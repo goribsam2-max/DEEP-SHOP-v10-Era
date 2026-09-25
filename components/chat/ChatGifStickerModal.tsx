@@ -110,9 +110,9 @@ export const ChatGifStickerModal: React.FC<ChatGifStickerModalProps> = ({
         {/* Grid List */}
         <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
           <div className={`grid ${isGif ? 'grid-cols-2 gap-2.5' : 'grid-cols-3 sm:grid-cols-4 gap-3'}`}>
-            {filtered.map((item: any) => (
+            {filtered.map((item: any, index: number) => (
               <div
-                key={item.id}
+                key={`${item.id || index}-${index}`}
                 onClick={() => {
                   onSelectMedia(item.url, !isGif);
                   onClose();

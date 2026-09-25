@@ -140,9 +140,9 @@ export function FloatingVoiceBot() {
 
             {/* Chat Area */}
             <div className="flex-1 p-4 overflow-y-auto max-h-[400px] flex flex-col gap-4 bg-zinc-50 dark:bg-zinc-950/50">
-              {messages.map((msg) => (
+              {messages.map((msg, index) => (
                 <div
-                  key={msg.id}
+                  key={`${msg.id || index}-${index}`}
                   className={`flex gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
                 >
                   <div className={`w-8 h-8 rounded-full flex shrink-0 items-center justify-center ${msg.sender === 'user' ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'}`}>
