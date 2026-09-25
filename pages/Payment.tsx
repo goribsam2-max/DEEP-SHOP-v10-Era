@@ -17,7 +17,8 @@ import {
   Smartphone,
   ExternalLink,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -240,11 +241,19 @@ const Payment: React.FC = () => {
 
   // Financial Calculations
   const calculations = useMemo(() => {
-    if (!order) return { amountToPay: 0, subtotal: 0, advance: 0, dueOnDelivery: 0, deliveryFee: 0 };
+    if (!order) return { amountToPay: 0, subtotal: 0, advance: 0, dueOnDelivery: 0, deliveryFee: 0, isBorderOffer: false, isCourierPayment: false };
     const isCourierPayment = order.status === "Shipped in Courier" || order.status === "shipped_in_courier";
-    const prevPaid = order.paymentOption === "Full Payment" 
-      ? order.total 
-      : (order.advanceAmount !== undefined && order.advanceAmount !== null ? order.advanceAmount : 150);
+    const isBorderOffer = Boolean(order.isBorderOffer || order.productClassification?.toLowerCase().includes("border") || order.items?.some((i: any) => i.isBorderOffer || i.productType === 'border_offer'));
+    
+    let prevPaid: number;
+    if (order.advanceAmount !== undefined && order.advanceAmount !== null && Number(order.advanceAmount) > 0) {
+      prevPaid = Number(order.advanceAmount);
+    } else if (order.paymentOption === "Full Payment") {
+      prevPaid = order.total;
+    } else {
+      prevPaid = 150;
+    }
+
     const remainingDue = Math.max(0, (order.total || 0) - prevPaid);
     const amountToPay = isCourierPayment ? Math.round(remainingDue * 0.20) : (prevPaid || order.total || 0);
 
@@ -254,7 +263,8 @@ const Payment: React.FC = () => {
       advance: amountToPay,
       dueOnDelivery: order.dueAmount !== undefined ? order.dueAmount : Math.max(0, (order.total || amountToPay) - amountToPay),
       deliveryFee: order.deliveryFee || 120,
-      isCourierPayment
+      isCourierPayment,
+      isBorderOffer,
     };
   }, [order]);
 
@@ -610,6 +620,28 @@ const Payment: React.FC = () => {
             {calculations.isCourierPayment && (
               <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 px-3 py-2 rounded-2xl text-[10.5px] sm:text-xs font-semibold text-rose-600 dark:text-rose-400 animate-pulse text-center whitespace-nowrap truncate">
                 বিস্তারিত দেখতে পে করুন, না হলে ১ দিনের মধ্যে রিটার্ন চলে যাবে
+              </div>
+            )}
+
+            {/* Border Offer Dedicated Notice Banner */}
+            {calculations.isBorderOffer && (
+              <div className="bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 px-3.5 py-2.5 rounded-2xl flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                    <Zap className="w-3.5 h-3.5 fill-amber-500 stroke-none" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-amber-700 dark:text-amber-300 block text-[11px] sm:text-xs">
+                      বর্ডার স্টক অফার স্পেশাল এডভান্স পেমেন্ট
+                    </span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                      অফারের জন্য নির্ধারিত এডভান্স: ৳{calculations.amountToPay} {calculations.dueOnDelivery > 0 ? `(বাকি ৳${calculations.dueOnDelivery} ডেলিভারিতে)` : "(সম্পূর্ণ পরিশোধ)"}
+                    </span>
+                  </div>
+                </div>
+                <span className="font-black text-amber-600 dark:text-amber-400 text-sm whitespace-nowrap">
+                  ৳{calculations.amountToPay}
+                </span>
               </div>
             )}
 

@@ -15,6 +15,7 @@ import { formatPrice } from "../lib/utils";
 import { useNotify } from "../components/Notifications";
 import { useIllustrations } from "../lib/useIllustrations";
 import Icon from "../components/Icon";
+import { Zap, Smartphone, Sparkles, ShieldCheck, Lock, MapPin } from "lucide-react";
 
 const StatusIconSmall = ({ status }: { status: OrderStatus }) => {
   const base =
@@ -90,7 +91,7 @@ const MyOrders: React.FC = () => {
   const [exchanges, setExchanges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<"Pending" | "Active" | "Cancelled" | "Custom/Exchange">("Pending");
+  const [activeTab, setActiveTab] = useState<"Pending" | "Active" | "Cancelled" | "Border Offers" | "Custom/Exchange">("Pending");
   const navigate = useNavigate();
   const illustrations = useIllustrations();
   const notify = useNotify();
@@ -183,6 +184,11 @@ const MyOrders: React.FC = () => {
   };
 
   const filteredOrders = orders.filter(order => {
+    if (activeTab === "Border Offers") {
+      return order.isBorderOffer === true ||
+             order.productClassification?.toLowerCase().includes("border") ||
+             order.items?.some((i: any) => i.isBorderOffer || i.productType === 'border_offer');
+    }
     if (activeTab === "Pending") {
       return order.status === OrderStatus.PENDING;
     }
@@ -192,7 +198,7 @@ const MyOrders: React.FC = () => {
     if (activeTab === "Cancelled") {
       return order.status === OrderStatus.CANCELLED;
     }
-    return true; // All orders
+    return true;
   });
 
   return (
@@ -206,17 +212,17 @@ const MyOrders: React.FC = () => {
       </div>
 
       <div className="flex bg-white dark:bg-zinc-900 rounded-[24px] p-1.5 mb-8 border border-zinc-100 dark:border-zinc-800 shadow-sm gap-1 overflow-x-auto no-scrollbar">
-        {["Pending", "Active", "Cancelled", "Custom/Exchange"].map((tab) => (
+        {["Pending", "Active", "Border Offers", "Cancelled", "Custom/Exchange"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
             className={`grow shrink-0 min-w-[80px] whitespace-nowrap text-center py-2 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-bold transition-all ${
               activeTab === tab
-                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md"
+                ? "bg-zinc-900 text-white dark:bg-amber-500 dark:text-black shadow-md"
                 : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 bg-transparent"
             }`}
           >
-            {tab}
+            {tab === "Border Offers" ? "বর্ডার অফার (Border Offers)" : tab}
           </button>
         ))}
       </div>
@@ -380,38 +386,97 @@ const MyOrders: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {filteredOrders.map((order) => {
+              const isBorder = Boolean(
+                order.isBorderOffer ||
+                order.productClassification?.toLowerCase().includes("border") ||
+                order.items?.some((i: any) => i.isBorderOffer || i.productType === 'border_offer')
+              );
+              const firstItem = order.items[0];
+
               return (
                 <motion.div
                   whileTap={{ scale: 0.99 }}
                   key={order.id}
-                  className="bg-white dark:bg-zinc-900 p-5 rounded-[24px] border border-zinc-100 dark:border-zinc-800 shadow-sm cursor-pointer"
+                  className={`bg-white dark:bg-zinc-900 p-5 rounded-[24px] border shadow-sm cursor-pointer transition-all ${
+                    isBorder
+                      ? "border-amber-500/50 dark:border-amber-500/40 bg-gradient-to-b from-amber-500/[0.03] to-transparent"
+                      : "border-zinc-100 dark:border-zinc-800"
+                  }`}
                 >
-                  <div className="flex justify-between items-start mb-6" onClick={() => navigate(`/track-order/${order.id}`)}>
+                  {/* Distinct Border Offer Header */}
+                  {isBorder && (
+                    <div className="flex items-center justify-between pb-3 mb-4 border-b border-amber-500/20">
+                      <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/30">
+                        <Zap className="w-3.5 h-3.5 fill-amber-500 stroke-none" />
+                        <span>বর্ডার স্টক অফার অর্ডার (Border Offer)</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-zinc-400">
+                        {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ""}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-start mb-4" onClick={() => navigate(`/track-order/${order.id}`)}>
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-zinc-50 dark:bg-zinc-800 overflow-hidden shrink-0 border border-zinc-100 dark:border-zinc-800 p-2">
-                         <img src={order.items[0]?.image} alt="" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
+                         <img src={firstItem?.image} alt="" className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-lg mb-0.5 tracking-tight line-clamp-1">{order.items[0]?.name || "Item"}</h4>
+                        <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-base sm:text-lg mb-0.5 tracking-tight line-clamp-1">{firstItem?.name || "Item"}</h4>
                         <p className="text-zinc-500 font-medium text-xs">
                           {formatPrice(order.total)} <span className="mx-1 text-zinc-300">|</span> {order.items.reduce((acc, item) => acc + item.quantity, 0)} Items
                         </p>
                         {order.advanceAmount > 0 && (
-                          <p className="text-[10px] font-bold text-blue-600 mt-1">Advance: {formatPrice(order.advanceAmount)} | Due: {formatPrice(Math.max(0, order.total - order.advanceAmount))}</p>
+                          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                            এডভান্স পরিশোধিত: {formatPrice(order.advanceAmount)} {Math.max(0, order.total - order.advanceAmount) > 0 ? `| বাকি: ${formatPrice(Math.max(0, order.total - order.advanceAmount))}` : "| সম্পূর্ণ পেইড"}
+                          </p>
                         )}
                       </div>
                     </div>
                     <span className="text-sm font-semibold text-zinc-400">#{order.id.slice(0, 6).toUpperCase()}</span>
                   </div>
 
-                  <div className="flex justify-end items-end mb-6" onClick={() => navigate(`/track-order/${order.id}`)}>
-                    <div className="text-right">
-                      <span className="text-[11px] font-semibold text-zinc-400 block mb-1">Status</span>
-                      <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{order.status}</span>
-                      {order.status === OrderStatus.CANCELLED && (order as any).rejectReason && (
-                        <p className="text-[10px] font-bold text-rose-500 mt-1 max-w-[200px] text-right truncate" title={(order as any).rejectReason}>Reason: {(order as any).rejectReason}</p>
+                  {/* Border Offer Dedicated Specs & Address Section */}
+                  {isBorder && (
+                    <div className="my-3 p-3 bg-amber-500/[0.06] border border-amber-500/20 rounded-2xl space-y-2 text-xs">
+                      <div className="flex flex-wrap gap-1.5">
+                        {firstItem?.storage && (
+                          <span className="inline-flex items-center gap-1 bg-white/80 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                            <Smartphone className="w-3 h-3 text-amber-500" />
+                            <span>{firstItem.storage}</span>
+                          </span>
+                        )}
+                        {firstItem?.condition && (
+                          <span className="inline-flex items-center gap-1 bg-white/80 dark:bg-zinc-800/80 text-amber-700 dark:text-amber-300 text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-amber-500/30">
+                            <Sparkles className="w-3 h-3 text-amber-500" />
+                            <span>{firstItem.condition}</span>
+                          </span>
+                        )}
+                        {firstItem?.warranty && (
+                          <span className="inline-flex items-center gap-1 bg-white/80 dark:bg-zinc-800/80 text-blue-700 dark:text-blue-300 text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-blue-500/30">
+                            <ShieldCheck className="w-3 h-3 text-blue-500" />
+                            <span>{firstItem.warranty}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {order.shippingAddress && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-zinc-600 dark:text-zinc-400 pt-1 border-t border-amber-500/15">
+                          <MapPin className="w-3 h-3 text-amber-500 shrink-0" />
+                          <span className="truncate">ডেলিভারি ঠিকানা: {order.shippingAddress}</span>
+                        </div>
                       )}
                     </div>
+                  )}
+
+                  <div className="flex justify-between items-end mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800" onClick={() => navigate(`/track-order/${order.id}`)}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-zinc-400">অর্ডার স্ট্যাটাস:</span>
+                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800">{order.status}</span>
+                    </div>
+                    {order.status === OrderStatus.CANCELLED && (order as any).rejectReason && (
+                      <p className="text-[10px] font-bold text-rose-500 max-w-[200px] text-right truncate" title={(order as any).rejectReason}>Reason: {(order as any).rejectReason}</p>
+                    )}
                   </div>
 
                   {order.status === OrderStatus.SHIPPED_IN_COURIER ? (

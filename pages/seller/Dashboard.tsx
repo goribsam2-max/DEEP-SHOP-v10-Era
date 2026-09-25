@@ -145,6 +145,12 @@ const SellerDashboard: React.FC = () => {
     stock: "",
     isOffer: false,
     offerPrice: "",
+    isBorderOffer: false,
+    borderOfferAdvanceAmount: "",
+    storage: "",
+    condition: "",
+    batteryHealth: "",
+    warranty: "",
     modelUrl: "",
     videoUrl: "",
     imageFiles: [] as File[],
@@ -474,18 +480,29 @@ const SellerDashboard: React.FC = () => {
         name: productForm.name,
         price: Number(productForm.price),
         description: productForm.description,
-        category: productForm.category === "custom" ? customCategoryName : productForm.category,
+        category: productForm.isBorderOffer ? "Border Cross Products" : (productForm.category === "custom" ? customCategoryName : productForm.category),
         stock: Number(productForm.stock),
         isOffer: productForm.isOffer,
         offerPrice: productForm.isOffer ? Number(productForm.offerPrice) : 0,
+        isBorderOffer: productForm.isBorderOffer,
+        productType: productForm.isBorderOffer ? "border_offer" : (productForm.isOffer ? "offer" : "normal"),
+        storage: productForm.storage || "",
+        condition: productForm.condition || "",
+        batteryHealth: productForm.batteryHealth || "",
+        warranty: productForm.warranty || "",
         modelUrl: productForm.modelUrl,
         videoUrl: productForm.videoUrl,
         coinReward: Number(productForm.coinReward),
-        isCodEnabled: productForm.isCodEnabled,
-        advanceType: productForm.advanceType || "custom",
-        advanceMode: productForm.advanceType === "full" ? "fixed" : (productForm.advanceMode || "fixed"),
+        isCodEnabled: productForm.isBorderOffer ? false : productForm.isCodEnabled,
+        advanceType: productForm.isBorderOffer ? "full" : (productForm.advanceType || "custom"),
+        advanceMode: productForm.isBorderOffer || productForm.advanceType === "full" ? "fixed" : (productForm.advanceMode || "fixed"),
         advancePercentage: productForm.advanceType === "custom" && productForm.advanceMode === "percentage" ? Number(productForm.advancePercentage || 0) : 0,
-        advanceAmount: calcAdvanceAmount,
+        advanceAmount: productForm.isBorderOffer 
+          ? (productForm.borderOfferAdvanceAmount ? Number(productForm.borderOfferAdvanceAmount) : Number(productForm.price))
+          : calcAdvanceAmount,
+        borderOfferAdvanceAmount: productForm.isBorderOffer && productForm.borderOfferAdvanceAmount
+          ? Number(productForm.borderOfferAdvanceAmount)
+          : (productForm.isBorderOffer ? Number(productForm.price) : 0),
         sellerId: user.uid,
         sellerName: sellerProfile?.shopName || "Registered Seller",
         shopLogo: sellerProfile?.photoURL || "",
@@ -525,6 +542,12 @@ const SellerDashboard: React.FC = () => {
       stock: "10",
       isOffer: false,
       offerPrice: "",
+      isBorderOffer: false,
+      borderOfferAdvanceAmount: "",
+      storage: "",
+      condition: "",
+      batteryHealth: "",
+      warranty: "",
       modelUrl: "",
       videoUrl: "",
       imageFiles: [],
@@ -549,6 +572,12 @@ const SellerDashboard: React.FC = () => {
       stock: String(prod.stock ?? "10"),
       isOffer: !!prod.isOffer,
       offerPrice: String(prod.offerPrice || ""),
+      isBorderOffer: !!prod.isBorderOffer,
+      borderOfferAdvanceAmount: String(prod.borderOfferAdvanceAmount || prod.advanceAmount || ""),
+      storage: prod.storage || "",
+      condition: prod.condition || "",
+      batteryHealth: prod.batteryHealth || "",
+      warranty: prod.warranty || "",
       modelUrl: prod.modelUrl || "",
       videoUrl: prod.videoUrl || "",
       imageFiles: [],
@@ -752,30 +781,32 @@ const SellerDashboard: React.FC = () => {
     const isActive = activeTab === tab || activeTab.startsWith(tab);
     return (
       <button
+        type="button"
         onClick={() => { setActiveTab(tab); setSelectedOrderId(null); }}
-        className="flex flex-col items-center justify-center flex-1 h-full relative group py-2"
+        className={cn(
+          "h-10 flex items-center justify-center transition-all duration-300 rounded-full cursor-pointer relative",
+          isActive 
+            ? "bg-[#E8EAEE]/90 dark:bg-[#2D2E33]/90 text-zinc-950 dark:text-white px-5 shadow-xs" 
+            : "px-3.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+        )}
+        title={label}
       >
-        <div className="relative flex flex-col items-center justify-center">
-          <div className="relative">
-            <div className={cn(
-              "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300",
-              isActive ? "bg-[#EF8020]/10 dark:bg-[#EF8020]/25 text-[#EF8020]" : "text-zinc-400 dark:text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-            )}>
-              <Icon 
-                name={icon}
-                className={cn("w-5 h-5 transition-transform duration-300", isActive && "scale-110")} 
-                solid={false}
-              />
-            </div>
-            {badge !== undefined && badge > 0 && (
-              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[9px] font-bold px-1 py-0.5 rounded-full min-w-[14px] h-[14px] flex items-center justify-center leading-none">
-                {badge}
-              </span>
-            )}
-          </div>
-          <span className={`text-[10px] font-bold tracking-tight whitespace-nowrap transition-all duration-300 ${isActive ? "text-[#EF8020]" : "text-zinc-400 dark:text-zinc-500"}`}>
-            {label}
-          </span>
+        <div className="relative flex items-center gap-1.5">
+          <Icon 
+            name={icon} 
+            className={cn("w-5 h-5 transition-transform duration-300", isActive && "scale-105")} 
+            solid={false} 
+          />
+          {isActive && (
+            <span className="text-xs font-bold whitespace-nowrap">
+              {label}
+            </span>
+          )}
+          {badge !== undefined && badge > 0 && (
+            <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center leading-none shadow-xs">
+              {badge}
+            </span>
+          )}
         </div>
       </button>
     );
@@ -1356,6 +1387,38 @@ const SellerDashboard: React.FC = () => {
                               <p className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">Stock: {p.stock}</p>
                            </div>
                            {p.advanceAmount && <p className="text-[10px] text-blue-600 font-medium mt-1">Adv. Req: {formatPrice(p.advanceAmount)}</p>}
+                            
+                            {/* Mark as Sold Toggle Button */}
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const newSold = !p.isSold;
+                                    await updateDoc(doc(db, "products", p.id), {
+                                      isSold: newSold,
+                                      stock: newSold ? 0 : 1
+                                    });
+                                    notify(newSold ? "প্রোডাক্টটি 'সোল্ড আউট' চিহ্নিত করা হয়েছে!" : "প্রোডাক্টটি ইন স্টক করা হয়েছে!", "success");
+                                  } catch(err) {
+                                    notify("স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে", "error");
+                                  }
+                                }}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition border cursor-pointer ${
+                                  p.isSold
+                                    ? "bg-rose-500/10 text-rose-600 border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-400"
+                                    : "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-400 hover:bg-amber-500/20"
+                                }`}
+                              >
+                                {p.isSold ? "🔴 SOLD OUT (ইন স্টক করুন)" : "🏷️ সোল্ড আউট চিহ্নিত করুন"}
+                              </button>
+
+                              {p.isBorderOffer && (
+                                <span className="text-[9px] font-black bg-amber-500 text-black px-2 py-0.5 rounded-full">
+                                  ⚡ BORDER OFFER
+                                </span>
+                              )}
+                            </div>
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
                            <button onClick={() => handleEditProduct(p)} className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:bg-zinc-700">
@@ -1481,6 +1544,97 @@ const SellerDashboard: React.FC = () => {
                          </div>
                        )}
                     </div>
+                    {/* Border Stock Phone Offer Toggle */}
+                    <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between cursor-pointer" onClick={() => setProductForm({ ...productForm, isBorderOffer: !productForm.isBorderOffer, advanceType: !productForm.isBorderOffer ? "full" : productForm.advanceType })}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-amber-500 text-lg">⚡</span>
+                          <div>
+                            <Label className="text-xs font-bold text-amber-500 block cursor-pointer">
+                              Border Stock Phone Offer (বর্ডার স্টক মোবাইল অফার)
+                            </Label>
+                            <p className="text-[10px] text-zinc-400">
+                              এই অফার প্রোডাক্টগুলোতে ১০০% ফুল এডভান্স বাধ্যতামূলক থাকবে।
+                            </p>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={productForm.isBorderOffer}
+                          onChange={(e) => setProductForm({ ...productForm, isBorderOffer: e.target.checked, advanceType: e.target.checked ? "full" : productForm.advanceType })}
+                          className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                        />
+                      </div>
+
+                      {productForm.isBorderOffer && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-amber-500/20 animate-in fade-in duration-200">
+                          <div>
+                            <Label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                              Storage / Memory (e.g. 8GB / 128GB)
+                            </Label>
+                            <Input
+                              value={productForm.storage}
+                              onChange={(e) => setProductForm({ ...productForm, storage: e.target.value })}
+                              placeholder="e.g. 8/128 GB"
+                              className="h-10 text-xs bg-zinc-900 border-zinc-700 rounded-xl"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                              Condition / Grade (e.g. Grade A Intake)
+                            </Label>
+                            <Input
+                              value={productForm.condition}
+                              onChange={(e) => setProductForm({ ...productForm, condition: e.target.value })}
+                              placeholder="e.g. Grade A Intake"
+                              className="h-10 text-xs bg-zinc-900 border-zinc-700 rounded-xl"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                              Battery Health / Condition
+                            </Label>
+                            <Input
+                              value={productForm.batteryHealth}
+                              onChange={(e) => setProductForm({ ...productForm, batteryHealth: e.target.value })}
+                              placeholder="e.g. 100% Health"
+                              className="h-10 text-xs bg-zinc-900 border-zinc-700 rounded-xl"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                              Warranty Details
+                            </Label>
+                            <Input
+                              value={productForm.warranty}
+                              onChange={(e) => setProductForm({ ...productForm, warranty: e.target.value })}
+                              placeholder="e.g. 7 Days Replacement"
+                              className="h-10 text-xs bg-zinc-900 border-zinc-700 rounded-xl"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+                            <Label className="text-[11px] font-bold text-amber-400 block mb-1">
+                              অফারের জন্য নির্দিষ্ট এডভান্স টাকা (৳) - Dedicated Advance Amount
+                            </Label>
+                            <Input
+                              type="number"
+                              value={productForm.borderOfferAdvanceAmount}
+                              onChange={(e) => setProductForm({ ...productForm, borderOfferAdvanceAmount: e.target.value })}
+                              placeholder={`যেমন: 500 বা 1000 বা সম্পূর্ণ ৳${productForm.price || 0}`}
+                              className="h-10 text-xs bg-zinc-900 border-zinc-700 rounded-xl text-white placeholder:text-zinc-500"
+                            />
+                            <p className="text-[10px] text-zinc-400 mt-1">
+                              এই টাকাটি কাস্টমারের জন্য স্বয়ংক্রিয়ভাবে পেমেন্ট পেজে এডভান্স হিসেবে ধার্য হবে এবং বাকি টাকা ডেলিভারির সময় প্রদেয় হবে।
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div>
                       <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Category *</Label>
                       <CustomDropdown
@@ -1857,8 +2011,8 @@ const SellerDashboard: React.FC = () => {
         )}
       </main>
 
-      {/* Bottom Navigation for Mobile */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-50 px-1 sm:px-4 py-1.5 pb-safe flex justify-between items-center overflow-x-auto no-scrollbar">
+      {/* Bottom Navigation for Mobile (Floating capsule matching Messages.tsx) */}
+      <div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 pointer-events-auto h-[54px] flex items-center justify-between gap-1.5 px-2.5 rounded-full bg-white/85 dark:bg-[#141518]/85 backdrop-blur-md shadow-[0_4px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_22px_rgba(0,0,0,0.4)] transition-all mb-[env(safe-area-inset-bottom)]">
         <NavItem icon="home" label="Home" tab="home" />
         <NavItem icon="receipt" label="Orders" tab="orders" badge={orders.filter((o: any) => o.status === "pending").length} />
         <NavItem icon="boxes" label="Products" tab="products" />

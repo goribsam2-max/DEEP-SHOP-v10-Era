@@ -32,6 +32,7 @@ import { VibeMascot, MascotState } from "../components/ui/VibeMascot";
 import StoryViewer from "../components/ui/StoryViewer";
 import { ProductCard } from "../components/ui/ProductCard";
 import { OfferSlider } from "../components/ui/OfferSlider";
+import { BorderOfferSection } from "../components/ui/BorderOfferSection";
 import { Tag, Zap, Crown, Users, Sparkles, Star, Play, MoreHorizontal, ChevronRight, ShoppingBag } from "lucide-react";
 import { PixelImage } from "../components/ui/PixelImage";
 import { HeroSlider } from "../components/ui/hero-slider";
@@ -462,6 +463,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           <OfferSlider products={products.filter(p => p.isOffer)} autoSlide={true} />
         </div>
       )}
+
+      {/* Dedicated Border Stock Mobile Offer Section */}
+      <BorderOfferSection products={products} />
 
       {/* Categories (Single Line Scrollable) */}
       <div className="mb-8 w-full animate-stagger-3 relative z-10 pt-2">

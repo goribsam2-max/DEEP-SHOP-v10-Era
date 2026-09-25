@@ -114,8 +114,19 @@ export const ProductCard = ({ product, index }: { product: Product, index?: numb
             src={product.image}
             alt={product.name}
             className="w-full h-full z-10"
-            imgClassName={`group-hover:scale-105 transition-transform duration-500 object-contain p-3 rounded-[15px]`}
+            imgClassName={`group-hover:scale-105 transition-transform duration-500 object-contain p-3 rounded-[15px] ${product.isSold || product.stock === 0 ? "opacity-30 grayscale" : ""}`}
           />
+
+          {/* Rubber Stamp "SOLD OUT" Seal */}
+          {(product.isSold || product.stock === 0) && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-2 z-20">
+              <div className="rotate-[-12deg] border-2 border-rose-500 text-rose-500 font-black px-3 py-1 rounded-xl uppercase tracking-wider text-center bg-black/85 shadow-lg border-dashed">
+                <span className="text-xs sm:text-sm block leading-none font-black">
+                  SOLD OUT
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Top Left/Right Discount Badge */}
           {hasDiscount && discountPercentage > 0 && (

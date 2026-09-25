@@ -17,7 +17,14 @@ export interface Product {
   sellerId?: string;
   isOffer?: boolean;
   isBypass?: boolean;
-  productType?: 'normal' | 'offer' | 'bypass' | 'custom';
+  isBorderOffer?: boolean;
+  isSold?: boolean;
+  storage?: string;
+  condition?: string;
+  batteryHealth?: string;
+  warranty?: string;
+  borderOfferAdvanceAmount?: number;
+  productType?: 'normal' | 'offer' | 'bypass' | 'custom' | 'border_offer';
   createdAt?: number;
   id: string;
   name: string;
@@ -149,6 +156,7 @@ export interface Order {
   guardianNumber?: string;
   nidCardUrl?: string;
   productClassification?: string;
+  isBorderOffer?: boolean;
   shippingAddress: string;
   contactNumber: string;
   altNumber?: string;
