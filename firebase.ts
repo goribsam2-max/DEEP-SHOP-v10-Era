@@ -19,6 +19,7 @@ export const auth = getAuth(app);
 // Use force long polling to prevent WebChannelConnection stream transport errors in sandbox iframes
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
+  ignoreUndefinedProperties: true,
 });
 
 import { getMessaging, isSupported } from "firebase/messaging";

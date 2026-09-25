@@ -357,7 +357,13 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
         {/* ======================================================== */}
         {/* ITEM 3, 4, 5...: Online Friends with Notes */}
         {/* ======================================================== */}
-        {onlineUsers.map((friend, fIdx) => {
+        {onlineUsers
+          .filter((friend) => {
+            const friendNote = allNotes[friend.id || friend.uid];
+            // Only show users who are genuinely online OR have an active note
+            return Boolean(friend.isOnline) || Boolean(friendNote?.text);
+          })
+          .map((friend, fIdx) => {
           const friendNote = allNotes[friend.id || friend.uid];
           return (
             <div
@@ -402,8 +408,10 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   )}
                 </div>
 
-                {/* Online indicator dot */}
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#121214]" />
+                {/* Online indicator dot - ONLY shown when user is actually online */}
+                {Boolean(friend.isOnline) && (
+                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#121214] animate-pulse" />
+                )}
               </div>
 
               {/* Friend Name */}

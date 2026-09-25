@@ -304,7 +304,7 @@ export default function Messages() {
   
   // Derived activeChat
   const activeChat = chatIdParam 
-    ? (chats.find(c => c.otherUser?.id === chatIdParam || c.id === chatIdParam) || tempActiveChat)
+    ? (chats.find(c => c.id === chatIdParam || c.otherUser?.id === chatIdParam || c.otherUser?.uid === chatIdParam) || tempActiveChat)
     : null;
 
   const otherUid = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
@@ -865,10 +865,19 @@ export default function Messages() {
     if (chats.length === 0) return;
     const unsubscribes = chats.map(chat => {
       const otherId = chat.otherUser?.id || chat.otherUser?.uid;
-      if (!otherId) return () => {};
+      if (!otherId || otherId === 'system') return () => {};
       return onSnapshot(doc(db, 'users', otherId), (docSnap) => {
         if (docSnap.exists()) {
           const uData = docSnap.data();
+          const lastActiveMs = typeof uData.lastActive === 'number'
+            ? uData.lastActive
+            : uData.lastActive?.toMillis
+              ? uData.lastActive.toMillis()
+              : (uData.lastActive?.seconds ? uData.lastActive.seconds * 1000 : (typeof uData.lastActive === 'string' ? new Date(uData.lastActive).getTime() : 0));
+          
+          const isRecentlyActive = lastActiveMs > 0 && (Date.now() - lastActiveMs < 60000);
+          const isUserOnline = Boolean(uData.isOnline && isRecentlyActive);
+
           setChatUsersData(prev => ({
             ...prev,
             [otherId]: uData
@@ -876,8 +885,8 @@ export default function Messages() {
           setChatUsersPresence(prev => ({
             ...prev,
             [otherId]: {
-              isOnline: !!uData.isOnline && (Date.now() - (uData.lastActive || 0) < 40000),
-              lastActive: uData.lastActive || null
+              isOnline: isUserOnline,
+              lastActive: lastActiveMs || null
             }
           }));
         }
@@ -1714,6 +1723,7 @@ const handleCreateChannel = async () => {
         }
 
         await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), msgData);
+        const recipientId = targetChatOrChannel.otherUser?.id || targetChatOrChannel.otherUser?.uid;
         if (recipientId) {
              fetch('/api/web-push/send-p2p', {
                  method: 'POST',
@@ -1727,7 +1737,6 @@ const handleCreateChannel = async () => {
              }).catch(() => {});
         }
 
-        const recipientId = targetChatOrChannel.otherUser?.id || targetChatOrChannel.otherUser?.uid;
         if (recipientId && recipientId !== "system") {
           fetch("/api/send-push-user", {
             method: "POST",
@@ -1861,7 +1870,9 @@ const handleCreateChannel = async () => {
     );
     
     const unsub = onSnapshot(q1, async (snapshot) => {
+      try {
         const chatsList = await Promise.all(snapshot.docs.map(async d => {
+          try {
             const data = d.data();
             const isGroup = data.type === 'group' || data.isGroup;
             let otherUser: any = { displayName: 'Unknown', photoURL: '', id: d.id, isGroup: false };
@@ -1875,7 +1886,7 @@ const handleCreateChannel = async () => {
                     isGroup: true
                 };
             } else {
-                const otherUid = data.participants.find((p: string) => p !== user.uid);
+                const otherUid = Array.isArray(data.participants) ? data.participants.find((p: string) => p !== user.uid) : null;
                 otherUser = { displayName: 'Unknown', photoURL: '', id: otherUid, isGroup: false };
                 if (otherUid) {
                     if (otherUid === 'system') {
@@ -1886,16 +1897,20 @@ const handleCreateChannel = async () => {
                             isGroup: false
                         };
                     } else {
-                        const uDoc = await getDoc(doc(db, 'users', otherUid));
-                        if (uDoc.exists()) {
-                            otherUser = { ...uDoc.data(), id: uDoc.id, isGroup: false } as any;
-                        } else {
-                            otherUser = {
-                                id: otherUid,
-                                displayName: 'Verified Seller',
-                                photoURL: '',
-                                isGroup: false
-                            };
+                        try {
+                          const uDoc = await getDoc(doc(db, 'users', otherUid));
+                          if (uDoc.exists()) {
+                              otherUser = { ...uDoc.data(), id: uDoc.id, isGroup: false } as any;
+                          } else {
+                              otherUser = {
+                                  id: otherUid,
+                                  displayName: 'Verified Seller',
+                                  photoURL: '',
+                                  isGroup: false
+                              };
+                          }
+                        } catch (uErr) {
+                          otherUser = { id: otherUid, displayName: 'User', photoURL: '', isGroup: false };
                         }
                     }
                 }
@@ -1906,6 +1921,9 @@ const handleCreateChannel = async () => {
                 ...data,
                 otherUser
             };
+          } catch (itemErr) {
+            return { id: d.id, ...d.data(), otherUser: { id: d.id, displayName: 'Chat' } };
+          }
         }));
 
         // Sort in memory by updatedAt descending safely
@@ -1916,6 +1934,9 @@ const handleCreateChannel = async () => {
         });
         
         setChats(chatsList);
+      } catch (err) {
+        console.error("Error in chats onSnapshot:", err);
+      }
     });
     
     return () => unsub();
@@ -1984,9 +2005,18 @@ const handleCreateChannel = async () => {
     const unsub = onSnapshot(doc(db, 'users', otherUid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
+        const lastActiveMs = typeof data.lastActive === 'number'
+          ? data.lastActive
+          : data.lastActive?.toMillis
+            ? data.lastActive.toMillis()
+            : (data.lastActive?.seconds ? data.lastActive.seconds * 1000 : (typeof data.lastActive === 'string' ? new Date(data.lastActive).getTime() : 0));
+        
+        const isRecentlyActive = lastActiveMs > 0 && (Date.now() - lastActiveMs < 60000);
+        const isOnline = Boolean(data.isOnline && isRecentlyActive);
+
         setOtherUserPresence({
-          isOnline: !!data.isOnline && (Date.now() - (data.lastActive || 0) < 40000),
-          lastActive: data.lastActive || 0
+          isOnline: isOnline,
+          lastActive: lastActiveMs || null
         });
       }
     });
@@ -2195,94 +2225,154 @@ const handleCreateChannel = async () => {
 
     if (!activeChat) return;
 
-    setIsTyping(false);
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    if (activeChat.id && user?.uid) {
-      updateDoc(doc(db, 'p2p_chats', activeChat.id), {
-        [`typingState.${user.uid}`]: null
-      }).catch(console.error);
-    }
+    try {
+      setIsTyping(false);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (activeChat.id && user?.uid) {
+        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+          [`typingState.${user.uid}`]: null
+        }).catch(console.error);
+      }
 
-    setNewMessage('');
-    
-    let imageUrls: string[] = [...previewUrls];
-    setPreviewUrls([]);
-    setAttachments([]);
-    
-    let chatId = activeChat.id;
-    
-    const lastMessageText = messageText || (audioUrlToSend ? '🎙️ Voice Message' : imageUrls.length > 0 ? 'Sent an image' : 'Sent an attachment');
-    
-    // If it's a new chat, create it first
-    if (activeChat.isNew) {
-        const chatRef = await addDoc(collection(db, 'p2p_chats'), {
-            participants: [user.uid, activeChat.otherUser.id],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            lastMessage: lastMessageText,
-            lastSenderId: user.uid,
-            seenBy: [user.uid]
-        });
-        chatId = chatRef.id;
+      setNewMessage('');
+      
+      let imageUrls: string[] = [...previewUrls];
+      setPreviewUrls([]);
+      setAttachments([]);
+      
+      const otherUserId = activeChat.otherUser?.id || activeChat.otherUser?.uid;
+      const isGroup = Boolean(activeChat.isGroup || activeChat.type === 'group');
+      let chatId = activeChat.id;
+      
+      const lastMessageText = messageText || (audioUrlToSend ? '🎙️ Voice Message' : imageUrls.length > 0 ? 'Sent an image' : 'Sent an attachment');
+      
+      // If it's a new chat, find or create it first
+      if (!chatId || activeChat.isNew) {
+        if (!isGroup && otherUserId) {
+          // Check if an existing chat already exists in memory or Firestore to avoid creating duplicates
+          const existingInChats = chats.find(c => 
+            !c.isGroup && 
+            c.type !== 'group' && 
+            Array.isArray(c.participants) && 
+            c.participants.includes(otherUserId) && 
+            c.participants.includes(user.uid)
+          );
+
+          if (existingInChats?.id) {
+            chatId = existingInChats.id;
+          } else {
+            try {
+              const qExisting = query(
+                collection(db, 'p2p_chats'),
+                where('participants', 'array-contains', user.uid)
+              );
+              const snapExisting = await getDocs(qExisting);
+              const foundDoc = snapExisting.docs.find(d => {
+                const data = d.data();
+                const p = data.participants;
+                return Array.isArray(p) && p.includes(otherUserId) && !data.isGroup && data.type !== 'group';
+              });
+              if (foundDoc) {
+                chatId = foundDoc.id;
+              }
+            } catch (e) {
+              console.warn("Could not query existing chats:", e);
+            }
+          }
+
+          if (!chatId) {
+            const chatRef = await addDoc(collection(db, 'p2p_chats'), {
+              participants: [user.uid, otherUserId],
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              lastMessage: lastMessageText,
+              lastSenderId: user.uid,
+              seenBy: [user.uid]
+            });
+            chatId = chatRef.id;
+          }
+        } else if (isGroup && !chatId) {
+          notify("Group not found", "error");
+          return;
+        }
+
         setTempActiveChat({ ...activeChat, id: chatId, isNew: false, seenBy: [user.uid] });
-    } else {
+        setSearchParams({ chatId });
+      } else {
         await updateDoc(doc(db, 'p2p_chats', chatId), {
-            updatedAt: serverTimestamp(),
-            lastMessage: lastMessageText,
-            lastSenderId: user.uid,
-            seenBy: [user.uid]
-        });
-    }
+          updatedAt: serverTimestamp(),
+          lastMessage: lastMessageText,
+          lastSenderId: user.uid,
+          seenBy: [user.uid]
+        }).catch(console.error);
+      }
 
-    const isGroup = activeChat.isGroup || activeChat.type === 'group';
-    const currentSenderName = userShopName || user.displayName || user.email?.split('@')[0] || 'User';
-    const currentSenderPhoto = user.photoURL || '';
-    const currentSenderRole = activeChat.creatorId === user.uid ? 'creator' : (activeChat.admins?.includes(user.uid) ? 'admin' : (userRole || 'member'));
+      const currentSenderName = userShopName || user.displayName || user.email?.split('@')[0] || 'User';
+      const currentSenderPhoto = user.photoURL || '';
+      const currentSenderRole = activeChat.creatorId === user.uid ? 'creator' : (activeChat.admins?.includes(user.uid) ? 'admin' : (userRole || 'member'));
 
-    const msgData: any = {
-      text: messageText,
-      images: imageUrls,
-      imageUrl: imageUrls[0] || null,
-      audioUrl: audioUrlToSend || null,
-      audioDuration: recordingDuration || 12,
-      senderId: user.uid,
-      senderName: currentSenderName,
-      senderPhoto: currentSenderPhoto,
-      senderRole: isGroup ? currentSenderRole : undefined,
-      timestamp: serverTimestamp(),
-    };
-    setRecordedAudioUrl(null);
-
-    if (replyingTo) {
-      msgData.replyTo = {
-        id: replyingTo.id,
-        text: replyingTo.text,
-        senderId: replyingTo.senderId,
-        senderName: (replyingTo as any).senderName || (replyingTo.senderId === user.uid ? 'You' : (participantProfiles[replyingTo.senderId]?.displayName || 'User'))
+      const msgData: any = {
+        text: messageText,
+        images: imageUrls,
+        imageUrl: imageUrls[0] || null,
+        audioUrl: audioUrlToSend || null,
+        audioDuration: recordingDuration || 12,
+        senderId: user.uid,
+        senderName: currentSenderName,
+        senderPhoto: currentSenderPhoto,
+        createdAt: Date.now(),
+        timestamp: serverTimestamp(),
+        seenBy: [user.uid],
       };
-      setReplyingTo(null);
-    }
+      if (isGroup && currentSenderRole) {
+        msgData.senderRole = currentSenderRole;
+      }
+      setRecordedAudioUrl(null);
 
-    await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), msgData);
-    
-    // Send a real push notification to the recipient!
-    const recipientId = activeChat.otherUser?.id || activeChat.otherUser?.uid;
-    if (recipientId && recipientId !== "system") {
-      fetch("/api/send-push-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: recipientId,
-          title: user.displayName || "New Message",
-          body: messageText || "Sent an image",
-          link: `/messages?chatId=${user.uid}`
-        })
-      }).catch(err => console.error("Message push notification failed:", err));
-    }
-    
-    // Local push notification simulation for the other user receiving it (this would normally be Cloud Functions)
-    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'granted') {
-        // Just for demo, we don't send notification to ourselves
+      if (replyingTo) {
+        msgData.replyTo = {
+          id: replyingTo.id,
+          text: replyingTo.text,
+          senderId: replyingTo.senderId,
+          senderName: (replyingTo as any).senderName || (replyingTo.senderId === user.uid ? 'You' : (participantProfiles[replyingTo.senderId]?.displayName || 'User'))
+        };
+        setReplyingTo(null);
+      }
+
+      // Optimistically show message immediately for sender
+      const optimisticId = `temp-${Date.now()}`;
+      const optimisticMsg = {
+        id: optimisticId,
+        ...msgData,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+
+      audioHelper?.playMessageSentSound?.();
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+
+      // Save to Firestore
+      await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), msgData);
+      
+      // Send real push notification to recipient
+      const recipientId = activeChat.otherUser?.id || activeChat.otherUser?.uid;
+      if (recipientId && recipientId !== "system") {
+        fetch("/api/send-push-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: recipientId,
+            title: user.displayName || "New Message",
+            body: messageText || "Sent an image",
+            link: `/messages?chatId=${user.uid}`
+          })
+        }).catch(err => console.error("Message push notification failed:", err));
+      }
+    } catch (err: any) {
+      console.error("Error in handleSendMessage:", err);
+      notify("মেসেজ পাঠাতে সমস্যা হয়েছে: " + (err?.message || "নেটওয়ার্ক সমস্যা"), "error");
     }
   };
 
@@ -2999,7 +3089,7 @@ const handleCreateChannel = async () => {
               }
               const targetUserData = targetUserDoc.data();
               // Check if chat already exists
-              const existingChat = chats.find(c => c.type === 'p2p' && c.participants.includes(targetUserDoc.id));
+              const existingChat = chats.find(c => !c.isGroup && c.type !== 'group' && Array.isArray(c.participants) && c.participants.includes(targetUserDoc.id));
               if (existingChat) {
                   setSearchParams({ chatId: existingChat.id });
                   setShowNewChatModal(false);
@@ -3007,11 +3097,10 @@ const handleCreateChannel = async () => {
                   return;
               }
               
-              // Create new chat
-              const chatsRef = collection(db, 'chats');
+              // Create new chat in p2p_chats
+              const chatsRef = collection(db, 'p2p_chats');
               const newChatData = {
                   participants: [user.uid, targetUserDoc.id],
-                  type: 'p2p',
                   createdAt: serverTimestamp(),
                   updatedAt: serverTimestamp(),
                   createdBy: user.uid,
@@ -3895,7 +3984,7 @@ const handleCreateChannel = async () => {
                           return (
                              <div 
                                 key={`chat-${chat.id || idx}-${idx}`}
-                                 onClick={() => setSearchParams({ chatId: chat.otherUser?.id || "" }, { replace: true })}
+                                 onClick={() => setSearchParams({ chatId: chat.id || chat.otherUser?.id || "" }, { replace: true })}
                                 className={cn(
                                      "flex items-center gap-3 p-4 cursor-pointer transition-all hover:bg-[#F8F9FB] dark:hover:bg-zinc-800/50 relative border-b border-zinc-50 dark:border-zinc-800/20",
                                      activeChat?.id === chat.id ? "bg-[#F8F9FB] dark:bg-zinc-800 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#4E4AEB] before:rounded-r-full" : ""
