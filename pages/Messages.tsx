@@ -2,7 +2,7 @@ import { uploadToImgbb } from '../services/imgbb';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle } from 'lucide-react';
+import { Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle } from 'lucide-react';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { subscribeToWebPush } from '../lib/push';
@@ -6672,8 +6672,8 @@ const handleCreateChannel = async () => {
                           {/* Detail view based on user permission level */}
                           {showDetailedUserIds ? (
                               <div className="space-y-1.5 max-h-[120px] overflow-y-auto no-scrollbar">
-                                  {rEntries.map(([uid, emoji]) => (
-                                      <div key={uid} className="flex items-center justify-between text-zinc-500 dark:text-zinc-400 font-medium">
+                                  {rEntries.map(([uid, emoji], rIdx) => (
+                                      <div key={`${uid}-${rIdx}`} className="flex items-center justify-between text-zinc-500 dark:text-zinc-400 font-medium">
                                           <span className="truncate">User ID: {uid === user?.uid ? "You" : uid}</span>
                                           <span className="text-sm font-bold">{emoji}</span>
                                       </div>

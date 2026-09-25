@@ -106,13 +106,14 @@ export async function subscribeToWebPush(uidParam?: string) {
             }
 
             const uid = uidParam || auth.currentUser?.uid;
+            const subJson = subscription?.toJSON ? subscription.toJSON() : subscription;
             
             // Save subscription to backend using API to avoid permission issues
             try {
                 await fetch('/api/web-push/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subscription, uid })
+                    body: JSON.stringify({ subscription: subJson, uid })
                 });
             } catch (err) {
                 console.error("Failed to save subscription to API", err);
@@ -121,7 +122,7 @@ export async function subscribeToWebPush(uidParam?: string) {
             if (uid) {
                 try {
                     await setDoc(doc(db, "users", uid), {
-                        webPushSub: JSON.parse(JSON.stringify(subscription))
+                        webPushSub: subJson
                     }, { merge: true });
                 } catch(e) {
                     console.error("Failed to save to users doc", e);
