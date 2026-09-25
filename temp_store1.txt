@@ -1,0 +1,400 @@
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
+import { db, auth } from "../firebase";
+import { useRegion } from "../components/RegionContext";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { 
+  Star, 
+  MessageSquare, 
+  Phone, 
+  ArrowLeft, 
+  ShieldAlert, 
+  Calendar, 
+  LayoutGrid, 
+  Layers, 
+  Award, 
+  AlertCircle, 
+  MapPin, 
+  UserPlus, 
+  UserCheck, 
+  Check, 
+  Plus,
+  ShieldCheck,
+  Heart
+} from "lucide-react";
+import { VerifiedIcon } from "../components/SellerBadge";
+import { ProductCard } from "../components/ui/ProductCard";
+import Icon from "../components/Icon";
+
+interface SellerProfile {
+  id: string;
+  shopName?: string;
+  displayName?: string;
+  photoURL?: string;
+  avatarUrl?: string;
+  kycStatus?: "verified" | "pending" | "unverified";
+  tiktokId?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  shopNumber?: string;
+  role?: string;
+  bio?: string;
+  address?: string;
+  followersCount?: number;
+  followingCount?: number;
+  profileBg?: string;
+}
+
+export default function StoreProfile() {
+  const { sellerId } = useParams();
+  const navigate = useNavigate();
+  const { formatPrice } = useRegion();
+  
+  const [seller, setSeller] = useState<SellerProfile | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Follow states
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+
+  // Tabs navigation state
+  const [activeTab, setActiveTab] = useState<"home" | "products" | "reviews">("home");
+
+  // Admin states
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminEditModal, setShowAdminEditModal] = useState(false);
+  const [adminEditingReview, setAdminEditingReview] = useState<any | null>(null);
+  const [adminEditRating, setAdminEditRating] = useState(5);
+  const [adminEditText, setAdminEditText] = useState("");
+  const [adminFollowersInput, setAdminFollowersInput] = useState("");
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const uDoc = await getDoc(doc(db, "users", currentUser.uid));
+        if (uDoc.exists() && uDoc.data()?.isAdmin) {
+          setIsAdmin(true);
+        }
+      }
+    };
+    checkAdmin();
+  }, []);
+
+  const handleDeleteReview = async (reviewId: string, isProductReview: boolean) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    try {
+      const collectionName = isProductReview ? "reviews" : "user_reviews";
+      await deleteDoc(doc(db, collectionName, reviewId));
+      if (isProductReview) {
+        setReviews(prev => prev.filter(r => r.id !== reviewId));
+      } else {
+        setUserReviews(prev => prev.filter(r => r.id !== reviewId));
+      }
+      alert("Review deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting review:", err);
+      alert("Failed to delete review");
+    }
+  };
+
+  const handleOpenAdminEdit = (review: any, isProductReview: boolean) => {
+    setAdminEditingReview({ ...review, isProductReview });
+    setAdminEditRating(review.rating || 5);
+    setAdminEditText(review.comment || review.text || "");
+    setShowAdminEditModal(true);
+  };
+
+  const handleSaveAdminEdit = async () => {
+    if (!adminEditingReview) return;
+    try {
+      const collectionName = adminEditingReview.isProductReview ? "reviews" : "user_reviews";
+      const reviewDocRef = doc(db, collectionName, adminEditingReview.id);
+      
+      const updateData: any = {
+        rating: adminEditRating,
+        comment: adminEditText
+      };
+
+      await updateDoc(reviewDocRef, updateData);
+
+      if (adminEditingReview.isProductReview) {
+        setReviews(prev => prev.map(r => r.id === adminEditingReview.id ? { ...r, ...updateData } : r));
+      } else {
+        setUserReviews(prev => prev.map(r => r.id === adminEditingReview.id ? { ...r, ...updateData } : r));
+      }
+
+      setShowAdminEditModal(false);
+      setAdminEditingReview(null);
+      alert("Review updated successfully!");
+    } catch (err) {
+      console.error("Error updating review:", err);
+      alert("Failed to update review");
+    }
+  };
+
+  // Follow Toggle Logic
+  const handleFollowToggle = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Please login first to follow users!");
+      return;
+    }
+    if (!sellerId) return;
+    if (currentUser.uid === sellerId) {
+      alert("You cannot follow your own profile!");
+      return;
+    }
+    const followDocId = `${currentUser.uid}_${sellerId}`;
+    try {
+      if (isFollowing) {
+        // Unfollow
+        await deleteDoc(doc(db, "follows", followDocId));
+        const newFollowers = Math.max(0, followersCount - 1);
+        setFollowersCount(newFollowers);
+        setIsFollowing(false);
+        
+        await updateDoc(doc(db, "users", sellerId), { followersCount: newFollowers });
+        
+        const myUserDoc = await getDoc(doc(db, "users", currentUser.uid));
+        const myFollowing = Math.max(0, (myUserDoc.data()?.followingCount || 0) - 1);
+        await updateDoc(doc(db, "users", currentUser.uid), { followingCount: myFollowing });
+      } else {
+        // Follow
+        await setDoc(doc(db, "follows", followDocId), {
+          followerId: currentUser.uid,
+          followedId: sellerId,
+          createdAt: Date.now()
+        });
+        const newFollowers = followersCount + 1;
+        setFollowersCount(newFollowers);
+        setIsFollowing(true);
+
+        await updateDoc(doc(db, "users", sellerId), { followersCount: newFollowers });
+        
+        const myUserDoc = await getDoc(doc(db, "users", currentUser.uid));
+        const myFollowing = (myUserDoc.data()?.followingCount || 0) + 1;
+        await updateDoc(doc(db, "users", currentUser.uid), { followingCount: myFollowing });
+      }
+    } catch (err) {
+      console.error("Error toggling follow status:", err);
+    }
+  };
+
+  const handleAdminAdjustFollowers = async () => {
+    if (!sellerId || !adminFollowersInput) return;
+    try {
+      const count = Math.max(0, parseInt(adminFollowersInput) || 0);
+      await updateDoc(doc(db, "users", sellerId), { followersCount: count });
+      setFollowersCount(count);
+      alert(`Followers adjusted to ${count} successfully!`);
+    } catch (err) {
+      console.error("Error adjusting followers count:", err);
+      alert("Failed to adjust count");
+    }
+  };
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (!sellerId) return;
+
+    const loadStore = async () => {
+      setLoading(true);
+      try {
+        // 1. Fetch Seller User Doc
+        if (sellerId === "system") {
+          const profile = {
+            id: "system",
+            shopName: "DEEP SHOP HQ",
+            displayName: "DEEP SHOP",
+            kycStatus: "verified" as const,
+            tiktokId: "deepshop.official",
+            bio: "Welcome to DEEP SHOP HQ! The top-rated provider of Border Cross Phones, Original Mobiles, and premium high-quality tech accessories in Bangladesh.",
+            address: "Dr. ishak Shopping Center (FTC), Room Number: 54, Ground Floor, Dhaka, BD",
+            followersCount: 32000,
+            followingCount: 42
+          };
+          setSeller(profile);
+          setFollowersCount(profile.followersCount);
+          setFollowingCount(profile.followingCount);
+        } else {
+          const userSnap = await getDoc(doc(db, "users", sellerId));
+          if (userSnap.exists()) {
+            const udata = userSnap.data();
+            setSeller({ id: userSnap.id, ...udata } as SellerProfile);
+            setFollowersCount(udata.followersCount || 0);
+            setFollowingCount(udata.followingCount || 0);
+            setAdminFollowersInput(String(udata.followersCount || 0));
+          } else {
+            // Fallback mock/defaults if user doc not fully created
+            const profile = {
+              id: sellerId,
+              shopName: "Genuine DEEP SHOP Merchant",
+              displayName: "Verified Seller",
+              kycStatus: "unverified" as const,
+              bio: "Connecting top buyers and sellers across Bangladesh.",
+              followersCount: 0,
+              followingCount: 0
+            };
+            setSeller(profile);
+            setFollowersCount(profile.followersCount);
+            setFollowingCount(profile.followingCount);
+          }
+        }
+
+        // Check user followed state
+        const currentUser = auth.currentUser;
+        if (currentUser && sellerId) {
+          const followSnap = await getDoc(doc(db, "follows", `${currentUser.uid}_${sellerId}`));
+          setIsFollowing(followSnap.exists());
+        }
+
+        // 2. Fetch Seller's Products
+        const q = query(
+          collection(db, "products"),
+          where("sellerId", "==", sellerId === "system" ? null : sellerId)
+        );
+        const snap = await getDocs(q);
+        const plist = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // If system, and no products matched, fetch default products
+        if (sellerId === "system" && plist.length === 0) {
+          const allSnap = await getDocs(collection(db, "products"));
+          const systemList = allSnap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter((p: any) => !p.sellerId);
+          setProducts(systemList);
+        } else {
+          setProducts(plist);
+        }
+
+        // 3. Fetch Seller's Reviews
+        let rList: any[] = [];
+        const rQuery = query(
+          collection(db, "reviews"),
+          where("sellerId", "==", sellerId)
+        );
+        const rSnap = await getDocs(rQuery);
+        rList = rSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        if (rList.length === 0 && plist.length > 0) {
+          const productIds = plist.map(p => p.id);
+          const allReviewsSnap = await getDocs(collection(db, "reviews"));
+          rList = allReviewsSnap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(r => productIds.includes(r.productId));
+        }
+        setReviews(rList);
+
+        // 4. Fetch Chat/User reviews
+        const urQuery = query(
+          collection(db, "user_reviews"),
+          where("revieweeId", "==", sellerId)
+        );
+        const urSnap = await getDocs(urQuery);
+        const urList = urSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setUserReviews(urList);
+
+      } catch (err) {
+        console.error("Error loading store:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStore();
+  }, [sellerId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#EF8020] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm text-zinc-500 mt-4 font-bold">Opening Store Entrance...</p>
+      </div>
+    );
+  }
+
+  if (!seller) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-6">
+        <ShieldAlert className="w-16 h-16 text-rose-500 mb-4" />
+        <h1 className="text-xl font-bold">Profile Not Found</h1>
+        <p className="text-sm text-zinc-500 text-center max-w-xs mt-2">The user or store you are trying to visit does not exist.</p>
+        <Button onClick={() => navigate("/")} className="mt-6 bg-zinc-900 text-white rounded-xl">Go Home</Button>
+      </div>
+    );
+  }
+
+  // Determine if they are a seller
+  const isSeller = seller.role === "seller" || products.length > 0 || sellerId === "system";
+
+  // Group products by Categories
+  const categoriesMap: Record<string, any[]> = {};
+  products.forEach((p) => {
+    const cat = p.category || "General Gear";
+    if (!categoriesMap[cat]) categoriesMap[cat] = [];
+    categoriesMap[cat].push(p);
+  });
+
+  // Latest products section (sorted by date desc)
+  const latestProducts = [...products]
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    .slice(0, 6);
+
+  // Offers products
+  const offerProducts = products.filter((p) => p.isOffer);
+
+  const getSellerRatingValue = () => {
+    if (seller && (seller as any).customRating !== undefined && (seller as any).customRating !== null && String((seller as any).customRating).trim() !== "") {
+      return Number((seller as any).customRating);
+    }
+    const combined = [...reviews, ...userReviews];
+    if (combined.length > 0) {
+      const sum = combined.reduce((acc, r) => acc + (r.rating || 0), 0);
+      return Number((sum / combined.length).toFixed(1));
+    }
+    return 0;
+  };
+
+  const sellerRating = getSellerRatingValue();
+
+  const renderStars = (rating: number) => {
+    const fullStars = Math.floor(rating);
+    const filledCount = rating % 1 > 0.7 ? fullStars + 1 : fullStars;
+    
+    return (
+      <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-2 flex-wrap min-w-0">
+        <div className="flex items-center gap-0.5 shrink-0">
+          {Array.from({ length: 5 }).map((_, i) => {
+            const isFilled = i < filledCount;
+            return (
+              <Star
+                key={i}
+                className={`w-3.5 h-3.5 shrink-0 ${
+                  isFilled ? "text-amber-500 fill-amber-500" : "text-zinc-350 dark:text-zinc-650"
+                }`}
+              />
+            );
+          })}
+        </div>
+        <span className="text-[10px] font-black bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 flex items-center justify-center">
+          {rating > 0 ? `${rating} Rating` : "0.0 Rating"}
+        </span>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20 font-inter">
+      {/* Upper Brand Cover Photo */}
+      <div 
+        className="relative h-48 sm:h-64 bg-cover bg-center overflow-hidden transition-all duration-300"
+        style={{ backgroundImage: `url(${seller.profileBg || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"})` }}
+      >
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>

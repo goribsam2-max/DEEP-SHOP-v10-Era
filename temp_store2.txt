@@ -1,0 +1,400 @@
+        
+        {/* Back Button */}
+        <button 
+          onClick={() => navigate(-1)} 
+          className="absolute top-4 left-4 z-20 p-2.5 rounded-full bg-black/30 backdrop-blur-md text-white hover:bg-black/50 transition"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Main Container */}
+      <div className="max-w-4xl mx-auto px-4 -mt-20 relative z-10">
+        
+        {/* Premium Profile Header Card */}
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-xl border border-zinc-200/50 dark:border-zinc-800/80 mb-6 flex flex-col items-center sm:items-start text-center sm:text-left gap-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 w-full">
+            
+            {/* Circle Avatar */}
+            <Avatar className="h-28 w-28 border-4 border-white dark:border-zinc-900 shadow-lg bg-zinc-100 dark:bg-zinc-850 shrink-0">
+              {seller.photoURL || seller.avatarUrl ? (
+                <img src={seller.photoURL || seller.avatarUrl} alt={seller.shopName || seller.displayName || "User"} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <AvatarFallback className="bg-gradient-to-tr from-[#EF8020]/20 to-[#EF8020]/40 text-zinc-900 dark:text-zinc-50 font-black text-2xl uppercase">
+                  {(seller.shopName || seller.displayName || "VG").slice(0, 2)}
+                </AvatarFallback>
+              )}
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
+                <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight break-words">
+                  {seller.shopName || seller.displayName || "Verified User"}
+                </h1>
+                
+                {seller.kycStatus === "verified" ? (
+                  <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-900/30 whitespace-nowrap">
+                    <VerifiedIcon className="w-3.5 h-3.5" /> Verified Profile
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700 whitespace-nowrap">
+                    Member
+                  </span>
+                )}
+              </div>
+
+              {/* Verified Address (If Available) */}
+              {seller.address ? (
+                <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 justify-center sm:justify-start text-xs font-semibold mt-1">
+                  <MapPin className="w-4 h-4 text-[#EF8020] shrink-0" />
+                  <span>{seller.address}</span>
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                  Verified platform member since recently
+                </p>
+              )}
+
+              {renderStars(sellerRating)}
+
+              {/* Gorgeous SVG Social Badges Row */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-4">
+                {seller.facebookUrl && (
+                  <a 
+                    href={seller.facebookUrl.startsWith("http") ? seller.facebookUrl : `https://facebook.com/${seller.facebookUrl}`} 
+                    target="_blank" 
+                    referrerPolicy="no-referrer"
+                    className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/15 text-[11px] font-extrabold rounded-full transition"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    Facebook
+                  </a>
+                )}
+                {seller.tiktokId && (
+                  <a 
+                    href={`https://tiktok.com/@${seller.tiktokId}`} 
+                    target="_blank" 
+                    referrerPolicy="no-referrer"
+                    className="flex items-center gap-1.5 px-3 py-1 bg-zinc-900/10 text-zinc-900 dark:bg-white/10 dark:text-zinc-200 hover:bg-zinc-900/15 text-[11px] font-extrabold rounded-full transition"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.02 1.59 4.23.95 1.2 2.27 2 3.76 2.27v3.93c-1.89-.04-3.72-.67-5.26-1.78-.18-.13-.35-.27-.51-.42v6.19c.01 1.76-.48 3.48-1.42 4.93-.94 1.46-2.29 2.56-3.87 3.17-1.58.61-3.32.74-4.97.37-1.66-.36-3.17-1.28-4.32-2.61-1.16-1.34-1.81-3.05-1.87-4.81-.06-1.76.45-3.49 1.44-4.93.99-1.44 2.39-2.5 4.01-3.04 1.62-.54 3.38-.6 5.04-.17v4.03c-1.09-.27-2.25-.19-3.28.25-.1.04-.19.09-.29.15-.71.43-1.26 1.09-1.57 1.88-.31.79-.34 1.66-.08 2.47.26.81.79 1.5 1.5 1.96.71.46 1.56.66 2.4.55.84-.11 1.62-.53 2.19-1.19.57-.66.86-1.5.82-2.37V.02h.11z"/>
+                    </svg>
+                    TikTok
+                  </a>
+                )}
+                {seller.instagramUrl && (
+                  <a 
+                    href={seller.instagramUrl.startsWith("http") ? seller.instagramUrl : `https://instagram.com/${seller.instagramUrl}`} 
+                    target="_blank" 
+                    referrerPolicy="no-referrer"
+                    className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 text-[11px] font-extrabold rounded-full transition"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                    </svg>
+                    Instagram
+                  </a>
+                )}
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* Followers, Following, Rating Stats Row (Matches Sialvi layout) */}
+          <div className="w-full grid grid-cols-3 gap-2 py-4 px-6 bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-150 dark:border-zinc-800 rounded-2xl text-center shadow-xs">
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">Followers</p>
+              <p className="text-xl font-extrabold text-zinc-900 dark:text-white mt-0.5">
+                {followersCount >= 1000 ? `${(followersCount / 1000).toFixed(1)}k` : followersCount}
+              </p>
+            </div>
+            <div className="border-x border-zinc-200 dark:border-zinc-800">
+              <p className="text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">Following</p>
+              <p className="text-xl font-extrabold text-zinc-900 dark:text-white mt-0.5">{followingCount}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">Positive Stars</p>
+              <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {sellerRating > 0 ? `${Math.round((sellerRating / 5) * 100)}%` : "98%"}
+              </p>
+            </div>
+          </div>
+
+          {/* Action Buttons: Follow, Message, and Call */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full shrink-0 mt-2">
+            
+            {/* Dynamic Follow Button */}
+            <Button
+              onClick={handleFollowToggle}
+              className={`w-full sm:flex-1 h-11 text-xs font-black uppercase rounded-xl tracking-wider transition-all duration-300 flex items-center justify-center gap-2 border ${
+                isFollowing 
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100/70 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30" 
+                  : "bg-[#EF8020] hover:bg-[#EF8020]/90 text-white border-transparent shadow-md"
+              }`}
+            >
+              {isFollowing ? (
+                <>
+                  <UserCheck className="w-4 h-4 shrink-0" />
+                  <span>Following</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 shrink-0" />
+                  <span>Follow User</span>
+                </>
+              )}
+            </Button>
+
+            {/* Message Button */}
+            <Button
+              onClick={() => navigate(`/messages?chatId=${seller.id}`)}
+              className="w-full sm:flex-1 h-11 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 text-xs font-black uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2"
+            >
+              <MessageSquare className="w-4 h-4 shrink-0" /> 
+              <span>{isSeller ? "Message Store" : "Message User"}</span>
+            </Button>
+
+            {/* Audio Call */}
+            <Button
+              onClick={() => navigate(`/messages?chatId=${seller.id}&autoCall=true`)}
+              className="w-full sm:w-auto h-11 px-5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white text-xs font-black uppercase tracking-wider rounded-xl border border-zinc-200 dark:border-zinc-700 transition flex items-center justify-center gap-2"
+            >
+              <Phone className="w-4 h-4 text-emerald-500 fill-emerald-500 shrink-0" />
+              <span>Call</span>
+            </Button>
+
+          </div>
+
+          {/* Admin Manual Followers Adjustment Tool */}
+          {isAdmin && (
+            <div className="w-full mt-2 pt-4 border-t border-dashed border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center gap-3 justify-between bg-[#EF8020]/5 p-4 rounded-2xl">
+              <div className="flex items-center gap-2 text-xs font-black text-[#EF8020] uppercase shrink-0">
+                <ShieldCheck className="w-4.5 h-4.5" />
+                <span>Admin Followers Tool:</span>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <input 
+                  type="number"
+                  placeholder="Set followers e.g. 1500"
+                  value={adminFollowersInput}
+                  onChange={(e) => setAdminFollowersInput(e.target.value)}
+                  className="px-3 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs font-bold rounded-lg w-32 text-zinc-900 dark:text-white outline-none"
+                />
+                <button 
+                  onClick={handleAdminAdjustFollowers}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg transition"
+                >
+                  Adjust
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* PROFILE TAB NAVIGATION */}
+        <div className="flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 p-1.5 rounded-2xl shadow-sm gap-1.5 mb-6">
+          <button 
+            onClick={() => setActiveTab("home")}
+            className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTab === "home" 
+                ? "bg-[#EF8020] text-white shadow-sm" 
+                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            <span>Home</span>
+          </button>
+          
+          {isSeller && (
+            <button 
+              onClick={() => setActiveTab("products")}
+              className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+                activeTab === "products" 
+                  ? "bg-[#EF8020] text-white shadow-sm" 
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              <span>Products ({products.length})</span>
+            </button>
+          )}
+
+          <button 
+            onClick={() => setActiveTab("reviews")}
+            className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTab === "reviews" 
+                ? "bg-[#EF8020] text-white shadow-sm" 
+                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            <span>Reviews ({reviews.length + userReviews.length})</span>
+          </button>
+        </div>
+
+        {/* TAB CONTENTS */}
+
+        {/* Tab 1: HOME TAB */}
+        {activeTab === "home" && (
+          <div className="space-y-6">
+            
+            {/* About / Bio section */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/80 rounded-3xl p-6 shadow-sm">
+              <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-3">About / Biography</h3>
+              <p className="text-sm text-zinc-650 dark:text-zinc-350 leading-relaxed font-medium">
+                {seller.bio || "No profile biography written yet. Update biography in the Edit Profile page!"}
+              </p>
+            </div>
+
+            {/* Address Location Card */}
+            {seller.address && (
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/80 rounded-3xl p-6 shadow-sm flex items-start gap-4">
+                <div className="p-3 bg-[#EF8020]/10 rounded-2xl text-[#EF8020]">
+                  <MapPin className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">Business / Personal Location</h4>
+                  <p className="text-sm text-zinc-650 dark:text-zinc-350 mt-1 font-medium">{seller.address}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Dynamic mini-products display if seller */}
+            {isSeller && latestProducts.length > 0 && (
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/80 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">Featured Catalog</h3>
+                  <button onClick={() => setActiveTab("products")} className="text-xs font-extrabold text-[#EF8020] hover:underline">
+                    View All
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {latestProducts.slice(0, 3).map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* Tab 2: PRODUCTS CATALOGUE TAB */}
+        {activeTab === "products" && isSeller && (
+          <div className="space-y-8">
+            
+            {/* Promo Offers section if present */}
+            {offerProducts.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="bg-rose-500 text-white font-extrabold text-[9px] uppercase px-2 py-0.5 rounded">Promo</span>
+                  <h2 className="text-sm font-black text-zinc-950 dark:text-zinc-50 tracking-tight uppercase">Special Flash Deals</h2>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none snap-x">
+                  {offerProducts.map((p) => (
+                    <div key={p.id} className="w-64 shrink-0 snap-start">
+                      <ProductCard product={p} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* All Products in Categorized list */}
+            <div className="space-y-10">
+              {Object.entries(categoriesMap).map(([category, catProds]) => (
+                <div key={category} className="border-t border-zinc-200/60 dark:border-zinc-800/60 pt-6">
+                  <div className="flex items-center gap-2.5 mb-5">
+                    <div className="w-1.5 h-4 bg-[#EF8020] rounded-full"></div>
+                    <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider">{category}</h3>
+                    <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      {catProds.length} Items
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {catProds.map((p) => (
+                      <ProductCard key={p.id} product={p} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {products.length === 0 && (
+              <div className="text-center py-20 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl">
+                <LayoutGrid className="w-12 h-12 text-zinc-400 mx-auto mb-3 animate-pulse" />
+                <h3 className="text-md font-bold">No Products Yet</h3>
+                <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">This merchant hasn't listed any products for sale.</p>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* Tab 3: REVIEWS TAB */}
+        {activeTab === "reviews" && (
+          <div className="space-y-6">
+            
+            {/* Reviews list */}
+            {reviews.length + userReviews.length === 0 ? (
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-12 text-center">
+                <Star className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mx-auto mb-3 animate-spin" style={{ animationDuration: "5s" }} />
+                <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">No Ratings Yet</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
+                  Be the first to review this member! Ratings are given during chat transactions or direct product orders.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  ...reviews.map(r => ({ ...r, isProductReview: true })),
+                  ...userReviews.map(r => ({ ...r, isProductReview: false }))
+                ]
+                  .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                  .map((r, i) => {
+                    const ratingVal = r.rating || 5;
+                    const commentVal = r.comment || r.text || "No detailed feedback provided.";
+                    const dateString = r.createdAt ? new Date(r.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : "Recent";
+                    
+                    return (
+                      <div 
+                        key={r.id || i} 
+                        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition relative flex flex-col justify-between"
+                      >
+                        <div>
+                          {/* Header details with potential admin actions */}
+                          <div className="flex items-start justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 text-xs font-black text-zinc-700 dark:text-zinc-300 uppercase overflow-hidden border border-zinc-200/50 dark:border-zinc-700/50">
+                                {r.reviewerPhoto || r.userPhoto ? (
+                                  <img src={r.reviewerPhoto || r.userPhoto} alt="Reviewer" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>{(r.reviewerName || r.userName || "U")[0]}</span>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <h5 className="font-bold text-xs text-zinc-900 dark:text-zinc-100 truncate">
+                                  {r.reviewerName || r.userName || "Verified User"}
+                                </h5>
+                                <span className="text-[10px] text-zinc-400 font-medium block">
+                                  {dateString}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Review category label & admin buttons */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {isAdmin && (
+                                <div className="flex items-center gap-1">
+                                  <button 
+                                    onClick={() => handleOpenAdminEdit(r, r.isProductReview)}
+                                    className="p-1 rounded bg-zinc-100 hover:bg-amber-100 text-zinc-500 hover:text-amber-600 dark:bg-zinc-850 dark:hover:bg-amber-950 transition"
+                                    title="Edit review"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                  </button>

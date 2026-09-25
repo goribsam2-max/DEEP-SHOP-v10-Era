@@ -1,0 +1,139 @@
+  
+      {/* Delete Message Bottom Sheet */}
+      <AnimatePresence>
+        {deleteMessageId && (
+          <div className="fixed inset-0 z-[10000] flex items-end justify-center sm:items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="bg-white dark:bg-[#1C1C1D] w-full max-w-sm sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl font-inter flex flex-col"
+            >
+              <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+                <h3 className="text-center font-bold text-zinc-900 dark:text-white">Delete Message</h3>
+              </div>
+              <div className="p-4 space-y-2">
+                <button
+                  onClick={async () => {
+                    if(!user || (!activeChat && !activeChannel)) return;
+                    try {
+                      let colRef;
+                      if (activeChannel) {
+                        colRef = collection(db, 'community_channels', activeChannel.id, 'messages');
+                      } else {
+                        colRef = collection(db, 'p2p_chats', activeChat.id, 'messages');
+                      }
+                      await updateDoc(doc(colRef, deleteMessageId), {
+                        deletedFor: arrayUnion(user.uid)
+                      });
+                      // setNotify handled in component context, maybe use window.dispatchEvent if no hook
+                    } catch(e) {
+                      console.error(e);
+                    }
+                    setDeleteMessageId(null);
+                  }}
+                  className="w-full py-4 text-center font-bold text-[15px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-2xl transition"
+                >
+                  Delete for me
+                </button>
+                <button
+                  onClick={async () => {
+                    if(!user || (!activeChat && !activeChannel)) return;
+                    const msg = activeChannel ? channelMessages.find(m => m.id === deleteMessageId) : messages.find(m => m.id === deleteMessageId);
+                    if(!msg || msg.senderId !== user.uid) {
+                        alert("You can only delete your own messages for everyone");
+                        return;
+                    }
+                    try {
+                      let colRef;
+                      if (activeChannel) {
+                        colRef = collection(db, 'community_channels', activeChannel.id, 'messages');
+                      } else {
+                        colRef = collection(db, 'p2p_chats', activeChat.id, 'messages');
+                      }
+                      await updateDoc(doc(colRef, deleteMessageId), {
+                        isDeletedForEveryone: true
+                      });
+                    } catch(e) {
+                      console.error(e);
+                    }
+                    setDeleteMessageId(null);
+                  }}
+                  className="w-full py-4 text-center font-bold text-[15px] bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-500 rounded-2xl transition"
+                >
+                  Delete for everyone
+                </button>
+                <button
+                  onClick={() => setDeleteMessageId(null)}
+                  className="w-full py-4 mt-2 text-center font-bold text-[15px] text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Auto Delete Modal */}
+      <AnimatePresence>
+        {showAutoDeleteModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-[#1C1C1D] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl font-inter flex flex-col relative"
+            >
+              <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
+                <h3 className="font-bold text-lg text-zinc-900 dark:text-white">Auto-Delete</h3>
+                <button onClick={() => setShowAutoDeleteModal(false)} className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">
+                  <X className="w-5 h-5 text-zinc-500" />
+                </button>
+              </div>
+              <div className="p-4 space-y-2">
+                <p className="text-sm text-zinc-500 mb-4">Set a timer for new messages. Messages will be automatically deleted after the selected duration.</p>
+                {[ 
+                  { label: "1 Day", val: 86400000 }, 
+                  { label: "1 Week", val: 604800000 }, 
+                  { label: "1 Month", val: 2592000000 } 
+                ].map((t) => (
+                    <button
+                      key={t.label}
+                      onClick={async () => {
+                        if(activeChat) {
+                            try {
+                                await updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+                                    autoDeleteTimer: { duration: t.val, setAt: Date.now() }
+                                });
+                                setShowAutoDeleteModal(false);
+                            } catch(e) {}
+                        }
+                      }}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-xl transition"
+                    >
+                      <span className="font-bold">{t.label}</span>
+                      {activeChat?.autoDeleteTimer?.duration === t.val && <CheckCheck className="w-5 h-5 text-emerald-500" />}
+                    </button>
+                ))}
+                {activeChat?.autoDeleteTimer && (
+                    <button
+                      onClick={async () => {
+                        try {
+                            await updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+                                autoDeleteTimer: null
+                            });
+                            setShowAutoDeleteModal(false);
+                        } catch(e) {}
+                      }}
+                      className="w-full mt-4 py-3 text-center font-bold text-[15px] bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-500 rounded-xl transition"
+                    >
+                      Turn Off
+                    </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>

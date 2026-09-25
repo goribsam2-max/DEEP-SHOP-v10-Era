@@ -1,0 +1,626 @@
+
+  // Format Date for Order Details
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-US', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+  };
+
+  const getStatusColor = (status) => {
+    if (!status) return "text-zinc-800";
+    const s = status.toLowerCase();
+    if (s.includes("new") || s.includes("pending")) return "text-blue-600";
+    if (s.includes("confirm")) return "text-emerald-600";
+    if (s.includes("ship")) return "text-orange-600";
+    if (s.includes("deliver")) return "text-emerald-600";
+    if (s.includes("cancel") || s.includes("reject")) return "text-rose-600";
+    return "text-zinc-800";
+  };
+
+  const NavItem = ({ icon: Icon, label, tab }: any) => {
+    const isActive = activeTab === tab || activeTab.startsWith(tab);
+    return (
+      <button
+        onClick={() => { setActiveTab(tab); setSelectedOrderId(null); }}
+        className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all ${
+          isActive ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
+        }`}
+      >
+        <Icon className={`w-6 h-6 mb-1 ${isActive ? "fill-zinc-900 text-zinc-900" : ""}`} strokeWidth={isActive ? 2.5 : 2} />
+        <span className={`text-[10px] font-medium ${isActive ? "font-bold text-zinc-900" : ""}`}>{label}</span>
+      </button>
+    );
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        notify("Uploading logo...", "info");
+        const url = await uploadToImgbb(file);
+        setShopLogo(url);
+        notify("Logo uploaded successfully!", "success");
+      } catch (err) {
+        notify("Failed to upload logo", "error");
+      }
+    }
+  };
+
+  return (
+    <div id="seller-dashboard-page" className="min-h-screen bg-[#F5F5F7] text-zinc-900 font-sans flex flex-col md:flex-row pb-24 md:pb-0 relative">
+      
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 shrink-0 border-r border-zinc-200/80 bg-white p-6 sticky top-0 h-screen z-40 overflow-y-auto no-scrollbar">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-10 h-10 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-lg overflow-hidden">
+            {shopLogo ? <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" /> : storeInitials}
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-zinc-900">{shopName || "Seller Studio"}</h3>
+            <span className="text-[10px] text-zinc-500">Dashboard</span>
+          </div>
+        </div>
+        <nav className="flex flex-col gap-2 flex-1">
+          <button onClick={() => { setActiveTab("home"); setSelectedOrderId(null); }} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab === "home" ? "bg-zinc-100 text-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
+            <HomeIcon className={`w-5 h-5 ${activeTab === "home" ? "fill-zinc-900 text-zinc-900" : ""}`} /> Home
+          </button>
+          <button onClick={() => { setActiveTab("orders"); setSelectedOrderId(null); }} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab === "orders" ? "bg-zinc-100 text-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
+            <ShoppingBag className={`w-5 h-5 ${activeTab === "orders" ? "fill-zinc-900 text-zinc-900" : ""}`} /> Orders
+          </button>
+          <button onClick={() => { setActiveTab("products"); setSelectedOrderId(null); }} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab === "products" || activeTab === "add_product" || activeTab === "edit_product" ? "bg-zinc-100 text-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
+            <Package className={`w-5 h-5 ${activeTab === "products" || activeTab === "add_product" || activeTab === "edit_product" ? "fill-zinc-900 text-zinc-900" : ""}`} /> Products
+          </button>
+          <button onClick={() => { setActiveTab("settings_store"); setSelectedOrderId(null); }} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab.startsWith("settings") ? "bg-zinc-100 text-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
+            <Settings className={`w-5 h-5 ${activeTab.startsWith("settings") ? "fill-zinc-900 text-zinc-900" : ""}`} /> Settings
+          </button>
+        </nav>
+      </aside>
+
+      {/* Main Workspace */}
+      <main className="flex-1 w-full max-w-2xl mx-auto p-4 md:p-8 overflow-y-auto no-scrollbar relative min-h-screen">
+        
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32">
+            <Loader2 className="w-8 h-8 text-zinc-900 animate-spin mb-4" />
+            <span className="text-sm text-zinc-500 font-medium">Loading Dashboard...</span>
+          </div>
+        ) : (
+          <div className="pb-10">
+            {/* --- HOME TAB --- */}
+            {activeTab === "home" && !selectedOrderId && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Header Profile */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-xl overflow-hidden border border-zinc-200 shadow-sm">
+                      {shopLogo ? <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" /> : storeInitials}
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 font-medium mb-0.5">Good Morning!</p>
+                      <h2 className="text-base font-bold text-zinc-900 leading-tight">{shopName || "Seller Studio"}</h2>
+                    </div>
+                  </div>
+                  <button className="w-11 h-11 bg-white rounded-full flex items-center justify-center shadow-sm border border-zinc-100 relative">
+                    <Bell className="w-5 h-5 text-zinc-800" strokeWidth={2.5} />
+                    {orders.some(o => o.status === "New Order") && <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-zinc-900 rounded-full border border-white"></span>}
+                  </button>
+                </div>
+
+                {/* Sales Overview Card */}
+                <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-zinc-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-zinc-900 text-[15px]">Sales Overview</h3>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-zinc-500 font-medium">All Time</span>
+                      <ArrowRight className="w-4 h-4 text-zinc-400 rotate-[-45deg]" strokeWidth={3} />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-end justify-between mb-6">
+                    <div>
+                      <p className="text-[11px] text-zinc-500 font-medium mb-1">Total Earning</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-zinc-900 tracking-tight">${totalEarnings.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    {/* Mock Chart Icon */}
+                    <div className="flex items-end gap-1 h-10">
+                      <div className="w-2.5 h-4 bg-zinc-200 rounded-sm"></div>
+                      <div className="w-2.5 h-6 bg-zinc-300 rounded-sm"></div>
+                      <div className="w-2.5 h-8 bg-zinc-800 rounded-sm"></div>
+                      <div className="w-2.5 h-5 bg-zinc-300 rounded-sm"></div>
+                      <div className="w-2.5 h-7 bg-zinc-400 rounded-sm"></div>
+                      <div className="w-2.5 h-3 bg-zinc-200 rounded-sm"></div>
+                    </div>
+                  </div>
+
+                  {/* Stats Row */}
+                  <div className="flex items-center justify-between pt-4 border-t border-zinc-100">
+                    <div>
+                      <p className="text-[10px] text-zinc-500 font-medium mb-1">Revenue</p>
+                      <p className="text-xs font-bold text-zinc-900">${totalEarnings.toLocaleString()}</p>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-200"></div>
+                    <div>
+                      <p className="text-[10px] text-zinc-500 font-medium mb-1">Product</p>
+                      <p className="text-xs font-bold text-zinc-900">{products.length}</p>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-200"></div>
+                    <div>
+                      <p className="text-[10px] text-zinc-500 font-medium mb-1">Customer</p>
+                      <p className="text-xs font-bold text-zinc-900">{uniqueCustomersCount}</p>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-200"></div>
+                    <div>
+                      <p className="text-[10px] text-zinc-500 font-medium mb-1">Avg. Order</p>
+                      <p className="text-xs font-bold text-zinc-900">${averageOrderValue}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top Selling Products */}
+                <div>
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <h3 className="font-bold text-zinc-900 text-[15px]">Top Selling Products</h3>
+                    <button onClick={() => setActiveTab("products")} className="text-xs text-zinc-500 font-medium">See all</button>
+                  </div>
+                  
+                  <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-zinc-100 flex flex-col gap-5">
+                    {topProducts.length > 0 ? topProducts.map((p: any, idx: number) => (
+                      <div key={p.id || idx} className={`flex items-center justify-between ${idx !== topProducts.length - 1 ? "pb-5 border-b border-zinc-100" : ""}`}>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] border border-zinc-100 overflow-hidden shrink-0 p-1 flex items-center justify-center">
+                            {p.image || (p.imageFiles && p.imageFiles[0]) || p.modelUrl ? (
+                              <img src={p.image || p.modelUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80"} alt={p.name} className="w-full h-full object-contain mix-blend-multiply" />
+                            ) : (
+                              <Package className="w-5 h-5 text-zinc-300" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-[13px] font-bold text-zinc-900 leading-tight mb-0.5 line-clamp-1">{p.name}</h4>
+                            <p className="text-[11px] text-zinc-400 font-medium">{p.category || "General"}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[13px] font-bold text-zinc-900 mb-0.5">{p.unitsSold} Units</p>
+                          <p className="text-[9px] font-bold text-emerald-500 flex items-center justify-end gap-0.5">
+                            <ArrowRight className="w-2.5 h-2.5 rotate-[-45deg]" strokeWidth={3} />
+                            Active
+                          </p>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="text-center py-6 text-zinc-500 text-sm">No sales data yet.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- ORDERS TAB --- */}
+            {activeTab === "orders" && !selectedOrderId && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
+                {/* Search Header */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-white rounded-2xl h-12 flex items-center px-4 shadow-sm border border-zinc-100">
+                    <Search className="w-5 h-5 text-zinc-400 mr-3" />
+                    <input 
+                      type="text" 
+                      placeholder="Filter by Status (e.g., Pending, Confirmed)..." 
+                      value={orderFilter === "all" ? "" : orderFilter}
+                      onChange={(e) => setOrderFilter(e.target.value || "all")}
+                      className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-zinc-900 placeholder:text-zinc-400"
+                    />
+                  </div>
+                  <button className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-zinc-100 shrink-0">
+                    <SlidersHorizontal className="w-5 h-5 text-zinc-800" />
+                  </button>
+                </div>
+
+                {/* Orders List */}
+                <div className="flex-1 overflow-y-auto pb-4 space-y-4">
+                  {filteredOrders.length > 0 ? filteredOrders.map((ord: any, idx: number) => {
+                    const firstItem = ord.items?.[0] || {};
+                    const totalPcs = ord.items?.reduce((sum: number, i: any) => sum + (i.quantity || 1), 0) || 1;
+                    return (
+                      <div key={ord.id || idx} onClick={() => setSelectedOrderId(ord.id)} className="bg-white rounded-[1.5rem] p-4 shadow-sm border border-zinc-100 cursor-pointer active:scale-[0.98] transition-transform">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] border border-zinc-100 overflow-hidden p-1 flex items-center justify-center shrink-0">
+                              {firstItem.image || firstItem.modelUrl ? (
+                                <img src={firstItem.image || firstItem.modelUrl} alt={firstItem.name} className="w-full h-full object-contain mix-blend-multiply" />
+                              ) : <Package className="w-5 h-5 text-zinc-300" />}
+                            </div>
+                            <div>
+                              <h4 className="text-[13px] font-bold text-zinc-900 line-clamp-1">{firstItem.name || "Unknown Item"}</h4>
+                              <p className="text-[11px] text-zinc-500 font-medium mt-0.5">{formatDate(ord.createdAt)}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-[11px] font-bold ${getStatusColor(ord.status || "New Order")}`}>{ord.status || "New Order"}</p>
+                            <p className="text-[10px] text-zinc-400 font-medium mt-0.5 uppercase">#{ord.id?.slice(0, 8) || "N/A"}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 pt-3 border-t border-zinc-100 px-1">
+                          <div className="flex items-center gap-1.5">
+                            <ShoppingBag className="w-3.5 h-3.5 text-zinc-400" />
+                            <span className="text-[11px] text-zinc-600 font-semibold">{totalPcs} Pcs</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-zinc-400" />
+                            <span className="text-[11px] text-zinc-600 font-semibold line-clamp-1">{ord.shippingAddress?.fullName || "Guest"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }) : (
+                    <div className="text-center py-10 text-zinc-500 font-medium">No orders found.</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* --- ORDER DETAILS --- */}
+            {selectedOrderId && (() => {
+              const order = orders.find(o => o.id === selectedOrderId);
+              if (!order) return <div className="p-10 text-center">Order not found.</div>;
+
+              const orderSubtotal = order.items?.reduce((acc: number, item: any) => acc + (Number(item.price || 0) * Number(item.quantity || 1)), 0) || order.total || 0;
+              const shippingCharge = order.shippingFee || 0;
+              const taxAmount = order.taxAmount || 0;
+              const discountAmount = order.discountAmount || 0;
+              
+              // Calculate Advance Paid
+              // Advance could be stored in order document, or derived from items
+              let advancePaid = Number(order.advancePaid || 0);
+              if (!advancePaid && order.items) {
+                 // Check if any items had advance amount required
+                 advancePaid = order.items.reduce((sum: number, item: any) => {
+                    const adv = Number(item.advanceAmount || 0);
+                    return sum + (adv * (item.quantity || 1));
+                 }, 0);
+              }
+              if (!advancePaid && defaultAdvanceAmount) {
+                 advancePaid = Number(defaultAdvanceAmount);
+              }
+
+              const totalAmount = (orderSubtotal + shippingCharge + taxAmount) - discountAmount;
+              const dueAmount = Math.max(0, totalAmount - advancePaid);
+
+              return (
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500 pb-8">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <button 
+                      onClick={() => setSelectedOrderId(null)} 
+                      className="w-10 h-10 bg-white border border-zinc-100 rounded-xl flex items-center justify-center shadow-sm hover:bg-zinc-50"
+                    >
+                      <ArrowLeft className="w-5 h-5 text-zinc-800" />
+                    </button>
+                    <h2 className="text-[17px] font-bold text-zinc-900">Order Details</h2>
+                    <div className="w-10 text-right">
+                       <span className={`text-[10px] font-bold uppercase ${getStatusColor(order.status)}`}>{order.status}</span>
+                    </div>
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 space-y-5">
+                    <h3 className="font-bold text-zinc-900 text-sm">Customer Info</h3>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-400">
+                          <Users className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-zinc-900 mb-0.5">{order.shippingAddress?.fullName || "Guest User"}</h4>
+                          <p className="text-[11px] text-zinc-500 font-medium">#{order.id.slice(0, 8)}</p>
+                        </div>
+                      </div>
+                      <button className="w-10 h-10 bg-[#F5F5F7] rounded-full flex items-center justify-center">
+                        <MessageSquare className="w-5 h-5 fill-zinc-600 text-zinc-600" />
+                      </button>
+                    </div>
+                    <div className="space-y-3 pt-4 border-t border-zinc-100">
+                      <div className="flex items-start gap-2.5">
+                        <MapPin className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" />
+                        <span className="text-[11px] font-medium text-zinc-600">{order.shippingAddress?.address}, {order.shippingAddress?.city}</span>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <Phone className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" />
+                        <span className="text-[11px] font-medium text-zinc-600">{order.shippingAddress?.phone}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Order Summary */}
+                  <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 space-y-4">
+                    <h3 className="font-bold text-zinc-900 text-sm">Order Items</h3>
+                    <div className="space-y-4">
+                      {order.items?.map((item: any, idx: number) => (
+                        <div key={idx} className={`flex items-center justify-between ${idx !== order.items.length - 1 ? "pb-4 border-b border-zinc-100" : ""}`}>
+                           <div className="flex items-center gap-3">
+                             <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] border border-zinc-100 overflow-hidden p-1 flex items-center justify-center shrink-0">
+                               {item.image || item.modelUrl ? (
+                                 <img src={item.image || item.modelUrl} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
+                               ) : <Package className="w-5 h-5 text-zinc-300" />}
+                             </div>
+                             <div>
+                               <h4 className="text-[13px] font-bold text-zinc-900 mb-0.5 line-clamp-1">{item.name}</h4>
+                               <p className="text-[11px] text-zinc-500 font-medium">Qty: {item.quantity || 1} {item.size ? `/ Size: ${item.size}` : ''}</p>
+                             </div>
+                           </div>
+                           <div className="text-right">
+                             <p className="text-[13px] font-bold text-zinc-900 mb-0.5">${(item.price * (item.quantity || 1)).toFixed(2)}</p>
+                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price Details */}
+                  <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 space-y-4">
+                    <h3 className="font-bold text-zinc-900 text-sm mb-2">Price Details</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-[12px] font-medium text-zinc-500">
+                        <span>Order Amount</span>
+                        <span className="text-zinc-900 font-bold">${orderSubtotal.toFixed(2)}</span>
+                      </div>
+                      {discountAmount > 0 && (
+                        <div className="flex justify-between items-center text-[12px] font-medium text-emerald-600">
+                          <span>Promo/Discount</span>
+                          <span className="font-bold">-${discountAmount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center text-[12px] font-medium text-zinc-500">
+                        <span>Delivery</span>
+                        <span className="text-zinc-900 font-bold">${shippingCharge.toFixed(2)}</span>
+                      </div>
+                      {taxAmount > 0 && (
+                        <div className="flex justify-between items-center text-[12px] font-medium text-zinc-500">
+                          <span>Tax</span>
+                          <span className="text-zinc-900 font-bold">${taxAmount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      
+                      <div className="pt-2 border-t border-zinc-100 flex justify-between items-center">
+                        <span className="text-[12px] font-bold text-zinc-900">Grand Total</span>
+                        <span className="text-sm font-black text-zinc-900">${totalAmount.toFixed(2)}</span>
+                      </div>
+
+                      {advancePaid > 0 && (
+                        <div className="flex justify-between items-center text-[12px] font-medium text-blue-600 bg-blue-50 p-2 rounded-lg">
+                          <span>Advance Paid</span>
+                          <span className="font-bold">-${advancePaid.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      <div className="pt-2 flex justify-between items-center border-t border-zinc-100">
+                        <span className="text-[13px] font-bold text-rose-600">Due Amount (COD)</span>
+                        <span className="text-lg font-black text-rose-600">${dueAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    {(order.status === "Pending" || order.status === OrderStatus.PENDING || order.status === OrderStatus.PROCESSING || order.status === "New Order") && (
+                      <div className="flex gap-3 pt-4 border-t border-zinc-100">
+                        <button 
+                          onClick={() => { updateOrderStatus(order.id, OrderStatus.CANCELLED); setSelectedOrderId(null); }}
+                          className="flex-1 h-12 bg-rose-500 active:bg-rose-600 rounded-xl flex items-center justify-center gap-2 text-white text-sm font-bold shadow-sm shadow-rose-500/20 transition-all"
+                        >
+                          Reject <div className="w-px h-4 bg-white/30 mx-1"></div> <X className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => { updateOrderStatus(order.id, OrderStatus.CONFIRMED); setSelectedOrderId(null); }}
+                          className="flex-1 h-12 bg-emerald-500 active:bg-emerald-600 rounded-xl flex items-center justify-center gap-2 text-white text-sm font-bold shadow-sm shadow-emerald-500/20 transition-all"
+                        >
+                          Accept <div className="w-px h-4 bg-white/30 mx-1"></div> <Check className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    {(order.status === OrderStatus.CONFIRMED) && (
+                      <div className="flex gap-3 pt-4 border-t border-zinc-100">
+                        <button 
+                          onClick={() => { updateOrderStatus(order.id, OrderStatus.SHIPPED); setSelectedOrderId(null); }}
+                          className="w-full h-12 bg-zinc-900 active:bg-zinc-800 rounded-xl flex items-center justify-center gap-2 text-white text-sm font-bold shadow-sm transition-all"
+                        >
+                          Mark as Shipped <Truck className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* --- PRODUCTS TAB --- */}
+            {activeTab === "products" && !selectedOrderId && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
+                <div className="flex items-center justify-between">
+                   <h2 className="text-[17px] font-bold text-zinc-900">Your Products</h2>
+                   <button 
+                     onClick={() => setActiveTab("add_product")}
+                     className="h-10 px-4 bg-zinc-900 text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-zinc-800"
+                   >
+                     <Plus className="w-4 h-4" /> Add New
+                   </button>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-white rounded-2xl h-12 flex items-center px-4 shadow-sm border border-zinc-100">
+                    <Search className="w-5 h-5 text-zinc-400 mr-3" />
+                    <input 
+                      type="text" 
+                      placeholder="Search Products..." 
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-zinc-900 placeholder:text-zinc-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                   {filteredProducts.map((p: any) => (
+                      <div key={p.id} className="bg-white rounded-[1.5rem] p-4 shadow-sm border border-zinc-100 flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-[#F5F5F7] border border-zinc-100 overflow-hidden shrink-0 flex items-center justify-center p-1">
+                          {p.image || p.modelUrl ? (
+                            <img src={p.image || p.modelUrl} alt={p.name} className="w-full h-full object-contain mix-blend-multiply" />
+                          ) : (
+                            <Package className="w-6 h-6 text-zinc-300" />
+                          )}
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                           <h4 className="text-sm font-bold text-zinc-900 truncate mb-1">{p.name}</h4>
+                           <div className="flex items-center gap-3">
+                              <p className="text-xs font-bold text-zinc-900">${p.price}</p>
+                              <p className="text-[10px] text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">Stock: {p.stock}</p>
+                           </div>
+                           {p.advanceAmount && <p className="text-[10px] text-blue-600 font-medium mt-1">Adv. Req: ${p.advanceAmount}</p>}
+                        </div>
+                        <div className="flex flex-col gap-2 shrink-0">
+                           <button onClick={() => handleEditProduct(p)} className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 hover:bg-zinc-200">
+                              <Edit className="w-4 h-4" />
+                           </button>
+                           <button onClick={() => handleDeleteProduct(p.id)} className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-100">
+                              <Trash2 className="w-4 h-4" />
+                           </button>
+                        </div>
+                      </div>
+                   ))}
+                   {filteredProducts.length === 0 && (
+                      <div className="text-center py-10 text-zinc-500 font-medium">No products found.</div>
+                   )}
+                </div>
+              </div>
+            )}
+
+            {/* --- ADD/EDIT PRODUCT TAB --- */}
+            {(activeTab === "add_product" || activeTab === "edit_product") && !selectedOrderId && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+                <div className="flex items-center gap-4 mb-6">
+                  <button onClick={() => setActiveTab("products")} className="w-10 h-10 bg-white rounded-xl border border-zinc-200 flex items-center justify-center text-zinc-800 shadow-sm">
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <h2 className="text-[17px] font-bold text-zinc-900">{activeTab === "add_product" ? "Add New Product" : "Edit Product"}</h2>
+                </div>
+
+                <form onSubmit={handleProductSubmit} className="space-y-5">
+                  <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 space-y-4">
+                    <div>
+                      <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Product Name *</Label>
+                      <Input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} placeholder="e.g. Premium Smartwatch" className="rounded-xl bg-[#F5F5F7] border-transparent h-12" required />
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Price ($) *</Label>
+                        <Input type="number" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} placeholder="0.00" className="rounded-xl bg-[#F5F5F7] border-transparent h-12" required />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Stock *</Label>
+                        <Input type="number" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} placeholder="10" className="rounded-xl bg-[#F5F5F7] border-transparent h-12" required />
+                      </div>
+                    </div>
+                    <div>
+                       <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Advance Payment Required ($)</Label>
+                       <Input type="number" value={productForm.advanceAmount} onChange={e => setProductForm({...productForm, advanceAmount: e.target.value})} placeholder="e.g. 5.00" className="rounded-xl bg-[#F5F5F7] border-transparent h-12" />
+                       <p className="text-[10px] text-zinc-500 ml-1 mt-1">Specific advance amount required to order this product.</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Category *</Label>
+                      <select 
+                        value={productForm.category === "custom" ? "custom" : productForm.category} 
+                        onChange={e => setProductForm({...productForm, category: e.target.value})}
+                        className="w-full rounded-xl bg-[#F5F5F7] border-transparent h-12 px-3 text-sm outline-none"
+                      >
+                        <option value="Border Cross Products">Border Cross Products</option>
+                        <option value="Mobile">Mobile</option>
+                        <option value="Smart Watch">Smart Watch</option>
+                        <option value="Earbuds">Earbuds</option>
+                        <option value="Accessories">Accessories</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Image URL</Label>
+                      <Input value={productForm.modelUrl} onChange={e => setProductForm({...productForm, modelUrl: e.target.value})} placeholder="https://..." className="rounded-xl bg-[#F5F5F7] border-transparent h-12" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Description</Label>
+                      <Textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} placeholder="Product details..." className="rounded-xl bg-[#F5F5F7] border-transparent min-h-[100px]" />
+                    </div>
+                  </div>
+                  
+                  <Button type="submit" disabled={submitting} className="w-full h-14 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl font-bold text-[15px] shadow-sm">
+                    {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (activeTab === "add_product" ? "Publish Product" : "Save Changes")}
+                  </Button>
+                </form>
+              </div>
+            )}
+
+            {/* --- STORE SETTINGS TAB --- */}
+            {activeTab === "settings_store" && !selectedOrderId && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+                 <h2 className="text-[17px] font-bold text-zinc-900 mb-6">Store Settings</h2>
+                 
+                 <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 space-y-6">
+                    {/* Logo Upload */}
+                    <div className="flex flex-col items-center gap-4 pb-6 border-b border-zinc-100">
+                       <div className="w-24 h-24 rounded-full bg-zinc-100 overflow-hidden border border-zinc-200 flex items-center justify-center text-3xl font-bold text-zinc-400">
+                          {shopLogo ? <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" /> : storeInitials}
+                       </div>
+                       <div className="relative">
+                          <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                          <button type="button" className="px-4 py-2 bg-[#F5F5F7] rounded-xl text-xs font-bold text-zinc-900 border border-zinc-200">
+                             Change Store Logo
+                          </button>
+                       </div>
+                    </div>
+
+                    {/* Inputs */}
+                    <div className="space-y-4">
+                       <div>
+                          <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Store Name</Label>
+                          <Input value={shopName} onChange={e => setShopName(e.target.value)} placeholder="e.g. DEEP SHOP" className="rounded-xl bg-[#F5F5F7] border-transparent h-12" />
+                       </div>
+                       <div>
+                          <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Global Advance Payment ($)</Label>
+                          <Input type="number" value={defaultAdvanceAmount} onChange={e => setDefaultAdvanceAmount(e.target.value)} placeholder="0.00" className="rounded-xl bg-[#F5F5F7] border-transparent h-12" />
+                          <p className="text-[10px] text-zinc-500 ml-1 mt-1">Default advance amount required for COD orders.</p>
+                       </div>
+                       <div>
+                          <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">TikTok Username</Label>
+                          <Input value={tiktokId} onChange={e => setTiktokId(e.target.value)} placeholder="@username" className="rounded-xl bg-[#F5F5F7] border-transparent h-12" />
+                       </div>
+                       <div>
+                          <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">bKash Number</Label>
+                          <Input value={bkashNumber} onChange={e => setBkashNumber(e.target.value)} placeholder="+880..." className="rounded-xl bg-[#F5F5F7] border-transparent h-12" />
+                       </div>
+                       <div>
+                          <Label className="text-xs font-bold text-zinc-900 ml-1 mb-1.5 block">Nagad Number</Label>
+                          <Input value={nagadNumber} onChange={e => setNagadNumber(e.target.value)} placeholder="+880..." className="rounded-xl bg-[#F5F5F7] border-transparent h-12" />
+                       </div>
+                    </div>
+
+                    <Button onClick={saveStoreSettings} disabled={isSavingSettings} className="w-full h-14 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl font-bold text-[15px] shadow-sm mt-4">
+                      {isSavingSettings ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Save Settings"}
+                    </Button>
+                 </div>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-100 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-50 px-6 py-2 pb-safe flex justify-between items-center">
+        <NavItem icon={HomeIcon} label="Home" tab="home" />
+        <NavItem icon={ShoppingBag} label="Orders" tab="orders" />
+        <NavItem icon={Package} label="Products" tab="products" />
+        <NavItem icon={Settings} label="Settings" tab="settings_store" />
+      </div>
+      
+      {/* Safe area spacing for mobile browsers */}
+      <div className="h-safe md:hidden"></div>
+    </div>
+  );
+};
+
+export default SellerDashboard;

@@ -1,0 +1,14 @@
+{
+  "aHR0cHM6Ly9mY20uZ29vZ2xlYXBpcy5jb20vZmNtL3NlbmQvZmpRekpEaWlCSDQ6QVBBOTFiRUplZ20zdlhTYnZLdXFvSUdmamVCQzJzLWt5X2xYTzJIMUU3bXRJZEhFU2EyOHR6M0JpeXJEam9xRmxYUzJJSmo4WGRabHdRR0dYRkk0dzNXTEJGZEVtNUx5c3VfZFlwcUtBZkFmYkQ5blh4N2ZDWDd1SHJYa0JVQVRVdDdlWHhTcjJUZnA": {
+    "subscription": {
+      "endpoint": "https://fcm.googleapis.com/fcm/send/fjQzJDiiBH4:APA91bEJegm3vXSbvKuqoIGfjeBC2s-ky_lXO2H1E7mtIdHESa28tz3BiyrDjoqFlXS2IJj8XdZlwQGGXFI4w3WLBFdEm5Lysu_dYpqKAfAfbD9nXx7fCX7uHrXkBUATUt7eXxSr2Tfp",
+      "expirationTime": null,
+      "keys": {
+        "p256dh": "BLtFI173R-Wmp_ceyED9qyzkbFIFfsVsi7L09RUQGvxCVy08ybfy_IqXLlsQ9NpmVe6aNFSFAslsG1JMegstLY8",
+        "auth": "hKKZ9O4NooDUL02oKC32aA"
+      }
+    },
+    "uid": "Qn8rLF9wLehXc4YiSaPS8Ljy93J3",
+    "createdAt": 1785491817613
+  }
+}

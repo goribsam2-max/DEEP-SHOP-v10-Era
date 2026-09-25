@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'admin@vibe.shop' ||
+        request.auth.token.email == 'deepshopbysam@gmail.com' ||
+        request.auth.token.email == 'deepshop@gmail.com' ||
+        request.auth.token.email == 'vibegadget1@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isSeller() {
+      // Safe dynamic role lookup
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller'
+      );
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Settings Collection
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      // Allow public read so buyers can view seller profiles, ratings, and messaging details
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    // Products Collection
+    match /products/{productId} {
+      allow read: if true;
+      // Allow admins to write, or sellers to manage their own products
+      allow create: if isAdmin() || isSeller();
+      allow update, delete: if isAdmin() || (isSeller() && resource.data.sellerId == request.auth.uid);
+    }
+
+    // Reviews Collection
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // Blogs Collection
+    match /blogs/{blogId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Tickets Collection (Helpcenter)
+    match /tickets/{ticketId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // Orders Collection
+    match /orders/{orderId} {
+      allow create: if isSignedIn();
+      // Allow admins, buyers, or any signed-in user (especially sellers checking their customer orders) to read
+      allow read: if isSignedIn();
+      allow update, delete: if isAdmin() || isSeller();
+    }
+
+    // Coupons Collection
+    match /coupons/{couponId} {
+      allow read: if true;
+      // Admins and Sellers can manage coupons
+      allow create: if isAdmin() || isSeller();
+      allow update, delete: if isAdmin() || (isSeller() && resource.data.sellerId == request.auth.uid);
+    }
+
+    // Chats/Messages Collection
+    match /chats/{chatId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+
+    match /chats/{chatId}/messages/{messageId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+
+    // P2P Chats Collection
+    match /p2p_chats/{chatId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+    match /p2p_chats/{chatId}/messages/{messageId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+
+    // Community Channels Collection
+    match /community_channels/{channelId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+    match /community_channels/{channelId}/{subCollection}/{documentId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+
+    // Banners/Sliders Collection
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Stories Collection
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create: if isAdmin() || isSeller();
+      allow update, delete: if isAdmin() || (isSeller() && resource.data.sellerId == request.auth.uid);
+    }
+
+    // KYC Requests Collection
+    match /kyc_requests/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // User Reviews / Seller Reviews Collection
+    match /user_reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.reviewerId == request.auth.uid);
+    }
+
+    // Deposits Collection
+    match /deposits/{depositId} {
+      allow create: if isSignedIn();
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+  }
+}
