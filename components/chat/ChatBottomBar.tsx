@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Camera,
   Mic,
@@ -10,13 +10,13 @@ import {
   Bookmark,
   Pencil,
   Smile,
-  Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ChatBottomBarProps {
   newMessage: string;
   setNewMessage: (val: string) => void;
+  onInputChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onSendMessage: () => void;
   isRecording: boolean;
   recordingDuration: number;
@@ -39,6 +39,7 @@ interface ChatBottomBarProps {
 export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   newMessage,
   setNewMessage,
+  onInputChange,
   onSendMessage,
   isRecording,
   recordingDuration,
@@ -58,7 +59,16 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   onRemovePreview,
 }) => {
   const [showPlusMenu, setShowPlusMenu] = useState(false);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Auto-expand textarea height as user types
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 130);
+      textareaRef.current.style.height = `${Math.max(38, newHeight)}px`;
+    }
+  }, [newMessage]);
 
   if (isBlocked) {
     return (
@@ -68,12 +78,11 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
     );
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Prevent sending on Enter key (Enter allows multi-line typing; send ONLY on button click)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter') {
-      e.preventDefault();
-      if (newMessage.trim() || previewUrls.length > 0) {
-        onSendMessage();
-      }
+      // Do not send on Enter press - lets user create new lines naturally
+      e.stopPropagation();
     }
   };
 
@@ -84,6 +93,8 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
       fileInputRef.current.click();
     }
   };
+
+  const hasContent = Boolean(newMessage.trim() || previewUrls.length > 0);
 
   return (
     <div className="w-full relative font-inter select-none">
@@ -107,7 +118,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         </div>
       )}
 
-      {/* Floating Popup Menu from Image 4 (IMG_3980.jpeg) */}
+      {/* Floating Popup Menu */}
       <AnimatePresence>
         {showPlusMenu && (
           <>
@@ -148,7 +159,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                   <Pencil className="w-4 h-4 text-zinc-800 dark:text-zinc-200 stroke-[2]" />
                   <span>Draw</span>
                 </div>
-                <span className="text-[10px] font-bold bg-[#4F46E5] text-white px-2 py-0.5 rounded-full shadow-sm">
+                <span className="text-[10px] font-bold bg-[#5B51D8] text-white px-2 py-0.5 rounded-full shadow-sm">
                   New
                 </span>
               </button>
@@ -185,21 +196,21 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Main Bottom Bar Capsule */}
-      <div className="w-full flex items-center bg-zinc-100 dark:bg-[#1E1F24] border border-zinc-200/80 dark:border-zinc-750/70 rounded-full p-1.5 gap-1.5 shadow-sm transition-all focus-within:border-zinc-300 dark:focus-within:border-zinc-650 overflow-hidden">
-        {/* Left: Royal Blue/Indigo Camera Circle Button */}
+      {/* Main Bottom Bar Capsule Container */}
+      <div className="w-full flex items-end bg-zinc-100 dark:bg-[#1E1F24] border border-zinc-200/80 dark:border-zinc-750/70 rounded-[28px] p-1.5 gap-1.5 shadow-sm transition-all focus-within:border-zinc-300 dark:focus-within:border-zinc-650">
+        {/* Left: Camera Circle Button */}
         <button
           type="button"
           onClick={handleCameraClick}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#5B51D8] dark:bg-[#5B51D8] flex items-center justify-center text-white shrink-0 hover:brightness-110 active:scale-95 transition-all shadow-sm cursor-pointer"
+          className="w-10 h-10 rounded-full bg-[#5B51D8] flex items-center justify-center text-white shrink-0 hover:brightness-110 active:scale-95 transition-all shadow-sm cursor-pointer mb-0.5"
           title="Take photo or choose from gallery"
         >
-          <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-white stroke-[2.2]" />
+          <Camera className="w-5 h-5 text-white stroke-[2.2]" />
         </button>
 
-        {/* Middle: Recording State or Text Input */}
+        {/* Middle: Recording Status OR Auto-Expanding Textarea Input */}
         {isRecording ? (
-          <div className="flex-1 min-w-0 flex items-center justify-between px-2 text-rose-500">
+          <div className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 text-rose-500">
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
               <span className="font-mono text-xs sm:text-sm font-bold truncate">
@@ -209,41 +220,45 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
             <button
               type="button"
               onClick={cancelRecording}
-              className="text-xs text-zinc-400 hover:text-rose-500 transition px-2 py-1 shrink-0 cursor-pointer"
+              className="text-xs text-zinc-400 hover:text-rose-500 transition px-2 py-1 shrink-0 cursor-pointer font-semibold"
             >
               Cancel
             </button>
           </div>
         ) : (
-          <input
-            ref={inputRef}
-            type="text"
+          <textarea
+            ref={textareaRef}
             value={newMessage}
+            rows={1}
             onChange={(e) => {
-              setNewMessage(e.target.value);
+              if (onInputChange) {
+                onInputChange(e);
+              } else {
+                setNewMessage(e.target.value);
+              }
               if (showPlusMenu) setShowPlusMenu(false);
             }}
             onKeyDown={handleKeyDown}
             placeholder="Message..."
-            className="flex-1 min-w-0 bg-transparent border-0 px-2 py-1 text-[15px] sm:text-[16px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-0 leading-normal"
+            className="flex-1 min-w-0 bg-transparent border-0 px-2.5 py-2 text-[15px] sm:text-[16px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-0 resize-none leading-relaxed overflow-y-auto max-h-[130px]"
           />
         )}
 
-        {/* Right Action Area inside Capsule: Dynamic Toggle between Action buttons & Send button */}
-        <div className="flex items-center shrink-0 pr-0.5">
-          {Boolean(newMessage.trim() || previewUrls.length > 0) ? (
-            /* When user is typing or has attachment: Show ONLY Send button */
+        {/* Right Action Icons Area inside Capsule */}
+        <div className="flex items-center shrink-0 pr-0.5 gap-1 mb-0.5">
+          {hasContent ? (
+            /* When user has typed text or selected media: Show prominent Send Button */
             <button
               type="button"
               onClick={onSendMessage}
               disabled={isUploading}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#5B51D8] text-white flex items-center justify-center hover:brightness-110 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+              className="w-10 h-10 rounded-full bg-[#5B51D8] text-white flex items-center justify-center hover:brightness-110 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50 shrink-0"
               title="Send message"
             >
-              <Send className="w-4 h-4 ml-0.5" />
+              <Send className="w-4.5 h-4.5 ml-0.5" />
             </button>
           ) : (
-            /* When input is empty: Show full Telegram-style action bar (Mic, Gallery, Saved, Plus) */
+            /* When input is empty: Show full Action Bar (Record Mic, Gallery, Saved Replies, Plus Action) */
             <div className="flex items-center gap-0.5 sm:gap-1">
               {/* 1. Mic button (Audio recording) */}
               <button
@@ -255,52 +270,52 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                     startRecording();
                   }
                 }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition cursor-pointer ${
                   isRecording
                     ? 'bg-rose-500 text-white'
                     : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 active:scale-95'
                 }`}
                 title={isRecording ? 'Send recording' : 'Record voice message'}
               >
-                <Mic className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+                <Mic className="w-5 h-5 stroke-[2]" />
               </button>
 
               {/* 2. Gallery / Image button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer"
                 title="Upload photo"
               >
-                <ImageIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+                <ImageIcon className="w-5 h-5 stroke-[2]" />
               </button>
 
-              {/* 3. Saved replies button */}
+              {/* 3. Quick Message / Saved replies button */}
               <button
                 type="button"
                 onClick={onOpenSavedReplies}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer"
-                title="Saved replies"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer"
+                title="Quick messages"
               >
-                <MessageSquareMore className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2]" />
+                <MessageSquareMore className="w-5 h-5 stroke-[2]" />
               </button>
 
               {/* 4. Action (+) or (X) Button */}
               <button
                 type="button"
                 onClick={() => setShowPlusMenu(!showPlusMenu)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                   showPlusMenu
                     ? 'bg-[#5B51D8] text-white shadow-md rotate-90'
                     : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700/60 active:scale-95'
                 }`}
-                title="More actions (Draw, GIFs, Stickers, Saved)"
+                title="More options"
               >
                 {showPlusMenu ? (
-                  <X className="w-4 h-4 stroke-[2.4]" />
+                  <X className="w-4.5 h-4.5 stroke-[2.4]" />
                 ) : (
-                  <div className="w-5 h-5 rounded-full border border-zinc-700 dark:border-zinc-300 flex items-center justify-center">
-                    <Plus className="w-3.5 h-3.5 stroke-[2.2]" />
+                  <div className="w-6 h-6 rounded-full border border-zinc-700 dark:border-zinc-300 flex items-center justify-center">
+                    <Plus className="w-4 h-4 stroke-[2.2]" />
                   </div>
                 )}
               </button>

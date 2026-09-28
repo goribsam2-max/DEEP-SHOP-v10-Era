@@ -17,6 +17,11 @@ service cloud.firestore {
         request.auth.token.email == 'deepshopbysam@gmail.com' ||
         request.auth.token.email == 'deepshop@gmail.com' ||
         request.auth.token.email == 'vibegadget1@gmail.com' ||
+        request.auth.token.email == 'goribsam2@gmail.com' ||
+        request.auth.token.email == 'admin@deep.shop' ||
+        request.auth.token.email == 'admin@deepshop.top' ||
+        request.auth.token.email == 'vibegadgetfeni@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }

@@ -12,7 +12,9 @@ const ManagePayments: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [newBkashInput, setNewBkashInput] = useState("");
+  const [newBkashType, setNewBkashType] = useState<"personal" | "payment" | "cashout">("personal");
   const [newNagadInput, setNewNagadInput] = useState("");
+  const [newNagadType, setNewNagadType] = useState<"personal" | "payment" | "cashout">("personal");
   const [data, setData] = useState({
     instagramUrl: "https://www.instagram.com/deep.shop.official",
     tiktokUrl: "",
@@ -22,6 +24,8 @@ const ManagePayments: React.FC = () => {
     pathaoPayNumber: "",
     bkashNumbers: [] as string[],
     nagadNumbers: [] as string[],
+    bkashAccounts: [] as { number: string; type: "personal" | "payment" | "cashout" }[],
+    nagadAccounts: [] as { number: string; type: "personal" | "payment" | "cashout" }[],
     footerPaymentLogos: [
       { name: 'bKash', icon: 'https://freelogopng.com/images/all_img/1656234745bkash-app-logo-png.png' },
       { name: 'Nagad', icon: 'https://freelogopng.com/images/all_img/1679248787Nagad-Logo.png' },
@@ -41,10 +45,14 @@ const ManagePayments: React.FC = () => {
       let mergedData: any = {};
       let bkashList: string[] = [];
       let nagadList: string[] = [];
+      let bkashAccs: { number: string; type: "personal" | "payment" | "cashout" }[] = [];
+      let nagadAccs: { number: string; type: "personal" | "payment" | "cashout" }[] = [];
 
       if (paySnap.exists()) {
         const d = paySnap.data();
         mergedData = { ...d };
+        if (Array.isArray(d.bkashAccounts)) bkashAccs = [...d.bkashAccounts];
+        if (Array.isArray(d.nagadAccounts)) nagadAccs = [...d.nagadAccounts];
         if (Array.isArray(d.bkashNumbers)) bkashList = [...d.bkashNumbers];
         if (Array.isArray(d.nagadNumbers)) nagadList = [...d.nagadNumbers];
         if (bkashList.length === 0 && d.npsbNumber) bkashList = [d.npsbNumber];
@@ -53,15 +61,33 @@ const ManagePayments: React.FC = () => {
 
       if (platSnap.exists()) {
         const pd = platSnap.data();
+        if (bkashAccs.length === 0 && Array.isArray(pd.bkashAccounts)) bkashAccs = [...pd.bkashAccounts];
+        if (nagadAccs.length === 0 && Array.isArray(pd.nagadAccounts)) nagadAccs = [...pd.nagadAccounts];
         if (bkashList.length === 0 && Array.isArray(pd.bkashNumbers)) bkashList = [...pd.bkashNumbers];
         if (bkashList.length === 0 && pd.bkashNumber) bkashList = [pd.bkashNumber];
         if (nagadList.length === 0 && Array.isArray(pd.nagadNumbers)) nagadList = [...pd.nagadNumbers];
         if (nagadList.length === 0 && pd.nagadNumber) nagadList = [pd.nagadNumber];
       }
 
+      // Sync accounts from numbers if accounts were empty
+      if (bkashAccs.length === 0 && bkashList.length > 0) {
+        bkashAccs = bkashList.map(num => ({ number: num, type: 'personal' }));
+      }
+      if (nagadAccs.length === 0 && nagadList.length > 0) {
+        nagadAccs = nagadList.map(num => ({ number: num, type: 'personal' }));
+      }
+      if (bkashList.length === 0 && bkashAccs.length > 0) {
+        bkashList = bkashAccs.map(a => a.number);
+      }
+      if (nagadList.length === 0 && nagadAccs.length > 0) {
+        nagadList = nagadAccs.map(a => a.number);
+      }
+
       setData((prev) => ({
         ...prev,
         ...mergedData,
+        bkashAccounts: bkashAccs,
+        nagadAccounts: nagadAccs,
         bkashNumbers: bkashList,
         nagadNumbers: nagadList,
         npsbNumber: bkashList[0] || prev.npsbNumber,
@@ -76,6 +102,8 @@ const ManagePayments: React.FC = () => {
     if (
       payload.bkashNumbers.some(isForbiddenNumber) ||
       payload.nagadNumbers.some(isForbiddenNumber) ||
+      payload.bkashAccounts.some(a => isForbiddenNumber(a.number)) ||
+      payload.nagadAccounts.some(a => isForbiddenNumber(a.number)) ||
       isForbiddenNumber(payload.npsbNumber) ||
       isForbiddenNumber(payload.pathaoPayNumber)
     ) {
@@ -88,6 +116,8 @@ const ManagePayments: React.FC = () => {
       await setDoc(
         doc(db, "settings", "platform"),
         {
+          bkashAccounts: payload.bkashAccounts,
+          nagadAccounts: payload.nagadAccounts,
           bkashNumbers: payload.bkashNumbers,
           nagadNumbers: payload.nagadNumbers,
           bkashNumber: payload.bkashNumbers[0] || payload.npsbNumber || "",
@@ -217,15 +247,24 @@ const ManagePayments: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-sm font-bold text-pink-700 dark:text-pink-300">
-                  Multiple bKash Numbers (অ্যাডমিন বিকাশ নাম্বারসমূহ - র‍্যান্ডম রোটেট করবে)
+                  Multiple bKash Numbers (অ্যাডমিন বিকাশ নাম্বারসমূহ - Personal, Payment, Cash Out)
                 </label>
                 <p className="text-xs text-zinc-500">
-                  একাধিক নাম্বার যোগ করুন। চেকআউট পেজে রিফ্রেশ করলে প্রতিবার একটি একটি করে পরিবর্তন হবে।
+                  নাম্বার যোগ করার সময় ধরণ (Personal / Payment / Cash Out) নির্বাচন করুন। চেকআউট পেজে উপযুক্ত ধরণ অনুযায়ী ইনস্ট্রাকশন দেখানো হবে।
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <select
+                value={newBkashType}
+                onChange={(e) => setNewBkashType(e.target.value as any)}
+                className="bg-white dark:bg-zinc-800 border border-pink-200 dark:border-pink-800/50 rounded-xl px-3 py-2.5 text-xs font-bold text-zinc-900 dark:text-white"
+              >
+                <option value="personal">Personal (Send Money)</option>
+                <option value="payment">Payment / Merchant (Make Payment)</option>
+                <option value="cashout">Cash Out / Agent (Cash Out)</option>
+              </select>
               <input
                 type="text"
                 value={newBkashInput}
@@ -239,15 +278,18 @@ const ManagePayments: React.FC = () => {
                       notify("This number is not allowed", "error");
                       return;
                     }
-                    if (data.bkashNumbers.includes(val)) {
+                    if (data.bkashAccounts.some(a => a.number === val) || data.bkashNumbers.includes(val)) {
                       notify("This number is already in the list", "error");
                       return;
                     }
-                    const updated = [...data.bkashNumbers, val];
+                    const newAcc = { number: val, type: newBkashType };
+                    const updatedAccounts = [...data.bkashAccounts, newAcc];
+                    const updatedNumbers = updatedAccounts.map(a => a.number);
                     const nextData = {
                       ...data,
-                      bkashNumbers: updated,
-                      npsbNumber: updated[0] || "",
+                      bkashAccounts: updatedAccounts,
+                      bkashNumbers: updatedNumbers,
+                      npsbNumber: updatedNumbers[0] || "",
                     };
                     setData(nextData);
                     setNewBkashInput("");
@@ -266,15 +308,18 @@ const ManagePayments: React.FC = () => {
                     notify("This number is not allowed", "error");
                     return;
                   }
-                  if (data.bkashNumbers.includes(val)) {
+                  if (data.bkashAccounts.some(a => a.number === val) || data.bkashNumbers.includes(val)) {
                     notify("This number is already in the list", "error");
                     return;
                   }
-                  const updated = [...data.bkashNumbers, val];
+                  const newAcc = { number: val, type: newBkashType };
+                  const updatedAccounts = [...data.bkashAccounts, newAcc];
+                  const updatedNumbers = updatedAccounts.map(a => a.number);
                   const nextData = {
                     ...data,
-                    bkashNumbers: updated,
-                    npsbNumber: updated[0] || "",
+                    bkashAccounts: updatedAccounts,
+                    bkashNumbers: updatedNumbers,
+                    npsbNumber: updatedNumbers[0] || "",
                   };
                   setData(nextData);
                   setNewBkashInput("");
@@ -287,21 +332,33 @@ const ManagePayments: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
-              {data.bkashNumbers.map((num, i) => (
+              {data.bkashAccounts.map((acc, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-pink-300 dark:border-pink-800 px-3 py-1.5 rounded-xl shadow-xs"
                 >
                   <span className="text-xs font-bold text-[#E2125B]">#{i + 1}</span>
-                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{num}</span>
+                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc.number}</span>
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                    acc.type === "payment"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                      : acc.type === "cashout"
+                      ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                      : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                  )}>
+                    {acc.type === "payment" ? "Payment" : acc.type === "cashout" ? "Cash Out" : "Personal"}
+                  </span>
                   <button
                     type="button"
                     onClick={() => {
-                      const updated = data.bkashNumbers.filter((_, idx) => idx !== i);
+                      const updatedAccounts = data.bkashAccounts.filter((_, idx) => idx !== i);
+                      const updatedNumbers = updatedAccounts.map(a => a.number);
                       const nextData = {
                         ...data,
-                        bkashNumbers: updated,
-                        npsbNumber: updated[0] || "",
+                        bkashAccounts: updatedAccounts,
+                        bkashNumbers: updatedNumbers,
+                        npsbNumber: updatedNumbers[0] || "",
                       };
                       setData(nextData);
                       handleSave(nextData);
@@ -312,8 +369,8 @@ const ManagePayments: React.FC = () => {
                   </button>
                 </div>
               ))}
-              {data.bkashNumbers.length === 0 && (
-                <p className="text-xs text-amber-600 font-medium">কোনো বিকাশ নাম্বার যোগ করা নেই</p>
+              {data.bkashAccounts.length === 0 && (
+                <p className="text-xs text-amber-600 font-medium">কোনো বিকাশ নাম্বার যোগ করা নেই (গ্রাহক বিকাশ নির্বাচন করতে পারবে না)</p>
               )}
             </div>
           </div>
@@ -323,15 +380,24 @@ const ManagePayments: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-sm font-bold text-orange-700 dark:text-orange-300">
-                  Multiple Nagad Numbers (অ্যাডমিন নগদ নাম্বারসমূহ - র‍্যান্ডম রোটেট করবে)
+                  Multiple Nagad Numbers (অ্যাডমিন নগদ নাম্বারসমূহ - Personal, Payment, Cash Out)
                 </label>
                 <p className="text-xs text-zinc-500">
-                  একাধিক নাম্বার যোগ করুন। চেকআউট পেজে রিফ্রেশ করলে প্রতিবার একটি একটি করে পরিবর্তন হবে।
+                  নাম্বার যোগ করার সময় ধরণ (Personal / Payment / Cash Out) নির্বাচন করুন। চেকআউট পেজে উপযুক্ত ধরণ অনুযায়ী ইনস্ট্রাকশন দেখানো হবে।
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <select
+                value={newNagadType}
+                onChange={(e) => setNewNagadType(e.target.value as any)}
+                className="bg-white dark:bg-zinc-800 border border-orange-200 dark:border-orange-800/50 rounded-xl px-3 py-2.5 text-xs font-bold text-zinc-900 dark:text-white"
+              >
+                <option value="personal">Personal (Send Money)</option>
+                <option value="payment">Payment / Merchant (Make Payment)</option>
+                <option value="cashout">Cash Out / Agent (Cash Out)</option>
+              </select>
               <input
                 type="text"
                 value={newNagadInput}
@@ -345,15 +411,18 @@ const ManagePayments: React.FC = () => {
                       notify("This number is not allowed", "error");
                       return;
                     }
-                    if (data.nagadNumbers.includes(val)) {
+                    if (data.nagadAccounts.some(a => a.number === val) || data.nagadNumbers.includes(val)) {
                       notify("This number is already in the list", "error");
                       return;
                     }
-                    const updated = [...data.nagadNumbers, val];
+                    const newAcc = { number: val, type: newNagadType };
+                    const updatedAccounts = [...data.nagadAccounts, newAcc];
+                    const updatedNumbers = updatedAccounts.map(a => a.number);
                     const nextData = {
                       ...data,
-                      nagadNumbers: updated,
-                      pathaoPayNumber: updated[0] || "",
+                      nagadAccounts: updatedAccounts,
+                      nagadNumbers: updatedNumbers,
+                      pathaoPayNumber: updatedNumbers[0] || "",
                     };
                     setData(nextData);
                     setNewNagadInput("");
@@ -372,15 +441,18 @@ const ManagePayments: React.FC = () => {
                     notify("This number is not allowed", "error");
                     return;
                   }
-                  if (data.nagadNumbers.includes(val)) {
+                  if (data.nagadAccounts.some(a => a.number === val) || data.nagadNumbers.includes(val)) {
                     notify("This number is already in the list", "error");
                     return;
                   }
-                  const updated = [...data.nagadNumbers, val];
+                  const newAcc = { number: val, type: newNagadType };
+                  const updatedAccounts = [...data.nagadAccounts, newAcc];
+                  const updatedNumbers = updatedAccounts.map(a => a.number);
                   const nextData = {
                     ...data,
-                    nagadNumbers: updated,
-                    pathaoPayNumber: updated[0] || "",
+                    nagadAccounts: updatedAccounts,
+                    nagadNumbers: updatedNumbers,
+                    pathaoPayNumber: updatedNumbers[0] || "",
                   };
                   setData(nextData);
                   setNewNagadInput("");
@@ -393,21 +465,33 @@ const ManagePayments: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
-              {data.nagadNumbers.map((num, i) => (
+              {data.nagadAccounts.map((acc, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-xl shadow-xs"
                 >
                   <span className="text-xs font-bold text-[#F57C20]">#{i + 1}</span>
-                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{num}</span>
+                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc.number}</span>
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                    acc.type === "payment"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                      : acc.type === "cashout"
+                      ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                      : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                  )}>
+                    {acc.type === "payment" ? "Payment" : acc.type === "cashout" ? "Cash Out" : "Personal"}
+                  </span>
                   <button
                     type="button"
                     onClick={() => {
-                      const updated = data.nagadNumbers.filter((_, idx) => idx !== i);
+                      const updatedAccounts = data.nagadAccounts.filter((_, idx) => idx !== i);
+                      const updatedNumbers = updatedAccounts.map(a => a.number);
                       const nextData = {
                         ...data,
-                        nagadNumbers: updated,
-                        pathaoPayNumber: updated[0] || "",
+                        nagadAccounts: updatedAccounts,
+                        nagadNumbers: updatedNumbers,
+                        pathaoPayNumber: updatedNumbers[0] || "",
                       };
                       setData(nextData);
                       handleSave(nextData);
@@ -418,8 +502,8 @@ const ManagePayments: React.FC = () => {
                   </button>
                 </div>
               ))}
-              {data.nagadNumbers.length === 0 && (
-                <p className="text-xs text-amber-600 font-medium">কোনো নগদ নাম্বার যোগ করা নেই</p>
+              {data.nagadAccounts.length === 0 && (
+                <p className="text-xs text-amber-600 font-medium">কোনো নগদ নাম্বার যোগ করা নেই (গ্রাহক নগদ নির্বাচন করতে পারবে না)</p>
               )}
             </div>
           </div>

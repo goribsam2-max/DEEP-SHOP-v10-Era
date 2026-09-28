@@ -291,11 +291,12 @@ export default function CheckoutPage() {
         ? paymentSettings.bkashNumbers.filter(Boolean)
         : [paymentSettings.bkashNumber, paymentSettings.npsbNumber, sellerPaymentNumbers?.bkash].filter(Boolean) as string[];
 
-      if (bkashList.length > 0) {
-        const randomBkash = bkashList[Math.floor(Math.random() * bkashList.length)];
+      const validBkash = bkashList.filter(n => n && n !== "01700000000" && !isForbiddenNumber(n));
+      if (validBkash.length > 0) {
+        const randomBkash = validBkash[Math.floor(Math.random() * validBkash.length)];
         setActiveBkashNumber(randomBkash);
-      } else if (!activeBkashNumber) {
-        setActiveBkashNumber("01700000000");
+      } else {
+        setActiveBkashNumber("");
       }
 
       // 2. Nagad numbers
@@ -303,14 +304,26 @@ export default function CheckoutPage() {
         ? paymentSettings.nagadNumbers.filter(Boolean)
         : [paymentSettings.nagadNumber, paymentSettings.pathaoPayNumber, sellerPaymentNumbers?.nagad].filter(Boolean) as string[];
 
-      if (nagadList.length > 0) {
-        const randomNagad = nagadList[Math.floor(Math.random() * nagadList.length)];
+      const validNagad = nagadList.filter(n => n && n !== "01800000000" && !isForbiddenNumber(n));
+      if (validNagad.length > 0) {
+        const randomNagad = validNagad[Math.floor(Math.random() * validNagad.length)];
         setActiveNagadNumber(randomNagad);
-      } else if (!activeNagadNumber) {
-        setActiveNagadNumber("01800000000");
+      } else {
+        setActiveNagadNumber("");
       }
     }
   }, [paymentSettings, sellerPaymentNumbers]);
+
+  const hasBkashNumber = Boolean(activeBkashNumber && activeBkashNumber !== "01700000000" && !isForbiddenNumber(activeBkashNumber));
+  const hasNagadNumber = Boolean(activeNagadNumber && activeNagadNumber !== "01800000000" && !isForbiddenNumber(activeNagadNumber));
+
+  useEffect(() => {
+    if (selectedPaymentMethod === "bkash" && !hasBkashNumber && hasNagadNumber) {
+      setSelectedPaymentMethod("nagad");
+    } else if (selectedPaymentMethod === "nagad" && !hasNagadNumber && hasBkashNumber) {
+      setSelectedPaymentMethod("bkash");
+    }
+  }, [hasBkashNumber, hasNagadNumber, selectedPaymentMethod]);
 
   // Product classification analysis
   const hasBypassProduct = items.some(
@@ -653,6 +666,18 @@ export default function CheckoutPage() {
                 link: "/seller/dashboard"
               })
             }).catch(err => console.error("Seller push notification failed:", err));
+
+            // In-app Firestore notification for seller
+            addDoc(collection(db, "notifications"), {
+              userId: sellerId,
+              title: "New Customer Order! 🛍️",
+              message: `You received a new order #${finalDocId.slice(0, 8)} from ${activeAddress.name || 'Customer'} for ৳${total}.`,
+              link: "/seller/dashboard",
+              type: "order",
+              orderId: finalDocId,
+              createdAt: Date.now(),
+              isRead: false
+            }).catch(console.error);
           });
 
           // Notify admins of new order
@@ -665,6 +690,18 @@ export default function CheckoutPage() {
               link: "/admin/orders"
             })
           }).catch(err => console.error("Admin order push failed:", err));
+
+          // In-app notification for admin
+          addDoc(collection(db, "notifications"), {
+            userId: "admin",
+            title: "New Customer Order! 🛍️",
+            message: `A new order #${finalDocId.slice(0, 8)} was placed by ${activeAddress.name || 'Customer'} for ৳${total}.`,
+            link: "/admin/orders",
+            type: "order",
+            orderId: finalDocId,
+            createdAt: Date.now(),
+            isRead: false
+          }).catch(console.error);
 
           // Notify the seller
           const firstSellerId = orderData.items?.[0]?.sellerId;
@@ -1211,104 +1248,18 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
-                      {/* Payment Method Selector Cards (bKash & Nagad) */}
-                      <div className="space-y-2">
-                        <Label className="text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                          পেমেন্ট মেথড নির্বাচন করুন:
-                        </Label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                          {/* bKash Option */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPaymentMethod("bkash")}
-                            className={cn(
-                              "relative flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer",
-                              selectedPaymentMethod === "bkash"
-                                ? "border-[#D12053] bg-pink-50/60 dark:bg-pink-950/20 shadow-sm ring-2 ring-[#D12053]/20"
-                                : "border-zinc-200 dark:border-zinc-800 hover:border-pink-300 dark:hover:border-pink-900/50 bg-white dark:bg-zinc-900"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#D12053] text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
-                                বিকাশ
-                              </div>
-                              <div>
-                                <span className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 block">
-                                  bKash (বিকাশ)
-                                </span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                  পার্সোনাল সেন্ড মানি
-                                </span>
-                              </div>
-                            </div>
-                            <div className={cn(
-                              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                              selectedPaymentMethod === "bkash"
-                                ? "border-[#D12053] bg-[#D12053] text-white"
-                                : "border-zinc-300 dark:border-zinc-700"
-                            )}>
-                              {selectedPaymentMethod === "bkash" && <Check className="w-3 h-3" />}
-                            </div>
-                          </button>
-
-                          {/* Nagad Option */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPaymentMethod("nagad")}
-                            className={cn(
-                              "relative flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer",
-                              selectedPaymentMethod === "nagad"
-                                ? "border-[#F7921E] bg-orange-50/60 dark:bg-orange-950/20 shadow-sm ring-2 ring-[#F7921E]/20"
-                                : "border-zinc-200 dark:border-zinc-800 hover:border-orange-300 dark:hover:border-orange-900/50 bg-white dark:bg-zinc-900"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#F7921E] text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
-                                নগদ
-                              </div>
-                              <div>
-                                <span className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 block">
-                                  Nagad (নগদ)
-                                </span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                  পার্সোনাল সেন্ড মানি
-                                </span>
-                              </div>
-                            </div>
-                            <div className={cn(
-                              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                              selectedPaymentMethod === "nagad"
-                                ? "border-[#F7921E] bg-[#F7921E] text-white"
-                                : "border-zinc-300 dark:border-zinc-700"
-                            )}>
-                              {selectedPaymentMethod === "nagad" && <Check className="w-3 h-3" />}
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Rotating Number Display Card */}
-                      <div className={cn(
-                        "rounded-2xl p-5 sm:p-6 border-2 transition-all duration-300 space-y-5",
-                        selectedPaymentMethod === "bkash"
-                          ? "border-[#D12053]/30 bg-pink-50/30 dark:bg-pink-950/10"
-                          : "border-[#F7921E]/30 bg-orange-50/30 dark:bg-orange-950/10"
-                      )}>
+                      {/* Mobile Banking Advance Info Card */}
+                      <div className="rounded-2xl p-5 sm:p-6 border-2 border-pink-500/20 bg-pink-50/20 dark:bg-pink-950/10 space-y-5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4 border-zinc-200/80 dark:border-zinc-800">
                           <div>
                             <span className="text-xs font-semibold text-zinc-500 tracking-normal">
-                              {selectedPaymentMethod === "bkash" ? "বিকাশ পেমেন্ট" : "নগদ পেমেন্ট"}
+                              মোবাইল ব্যাংকিং পেমেন্ট (বিকাশ / নগদ)
                             </span>
                             <h4 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                              Send Money মেথড
+                              Send Money / পেমেন্ট গেটওয়ে
                             </h4>
                           </div>
-                          <span className={cn(
-                            "self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full tracking-normal",
-                            selectedPaymentMethod === "bkash"
-                              ? "bg-[#D12053] text-white"
-                              : "bg-[#F7921E] text-white"
-                          )}>
+                          <span className="self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full tracking-normal bg-[#EF8020] text-white">
                             সুরক্ষিত গেটওয়ে
                           </span>
                         </div>
@@ -1320,11 +1271,11 @@ export default function CheckoutPage() {
                               ৳
                             </span>
                             <h5 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                              পেমেন্ট পেজে গেলে বিকাশ ও নগদ নম্বর দেখতে পাবেন
+                              পেমেন্ট পেজে বিকাশ ও নগদ নির্বাচন করতে পারবেন
                             </h5>
                           </div>
                           <p className="text-xs text-zinc-600 dark:text-zinc-400 pl-9 leading-relaxed">
-                            সুরক্ষা ও নির্ভুল ট্রানজেকশনের স্বার্থে পরবর্তী সুরক্ষিত পেমেন্ট পেজে আপনাকে সক্রিয় নম্বর ও বিস্তারিত প্রদান করা হবে।
+                            সুরক্ষা ও নির্ভুল ট্রানজেকশনের স্বার্থে পরবর্তী সুরক্ষিত পেমেন্ট পেজে আপনাকে সক্রিয় নম্বর ও বিস্তারিত প্রদান করা হবে এবং সেখান থেকে বিকাশ অথবা নগদ নির্বাচন করতে পারবেন।
                           </p>
                         </div>
 
@@ -1355,7 +1306,7 @@ export default function CheckoutPage() {
                             </span>
                           </div>
                           <p className="text-xs text-zinc-600 dark:text-zinc-400 pl-8 leading-relaxed">
-                            চেকআউট পেজে আপনাকে কোনো TrxID দিতে হবে না। অর্ডার রিভিউ কনফার্ম করার পর সরাসরি সুরক্ষিত ডেডিকেটেড গেটওয়ে পেজে নিয়ে যাওয়া হবে, যেখান থেকে আপনি আপনার <strong>{selectedPaymentMethod === "bkash" ? "বিকাশ" : "নগদ"}</strong> পার্সোনাল অ্যাকাউন্ট থেকে খুব সহজেই পেমেন্ট সম্পন্ন করতে পারবেন।
+                            চেকআউট পেজে আপনাকে কোনো TrxID দিতে হবে না। অর্ডার রিভিউ কনফার্ম করার পর সরাসরি সুরক্ষিত ডেডিকেটেড গেটওয়ে পেজে নিয়ে যাওয়া হবে, যেখান থেকে আপনি আপনার বিকাশ অথবা নগদ অ্যাকাউন্ট থেকে খুব সহজেই পেমেন্ট সম্পন্ন করতে পারবেন।
                           </p>
                         </div>
                       </div>

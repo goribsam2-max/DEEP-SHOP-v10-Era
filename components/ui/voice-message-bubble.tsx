@@ -15,6 +15,30 @@ interface VoiceMessageBubbleProps {
   autoPlay?: boolean
 }
 
+// Convert base64 data URL to Blob URL for rock-solid cross-browser playback
+function createAudioBlobUrl(src: string): string {
+  if (!src) return '';
+  if (!src.startsWith('data:audio/')) return src;
+
+  try {
+    const parts = src.split(',');
+    if (parts.length < 2) return src;
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'audio/webm';
+    const b64 = parts[1];
+    const byteCharacters = atob(b64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mime });
+    return URL.createObjectURL(blob);
+  } catch (e) {
+    return src;
+  }
+}
+
 export default function VoiceMessageBubble({
   audioSrc,
   duration = 10,
@@ -32,25 +56,49 @@ export default function VoiceMessageBubble({
   const [speed, setSpeed] = React.useState(1)
   const [isDragging, setIsDragging] = React.useState(false)
   const [hasError, setHasError] = React.useState(false)
+  const [resolvedSrc, setResolvedSrc] = React.useState<string>('')
 
   const audioRef = React.useRef<HTMLAudioElement | null>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const webAudioSourceRef = React.useRef<AudioBufferSourceNode | null>(null)
+  const webAudioCtxRef = React.useRef<AudioContext | null>(null)
+
+  React.useEffect(() => {
+    if (!audioSrc) {
+      setResolvedSrc('');
+      return;
+    }
+    const blobUrl = createAudioBlobUrl(audioSrc);
+    setResolvedSrc(blobUrl);
+    setHasError(false);
+
+    return () => {
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrl);
+      }
+      if (webAudioSourceRef.current) {
+        try {
+          webAudioSourceRef.current.stop();
+        } catch (e) {}
+      }
+    };
+  }, [audioSrc]);
 
   // Sync speed changes
   React.useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.playbackRate = speed
+      audioRef.current.playbackRate = speed;
     }
   }, [speed])
 
   // Handle Autoplay if requested
   React.useEffect(() => {
-    if (autoPlay && audioRef.current && !isPlaying) {
+    if (autoPlay && audioRef.current && !isPlaying && resolvedSrc) {
       audioRef.current.play()
         .then(() => setIsPlaying(true))
         .catch(() => {});
     }
-  }, [autoPlay, audioSrc])
+  }, [autoPlay, resolvedSrc])
 
   const handleTimeUpdate = () => {
     if (!audioRef.current || isDragging) return
@@ -82,41 +130,90 @@ export default function VoiceMessageBubble({
   }
 
   const handleAudioError = (e: any) => {
-    console.warn("Audio element error on voice note:", e)
+    // Graceful error handling
     setHasError(true)
     setIsPlaying(false)
   }
 
+  const playViaWebAudio = async () => {
+    try {
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtxClass) return false;
+      if (!webAudioCtxRef.current) {
+        webAudioCtxRef.current = new AudioCtxClass();
+      }
+      const ctx = webAudioCtxRef.current;
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+
+      let arrayBuffer: ArrayBuffer;
+      if (audioSrc.startsWith('data:audio/')) {
+        const parts = audioSrc.split(',');
+        const b64 = parts[1] || '';
+        const byteCharacters = atob(b64);
+        const bytes = new Uint8Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          bytes[i] = byteCharacters.charCodeAt(i);
+        }
+        arrayBuffer = bytes.buffer;
+      } else {
+        const res = await fetch(resolvedSrc || audioSrc);
+        arrayBuffer = await res.arrayBuffer();
+      }
+
+      const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+      setTotalDuration(Math.round(decodedBuffer.duration));
+
+      const source = ctx.createBufferSource();
+      source.buffer = decodedBuffer;
+      source.playbackRate.value = speed;
+      source.connect(ctx.destination);
+      source.onended = handleAudioEnded;
+      source.start(0);
+      webAudioSourceRef.current = source;
+      setIsPlaying(true);
+      setHasError(false);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+
   const togglePlay = async (e: React.MouseEvent) => {
     e.stopPropagation()
     const audio = audioRef.current
-    if (!audio) return
 
     if (isPlaying) {
-      audio.pause()
+      if (audio) {
+        audio.pause()
+      }
+      if (webAudioSourceRef.current) {
+        try {
+          webAudioSourceRef.current.stop()
+        } catch (e) {}
+      }
       setIsPlaying(false)
-    } else {
+      return
+    }
+
+    if (audio && resolvedSrc) {
       audio.playbackRate = speed
       try {
         await audio.play()
         setIsPlaying(true)
         setHasError(false)
+        return
       } catch (err) {
-        console.warn("Direct play failed, trying audio context unlock:", err)
-        try {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
-          if (AudioContextClass) {
-            const ctx = new AudioContextClass()
-            await ctx.resume()
-          }
-          await audio.play()
-          setIsPlaying(true)
-          setHasError(false)
-        } catch (e2) {
-          console.error("Audio playback error:", e2)
+        // Fallback to Web Audio API decoding if native HTML5 Audio element fails on specific codecs
+        const fallbackSuccess = await playViaWebAudio();
+        if (!fallbackSuccess) {
           setIsPlaying(false)
+          setHasError(true)
         }
       }
+    } else {
+      await playViaWebAudio();
     }
   }
 
@@ -200,7 +297,7 @@ export default function VoiceMessageBubble({
     }
   }, [isDragging, progress, totalDuration])
 
-  // Messenger-style waveform bars
+  // Waveform bars
   const waveBars = [
     6, 12, 18, 10, 14, 22, 28, 16, 12, 24, 
     30, 20, 14, 26, 32, 24, 12, 18, 26, 22, 
@@ -220,24 +317,26 @@ export default function VoiceMessageBubble({
       onClick={(e) => e.stopPropagation()}
       className={cn(
         "flex items-center gap-2.5 p-2 rounded-2xl w-full max-w-[290px] select-none transition-all relative",
-        isMe ? "bg-indigo-600 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100",
+        isMe ? "bg-[#5B51D8] text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100",
         className
       )}
       style={bubbleColor ? { backgroundColor: bubbleColor } : undefined}
     >
-      {/* Hidden Native Audio Element with inline handlers for rock-solid stability */}
-      <audio
-        ref={audioRef}
-        src={audioSrc}
-        preload="auto"
-        playsInline
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleAudioEnded}
-        onError={handleAudioError}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-      />
+      {/* Native Audio Element with inline handlers */}
+      {resolvedSrc ? (
+        <audio
+          ref={audioRef}
+          src={resolvedSrc}
+          preload="auto"
+          playsInline
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={handleAudioEnded}
+          onError={handleAudioError}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        />
+      ) : null}
 
       {/* Play/Pause Trigger */}
       <button
@@ -245,7 +344,7 @@ export default function VoiceMessageBubble({
         onClick={togglePlay}
         className={cn(
           "h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-90 hover:opacity-90 shadow-sm cursor-pointer",
-          isMe ? "bg-white text-indigo-600" : "bg-indigo-600 text-white"
+          isMe ? "bg-white text-[#5B51D8]" : "bg-[#5B51D8] text-white"
         )}
       >
         {isPlaying ? (

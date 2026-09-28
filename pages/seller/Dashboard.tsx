@@ -180,6 +180,7 @@ const SellerDashboard: React.FC = () => {
   // Authentication & Profile listener
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
+    let unsubOrdersRef: (() => void) | null = null;
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
@@ -214,6 +215,27 @@ const SellerDashboard: React.FC = () => {
             if (!dataFetchedRef.current) {
               fetchSellerData(u.uid, true);
               dataFetchedRef.current = true;
+
+              // Real-time listener for orders
+              const unsubOrders = onSnapshot(collection(db, "orders"), (orderSnap) => {
+                const allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                setOrders(prev => {
+                  const sellerOrders = allOrders.filter((ord: any) =>
+                    ord.status !== "awaiting_payment" &&
+                    ord.status !== "payment_pending" &&
+                    (
+                      ord.sellerId === u.uid ||
+                      ord.items?.some((item: any) => item.sellerId === u.uid)
+                    )
+                  );
+                  return sellerOrders.sort((a: any, b: any) => {
+                    const tA = a.createdAt || a.timestamp || 0;
+                    const tB = b.createdAt || b.timestamp || 0;
+                    return tB - tA;
+                  });
+                });
+              }, (err) => console.error("Real-time orders listener error:", err));
+              unsubOrdersRef = unsubOrders;
             }
           } else {
             notify("Seller profile not found.", "error");
@@ -227,6 +249,7 @@ const SellerDashboard: React.FC = () => {
     return () => {
       unsub();
       if (unsubProfile) unsubProfile();
+      if (unsubOrdersRef) unsubOrdersRef();
     };
   }, [navigate]);
 
@@ -261,8 +284,9 @@ const SellerDashboard: React.FC = () => {
   // Firestore Write Operations
   const saveStoreSettings = async (overrideData?: any) => {
     if (!user) return;
-    const finalBkashList = overrideData?.bkashNumbers !== undefined ? overrideData.bkashNumbers : bkashNumbers;
-    const finalNagadList = overrideData?.nagadNumbers !== undefined ? overrideData.nagadNumbers : nagadNumbers;
+    const cleanOverride = overrideData && typeof overrideData === 'object' && !('nativeEvent' in overrideData) && !('target' in overrideData) && !('preventDefault' in overrideData) ? overrideData : {};
+    const finalBkashList = cleanOverride.bkashNumbers !== undefined ? cleanOverride.bkashNumbers : bkashNumbers;
+    const finalNagadList = cleanOverride.nagadNumbers !== undefined ? cleanOverride.nagadNumbers : nagadNumbers;
 
     if (
       finalBkashList.some(isForbiddenNumber) ||
@@ -287,7 +311,7 @@ const SellerDashboard: React.FC = () => {
       taxRate: Number(taxRate),
       binNumber: binNumber,
       taxInclusive: taxInclusive,
-      ...(overrideData || {})
+      ...cleanOverride
     };
     try {
       await setDoc(doc(db, "users", user.uid), updateData, { merge: true });
@@ -354,14 +378,16 @@ const SellerDashboard: React.FC = () => {
       const storySnap = await getDocs(storyQuery);
       setStories(storySnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      // 3. Fetch Orders
+      // 3. Fetch Orders (Real-time & inclusive of COD orders)
       const orderSnap = await getDocs(collection(db, "orders"));
       const allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       const sellerOrders = allOrders.filter((ord: any) =>
-        ord.status !== "payment_pending" &&
         ord.status !== "awaiting_payment" &&
-        ord.paymentStatus !== "unpaid" &&
-        ord.items?.some((item: any) => item.sellerId === sellerId || prodList.some((p: any) => p.id === item.productId))
+        ord.status !== "payment_pending" &&
+        (
+          ord.sellerId === sellerId ||
+          ord.items?.some((item: any) => item.sellerId === sellerId || prodList.some((p: any) => p.id === item.productId))
+        )
       );
       const sortedOrders = sellerOrders.sort((a: any, b: any) => {
         const tA = a.createdAt || a.timestamp || 0;

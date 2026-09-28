@@ -1,7 +1,6 @@
 import Icon from "../Icon";
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import useMeasure from "react-use-measure";
 import { cn } from "../../lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../../components/ThemeContext";
@@ -52,8 +51,6 @@ const BottomMenu = () => {
   const { isDark, toggleTheme } = useTheme();
   const { t } = useLanguage();
   
-  const [elementRef] = useMeasure();
-  const [hiddenRef, hiddenBounds] = useMeasure();
   const [view, setView] = useState<
     "default" | "home" | "search" | "notifications" | "profile" | "theme"
   >("default");
@@ -125,7 +122,7 @@ const BottomMenu = () => {
   };
 
   const sharedHover =
-    "group transition-all duration-75 px-3 py-2.5 text-[14px] text-zinc-500 dark:text-zinc-400 w-full text-left rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-100";
+    "group transition-colors duration-150 px-3 py-2.5 text-[14px] text-zinc-600 dark:text-zinc-300 w-full text-left rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer active:scale-[0.98]";
 
   const content = useMemo(() => {
     switch (view) {
@@ -134,7 +131,7 @@ const BottomMenu = () => {
 
       case "home":
         return (
-          <div className="space-y-0.5 min-w-[210px] p-[6px] py-1">
+          <div className="space-y-0.5 min-w-[210px] p-2">
             {SHOPPING_HOME_ITEMS.map(({ icon: IconName, text, path }) => (
               <button
                 key={text}
@@ -143,9 +140,9 @@ const BottomMenu = () => {
               >
                 <Icon
                   name={IconName}
-                  className="w-[18px] h-[18px] text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-all duration-75"
+                  className="w-[18px] h-[18px] text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors"
                 />
-                <span className="font-medium">{text}</span>
+                <span className="font-semibold">{text}</span>
               </button>
             ))}
           </div>
@@ -153,7 +150,7 @@ const BottomMenu = () => {
 
       case "search":
         return (
-          <div className="space-y-2.5 min-w-[280px] p-[10px] py-2">
+          <div className="space-y-2.5 min-w-[280px] p-3">
             <div className="relative">
               <Icon
                 name="search"
@@ -162,12 +159,13 @@ const BottomMenu = () => {
               <input
                 type="text"
                 placeholder="Search products..."
+                autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     handleNavigate(`/search?q=${(e.target as HTMLInputElement).value}`);
                   }
                 }}
-                className="w-full pl-10 pr-4 py-2.5 text-[14px] text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:ring-zinc-100/20 focus:border-zinc-900 dark:border-zinc-100/50 placeholder:text-zinc-400"
+                className="w-full pl-10 pr-4 py-2.5 text-[14px] text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1cdb5e]/50 placeholder:text-zinc-400"
               />
             </div>
             <div className="flex gap-2">
@@ -175,7 +173,7 @@ const BottomMenu = () => {
                 <button
                   key={text}
                   onClick={() => handleNavigate(path)}
-                  className="flex-1 flex items-center justify-center gap-2 py-2 text-[13px] font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 py-2 text-[13px] font-semibold text-zinc-700 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer active:scale-95"
                 >
                   <Icon name={IconName} className="w-[15px] h-[15px]" />
                   <span>{text}</span>
@@ -187,13 +185,13 @@ const BottomMenu = () => {
 
       case "notifications":
         return (
-          <div className="space-y-0.5 min-w-[220px] p-[6px] py-1">
-            <div className="px-3 py-2 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+          <div className="space-y-0.5 min-w-[220px] p-2">
+            <div className="px-3 py-1.5 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
               Recent Alerts
             </div>
             {NOTIFICATION_TYPES.map((t) => (
               <button key={t.text} onClick={() => handleNavigate(t.path)} className={sharedHover}>
-                <span className="font-medium">{t.text}</span>
+                <span className="font-semibold">{t.text}</span>
               </button>
             ))}
           </div>
@@ -201,7 +199,7 @@ const BottomMenu = () => {
 
       case "profile":
         return (
-          <div className="space-y-0.5 min-w-[240px] p-[6px] py-1">
+          <div className="space-y-0.5 min-w-[240px] p-2">
             {profileLinks.map(({ icon: IconName, text, path }) => (
               <button
                 key={text}
@@ -212,13 +210,13 @@ const BottomMenu = () => {
                   name={IconName}
                   className="w-[18px] h-[18px] text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100"
                 />
-                <span className="font-medium">{text}</span>
+                <span className="font-semibold">{text}</span>
               </button>
             ))}
             <div className="border-t border-zinc-100 dark:border-zinc-800 my-1.5" />
             <button 
               onClick={handleLogout}
-              className="flex items-center gap-3 px-3 py-2.5 text-[14px] font-semibold text-rose-500 w-full text-left rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"
+              className="flex items-center gap-3 px-3 py-2.5 text-[14px] font-bold text-rose-500 w-full text-left rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
             >
               <Icon name="sign-out-alt" className="w-[18px] h-[18px]" />
               <span>Sign Out</span>
@@ -228,13 +226,13 @@ const BottomMenu = () => {
 
       case "theme":
         return (
-          <div className="flex items-center justify-between gap-2 min-w-[280px] p-[6px]">
+          <div className="flex items-center justify-between gap-2 min-w-[280px] p-2">
             <button
               onClick={(e) => { triggerHaptic(); if (isDark) toggleTheme(e); setView("default"); }}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 transition-all font-medium text-[13px] ${
+              className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 transition-all font-semibold text-[13px] cursor-pointer ${
                 !isDark
                   ? "bg-zinc-100 text-zinc-900 border border-zinc-200"
-                  : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                  : "text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
               }`}
             >
               <Icon name="sun" className="w-[18px] h-[18px]" />
@@ -242,10 +240,10 @@ const BottomMenu = () => {
             </button>
             <button
               onClick={(e) => { triggerHaptic(); if (!isDark) toggleTheme(e); setView("default"); }}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 transition-all font-medium text-[13px] ${
+              className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 transition-all font-semibold text-[13px] cursor-pointer ${
                 isDark
                   ? "bg-zinc-800 text-zinc-100 border border-zinc-700"
-                  : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                  : "text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
               }`}
             >
               <Icon name="moon" className="w-[18px] h-[18px]" />
@@ -264,109 +262,41 @@ const BottomMenu = () => {
       ref={containerRef}
       className={cn("fixed bottom-5 left-3 right-3 sm:left-5 sm:right-5 z-[100] flex items-center justify-between md:hidden gap-1.5 sm:gap-2.5 pointer-events-none mb-[env(safe-area-inset-bottom)]")}
     >
-      {/* Hidden for measurement */}
-      <div
-        ref={hiddenRef}
-        className="absolute left-[-9999px] top-[-9999px] invisible pointer-events-none"
-      >
-        <div className="rounded-[28px] bg-white dark:bg-zinc-950 border-none py-1">
-          {content}
-        </div>
-      </div>
-
-      {/* Animated submenu */}
+      {/* Silky-Smooth Animated Submenu Popup */}
       <AnimatePresence mode="wait">
         {view !== "default" && (
           <motion.div
-            key="submenu"
-            initial={{
-              opacity: 0,
-              scaleY: 0.9,
-              scaleX: 0.95,
-              height: 0,
-              width: 0,
-              originY: 1,
-              x: view === "profile" || view === "theme" ? "0%" : "-50%",
-            }}
-            animate={{
-              opacity: 1,
-              scaleY: 1,
-              scaleX: 1,
-              height: hiddenBounds.height || "auto",
-              width: hiddenBounds.width || "auto",
-              originY: 1,
-              x: view === "profile" || view === "theme" ? "0%" : "-50%",
-            }}
-            exit={{
-              opacity: 0,
-              scaleY: 0.9,
-              scaleX: 0.95,
-              height: 0,
-              width: 0,
-              originY: 1,
-              x: view === "profile" || view === "theme" ? "0%" : "-50%",
-            }}
+            key={view}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{
-              duration: 0.4,
               type: "spring",
-              damping: 25,
-              stiffness: 300
-            }}
-            style={{
-              transformOrigin: view === "profile" || view === "theme" ? "bottom right" : "bottom center",
+              stiffness: 450,
+              damping: 32,
+              mass: 0.6
             }}
             className={cn(
-              "absolute bottom-[calc(100%+12px)] overflow-hidden rounded-[28px] shadow-xl z-[101] pointer-events-auto",
-              view === "profile" || view === "theme" ? "right-0" : "left-1/2"
+              "absolute bottom-[calc(100%+12px)] overflow-hidden rounded-[26px] shadow-[0_16px_45px_rgba(0,0,0,0.18)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.6)] z-[101] pointer-events-auto border border-zinc-200/90 dark:border-zinc-800/90 bg-white/95 dark:bg-[#141518]/95 backdrop-blur-2xl transform-gpu will-change-transform",
+              view === "profile" || view === "theme" ? "right-0" : view === "home" ? "left-2" : view === "search" ? "left-1/2 -translate-x-1/2" : "right-16"
             )}
           >
-            <div
-              ref={elementRef}
-              className="rounded-[28px] bg-white/90 dark:bg-[#141518]/90 backdrop-blur-md relative overflow-hidden shadow-xl"
-            >
-              <AnimatePresence initial={false} mode="popLayout">
-                <motion.div
-                  key={view}
-                  initial={{
-                    opacity: 0,
-                    scale: 0.96,
-                    filter: "blur(8px)",
-                  }}
-                  animate={{
-                    opacity: 1,
-                    scale: 1,
-                    filter: "blur(0px)",
-                  }}
-                  exit={{
-                    opacity: 0,
-                    scale: 0.95,
-                    filter: "blur(8px)",
-                  }}
-                  transition={{
-                    duration: 0.2,
-                  }}
-                  className="py-1"
-                >
-                  {content}
-                </motion.div>
-              </AnimatePresence>
-            </div>
+            {content}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main Nav Container (Height increased to 54px) */}
+      {/* Main Nav Container (Height 54px) */}
       <div className="flex-1 relative pointer-events-auto h-[54px] flex items-center">
-
-        {/* Floating Toolbar with subtle fade, no harsh border */}
-        <div className="w-full h-[54px] bg-white/85 dark:bg-[#141518]/85 backdrop-blur-md flex items-center justify-around px-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)] relative rounded-full">
+        {/* Floating Toolbar */}
+        <div className="w-full h-[54px] bg-white/90 dark:bg-[#141518]/90 backdrop-blur-md flex items-center justify-around px-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] relative rounded-full border border-zinc-200/60 dark:border-zinc-800/60">
           {MAIN_NAV.map(({ icon: IconName, name }) => {
             const isActive = view === name || (name === 'home' && location.pathname === '/');
             return (
               <button
                 key={name}
                 className={cn(
-                  "relative py-0.5 flex items-center justify-center flex-1 transition-all active:scale-95",
+                  "relative py-0.5 flex items-center justify-center flex-1 transition-transform active:scale-95 cursor-pointer",
                   isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
                 )}
                 onClick={() => {
@@ -386,7 +316,7 @@ const BottomMenu = () => {
               >
                 <div className="relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-[50px] transition-all">
                   {isActive && (
-                     <motion.div layoutId="nav-pill" className="absolute inset-0 bg-zinc-100/90 dark:bg-zinc-800/90 rounded-[50px] -z-10 shadow-xs" />
+                     <motion.div layoutId="nav-pill" className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 rounded-[50px] -z-10 shadow-xs" transition={{ type: "spring", stiffness: 450, damping: 32 }} />
                   )}
                   <Icon
                     name={IconName}
@@ -410,7 +340,7 @@ const BottomMenu = () => {
                triggerHaptic();
                setView(view === "profile" ? "default" : "profile");
             }}
-            className="w-[54px] h-[54px] rounded-full bg-white/85 dark:bg-[#141518]/85 backdrop-blur-md shadow-[0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)] flex items-center justify-center transition-transform active:scale-95"
+            className="w-[54px] h-[54px] rounded-full bg-white/90 dark:bg-[#141518]/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] flex items-center justify-center transition-transform active:scale-95 cursor-pointer border border-zinc-200/60 dark:border-zinc-800/60"
           >
             <div className="w-[40px] h-[40px] rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center m-auto">
                <Icon name="user" className={cn("w-[19px] h-[19px]", view === "profile" ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400")} />
@@ -423,10 +353,10 @@ const BottomMenu = () => {
                window.dispatchEvent(new CustomEvent('openAccountCenter'));
                setView("default");
             }}
-            className="w-[54px] h-[54px] rounded-full bg-white/85 dark:bg-[#141518]/85 backdrop-blur-md shadow-[0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)] flex items-center justify-center transition-transform active:scale-95 hover:bg-zinc-50 dark:hover:bg-zinc-800/80"
+            className="w-[54px] h-[54px] rounded-full bg-white/90 dark:bg-[#141518]/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] flex items-center justify-center transition-transform active:scale-95 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 cursor-pointer border border-zinc-200/60 dark:border-zinc-800/60"
           >
-            <div className="w-[40px] h-[40px] rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-inner hover:bg-indigo-600 transition-colors m-auto flex-shrink-0">
-              <ArrowRight className="text-white w-4.5 h-4.5" />
+            <div className="w-[40px] h-[40px] rounded-full bg-[#1cdb5e] text-zinc-950 flex items-center justify-center shadow-inner hover:bg-[#19c754] transition-colors m-auto flex-shrink-0">
+              <ArrowRight className="text-zinc-950 w-4.5 h-4.5 stroke-[2.5]" />
             </div>
           </button>
         )}
@@ -436,4 +366,3 @@ const BottomMenu = () => {
 };
 
 export default BottomMenu;
-

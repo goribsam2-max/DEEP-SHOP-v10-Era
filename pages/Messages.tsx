@@ -27,6 +27,10 @@ import { GroupDetailsModal } from '../components/chat/GroupDetailsModal';
 import { InstagramNotesBar } from '../components/chat/InstagramNotesBar';
 import { ChatBottomBar } from '../components/chat/ChatBottomBar';
 import { NewMessageModal } from '../components/chat/NewMessageModal';
+import { MessageReplyPreview } from '../components/chat/MessageReplyPreview';
+import { MessageMediaGrid } from '../components/chat/MessageMediaGrid';
+import { ChatMediaGalleryModal } from '../components/chat/ChatMediaGalleryModal';
+import { ChatTypingIndicator } from '../components/chat/ChatTypingIndicator';
 
 const isOnlyEmojis = (str: string) => {
     if (!str) return false;
@@ -302,15 +306,116 @@ export default function Messages() {
   const [chatUsersData, setChatUsersData] = useState<Record<string, any>>({});
   const [showOnlineRow, setShowOnlineRow] = useState(true);
   
+  const [activeChatTypingState, setActiveChatTypingState] = useState<Record<string, any>>({});
+  const [otherUserChatActivity, setOtherUserChatActivity] = useState<any>(null);
+
   // Derived activeChat
   const activeChat = chatIdParam 
     ? (chats.find(c => c.id === chatIdParam || c.otherUser?.id === chatIdParam || c.otherUser?.uid === chatIdParam) || tempActiveChat)
     : null;
 
-  const otherUid = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
-  const otherTypingData = activeChat?.typingState?.[otherUid];
-  const isOtherTyping = otherTypingData?.status === 'typing' && (Date.now() - (otherTypingData?.updatedAt || 0) < 5000);
-  const isOtherRecording = otherTypingData?.status === 'recording' && (Date.now() - (otherTypingData?.updatedAt || 0) < 12000);
+  const otherUid = activeChat?.otherUser?.id || activeChat?.otherUser?.uid || (chatIdParam && chatIdParam !== activeChat?.id && chatIdParam !== 'system' ? chatIdParam : null);
+
+  // 1. Direct real-time snapshot on active p2p_chats document
+  useEffect(() => {
+    const effectiveChatId = activeChat?.id;
+    if (!effectiveChatId || activeChat.isNew) {
+      setActiveChatTypingState({});
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db, 'p2p_chats', effectiveChatId), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setActiveChatTypingState(data?.typingState || {});
+      }
+    }, (err) => {
+      console.warn("Typing state subscription warning:", err);
+    });
+
+    return () => unsub();
+  }, [activeChat?.id, activeChat?.isNew]);
+
+  // 2. Direct real-time listener on other user's presence/activity channel
+  useEffect(() => {
+    if (!otherUid || otherUid === 'system') {
+      setOtherUserChatActivity(null);
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db, 'users', otherUid), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const act = data?.chatActivity;
+        if (act && act.status && (act.targetId === user?.uid || !act.targetId)) {
+          setOtherUserChatActivity(act);
+        } else {
+          setOtherUserChatActivity(null);
+        }
+      }
+    }, (err) => {
+      console.warn("User activity subscription warning:", err);
+    });
+
+    return () => unsub();
+  }, [otherUid, user?.uid]);
+
+  // Multi-tier resolution for highest reliability and speed
+  const p2pTypingData = activeChatTypingState?.[otherUid] || activeChat?.typingState?.[otherUid];
+  const userDocActivity = otherUserChatActivity;
+
+  const resolvedActivityData = React.useMemo(() => {
+    const now = Date.now();
+    const candidate1 = (p2pTypingData && p2pTypingData.status && (now - (p2pTypingData.updatedAt || 0) < (p2pTypingData.status === 'recording' ? 35000 : 12000))) ? p2pTypingData : null;
+    const candidate2 = (userDocActivity && userDocActivity.status && (now - (userDocActivity.updatedAt || 0) < (userDocActivity.status === 'recording' ? 35000 : 12000))) ? userDocActivity : null;
+
+    if (candidate1 && candidate2) {
+      return (candidate1.updatedAt || 0) >= (candidate2.updatedAt || 0) ? candidate1 : candidate2;
+    }
+    return candidate1 || candidate2 || null;
+  }, [p2pTypingData, userDocActivity]);
+
+  const otherActivity: 'typing' | 'recording' | 'uploading_photo' | 'choosing_gif' | null = resolvedActivityData ? (
+    resolvedActivityData.status === 'recording' ? 'recording' :
+    (resolvedActivityData.status === 'uploading_photo' || resolvedActivityData.status === 'uploading_image' || resolvedActivityData.status === 'photo') ? 'uploading_photo' :
+    (resolvedActivityData.status === 'choosing_gif' || resolvedActivityData.status === 'gif' || resolvedActivityData.status === 'choosing_sticker' || resolvedActivityData.status === 'sticker') ? 'choosing_gif' :
+    resolvedActivityData.status === 'typing' ? 'typing' : null
+  ) : null;
+  const isOtherTyping = otherActivity === 'typing';
+  const isOtherRecording = otherActivity === 'recording';
+
+  const updateMyActivity = (status: 'typing' | 'recording' | 'uploading_photo' | 'choosing_gif' | null) => {
+    if (!user?.uid) return;
+    const now = Date.now();
+
+    // 1. Direct update to user's activity broadcast doc
+    setDoc(doc(db, 'users', user.uid), {
+      chatActivity: status ? {
+        status,
+        targetId: otherUid || null,
+        updatedAt: now
+      } : null
+    }, { merge: true }).catch(() => {});
+
+    // 2. Direct update to p2p_chats if available
+    let targetChatId = activeChat?.id;
+    if ((!targetChatId || activeChat?.isNew) && otherUid) {
+      const existing = chats.find(c => 
+        !c.isGroup && 
+        c.type !== 'group' && 
+        Array.isArray(c.participants) && 
+        c.participants.includes(otherUid) && 
+        c.participants.includes(user.uid)
+      );
+      if (existing?.id) targetChatId = existing.id;
+    }
+
+    if (targetChatId && targetChatId !== 'new') {
+      updateDoc(doc(db, 'p2p_chats', targetChatId), {
+        [`typingState.${user.uid}`]: status ? { status, updatedAt: now } : null
+      }).catch(() => {});
+    }
+  };
 
   const [showPrivateChatMenu, setShowPrivateChatMenu] = useState(false);
   const [showP2pSearch, setShowP2pSearch] = useState(false);
@@ -509,10 +614,10 @@ export default function Messages() {
   }, [activeChat?.id, activeChat?.themeId]);
 
   useEffect(() => {
-    if (isOtherTyping || isOtherRecording) {
+    if (otherActivity) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [isOtherTyping, isOtherRecording]);
+  }, [otherActivity]);
 
   // Voice Recording states
   const [isRecording, setIsRecording] = useState(false);
@@ -543,7 +648,7 @@ export default function Messages() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // New States and Refs for Reactions, Replies, Review Close, and WebRTC
-  const [replyingTo, setReplyingTo] = useState<{ id: string; text: string; senderId: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; text: string; senderId: string; senderName?: string; imageUrl?: string; audioUrl?: string } | null>(null);
   const [activeMessageMenuId, setActiveMessageMenuId] = useState<string | null>(null);
   const [deleteMessageId, setDeleteMessageId] = useState<string | null>(null);
   const [showAutoDeleteModal, setShowAutoDeleteModal] = useState(false);
@@ -743,6 +848,22 @@ export default function Messages() {
   const [lightboxZoom, setLightboxZoom] = useState<number>(1);
   const [lightboxOffset, setLightboxOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [lightboxMessageId, setLightboxMessageId] = useState<string | null>(null);
+
+  // Modern Media Gallery (3rd & 4th Styles)
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [galleryIndex, setGalleryIndex] = useState<number>(0);
+  const [gallerySenderName, setGallerySenderName] = useState<string>('');
+  const [galleryTimestamp, setGalleryTimestamp] = useState<any>(null);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+  const openMediaGallery = (clickedUrl: string, index: number, allImages: string[], sender?: string, time?: any) => {
+    const list = allImages && allImages.length > 0 ? allImages : (clickedUrl ? [clickedUrl] : []);
+    setGalleryImages(list);
+    setGalleryIndex(index >= 0 ? index : 0);
+    setGallerySenderName(sender || '');
+    setGalleryTimestamp(time || null);
+    setIsGalleryOpen(true);
+  };
 
   // Private Chat Details Media & Links Tab
   const [profileTab, setProfileTab] = useState<'media' | 'links'>('media');
@@ -2195,7 +2316,9 @@ const handleCreateChannel = async () => {
           msgData.replyTo = {
             id: replyingTo.id,
             text: replyingTo.text,
-            senderId: replyingTo.senderId
+            senderId: replyingTo.senderId,
+            senderName: replyingTo.senderName || (replyingTo.senderId === user.uid ? 'You' : 'Member'),
+            imageUrl: replyingTo.imageUrl || null
           };
           setReplyingTo(null);
         }
@@ -3175,34 +3298,37 @@ const handleCreateChannel = async () => {
     const val = e.target.value;
     setNewMessage(val);
 
-    if (!activeChat || activeChat.isNew || !activeChat.id || !user?.uid) return;
-
     if (val.trim().length > 0) {
       if (!isTyping) {
         setIsTyping(true);
-        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
-          [`typingState.${user.uid}`]: { status: 'typing', updatedAt: Date.now() }
-        }).catch(console.error);
+        updateMyActivity('typing');
       }
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false);
-        if (activeChat?.id && user?.uid) {
-          updateDoc(doc(db, 'p2p_chats', activeChat.id), {
-            [`typingState.${user.uid}`]: null
-          }).catch(console.error);
-        }
+        updateMyActivity(null);
       }, 3500);
     } else {
       setIsTyping(false);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      if (activeChat?.id && user?.uid) {
-        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
-          [`typingState.${user.uid}`]: null
-        }).catch(console.error);
-      }
+      updateMyActivity(null);
     }
   };
+
+  // Sync activity status when choosing GIFs or uploading photos
+  useEffect(() => {
+    if (gifStickerModalState.isOpen) {
+      updateMyActivity('choosing_gif');
+    } else if (!isTyping && !isRecording && !isUploadingAttachment && previewUrls.length === 0) {
+      updateMyActivity(null);
+    }
+  }, [gifStickerModalState.isOpen]);
+
+  useEffect(() => {
+    if (isUploadingAttachment || previewUrls.length > 0) {
+      updateMyActivity('uploading_photo');
+    }
+  }, [isUploadingAttachment, previewUrls.length]);
 
   const startRecording = async () => {
     try {
@@ -3264,12 +3390,7 @@ const handleCreateChannel = async () => {
       mediaRecorder.start(250);
       setIsRecording(true);
       setRecordingDuration(0);
-      
-      if (activeChat && !activeChat.isNew && activeChat.id && user?.uid) {
-        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
-          [`typingState.${user.uid}`]: { status: 'recording', updatedAt: Date.now() }
-        }).catch(console.error);
-      }
+      updateMyActivity('recording');
 
       recordingTimerRef.current = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
@@ -3287,11 +3408,7 @@ const handleCreateChannel = async () => {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       clearInterval(recordingTimerRef.current);
-      if (activeChat && !activeChat.isNew && activeChat.id && user?.uid) {
-        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
-          [`typingState.${user.uid}`]: null
-        }).catch(console.error);
-      }
+      updateMyActivity(null);
     }
   };
   
@@ -3304,11 +3421,7 @@ const handleCreateChannel = async () => {
       // Don't save
       audioChunksRef.current = [];
       setRecordedAudioUrl(null);
-      if (activeChat && !activeChat.isNew && activeChat.id && user?.uid) {
-        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
-          [`typingState.${user.uid}`]: null
-        }).catch(console.error);
-      }
+      updateMyActivity(null);
     }
   };
 
@@ -5448,26 +5561,15 @@ const handleCreateChannel = async () => {
 
                                           {/* Quoted Reply Header (if any) */}
                                           {msg.replyTo && (
-                                              <div 
-                                                className={cn(
-                                                  "mb-1.5 p-2 rounded-xl text-xs border-l-[3px] text-left max-w-full cursor-pointer hover:opacity-85 transition",
-                                                  isMe 
-                                                    ? "bg-emerald-700/60 border-white text-white/90" 
-                                                    : "bg-zinc-100 dark:bg-zinc-800/80 border-emerald-500 text-zinc-600 dark:text-zinc-400"
-                                                )}
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  if (msg.replyTo.id) {
-                                                    document.getElementById(`msg-${msg.replyTo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                    triggerHighlight(msg.replyTo.id);
-                                                  }
+                                              <MessageReplyPreview
+                                                replyTo={msg.replyTo}
+                                                isMe={isMe}
+                                                currentUserId={user?.uid || ""}
+                                                onScrollToMessage={(targetId) => {
+                                                  document.getElementById(`msg-${targetId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                  triggerHighlight(targetId);
                                                 }}
-                                              >
-                                                  <p className={cn("font-bold text-[9px]", isMe ? "text-emerald-200" : "text-emerald-600 dark:text-emerald-400")}>
-                                                      {msg.replyTo.senderId === user.uid ? "You" : (activeChannel.creatorName || "Reply")}
-                                                  </p>
-                                                  <p className="truncate text-[10.5px] mt-0.5">{msg.replyTo.text}</p>
-                                              </div>
+                                              />
                                           )}
 
                                           {/* Forwarded Header (if any) */}
@@ -5490,19 +5592,19 @@ const handleCreateChannel = async () => {
                                               </div>
                                           )}
 
-                                          {/* Images attachment */}
-                                          {(msg.images && msg.images.length > 0) ? (
-                                            <div className="flex flex-wrap gap-1 mb-1 max-w-[280px]">
-                                                {msg.images.map((imgUrl: string, idx: number) => (
-                                                    <div key={idx} className="rounded-2xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm max-w-[280px] cursor-pointer" onClick={(e) => { e.stopPropagation(); setLightboxImage(imgUrl); setLightboxZoom(1); setLightboxOffset({ x: 0, y: 0 }); setLightboxMessageId(msg.id); }}>
-                                                        <img src={imgUrl} alt="Attachment" className="w-full object-cover" />
-                                                    </div>
-                                                ))}
+                                          {/* Images attachment (2nd Style Grid) */}
+                                          {((msg.images && msg.images.length > 0) || msg.imageUrl) && (
+                                            <div className="mb-1">
+                                              <MessageMediaGrid
+                                                images={msg.images && msg.images.length > 0 ? msg.images : (msg.imageUrl ? [msg.imageUrl] : [])}
+                                                messageId={msg.id}
+                                                isMe={isMe}
+                                                dataSaverMode={privacySettings.dataSaverMode}
+                                                loadedImages={loadedImages}
+                                                onLoadImage={(key) => setLoadedImages(prev => ({ ...prev, [key]: true }))}
+                                                onImageClick={(url, idx, allImgs) => openMediaGallery(url, idx, allImgs, msg.senderName || 'Member', msg.timestamp)}
+                                              />
                                             </div>
-                                          ) : msg.imageUrl && (
-                                              <div onClick={(e) => { e.stopPropagation(); setLightboxImage(msg.imageUrl); setLightboxZoom(1); setLightboxOffset({ x: 0, y: 0 }); setLightboxMessageId(msg.id); }} className="mb-1 rounded-2xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm max-w-[280px] cursor-pointer">
-                                                  <img src={msg.imageUrl} alt="Attachment" className="w-full object-cover" />
-                                              </div>
                                           )}
 
                                           {/* Post / Message Bubble text */}
@@ -5565,6 +5667,13 @@ const handleCreateChannel = async () => {
                           );
                       })
                       )}
+                      {/* Real-time typing, voice recording, photo sending, GIF picking activity indicator */}
+                      <ChatTypingIndicator
+                        activity={otherActivity}
+                        userName={activeChat.otherUser?.shopName || activeChat.otherUser?.displayName || "User"}
+                        userPhoto={activeChat.otherUser?.photoURL || activeChat.otherUser?.avatarUrl || activeChat.recipientAvatar}
+                        className="px-2"
+                      />
                       <div ref={messagesEndRef} />
                   </div>
 
@@ -5579,7 +5688,7 @@ const handleCreateChannel = async () => {
                                    className="mb-3 p-3 bg-zinc-50 dark:bg-white dark:bg-zinc-200 dark:bg-zinc-800/80 shadow-sm dark:shadow-none border-l-[4px] border-emerald-500 rounded-r-xl flex items-center justify-between text-left"
                                >
                                    <div>
-                                       <p className="text-[10px] font-bold text-[#EF8020]">Replying to</p>
+                                       <p className="text-[11px] font-bold text-[#5B51D8] dark:text-[#7B73F0]">Replying to {replyingTo.senderName || (replyingTo.senderId === user?.uid ? "You" : "User")}</p>
                                        <p className="text-xs text-zinc-600 dark:text-zinc-300 truncate max-w-xs sm:max-w-md mt-0.5">{replyingTo.text}</p>
                                    </div>
                                    <button onClick={() => setReplyingTo(null)} className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition">
@@ -5801,16 +5910,27 @@ const handleCreateChannel = async () => {
                              <div className="flex items-center gap-1.5 truncate mt-0.5">
                                   {activeChat?.isGroup || activeChat?.type === 'group' ? (
                                       <p className="text-[12px] sm:text-[13px] text-zinc-400 dark:text-zinc-500 truncate font-normal">
-                                          {isOtherTyping ? "Someone is typing..." : `${activeChat.participants?.length || 2} members`}
+                                          {otherActivity ? "Someone is active..." : `${activeChat.participants?.length || 2} members`}
                                       </p>
-                                  ) : isOtherTyping ? (
-                                     <p className="text-[12px] sm:text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 animate-pulse truncate">
-                                         typing...
+                                  ) : otherActivity === 'typing' ? (
+                                     <p className="text-[12px] sm:text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 animate-pulse truncate flex items-center gap-1.5">
+                                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
+                                         <span>typing...</span>
                                      </p>
-                                 ) : isOtherRecording ? (
+                                 ) : otherActivity === 'recording' ? (
                                      <p className="text-[12px] sm:text-[13px] font-semibold text-rose-500 animate-pulse flex items-center gap-1 truncate">
                                          <Mic className="w-3 h-3 text-rose-500 shrink-0" />
                                          <span>recording audio...</span>
+                                     </p>
+                                 ) : otherActivity === 'uploading_photo' ? (
+                                     <p className="text-[12px] sm:text-[13px] font-semibold text-blue-500 animate-pulse flex items-center gap-1 truncate">
+                                         <ImageIcon className="w-3 h-3 text-blue-500 shrink-0" />
+                                         <span>sending photo...</span>
+                                     </p>
+                                 ) : otherActivity === 'choosing_gif' ? (
+                                     <p className="text-[12px] sm:text-[13px] font-semibold text-purple-500 animate-pulse flex items-center gap-1 truncate">
+                                         <Sparkles className="w-3 h-3 text-purple-500 shrink-0" />
+                                         <span>choosing a GIF...</span>
                                      </p>
                                  ) : (
                                      <p className="text-[12px] sm:text-[13px] text-zinc-400 dark:text-zinc-500 truncate font-normal">
@@ -6155,15 +6275,15 @@ const handleCreateChannel = async () => {
                                  )} 
                                  onClick={() => setActiveMessageMenuId(null)}
                              >
-                                 {!isMe && (
-                                     <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0 self-end overflow-hidden mb-1 border border-zinc-200 dark:border-zinc-700 shadow-sm">
-                                         {showAvatar && (
-                                             senderPhoto ? 
-                                                 <img src={senderPhoto} alt={senderName} className="w-full h-full object-cover" /> :
-                                                 <div className={cn("w-full h-full flex items-center justify-center font-bold text-xs", getSenderColor(msg.senderId || senderName), "bg-zinc-100 dark:bg-zinc-800")}>
-                                                     {(senderName || 'U')[0].toUpperCase()}
-                                                 </div>
-                                         )}
+                                  {!isMe && (
+                                      <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0 self-end overflow-hidden mb-1 border border-zinc-200 dark:border-zinc-700 shadow-xs">
+                                          {senderPhoto ? (
+                                              <img src={senderPhoto} alt={senderName} className="w-full h-full object-cover" />
+                                          ) : (
+                                              <div className={cn("w-full h-full flex items-center justify-center font-bold text-xs", getSenderColor(msg.senderId || senderName), "bg-zinc-100 dark:bg-zinc-800")}>
+                                                  {(senderName || "U")[0].toUpperCase()}
+                                              </div>
+                                          )}
                                      </div>
                                  )}
                                  
@@ -6190,24 +6310,18 @@ const handleCreateChannel = async () => {
                                        </div>
                                      )}
 
-                                     {/* Replying to quoted message preview inside bubble */}
-                                     {msg.replyTo && (
-                                         <div 
-                                           className={`mb-1.5 p-2 rounded-xl text-xs border-l-[3px] text-left max-w-full cursor-pointer hover:opacity-80 transition ${isMe ? 'bg-black/10 border-emerald-300 text-emerald-100' : 'bg-zinc-100 dark:bg-zinc-200 dark:bg-zinc-800 border-emerald-500 text-zinc-600 dark:text-zinc-400'}`}
-                                           onClick={(e) => {
-                                             e.stopPropagation();
-                                             if (msg.replyTo.id) {
-                                               document.getElementById(`msg-${msg.replyTo.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                               triggerHighlight(msg.replyTo.id);
-                                             }
-                                           }}
-                                         >
-                                             <p className="font-bold text-[9px] text-[#EF8020]">
-                                                 {msg.replyTo.senderId === user.uid ? "You" : (msg.replyTo.senderName || participantProfiles[msg.replyTo.senderId]?.displayName || activeChat.otherUser?.shopName || activeChat.otherUser?.displayName || "User")}
-                                             </p>
-                                             <p className="truncate text-[10.5px] mt-0.5">{msg.replyTo.text}</p>
-                                         </div>
-                                     )}
+                                      {/* Replying to quoted message preview inside bubble (First Style) */}
+                                      {msg.replyTo && (
+                                          <MessageReplyPreview
+                                            replyTo={msg.replyTo}
+                                            isMe={isMe}
+                                            currentUserId={user?.uid || ""}
+                                            onScrollToMessage={(targetId) => {
+                                              document.getElementById("msg-" + targetId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                              triggerHighlight(targetId);
+                                            }}
+                                          />
+                                      )}
 
                                      
                                      <div className="flex items-center gap-2 group/msg">
@@ -6257,63 +6371,19 @@ const handleCreateChannel = async () => {
                                                     />
                                                 </div>
                                             )}
-                                            {(msg.images && msg.images.length > 0) ? (
-                                              <div className="flex flex-wrap gap-1">
-                                                  {msg.images.map((imgUrl: string, imgIdx: number) => {
-                                                      const isImageLoaded = !privacySettings.dataSaverMode || loadedImages[`${msg.id}-${imgIdx}`];
-                                                      return (
-                                                          <div key={imgIdx} className="rounded-[12px] overflow-hidden relative">
-                                                              {isImageLoaded ? (
-                                                                  <div onClick={(e) => { e.stopPropagation(); setLightboxImage(imgUrl); setLightboxZoom(1); setLightboxOffset({ x: 0, y: 0 }); setLightboxMessageId(msg.id); }}>
-                                                                      <img src={imgUrl} alt="Attachment" className="w-full object-cover" />
-                                                                  </div>
-                                                              ) : (
-                                                                  <div className="w-48 h-32 bg-zinc-800/80 backdrop-blur-md flex flex-col items-center justify-center p-3 text-center gap-1.5 rounded-[12px] border border-zinc-700/50">
-                                                                      <EyeOff className="w-5 h-5 text-zinc-400" />
-                                                                      <p className="text-[10px] text-zinc-300 font-bold">Image hidden (Data Saver)</p>
-                                                                      <button 
-                                                                          type="button"
-                                                                          onClick={(e) => {
-                                                                              e.stopPropagation();
-                                                                              setLoadedImages(prev => ({ ...prev, [`${msg.id}-${imgIdx}`]: true }));
-                                                                          }}
-                                                                          className="px-2.5 py-1 rounded-full bg-[#EF8020] text-white text-[9px] font-black uppercase hover:bg-[#EF8020]/90 transition"
-                                                                      >
-                                                                          Load Image
-                                                                      </button>
-                                                                  </div>
-                                                              )}
-                                                          </div>
-                                                      );
-                                                  })}
+                                            {((msg.images && msg.images.length > 0) || msg.imageUrl) && (
+                                              <div className="mb-1">
+                                                <MessageMediaGrid
+                                                  images={msg.images && msg.images.length > 0 ? msg.images : (msg.imageUrl ? [msg.imageUrl] : [])}
+                                                  messageId={msg.id}
+                                                  isMe={isMe}
+                                                  dataSaverMode={privacySettings.dataSaverMode}
+                                                  loadedImages={loadedImages}
+                                                  onLoadImage={(key) => setLoadedImages(prev => ({ ...prev, [key]: true }))}
+                                                  onImageClick={(url, idx, allImgs) => openMediaGallery(url, idx, allImgs, senderName, msg.timestamp)}
+                                                />
                                               </div>
-                                          ) : msg.imageUrl && (() => {
-                                              const isImageLoaded = !privacySettings.dataSaverMode || loadedImages[`${msg.id}-single`];
-                                              return (
-                                                  <div className="rounded-[12px] overflow-hidden relative">
-                                                      {isImageLoaded ? (
-                                                          <div onClick={(e) => { e.stopPropagation(); setLightboxImage(msg.imageUrl); setLightboxZoom(1); setLightboxOffset({ x: 0, y: 0 }); setLightboxMessageId(msg.id); }}>
-                                                              <img src={msg.imageUrl} alt="Attachment" className="w-full object-cover" />
-                                                          </div>
-                                                      ) : (
-                                                          <div className="w-48 h-32 bg-zinc-800/80 backdrop-blur-md flex flex-col items-center justify-center p-3 text-center gap-1.5 rounded-[12px] border border-zinc-700/50">
-                                                              <EyeOff className="w-5 h-5 text-zinc-400" />
-                                                              <p className="text-[10px] text-zinc-300 font-bold">Image hidden (Data Saver)</p>
-                                                              <button 
-                                                                  type="button"
-                                                                  onClick={(e) => {
-                                                                      e.stopPropagation();
-                                                                      setLoadedImages(prev => ({ ...prev, [`${msg.id}-single`]: true }));
-                                                                  }}
-                                                                  className="px-2.5 py-1 rounded-full bg-[#EF8020] text-white text-[9px] font-black uppercase hover:bg-[#EF8020]/90 transition"
-                                                              >
-                                                                  Load Image
-                                                              </button>
-                                                          </div>
-                                                      )}
-                                                  </div>
-                                              );
-                                          })()}
+                                            )}
                                           
                                           {msg.text && (
                                              <div className={cn("px-3 pb-1.5 pt-1", isOnlyEmojis(msg.text) ? "p-0" : "")}>
@@ -6397,6 +6467,13 @@ const handleCreateChannel = async () => {
                          </div>
                        </div>
                      )}
+                     {/* Real-time typing, voice recording, photo sending, GIF picking activity indicator */}
+                     <ChatTypingIndicator
+                       activity={otherActivity}
+                       userName={activeChat.otherUser?.shopName || activeChat.otherUser?.displayName || "User"}
+                       userPhoto={activeChat.otherUser?.photoURL || activeChat.otherUser?.avatarUrl || activeChat.recipientAvatar}
+                       className="px-2"
+                     />
                      <div ref={messagesEndRef} />
                  </div>
 
@@ -6408,13 +6485,13 @@ const handleCreateChannel = async () => {
                                  initial={{ opacity: 0, y: 10 }} 
                                  animate={{ opacity: 1, y: 0 }} 
                                  exit={{ opacity: 0, y: 10 }} 
-                                 className="mb-2 p-2.5 bg-zinc-50 dark:bg-zinc-850 border-l-[4px] border-emerald-500 rounded-r-xl flex items-center justify-between text-left"
+                                 className="mb-2 p-2.5 bg-zinc-100 dark:bg-[#1E1F24] border-l-[4px] border-[#5B51D8] rounded-xl flex items-center justify-between text-left shadow-sm border border-zinc-200/80 dark:border-zinc-750/70 w-full min-w-0 overflow-hidden"
                              >
-                                 <div>
-                                     <p className="text-[10px] font-bold text-[#EF8020]">Replying to</p>
-                                     <p className="text-xs text-zinc-600 dark:text-zinc-300 truncate max-w-xs sm:max-w-md mt-0.5">{replyingTo.text}</p>
+                                 <div className="flex-1 min-w-0 mr-2 overflow-hidden">
+                                     <p className="text-[11px] font-bold text-[#5B51D8] dark:text-[#7B73F0] truncate">{replyingTo.senderName || (replyingTo.senderId === user?.uid ? "You" : (activeChat?.otherUser?.shopName || activeChat?.otherUser?.displayName || "User"))}</p>
+                                     <p className="text-xs text-zinc-600 dark:text-zinc-300 font-normal leading-snug line-clamp-2 break-all overflow-hidden text-ellipsis mt-0.5">{replyingTo.text}</p>
                                  </div>
-                                 <button onClick={() => setReplyingTo(null)} className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition">
+                                 <button onClick={() => setReplyingTo(null)} className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition shrink-0 cursor-pointer">
                                      <X className="w-4 h-4" />
                                  </button>
                              </motion.div>
@@ -6427,6 +6504,7 @@ const handleCreateChannel = async () => {
                      <ChatBottomBar
                        newMessage={newMessage}
                        setNewMessage={setNewMessage}
+                       onInputChange={handleInputChange}
                        onSendMessage={() => handleSendMessage()}
                        isRecording={isRecording}
                        recordingDuration={recordingDuration}
@@ -6622,7 +6700,17 @@ const handleCreateChannel = async () => {
                           const msg = activeChannel 
                             ? channelMessages.find(m => m.id === activeMessageMenuId)
                             : messages.find(m => m.id === activeMessageMenuId);
-                          if (msg) setReplyingTo({ id: msg.id, text: msg.text || "Image attachment", senderId: msg.senderId });
+                          if (msg) {
+                            const senderName = msg.senderName || (msg.senderId === user?.uid ? 'You' : (participantProfiles[msg.senderId]?.displayName || chatUsersData[msg.senderId]?.displayName || activeChat?.otherUser?.displayName || activeChat?.otherUser?.shopName || 'User'));
+                            setReplyingTo({ 
+                              id: msg.id, 
+                              text: msg.text || (msg.images?.length || msg.imageUrl ? 'Photo' : msg.audioUrl ? 'Voice Message' : 'Attachment'), 
+                              senderId: msg.senderId,
+                              senderName: senderName,
+                              imageUrl: msg.images?.[0] || msg.imageUrl || null,
+                              audioUrl: msg.audioUrl || null
+                            });
+                          }
                           setActiveMessageMenuId(null);
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition font-semibold text-[15px]"
@@ -7917,92 +8005,20 @@ const handleCreateChannel = async () => {
           </div>
         )}
       </AnimatePresence>
-      {/* --- Lightbox Modal --- */}
-      <AnimatePresence>
-        {lightboxImage && (
-          <div 
-            className="fixed inset-0 z-[50000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 cursor-pointer select-none"
-            onClick={() => setLightboxImage(null)}
-          >
-            {/* Close Button */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxImage(null); }}
-              className="absolute top-6 right-6 p-3 rounded-full bg-zinc-900/95 hover:bg-zinc-800 text-white transition-all z-50 border border-white/10 flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 active:scale-95"
-              title="Close Fullscreen"
-            >
-              <X className="w-7 h-7" />
-            </button>
-            
-            {/* Controls panel */}
-            <div className="absolute top-6 left-6 flex items-center gap-2 z-50 flex-wrap max-w-[calc(100%-100px)]" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={() => setLightboxZoom(prev => Math.max(0.5, prev - 0.25))}
-                className="p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-white transition border border-white/10 text-xs font-bold"
-                title="Zoom Out"
-              >
-                Zoom -
-              </button>
-              <span className="text-xs font-mono text-zinc-400 bg-zinc-900/80 px-3 py-2 rounded-xl border border-white/10">
-                {Math.round(lightboxZoom * 100)}%
-              </span>
-              <button
-                onClick={() => setLightboxZoom(prev => Math.min(3, prev + 0.25))}
-                className="p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-white transition border border-white/10 text-xs font-bold"
-                title="Zoom In"
-              >
-                Zoom +
-              </button>
-              <button
-                onClick={() => { setLightboxZoom(1); setLightboxOffset({ x: 0, y: 0 }); }}
-                className="p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-white transition border border-white/10 text-xs font-bold"
-              >
-                Reset
-              </button>
-              <a
-                href={lightboxImage}
-                download="attachment"
-                target="_blank"
-                rel="noreferrer"
-                className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition text-xs font-bold flex items-center gap-1.5"
-              >
-                Download
-              </a>
-            </div>
+      {/* --- Dynamic 3rd & 4th Style Media Viewer / Lightbox Modal --- */}
+      <ChatMediaGalleryModal
+        isOpen={isGalleryOpen || !!lightboxImage}
+        images={galleryImages.length > 0 ? galleryImages : (lightboxImage ? [lightboxImage] : [])}
+        initialIndex={galleryIndex}
+        senderName={gallerySenderName}
+        timestamp={galleryTimestamp}
+        onClose={() => {
+          setIsGalleryOpen(false);
+          setLightboxImage(null);
+          setGalleryImages([]);
+        }}
+      />
 
-            {/* Image Stage */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
-              drag={lightboxZoom > 1}
-              dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-              onDrag={(e, info) => {
-                setLightboxOffset({
-                  x: lightboxOffset.x + info.delta.x,
-                  y: lightboxOffset.y + info.delta.y
-                });
-              }}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setLightboxImage(null);
-                }
-              }}
-            >
-              <motion.img
-                src={lightboxImage}
-                alt="Fullscreen Attachment"
-                style={{
-                  scale: lightboxZoom,
-                  x: lightboxOffset.x,
-                  y: lightboxOffset.y,
-                }}
-                className="max-w-full max-h-[85vh] object-contain rounded-2xl select-none pointer-events-none shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </motion.div>
-          </div>
-        )}
       {/* Dynamic New Message & Group Creation Modal matching iOS screenshots */}
       <NewMessageModal
         isOpen={showNewMessageModal || showNewChatModal}
@@ -8026,26 +8042,32 @@ const handleCreateChannel = async () => {
           }
         }}
       />
-      
+
       {/* Custom Clear / Delete Chat Modal */}
       <AnimatePresence>
         {showClearChatModal && activeChat && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowClearChatModal(false)}>
-            <motion.div
+          <div 
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={() => setShowClearChatModal(false)}
+          >
+            <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
               className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl"
             >
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 text-center">Clear Chat History</h3>
-              <p className="text-sm text-zinc-500 mb-6 text-center">Are you sure you want to clear this chat history? This action cannot be undone.</p>
-              
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 text-center">
+                Clear Chat History
+              </h3>
+              <p className="text-sm text-zinc-500 mb-6 text-center">
+                Are you sure you want to clear this chat history? This action cannot be undone.
+              </p>
               <div className="space-y-3">
                 <button
                   onClick={() => {
-                      handleClearChat(activeChat.id);
-                      setShowClearChatModal(false);
+                    handleClearChatForMe(activeChat.id);
+                    setShowClearChatModal(false);
                   }}
                   className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition"
                 >
@@ -8053,8 +8075,8 @@ const handleCreateChannel = async () => {
                 </button>
                 <button
                   onClick={() => {
-                      handleClearChatForEveryone(activeChat.id);
-                      setShowClearChatModal(false);
+                    handleClearChatForEveryone(activeChat.id);
+                    setShowClearChatModal(false);
                   }}
                   className="w-full py-3 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded-xl font-bold text-sm transition"
                 >
@@ -8071,8 +8093,6 @@ const handleCreateChannel = async () => {
           </div>
         )}
       </AnimatePresence>
-
-      </AnimatePresence>
-</div>
+    </div>
   );
 }

@@ -188,38 +188,48 @@ const Payment: React.FC = () => {
   // ROTATE bKash and Nagad numbers DYNAMICALLY on load / refresh
   // Distributes different numbers to different users concurrently, and cycles through them per refresh
   useEffect(() => {
+    // Check if order belongs to a seller
+    const isSellerOrder = Boolean(sellerProfile && (sellerProfile.uid || sellerProfile.id || sellerProfile.email || sellerProfile.storeName));
+
     // 1. Rotate bKash Number
     let bPool: string[] = [];
-    if (Array.isArray(sellerProfile?.bkashNumbers) && sellerProfile.bkashNumbers.length > 0) {
-      bPool = sellerProfile.bkashNumbers;
-    } else if (sellerProfile?.bkashNumber) {
-      bPool = [sellerProfile.bkashNumber];
-    } else if (Array.isArray(paymentSettings?.bkashNumbers) && paymentSettings.bkashNumbers.length > 0) {
-      bPool = paymentSettings.bkashNumbers;
-    } else if (paymentSettings?.bkashNumber) {
-      bPool = [paymentSettings.bkashNumber];
-    } else if (paymentSettings?.npsbNumber) {
-      bPool = [paymentSettings.npsbNumber];
+    if (isSellerOrder) {
+      if (Array.isArray(sellerProfile?.bkashNumbers) && sellerProfile.bkashNumbers.length > 0) {
+        bPool = sellerProfile.bkashNumbers;
+      } else if (sellerProfile?.bkashNumber) {
+        bPool = [sellerProfile.bkashNumber];
+      }
+    } else {
+      if (Array.isArray(paymentSettings?.bkashAccounts) && paymentSettings.bkashAccounts.length > 0) {
+        bPool = paymentSettings.bkashAccounts.map((a: any) => a.number).filter(Boolean);
+      } else if (Array.isArray(paymentSettings?.bkashNumbers) && paymentSettings.bkashNumbers.length > 0) {
+        bPool = paymentSettings.bkashNumbers;
+      } else if (paymentSettings?.bkashNumber) {
+        bPool = [paymentSettings.bkashNumber];
+      }
     }
-    const cleanBkash = bPool.filter((n) => n && !isForbiddenNumber(n));
+    const cleanBkash = bPool.filter((n) => n && typeof n === "string" && !isForbiddenNumber(n) && n !== "01700000000");
 
     // 2. Rotate Nagad Number
     let nPool: string[] = [];
-    if (Array.isArray(sellerProfile?.nagadNumbers) && sellerProfile.nagadNumbers.length > 0) {
-      nPool = sellerProfile.nagadNumbers;
-    } else if (sellerProfile?.nagadNumber) {
-      nPool = [sellerProfile.nagadNumber];
-    } else if (Array.isArray(paymentSettings?.nagadNumbers) && paymentSettings.nagadNumbers.length > 0) {
-      nPool = paymentSettings.nagadNumbers;
-    } else if (paymentSettings?.nagadNumber) {
-      nPool = [paymentSettings.nagadNumber];
-    } else if (paymentSettings?.pathaoPayNumber) {
-      nPool = [paymentSettings.pathaoPayNumber];
+    if (isSellerOrder) {
+      if (Array.isArray(sellerProfile?.nagadNumbers) && sellerProfile.nagadNumbers.length > 0) {
+        nPool = sellerProfile.nagadNumbers;
+      } else if (sellerProfile?.nagadNumber) {
+        nPool = [sellerProfile.nagadNumber];
+      }
+    } else {
+      if (Array.isArray(paymentSettings?.nagadAccounts) && paymentSettings.nagadAccounts.length > 0) {
+        nPool = paymentSettings.nagadAccounts.map((a: any) => a.number).filter(Boolean);
+      } else if (Array.isArray(paymentSettings?.nagadNumbers) && paymentSettings.nagadNumbers.length > 0) {
+        nPool = paymentSettings.nagadNumbers;
+      } else if (paymentSettings?.nagadNumber) {
+        nPool = [paymentSettings.nagadNumber];
+      }
     }
-    const cleanNagad = nPool.filter((n) => n && !isForbiddenNumber(n));
+    const cleanNagad = nPool.filter((n) => n && typeof n === "string" && !isForbiddenNumber(n) && n !== "01800000000");
 
-    // Calculate seed from orderId + session refresh salt so different orders/users
-    // get different numbers concurrently, and every refresh picks another available number
+    // Calculate seed from orderId + session refresh salt
     const sessionSalt = Math.floor(Math.random() * 1000);
     const orderHash = (orderId || "").split("").reduce((acc, c, idx) => acc + c.charCodeAt(0) * (idx + 3), 0);
     const seed = orderHash + sessionSalt;
@@ -228,16 +238,28 @@ const Payment: React.FC = () => {
       const picked = cleanBkash[seed % cleanBkash.length];
       setActiveBkashNumber(picked);
     } else {
-      setActiveBkashNumber("01700000000");
+      setActiveBkashNumber("");
     }
 
     if (cleanNagad.length > 0) {
       const picked = cleanNagad[(seed + 1) % cleanNagad.length];
       setActiveNagadNumber(picked);
     } else {
-      setActiveNagadNumber("01800000000");
+      setActiveNagadNumber("");
     }
   }, [sellerProfile, paymentSettings, orderId]);
+
+  const hasBkashNumber = Boolean(activeBkashNumber && activeBkashNumber !== "01700000000" && !isForbiddenNumber(activeBkashNumber));
+  const hasNagadNumber = Boolean(activeNagadNumber && activeNagadNumber !== "01800000000" && !isForbiddenNumber(activeNagadNumber));
+
+  // Automatically switch to available method if current one is unavailable
+  useEffect(() => {
+    if (hasBkashNumber && !hasNagadNumber && selectedMethod === "nagad") {
+      setSelectedMethod("bkash");
+    } else if (!hasBkashNumber && hasNagadNumber && selectedMethod === "bkash") {
+      setSelectedMethod("nagad");
+    }
+  }, [hasBkashNumber, hasNagadNumber, selectedMethod]);
 
   // Financial Calculations
   const calculations = useMemo(() => {
@@ -678,23 +700,30 @@ const Payment: React.FC = () => {
               {/* bKash Card */}
               <button
                 type="button"
-                onClick={() => setSelectedMethod("bkash")}
-                className={`flex flex-col items-center justify-between p-3.5 rounded-2xl border-2 transition-all bg-white dark:bg-zinc-900 cursor-pointer relative h-32 ${
-                  selectedMethod === "bkash"
-                    ? "border-[#E2125B] ring-2 ring-[#E2125B]/20 shadow-md"
-                    : "border-zinc-200 dark:border-zinc-800 hover:border-pink-300"
+                disabled={!hasBkashNumber}
+                onClick={() => {
+                  if (!hasBkashNumber) {
+                    notify("বর্তমানে কোনো বিকাশ পেমেন্ট নম্বর যুক্ত নেই।", "error");
+                    return;
+                  }
+                  setSelectedMethod("bkash");
+                }}
+                className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all relative h-28 ${
+                  !hasBkashNumber
+                    ? "opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800"
+                    : selectedMethod === "bkash"
+                    ? "border-[#E2125B] ring-2 ring-[#E2125B]/20 shadow-md bg-pink-50/20 dark:bg-pink-950/20 cursor-pointer"
+                    : "border-zinc-200 dark:border-zinc-800 hover:border-pink-300 bg-white dark:bg-zinc-900 cursor-pointer"
                 }`}
               >
-                <div className="flex-1 flex items-center justify-center w-full">
-                  <BkashLogo className="h-8 w-auto" />
-                </div>
-                <div className="w-full pt-1.5 border-t border-zinc-100 dark:border-zinc-800 text-center">
-                  <span className="text-[11px] sm:text-xs font-bold text-zinc-800 dark:text-zinc-200 whitespace-nowrap">
-                    bKash Personal
-                  </span>
-                </div>
-                {selectedMethod === "bkash" && (
-                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#E2125B] text-white flex items-center justify-center text-[10px]">
+                <span className="text-xl sm:text-2xl font-black text-[#E2125B] tracking-tight">
+                  bKash
+                </span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 font-semibold">
+                  {hasBkashNumber ? "বিকাশ পেমেন্ট" : "(নম্বর অনুপলব্ধ)"}
+                </span>
+                {hasBkashNumber && selectedMethod === "bkash" && (
+                  <span className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-[#E2125B] text-white flex items-center justify-center text-xs font-bold shadow-sm">
                     ✓
                   </span>
                 )}
@@ -703,35 +732,59 @@ const Payment: React.FC = () => {
               {/* Nagad Card */}
               <button
                 type="button"
-                onClick={() => setSelectedMethod("nagad")}
-                className={`flex flex-col items-center justify-between p-3.5 rounded-2xl border-2 transition-all bg-white dark:bg-zinc-900 cursor-pointer relative h-32 ${
-                  selectedMethod === "nagad"
-                    ? "border-[#F57C20] ring-2 ring-[#F57C20]/20 shadow-md"
-                    : "border-zinc-200 dark:border-zinc-800 hover:border-orange-300"
+                disabled={!hasNagadNumber}
+                onClick={() => {
+                  if (!hasNagadNumber) {
+                    notify("বর্তমানে কোনো নগদ পেমেন্ট নম্বর যুক্ত নেই।", "error");
+                    return;
+                  }
+                  setSelectedMethod("nagad");
+                }}
+                className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all relative h-28 ${
+                  !hasNagadNumber
+                    ? "opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800"
+                    : selectedMethod === "nagad"
+                    ? "border-[#F57C20] ring-2 ring-[#F57C20]/20 shadow-md bg-orange-50/20 dark:bg-orange-950/20 cursor-pointer"
+                    : "border-zinc-200 dark:border-zinc-800 hover:border-orange-300 bg-white dark:bg-zinc-900 cursor-pointer"
                 }`}
               >
-                <div className="flex-1 flex items-center justify-center w-full">
-                  <NagadLogo className="h-8 w-auto" />
-                </div>
-                <div className="w-full pt-1.5 border-t border-zinc-100 dark:border-zinc-800 text-center">
-                  <span className="text-[11px] sm:text-xs font-bold text-zinc-800 dark:text-zinc-200 whitespace-nowrap">
-                    Nagad Personal
-                  </span>
-                </div>
-                {selectedMethod === "nagad" && (
-                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#F57C20] text-white flex items-center justify-center text-[10px]">
+                <span className="text-xl sm:text-2xl font-black text-[#F57C20] tracking-tight">
+                  নগদ
+                </span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 font-semibold">
+                  {hasNagadNumber ? "নগদ পেমেন্ট" : "(নম্বর অনুপলব্ধ)"}
+                </span>
+                {hasNagadNumber && selectedMethod === "nagad" && (
+                  <span className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-[#F57C20] text-white flex items-center justify-center text-xs font-bold shadow-sm">
                     ✓
                   </span>
                 )}
               </button>
             </div>
 
+            {!hasBkashNumber && !hasNagadNumber && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-xl text-xs text-rose-600 dark:text-rose-400 font-semibold text-center">
+                বর্তমানে কোনো বিকাশ বা নগদ নম্বর সক্রিয় নেই। অনুগ্রহ করে অ্যাডমিন বা বিক্রেতার সাথে যোগাযোগ করুন।
+              </div>
+            )}
+
             {/* Primary Action Button: "5000 BDT পেমেন্ট করুন" */}
             <div className="space-y-2.5 pt-1">
               <button
                 type="button"
-                onClick={() => setStep(2)}
-                className={`w-full h-12 rounded-full font-bold text-sm sm:text-base text-white shadow-lg transition-transform active:scale-[0.99] flex items-center justify-center gap-2 whitespace-nowrap ${
+                disabled={(!hasBkashNumber && selectedMethod === "bkash") || (!hasNagadNumber && selectedMethod === "nagad")}
+                onClick={() => {
+                  if (selectedMethod === "bkash" && !hasBkashNumber) {
+                    notify("বিকাশ নম্বর সক্রিয় নেই।", "error");
+                    return;
+                  }
+                  if (selectedMethod === "nagad" && !hasNagadNumber) {
+                    notify("নগদ নম্বর সক্রিয় নেই।", "error");
+                    return;
+                  }
+                  setStep(2);
+                }}
+                className={`w-full h-12 rounded-full font-bold text-sm sm:text-base text-white shadow-lg transition-transform active:scale-[0.99] flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${
                   selectedMethod === "bkash"
                     ? "bg-[#E2125B] hover:bg-[#c20e4d]"
                     : "bg-[#F57C20] hover:bg-[#d96714]"
