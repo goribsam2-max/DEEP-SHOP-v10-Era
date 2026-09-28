@@ -103,23 +103,23 @@ html, body {
 
 /* User's custom premium SVG & Plus UI XML variables */
 :root {
-  --themeC: #482dff;
-  --headC: #08102b;
-  --bodyC: #08102b;
-  --bodyCa: #989b9f;
-  --bodyB: #fffdfc;
-  --linkC: #204ecf;
-  --linkB: #204ecf;
-  --waveB: #C6DAFC;
-  --iconC: #08102b;
-  --iconCa: #08102b;
-  --iconCs: #767676;
-  --headerC: #343435;
-  --headerB: #fffdfc;
-  --contentB: #fffdfc;
-  --contentL: #e6e6e6;
-  --notifU: #e8f0fe;
-  --notifC: #01579b;
+  --themeC: #5F2CFF;
+  --headC: #110833;
+  --bodyC: #110833;
+  --bodyCa: #3d2b6b;
+  --bodyB: #DFF6FF;
+  --linkC: #5F2CFF;
+  --linkB: #5F2CFF;
+  --waveB: #a3e3f8;
+  --iconC: #5F2CFF;
+  --iconCa: #5F2CFF;
+  --iconCs: #5F2CFF;
+  --headerC: #110833;
+  --headerB: #DFF6FF;
+  --contentB: #DFF6FF;
+  --contentL: #b5e4f8;
+  --notifU: #cceefc;
+  --notifC: #110833;
   --buttonR: 50px;
   --greetR: 10px;
   --iconHr: 15px;
@@ -127,32 +127,39 @@ html, body {
   --srchMr: 20px;
   --srchDr: 20px;
 
-  --fotB: #fffdfc;
-  --fotT: #08102b;
-  --fotL: #e6e6e6;
+  --fotB: #DFF6FF;
+  --fotT: #110833;
+  --fotL: #b5e4f8;
+
+  --zinc-50: #DFF6FF;
+  --zinc-100: #cceefc;
+  --zinc-200: #b5e4f8;
+  --zinc-900: #110833;
+  --primary: #5F2CFF;
+  --primary-foreground: #ffffff;
 }
 
 .dark, .drK {
-  --themeC: #1e1e1e;
-  --headC: #fffdfc;
-  --bodyC: #fffdfc;
-  --bodyCa: #989b9f;
-  --bodyB: #1e1e1e;
-  --linkC: #3b82f6;
-  --linkB: #3b82f6;
-  --darkU: #3b82f6;
-  --darkT: #fffdfc;
-  --darkTa: #989b9f;
-  --darkB: #1e1e1e;
-  --darkBa: #2d2d30;
-  --darkBs: #252526;
-  --contentB: #252526;
-  --contentL: rgba(255, 255, 255, 0.15);
+  --themeC: #000000;
+  --headC: #ffffff;
+  --bodyC: #ffffff;
+  --bodyCa: #E2D5F8;
+  --bodyB: #000000;
+  --linkC: #8E05C2;
+  --linkB: #8E05C2;
+  --darkU: #8E05C2;
+  --darkT: #ffffff;
+  --darkTa: #E2D5F8;
+  --darkB: #000000;
+  --darkBa: #3E065F;
+  --darkBs: #700B97;
+  --contentB: #3E065F;
+  --contentL: #700B97;
 
-  --waveB: #1e293b;
-  --fotB: #252526;
-  --fotT: #fffdfc;
-  --fotL: rgba(255, 255, 255, 0.15);
+  --waveB: #3E065F;
+  --fotB: #3E065F;
+  --fotT: #ffffff;
+  --fotL: #700B97;
 }
 
 /* Standard Plus UI XML Button styles */
@@ -577,5 +584,375 @@ body {
   background: var(--darkU, #3b82f6) !important;
   color: #fffdfc !important;
 }
+
+/* ==========================================================================
+   GLOBAL LIGHT MODE COLOR GRADED REWRITE:
+   Page Background: GLASS BLUE (#DFF6FF)
+   Cards / Popups / Footers / Message Buttons / Modals: PURE WHITE (#FFFFFF)
+   Action / Highlights / All Green elements: CHROME VIOLET (#5F2CFF)
+   Readable Dark Text: #110833
+   ========================================================================== */
+
+html:not(.dark) body,
+html:not(.dark) #root,
+html:not(.dark) main {
+  background-color: #DFF6FF !important;
+  color: #110833 !important;
+}
+
+/* Cards, Product Cards, Footer, Popups, Modals, Message Buttons, Floating bars stay WHITE (#FFFFFF) */
+html:not(.dark) .bg-white,
+html:not(.dark) .bg-zinc-50,
+html:not(.dark) .bg-gray-50,
+html:not(.dark) .bg-slate-50,
+html:not(.dark) .bg-\[\#fffdfc\],
+html:not(.dark) .bg-\[\#ffffff\],
+html:not(.dark) .bg-\[\#fff\],
+html:not(.dark) .bg-white\/90,
+html:not(.dark) .bg-white\/80,
+html:not(.dark) .bg-white\/95,
+html:not(.dark) .bg-white\/70,
+html:not(.dark) .bg-zinc-50\/90,
+html:not(.dark) .bg-zinc-50\/80,
+html:not(.dark) footer,
+html:not(.dark) [role="dialog"],
+html:not(.dark) .popup,
+html:not(.dark) .card {
+  background-color: #ffffff !important;
+}
+
+/* Secondary light card surfaces become soft clean white-tinted surfaces */
+html:not(.dark) .bg-zinc-100,
+html:not(.dark) .bg-gray-100,
+html:not(.dark) .bg-slate-100,
+html:not(.dark) .bg-zinc-200\/80,
+html:not(.dark) .bg-zinc-100\/90,
+html:not(.dark) .bg-[#f4f4f5],
+html:not(.dark) .bg-[#f8fafc],
+html:not(.dark) .bg-[#f1f5f9],
+html:not(.dark) .bg-[#F0F2F5] {
+  background-color: #f2faff !important;
+}
+
+/* CHROME VIOLET (#5F2CFF) replacing ALL Green colors (#1cdb5e, #22c55e, #10b981, #25D366, emerald, green) & Primary accents */
+html:not(.dark) .bg-\[\#1cdb5e\],
+html:not(.dark) .bg-\[\#22c55e\],
+html:not(.dark) .bg-\[\#10b981\],
+html:not(.dark) .bg-\[\#16a34a\],
+html:not(.dark) .bg-\[\#059669\],
+html:not(.dark) .bg-\[\#25D366\],
+html:not(.dark) .bg-emerald-600,
+html:not(.dark) .bg-emerald-500,
+html:not(.dark) .bg-emerald-400,
+html:not(.dark) .bg-green-600,
+html:not(.dark) .bg-green-500,
+html:not(.dark) .bg-indigo-600,
+html:not(.dark) .bg-indigo-500,
+html:not(.dark) .bg-violet-600,
+html:not(.dark) .bg-violet-500,
+html:not(.dark) .bg-purple-600,
+html:not(.dark) .bg-blue-600,
+html:not(.dark) .bg-blue-500,
+html:not(.dark) .bg-\[\#5B51D8\],
+html:not(.dark) .bg-\[\#482dff\],
+html:not(.dark) .bg-\[\#204ecf\],
+html:not(.dark) .bg-\[\#007AFF\],
+html:not(.dark) .bg-\[\#ea580c\] {
+  background-color: #5F2CFF !important;
+  color: #ffffff !important;
+}
+
+/* Chrome Violet Hover States */
+html:not(.dark) .hover\:bg-emerald-700:hover,
+html:not(.dark) .hover\:bg-emerald-600:hover,
+html:not(.dark) .hover\:bg-green-700:hover,
+html:not(.dark) .hover\:bg-indigo-700:hover,
+html:not(.dark) .hover\:bg-indigo-600:hover,
+html:not(.dark) .hover\:bg-violet-700:hover,
+html:not(.dark) .hover\:bg-purple-700:hover,
+html:not(.dark) .hover\:bg-blue-700:hover {
+  background-color: #4c1ddb !important;
+  color: #ffffff !important;
+}
+
+/* White text on Chrome Violet elements */
+html:not(.dark) .bg-\[\#5F2CFF\] *,
+html:not(.dark) .bg-\[\#1cdb5e\] *,
+html:not(.dark) .bg-emerald-600 *,
+html:not(.dark) .bg-emerald-500 *,
+html:not(.dark) .bg-green-600 *,
+html:not(.dark) .bg-indigo-600 *,
+html:not(.dark) .bg-indigo-500 *,
+html:not(.dark) .bg-violet-600 *,
+html:not(.dark) .bg-violet-500 * {
+  color: #ffffff !important;
+}
+
+/* CHROME VIOLET (#5F2CFF) Text colors for Green / Primary / Highlights */
+html:not(.dark) .text-\[\#1cdb5e\],
+html:not(.dark) .text-\[\#22c55e\],
+html:not(.dark) .text-\[\#10b981\],
+html:not(.dark) .text-\[\#25D366\],
+html:not(.dark) .text-emerald-600,
+html:not(.dark) .text-emerald-500,
+html:not(.dark) .text-green-600,
+html:not(.dark) .text-green-500,
+html:not(.dark) .text-indigo-600,
+html:not(.dark) .text-indigo-500,
+html:not(.dark) .text-violet-600,
+html:not(.dark) .text-violet-500,
+html:not(.dark) .text-purple-600,
+html:not(.dark) .text-blue-600,
+html:not(.dark) .text-blue-500,
+html:not(.dark) .text-\[\#5B51D8\],
+html:not(.dark) .text-\[\#482dff\],
+html:not(.dark) .text-\[\#204ecf\],
+html:not(.dark) .text-\[\#007AFF\],
+html:not(.dark) .text-\[\#ea580c\] {
+  color: #5F2CFF !important;
+}
+
+/* Chrome Violet (#5F2CFF) Fill for SVGs */
+html:not(.dark) .fill-emerald-500,
+html:not(.dark) .fill-emerald-600,
+html:not(.dark) .fill-green-500,
+html:not(.dark) .fill-[#1cdb5e],
+html:not(.dark) .fill-[#22c55e],
+html:not(.dark) .fill-[#25D366] {
+  fill: #5F2CFF !important;
+}
+
+/* Chrome Violet (#5F2CFF) Borders */
+html:not(.dark) .border-emerald-600,
+html:not(.dark) .border-emerald-500,
+html:not(.dark) .border-green-600,
+html:not(.dark) .border-green-500,
+html:not(.dark) .border-indigo-600,
+html:not(.dark) .border-indigo-500,
+html:not(.dark) .border-violet-600,
+html:not(.dark) .border-violet-500,
+html:not(.dark) .border-[#5B51D8],
+html:not(.dark) .border-[#482dff],
+html:not(.dark) .border-[#204ecf],
+html:not(.dark) .border-\[\#1cdb5e\] {
+  border-color: #5F2CFF !important;
+}
+
+/* Clean Subtle Card Borders */
+html:not(.dark) .border-zinc-200,
+html:not(.dark) .border-zinc-300,
+html:not(.dark) .border-gray-200,
+html:not(.dark) .border-slate-200,
+html:not(.dark) .border-zinc-200\/80,
+html:not(.dark) .border-zinc-300\/60 {
+  border-color: #d8f1fc !important;
+}
+
+/* Standard readable text colors on White Cards & Glass Blue background */
+html:not(.dark) .text-zinc-900,
+html:not(.dark) .text-zinc-800,
+html:not(.dark) .text-gray-900,
+html:not(.dark) .text-gray-800,
+html:not(.dark) .text-slate-900,
+html:not(.dark) .text-slate-800,
+html:not(.dark) .text-black,
+html:not(.dark) .text-\[\#08102b\] {
+  color: #110833 !important;
+}
+
+html:not(.dark) .text-zinc-600,
+html:not(.dark) .text-zinc-500,
+html:not(.dark) .text-zinc-700,
+html:not(.dark) .text-gray-600,
+html:not(.dark) .text-gray-500,
+html:not(.dark) .text-slate-600,
+html:not(.dark) .text-slate-500 {
+  color: #43336d !important;
+}
+
+/* ==========================================================================
+   GLOBAL DARK MODE COLOR GRADED REWRITE (MATCHING IMG_4103.jpeg):
+   Canvas / Page Body: PURE OLED BLACK (#000000)
+   Standard Cards / Popups / Footers / Modals: SLEEK GRAPHITE CHARCOAL (#181822)
+   Card Borders & Sub-containers: DEEP PURPLE TINT (#3E065F)
+   Featured Banner Cards / Price Pills / Action Buttons / Badges / Loaders: ELECTRIC PURPLE (#8E05C2)
+   Wave Animation & Luma Loader: Light = Chrome Violet (#5F2CFF), Dark = Purple (#8E05C2)
+   ========================================================================== */
+
+/* 1. Page Backgrounds in Dark Mode -> PURE OLED BLACK (#000000) */
+html.dark,
+html.dark body,
+html.dark #root,
+html.dark main,
+html.dark .dark\:bg-black,
+html.dark .dark\:bg-zinc-950,
+html.dark .dark\:bg-gray-950,
+html.dark .dark\:bg-slate-950,
+html.dark .dark\:bg-\[\#08102b\],
+html.dark .dark\:bg-\[\#000000\],
+html.dark .dark\:bg-\[\#000\] {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* 2. Standard Cards, Footers, Popups, Modals, Headers, Drawers, Message Bubbles -> SLEEK GRAPHITE CHARCOAL (#181822) */
+html.dark .dark\:bg-zinc-900,
+html.dark .dark\:bg-zinc-850,
+html.dark .dark\:bg-zinc-800,
+html.dark .dark\:bg-zinc-900\/90,
+html.dark .dark\:bg-zinc-900\/80,
+html.dark .dark\:bg-zinc-900\/70,
+html.dark .dark\:bg-\[\#121214\],
+html.dark .dark\:bg-\[\#141518\],
+html.dark .dark\:bg-\[\#1E1F24\],
+html.dark .dark\:bg-\[\#18181b\],
+html.dark .dark\:bg-\[\#252526\],
+html.dark .dark\:bg-\[\#2d2d30\],
+html.dark .dark\:bg-gray-900,
+html.dark .dark\:bg-slate-900,
+html.dark footer,
+html.dark [role="dialog"],
+html.dark .popup,
+html.dark .card {
+  background-color: #181822 !important;
+  color: #ffffff !important;
+}
+
+/* 3. Sub-cards, Inputs, Search Bars, Interactive Items -> DARK PURPLE GRAPHITE (#242032) */
+html.dark .dark\:bg-zinc-800\/80,
+html.dark .dark\:bg-zinc-800\/60,
+html.dark .dark\:bg-zinc-700,
+html.dark .dark\:bg-zinc-750,
+html.dark .dark\:bg-gray-800,
+html.dark .dark\:bg-slate-800,
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #242032 !important;
+  color: #ffffff !important;
+}
+
+/* 4. Featured Banner Cards, Hero Cards, Banner Cards in Dark Mode -> VIBRANT PURPLE (#8E05C2 / #3E065F) */
+html.dark .featured-card,
+html.dark .hero-card,
+html.dark .bg-gradient-to-r.from-purple-600,
+html.dark .bg-gradient-to-br.from-purple-600 {
+  background-color: #8E05C2 !important;
+}
+
+/* 5. Primary Action Buttons, Active Pills, Highlights, Price Badges, Cart Badges, Wishlist Hearts, Active Navigation Icons -> ELECTRIC PURPLE (#8E05C2) */
+html.dark .dark\:bg-indigo-600,
+html.dark .dark\:bg-indigo-500,
+html.dark .dark\:bg-violet-600,
+html.dark .dark\:bg-violet-500,
+html.dark .dark\:bg-purple-600,
+html.dark .dark\:bg-purple-500,
+html.dark .dark\:bg-blue-600,
+html.dark .dark\:bg-blue-500,
+html.dark .dark\:bg-emerald-600,
+html.dark .dark\:bg-emerald-500,
+html.dark .dark\:bg-green-600,
+html.dark .dark\:bg-\[\#5B51D8\],
+html.dark .dark\:bg-\[\#5F2CFF\],
+html.dark .dark\:bg-\[\#1cdb5e\],
+html.dark .dark\:bg-\[\#22c55e\],
+html.dark .dark\:bg-\[\#10b981\],
+html.dark .dark\:bg-\[\#25D366\],
+html.dark .dark\:bg-\[\#ea580c\],
+html.dark .dark\:bg-\[\#8E05C2\],
+html.dark .dark\:bg-\[\#700B97\] {
+  background-color: #8E05C2 !important;
+  color: #ffffff !important;
+}
+
+/* Hover States for Electric Purple (#8E05C2) */
+html.dark .dark\:hover\:bg-indigo-700:hover,
+html.dark .dark\:hover\:bg-indigo-600:hover,
+html.dark .dark\:hover\:bg-violet-700:hover,
+html.dark .dark\:hover\:bg-purple-700:hover,
+html.dark .dark\:hover\:bg-zinc-700:hover,
+html.dark .dark\:hover\:bg-zinc-800:hover {
+  background-color: #700B97 !important;
+  color: #ffffff !important;
+}
+
+/* White text on Electric Purple (#8E05C2) elements */
+html.dark .bg-\[\#8E05C2\] *,
+html.dark .dark\:bg-indigo-600 *,
+html.dark .dark\:bg-indigo-500 *,
+html.dark .dark\:bg-violet-600 *,
+html.dark .dark\:bg-purple-600 *,
+html.dark .dark\:bg-\[\#8E05C2\] * {
+  color: #ffffff !important;
+}
+
+/* Text Colors for Links, Brand Titles, Active Icons -> Vibrant Purple (#D463FF) */
+html.dark .dark\:text-indigo-400,
+html.dark .dark\:text-indigo-500,
+html.dark .dark\:text-violet-400,
+html.dark .dark\:text-violet-500,
+html.dark .dark\:text-purple-400,
+html.dark .dark\:text-purple-500,
+html.dark .dark\:text-blue-400,
+html.dark .dark\:text-blue-500,
+html.dark .dark\:text-emerald-400,
+html.dark .dark\:text-emerald-500,
+html.dark .dark\:text-\[\#5B51D8\],
+html.dark .dark\:text-\[\#7B73F0\],
+html.dark .dark\:text-\[\#5F2CFF\],
+html.dark .dark\:text-\[\#1cdb5e\],
+html.dark .dark\:text-\[\#8E05C2\] {
+  color: #D463FF !important;
+}
+
+/* Fill for SVGs in Dark Mode */
+html.dark .dark\:fill-\[\#8E05C2\],
+html.dark .dark\:fill-indigo-500,
+html.dark .dark\:fill-violet-500,
+html.dark .dark\:fill-purple-500,
+html.dark .dark\:fill-emerald-500 {
+  fill: #8E05C2 !important;
+}
+
+/* Card Borders in Dark Mode -> SUBTLE DARK PURPLE (#3E065F / #322548) */
+html.dark .dark\:border-zinc-800,
+html.dark .dark\:border-zinc-750,
+html.dark .dark\:border-zinc-700,
+html.dark .dark\:border-zinc-600,
+html.dark .dark\:border-gray-800,
+html.dark .dark\:border-slate-800,
+html.dark .dark\:border-\[\#1E1F24\] {
+  border-color: #3E065F !important;
+}
+
+/* Active Borders in Dark Mode -> ELECTRIC PURPLE (#8E05C2) */
+html.dark .dark\:border-indigo-500,
+html.dark .dark\:border-violet-500,
+html.dark .dark\:border-purple-500,
+html.dark .dark\:border-\[\#5B51D8\],
+html.dark .dark\:border-\[\#5F2CFF\],
+html.dark .dark\:border-\[\#8E05C2\] {
+  border-color: #8E05C2 !important;
+}
+
+/* Crisp White & Soft Lilac Readable Text in Dark Mode */
+html.dark .dark\:text-white,
+html.dark .dark\:text-zinc-100,
+html.dark .dark\:text-zinc-200,
+html.dark .dark\:text-gray-100,
+html.dark .dark\:text-slate-100 {
+  color: #ffffff !important;
+}
+
+html.dark .dark\:text-zinc-300,
+html.dark .dark\:text-zinc-400,
+html.dark .dark\:text-zinc-500,
+html.dark .dark\:text-gray-300,
+html.dark .dark\:text-gray-400,
+html.dark .dark\:text-slate-300,
+html.dark .dark\:text-slate-400 {
+  color: #C8B8E8 !important;
+}
+
 
 

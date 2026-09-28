@@ -130,20 +130,20 @@ export const ProductCard = ({ product, index }: { product: Product, index?: numb
 
           {/* Top Left/Right Discount Badge */}
           {hasDiscount && discountPercentage > 0 && (
-            <div className="absolute top-2.5 right-2.5 sm:right-auto sm:left-2.5 bg-[#ea580c] rounded-full px-2.5 py-1 z-10 shadow-sm flex items-center justify-center border border-white/10">
+            <div className="absolute top-2.5 right-2.5 sm:right-auto sm:left-2.5 bg-[#5F2CFF] rounded-full px-2.5 py-1 z-10 shadow-sm flex items-center justify-center border border-white/10">
               <span className="text-[10px] sm:text-xs font-black text-white leading-none">-{discountPercentage}%</span>
             </div>
           )}
 
-          {/* Top Right Heart Outline (Only when large we might want it differently, but keep it here) */}
+          {/* Top Right Heart Outline */}
           <button
             onClick={toggleWishlist}
-            className="absolute top-2.5 left-2.5 sm:left-auto sm:right-2.5 bg-white/70 backdrop-blur-sm dark:bg-zinc-900/70 rounded-full p-2 flex items-center justify-center transition-colors hover:bg-orange-50 dark:hover:bg-zinc-800 z-10 cursor-pointer shadow-sm"
+            className="absolute top-2.5 left-2.5 sm:left-auto sm:right-2.5 bg-white/80 backdrop-blur-sm dark:bg-zinc-900/70 rounded-full p-2 flex items-center justify-center transition-colors hover:bg-violet-50 dark:hover:bg-zinc-800 z-10 cursor-pointer shadow-sm"
           >
             <Icon
               name="heart"
               solid={isWishlisted}
-              className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isWishlisted ? "text-[#ea580c]" : "text-[#ea580c]"}`}
+              className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isWishlisted ? "text-[#5F2CFF]" : "text-[#5F2CFF]"}`}
             />
           </button>
 
@@ -175,7 +175,7 @@ export const ProductCard = ({ product, index }: { product: Product, index?: numb
 
               {/* Price Inner */}
               <div className="flex flex-row items-center justify-center min-w-min pl-1 pr-1.5 pb-1.5 pt-1 relative z-20 bg-white dark:bg-zinc-900 rounded-tl-[15px] max-w-[85%]">
-                <div className="flex flex-row items-center justify-center gap-1.5 bg-[#1cdb5e] py-1 px-2.5 w-full rounded-full shadow-sm overflow-hidden">
+                <div className="flex flex-row items-center justify-center gap-1.5 bg-[#5F2CFF] py-1 px-2.5 w-full rounded-full shadow-sm overflow-hidden">
                   <span className="text-[12px] sm:text-[13px] font-black text-white tracking-tight leading-none shrink-0 truncate">
                     {formatPrice(displayPrice)}
                   </span>
@@ -196,7 +196,7 @@ export const ProductCard = ({ product, index }: { product: Product, index?: numb
             {product.name}
           </h3>
           <div className="flex items-center gap-1 mt-1.5 mb-2">
-            <Icon name="star" solid={true} className="w-3 h-3 text-yellow-400" />
+            <Icon name="star" solid={true} className="w-3 h-3 text-[#5F2CFF]" />
             <span className="text-[10px] sm:text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
               {product.rating ? product.rating.toFixed(1) : "4.9"}
             </span>
@@ -208,7 +208,7 @@ export const ProductCard = ({ product, index }: { product: Product, index?: numb
           {/* If Large, show price here instead of cutout */}
           {isLarge && (
             <div className="flex flex-col items-start mt-2 max-w-full">
-              <div className="flex flex-row items-center justify-start gap-1.5 bg-[#1cdb5e] py-1.5 px-3 rounded-full shadow-sm max-w-full overflow-hidden">
+              <div className="flex flex-row items-center justify-start gap-1.5 bg-[#5F2CFF] py-1.5 px-3 rounded-full shadow-sm max-w-full overflow-hidden">
                 <span className="text-[14px] md:text-[15px] font-black text-white tracking-tight leading-none shrink-0 truncate">
                   {formatPrice(displayPrice)}
                 </span>

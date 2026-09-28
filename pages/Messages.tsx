@@ -604,7 +604,7 @@ export default function Messages() {
     if (activeChat?.id) {
       // Sync theme
       try {
-        const savedThemeId = localStorage.getItem(`chat_theme_${activeChat.id}`) || activeChat.themeId || localStorage.getItem('deepshop_chat_theme_id');
+        const savedThemeId = localStorage.getItem(`chat_theme_${activeChat?.id}`) || activeChat.themeId || localStorage.getItem('deepshop_chat_theme_id');
         if (savedThemeId) {
           const found = CHAT_THEMES.find(t => t.id === savedThemeId);
           if (found) setActiveTheme(found);
@@ -819,10 +819,10 @@ export default function Messages() {
   };
 
   const isDMBlocked = React.useMemo(() => {
-    if (!activeChat || !activeChat.otherUser || activeChat.otherUser.id === 'system') return false;
+    if (!activeChat || !activeChat.otherUser || activeChat?.otherUser?.id === 'system') return false;
     
     // Check other user's real-time direct message policy
-    const otherId = activeChat.otherUser.id || activeChat.otherUser.uid;
+    const otherId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
     const otherData = otherId ? chatUsersData[otherId] : null;
     
     if (otherData?.privacy?.allowDirectMessages === false) {
@@ -832,7 +832,7 @@ export default function Messages() {
       return true;
     }
 
-    const privacy = activeChat.otherUser.whoCanDM;
+    const privacy = activeChat?.otherUser?.whoCanDM;
     if (!privacy || privacy === 'everyone') return false;
     
     if (privacy === 'no_one') return true;
@@ -1763,9 +1763,9 @@ const handleCreateChannel = async () => {
   };
 
   const handlePinMessageP2P = async (msg: any) => {
-    if (!activeChat || !activeChat.id) return;
+    if (!activeChat || !activeChat?.id) return;
     try {
-      await updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+      await updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
         pinnedMessage: {
           id: msg.id,
           text: msg.text || "Attachment",
@@ -1780,9 +1780,9 @@ const handleCreateChannel = async () => {
   };
 
   const handleUnpinMessageP2P = async () => {
-    if (!activeChat || !activeChat.id) return;
+    if (!activeChat || !activeChat?.id) return;
     try {
-      await updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+      await updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
         pinnedMessage: null
       });
       notify("Message unpinned", "info");
@@ -1882,8 +1882,8 @@ const handleCreateChannel = async () => {
   };
 
   const handleReactToMessage = async (msgId: string, emoji: string) => {
-    if (!user || !activeChat || !activeChat.id) return;
-    const msgRef = doc(db, 'p2p_chats', activeChat.id, 'messages', msgId);
+    if (!user || !activeChat || !activeChat?.id) return;
+    const msgRef = doc(db, 'p2p_chats', activeChat?.id, 'messages', msgId);
     try {
       const msgDoc = await getDoc(msgRef);
       if (msgDoc.exists()) {
@@ -1916,7 +1916,7 @@ const handleCreateChannel = async () => {
         const q = query(
           collection(db, "user_reviews"),
           where("reviewerId", "==", user.uid),
-          where("revieweeId", "==", activeChat.otherUser.id)
+          where("revieweeId", "==", activeChat?.otherUser?.id)
         );
         const snap = await getDocs(q);
         setHasReviewed(!snap.empty);
@@ -1928,7 +1928,7 @@ const handleCreateChannel = async () => {
     const loadOtherUserReviews = async () => {
       setIsTrustLoading(true);
       const emailLower = activeChat?.otherUser?.email?.toLowerCase().trim();
-      if (activeChat.otherUser.id === 'system' || emailLower === 'deepshop@gmail.com' || emailLower === 'deepshopbysam@gmail.com') {
+      if (activeChat?.otherUser?.id === 'system' || emailLower === 'deepshop@gmail.com' || emailLower === 'deepshopbysam@gmail.com') {
         setOtherUserTrust({ score: 100, count: 120, avgRating: 5, hasScamWarning: false });
         setIsTrustLoading(false);
         return;
@@ -1936,14 +1936,14 @@ const handleCreateChannel = async () => {
       try {
         const q1 = query(
           collection(db, "user_reviews"),
-          where("revieweeId", "==", activeChat.otherUser.id)
+          where("revieweeId", "==", activeChat?.otherUser?.id)
         );
         const snap1 = await getDocs(q1);
         const list1 = snap1.docs.map(doc => doc.data());
 
         const q2 = query(
           collection(db, "reviews"),
-          where("sellerId", "==", activeChat.otherUser.id)
+          where("sellerId", "==", activeChat?.otherUser?.id)
         );
         const snap2 = await getDocs(q2);
         const list2 = snap2.docs.map(doc => doc.data());
@@ -1977,7 +1977,7 @@ const handleCreateChannel = async () => {
     loadOtherUserReviews();
     
     // Load wallpaper setting for this chat
-    const savedWallpaper = localStorage.getItem('chat_wallpaper_' + activeChat.id);
+    const savedWallpaper = localStorage.getItem('chat_wallpaper_' + activeChat?.id);
     setChatWallpaper(savedWallpaper || null);
   }, [activeChat?.otherUser?.id, activeChat?.id, user]);
 
@@ -2117,12 +2117,12 @@ const handleCreateChannel = async () => {
 
   // Effect 3: Listen for other user presence status in real-time
   useEffect(() => {
-    if (!activeChat || !activeChat.otherUser?.id || activeChat.otherUser.id === 'system') {
+    if (!activeChat || !activeChat.otherUser?.id || activeChat?.otherUser?.id === 'system') {
       setOtherUserPresence(null);
       return;
     }
 
-    const otherUid = activeChat.otherUser.id;
+    const otherUid = activeChat?.otherUser?.id;
     const unsub = onSnapshot(doc(db, 'users', otherUid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
@@ -2159,12 +2159,12 @@ const handleCreateChannel = async () => {
 
   // Effect 4: Listen for messages & set as seen
   useEffect(() => {
-    if (!activeChat || activeChat.isNew || !activeChat.id) {
+    if (!activeChat || activeChat.isNew || !activeChat?.id) {
         setMessages([]);
         return;
     }
     
-    const colRef = collection(db, 'p2p_chats', activeChat.id, 'messages');
+    const colRef = collection(db, 'p2p_chats', activeChat?.id, 'messages');
 
     const unsub = onSnapshot(colRef, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
@@ -2183,18 +2183,18 @@ const handleCreateChannel = async () => {
 
       const filteredMsgs = msgs.filter(m => {
           if (m.deletedFor && Array.isArray(m.deletedFor) && user?.uid && m.deletedFor.includes(user.uid)) return false;
-          if (activeChat?.autoDeleteTimer && typeof activeChat.autoDeleteTimer.duration === 'number' && activeChat.autoDeleteTimer.duration > 0) {
+          if (activeChat?.autoDeleteTimer && typeof activeChat?.autoDeleteTimer?.duration === 'number' && activeChat?.autoDeleteTimer?.duration > 0) {
              const ts = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp?.seconds ? m.timestamp.seconds * 1000 : (typeof m.timestamp === 'number' ? m.timestamp : 0));
-             if (ts > 0 && Date.now() - ts > activeChat.autoDeleteTimer.duration) return false;
+             if (ts > 0 && Date.now() - ts > activeChat?.autoDeleteTimer?.duration) return false;
           }
           return true;
       });
       setMessages(filteredMsgs);
 
       // Mark the active chat as seen by current user in real-time
-      if (user && activeChat.id) {
+      if (user && activeChat?.id) {
         if (currentUserProfile?.readReceipts !== false) {
-          updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+          updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
             seenBy: arrayUnion(user.uid)
           }).catch(console.error);
         }
@@ -2217,9 +2217,9 @@ const handleCreateChannel = async () => {
 
   // Effect 5: Mark chat as seen when opened
   useEffect(() => {
-    if (user && activeChat && activeChat.id && !activeChat.isNew) {
+    if (user && activeChat && activeChat?.id && !activeChat.isNew) {
       if (currentUserProfile?.readReceipts !== false) {
-        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+        updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
           seenBy: arrayUnion(user.uid)
         }).catch(console.error);
       }
@@ -2351,8 +2351,8 @@ const handleCreateChannel = async () => {
     try {
       setIsTyping(false);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      if (activeChat.id && user?.uid) {
-        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+      if (activeChat?.id && user?.uid) {
+        updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
           [`typingState.${user.uid}`]: null
         }).catch(console.error);
       }
@@ -2365,7 +2365,7 @@ const handleCreateChannel = async () => {
       
       const otherUserId = activeChat.otherUser?.id || activeChat.otherUser?.uid;
       const isGroup = Boolean(activeChat.isGroup || activeChat.type === 'group');
-      let chatId = activeChat.id;
+      let chatId = activeChat?.id;
       
       const lastMessageText = messageText || (audioUrlToSend ? '🎙️ Voice Message' : imageUrls.length > 0 ? 'Sent an image' : 'Sent an attachment');
       
@@ -2502,10 +2502,10 @@ const handleCreateChannel = async () => {
   const handleSendDirectMedia = async (url: string, isSticker: boolean = false) => {
     if (!activeChat || !user) return;
     try {
-      let chatId = activeChat.id;
+      let chatId = activeChat?.id;
       if (activeChat.isNew) {
         const chatRef = await addDoc(collection(db, 'p2p_chats'), {
-          participants: [user.uid, activeChat.otherUser.id],
+          participants: [user.uid, activeChat?.otherUser?.id],
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastMessage: isSticker ? '✨ Sticker' : 'Sent an image',
@@ -2550,9 +2550,9 @@ const handleCreateChannel = async () => {
     setActiveTheme(theme);
     localStorage.setItem('deepshop_chat_theme_id', theme.id);
     if (activeChat?.id) {
-      localStorage.setItem(`chat_theme_${activeChat.id}`, theme.id);
+      localStorage.setItem(`chat_theme_${activeChat?.id}`, theme.id);
       try {
-        updateDoc(doc(db, 'p2p_chats', activeChat.id), { themeId: theme.id }).catch(() => {});
+        updateDoc(doc(db, 'p2p_chats', activeChat?.id), { themeId: theme.id }).catch(() => {});
       } catch {}
     }
     notify(`Applied ${theme.name} theme`, 'success');
@@ -2605,7 +2605,7 @@ const handleCreateChannel = async () => {
           
           // Log start of call in chat if we are the caller
           if (data.callerId === user?.uid && activeChat && !activeChat.isNew) {
-            addDoc(collection(db, 'p2p_chats', activeChat.id, 'messages'), {
+            addDoc(collection(db, 'p2p_chats', activeChat?.id, 'messages'), {
               text: `Started ${data.type} call`,
               senderId: user?.uid,
               systemType: data.type,
@@ -2669,7 +2669,7 @@ const handleCreateChannel = async () => {
         
         // Log end of call in chat if we are the caller and we were connected
         if (data.callerId === user?.uid && activeChat && !activeChat.isNew && callStatus === 'connected') {
-          addDoc(collection(db, 'p2p_chats', activeChat.id, 'messages'), {
+          addDoc(collection(db, 'p2p_chats', activeChat?.id, 'messages'), {
             text: `${callType} call ended (${Math.floor(callDuration / 60)}m ${callDuration % 60}s)`,
             senderId: user?.uid,
             systemType: callType,
@@ -2722,7 +2722,7 @@ const handleCreateChannel = async () => {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify({
-               targetUserId: activeChat.otherUser.id,
+               targetUserId: activeChat?.otherUser?.id,
                title: `Incoming ${callType} call 📞`,
                body: `${user.displayName || 'Someone'} is calling you...`,
                link: `/messages?chatId=${user.uid}`
@@ -2733,7 +2733,7 @@ const handleCreateChannel = async () => {
         callerId: user.uid,
         callerName: user.displayName || 'Deep Shop Customer',
         callerAvatar: user.photoURL || '',
-        receiverId: activeChat.otherUser.id,
+        receiverId: activeChat?.otherUser?.id,
         status: 'calling',
         type,
         timestamp: Date.now()
@@ -2770,7 +2770,7 @@ const handleCreateChannel = async () => {
 
   useEffect(() => {
     if (activeChat?.id) {
-      const val = localStorage.getItem('dismissed_review_' + activeChat.id);
+      const val = localStorage.getItem('dismissed_review_' + activeChat?.id);
       setReviewDismissedAt(val ? parseInt(val) : 0);
     }
   }, [activeChat?.id]);
@@ -3086,9 +3086,9 @@ const handleCreateChannel = async () => {
       setCurrentCallId(null);
     }
     
-    if (finalDuration > 0 && activeChat && activeChat.id) {
+    if (finalDuration > 0 && activeChat && activeChat?.id) {
        try {
-         await addDoc(collection(db, 'p2p_chats', activeChat.id, 'messages'), {
+         await addDoc(collection(db, 'p2p_chats', activeChat?.id, 'messages'), {
             text: `Call ended. Duration: ${formatDuration(finalDuration)}`,
             senderId: 'system',
             timestamp: Date.now(),
@@ -3129,24 +3129,24 @@ const handleCreateChannel = async () => {
         reviewerId: user.uid,
         reviewerName: user.displayName || user.email?.split("@")[0] || "Someone",
         reviewerPhoto: user.photoURL || "",
-        revieweeId: activeChat.otherUser.id,
+        revieweeId: activeChat?.otherUser?.id,
         rating: reviewRating,
         comment: reviewText.trim(),
         createdAt: Date.now(),
-        chatId: activeChat.id || "p2p"
+        chatId: activeChat?.id || "p2p"
       });
 
       const reviewerName = user.displayName || "Someone";
-      const revieweeName = activeChat.otherUser.displayName || activeChat.otherUser.shopName || "User";
+      const revieweeName = activeChat?.otherUser?.displayName || activeChat?.otherUser?.shopName || "User";
 
       fetch("/api/send-push-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: activeChat.otherUser.id,
+          userId: activeChat?.otherUser?.id,
           title: "New Review Received! ⭐",
           body: `${reviewerName} gave you a ${reviewRating}-star rating: "${reviewText.trim() || 'Excellent!'}"`,
-          link: `/store/${activeChat.otherUser.id}`
+          link: `/store/${activeChat?.otherUser?.id}`
         })
       }).catch(err => console.error("Push to reviewee failed:", err));
 
@@ -5883,7 +5883,7 @@ const handleCreateChannel = async () => {
                             }}
                          >
                              {activeChat.otherUser?.photoURL ? (
-                                 <img src={activeChat.otherUser.photoURL} alt={activeChat.otherUser.displayName} className="w-full h-full object-cover" />
+                                 <img src={activeChat?.otherUser?.photoURL} alt={activeChat?.otherUser?.displayName} className="w-full h-full object-cover" />
                              ) : (
                                  <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm">
                                      {(activeChat.otherUser?.displayName || activeChat.otherUser?.shopName || 'U')[0].toUpperCase()}
@@ -5941,9 +5941,9 @@ const handleCreateChannel = async () => {
                                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 rounded-full flex items-center gap-1 shrink-0 ml-1">
                                          <Clock className="w-2.5 h-2.5" />
                                          {
-                                             activeChat.autoDeleteTimer.duration === 86400000 ? "1d" :
-                                             activeChat.autoDeleteTimer.duration === 604800000 ? "1w" :
-                                             activeChat.autoDeleteTimer.duration === 2592000000 ? "1m" : "On"
+                                             activeChat?.autoDeleteTimer?.duration === 86400000 ? "1d" :
+                                             activeChat?.autoDeleteTimer?.duration === 604800000 ? "1w" :
+                                             activeChat?.autoDeleteTimer?.duration === 2592000000 ? "1m" : "On"
                                          }
                                      </span>
                                  )}
@@ -6003,14 +6003,14 @@ const handleCreateChannel = async () => {
                                  <button 
                                    onClick={() => {
                                      setShowPrivateChatMenu(false);
-                                     const isCurrentlyMuted = localStorage.getItem(`chat_muted_${activeChat.id}`) === 'true';
-                                     localStorage.setItem(`chat_muted_${activeChat.id}`, (!isCurrentlyMuted).toString());
+                                     const isCurrentlyMuted = localStorage.getItem(`chat_muted_${activeChat?.id}`) === 'true';
+                                     localStorage.setItem(`chat_muted_${activeChat?.id}`, (!isCurrentlyMuted).toString());
                                      notify(isCurrentlyMuted ? "Chat unmuted" : "Chat muted", "info");
                                    }}
                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 rounded-xl transition-colors"
                                  >
                                    <VolumeX className="w-4 h-4 text-zinc-400" />
-                                   <span>{localStorage.getItem(`chat_muted_${activeChat.id}`) === 'true' ? 'Unmute' : 'Mute'}</span>
+                                   <span>{localStorage.getItem(`chat_muted_${activeChat?.id}`) === 'true' ? 'Unmute' : 'Mute'}</span>
                                  </button>
 
                                  {/* Video Call Option */}
@@ -6155,19 +6155,19 @@ const handleCreateChannel = async () => {
                    {activeChat?.pinnedMessage && (
                     <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-zinc-900/90 dark:to-zinc-950/90 border-b border-amber-100 dark:border-zinc-800 px-4 py-2 flex items-center justify-between text-xs shrink-0 z-10 shadow-sm relative">
                       <div className="flex items-center gap-2 min-w-0 cursor-pointer flex-1" onClick={() => {
-                        const targetMsg = messages.find(m => m.id === activeChat.pinnedMessage.id);
+                        const targetMsg = messages.find(m => m.id === activeChat?.pinnedMessage.id);
                         if (targetMsg) {
                           document.getElementById(`msg-${targetMsg.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           triggerHighlight(targetMsg.id);
                         } else {
-                          notify(`Pinned: ${activeChat.pinnedMessage.text}`, "info");
+                          notify(`Pinned: ${activeChat?.pinnedMessage.text}`, "info");
                         }
                       }}>
                         <Pin className="w-3.5 h-3.5 text-[#EF8020] rotate-45 shrink-0" />
                         <div className="min-w-0">
                           <p className="font-bold text-[10px] text-[#EF8020] uppercase tracking-wider">Pinned Message</p>
                           <p className="text-zinc-650 dark:text-zinc-400 truncate max-w-full font-medium mt-0.5">
-                            {activeChat.pinnedMessage.text || "Attachment"}
+                            {activeChat?.pinnedMessage.text || "Attachment"}
                           </p>
                         </div>
                       </div>
@@ -6424,7 +6424,7 @@ const handleCreateChannel = async () => {
                                      </div>
 
                                      <span className={`text-[9px] font-semibold text-zinc-400 mx-1 block ${reactionEntries.length > 0 ? 'mt-3.5' : 'mt-1'}`}>
-                                         {formatTime12h(msg.timestamp)}</span>{isMe && idx === messages.length - 1 && <div className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 uppercase tracking-wide select-none">{activeChat.seenBy && activeChat.seenBy.includes(activeChat.otherUser.id) ? "Seen" : (otherUserPresence?.isOnline ? "Delivered" : "Sent")}</div>}<span className="hidden">
+                                         {formatTime12h(msg.timestamp)}</span>{isMe && idx === messages.length - 1 && <div className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 uppercase tracking-wide select-none">{activeChat?.seenBy && activeChat?.seenBy.includes(activeChat?.otherUser?.id) ? "Seen" : (otherUserPresence?.isOnline ? "Delivered" : "Sent")}</div>}<span className="hidden">
                                      </span>
                                  </div>
                              </div>
@@ -6442,7 +6442,7 @@ const handleCreateChannel = async () => {
                              onClick={(e) => {
                                e.stopPropagation();
                                const now = Date.now();
-                               localStorage.setItem('dismissed_review_' + activeChat.id, now.toString());
+                               localStorage.setItem('dismissed_review_' + activeChat?.id, now.toString());
                                setReviewDismissedAt(now);
                              }}
                              className="absolute top-2 right-2 p-1 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition"
@@ -7126,13 +7126,13 @@ const handleCreateChannel = async () => {
           const isBlocked = activeChat.blockedBy?.includes(user.uid);
           try {
             if (isBlocked) {
-              await updateDoc(doc(db, "p2p_chats", activeChat.id), {
-                blockedBy: activeChat.blockedBy.filter((id: string) => id !== user.uid),
+              await updateDoc(doc(db, "p2p_chats", activeChat?.id), {
+                blockedBy: (activeChat?.blockedBy || []).filter((id: string) => id !== user.uid),
               });
               notify("User unblocked", "success");
             } else {
-              const currentBlocked = activeChat.blockedBy || [];
-              await updateDoc(doc(db, "p2p_chats", activeChat.id), {
+              const currentBlocked = (activeChat?.blockedBy || []) || [];
+              await updateDoc(doc(db, "p2p_chats", activeChat?.id), {
                 blockedBy: [...currentBlocked, user.uid],
               });
               notify("User blocked", "info");
@@ -7146,12 +7146,12 @@ const handleCreateChannel = async () => {
         onSetAutoDelete={(duration) => {
           if (!activeChat) return;
           if (duration) {
-            updateDoc(doc(db, "p2p_chats", activeChat.id), {
+            updateDoc(doc(db, "p2p_chats", activeChat?.id), {
               autoDeleteTimer: { duration, enabledAt: serverTimestamp() },
             }).catch(console.error);
             notify("Disappearing messages enabled", "success");
           } else {
-            updateDoc(doc(db, "p2p_chats", activeChat.id), {
+            updateDoc(doc(db, "p2p_chats", activeChat?.id), {
               autoDeleteTimer: null,
             }).catch(console.error);
             notify("Disappearing messages turned off", "info");
@@ -7493,7 +7493,7 @@ const handleCreateChannel = async () => {
                         if (activeChannel) {
                           colRef = collection(db, 'community_channels', activeChannel.id, 'messages');
                         } else {
-                          colRef = collection(db, 'p2p_chats', activeChat.id, 'messages');
+                          colRef = collection(db, 'p2p_chats', activeChat?.id, 'messages');
                         }
                         await updateDoc(doc(colRef, deleteMessageId), {
                           deletedFor: arrayUnion(user.uid)
@@ -7516,7 +7516,7 @@ const handleCreateChannel = async () => {
                           if (activeChannel) {
                             colRef = collection(db, 'community_channels', activeChannel.id, 'messages');
                           } else {
-                            colRef = collection(db, 'p2p_chats', activeChat.id, 'messages');
+                            colRef = collection(db, 'p2p_chats', activeChat?.id, 'messages');
                           }
                           await updateDoc(doc(colRef, deleteMessageId), {
                             isDeletedForEveryone: true
@@ -7583,7 +7583,7 @@ const handleCreateChannel = async () => {
                         key={wp.name}
                         onClick={() => {
                           if (activeChat) {
-                            localStorage.setItem('chat_wallpaper_' + activeChat.id, wp.url);
+                            localStorage.setItem('chat_wallpaper_' + activeChat?.id, wp.url);
                             setChatWallpaper(wp.url);
                             notify(`Wallpaper set to ${wp.name}`, 'success');
                             setShowWallpaperModal(false);
@@ -7605,7 +7605,7 @@ const handleCreateChannel = async () => {
                     e.preventDefault();
                     const urlInput = (e.currentTarget.elements.namedItem('urlInput') as HTMLInputElement).value;
                     if (urlInput && activeChat) {
-                      localStorage.setItem('chat_wallpaper_' + activeChat.id, urlInput);
+                      localStorage.setItem('chat_wallpaper_' + activeChat?.id, urlInput);
                       setChatWallpaper(urlInput);
                       notify('Custom wallpaper applied', 'success');
                       setShowWallpaperModal(false);
@@ -7628,7 +7628,7 @@ const handleCreateChannel = async () => {
                   <button
                     onClick={() => {
                       if (activeChat) {
-                        localStorage.removeItem('chat_wallpaper_' + activeChat.id);
+                        localStorage.removeItem('chat_wallpaper_' + activeChat?.id);
                         setChatWallpaper(null);
                         notify('Wallpaper removed', 'info');
                         setShowWallpaperModal(false);
@@ -7711,7 +7711,7 @@ const handleCreateChannel = async () => {
                       onClick={async () => {
                         if(activeChat) {
                             try {
-                                await updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+                                await updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
                                     autoDeleteTimer: { duration: t.val, setAt: Date.now() }
                                 });
                                 setShowAutoDeleteModal(false);
@@ -7728,7 +7728,7 @@ const handleCreateChannel = async () => {
                     <button
                       onClick={async () => {
                         try {
-                            await updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+                            await updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
                                 autoDeleteTimer: null
                             });
                             setShowAutoDeleteModal(false);
@@ -7791,7 +7791,7 @@ const handleCreateChannel = async () => {
                       if (!activeChat || !user) return;
                       setIsClearingChat(true);
                       try {
-                        const chatId = activeChat.id;
+                        const chatId = activeChat?.id;
                         if (clearChatDeleteForOther) {
                           // Complete delete of chat and messages for both sides
                           // 1. Delete all messages
@@ -8066,7 +8066,7 @@ const handleCreateChannel = async () => {
               <div className="space-y-3">
                 <button
                   onClick={() => {
-                    handleClearChatForMe(activeChat.id);
+                    handleClearChatForMe(activeChat?.id);
                     setShowClearChatModal(false);
                   }}
                   className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition"
@@ -8075,7 +8075,7 @@ const handleCreateChannel = async () => {
                 </button>
                 <button
                   onClick={() => {
-                    handleClearChatForEveryone(activeChat.id);
+                    handleClearChatForEveryone(activeChat?.id);
                     setShowClearChatModal(false);
                   }}
                   className="w-full py-3 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded-xl font-bold text-sm transition"

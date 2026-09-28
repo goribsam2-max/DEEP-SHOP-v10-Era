@@ -355,8 +355,8 @@ const BottomMenu = () => {
             }}
             className="w-[54px] h-[54px] rounded-full bg-white/90 dark:bg-[#141518]/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] flex items-center justify-center transition-transform active:scale-95 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 cursor-pointer border border-zinc-200/60 dark:border-zinc-800/60"
           >
-            <div className="w-[40px] h-[40px] rounded-full bg-[#1cdb5e] text-zinc-950 flex items-center justify-center shadow-inner hover:bg-[#19c754] transition-colors m-auto flex-shrink-0">
-              <ArrowRight className="text-zinc-950 w-4.5 h-4.5 stroke-[2.5]" />
+            <div className="w-[40px] h-[40px] rounded-full bg-[#5F2CFF] text-white flex items-center justify-center shadow-inner hover:bg-[#4c1ddb] transition-colors m-auto flex-shrink-0">
+              <ArrowRight className="text-white w-4.5 h-4.5 stroke-[2.5]" />
             </div>
           </button>
         )}
