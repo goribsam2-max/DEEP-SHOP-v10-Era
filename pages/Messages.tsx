@@ -319,7 +319,7 @@ export default function Messages() {
   // 1. Direct real-time snapshot on active p2p_chats document
   useEffect(() => {
     const effectiveChatId = activeChat?.id;
-    if (!effectiveChatId || activeChat.isNew) {
+    if (!effectiveChatId || activeChat?.isNew) {
       setActiveChatTypingState({});
       return;
     }
@@ -604,7 +604,7 @@ export default function Messages() {
     if (activeChat?.id) {
       // Sync theme
       try {
-        const savedThemeId = localStorage.getItem(`chat_theme_${activeChat?.id}`) || activeChat.themeId || localStorage.getItem('deepshop_chat_theme_id');
+        const savedThemeId = localStorage.getItem(`chat_theme_${activeChat?.id}`) || activeChat?.themeId || localStorage.getItem('deepshop_chat_theme_id');
         if (savedThemeId) {
           const found = CHAT_THEMES.find(t => t.id === savedThemeId);
           if (found) setActiveTheme(found);
@@ -744,12 +744,12 @@ export default function Messages() {
 
   useEffect(() => {
     if (!activeChat) return;
-    const isGroup = activeChat.isGroup || activeChat.type === 'group';
+    const isGroup = activeChat?.isGroup || activeChat?.type === 'group';
     if (!isGroup) return;
 
     const neededUids = new Set<string>();
-    if (Array.isArray(activeChat.participants)) {
-      activeChat.participants.forEach((uid: string) => {
+    if (Array.isArray(activeChat?.participants)) {
+      activeChat?.participants?.forEach((uid: string) => {
         if (uid && uid !== 'system' && !participantProfiles[uid]) {
           neededUids.add(uid);
         }
@@ -819,7 +819,7 @@ export default function Messages() {
   };
 
   const isDMBlocked = React.useMemo(() => {
-    if (!activeChat || !activeChat.otherUser || activeChat?.otherUser?.id === 'system') return false;
+    if (!activeChat || !activeChat?.otherUser || activeChat?.otherUser?.id === 'system') return false;
     
     // Check other user's real-time direct message policy
     const otherId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
@@ -828,7 +828,7 @@ export default function Messages() {
     if (otherData?.privacy?.allowDirectMessages === false) {
       return true;
     }
-    if (activeChat.otherUser?.privacy?.allowDirectMessages === false) {
+    if (activeChat?.otherUser?.privacy?.allowDirectMessages === false) {
       return true;
     }
 
@@ -1905,7 +1905,7 @@ const handleCreateChannel = async () => {
   };
 
   useEffect(() => {
-    if (!user || !activeChat || !activeChat.otherUser?.id) {
+    if (!user || !activeChat || !activeChat?.otherUser?.id) {
       setHasReviewed(false);
       setOtherUserTrust({ score: 100, count: 0, avgRating: 5, hasScamWarning: false });
       return;
@@ -2117,7 +2117,7 @@ const handleCreateChannel = async () => {
 
   // Effect 3: Listen for other user presence status in real-time
   useEffect(() => {
-    if (!activeChat || !activeChat.otherUser?.id || activeChat?.otherUser?.id === 'system') {
+    if (!activeChat || !activeChat?.otherUser?.id || activeChat?.otherUser?.id === 'system') {
       setOtherUserPresence(null);
       return;
     }
@@ -2159,7 +2159,7 @@ const handleCreateChannel = async () => {
 
   // Effect 4: Listen for messages & set as seen
   useEffect(() => {
-    if (!activeChat || activeChat.isNew || !activeChat?.id) {
+    if (!activeChat || activeChat?.isNew || !activeChat?.id) {
         setMessages([]);
         return;
     }
@@ -2217,7 +2217,7 @@ const handleCreateChannel = async () => {
 
   // Effect 5: Mark chat as seen when opened
   useEffect(() => {
-    if (user && activeChat && activeChat?.id && !activeChat.isNew) {
+    if (user && activeChat && activeChat?.id && !activeChat?.isNew) {
       if (currentUserProfile?.readReceipts !== false) {
         updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
           seenBy: arrayUnion(user.uid)
@@ -2363,14 +2363,14 @@ const handleCreateChannel = async () => {
       setPreviewUrls([]);
       setAttachments([]);
       
-      const otherUserId = activeChat.otherUser?.id || activeChat.otherUser?.uid;
-      const isGroup = Boolean(activeChat.isGroup || activeChat.type === 'group');
+      const otherUserId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
+      const isGroup = Boolean(activeChat?.isGroup || activeChat?.type === 'group');
       let chatId = activeChat?.id;
       
       const lastMessageText = messageText || (audioUrlToSend ? '🎙️ Voice Message' : imageUrls.length > 0 ? 'Sent an image' : 'Sent an attachment');
       
       // If it's a new chat, find or create it first
-      if (!chatId || activeChat.isNew) {
+      if (!chatId || activeChat?.isNew) {
         if (!isGroup && otherUserId) {
           // Check if an existing chat already exists in memory or Firestore to avoid creating duplicates
           const existingInChats = chats.find(c => 
@@ -2432,7 +2432,7 @@ const handleCreateChannel = async () => {
 
       const currentSenderName = userShopName || user.displayName || user.email?.split('@')[0] || 'User';
       const currentSenderPhoto = user.photoURL || '';
-      const currentSenderRole = activeChat.creatorId === user.uid ? 'creator' : (activeChat.admins?.includes(user.uid) ? 'admin' : (userRole || 'member'));
+      const currentSenderRole = activeChat?.creatorId === user.uid ? 'creator' : (activeChat?.admins?.includes(user.uid) ? 'admin' : (userRole || 'member'));
 
       const msgData: any = {
         text: messageText,
@@ -2480,7 +2480,7 @@ const handleCreateChannel = async () => {
       await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), msgData);
       
       // Send real push notification to recipient
-      const recipientId = activeChat.otherUser?.id || activeChat.otherUser?.uid;
+      const recipientId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
       if (recipientId && recipientId !== "system") {
         fetch("/api/send-push-user", {
           method: "POST",
@@ -2503,7 +2503,7 @@ const handleCreateChannel = async () => {
     if (!activeChat || !user) return;
     try {
       let chatId = activeChat?.id;
-      if (activeChat.isNew) {
+      if (activeChat?.isNew) {
         const chatRef = await addDoc(collection(db, 'p2p_chats'), {
           participants: [user.uid, activeChat?.otherUser?.id],
           createdAt: serverTimestamp(),
@@ -2604,7 +2604,7 @@ const handleCreateChannel = async () => {
           setCallDuration(0);
           
           // Log start of call in chat if we are the caller
-          if (data.callerId === user?.uid && activeChat && !activeChat.isNew) {
+          if (data.callerId === user?.uid && activeChat && !activeChat?.isNew) {
             addDoc(collection(db, 'p2p_chats', activeChat?.id, 'messages'), {
               text: `Started ${data.type} call`,
               senderId: user?.uid,
@@ -2668,7 +2668,7 @@ const handleCreateChannel = async () => {
         }
         
         // Log end of call in chat if we are the caller and we were connected
-        if (data.callerId === user?.uid && activeChat && !activeChat.isNew && callStatus === 'connected') {
+        if (data.callerId === user?.uid && activeChat && !activeChat?.isNew && callStatus === 'connected') {
           addDoc(collection(db, 'p2p_chats', activeChat?.id, 'messages'), {
             text: `${callType} call ended (${Math.floor(callDuration / 60)}m ${callDuration % 60}s)`,
             senderId: user?.uid,
@@ -2685,12 +2685,12 @@ const handleCreateChannel = async () => {
   }, [currentCallId, callStatus, activeChat, user, callType, callDuration]);
 
   const startCall = async (type: 'audio' | 'video') => {
-    if (!user || !activeChat || activeChat.isNew) {
+    if (!user || !activeChat || activeChat?.isNew) {
       notify("Please open an active chat to make a call.", "error");
       return;
     }
 
-    const targetUserId = activeChat.otherUser?.id;
+    const targetUserId = activeChat?.otherUser?.id;
     if (targetUserId && targetUserId !== "system") {
       try {
         const uDoc = await getDoc(doc(db, 'users', targetUserId));
@@ -2745,7 +2745,7 @@ const handleCreateChannel = async () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: activeChat.otherUser?.id || activeChat.otherUser?.uid,
+          userId: activeChat?.otherUser?.id || activeChat?.otherUser?.uid,
           title: `Incoming ${type === 'audio' ? 'Voice' : 'Video'} Call...`,
           body: `${user.displayName || 'Someone'} is calling you on Deep Shop.`,
           link: `/messages?chatId=${user.uid}&autoCall=true`
@@ -3105,7 +3105,7 @@ const handleCreateChannel = async () => {
   };
 
   const handleSubmitReview = async () => {
-    if (!user || !activeChat || !activeChat.otherUser?.id) return;
+    if (!user || !activeChat || !activeChat?.otherUser?.id) return;
     if (!reviewText.trim()) return;
 
     const bannedWord = await checkContainsBannedWord(reviewText);
@@ -5670,8 +5670,8 @@ const handleCreateChannel = async () => {
                       {/* Real-time typing, voice recording, photo sending, GIF picking activity indicator */}
                       <ChatTypingIndicator
                         activity={otherActivity}
-                        userName={activeChat.otherUser?.shopName || activeChat.otherUser?.displayName || "User"}
-                        userPhoto={activeChat.otherUser?.photoURL || activeChat.otherUser?.avatarUrl || activeChat.recipientAvatar}
+                        userName={activeChat?.otherUser?.shopName || activeChat?.otherUser?.displayName || "User"}
+                        userPhoto={activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatarUrl || activeChat?.recipientAvatar}
                         className="px-2"
                       />
                       <div ref={messagesEndRef} />
@@ -5882,11 +5882,11 @@ const handleCreateChannel = async () => {
                                 }
                             }}
                          >
-                             {activeChat.otherUser?.photoURL ? (
+                             {activeChat?.otherUser?.photoURL ? (
                                  <img src={activeChat?.otherUser?.photoURL} alt={activeChat?.otherUser?.displayName} className="w-full h-full object-cover" />
                              ) : (
                                  <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm">
-                                     {(activeChat.otherUser?.displayName || activeChat.otherUser?.shopName || 'U')[0].toUpperCase()}
+                                     {(activeChat?.otherUser?.displayName || activeChat?.otherUser?.shopName || 'U')[0].toUpperCase()}
                                  </div>
                              )}
                          </div>
@@ -5904,13 +5904,13 @@ const handleCreateChannel = async () => {
                             }}
                              >
                                  <span className="truncate">{getChatDisplayName(activeChat)}</span>
-                                 {(activeChat.otherUser?.kycStatus === "verified" || activeChat.otherUser?.verified) && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                                 {(activeChat?.otherUser?.kycStatus === "verified" || activeChat?.otherUser?.verified) && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                  <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 group-hover:translate-x-0.5 transition-all shrink-0" />
                              </h3>
                              <div className="flex items-center gap-1.5 truncate mt-0.5">
                                   {activeChat?.isGroup || activeChat?.type === 'group' ? (
                                       <p className="text-[12px] sm:text-[13px] text-zinc-400 dark:text-zinc-500 truncate font-normal">
-                                          {otherActivity ? "Someone is active..." : `${activeChat.participants?.length || 2} members`}
+                                          {otherActivity ? "Someone is active..." : `${activeChat?.participants?.length || 2} members`}
                                       </p>
                                   ) : otherActivity === 'typing' ? (
                                      <p className="text-[12px] sm:text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 animate-pulse truncate flex items-center gap-1.5">
@@ -6431,7 +6431,7 @@ const handleCreateChannel = async () => {
                              </React.Fragment>
                          );
                      })}
-                     {!hasReviewed && activeChat.otherUser?.id !== "system" && (!reviewDismissedAt || (Date.now() - reviewDismissedAt >= 24 * 60 * 60 * 1000)) && (messages.length >= 4 || (messages.length > 0 && (Date.now() - messages[messages.length - 1].timestamp) > 3600000)) && (
+                     {!hasReviewed && activeChat?.otherUser?.id && activeChat?.otherUser?.id !== "system" && (!reviewDismissedAt || (Date.now() - reviewDismissedAt >= 24 * 60 * 60 * 1000)) && (messages.length >= 4 || (messages.length > 0 && (Date.now() - messages[messages.length - 1].timestamp) > 3600000)) && (
                        <div className="flex justify-center my-6">
                          <div 
                            className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-zinc-900/90 dark:to-zinc-950/90 border border-amber-200 dark:border-zinc-800 rounded-2xl p-4 max-w-sm w-full text-center shadow-md hover:shadow-lg transition cursor-pointer border-dashed relative" 
@@ -6462,7 +6462,7 @@ const handleCreateChannel = async () => {
                              <span>Give a Review</span>
                            </h4>
                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed pr-4">
-                             Rate your experience with <strong className="text-[#EF8020]">{activeChat.otherUser?.shopName || activeChat.otherUser?.displayName || "Verified Seller"}</strong>. It will be styled beautifully on their profile page!
+                             Rate your experience with <strong className="text-[#EF8020]">{activeChat?.otherUser?.shopName || activeChat?.otherUser?.displayName || "Verified Seller"}</strong>. It will be styled beautifully on their profile page!
                            </p>
                          </div>
                        </div>
@@ -6470,8 +6470,8 @@ const handleCreateChannel = async () => {
                      {/* Real-time typing, voice recording, photo sending, GIF picking activity indicator */}
                      <ChatTypingIndicator
                        activity={otherActivity}
-                       userName={activeChat.otherUser?.shopName || activeChat.otherUser?.displayName || "User"}
-                       userPhoto={activeChat.otherUser?.photoURL || activeChat.otherUser?.avatarUrl || activeChat.recipientAvatar}
+                       userName={activeChat?.otherUser?.shopName || activeChat?.otherUser?.displayName || "User"}
+                       userPhoto={activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatarUrl || activeChat?.recipientAvatar}
                        className="px-2"
                      />
                      <div ref={messagesEndRef} />
@@ -6517,11 +6517,11 @@ const handleCreateChannel = async () => {
                        onOpenDraw={() => setShowDrawModal(true)}
                        onOpenGifs={() => setGifStickerModalState({ isOpen: true, type: "gif" })}
                        onOpenStickers={() => setGifStickerModalState({ isOpen: true, type: "sticker" })}
-                       isBlocked={Boolean(activeChat.blockedBy?.length > 0 || isDMBlocked)}
+                       isBlocked={Boolean(activeChat?.blockedBy?.length > 0 || isDMBlocked)}
                        blockedMessage={
-                         activeChat.blockedBy?.includes(user?.uid)
+                         activeChat?.blockedBy?.includes(user?.uid)
                            ? "You blocked this user."
-                           : activeChat.blockedBy?.length > 0
+                           : activeChat?.blockedBy?.length > 0
                            ? "You have been blocked."
                            : isDMBlocked
                            ? "This user privacy settings restrict direct messaging."
@@ -7123,7 +7123,7 @@ const handleCreateChannel = async () => {
         onStartSearch={() => setShowP2pSearch(true)}
         onBlockUser={async () => {
           if (!activeChat || !user) return;
-          const isBlocked = activeChat.blockedBy?.includes(user.uid);
+          const isBlocked = activeChat?.blockedBy?.includes(user.uid);
           try {
             if (isBlocked) {
               await updateDoc(doc(db, "p2p_chats", activeChat?.id), {
