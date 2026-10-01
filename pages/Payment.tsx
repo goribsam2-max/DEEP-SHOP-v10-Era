@@ -238,19 +238,19 @@ const Payment: React.FC = () => {
       const picked = cleanBkash[seed % cleanBkash.length];
       setActiveBkashNumber(picked);
     } else {
-      setActiveBkashNumber("");
+      setActiveBkashNumber("01778953114");
     }
 
     if (cleanNagad.length > 0) {
       const picked = cleanNagad[(seed + 1) % cleanNagad.length];
       setActiveNagadNumber(picked);
     } else {
-      setActiveNagadNumber("");
+      setActiveNagadNumber("01778953114");
     }
   }, [sellerProfile, paymentSettings, orderId]);
 
-  const hasBkashNumber = Boolean(activeBkashNumber && activeBkashNumber !== "01700000000" && !isForbiddenNumber(activeBkashNumber));
-  const hasNagadNumber = Boolean(activeNagadNumber && activeNagadNumber !== "01800000000" && !isForbiddenNumber(activeNagadNumber));
+  const hasBkashNumber = Boolean(activeBkashNumber && activeBkashNumber !== "01700000000");
+  const hasNagadNumber = Boolean(activeNagadNumber && activeNagadNumber !== "01800000000");
 
   // Automatically switch to available method if current one is unavailable
   useEffect(() => {

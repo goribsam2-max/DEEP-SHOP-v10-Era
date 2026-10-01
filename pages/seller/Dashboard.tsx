@@ -1054,14 +1054,18 @@ const SellerDashboard: React.FC = () => {
                             <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium mt-0.5 uppercase">#{ord.id?.slice(0, 8) || "N/A"}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 px-1">
+                        <div className="flex items-center justify-between gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800 px-1 text-[11px] flex-wrap">
                           <div className="flex items-center gap-1.5">
-                            <ShoppingBag className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
-                            <span className="text-[11px] text-zinc-600 dark:text-zinc-300 font-semibold">{totalPcs} Pcs</span>
+                            <ShoppingBag className="w-3.5 h-3.5 text-zinc-400" />
+                            <span className="text-zinc-600 dark:text-zinc-300 font-semibold">{totalPcs} Pcs</span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
-                            <span className="text-[11px] text-zinc-600 dark:text-zinc-300 font-semibold line-clamp-1">{ord.customerName || ord.shippingAddress?.fullName || "Guest"}</span>
+                            <Users className="w-3.5 h-3.5 text-zinc-400" />
+                            <span className="text-zinc-600 dark:text-zinc-300 font-semibold line-clamp-1">{ord.customerName || ord.shippingAddress?.fullName || "Guest"}</span>
+                          </div>
+                          <div className="flex items-center gap-1 font-mono font-bold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
+                            <span>From: {ord.accountNameSender || ord.senderNumber || ord.contactNumber || "N/A"}</span>
+                            <span>→ To: {ord.receiverNumber || "01778953114"}</span>
                           </div>
                         </div>
                       </div>
@@ -1219,35 +1223,59 @@ const SellerDashboard: React.FC = () => {
                         <span className="text-sm font-black text-zinc-900 dark:text-zinc-100">{formatPrice(totalAmount)}</span>
                       </div>
 
-                      <div className="space-y-2 bg-orange-50/70 dark:bg-zinc-800/40 p-3.5 rounded-2xl border border-orange-100/50 dark:border-zinc-700/50 mt-3">
-                        <div className="flex items-center gap-1.5 text-orange-800 dark:text-orange-400 font-extrabold text-[11px] uppercase tracking-wider mb-1">
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span>Payment & Transaction Details</span>
+                      <div className="space-y-3 bg-[#FFF8F0] dark:bg-zinc-800/60 p-4 rounded-2xl border border-orange-200/80 dark:border-zinc-700/80 mt-3 shadow-xs">
+                        <div className="flex items-center justify-between border-b border-orange-200/50 dark:border-zinc-700/50 pb-2.5">
+                          <div className="flex items-center gap-2 text-orange-900 dark:text-orange-400 font-extrabold text-[12px] uppercase tracking-wider">
+                            <CreditCard className="w-4 h-4 text-[#EF8020]" />
+                            <span>Payment & Transaction Details</span>
+                          </div>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            order.paymentStatus === 'paid' || order.paymentStatus === 'verified'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                              : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                          }`}>
+                            {order.paymentStatus || "Checking"}
+                          </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 dark:text-zinc-300">
-                          <div>
-                            <span className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Method</span>
-                            <span className="font-bold text-zinc-900 dark:text-zinc-100 dark:text-zinc-100 capitalize">{order.paymentMethod || "MFS / Cash"}</span>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-[11px] font-semibold">
+                          <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-orange-100/80 dark:border-zinc-800 shadow-xs">
+                            <span className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Method</span>
+                            <span className="font-extrabold text-zinc-900 dark:text-zinc-100 capitalize block mt-0.5">{order.paymentMethod || "bKash / Nagad"}</span>
                           </div>
-                          <div>
-                            <span className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Option</span>
-                            <span className="font-bold text-zinc-900 dark:text-zinc-100 dark:text-zinc-100">{order.paymentOption || (isCod ? "Cash on Delivery" : "Advance Payment")}</span>
+
+                          <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-orange-100/80 dark:border-zinc-800 shadow-xs">
+                            <span className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Option</span>
+                            <span className="font-bold text-zinc-900 dark:text-zinc-100 block mt-0.5 truncate">{order.paymentOption || (isCod ? "Cash on Delivery" : "Advance Payment")}</span>
                           </div>
-                          <div>
-                            <span className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Amount Paid</span>
-                            <span className="font-extrabold text-orange-600 dark:text-orange-400">{formatPrice(isCod ? 0 : (order.paymentOption === "Full Payment" ? totalAmount : advancePaid))}</span>
+
+                          <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-orange-100/80 dark:border-zinc-800 shadow-xs">
+                            <span className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Amount Paid</span>
+                            <span className="font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">{formatPrice(isCod ? 0 : (order.paymentOption === "Full Payment" ? totalAmount : advancePaid))}</span>
                           </div>
-                          <div>
-                            <span className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Due Amount</span>
-                            <span className="font-bold text-zinc-900 dark:text-zinc-100 dark:text-zinc-100">{formatPrice(isCod ? totalAmount : dueAmount)}</span>
+
+                          {/* Sender Number (Customer's Sending Number) */}
+                          <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-blue-100 dark:border-zinc-800 shadow-xs">
+                            <span className="block text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Sender Number (Customer)</span>
+                            <span className="font-mono font-black text-xs text-blue-900 dark:text-blue-200 select-all block mt-0.5">
+                              {order.accountNameSender || order.senderNumber || order.customerSenderNumber || order.senderPhone || order.contactNumber || "Not provided"}
+                            </span>
                           </div>
-                          <div>
-                            <span className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Sender Number</span>
-                            <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 dark:text-zinc-100 select-all">{order.accountNameSender || order.senderNumber || order.senderPhone || "Not provided"}</span>
+
+                          {/* Receiver Number (Store's bKash/Nagad Number) */}
+                          <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-purple-100 dark:border-zinc-800 shadow-xs">
+                            <span className="block text-[9px] font-extrabold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Received On (Store Number)</span>
+                            <span className="font-mono font-black text-xs text-purple-900 dark:text-purple-200 select-all block mt-0.5">
+                              {order.receiverNumber || order.merchantNumber || order.receivedNumber || order.receiverPhone || "01778953114"}
+                            </span>
                           </div>
-                          <div>
-                            <span className="block text-[9px] font-bold text-zinc-400 dark:text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Trx ID</span>
-                            <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 dark:text-zinc-100 select-all bg-white dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-750/50 dark:border-zinc-850 inline-block truncate max-w-full">{order.transactionId || order.trxId || "Not provided"}</span>
+
+                          {/* Transaction ID */}
+                          <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-amber-100 dark:border-zinc-800 shadow-xs">
+                            <span className="block text-[9px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Trx ID</span>
+                            <span className="font-mono font-black text-xs text-amber-900 dark:text-amber-200 select-all bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800 inline-block truncate max-w-full mt-0.5">
+                              {order.transactionId || order.trxId || order.lastDigits || "Not provided"}
+                            </span>
                           </div>
                         </div>
                       </div>

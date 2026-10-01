@@ -416,10 +416,12 @@ const ManageOrders: React.FC = () => {
                               <p><span className="font-medium text-zinc-400">Address:</span> {typeof order.shippingAddress === 'string' ? order.shippingAddress : `${(order.shippingAddress as any).address}, ${(order.shippingAddress as any).city}, ${(order.shippingAddress as any).zone}`}</p>
                               {typeof order.shippingAddress !== 'string' && (order.shippingAddress as any).area && <p><span className="font-medium text-zinc-400">Area:</span> {(order.shippingAddress as any).area}</p>}
                               
-                              <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs">
+                              <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs space-y-1">
                                 <p><span className="font-bold text-zinc-500">Payment Method:</span> {order.paymentMethod || "COD"}</p>
+                                <p><span className="font-medium text-zinc-400">Sender Number:</span> <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{order.accountNameSender || order.senderNumber || order.contactNumber || "N/A"}</span></p>
+                                <p><span className="font-medium text-zinc-400">Received On (Store):</span> <span className="font-mono font-bold text-purple-600 dark:text-purple-400">{order.receiverNumber || "01778953114"}</span></p>
                                 {order.gatewayUsed && <p className="font-bold text-pink-600 dark:text-pink-400"><span className="font-medium text-zinc-400">Payment Gateway:</span> {order.gatewayUsed.toUpperCase()} (৳150 Delivery Fee Paid)</p>}
-                                {order.transactionId && <p><span className="font-medium text-zinc-400">TrxID/Ref:</span> <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{order.transactionId}</span></p>}
+                                {(order.transactionId || order.trxId) && <p><span className="font-medium text-zinc-400">TrxID/Ref:</span> <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{order.transactionId || order.trxId}</span></p>}
                               </div>
                             </div>
                           </div>
