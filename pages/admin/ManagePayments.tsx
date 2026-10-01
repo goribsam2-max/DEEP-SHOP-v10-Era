@@ -99,17 +99,6 @@ const ManagePayments: React.FC = () => {
 
   const handleSave = async (overrideData?: typeof data) => {
     const payload = overrideData || data;
-    if (
-      payload.bkashNumbers.some(isForbiddenNumber) ||
-      payload.nagadNumbers.some(isForbiddenNumber) ||
-      payload.bkashAccounts.some(a => isForbiddenNumber(a.number)) ||
-      payload.nagadAccounts.some(a => isForbiddenNumber(a.number)) ||
-      isForbiddenNumber(payload.npsbNumber) ||
-      isForbiddenNumber(payload.pathaoPayNumber)
-    ) {
-      notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়। (This number is not allowed)", "error");
-      return;
-    }
     setSaving(true);
     try {
       await setDoc(doc(db, "settings", "payments"), payload, { merge: true });

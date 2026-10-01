@@ -238,14 +238,14 @@ const Payment: React.FC = () => {
       const picked = cleanBkash[seed % cleanBkash.length];
       setActiveBkashNumber(picked);
     } else {
-      setActiveBkashNumber("01778953114");
+      setActiveBkashNumber("");
     }
 
     if (cleanNagad.length > 0) {
       const picked = cleanNagad[(seed + 1) % cleanNagad.length];
       setActiveNagadNumber(picked);
     } else {
-      setActiveNagadNumber("01778953114");
+      setActiveNagadNumber("");
     }
   }, [sellerProfile, paymentSettings, orderId]);
 
@@ -301,9 +301,6 @@ const Payment: React.FC = () => {
     if (!cleaned || cleaned.length < 11) {
       return notify("অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর লিখুন।", "error");
     }
-    if (isForbiddenNumber(cleaned)) {
-      return notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়।", "error");
-    }
     setStep(3);
   };
 
@@ -317,10 +314,6 @@ const Payment: React.FC = () => {
     if (!trxId.trim() || trxId.trim().length < 4) {
       notify("অনুগ্রহ করে TrxID অথবা ট্রানজেকশনের শেষ ৪টি ডিজিট লিখুন।", "error");
       setShowTrxAccordion(true);
-      return;
-    }
-    if (isForbiddenNumber(senderNumber) || isForbiddenNumber(trxId)) {
-      notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়।", "error");
       return;
     }
 

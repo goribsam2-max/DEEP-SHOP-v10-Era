@@ -296,7 +296,7 @@ export default function CheckoutPage() {
         const randomBkash = validBkash[Math.floor(Math.random() * validBkash.length)];
         setActiveBkashNumber(randomBkash);
       } else {
-        setActiveBkashNumber("01778953114");
+        setActiveBkashNumber("");
       }
 
       // 2. Nagad numbers
@@ -309,7 +309,7 @@ export default function CheckoutPage() {
         const randomNagad = validNagad[Math.floor(Math.random() * validNagad.length)];
         setActiveNagadNumber(randomNagad);
       } else {
-        setActiveNagadNumber("01778953114");
+        setActiveNagadNumber("");
       }
     }
   }, [paymentSettings, sellerPaymentNumbers]);
@@ -449,9 +449,6 @@ export default function CheckoutPage() {
     if (!newAddress.name || !newAddress.phone || !newAddress.address) {
       return notify("Please complete all required fields.", "error");
     }
-    if (isForbiddenNumber(newAddress.phone)) {
-      return notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়। (This number is not allowed)", "error");
-    }
     const newAddrObj = {
       id: Math.random().toString(36).substring(7),
       ...newAddress,
@@ -556,10 +553,6 @@ export default function CheckoutPage() {
       (a) => a.id === selectedAddressId,
     );
     if (!activeAddress) return notify("Address required", "error");
-
-    if (isForbiddenNumber(activeAddress.phone) || isForbiddenNumber(customerSenderNumber) || isForbiddenNumber(customerTrxId)) {
-      return notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়। (This number is not allowed)", "error");
-    }
 
     if (paymentType === "vgcoin") {
       const coinCost = advanceType === "full" ? total : requiredAdvance;

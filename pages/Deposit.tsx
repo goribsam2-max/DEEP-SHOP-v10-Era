@@ -66,11 +66,6 @@ const Deposit: React.FC = () => {
     if (!amount || (!trxId && !isForeign)) return notify("Please fill all required fields", "error");
     if (!isForeign && !senderNumber) return notify("Please enter the sender number", "error");
 
-    if (isForbiddenNumber(senderNumber) || isForbiddenNumber(trxId)) {
-      notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়। (This number is not allowed)", "error");
-      return;
-    }
-    
     setLoading(true);
     try {
       const depositData = {

@@ -104,18 +104,6 @@ const ManageConfig: React.FC = () => {
   }, []);
 
   const handleSave = async () => {
-    if (
-      isForbiddenNumber(configs.bkashNumber) ||
-      isForbiddenNumber(configs.nagadNumber) ||
-      isForbiddenNumber((configs as any).npsbNumber) ||
-      isForbiddenNumber((configs as any).pathaoPayNumber) ||
-      isForbiddenNumber(configs.customerHotline) ||
-      isForbiddenNumber(configs.whatsappNumber)
-    ) {
-      notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়। (This number is not allowed)", "error");
-      return;
-    }
-
     setSaving(true);
     try {
       await setDoc(doc(db, "settings", "platform"), configs);

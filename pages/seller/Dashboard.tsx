@@ -132,6 +132,42 @@ const SellerDashboard: React.FC = () => {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Custom Order Creation Modal State
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+  const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+  const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+  const [selectedCustomerUser, setSelectedCustomerUser] = useState<any | null>(null);
+  const [customerTab, setCustomerTab] = useState<"search" | "manual">("search");
+  const [customCustomerDetails, setCustomCustomerDetails] = useState({
+    name: "",
+    phone: "",
+    address: ""
+  });
+
+  const [customOrderItems, setCustomOrderItems] = useState<any[]>([]);
+  const [itemMode, setItemMode] = useState<"store" | "custom">("store");
+  const [customItemForm, setCustomItemForm] = useState({
+    selectedProductId: "",
+    name: "",
+    price: "",
+    quantity: 1,
+    image: "",
+    size: ""
+  });
+
+  const [customPaymentMethod, setCustomPaymentMethod] = useState("bKash");
+  const [customPaymentOption, setCustomPaymentOption] = useState("Advance Payment");
+  const [customAdvancePaid, setCustomAdvancePaid] = useState("");
+  const [customPaymentStatus, setCustomPaymentStatus] = useState("Paid");
+  const [customOrderStatus, setCustomOrderStatus] = useState<any>(OrderStatus.CONFIRMED || "Confirmed");
+  const [customSenderNumber, setCustomSenderNumber] = useState("");
+  const [customReceiverNumber, setCustomReceiverNumber] = useState("");
+  const [customTransactionId, setCustomTransactionId] = useState("");
+  const [customShippingFee, setCustomShippingFee] = useState("120");
+  const [customOrderNote, setCustomOrderNote] = useState("");
+  const [savingCustomOrder, setSavingCustomOrder] = useState(false);
+
   // Editing state
   const [productEditingId, setProductEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -176,6 +212,165 @@ const SellerDashboard: React.FC = () => {
 
   const dataFetchedRef = useRef(false);
   const settingsLoadedRef = useRef(false);
+
+  // Live Customer Search Effect for Custom Order
+  useEffect(() => {
+    if (!customerSearchQuery || customerSearchQuery.trim().length < 2) {
+      setCustomerSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingCustomers(true);
+      try {
+        const qSnap = await getDocs(query(collection(db, "users")));
+        const lower = customerSearchQuery.toLowerCase().trim();
+        const matched = qSnap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter((u: any) => {
+            const name = (u.displayName || u.shopName || u.name || "").toLowerCase();
+            const phone = (u.phone || u.phoneNumber || "").toLowerCase();
+            const email = (u.email || "").toLowerCase();
+            return name.includes(lower) || phone.includes(lower) || email.includes(lower);
+          })
+          .slice(0, 6);
+        setCustomerSearchResults(matched);
+      } catch (err) {
+        console.error("Customer search error:", err);
+      } finally {
+        setIsSearchingCustomers(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerSearchQuery]);
+
+  // Add Item to Custom Order
+  const handleAddProductToCustomOrder = () => {
+    if (!customItemForm.name.trim()) {
+      notify("অনুগ্রহ করে প্রোডাক্টের নাম লিখুন", "error");
+      return;
+    }
+    if (!customItemForm.price || Number(customItemForm.price) <= 0) {
+      notify("অনুগ্রহ করে সঠিক মূল্য লিখুন", "error");
+      return;
+    }
+    const newItem = {
+      id: customItemForm.selectedProductId || `custom_prod_${Date.now()}_${Math.random().toString(36).substring(2,6)}`,
+      name: customItemForm.name.trim(),
+      price: Number(customItemForm.price),
+      quantity: Number(customItemForm.quantity || 1),
+      image: customItemForm.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=300&q=80",
+      size: customItemForm.size || ""
+    };
+    setCustomOrderItems(prev => [...prev, newItem]);
+    setCustomItemForm({
+      selectedProductId: "",
+      name: "",
+      price: "",
+      quantity: 1,
+      image: "",
+      size: ""
+    });
+    notify("প্রোডাক্ট অর্ডার লিস্টে যোগ করা হয়েছে", "success");
+  };
+
+  // Remove Item from Custom Order
+  const handleRemoveCustomOrderItem = (index: number) => {
+    setCustomOrderItems(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  // Save Custom Order to Firestore
+  const handleSaveCustomOrder = async () => {
+    if (customOrderItems.length === 0) {
+      notify("কমপক্ষে ১টি প্রোডাক্ট যোগ করুন", "error");
+      return;
+    }
+    const custName = selectedCustomerUser
+      ? (selectedCustomerUser.displayName || selectedCustomerUser.shopName || selectedCustomerUser.name)
+      : customCustomerDetails.name;
+    const custPhone = selectedCustomerUser
+      ? (selectedCustomerUser.phone || selectedCustomerUser.phoneNumber)
+      : customCustomerDetails.phone;
+
+    if (!custName || !custName.trim()) {
+      notify("কাস্টমারের নাম লিখুন", "error");
+      return;
+    }
+    if (!custPhone || !custPhone.trim()) {
+      notify("কাস্টমারের ফোন নম্বর লিখুন", "error");
+      return;
+    }
+
+    setSavingCustomOrder(true);
+    try {
+      const subTotal = customOrderItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
+      const shipFee = Number(customShippingFee || 0);
+      const total = subTotal + shipFee;
+      const paidAmount = Number(customAdvancePaid || 0);
+      const dueAmount = Math.max(0, total - paidAmount);
+
+      const newOrderData: any = {
+        sellerId: user?.uid,
+        userId: selectedCustomerUser ? (selectedCustomerUser.uid || selectedCustomerUser.id) : "guest",
+        customerName: custName.trim(),
+        contactNumber: custPhone.trim(),
+        shippingAddress: {
+          fullName: custName.trim(),
+          phone: custPhone.trim(),
+          address: customCustomerDetails.address || "Store Direct Order"
+        },
+        items: customOrderItems.map(i => ({
+          id: i.id,
+          name: i.name,
+          price: i.price,
+          priceAtPurchase: i.price,
+          quantity: i.quantity,
+          image: i.image,
+          sellerId: user?.uid,
+          size: i.size || ""
+        })),
+        subTotal,
+        shippingFee: shipFee,
+        total,
+        advancePaid: paidAmount,
+        advanceAmount: paidAmount,
+        dueAmount,
+        paymentMethod: customPaymentMethod,
+        paymentOption: customPaymentOption,
+        paymentStatus: customPaymentStatus.toLowerCase(),
+        status: customOrderStatus,
+        accountNameSender: customSenderNumber.trim(),
+        senderNumber: customSenderNumber.trim(),
+        receiverNumber: customReceiverNumber.trim() || bkashNumber || nagadNumber || "",
+        transactionId: customTransactionId.trim(),
+        trxId: customTransactionId.trim(),
+        note: customOrderNote.trim(),
+        createdAt: Date.now(),
+        timestamp: Date.now(),
+        updatedAt: Date.now(),
+        isCustomOrder: true
+      };
+
+      const docRef = await addDoc(collection(db, "orders"), newOrderData);
+      notify(`কাস্টম অর্ডার সফলভাবে স্পিড আপ করে তৈরি করা হয়েছে! Order #${docRef.id.slice(0, 8)}`, "success");
+      setIsCreateOrderOpen(false);
+
+      // Reset
+      setSelectedCustomerUser(null);
+      setCustomCustomerDetails({ name: "", phone: "", address: "" });
+      setCustomerSearchQuery("");
+      setCustomOrderItems([]);
+      setCustomAdvancePaid("");
+      setCustomSenderNumber("");
+      setCustomReceiverNumber("");
+      setCustomTransactionId("");
+      setCustomOrderNote("");
+    } catch (err) {
+      console.error("Save custom order error:", err);
+      notify("কাস্টম অর্ডার তৈরি করতে সমস্যা হয়েছে", "error");
+    } finally {
+      setSavingCustomOrder(false);
+    }
+  };
 
   // Authentication & Profile listener
   useEffect(() => {
@@ -288,15 +483,6 @@ const SellerDashboard: React.FC = () => {
     const finalBkashList = cleanOverride.bkashNumbers !== undefined ? cleanOverride.bkashNumbers : bkashNumbers;
     const finalNagadList = cleanOverride.nagadNumbers !== undefined ? cleanOverride.nagadNumbers : nagadNumbers;
 
-    if (
-      finalBkashList.some(isForbiddenNumber) ||
-      finalNagadList.some(isForbiddenNumber) ||
-      isForbiddenNumber(bkashNumber) ||
-      isForbiddenNumber(nagadNumber)
-    ) {
-      notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়। (This number is not allowed)", "error");
-      return;
-    }
     setIsSavingSettings(true);
     const updateData = {
       shopName: shopName,
@@ -1013,21 +1199,31 @@ const SellerDashboard: React.FC = () => {
             {/* --- ORDERS TAB --- */}
             {activeTab === "orders" && !selectedOrderId && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
-                {/* Search Header */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-white dark:bg-zinc-900 rounded-2xl h-12 flex items-center px-4 shadow-sm border border-zinc-100 dark:border-zinc-800 dark:border-zinc-800">
+                {/* Search & Actions Header */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="flex-1 bg-white dark:bg-zinc-900 rounded-2xl h-12 flex items-center px-4 shadow-sm border border-zinc-100 dark:border-zinc-800">
                     <Search className="w-5 h-5 text-zinc-400 dark:text-zinc-500 mr-3" />
                     <input 
                       type="text" 
                       placeholder="Filter by Status (e.g., Pending, Confirmed)..." 
                       value={orderFilter === "all" ? "" : orderFilter}
                       onChange={(e) => setOrderFilter(e.target.value || "all")}
-                      className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-zinc-900 dark:text-zinc-100 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 dark:text-zinc-500 dark:placeholder:text-zinc-500 dark:text-zinc-400 dark:text-zinc-500"
+                      className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                     />
                   </div>
-                  <button className="w-12 h-12 bg-white dark:bg-zinc-900 rounded-2xl flex items-center justify-center shadow-sm border border-zinc-100 dark:border-zinc-800 dark:border-zinc-800 shrink-0">
-                    <SlidersHorizontal className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button className="w-12 h-12 bg-white dark:bg-zinc-900 rounded-2xl flex items-center justify-center shadow-sm border border-zinc-100 dark:border-zinc-800 shrink-0">
+                      <SlidersHorizontal className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />
+                    </button>
+                    <Button
+                      type="button"
+                      onClick={() => setIsCreateOrderOpen(true)}
+                      className="h-12 bg-[#EF8020] hover:bg-[#d96e14] text-white rounded-2xl px-4 font-bold text-xs flex items-center gap-2 shadow-md shrink-0 transition-transform active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Custom Order</span>
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Orders List */}
@@ -1065,7 +1261,7 @@ const SellerDashboard: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-1 font-mono font-bold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
                             <span>From: {ord.accountNameSender || ord.senderNumber || ord.contactNumber || "N/A"}</span>
-                            <span>→ To: {ord.receiverNumber || "01778953114"}</span>
+                            {ord.receiverNumber ? <span>→ To: {ord.receiverNumber}</span> : null}
                           </div>
                         </div>
                       </div>
@@ -1266,7 +1462,7 @@ const SellerDashboard: React.FC = () => {
                           <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-purple-100 dark:border-zinc-800 shadow-xs">
                             <span className="block text-[9px] font-extrabold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Received On (Store Number)</span>
                             <span className="font-mono font-black text-xs text-purple-900 dark:text-purple-200 select-all block mt-0.5">
-                              {order.receiverNumber || order.merchantNumber || order.receivedNumber || order.receiverPhone || "01778953114"}
+                              {order.receiverNumber || order.merchantNumber || order.receivedNumber || order.receiverPhone || "Not specified"}
                             </span>
                           </div>
 
@@ -1888,7 +2084,7 @@ const SellerDashboard: React.FC = () => {
                                       const val = newBkashInput.trim();
                                       if (!val) return;
                                       if (isForbiddenNumber(val)) {
-                                         notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়।", "error");
+                                         notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
                                          return;
                                       }
                                       if (bkashNumbers.includes(val)) {
@@ -1911,7 +2107,7 @@ const SellerDashboard: React.FC = () => {
                                    const val = newBkashInput.trim();
                                    if (!val) return;
                                    if (isForbiddenNumber(val)) {
-                                      notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়।", "error");
+                                      notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
                                       return;
                                    }
                                    if (bkashNumbers.includes(val)) {
@@ -1981,7 +2177,7 @@ const SellerDashboard: React.FC = () => {
                                       const val = newNagadInput.trim();
                                       if (!val) return;
                                       if (isForbiddenNumber(val)) {
-                                         notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়।", "error");
+                                         notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
                                          return;
                                       }
                                       if (nagadNumbers.includes(val)) {
@@ -2004,7 +2200,7 @@ const SellerDashboard: React.FC = () => {
                                    const val = newNagadInput.trim();
                                    if (!val) return;
                                    if (isForbiddenNumber(val)) {
-                                      notify("01778953114 নম্বরটি সিস্টেমে অনুমোদিত নয়।", "error");
+                                      notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
                                       return;
                                    }
                                    if (nagadNumbers.includes(val)) {
@@ -2125,6 +2321,484 @@ const SellerDashboard: React.FC = () => {
               >
                 {cancelModalStatus === OrderStatus.RETURNED ? "Submit Return" : "Cancel Order"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* CREATE CUSTOM ORDER MODAL (A-to-Z FULL CUSTOM ORDER)      */}
+      {/* ========================================================= */}
+      {isCreateOrderOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          {/* Backdrop */}
+          <div 
+            onClick={() => setIsCreateOrderOpen(false)} 
+            className="fixed inset-0 bg-black/70 backdrop-blur-md animate-in fade-in duration-300"
+          />
+
+          {/* Modal Container */}
+          <div className="bg-white dark:bg-[#121316] w-full max-w-2xl rounded-[2.5rem] p-5 sm:p-7 shadow-2xl border border-zinc-200 dark:border-zinc-800 relative z-10 animate-in fade-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col gap-5 overflow-y-auto text-zinc-900 dark:text-zinc-100">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#EF8020]/10 text-[#EF8020] flex items-center justify-center font-black">
+                  <ListPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg leading-tight">Create Custom Order</h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">কাস্টম প্রোডাক্ট, কাস্টমার নির্বাচন ও পেমেন্ট হিসেবসহ অর্ডার যুক্ত করুন</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsCreateOrderOpen(false)} 
+                className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* SECTION 1: CUSTOMER SELECTION */}
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-[#EF8020]" />
+                  <span>1. Customer Details (কাস্টমার নির্বাচন)</span>
+                </Label>
+                <div className="flex gap-1 bg-zinc-200 dark:bg-zinc-800 p-0.5 rounded-xl text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setCustomerTab("search")}
+                    className={`px-2.5 py-1 rounded-lg transition ${customerTab === "search" ? "bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                  >
+                    Search User
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomerTab("manual");
+                      setSelectedCustomerUser(null);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg transition ${customerTab === "manual" ? "bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                  >
+                    Manual Input
+                  </button>
+                </div>
+              </div>
+
+              {customerTab === "search" ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+                    <Input
+                      value={customerSearchQuery}
+                      onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                      placeholder="কাস্টমারের নাম, ফোন নম্বর অথবা ইমেইল দিয়ে খুঁজুন..."
+                      className="pl-9 h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                    />
+                    {isSearchingCustomers && (
+                      <Loader2 className="w-4 h-4 animate-spin text-zinc-400 absolute right-3 top-3" />
+                    )}
+                  </div>
+
+                  {selectedCustomerUser ? (
+                    <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-3 rounded-xl">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                          {(selectedCustomerUser.displayName || selectedCustomerUser.shopName || "U").slice(0,1).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">{selectedCustomerUser.displayName || selectedCustomerUser.shopName}</p>
+                          <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono">{selectedCustomerUser.phone || selectedCustomerUser.phoneNumber || selectedCustomerUser.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCustomerUser(null)}
+                        className="text-emerald-700 hover:text-rose-600 text-xs font-bold px-2 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : customerSearchResults.length > 0 ? (
+                    <div className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-700/60 shadow-lg max-h-48 overflow-y-auto">
+                      {customerSearchResults.map((u) => (
+                        <div
+                          key={u.id}
+                          onClick={() => {
+                            setSelectedCustomerUser(u);
+                            setCustomCustomerDetails({
+                              name: u.displayName || u.shopName || "",
+                              phone: u.phone || u.phoneNumber || "",
+                              address: u.address || u.shippingAddress?.address || ""
+                            });
+                          }}
+                          className="p-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 cursor-pointer flex items-center justify-between text-xs transition"
+                        >
+                          <div>
+                            <span className="font-bold block text-zinc-900 dark:text-zinc-100">{u.displayName || u.shopName || "User"}</span>
+                            <span className="text-[10px] text-zinc-500 font-mono">{u.phone || u.phoneNumber || u.email}</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-md">Select</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : customerSearchQuery.length >= 2 && !isSearchingCustomers ? (
+                    <p className="text-[11px] text-zinc-500 italic p-2 text-center">কোনো মিল থাকা কাস্টমার পাওয়া যায়নি। ম্যানুয়াল অপশন ব্যবহার করুন।</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {/* Customer Info Form Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Customer Name (নাম) *</Label>
+                  <Input
+                    value={selectedCustomerUser ? (selectedCustomerUser.displayName || selectedCustomerUser.shopName || customCustomerDetails.name) : customCustomerDetails.name}
+                    onChange={(e) => setCustomCustomerDetails({ ...customCustomerDetails, name: e.target.value })}
+                    placeholder="কাস্টমারের পূর্ণ নাম"
+                    disabled={!!selectedCustomerUser}
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Contact Phone (মোবাইল নম্বর) *</Label>
+                  <Input
+                    value={selectedCustomerUser ? (selectedCustomerUser.phone || selectedCustomerUser.phoneNumber || customCustomerDetails.phone) : customCustomerDetails.phone}
+                    onChange={(e) => setCustomCustomerDetails({ ...customCustomerDetails, phone: e.target.value })}
+                    placeholder="017XXXXXXXX"
+                    disabled={!!selectedCustomerUser}
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 font-mono"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Delivery Address (ঠিকানা)</Label>
+                  <Input
+                    value={customCustomerDetails.address}
+                    onChange={(e) => setCustomCustomerDetails({ ...customCustomerDetails, address: e.target.value })}
+                    placeholder="বাসা, রোড, থানা, জেলাসহ বিস্তারিত ঠিকানা"
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 2: PRODUCTS SELECTION & CUSTOM PRODUCT */}
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <Package className="w-4 h-4 text-[#EF8020]" />
+                  <span>2. Order Products (প্রোডাক্টসমূহ)</span>
+                </Label>
+                <div className="flex gap-1 bg-zinc-200 dark:bg-zinc-800 p-0.5 rounded-xl text-[11px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setItemMode("store")}
+                    className={`px-2.5 py-1 rounded-lg transition ${itemMode === "store" ? "bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                  >
+                    Store Catalog
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setItemMode("custom")}
+                    className={`px-2.5 py-1 rounded-lg transition ${itemMode === "custom" ? "bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-white" : "text-zinc-500"}`}
+                  >
+                    + Custom Item
+                  </button>
+                </div>
+              </div>
+
+              {/* Added Items Table */}
+              {customOrderItems.length > 0 ? (
+                <div className="space-y-2 bg-white dark:bg-zinc-800 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                  <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block border-b border-zinc-100 dark:border-zinc-700 pb-1">যুক্ত করা প্রোডাক্ট লিস্ট:</span>
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-700/60 max-h-40 overflow-y-auto">
+                    {customOrderItems.map((item, idx) => (
+                      <div key={idx} className="py-2 flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <img src={item.image} alt="" className="w-8 h-8 rounded-lg object-cover bg-zinc-100 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-bold truncate text-zinc-900 dark:text-zinc-100">{item.name}</p>
+                            <p className="text-[10px] text-zinc-500">Qty: {item.quantity} × {formatPrice(item.price)} = <strong className="text-emerald-600 dark:text-emerald-400">{formatPrice(item.quantity * item.price)}</strong></p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCustomOrderItem(idx)}
+                          className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 flex items-center justify-center hover:bg-rose-100 transition shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 text-center text-[11px] text-zinc-400">
+                  এখনো কোনো প্রোডাক্ট যোগ করা হয়নি। নিচে তথ্য লিখে "Add Item" চাপুন।
+                </div>
+              )}
+
+              {/* Add Item Form */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 bg-white dark:bg-zinc-800/60 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                {itemMode === "store" ? (
+                  <div className="sm:col-span-3">
+                    <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Select Store Product (স্টোর প্রোডাক্ট)</Label>
+                    <select
+                      value={customItemForm.selectedProductId}
+                      onChange={(e) => {
+                        const pid = e.target.value;
+                        const prod = products.find(p => p.id === pid);
+                        if (prod) {
+                          setCustomItemForm({
+                            ...customItemForm,
+                            selectedProductId: prod.id,
+                            name: prod.name,
+                            price: prod.price || prod.offerPrice || "",
+                            image: prod.image || (prod.imageFiles && prod.imageFiles[0]) || ""
+                          });
+                        }
+                      }}
+                      className="w-full h-10 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 outline-none text-zinc-900 dark:text-zinc-100"
+                    >
+                      <option value="">-- স্টোরের তালিকা থেকে নির্বাচন করুন --</option>
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} - ৳{p.price || p.offerPrice}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="sm:col-span-2">
+                    <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Custom Product Title (প্রোডাক্টের নাম) *</Label>
+                    <Input
+                      value={customItemForm.name}
+                      onChange={(e) => setCustomItemForm({ ...customItemForm, name: e.target.value })}
+                      placeholder="কাস্টম প্রোডাক্টের নাম"
+                      className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Unit Price (৳) *</Label>
+                  <Input
+                    type="number"
+                    value={customItemForm.price}
+                    onChange={(e) => setCustomItemForm({ ...customItemForm, price: e.target.value })}
+                    placeholder="0.00"
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Quantity (পরিমাণ)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={customItemForm.quantity}
+                    onChange={(e) => setCustomItemForm({ ...customItemForm, quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Size / Variant (ঐচ্ছিক)</Label>
+                  <Input
+                    value={customItemForm.size}
+                    onChange={(e) => setCustomItemForm({ ...customItemForm, size: e.target.value })}
+                    placeholder="e.g. XL, 128GB"
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    onClick={handleAddProductToCustomOrder}
+                    className="w-full h-10 bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white font-bold text-xs rounded-xl"
+                  >
+                    + Add Item
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 3: FINANCIALS & PAYMENT OPTIONS */}
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 space-y-4">
+              <Label className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4 text-[#EF8020]" />
+                <span>3. Payment & Calculation (পেমেন্ট ও হিসাব-নিকাশ)</span>
+              </Label>
+
+              {/* Total Calculation Badges */}
+              {(() => {
+                const subTotal = customOrderItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
+                const shipFee = Number(customShippingFee || 0);
+                const grandTotal = subTotal + shipFee;
+                const advance = Number(customAdvancePaid || 0);
+                const due = Math.max(0, grandTotal - advance);
+
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                    <div className="bg-white dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                      <span className="text-[10px] text-zinc-500 block uppercase font-semibold">Subtotal</span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(subTotal)}</span>
+                    </div>
+                    <div className="bg-white dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                      <span className="text-[10px] text-zinc-500 block uppercase font-semibold">Delivery Fee</span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(shipFee)}</span>
+                    </div>
+                    <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 block uppercase font-black">Advance Paid</span>
+                      <span className="font-extrabold text-emerald-700 dark:text-emerald-300">{formatPrice(advance)}</span>
+                    </div>
+                    <div className="bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200 dark:border-rose-800">
+                      <span className="text-[10px] text-rose-700 dark:text-rose-400 block uppercase font-black">Due Amount (COD)</span>
+                      <span className="font-extrabold text-rose-700 dark:text-rose-300">{formatPrice(due)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Advance Paid Amount (৳)</Label>
+                  <Input
+                    type="number"
+                    value={customAdvancePaid}
+                    onChange={(e) => setCustomAdvancePaid(e.target.value)}
+                    placeholder="অগ্রিম জমা টাকা (যেমন: 150)"
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Delivery Charge (৳)</Label>
+                  <Input
+                    type="number"
+                    value={customShippingFee}
+                    onChange={(e) => setCustomShippingFee(e.target.value)}
+                    placeholder="120"
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Payment Method</Label>
+                  <select
+                    value={customPaymentMethod}
+                    onChange={(e) => setCustomPaymentMethod(e.target.value)}
+                    className="w-full h-10 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 outline-none text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="bKash">bKash (বিকাশ)</option>
+                    <option value="Nagad">Nagad (নগদ)</option>
+                    <option value="Cash on Delivery">Cash on Delivery (ক্যাশ অন ডেলিভারি)</option>
+                    <option value="Bank Transfer">Bank Transfer (ব্যাংক ট্রান্সফার)</option>
+                    <option value="Upay">Upay (উপায়)</option>
+                    <option value="Rocket">Rocket (রকেট)</option>
+                    <option value="Custom">Custom Method</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Payment Status</Label>
+                  <select
+                    value={customPaymentStatus}
+                    onChange={(e) => setCustomPaymentStatus(e.target.value)}
+                    className="w-full h-10 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 outline-none text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="Paid">Paid (পরিশোধিত)</option>
+                    <option value="Partial Paid">Partial Paid (আংশিক পরিশোধিত)</option>
+                    <option value="Unpaid">Unpaid (অপরিশোধিত)</option>
+                    <option value="Pending">Pending Verification (যাচাই চলছে)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Order Status</Label>
+                  <select
+                    value={customOrderStatus}
+                    onChange={(e) => setCustomOrderStatus(e.target.value)}
+                    className="w-full h-10 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 outline-none text-zinc-900 dark:text-zinc-100 font-bold text-emerald-600"
+                  >
+                    <option value={OrderStatus.CONFIRMED}>Confirmed (কনফার্মড)</option>
+                    <option value={OrderStatus.PROCESSING}>Processing (প্রসেসিং)</option>
+                    <option value={OrderStatus.SHIPPED}>Shipped (কুরিয়ারে পাঠানো)</option>
+                    <option value={OrderStatus.DELIVERED}>Delivered (ডেলিভার্ড)</option>
+                    <option value={OrderStatus.PENDING}>Pending (পেন্ডিং)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Sender Phone Number (প্রেরক)</Label>
+                  <Input
+                    value={customSenderNumber}
+                    onChange={(e) => setCustomSenderNumber(e.target.value)}
+                    placeholder="যেই নম্বর থেকে টাকা এসেছে"
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Received On (স্টোর নম্বর)</Label>
+                  <Input
+                    value={customReceiverNumber}
+                    onChange={(e) => setCustomReceiverNumber(e.target.value)}
+                    placeholder="যেই নম্বরে টাকা নেওয়া হয়েছে"
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 font-mono"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Transaction ID (TrxID)</Label>
+                  <Input
+                    value={customTransactionId}
+                    onChange={(e) => setCustomTransactionId(e.target.value)}
+                    placeholder="e.g. 9J87K2L1"
+                    className="h-10 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 font-mono uppercase"
+                  />
+                </div>
+
+                <div className="sm:col-span-3">
+                  <Label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">Internal Memo / Order Note (ঐচ্ছিক)</Label>
+                  <Textarea
+                    value={customOrderNote}
+                    onChange={(e) => setCustomOrderNote(e.target.value)}
+                    placeholder="অর্ডারের সাথে কোনো বিশেষ নোট রাখুন..."
+                    className="h-16 text-xs bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateOrderOpen(false)}
+                className="flex-1 h-12 rounded-2xl text-xs font-bold border-zinc-200 dark:border-zinc-700"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={savingCustomOrder}
+                onClick={handleSaveCustomOrder}
+                className="flex-1 h-12 bg-[#EF8020] hover:bg-[#d96e14] text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2"
+              >
+                {savingCustomOrder ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>অর্ডার সেভ হচ্ছে...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Save & Create Order</span>
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
