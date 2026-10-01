@@ -1,11 +1,44 @@
 import express from "express";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import webpush from "web-push";
+
+// Safe filesystem helpers for read-only Vercel serverless environment
+export const safeWriteFileSync = (filePath: string, content: string) => {
+  try {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, content, "utf-8");
+  } catch (e: any) {
+    console.warn(`Write to ${filePath} skipped (read-only filesystem):`, e?.message || e);
+  }
+};
+
+export const getLocalFilePath = (filename: string) => {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    const tmpDir = path.join(os.tmpdir(), "deepshop_local");
+    try {
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+    } catch (e) {}
+    return path.join(tmpDir, path.basename(filename));
+  }
+  const localDir = path.resolve(process.cwd(), "local_db");
+  try {
+    if (!fs.existsSync(localDir)) {
+      fs.mkdirSync(localDir, { recursive: true });
+    }
+  } catch (e) {}
+  return path.resolve(process.cwd(), filename.includes("/") ? filename : path.join("local_db", filename));
+};
 
 let hasValidFirebaseAdmin = false;
 try {
@@ -20,15 +53,20 @@ try {
         "utf8",
       ),
     );
-    if (!hasValidFirebaseAdmin) {
+    if (!hasValidFirebaseAdmin && !admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
     }
     hasValidFirebaseAdmin = true;
   } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    if (!hasValidFirebaseAdmin) {
+    let raw = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+    if ((raw.startsWith("'") && raw.endsWith("'")) || (raw.startsWith('"') && raw.endsWith('"'))) {
+      raw = raw.slice(1, -1);
+    }
+    raw = raw.replace(/\\n/g, '\n');
+    const serviceAccount = JSON.parse(raw);
+    if (!hasValidFirebaseAdmin && !admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
@@ -64,14 +102,13 @@ async function initializeVapid() {
             }
             
             if (!keysToUse) {
-                const vapidPath = path.resolve(process.cwd(), "vapid.json");
+                const vapidPath = getLocalFilePath("vapid.json");
                 if (fs.existsSync(vapidPath)) {
-                    keysToUse = JSON.parse(fs.readFileSync(vapidPath, "utf-8"));
-                } else {
+                    try { keysToUse = JSON.parse(fs.readFileSync(vapidPath, "utf-8")); } catch(e) {}
+                }
+                if (!keysToUse) {
                     keysToUse = webpush.generateVAPIDKeys();
-                    try {
-                        fs.writeFileSync(vapidPath, JSON.stringify(keysToUse, null, 2), "utf-8");
-                    } catch(e) {}
+                    safeWriteFileSync(vapidPath, JSON.stringify(keysToUse, null, 2));
                 }
             }
 
@@ -298,13 +335,13 @@ app.use(async (req, res, next) => {
         }
         
         if (!savedToFirestore) {
-           const subsPath = path.resolve(process.cwd(), "web_push_subscriptions.json");
+           const subsPath = getLocalFilePath("web_push_subscriptions.json");
            let subs: any = {};
            if (fs.existsSync(subsPath)) {
                try { subs = JSON.parse(fs.readFileSync(subsPath, "utf-8")); } catch(e) {}
            }
            subs[endpointHash] = { subscription, uid: uid || null, createdAt: Date.now() };
-           fs.writeFileSync(subsPath, JSON.stringify(subs, null, 2));
+           safeWriteFileSync(subsPath, JSON.stringify(subs, null, 2));
         }
 
         res.json({ success: true });
@@ -710,7 +747,7 @@ app.use(async (req, res, next) => {
         
         // 1. Save detailed analytics locally (always succeed)
         try {
-          const analyticsPath = path.resolve(process.cwd(), "local_db/ads_analytics.json");
+          const analyticsPath = getLocalFilePath("ads_analytics.json");
           let analytics: any = {};
           if (fs.existsSync(analyticsPath)) {
             try { analytics = JSON.parse(fs.readFileSync(analyticsPath, "utf-8")); } catch(err) {}
@@ -743,11 +780,7 @@ app.use(async (req, res, next) => {
             adStat.closeSeconds[sec] = (adStat.closeSeconds[sec] || 0) + 1;
           }
           
-          const localDir = path.resolve(process.cwd(), "local_db");
-          if (!fs.existsSync(localDir)) {
-            fs.mkdirSync(localDir, { recursive: true });
-          }
-          fs.writeFileSync(analyticsPath, JSON.stringify(analytics, null, 2), "utf-8");
+          safeWriteFileSync(analyticsPath, JSON.stringify(analytics, null, 2));
         } catch (err) {
           console.error("Failed to write local analytics:", err);
         }
@@ -797,7 +830,7 @@ app.use(async (req, res, next) => {
 
   app.get("/api/ads/analytics", (req, res) => {
     try {
-      const analyticsPath = path.resolve(process.cwd(), "local_db/ads_analytics.json");
+      const analyticsPath = getLocalFilePath("ads_analytics.json");
       let analytics = {};
       if (fs.existsSync(analyticsPath)) {
         try {
@@ -817,15 +850,13 @@ app.use(async (req, res, next) => {
         
         // Log locally for audit trail
         try {
-          const logPath = path.resolve(process.cwd(), "local_db/reward_logs.json");
+          const logPath = getLocalFilePath("reward_logs.json");
           let logs: any[] = [];
           if (fs.existsSync(logPath)) {
             try { logs = JSON.parse(fs.readFileSync(logPath, "utf-8")); } catch(err) {}
           }
           logs.push({ uid, adId, rewardCoins, timestamp: Date.now() });
-          const localDir = path.resolve(process.cwd(), "local_db");
-          if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
-          fs.writeFileSync(logPath, JSON.stringify(logs, null, 2), "utf-8");
+          safeWriteFileSync(logPath, JSON.stringify(logs, null, 2));
         } catch(e) {}
 
         if (hasValidFirebaseAdmin) {
@@ -1094,21 +1125,39 @@ export async function initializeAppAsync() {
 
   app.get("*all", async (req, res) => {
     try {
-      let template: string;
+      let template: string = "";
 
       if (!isProd) {
         template = fs.readFileSync(path.resolve("index.html"), "utf-8");
         template = await vite.transformIndexHtml(req.originalUrl, template);
       } else {
-        template = fs.readFileSync(
+        const candidatePaths = [
           path.join(distPath, "index.html"),
-          "utf-8",
-        );
+          path.join(process.cwd(), "dist", "index.html"),
+          path.join(process.cwd(), "index.html"),
+          path.resolve("index.html"),
+        ];
+        const found = candidatePaths.find((p) => fs.existsSync(p));
+        if (found) {
+          template = fs.readFileSync(found, "utf-8");
+        } else {
+          template = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>DEEP SHOP</title></head><body><div id="root"></div></body></html>`;
+        }
       }
 
       // Check if it's a product page matching `/product/:id` or `/:slug`
+      const knownAppRoutes = [
+        '/', '/all-products', '/cart', '/checkout', '/admin', '/seller', '/courier', 
+        '/messages', '/profile', '/orders', '/login', '/register', '/signup', '/settings', 
+        '/favorites', '/track-order', '/privacy', '/terms', '/helpline', '/ads',
+        '/categories', '/blog', '/contact', '/about', '/manifest.webmanifest', '/custom-sw.js',
+        '/favicon.ico', '/favicon.png', '/sitemap.xml', '/robots.txt'
+      ];
+      const isKnownRoute = knownAppRoutes.some(r => req.path === r || req.path.startsWith(r + '/'));
+      const hasExtension = req.path.includes('.');
+
       const productMatch = req.path.match(/^\/product\/(.+)/);
-      const isSlugMatch = req.path !== "/" && req.path !== "/all-products" && !req.path.startsWith("/api");
+      const isSlugMatch = !isKnownRoute && !hasExtension && !req.path.startsWith("/api");
 
       let product: any = null;
       if (productMatch && productMatch[1]) {
@@ -1119,8 +1168,8 @@ export async function initializeAppAsync() {
           const snapshot = await getFirestore().collection("products").get();
           for (const doc of snapshot.docs) {
             const data = doc.data();
-            const slug = toSlug(data.title);
-            if (`/${slug}` === req.path) {
+            const slug = toSlug(data.title || data.name || "");
+            if (slug && `/${slug}` === req.path) {
               product = data;
               break;
             }
