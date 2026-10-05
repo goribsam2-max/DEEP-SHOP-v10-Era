@@ -275,6 +275,7 @@ export default function Messages() {
 
   const togglePinChat = (chatId: string) => {
     setSwipedChatId(null);
+    setActiveContextMenuChatId(null);
     setPinnedChatIds(prev => {
       const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
       localStorage.setItem('deepshop_pinned_chats', JSON.stringify(next));
@@ -284,6 +285,7 @@ export default function Messages() {
 
   const toggleArchiveChat = (chatId: string) => {
     setSwipedChatId(null);
+    setActiveContextMenuChatId(null);
     setArchivedChatIds(prev => {
       const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
       localStorage.setItem('deepshop_archived_chats', JSON.stringify(next));
@@ -292,6 +294,8 @@ export default function Messages() {
   };
 
   const toggleBlockUser = (chatId: string) => {
+    setSwipedChatId(null);
+    setActiveContextMenuChatId(null);
     setBlockedUserIds(prev => {
       const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
       localStorage.setItem('deepshop_blocked_chats', JSON.stringify(next));
@@ -300,6 +304,8 @@ export default function Messages() {
   };
 
   const toggleMuteChat = (chatId: string) => {
+    setSwipedChatId(null);
+    setActiveContextMenuChatId(null);
     setMutedChatIds(prev => {
       const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
       localStorage.setItem('deepshop_muted_chats', JSON.stringify(next));
@@ -3255,6 +3261,8 @@ const handleCreateChannel = async () => {
 
   const lastScrollTopRef = useRef(0);
   const handleSidebarScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (swipedChatId) setSwipedChatId(null);
+    if (activeContextMenuChatId) setActiveContextMenuChatId(null);
     const scrollTop = e.currentTarget.scrollTop;
     if (scrollTop > lastScrollTopRef.current + 10 && scrollTop > 50) {
       setIsOnlineSectionVisible(false);
@@ -4222,7 +4230,7 @@ const handleCreateChannel = async () => {
 
                            return (
                               <div
-                                key={`chat-wrapper-${cId}-${idx}`}
+                                key={`chat-item-${cId}`}
                                 className="relative overflow-hidden select-none"
                                 onContextMenu={(e) => {
                                   e.preventDefault();
@@ -4235,24 +4243,37 @@ const handleCreateChannel = async () => {
                                   longPressTimerRef.current = setTimeout(() => {
                                     setActiveContextMenuChatId(cId);
                                     setSwipedChatId(null);
+                                    touchStartRef.current = null;
                                   }, 450);
                                 }}
                                 onTouchMove={(e) => {
                                   if (!touchStartRef.current || touchStartRef.current.cId !== cId) return;
                                   const dx = touchStartRef.current.x - e.touches[0].clientX;
-                                  if (Math.abs(dx) > 10 && longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                                  if (dx > 35) setSwipedChatId(cId);
-                                  else if (dx < -35 && isSwiped) setSwipedChatId(null);
+                                  const dy = touchStartRef.current.y - e.touches[0].clientY;
+                                  if (Math.abs(dy) > 10 || Math.abs(dx) > 15) {
+                                    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                  }
+                                  if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                                    setSwipedChatId(cId);
+                                  } else if (dx < -30 && isSwiped) {
+                                    setSwipedChatId(null);
+                                  }
                                 }}
                                 onTouchEnd={() => {
                                   if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                  touchStartRef.current = null;
                                 }}
                               >
                                   {/* Telegram Right Action Buttons Revealed on Left Swipe */}
                                   <div className="absolute right-0 top-0 bottom-0 w-[204px] flex items-center z-0 overflow-hidden">
                                     <button
                                       type="button"
-                                      onClick={(e) => { e.stopPropagation(); togglePinChat(cId); setSwipedChatId(null); }}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        togglePinChat(cId);
+                                        setSwipedChatId(null);
+                                      }}
                                       className="h-full w-[68px] bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
                                     >
                                       <Pin className="w-4 h-4" />
@@ -4260,7 +4281,12 @@ const handleCreateChannel = async () => {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={(e) => { e.stopPropagation(); toggleArchiveChat(cId); setSwipedChatId(null); }}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        toggleArchiveChat(cId);
+                                        setSwipedChatId(null);
+                                      }}
                                       className="h-full w-[68px] bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
                                     >
                                       <Archive className="w-4 h-4" />
@@ -4268,7 +4294,12 @@ const handleCreateChannel = async () => {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={(e) => { e.stopPropagation(); setShowClearChatModal(true); setSwipedChatId(null); }}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setShowClearChatModal(true);
+                                        setSwipedChatId(null);
+                                      }}
                                       className="h-full w-[68px] bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
                                     >
                                       <Trash2 className="w-4 h-4" />
