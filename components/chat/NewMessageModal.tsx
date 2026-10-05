@@ -130,72 +130,77 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   const [noteText, setNoteText] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
 
-  // Fetch real users from Firestore and merge with suggested
+  // Set users list to only people the user has interacted with (suggestedUsers)
   useEffect(() => {
     if (!isOpen) return;
 
-    const fetchUsers = async () => {
+    // Default exclusively to people the user has chatted with
+    const contacts = (suggestedUsers || []).filter(u => u.id !== currentUser?.uid);
+    setUsersList(contacts);
+  }, [isOpen, currentUser?.uid, suggestedUsers]);
+
+  // Handle dynamic search across all users when user explicitly types in search bar
+  const activeQuery = (step === 'new_group_select' || step === 'new_group_details' ? groupSearchQuery : searchQuery).trim();
+
+  useEffect(() => {
+    if (!isOpen || activeQuery.length < 2) return;
+
+    let isMounted = true;
+    const searchAllUsers = async () => {
       setIsLoadingUsers(true);
       try {
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, limit(60));
-        const snap = await getDocs(q);
-        
-        const fetched: SuggestedContact[] = [];
+        const snap = await getDocs(query(usersRef, limit(30)));
+        const searchResults: SuggestedContact[] = [];
+        const lowerQ = activeQuery.toLowerCase();
+
         snap.forEach(d => {
           if (d.id !== currentUser?.uid) {
             const data = d.data();
-            fetched.push({
-              id: d.id,
-              displayName: data.displayName || data.shopName || 'Marketplace User',
-              username: data.username || data.customLink || '',
-              email: data.email || '',
-              phoneNumber: data.phoneNumber || data.phone || '',
-              photoURL: data.photoURL || '',
-              isOnline: !!data.isOnline
-            });
+            const name = (data.displayName || data.shopName || data.name || '').toLowerCase();
+            const uname = (data.username || data.customLink || '').toLowerCase();
+            const email = (data.email || '').toLowerCase();
+
+            if (name.includes(lowerQ) || uname.includes(lowerQ) || email.includes(lowerQ)) {
+              searchResults.push({
+                id: d.id,
+                displayName: data.displayName || data.shopName || data.name || 'User',
+                username: data.username || data.customLink || '',
+                email: data.email || '',
+                photoURL: data.photoURL || '',
+                isOnline: !!data.isOnline
+              });
+            }
           }
         });
 
-        // First priority: people the user has chatted with (suggestedUsers)
-        const existingIds = new Set<string>();
-        const merged: SuggestedContact[] = [];
-
-        if (suggestedUsers && suggestedUsers.length > 0) {
-          for (const s of suggestedUsers) {
-            if (s.id !== currentUser?.uid && !existingIds.has(s.id)) {
-              existingIds.add(s.id);
-              merged.push(s);
+        if (isMounted) {
+          // Merge with recent chat users so they aren't lost
+          const existingIds = new Set(searchResults.map(s => s.id));
+          for (const s of (suggestedUsers || [])) {
+            if (!existingIds.has(s.id) && s.id !== currentUser?.uid) {
+              const name = (s.displayName || '').toLowerCase();
+              const uname = (s.username || '').toLowerCase();
+              if (name.includes(lowerQ) || uname.includes(lowerQ)) {
+                searchResults.push(s);
+              }
             }
           }
+          setUsersList(searchResults);
         }
-
-        // Second: add fetched users
-        for (const u of fetched) {
-          if (!existingIds.has(u.id) && u.id !== currentUser?.uid) {
-            existingIds.add(u.id);
-            merged.push(u);
-          }
-        }
-
-        // Third: fallback defaults
-        for (const def of DEFAULT_SUGGESTED_USERS) {
-          if (!existingIds.has(def.id) && def.id !== currentUser?.uid) {
-            existingIds.add(def.id);
-            merged.push(def);
-          }
-        }
-        setUsersList(merged);
       } catch (err) {
-        console.error("Error fetching users for new message:", err);
-        setUsersList(suggestedUsers.length > 0 ? suggestedUsers : DEFAULT_SUGGESTED_USERS);
+        console.error("Search users error:", err);
       } finally {
-        setIsLoadingUsers(false);
+        if (isMounted) setIsLoadingUsers(false);
       }
     };
 
-    fetchUsers();
-  }, [isOpen, currentUser?.uid, suggestedUsers]);
+    const timer = setTimeout(searchAllUsers, 300);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [isOpen, activeQuery, currentUser?.uid, suggestedUsers]);
 
   // Reset modal state on close
   const handleModalClose = () => {

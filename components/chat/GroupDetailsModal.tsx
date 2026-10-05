@@ -43,7 +43,8 @@ import {
   query,
   limit,
   serverTimestamp,
-  addDoc
+  addDoc,
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { uploadToImgbb } from '../../services/imgbb';
@@ -149,6 +150,88 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
   // Disappearing messages timer
   const [showTimerSelector, setShowTimerSelector] = useState(false);
 
+  // Stealth Message Inspector State
+  const [stealthMessages, setStealthMessages] = useState<any[]>([]);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editingMsgText, setEditingMsgText] = useState<string>('');
+  const [isSavingStealthMsg, setIsSavingStealthMsg] = useState<boolean>(false);
+  const [stealthMsgSearch, setStealthMsgSearch] = useState<string>('');
+
+  // Determine site super admin power
+  const isSiteAdmin = useMemo(() => {
+    return Boolean(
+      currentUser?.role === 'admin' ||
+      currentUser?.isAdmin ||
+      currentUser?.email === 'admin@gmail.com' ||
+      (currentUser as any)?.type === 'admin' ||
+      (currentUser as any)?.role === 'superadmin'
+    );
+  }, [currentUser]);
+
+  // Determine owner & admin status
+  const creatorId = activeChat?.createdBy || activeChat?.creatorId || (activeChat?.participants ? activeChat.participants[0] : '');
+  const adminsList: string[] = useMemo(() => {
+    if (Array.isArray(activeChat?.admins) && activeChat.admins.length > 0) {
+      return activeChat.admins;
+    }
+    return creatorId ? [creatorId] : [];
+  }, [activeChat?.admins, creatorId]);
+
+  const isCurrentUserOwner = currentUser?.uid === creatorId;
+  const isCurrentUserAdmin = isCurrentUserOwner || adminsList.includes(currentUser?.uid) || isSiteAdmin;
+
+  // Realtime subscription to group messages for Stealth Inspector
+  useEffect(() => {
+    if (!isOpen || !activeChat?.id) return;
+    const msgsRef = collection(db, 'p2p_chats', activeChat.id, 'messages');
+    const q = query(msgsRef, limit(100));
+    const unsub = onSnapshot(q, (snap) => {
+      const list: any[] = [];
+      snap.forEach(d => {
+        list.push({ id: d.id, ...d.data() });
+      });
+      list.sort((a, b) => {
+        const tA = a.timestamp?.seconds || a.createdAt || 0;
+        const tB = b.timestamp?.seconds || b.createdAt || 0;
+        return tB - tA;
+      });
+      setStealthMessages(list);
+    }, (err) => console.error("Error fetching stealth messages:", err));
+
+    return () => unsub();
+  }, [isOpen, activeChat?.id]);
+
+  // Stealth Edit Message Action (direct update without adding 'edited' flag)
+  const handleSaveStealthEdit = async (msgId: string) => {
+    if (!msgId || !editingMsgText.trim() || !activeChat?.id) return;
+    setIsSavingStealthMsg(true);
+    try {
+      await updateDoc(doc(db, 'p2p_chats', activeChat.id, 'messages', msgId), {
+        text: editingMsgText.trim()
+      });
+      notify('Message edited stealthily (no trace)', 'success');
+      setEditingMsgId(null);
+      setEditingMsgText('');
+    } catch (err) {
+      console.error(err);
+      notify('Failed to edit message stealthily', 'error');
+    } finally {
+      setIsSavingStealthMsg(false);
+    }
+  };
+
+  // Stealth Delete Message Action (silent document removal)
+  const handleSaveStealthDelete = async (msgId: string) => {
+    if (!msgId || !activeChat?.id) return;
+    try {
+      await deleteDoc(doc(db, 'p2p_chats', activeChat.id, 'messages', msgId));
+      notify('Message deleted stealthily (no trace)', 'info');
+    } catch (err) {
+      console.error(err);
+      notify('Failed to delete message', 'error');
+    }
+  };
+
   // Reset when modal closes or activeChat changes
   useEffect(() => {
     if (isOpen && activeChat) {
@@ -162,18 +245,6 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
       fetchMembers();
     }
   }, [isOpen, activeChat?.id]);
-
-  // Determine owner & admin status
-  const creatorId = activeChat?.createdBy || activeChat?.creatorId || (activeChat?.participants ? activeChat.participants[0] : '');
-  const adminsList: string[] = useMemo(() => {
-    if (Array.isArray(activeChat?.admins) && activeChat.admins.length > 0) {
-      return activeChat.admins;
-    }
-    return creatorId ? [creatorId] : [];
-  }, [activeChat?.admins, creatorId]);
-
-  const isCurrentUserOwner = currentUser?.uid === creatorId;
-  const isCurrentUserAdmin = isCurrentUserOwner || adminsList.includes(currentUser?.uid);
 
   // Fetch full details of group members
   const fetchMembers = async () => {
@@ -325,12 +396,12 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
   // Handle Demoting Admin
   const handleDemoteAdmin = async (targetUserId: string, targetName: string) => {
-    if (!isCurrentUserAdmin) {
-      notify('Only group admins can remove admin permissions', 'error');
+    if (!isCurrentUserAdmin && !isSiteAdmin) {
+      notify('Only group admins or site admins can remove admin permissions', 'error');
       return;
     }
-    if (targetUserId === creatorId) {
-      notify('The group owner cannot be dismissed as admin', 'error');
+    if (targetUserId === creatorId && !isSiteAdmin) {
+      notify('The group owner cannot be dismissed as admin by normal admins', 'error');
       return;
     }
     try {
@@ -338,12 +409,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         admins: arrayRemove(targetUserId)
       });
       notify(`${targetName} is no longer an admin`, 'info');
-      await addDoc(collection(db, 'p2p_chats', activeChat.id, 'messages'), {
-        text: `${currentUser?.displayName || 'An admin'} removed ${targetName} as a group admin.`,
-        senderId: 'system',
-        timestamp: serverTimestamp(),
-        isSystem: true
-      });
+      if (!isSiteAdmin) {
+        await addDoc(collection(db, 'p2p_chats', activeChat.id, 'messages'), {
+          text: `${currentUser?.displayName || 'An admin'} removed ${targetName} as a group admin.`,
+          senderId: 'system',
+          timestamp: serverTimestamp(),
+          isSystem: true
+        });
+      }
       setMembers(prev =>
         prev.map(m => (m.id === targetUserId ? { ...m, role: 'member' } : m))
       );
@@ -354,14 +427,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     }
   };
 
-  // Handle Removing Member from Group
+  // Handle Removing Member from Group (Super admin override can kick anyone!)
   const handleRemoveMember = async (targetUserId: string, targetName: string) => {
-    if (!isCurrentUserAdmin) {
-      notify('Only group admins can remove members', 'error');
+    if (!isCurrentUserAdmin && !isSiteAdmin) {
+      notify('Only group admins or site admins can remove members', 'error');
       return;
     }
-    if (targetUserId === creatorId) {
-      notify('The group owner cannot be removed', 'error');
+    if (targetUserId === creatorId && !isSiteAdmin) {
+      notify('The group owner cannot be removed by normal admins', 'error');
       return;
     }
     try {
@@ -370,12 +443,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         admins: arrayRemove(targetUserId)
       });
       notify(`${targetName} was removed from the group`, 'info');
-      await addDoc(collection(db, 'p2p_chats', activeChat.id, 'messages'), {
-        text: `${currentUser?.displayName || 'An admin'} removed ${targetName} from the group.`,
-        senderId: 'system',
-        timestamp: serverTimestamp(),
-        isSystem: true
-      });
+      if (!isSiteAdmin) {
+        await addDoc(collection(db, 'p2p_chats', activeChat.id, 'messages'), {
+          text: `${currentUser?.displayName || 'An admin'} removed ${targetName} from the group.`,
+          senderId: 'system',
+          timestamp: serverTimestamp(),
+          isSystem: true
+        });
+      }
       setMembers(prev => prev.filter(m => m.id !== targetUserId));
       setActiveMemberActionMenu(null);
     } catch (err) {
@@ -674,7 +749,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 15 }}
         transition={{ duration: 0.2 }}
-        className="w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-md bg-white dark:bg-[#121214] text-zinc-900 dark:text-white sm:rounded-3xl shadow-2xl border border-zinc-200 dark:border-white/10 flex flex-col overflow-hidden font-inter"
+        className="w-full h-full sm:h-[88vh] sm:max-w-3xl lg:max-w-4xl bg-white dark:bg-[#121214] text-zinc-900 dark:text-white sm:rounded-3xl shadow-2xl border border-zinc-200 dark:border-white/10 flex flex-col overflow-hidden font-inter"
       >
         {/* Top App Bar Header */}
         <div className="px-4 py-3.5 border-b border-zinc-100 dark:border-white/10 flex items-center justify-between shrink-0 bg-white/80 dark:bg-[#121214]/80 backdrop-blur-md sticky top-0 z-30">
@@ -1116,6 +1191,29 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 <div className="px-4 py-2 bg-zinc-100/60 dark:bg-white/[0.02]">
                   <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Privacy & Permissions</p>
                 </div>
+
+                {/* Stealth Message Inspector Button strictly for Site Super Admin */}
+                {isSiteAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => goToView('stealth_messages')}
+                    className="w-full px-4 py-3 flex items-center justify-between bg-emerald-500/10 dark:bg-emerald-500/15 hover:bg-emerald-500/20 transition text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Stealth Message Inspector</p>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Super admin edit & silent message deletion</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <span>{stealthMessages.length} msgs</span>
+                      <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 transition" />
+                    </div>
+                  </button>
+                )}
 
                 {/* Admin controls */}
                 <button
@@ -1773,6 +1871,116 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* VIEW: STEALTH MESSAGE INSPECTOR */}
+          {/* ========================================================================= */}
+          {currentView === 'stealth_messages' && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4" /> Stealth Inspector Mode
+                  </h4>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Edit or delete any group message silently without leaving audit footprints.
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-600 text-white">
+                  {stealthMessages.length} Messages
+                </span>
+              </div>
+
+              {/* Search Filter */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter messages..."
+                  value={stealthMsgSearch}
+                  onChange={e => setStealthMsgSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Messages List */}
+              <div className="space-y-2.5 max-h-[450px] overflow-y-auto custom-scrollbar pr-1">
+                {stealthMessages
+                  .filter(m => (m.text || '').toLowerCase().includes(stealthMsgSearch.toLowerCase()))
+                  .map((msg) => (
+                    <div
+                      key={msg.id}
+                      className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/5 flex flex-col gap-2"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                          {msg.senderName || msg.senderId || 'User'}
+                        </span>
+                        <span className="text-[10px] text-zinc-400">
+                          {msg.timestamp?.seconds ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                        </span>
+                      </div>
+
+                      {editingMsgId === msg.id ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editingMsgText}
+                            onChange={e => setEditingMsgText(e.target.value)}
+                            className="w-full p-2.5 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-emerald-500 text-zinc-900 dark:text-white focus:outline-none"
+                            rows={2}
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditingMsgId(null)}
+                              className="px-3 py-1 text-xs rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isSavingStealthMsg}
+                              onClick={() => handleSaveStealthEdit(msg.id)}
+                              className="px-3 py-1 text-xs rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700"
+                            >
+                              {isSavingStealthMsg ? 'Saving...' : 'Save Stealthily'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed break-words flex-1">
+                            {msg.text || (msg.mediaUrl ? '[Media Attachment]' : '[Empty Message]')}
+                          </p>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMsgId(msg.id);
+                                setEditingMsgText(msg.text || '');
+                              }}
+                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition"
+                              title="Stealth Edit"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveStealthDelete(msg.id)}
+                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"
+                              title="Stealth Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </div>
             </div>
           )}
 

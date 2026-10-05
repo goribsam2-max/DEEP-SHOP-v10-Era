@@ -45,9 +45,12 @@ import BanOverlay from './components/BanOverlay';
 import { AdManager } from './components/AdManager';
 import { GlobalCallReceiver } from './components/GlobalCallReceiver';
 import { CustomContextMenu } from './components/CustomContextMenu';
+import { initGlobalHaptics } from './lib/haptics';
 
 const SEOProvider = () => {
   useEffect(() => {
+    initGlobalHaptics();
+
     const unsub = onSnapshot(doc(db, 'settings', 'seo'), (snap) => {
       if (snap.exists()) {
         const data = snap.data();

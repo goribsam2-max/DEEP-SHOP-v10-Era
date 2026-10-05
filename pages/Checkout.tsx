@@ -1,6 +1,6 @@
 import { formatPrice, isForbiddenNumber } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { auth, db } from "../firebase";
 import { handleCoinDeductionWithExpiry } from "../lib/coinExpiry";
 import {
@@ -1459,21 +1459,53 @@ export default function CheckoutPage() {
                       id="terms"
                       checked={agreeToTerms}
                       onCheckedChange={(c) => setAgreeToTerms(!!c)}
+                      className="mt-0.5"
                     />
-                    <Label
-                      htmlFor="terms"
-                      className="text-sm font-bold leading-snug cursor-pointer mt-0.5"
-                    >
-                      I agree to the{" "}
-                      <span className="underline text-zinc-800 dark:text-zinc-200">
+                    <div className="text-sm font-bold leading-snug">
+                      <label htmlFor="terms" className="cursor-pointer text-zinc-900 dark:text-zinc-100 mr-1">
+                        I agree to the
+                      </label>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate('/terms');
+                        }}
+                        className="underline text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-extrabold cursor-pointer inline-block"
+                      >
                         Terms of Service
-                      </span>{" "}
-                      and{" "}
-                      <span className="underline text-zinc-800 dark:text-zinc-200">
+                      </button>{" "}
+                      <label htmlFor="terms" className="cursor-pointer text-zinc-900 dark:text-zinc-100 mx-1">
+                        and
+                      </label>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate('/privacy');
+                        }}
+                        className="underline text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-extrabold cursor-pointer inline-block"
+                      >
                         Privacy Policy
+                      </button>
+                      <span className="text-zinc-600 dark:text-zinc-400 font-normal">
+                        . Note: Returns are subjective to{" "}
                       </span>
-                      . Note: Returns are subjective to warranty policies.
-                    </Label>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate('/refund-policy');
+                        }}
+                        className="underline text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-extrabold cursor-pointer inline-block"
+                      >
+                        warranty policies
+                      </button>
+                      <span className="text-zinc-600 dark:text-zinc-400 font-normal">.</span>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-row justify-between items-center border-t border-zinc-100 dark:border-zinc-800 pt-4 pb-2 sm:gap-4 gap-2">

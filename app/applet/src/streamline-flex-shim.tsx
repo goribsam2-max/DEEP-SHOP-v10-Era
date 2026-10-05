@@ -26,6 +26,7 @@ const c = (d: string[]) => React.forwardRef<SVGSVGElement, any>(({ size, strokeW
 
 // Geometry database for Streamline Flex Remix Free (Outline) style
 export const Activity = c(["M22 12h-4l-3 9L9 3 6 12H2"]);
+export const Archive = c(["M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8", "M23 3H1v5h22V3z", "M10 12h4"]);
 export const AlertCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 8v4", "M12 16h.01"]);
 export const AlertTriangle = c(["M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z", "M12 9v4", "M12 17h.01"]);
 export const ArrowDown = c(["M12 5v14", "M19 12l-7 7-7-7"]);

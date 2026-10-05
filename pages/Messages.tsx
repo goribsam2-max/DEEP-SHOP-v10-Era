@@ -2,7 +2,7 @@ import { uploadToImgbb } from '../services/imgbb';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle } from 'lucide-react';
+import { Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle, Archive } from 'lucide-react';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { subscribeToWebPush } from '../lib/push';
@@ -242,6 +242,81 @@ export default function Messages() {
   // activeMessagesTab is now synchronized with search parameter tab=settings
   const [isOnlineSectionVisible, setIsOnlineSectionVisible] = useState(true);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  
+  // Safety Notice Dismissal State (Shows only ONCE until user clicks "буঝেছি")
+  const [safetyNoticeDismissed, setSafetyNoticeDismissed] = useState<boolean>(() => {
+    return localStorage.getItem('deepshop_safety_notice_dismissed') === 'true';
+  });
+
+  // Telegram-style Chat List States (Pinned, Archived, Blocked, Muted)
+  const [pinnedChatIds, setPinnedChatIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('deepshop_pinned_chats') || '[]'); } catch { return []; }
+  });
+  const [archivedChatIds, setArchivedChatIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('deepshop_archived_chats') || '[]'); } catch { return []; }
+  });
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('deepshop_blocked_chats') || '[]'); } catch { return []; }
+  });
+  const [mutedChatIds, setMutedChatIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('deepshop_muted_chats') || '[]'); } catch { return []; }
+  });
+  const [showArchivedOnly, setShowArchivedOnly] = useState(false);
+  const [activeContextMenuChatId, setActiveContextMenuChatId] = useState<string | null>(null);
+
+  // Message Pinning State
+  const [pinnedMessageIdsMap, setPinnedMessageIdsMap] = useState<Record<string, string[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('deepshop_pinned_msgs') || '{}'); } catch { return {}; }
+  });
+
+  const [swipedChatId, setSwipedChatId] = useState<string | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; cId: string } | null>(null);
+  const longPressTimerRef = useRef<any>(null);
+
+  const togglePinChat = (chatId: string) => {
+    setSwipedChatId(null);
+    setPinnedChatIds(prev => {
+      const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
+      localStorage.setItem('deepshop_pinned_chats', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const toggleArchiveChat = (chatId: string) => {
+    setSwipedChatId(null);
+    setArchivedChatIds(prev => {
+      const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
+      localStorage.setItem('deepshop_archived_chats', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const toggleBlockUser = (chatId: string) => {
+    setBlockedUserIds(prev => {
+      const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
+      localStorage.setItem('deepshop_blocked_chats', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const toggleMuteChat = (chatId: string) => {
+    setMutedChatIds(prev => {
+      const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
+      localStorage.setItem('deepshop_muted_chats', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const togglePinMessage = (chatId: string, msgId: string) => {
+    setPinnedMessageIdsMap(prev => {
+      const chatPins = prev[chatId] || [];
+      const updated = chatPins.includes(msgId) ? chatPins.filter(id => id !== msgId) : [...chatPins, msgId];
+      const next = { ...prev, [chatId]: updated };
+      localStorage.setItem('deepshop_pinned_msgs', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const [privacySettings, setPrivacySettings] = useState({
     allowDirectMessages: true,
     showOnlineStatus: true,
@@ -1297,10 +1372,15 @@ export default function Messages() {
     if (!user) return;
     const fetchUserRole = async () => {
       try {
+        if (user.email?.toLowerCase() === 'deepshop@gmail.com' || user.email?.toLowerCase() === 'goribsam2@gmail.com') {
+          setUserRole('admin');
+          setUserShopName('DEEP SHOP Admin');
+          return;
+        }
         const docSnap = await getDoc(doc(db, 'users', user.uid));
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setUserRole(data.role || 'buyer');
+          setUserRole(data.role === 'admin' ? 'admin' : (data.role || 'buyer'));
           setUserShopName(data.shopName || data.displayName || 'Seller');
         }
       } catch (err) {
@@ -4074,6 +4154,31 @@ const handleCreateChannel = async () => {
                     }}
                     notify={notify}
                   />
+                  {/* Archived Chats Folder Banner */}
+                  {archivedChatIds.length > 0 && (
+                    <div 
+                      onClick={() => setShowArchivedOnly(!showArchivedOnly)}
+                      className="flex items-center justify-between p-3 mx-3 my-2 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 border border-indigo-500/20 rounded-2xl cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition shadow-xs select-none"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">
+                          <Lock className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
+                            <span>অ্যাক্টিভ আর্কাইভ (Archived Chats)</span>
+                            <span className="px-2 py-0.2 bg-indigo-500 text-white rounded-full text-[10px] font-extrabold">{archivedChatIds.length}</span>
+                          </h4>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">আর্কাইভ করা চ্যাট নোটিফিকেশন মিউট রাখা হয়েছে</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">{showArchivedOnly ? "Show All" : "Open"}</span>
+                        <ChevronRight className={cn("w-4 h-4 text-indigo-500 transition-transform", showArchivedOnly && "rotate-90")} />
+                      </div>
+                    </div>
+                  )}
+
                   {chats.length === 0 && !chatIdParam ? (
                      <div className="flex flex-col items-center justify-center h-full text-zinc-400 p-6 text-center">
                          {illustrations.emptyMessages ? (
@@ -4087,83 +4192,253 @@ const handleCreateChannel = async () => {
                           <p className="text-xs mt-1">Start a conversation with a seller to see it here.</p>
                       </div>
                  ) : (
-                     chats.map((chat, idx) => {
-                          const isUnread = chat.lastMessage && chat.lastSenderId !== user.uid && (!chat.seenBy || !chat.seenBy.includes(user.uid));
-                          const chatOtherUid = chat.otherUser?.id || chat.otherUser?.uid;
-                          const isChatUserOnline = chatOtherUid ? chatUsersPresence[chatOtherUid]?.isOnline : false;
-                          const chatTypingData = chat.typingState?.[chatOtherUid];
-                          const isChatOtherTyping = chatTypingData?.status === 'typing' && (Date.now() - (chatTypingData?.updatedAt || 0) < 5000);
-                          const isChatOtherRecording = chatTypingData?.status === 'recording' && (Date.now() - (chatTypingData?.updatedAt || 0) < 12000);
-                          return (
-                             <div 
-                                key={`chat-${chat.id || idx}-${idx}`}
-                                 onClick={() => setSearchParams({ chatId: chat.id || chat.otherUser?.id || "" }, { replace: true })}
-                                className={cn(
-                                     "flex items-center gap-3 p-4 cursor-pointer transition-all hover:bg-[#F8F9FB] dark:hover:bg-zinc-800/50 relative border-b border-zinc-50 dark:border-zinc-800/20",
-                                     activeChat?.id === chat.id ? "bg-[#F8F9FB] dark:bg-zinc-800 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#4E4AEB] before:rounded-r-full" : ""
-                                 )}
-                             >
-                                 <div className="relative shrink-0">
-                                     <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-300 dark:border-zinc-700">
-                                         {chat.otherUser?.photoURL ? (
-                                             <img src={chat.otherUser.photoURL} alt={chat.otherUser.displayName} className="w-full h-full object-cover" />
-                                         ) : (
-                                             <div className="w-full h-full flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold text-lg">
-                                                 {(chat.otherUser?.displayName || chat.otherUser?.shopName || 'U')[0].toUpperCase()}
-                                             </div>
-                                         )}
-                                     </div>
-                                     {/* Active Presence Dot */}
-                                     {isChatUserOnline ? (
-                                         <div className="absolute bottom-0.5 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900 animate-pulse"></div>
-                                     ) : (
-                                         <div className="absolute bottom-0.5 right-0 w-3 h-3 rounded-full bg-zinc-300 dark:bg-zinc-600 border-2 border-white dark:border-zinc-900"></div>
+                      chats
+                        .filter(chat => {
+                          const cId = chat.id || chat.otherUser?.id || chat.otherUser?.uid;
+                          if (showArchivedOnly) return archivedChatIds.includes(cId);
+                          return !archivedChatIds.includes(cId);
+                        })
+                        .sort((a, b) => {
+                          const aId = a.id || a.otherUser?.id || a.otherUser?.uid;
+                          const bId = b.id || b.otherUser?.id || b.otherUser?.uid;
+                          const aPinned = pinnedChatIds.includes(aId) ? 1 : 0;
+                          const bPinned = pinnedChatIds.includes(bId) ? 1 : 0;
+                          return bPinned - aPinned;
+                        })
+                        .map((chat, idx) => {
+                           const cId = chat.id || chat.otherUser?.id || chat.otherUser?.uid || `chat-${idx}`;
+                           const isPinned = pinnedChatIds.includes(cId);
+                           const isArchived = archivedChatIds.includes(cId);
+                           const isBlocked = blockedUserIds.includes(cId);
+                           const isMuted = mutedChatIds.includes(cId);
+                           const isUnread = !isMuted && chat.lastMessage && chat.lastSenderId !== user.uid && (!chat.seenBy || !chat.seenBy.includes(user.uid));
+                           const chatOtherUid = chat.otherUser?.id || chat.otherUser?.uid;
+                           const isChatUserOnline = chatOtherUid ? chatUsersPresence[chatOtherUid]?.isOnline : false;
+                           const chatTypingData = chat.typingState?.[chatOtherUid];
+                           const isChatOtherTyping = chatTypingData?.status === 'typing' && (Date.now() - (chatTypingData?.updatedAt || 0) < 5000);
+                           const isChatOtherRecording = chatTypingData?.status === 'recording' && (Date.now() - (chatTypingData?.updatedAt || 0) < 12000);
+                           const isMenuOpen = activeContextMenuChatId === cId;
+                           const isSwiped = swipedChatId === cId;
+
+                           return (
+                              <div
+                                key={`chat-wrapper-${cId}-${idx}`}
+                                className="relative overflow-hidden select-none"
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  setActiveContextMenuChatId(cId);
+                                  setSwipedChatId(null);
+                                }}
+                                onTouchStart={(e) => {
+                                  touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, cId };
+                                  if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                  longPressTimerRef.current = setTimeout(() => {
+                                    setActiveContextMenuChatId(cId);
+                                    setSwipedChatId(null);
+                                  }, 450);
+                                }}
+                                onTouchMove={(e) => {
+                                  if (!touchStartRef.current || touchStartRef.current.cId !== cId) return;
+                                  const dx = touchStartRef.current.x - e.touches[0].clientX;
+                                  if (Math.abs(dx) > 10 && longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                  if (dx > 35) setSwipedChatId(cId);
+                                  else if (dx < -35 && isSwiped) setSwipedChatId(null);
+                                }}
+                                onTouchEnd={() => {
+                                  if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                }}
+                              >
+                                  {/* Telegram Right Action Buttons Revealed on Left Swipe */}
+                                  <div className="absolute right-0 top-0 bottom-0 w-[204px] flex items-center z-0 overflow-hidden">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); togglePinChat(cId); setSwipedChatId(null); }}
+                                      className="h-full w-[68px] bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                    >
+                                      <Pin className="w-4 h-4" />
+                                      <span className="text-[10px] font-extrabold whitespace-nowrap">{isPinned ? "Unpin" : "Pin"}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); toggleArchiveChat(cId); setSwipedChatId(null); }}
+                                      className="h-full w-[68px] bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                    >
+                                      <Archive className="w-4 h-4" />
+                                      <span className="text-[10px] font-extrabold whitespace-nowrap">{isArchived ? "Unarchive" : "Archive"}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setShowClearChatModal(true); setSwipedChatId(null); }}
+                                      className="h-full w-[68px] bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      <span className="text-[10px] font-extrabold whitespace-nowrap">Delete</span>
+                                    </button>
+                                  </div>
+
+                                  <div 
+                                     onClick={() => {
+                                       if (isSwiped) { setSwipedChatId(null); return; }
+                                       setSearchParams({ chatId: chat.id || chat.otherUser?.id || "" }, { replace: true });
+                                     }}
+                                     className={cn(
+                                          "flex items-center gap-3 p-4 cursor-pointer transition-all duration-300 relative border-b border-zinc-50 dark:border-zinc-800/20 group/chat z-10 bg-white dark:bg-zinc-900",
+                                          activeChat?.id === chat.id ? "bg-[#F8F9FB] dark:bg-zinc-800 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#4E4AEB] before:rounded-r-full" : "",
+                                          isPinned && "bg-gradient-to-r from-indigo-50/90 via-indigo-50/40 to-transparent dark:from-indigo-950/60 dark:via-indigo-950/20 dark:to-transparent border-l-4 border-indigo-600 dark:border-indigo-400 shadow-xs",
+                                          isSwiped && "-translate-x-[204px]"
                                      )}
-                                 </div>
-                                 
-                                 <div className="flex-1 min-w-0">
-                                     <div className="flex justify-between items-center mb-0.5">
-                                         <h4 className="text-[14px] font-bold text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1">
-                                             <span>{getChatDisplayName(chat)}</span>
-                                             {(chat.otherUser?.kycStatus === "verified" || chat.otherUser?.verified) && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                                         </h4>
-                                         {chat.updatedAt && (
-                                             <span className={cn("text-[10px] font-bold shrink-0", isUnread ? "text-emerald-500" : "text-zinc-400")}>
-                                                 {new Date(chat.updatedAt?.toMillis ? chat.updatedAt.toMillis() : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                             </span>
-                                         )}
-                                     </div>
-                                     <div className="flex justify-between items-center">
-                                         {isChatOtherTyping ? (
-                                             <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 truncate flex items-center gap-1.5 animate-pulse">
-                                                 <span className="flex gap-0.5 items-center">
-                                                     <span className="w-1 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                                     <span className="w-1 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                                     <span className="w-1 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce"></span>
-                                                 </span>
-                                                 <span>typing...</span>
-                                             </p>
-                                         ) : isChatOtherRecording ? (
-                                             <p className="text-xs font-bold text-rose-500 truncate flex items-center gap-1 animate-pulse">
-                                                 <Mic className="w-3 h-3 text-rose-500 animate-pulse" />
-                                                 <span>recording audio...</span>
-                                             </p>
-                                         ) : (
-                                             <p className={cn("text-xs truncate pr-4", isUnread ? "font-bold text-zinc-800 dark:text-zinc-200" : "font-semibold text-zinc-400")}>
-                                                 {chat.lastMessage}
-                                             </p>
-                                         )}
-                                         {isUnread && (
-                                             <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
-                                                 <span className="text-white text-[10px] font-bold">
-                                                     1
-                                                 </span>
-                                             </div>
-                                         )}
-                                     </div>
-                                 </div>
-                             </div>
-                      )})
+                                  >
+                                  <div className="relative shrink-0">
+                                      <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                                          {chat.otherUser?.photoURL ? (
+                                              <img src={chat.otherUser.photoURL} alt={chat.otherUser.displayName} className="w-full h-full object-cover" />
+                                          ) : (
+                                              <div className="w-full h-full flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold text-lg">
+                                                  {(chat.otherUser?.displayName || chat.otherUser?.shopName || 'U')[0].toUpperCase()}
+                                              </div>
+                                          )}
+                                      </div>
+                                      {/* Active Presence Dot */}
+                                      {isChatUserOnline ? (
+                                          <div className="absolute bottom-0.5 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900 animate-pulse"></div>
+                                      ) : (
+                                          <div className="absolute bottom-0.5 right-0 w-3 h-3 rounded-full bg-zinc-300 dark:bg-zinc-600 border-2 border-white dark:border-zinc-900"></div>
+                                      )}
+                                  </div>
+                                  
+                                  <div className="flex-1 min-w-0">
+                                      <div className="flex justify-between items-center mb-0.5">
+                                          <h4 className="text-[14px] font-bold text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
+                                              <span>{getChatDisplayName(chat)}</span>
+                                              {(chat.otherUser?.kycStatus === "verified" || chat.otherUser?.verified) && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                                              {isPinned && (
+                                                  <span className="text-[9px] font-black tracking-wider uppercase bg-indigo-600 text-white px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0 shadow-xs">
+                                                    <Pin className="w-2.5 h-2.5 fill-white" />
+                                                    PINNED
+                                                  </span>
+                                              )}
+                                              {isMuted && <VolumeX className="w-3 h-3 text-zinc-400 shrink-0" />}
+                                              {isBlocked && <span className="text-[9px] font-bold text-rose-500 bg-rose-500/10 px-1 py-0.2 rounded">Blocked</span>}
+                                          </h4>
+                                          {chat.updatedAt && (
+                                              <span className={cn("text-[10px] font-bold shrink-0", isUnread ? "text-emerald-500" : "text-zinc-400")}>
+                                                  {new Date(chat.updatedAt?.toMillis ? chat.updatedAt.toMillis() : Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                              </span>
+                                          )}
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                          {isChatOtherTyping ? (
+                                              <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 truncate flex items-center gap-1.5 animate-pulse">
+                                                  <span className="flex gap-0.5 items-center">
+                                                      <span className="w-1 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                                      <span className="w-1 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                                      <span className="w-1 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce"></span>
+                                                  </span>
+                                                  <span>typing...</span>
+                                              </p>
+                                          ) : isChatOtherRecording ? (
+                                              <p className="text-xs font-bold text-rose-500 truncate flex items-center gap-1 animate-pulse">
+                                                  <Mic className="w-3 h-3 text-rose-500 animate-pulse" />
+                                                  <span>recording audio...</span>
+                                              </p>
+                                          ) : (
+                                              <p className={cn("text-xs truncate pr-4", isUnread ? "font-bold text-zinc-800 dark:text-zinc-200" : "font-semibold text-zinc-400")}>
+                                                  {chat.lastMessage}
+                                              </p>
+                                          )}
+                                          
+                                          <div className="flex items-center gap-1.5 shrink-0">
+                                            {isUnread && (
+                                                <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                                                    <span className="text-white text-[10px] font-bold">1</span>
+                                                </div>
+                                            )}
+
+                                            {/* Context Menu Button (...) */}
+                                            <button 
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveContextMenuChatId(isMenuOpen ? null : cId);
+                                              }}
+                                              className="p-1.5 rounded-lg opacity-0 group-hover/chat:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 transition cursor-pointer"
+                                              title="Chat Options"
+                                            >
+                                              <MoreVertical className="w-4 h-4" />
+                                            </button>
+                                          </div>
+                                      </div>
+                                  </div>
+
+                                  {/* Telegram Context Menu Popover */}
+                                  <AnimatePresence>
+                                    {isMenuOpen && (
+                                      <>
+                                        <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setActiveContextMenuChatId(null); }} />
+                                        <motion.div 
+                                          initial={{ opacity: 0, scale: 0.9, y: 5 }}
+                                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                                          exit={{ opacity: 0, scale: 0.9, y: 5 }}
+                                          className="absolute right-3 top-12 w-48 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-2xl rounded-2xl p-2 z-50 text-left font-inter"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <button 
+                                            type="button"
+                                            onClick={() => { togglePinChat(cId); setActiveContextMenuChatId(null); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 rounded-xl transition cursor-pointer"
+                                          >
+                                            <Pin className="w-3.5 h-3.5 text-indigo-500" />
+                                            <span>{isPinned ? "Unpin Chat" : "Pin Chat"}</span>
+                                          </button>
+
+                                          <button 
+                                            type="button"
+                                            onClick={() => { toggleArchiveChat(cId); setActiveContextMenuChatId(null); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 rounded-xl transition cursor-pointer"
+                                          >
+                                            <Lock className="w-3.5 h-3.5 text-purple-500" />
+                                            <span>{isArchived ? "Unarchive Chat" : "Archive Chat"}</span>
+                                          </button>
+
+                                          <button 
+                                            type="button"
+                                            onClick={() => { toggleMuteChat(cId); setActiveContextMenuChatId(null); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 rounded-xl transition cursor-pointer"
+                                          >
+                                            <VolumeX className="w-3.5 h-3.5 text-amber-500" />
+                                            <span>{isMuted ? "Unmute Notifications" : "Mute Notifications"}</span>
+                                          </button>
+
+                                          <button 
+                                            type="button"
+                                            onClick={() => { toggleBlockUser(cId); setActiveContextMenuChatId(null); }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 rounded-xl transition cursor-pointer"
+                                          >
+                                            <UserX className="w-3.5 h-3.5 text-rose-500" />
+                                            <span>{isBlocked ? "Unblock User" : "Block User"}</span>
+                                          </button>
+
+                                          <div className="border-t border-zinc-100 dark:border-zinc-700/80 my-1" />
+
+                                          <button 
+                                            type="button"
+                                            onClick={() => { 
+                                              setActiveContextMenuChatId(null); 
+                                              setShowClearChatModal(true); 
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition cursor-pointer"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            <span>Delete Chat History</span>
+                                          </button>
+                                        </motion.div>
+                                      </>
+                                    )}
+                                  </AnimatePresence>
+                              </div>
+                              </div>
+                           );
+                       })
                  )}
                 </>
              ) : sidebarTab === 'community' ? (
@@ -5436,19 +5711,35 @@ const handleCreateChannel = async () => {
                   })()}
 
                   {/* Group / Untrusted Safety Warning Banner */}
-                  <div className="mx-3 sm:mx-4 my-2 p-3 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-start gap-2.5 shadow-sm text-left shrink-0">
-                    <div className="p-1.5 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5 shadow-sm">
-                      <ShieldAlert className="w-4 h-4" />
+                  {!safetyNoticeDismissed && (
+                    <div className="mx-3 sm:mx-4 my-2 p-3 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-2.5 shadow-sm text-left shrink-0">
+                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        <div className="p-1.5 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5 shadow-sm">
+                          <ShieldAlert className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h5 className="font-bold text-xs text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                            নিরাপত্তা সতর্কতা ও লেনদেন নির্দেশিকা
+                          </h5>
+                          <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80 mt-0.5 leading-relaxed font-medium">
+                            গ্রুপে বা কারো পার্সোনাল ইনবক্সে অগ্রিম টাকা লেনদেন করার ক্ষেত্রে নিজ দায়িত্বে করবেন। প্ল্যাটফর্মের অফিশিয়াল চেকআউট ছাড়া যেকোনো ব্যক্তিগত লেনদেনের জন্য DEEP SHOP কর্তৃপক্ষ কোনোভাবেই দায়ী থাকবে না।
+                          </p>
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          localStorage.setItem('deepshop_safety_notice_dismissed', 'true');
+                          setSafetyNoticeDismissed(true);
+                        }}
+                        className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] shrink-0 self-center shadow-sm transition active:scale-95 flex items-center gap-1 cursor-pointer"
+                        title="Dismiss Safety Notice"
+                      >
+                        <span>বুঝেছি</span>
+                        <X className="w-3 h-3" />
+                      </button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h5 className="font-bold text-xs text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
-                        নিরাপত্তা সতর্কতা ও লেনদেন নির্দেশিকা
-                      </h5>
-                      <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80 mt-0.5 leading-relaxed font-medium">
-                        গ্রুপে বা কারো পার্সোনাল ইনবক্সে অগ্রিম টাকা লেনদেন করার ক্ষেত্রে নিজ দায়িত্বে করবেন। প্ল্যাটফর্মের অফিশিয়াল চেকআউট ছাড়া যেকোনো ব্যক্তিগত লেনদেনের জন্য DEEP SHOP কর্তৃপক্ষ কোনোভাবেই দায়ী থাকবে না।
-                      </p>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Channel Messages Scroll Area */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -6080,6 +6371,37 @@ const handleCreateChannel = async () => {
                          </AnimatePresence>
                      </div>
                  </div>
+
+                 {/* Direct Messages Safety Warning Banner */}
+                 {!safetyNoticeDismissed && (
+                   <div className="mx-3 sm:mx-4 my-2 p-3 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-2.5 shadow-sm text-left shrink-0">
+                     <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                       <div className="p-1.5 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5 shadow-sm">
+                         <ShieldAlert className="w-4 h-4" />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <h5 className="font-bold text-xs text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                           নিরাপত্তা সতর্কতা ও লেনদেন নির্দেশিকা
+                         </h5>
+                         <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80 mt-0.5 leading-relaxed font-medium">
+                           গ্রুপে বা কারো পার্সোনাল ইনবক্সে অগ্রিম টাকা লেনদেন করার ক্ষেত্রে নিজ দায়িত্বে করবেন। প্ল্যাটফর্মের অফিশিয়াল চেকআউট ছাড়া যেকোনো ব্যক্তিগত লেনদেনের জন্য DEEP SHOP কর্তৃপক্ষ কোনোভাবেই দায়ী থাকবে না।
+                         </p>
+                       </div>
+                     </div>
+                     <button 
+                       type="button" 
+                       onClick={() => {
+                         localStorage.setItem('deepshop_safety_notice_dismissed', 'true');
+                         setSafetyNoticeDismissed(true);
+                       }}
+                       className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] shrink-0 self-center shadow-sm transition active:scale-95 flex items-center gap-1 cursor-pointer"
+                       title="Dismiss Safety Notice"
+                     >
+                       <span>বুঝেছি</span>
+                       <X className="w-3 h-3" />
+                     </button>
+                   </div>
+                 )}
 
                  {showP2pSearch && (
                    <div className="bg-white dark:bg-zinc-800 px-4 py-2.5 border-b border-zinc-200 dark:border-zinc-700/80 flex items-center gap-2 font-inter shrink-0 shadow-sm z-10">
@@ -6848,17 +7170,30 @@ const handleCreateChannel = async () => {
 
                           {/* Detail view based on user permission level */}
                           {showDetailedUserIds ? (
-                              <div className="space-y-1.5 max-h-[120px] overflow-y-auto no-scrollbar">
-                                  {rEntries.map(([uid, emoji], rIdx) => (
-                                      <div key={`${uid}-${rIdx}`} className="flex items-center justify-between text-zinc-500 dark:text-zinc-400 font-medium">
-                                          <span className="truncate">User ID: {uid === user?.uid ? "You" : uid}</span>
-                                          <span className="text-sm font-bold">{emoji}</span>
-                                      </div>
-                                  ))}
+                              <div className="space-y-1 max-h-[140px] overflow-y-auto no-scrollbar">
+                                  {rEntries.map(([uid, emoji], rIdx) => {
+                                      let name = uid === user?.uid ? "You" : "Member";
+                                      if (chatUsersData[uid]?.displayName) name = chatUsersData[uid].displayName;
+                                      else if (chatUsersData[uid]?.shopName) name = chatUsersData[uid].shopName;
+                                      else if (activeChat?.otherUser?.id === uid || activeChat?.otherUser?.uid === uid) {
+                                        name = activeChat.otherUser.displayName || activeChat.otherUser.shopName || "Member";
+                                      } else if (msg.senderId === uid && msg.senderName) {
+                                        name = msg.senderName;
+                                      }
+                                      return (
+                                          <div key={`${uid}-${rIdx}`} className="flex items-center justify-between text-zinc-700 dark:text-zinc-200 font-semibold py-1 border-b border-zinc-100 dark:border-zinc-800/40">
+                                              <span className="truncate flex items-center gap-1.5">
+                                                <User className="w-3.5 h-3.5 text-indigo-500" />
+                                                <span>{name}</span>
+                                              </span>
+                                              <span className="text-sm font-bold">{emoji}</span>
+                                          </div>
+                                      );
+                                  })}
                               </div>
                           ) : (
                               <p className="text-zinc-400 dark:text-zinc-500 italic mt-1">
-                                  Individual reaction details are restricted to channel administrators for privacy.
+                                  In community channels, individual reaction details are strictly reserved for channel admins.
                               </p>
                           )}
                       </div>
@@ -7252,10 +7587,11 @@ const handleCreateChannel = async () => {
                 </button>
               </div>
 
-              <div className="p-6 overflow-y-auto space-y-5">
+              <div className="p-6 overflow-y-auto space-y-6">
+                {/* Privacy & Security Section */}
                 <div className="space-y-3">
-                    <h4 className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider ml-1">
-                        Direct Messages
+                    <h4 className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest ml-1">
+                        Privacy & Security
                     </h4>
                     
                     <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
@@ -7264,93 +7600,211 @@ const handleCreateChannel = async () => {
                           Allow Direct Messages
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
-                          Anyone can send you a message. If turned off, users will see a privacy notice.
+                          Anyone can message you. If disabled, strangers see a privacy notice.
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={async () => {
-                            const newStatus = !privacySettings.allowDirectMessages;
-                            setPrivacySettings({ ...privacySettings, allowDirectMessages: newStatus });
-                            if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.allowDirectMessages': newStatus });
+                          const val = !privacySettings.allowDirectMessages;
+                          setPrivacySettings(prev => ({ ...prev, allowDirectMessages: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.allowDirectMessages': val });
                         }}
                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.allowDirectMessages ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.allowDirectMessages ? 'translate-x-5' : 'translate-x-0'}`}
-                        />
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.allowDirectMessages ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
                     <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                          Online Status
+                          Online Presence Indicator
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
-                          Show others when you are online in chats.
+                          Show live active status green dot when online in chat lists.
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={async () => {
-                            const newStatus = !privacySettings.showOnlineStatus;
-                            setPrivacySettings({ ...privacySettings, showOnlineStatus: newStatus });
-                            if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.showOnlineStatus': newStatus });
+                          const val = !privacySettings.showOnlineStatus;
+                          setPrivacySettings(prev => ({ ...prev, showOnlineStatus: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.showOnlineStatus': val });
                         }}
                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.showOnlineStatus ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.showOnlineStatus ? 'translate-x-5' : 'translate-x-0'}`}
-                        />
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.showOnlineStatus ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between opacity-50 cursor-not-allowed">
+                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                          Read Receipts
+                          Biometric & PIN Passcode Lock
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
-                          Let others know when you've read their messages. (Coming Soon)
+                          Require PIN code to view private messages.
                         </p>
                       </div>
                       <button
                         type="button"
-                        disabled
-                        className="relative inline-flex h-6 w-11 shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-indigo-500 transition-colors duration-200 ease-in-out"
+                        onClick={async () => {
+                          const val = !privacySettings.biometricLock;
+                          setPrivacySettings(prev => ({ ...prev, biometricLock: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.biometricLock': val });
+                          notify(val ? "PIN Passcode Lock Enabled" : "PIN Lock Disabled", val ? "success" : "info");
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.biometricLock ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
-                        <span className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-5" />
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.biometricLock ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                      <div className="space-y-1 max-w-[75%]">
+                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          Disappearing Messages (24h)
+                        </label>
+                        <p className="text-[11px] text-zinc-500 leading-tight">
+                          Automatically clear chat messages after 24 hours.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const val = !privacySettings.disappearingMessages;
+                          setPrivacySettings(prev => ({ ...prev, disappearingMessages: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.disappearingMessages': val });
+                          notify(val ? "Disappearing Messages (24h) Turned On" : "Disappearing Messages Turned Off", "info");
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.disappearingMessages ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.disappearingMessages ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
                 </div>
 
-                <div className="space-y-3 pt-2">
-                    <h4 className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider ml-1">
-                        Notifications
+                {/* Appearance & Themes Section */}
+                <div className="space-y-3">
+                    <h4 className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest ml-1">
+                        Design & Styling
                     </h4>
                     
                     <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                          Push Notifications
+                          Liquid Glass Mode
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
-                          Receive alerts for new messages and calls.
+                          Translucent backdrop blur style for chat bubbles.
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={async () => {
-                            const newStatus = !privacySettings.pushNotifications;
-                            setPrivacySettings({ ...privacySettings, pushNotifications: newStatus });
-                            if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.pushNotifications': newStatus });
+                          const val = !privacySettings.liquidGlassMode;
+                          setPrivacySettings(prev => ({ ...prev, liquidGlassMode: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.liquidGlassMode': val });
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.pushNotifications ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.liquidGlassMode ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.pushNotifications ? 'translate-x-5' : 'translate-x-0'}`}
-                        />
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.liquidGlassMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                      <div className="space-y-1 max-w-[75%]">
+                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          High Contrast Typography
+                        </label>
+                        <p className="text-[11px] text-zinc-500 leading-tight">
+                          Enhance text contrast for max readability.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const val = !privacySettings.highContrastFonts;
+                          setPrivacySettings(prev => ({ ...prev, highContrastFonts: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.highContrastFonts': val });
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.highContrastFonts ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.highContrastFonts ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                </div>
+
+                {/* Interactive Controls */}
+                <div className="space-y-3">
+                    <h4 className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest ml-1">
+                        Chat & Audio Controls
+                    </h4>
+                    
+                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                      <div className="space-y-1 max-w-[75%]">
+                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          Apple Haptic Feedback
+                        </label>
+                        <p className="text-[11px] text-zinc-500 leading-tight">
+                          Tactile Taptic engine feedback on clicks & sends.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const val = !privacySettings.hapticTouchFeedback;
+                          setPrivacySettings(prev => ({ ...prev, hapticTouchFeedback: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.hapticTouchFeedback': val });
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.hapticTouchFeedback ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.hapticTouchFeedback ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                      <div className="space-y-1 max-w-[75%]">
+                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          Auto-Play Voice Notes
+                        </label>
+                        <p className="text-[11px] text-zinc-500 leading-tight">
+                          Automatically play sequential voice messages.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const val = !privacySettings.autoPlayVoice;
+                          setPrivacySettings(prev => ({ ...prev, autoPlayVoice: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.autoPlayVoice': val });
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.autoPlayVoice ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.autoPlayVoice ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                      <div className="space-y-1 max-w-[75%]">
+                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          Do Not Disturb Mode
+                        </label>
+                        <p className="text-[11px] text-zinc-500 leading-tight">
+                          Silence all message chimes and notification sounds.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const val = !privacySettings.doNotDisturb;
+                          setPrivacySettings(prev => ({ ...prev, doNotDisturb: val }));
+                          if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.doNotDisturb': val });
+                        }}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.doNotDisturb ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                      >
+                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.doNotDisturb ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
                 </div>
