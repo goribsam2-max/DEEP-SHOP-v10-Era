@@ -2282,7 +2282,8 @@ const SellerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px]">{cancelModalStatus === OrderStatus.RETURNED ? "Return Order" : "Cancel / Reject Order"}</h3>
               <button 
-                onClick={() => setCancelModalOrderId(null)} 
+                type="button"
+                onClick={() => { setCancelModalOrderId(null); setCancelModalStatus(null); setCancelReasonText(""); }} 
                 className="w-8 h-8 rounded-full bg-[#F5F5F7] dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-200"
               >
                 <X className="w-4 h-4" />
@@ -2302,12 +2303,14 @@ const SellerDashboard: React.FC = () => {
             
             <div className="flex gap-3">
               <button 
-                onClick={() => setCancelModalOrderId(null)} 
+                type="button"
+                onClick={() => { setCancelModalOrderId(null); setCancelModalStatus(null); setCancelReasonText(""); }} 
                 className="flex-1 h-12 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold rounded-xl"
               >
                 Go Back
               </button>
               <button 
+                type="button"
                 disabled={!cancelReasonText.trim()} 
                 onClick={async () => {
                   if (cancelReasonText.trim()) {

@@ -38,12 +38,12 @@ export const BorderOfferCard: React.FC<BorderOfferCardProps> = ({ product, onBuy
         </div>
 
         {/* Product Image Area with Rubber Stamp Seal */}
-        <div className="relative w-full h-44 sm:h-48 rounded-2xl bg-zinc-100/80 dark:bg-zinc-800/60 border border-white/50 dark:border-zinc-700/50 overflow-hidden flex items-center justify-center p-3 mb-3 z-10">
+        <div className="relative w-full h-44 sm:h-48 rounded-2xl bg-zinc-100/80 dark:bg-zinc-800/60 border border-white/50 dark:border-zinc-700/50 overflow-hidden flex items-center justify-center mb-3 z-10">
           <PixelImage
             src={product.image}
             alt={product.name}
             className="w-full h-full"
-            imgClassName={`w-full h-full object-contain transition-transform duration-500 ${isSold ? "opacity-30 grayscale" : "group-hover:scale-105"}`}
+            imgClassName={`w-full h-full object-cover transition-transform duration-500 ${isSold ? "opacity-30 grayscale" : "group-hover:scale-105"}`}
           />
 
           {/* Rubber Stamp "SOLD OUT" Seal when marked as sold */}

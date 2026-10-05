@@ -203,7 +203,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         </Modal.Actions>
       </Modal.Modal>
 
-      <Modal.Modal zIndex={200000} active={!!promptModal} onClickOutside={() => { promptModal?.onCancel?.(); setPromptModal(null); }}>
+      <Modal.Modal zIndex={200000} active={!!promptModal} onClickOutside={() => { promptModal?.onCancel?.(); setPromptModal(null); setPromptVal(""); }}>
         <Modal.Body className="bg-white dark:bg-zinc-900 border-none">
           <Modal.Title className="text-zinc-900 dark:text-zinc-100">{promptModal?.title}</Modal.Title>
           <Modal.Subtitle className="text-zinc-500 dark:text-zinc-400">{promptModal?.message}</Modal.Subtitle>
@@ -218,13 +218,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           </div>
         </Modal.Body>
         <Modal.Actions className="bg-white dark:bg-zinc-900 border-none">
-          <Modal.Action variant="unstyled" onClick={() => { promptModal?.onCancel?.(); setPromptModal(null); }}>
+          <Modal.Action variant="unstyled" onClick={(e) => { e?.preventDefault?.(); e?.stopPropagation?.(); promptModal?.onCancel?.(); setPromptModal(null); setPromptVal(""); }}>
             {promptModal?.cancelText || 'Cancel'}
           </Modal.Action>
-          <Modal.Action className="bg-black dark:bg-white text-white dark:text-black" onClick={() => { 
+          <Modal.Action className="bg-black dark:bg-white text-white dark:text-black" onClick={(e) => { 
+            e?.preventDefault?.();
+            e?.stopPropagation?.();
             if (promptModal?.required && !promptVal.trim()) return notify("Please enter a value", "error");
             promptModal?.onConfirm(promptVal); 
             setPromptModal(null); 
+            setPromptVal("");
           }}>
             {promptModal?.confirmText || 'Submit'}
           </Modal.Action>

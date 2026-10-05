@@ -85,7 +85,7 @@ export const Button = ({
   return (
     <button
       ref={ref}
-      type="submit"
+      type={(rest as any).type || "button"}
       disabled={disabled}
       onClick={onClick}
       tabIndex={0}
