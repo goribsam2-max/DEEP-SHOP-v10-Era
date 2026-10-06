@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
 import Logo from "../components/Logo";
+import SEO from "../components/SEO";
 import { useIllustrations } from "../lib/useIllustrations";
 
 const NotFound: React.FC = () => {
@@ -11,6 +12,11 @@ const NotFound: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#121212] flex flex-col items-center justify-center p-6 text-center">
+      <SEO
+        title="Page Not Found (404)"
+        description="The page you are looking for does not exist or has been removed."
+        noindex={true}
+      />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

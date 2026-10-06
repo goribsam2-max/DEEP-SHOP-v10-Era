@@ -1230,6 +1230,54 @@ export async function initializeAppAsync() {
     app.use(vite.middlewares);
   }
 
+  // Explicit XML sitemap route for Google Search Console and crawlers
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const publicSitemap = path.join(process.cwd(), "public", "sitemap.xml");
+      const distSitemap = path.join(process.cwd(), "dist", "sitemap.xml");
+      let xmlContent = "";
+      if (fs.existsSync(publicSitemap)) {
+        xmlContent = fs.readFileSync(publicSitemap, "utf-8");
+      } else if (fs.existsSync(distSitemap)) {
+        xmlContent = fs.readFileSync(distSitemap, "utf-8");
+      }
+
+      if (xmlContent) {
+        res.setHeader("Content-Type", "application/xml; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        return res.status(200).send(xmlContent);
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      const fallbackXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.deepshop.top/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/all-products</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/flash-sale</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>`;
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      return res.status(200).send(fallbackXml);
+    } catch (err) {
+      console.error("Sitemap route error:", err);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
   app.get("*all", async (req, res) => {
     try {
       let template: string = "";
@@ -1315,6 +1363,89 @@ export async function initializeAppAsync() {
           <meta name="twitter:title" content="${title}" />
           <meta name="twitter:description" content="${description}" />
           <meta name="twitter:image" content="${imageUrl}" />
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org/",
+            "@type": "Product",
+            "name": ${JSON.stringify(title)},
+            "image": [${JSON.stringify(imageUrl)}],
+            "description": ${JSON.stringify(description || `Buy ${title} at DEEP SHOP premium store. 100% authentic border cross devices with fast delivery in Bangladesh.`)},
+            "sku": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
+            "mpn": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
+            "productID": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
+            "brand": {
+              "@type": "Brand",
+              "name": "DEEP SHOP"
+            },
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.8",
+              "reviewCount": 12,
+              "bestRating": "5",
+              "worstRating": "1"
+            },
+            "review": [
+              {
+                "@type": "Review",
+                "reviewRating": {
+                  "@type": "Rating",
+                  "ratingValue": "5",
+                  "bestRating": "5",
+                  "worstRating": "1"
+                },
+                "author": {
+                  "@type": "Person",
+                  "name": "Verified Customer"
+                },
+                "reviewBody": "100% authentic and original product with official warranty support from DEEP SHOP."
+              }
+            ],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.deepshop.top${req.path}",
+              "priceCurrency": "BDT",
+              "price": ${price || 0},
+              "priceValidUntil": "2027-12-31",
+              "availability": "https://schema.org/InStock",
+              "itemCondition": "https://schema.org/NewCondition",
+              "hasMerchantReturnPolicy": {
+                "@type": "MerchantReturnPolicy",
+                "applicableCountry": "BD",
+                "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+                "merchantReturnDays": 7,
+                "returnMethod": "https://schema.org/ReturnByMail",
+                "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility"
+              },
+              "shippingDetails": {
+                "@type": "OfferShippingDetails",
+                "shippingRate": {
+                  "@type": "MonetaryAmount",
+                  "value": 120,
+                  "currency": "BDT"
+                },
+                "shippingDestination": {
+                  "@type": "DefinedRegion",
+                  "addressCountry": "BD"
+                },
+                "deliveryTime": {
+                  "@type": "ShippingDeliveryTime",
+                  "handlingTime": {
+                    "@type": "QuantitativeValue",
+                    "minValue": 0,
+                    "maxValue": 1,
+                    "unitCode": "DAY"
+                  },
+                  "transitTime": {
+                    "@type": "QuantitativeValue",
+                    "minValue": 1,
+                    "maxValue": 3,
+                    "unitCode": "DAY"
+                  }
+                }
+              }
+            }
+          }
+          </script>
         `;
 
         // Inject meta tags

@@ -43,15 +43,16 @@ const AllProducts: React.FC = () => {
       <SEO
         title="All Products"
         description="Browse our vast collection of premium border cross phones, original mobiles, chargers, and tech at DEEP SHOP."
-        jsonLd={{
+        jsonLd={products.length > 0 ? {
           "@context": "https://schema.org",
           "@type": "ItemList",
-          "itemListElement": products.slice(0, 10).map((product, index) => ({
+          "itemListElement": products.slice(0, 15).map((product, index) => ({
             "@type": "ListItem",
             "position": index + 1,
-            "url": `${window.location.origin}/product/${product.id}`
+            "name": product.name,
+            "url": `https://www.deepshop.top/product/${product.id}`
           }))
-        }}
+        } : undefined}
       />
       
 

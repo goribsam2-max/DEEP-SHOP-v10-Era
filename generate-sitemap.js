@@ -52,6 +52,12 @@ async function generateSitemap() {
     <lastmod>${lastMod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/product/${doc.id}</loc>
+    <lastmod>${lastMod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>`;
       }
     });
@@ -69,12 +75,58 @@ async function generateSitemap() {
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/flash-sale</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/blog</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/about</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/contact</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/faq</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/privacy</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/terms</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>${urls}
 </urlset>
 `;
 
-    fs.writeFileSync(path.resolve(process.cwd(), "dist/sitemap.xml"), sitemap);
-    console.log("Sitemap generated successfully at dist/sitemap.xml");
+    // Write to both public/ (for Vite dev/build) and dist/ (for production static serving)
+    fs.writeFileSync(path.resolve(process.cwd(), "public/sitemap.xml"), sitemap);
+    if (fs.existsSync(path.resolve(process.cwd(), "dist"))) {
+      fs.writeFileSync(path.resolve(process.cwd(), "dist/sitemap.xml"), sitemap);
+    }
+    console.log("Sitemap generated successfully at public/sitemap.xml");
     process.exit(0);
   } catch (err) {
     console.error("Error generating sitemap:", err);
