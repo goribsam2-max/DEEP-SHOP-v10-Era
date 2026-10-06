@@ -30,11 +30,14 @@ interface Story {
 
 interface StoryViewerProps {
   stories: Story[];
-  isAdmin: boolean;
+  isAdmin?: boolean;
+  isSeller?: boolean;
+  canAddStory?: boolean;
 }
 
-const StoryViewer: React.FC<StoryViewerProps> = ({ stories, isAdmin }) => {
+const StoryViewer: React.FC<StoryViewerProps> = ({ stories, isAdmin = false, isSeller = false, canAddStory }) => {
   const navigate = useNavigate();
+  const allowedToAdd = canAddStory !== undefined ? canAddStory : Boolean(isAdmin || isSeller);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
   const [currentSubIndex, setCurrentSubIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -244,20 +247,27 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ stories, isAdmin }) => {
     setIsPaused(false);
   };
 
+  if (groupedStories.length === 0 && !allowedToAdd) {
+    return null;
+  }
+
   return (
     <div className="w-full">
       {/* Story List (Bubbles) */}
       <div className="flex items-center space-x-4 overflow-x-auto pb-4 px-1 scrollbar-hide no-scrollbar">
-        {/* Add Story Button */}
-        <button 
-          onClick={() => navigate("/add-story")}
-          className="flex flex-col items-center space-y-1 group shrink-0"
-        >
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-600 flex items-center justify-center text-white border-2 border-white dark:border-zinc-900 group-active:scale-95 transition-all shadow-md">
-            <Plus size={26} className="text-white font-bold" />
-          </div>
-          <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">Add Story</span>
-        </button>
+        {/* Add Story Button (Visible ONLY to Admin and Sellers) */}
+        {allowedToAdd && (
+          <button 
+            type="button"
+            onClick={() => navigate(isSeller ? "/seller/add-story" : "/add-story")}
+            className="flex flex-col items-center space-y-1 group shrink-0 cursor-pointer"
+          >
+            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-600 flex items-center justify-center text-white border-2 border-white dark:border-zinc-900 group-active:scale-95 transition-all shadow-md">
+              <Plus size={26} className="text-white font-bold" />
+            </div>
+            <span className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100">Add Story</span>
+          </button>
+        )}
         
         {groupedStories.map((group, idx) => (
           <button

@@ -117,11 +117,40 @@ export default function AddStory() {
 
   useEffect(() => {
     const fetchSeller = async () => {
-      if (!auth.currentUser) return;
+      if (!auth.currentUser) {
+        navigate("/login");
+        return;
+      }
       try {
         const uSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
         if (uSnap.exists()) {
-          setSellerInfo(uSnap.data());
+          const uData = uSnap.data();
+          setSellerInfo(uData);
+
+          const email = auth.currentUser.email?.toLowerCase().trim();
+          const isAdmin =
+            uData.role === "admin" ||
+            uData.isAdmin === true ||
+            uData.type === "admin" ||
+            email === "admin@deep.shop" ||
+            email === "admin@deepshop.top" ||
+            email === "deepshop@gmail.com" ||
+            email === "goribsam2@gmail.com" ||
+            email === "vibegadgetfeni@gmail.com" ||
+            email === "deepshopbysam@gmail.com";
+
+          const isSeller =
+            uData.role === "seller" ||
+            uData.isSeller === true ||
+            uData.sellerStatus === "approved" ||
+            uData.type === "seller" ||
+            uData.shopName ||
+            uData.sellerId;
+
+          if (!isAdmin && !isSeller) {
+            notify("Only verified Sellers and Admins can post stories.", "error");
+            navigate("/");
+          }
         }
       } catch (err) {
         console.error(err);

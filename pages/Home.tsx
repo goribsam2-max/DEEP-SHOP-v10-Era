@@ -109,8 +109,29 @@ const ThinBanner = ({ banner, navigate }: { banner: any; navigate: any }) => {
 
 const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const { formatPrice } = useRegion();
-  const isAdmin =
-    userData?.role === "admin" || userData?.email === "admin@deep.shop";
+  const email = userData?.email?.toLowerCase().trim();
+  const isAdmin = Boolean(
+    userData?.role === "admin" ||
+    userData?.isAdmin === true ||
+    userData?.type === "admin" ||
+    email === "admin@deep.shop" ||
+    email === "admin@deepshop.top" ||
+    email === "deepshop@gmail.com" ||
+    email === "goribsam2@gmail.com" ||
+    email === "vibegadgetfeni@gmail.com" ||
+    email === "deepshopbysam@gmail.com"
+  );
+
+  const isSeller = Boolean(
+    userData?.role === "seller" ||
+    userData?.isSeller === true ||
+    userData?.sellerStatus === "approved" ||
+    userData?.type === "seller" ||
+    userData?.shopName ||
+    userData?.sellerId
+  );
+
+  const canAddStory = Boolean(isAdmin || isSeller);
   const { isDark } = useTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
@@ -123,6 +144,17 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [stories, setStories] = useState<any[]>([]);
   const [sellers, setSellers] = useState<any[]>([]);
+
+  const hasStories = useMemo(() => {
+    if (!stories || stories.length === 0) return false;
+    const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+    const now = Date.now();
+    return stories.some(story => {
+      if (!story.createdAt) return true;
+      const createdTime = new Date(story.createdAt).getTime();
+      return !isNaN(createdTime) && (now - createdTime) < FORTY_EIGHT_HOURS;
+    });
+  }, [stories]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => activeCategory === "All" || p.category === activeCategory);
@@ -331,11 +363,13 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       
       <CustomSectionEmbed location="home_top" />
 
-      {/* Stories Section */}
-      <div id="home-stories" className="mb-4 w-full">
-        <SectionHeader title="Top Stories" />
-        <StoryViewer stories={stories} isAdmin={isAdmin} />
-      </div>
+      {/* Stories Section (Hidden from regular users when no stories exist) */}
+      {(hasStories || canAddStory) && (
+        <div id="home-stories" className="mb-4 w-full">
+          <SectionHeader title="Top Stories" />
+          <StoryViewer stories={stories} isAdmin={isAdmin} isSeller={isSeller} canAddStory={canAddStory} />
+        </div>
+      )}
 
       {/* Hero Slider */}
       {heroBanners.length > 0 && (
