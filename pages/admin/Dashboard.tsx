@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit, doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase";
 import { motion } from "framer-motion";
 import { useNotify } from "../../components/Notifications";
@@ -27,7 +27,9 @@ import {
   KeyRound,
   AlertTriangle,
   Phone,
-  MessageSquare
+  MessageSquare,
+  ShieldCheck,
+  ArrowRight
 } from "lucide-react";
 import {
   AreaChart,
@@ -42,6 +44,14 @@ import {
 import { StaffContext } from "../../components/AdminLayout";
 
 const ADMIN_PIN_ITEMS: PinListItem[] = [
+  {
+    id: 'manage-security',
+    name: 'Security & Threat Radar',
+    info: 'Live security posture, threats & audit stream',
+    icon: ShieldCheck,
+    pinned: true,
+    href: 'security'
+  },
   {
     id: 'manage-products',
     name: 'Manage Products',
@@ -437,6 +447,38 @@ const AdminDashboard: React.FC = () => {
           <PinList items={permittedItems} />
         </div>
       </div>
+
+      {/* Live Security Radar Quick Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 mb-8 p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-emerald-950/40 via-zinc-900 to-indigo-950/40 border border-emerald-500/30 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 overflow-hidden"
+      >
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xs sm:text-sm font-black text-white truncate">Live Platform Security Radar & Posture</h3>
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> 100% Protected & Hardened
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-400 mt-0.5 truncate">
+              Real-time threat monitoring, audit stream, Firebase security rules & active word moderation live.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to="security"
+          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
+        >
+          <span>Open Security Console</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      </motion.div>
 
       <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10 animate-stagger-1">
         <StatCard

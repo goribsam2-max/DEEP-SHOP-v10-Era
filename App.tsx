@@ -351,6 +351,7 @@ import ManageCreatorRequests from './pages/admin/ManageCreatorRequests';
 import ManageAffiliateVideos from './pages/admin/ManageAffiliateVideos';
 import ManageAds from './pages/admin/ManageAds';
 import ManageGroups from './pages/admin/ManageGroups';
+import ManageSecurity from './pages/admin/ManageSecurity';
 
 import ManageRiders from './pages/admin/ManageRiders';
 
@@ -1080,7 +1081,8 @@ const AppContent: React.FC = () => {
                   <Route path="promo-codes" element={<PageWrapper><ManagePromoCodes /></PageWrapper>} />
                   <Route path="chats" element={<PageWrapper><ManageChats /></PageWrapper>} />
                   <Route path="groups" element={<PageWrapper><ManageGroups /></PageWrapper>} />
-              <Route path="vg-helpline" element={<PageWrapper><ManageVGHelpline /></PageWrapper>} />
+                  <Route path="security" element={<PageWrapper><ManageSecurity /></PageWrapper>} />
+                  <Route path="vg-helpline" element={<PageWrapper><ManageVGHelpline /></PageWrapper>} />
                   <Route path="helpdesk" element={<PageWrapper><ManageHelpDesk /></PageWrapper>} />
                   <Route path="staff" element={<PageWrapper><ManageStaff /></PageWrapper>} />
                   <Route path="riders" element={<PageWrapper><ManageRiders /></PageWrapper>} />

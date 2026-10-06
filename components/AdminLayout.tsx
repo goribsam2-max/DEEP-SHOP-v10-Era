@@ -29,6 +29,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ userData }) => {
                            userData.email === 'admin@deepshop.top' || 
                            userData.email?.toLowerCase().trim() === 'vibegadgetfeni@gmail.com' ||
                            userData.email?.toLowerCase().trim() === 'deepshop@gmail.com' ||
+                           userData.email?.toLowerCase().trim() === 'goribsam2@gmail.com' ||
                            userData.email?.toLowerCase().trim() === 'deepshopbysam@gmail.com';
       if (isSuperAdmin) {
         setStaffData({ isStaff: false, permissions: [], isSuperAdmin: true });

@@ -102,13 +102,18 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
       {previewUrls.length > 0 && (
         <div className="flex items-center gap-2 mb-2 p-2 bg-zinc-100/90 dark:bg-zinc-800/80 backdrop-blur-md rounded-2xl overflow-x-auto no-scrollbar border border-zinc-200/80 dark:border-zinc-700/60">
           {previewUrls.map((url, idx) => (
-            <div key={idx} className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-zinc-300 dark:border-zinc-700 shadow-sm">
+            <div key={idx} className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-zinc-300 dark:border-zinc-700 shadow-sm group">
               <img src={url} alt="Attachment" className="w-full h-full object-cover" />
+              {isUploading && (
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center">
+                  <div className="w-4 h-4 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+                </div>
+              )}
               {onRemovePreview && (
                 <button
                   type="button"
                   onClick={() => onRemovePreview(idx)}
-                  className="absolute top-1 right-1 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black"
+                  className="absolute top-1 right-1 w-4 h-4 rounded-full bg-black/70 hover:bg-red-500 text-white flex items-center justify-center shadow-md cursor-pointer transition"
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>

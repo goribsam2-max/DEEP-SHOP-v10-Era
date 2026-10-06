@@ -2320,21 +2320,31 @@ const handleCreateChannel = async () => {
         return;
       }
       const newValidFiles = files.filter(f => {
-        if (f.size > 5 * 1024 * 1024) {
-          notify(`${f.name} is larger than 5MB and was skipped`, "error");
+        if (f.size > 20 * 1024 * 1024) {
+          notify(`${f.name} is larger than 20MB and was skipped`, "error");
           return false;
         }
         return true;
       });
+
+      if (newValidFiles.length === 0) return;
       
+      // ⚡ INSTANT OPTIMISTIC PREVIEW (0ms latency - images show in preview immediately!)
+      const instantPreviews = newValidFiles.map(f => URL.createObjectURL(f));
+      setPreviewUrls(prev => [...prev, ...instantPreviews]);
       setIsUploadingAttachment(true);
+
       try {
-        const uploadedUrls = [];
-        for (const file of newValidFiles) {
-            const url = await uploadToImgbb(file);
-            uploadedUrls.push(url);
-        }
-        setPreviewUrls(prev => [...prev, ...uploadedUrls]);
+        // Fast parallel compressed upload through server proxy
+        const uploadedUrls = await Promise.all(
+          newValidFiles.map(file => uploadToImgbb(file))
+        );
+
+        // Replace local object URLs with permanent remote URLs
+        setPreviewUrls(prev => {
+          const filtered = prev.filter(u => !instantPreviews.includes(u));
+          return [...filtered, ...uploadedUrls];
+        });
       } catch (err) {
         notify("Failed to upload image", "error");
       } finally {
@@ -6018,23 +6028,22 @@ const handleCreateChannel = async () => {
                                    </button>
                                </motion.div>
                           )}
-                          {(previewUrls.length > 0 || isUploadingAttachment) && (
+                          {previewUrls.length > 0 && (
     <div className="flex flex-wrap items-center gap-2 mb-3">
-        {isUploadingAttachment && (
-            <div className="w-20 h-20 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex flex-col items-center justify-center gap-2">
-                <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
-                <span className="text-[10px] font-medium text-zinc-500">Uploading...</span>
-            </div>
-        )}
         {previewUrls.map((url, idx) => (
             <motion.div key={idx} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative inline-block">
-                <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md">
+                <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md relative">
                     <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                    {isUploadingAttachment && (
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center">
+                            <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+                        </div>
+                    )}
                 </div>
                 <button onClick={() => { 
                     setAttachments(prev => prev.filter((_, i) => i !== idx));
                     setPreviewUrls(prev => prev.filter((_, i) => i !== idx));
-                }} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-zinc-900 dark:text-white rounded-full flex items-center justify-center shadow-sm">
+                }} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md cursor-pointer transition">
                     <X className="w-3.5 h-3.5" />
                 </button>
             </motion.div>

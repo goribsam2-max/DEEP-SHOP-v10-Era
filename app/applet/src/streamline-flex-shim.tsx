@@ -27,6 +27,9 @@ const c = (d: string[]) => React.forwardRef<SVGSVGElement, any>(({ size, strokeW
 // Geometry database for Streamline Flex Remix Free (Outline) style
 export const Activity = c(["M22 12h-4l-3 9L9 3 6 12H2"]);
 export const Archive = c(["M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8", "M23 3H1v5h22V3z", "M10 12h4"]);
+export const Terminal = c(["M4 17l6-6-6-6", "M12 19h8"]);
+export const Server = c(["M2 6h20v4H2z", "M2 14h20v4H2z", "M6 8h.01", "M6 16h.01"]);
+export const Database = c(["M3 5c0 2.21 4.03 4 9 4s9-1.79 9-4-4.03-4-9-4-9 1.79-9 4z", "M3 5v14c0 2.21 4.03 4 9 4s9-1.79 9-4V5", "M3 12c0 2.21 4.03 4 9 4s9-1.79 9-4"]);
 export const AlertCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 8v4", "M12 16h.01"]);
 export const AlertTriangle = c(["M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z", "M12 9v4", "M12 17h.01"]);
 export const ArrowDown = c(["M12 5v14", "M19 12l-7 7-7-7"]);
@@ -120,6 +123,7 @@ export const ImagePlus = c(["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 
 export const Info = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 16v-4", "M12 8h.01"]);
 export const InfoIcon = Info;
 export const KeyRound = c(["M21.5 2.5a6.5 6.5 0 1 0-7.73 7.73L9 15v3H6v3H3v3h5l5.27-5.27a6.5 6.5 0 0 0 7.23-11.23z", "M18.5 5.5h.01"]);
+export const Key = KeyRound;
 export const Layers = c(["M12 2L2 7l10 5 10-5-10-5z", "M2 17l10 5 10-5", "M2 12l10 5 10-5"]);
 export const Layout = c(["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z", "M3 9h18", "M9 21V9"]);
 export const LayoutDashboard = c(["M3 4h7v9H3zm11 0h7v5h-7zm0 9h7v7h-7zm-11 13h7v4H3z"]);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -11,6 +11,44 @@ interface MessageMediaGridProps {
   onLoadImage?: (key: string) => void;
   onImageClick: (imgUrl: string, index: number, allImages: string[]) => void;
 }
+
+// 🌟 Smooth Image Loader with Animated Skeleton Shimmer and Instant Fade-In
+const SmoothImage: React.FC<{
+  src: string;
+  alt?: string;
+  className?: string;
+}> = ({ src, alt = "Attachment", className = "" }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isError, setIsError] = useState(false);
+
+  return (
+    <div className="relative w-full h-full overflow-hidden bg-zinc-800/60 select-none">
+      {/* Shimmer Skeleton Placeholder */}
+      {!isLoaded && !isError && (
+        <div className="absolute inset-0 bg-gradient-to-r from-zinc-800 via-zinc-700/60 to-zinc-800 animate-pulse flex items-center justify-center">
+          <div className="w-5 h-5 rounded-full border-2 border-emerald-500/30 border-t-emerald-400 animate-spin" />
+        </div>
+      )}
+
+      <img
+        src={src}
+        alt={alt}
+        loading="eager"
+        decoding="async"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => {
+          setIsLoaded(true);
+          setIsError(true);
+        }}
+        className={cn(
+          "w-full h-full object-cover transition-all duration-300",
+          isLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-95 blur-xs",
+          className
+        )}
+      />
+    </div>
+  );
+};
 
 export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
   images,
@@ -36,13 +74,12 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
               e.stopPropagation();
               onImageClick(imgUrl, 0, images);
             }}
-            className="cursor-pointer overflow-hidden rounded-2xl"
+            className="cursor-pointer overflow-hidden rounded-2xl max-h-[360px]"
           >
-            <img
+            <SmoothImage
               src={imgUrl}
-              alt="Attachment"
-              className="w-full max-h-[360px] object-cover transition-transform duration-300 group-hover/img:scale-[1.02]"
-              loading="lazy"
+              alt="Photo"
+              className="max-h-[360px] transition-transform duration-300 group-hover/img:scale-[1.02]"
             />
           </div>
         ) : (
@@ -81,11 +118,10 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
               }}
             >
               {isLoaded ? (
-                <img
+                <SmoothImage
                   src={imgUrl}
-                  alt={`Attachment ${idx + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-105"
-                  loading="lazy"
+                  alt={`Photo ${idx + 1}`}
+                  className="transition-transform duration-300 group-hover/item:scale-105"
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 p-2 text-center">
@@ -121,11 +157,10 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
             onImageClick(images[0], 0, images);
           }}
         >
-          <img
+          <SmoothImage
             src={images[0]}
-            alt="Attachment 1"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-105"
-            loading="lazy"
+            alt="Photo 1"
+            className="transition-transform duration-300 group-hover/item:scale-105"
           />
         </div>
         {/* Bottom 2 images */}
@@ -141,11 +176,10 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
                   onImageClick(imgUrl, idx, images);
                 }}
               >
-                <img
+                <SmoothImage
                   src={imgUrl}
-                  alt={`Attachment ${idx + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-105"
-                  loading="lazy"
+                  alt={`Photo ${idx + 1}`}
+                  className="transition-transform duration-300 group-hover/item:scale-105"
                 />
               </div>
             );
@@ -172,14 +206,13 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
               onImageClick(imgUrl, idx, images);
             }}
           >
-            <img
+            <SmoothImage
               src={imgUrl}
-              alt={`Attachment ${idx + 1}`}
+              alt={`Photo ${idx + 1}`}
               className={cn(
-                "w-full h-full object-cover transition-transform duration-300",
+                "transition-transform duration-300",
                 !isLastItem && "group-hover/item:scale-105"
               )}
-              loading="lazy"
             />
             {isLastItem && (
               <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center transition-all group-hover/item:bg-black/70">
