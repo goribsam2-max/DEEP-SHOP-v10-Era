@@ -1,9 +1,9 @@
 // High-performance client-side image compression & optimizer
 export const compressImage = async (
   file: File,
-  maxWidth = 1280,
-  maxHeight = 1280,
-  quality = 0.82
+  maxWidth = 1080,
+  maxHeight = 1080,
+  quality = 0.78
 ): Promise<string> => {
   return new Promise((resolve) => {
     // If SVG or tiny gif, return as-is
@@ -61,6 +61,11 @@ export const compressImage = async (
     };
     reader.onerror = () => resolve('');
   });
+};
+
+// Generates a tiny blurred micro-thumbnail for progressive chat image loading (~500 bytes)
+export const generateMicroThumb = async (file: File): Promise<string> => {
+  return compressImage(file, 48, 48, 0.35);
 };
 
 export const uploadToImgbb = async (file: File): Promise<string> => {

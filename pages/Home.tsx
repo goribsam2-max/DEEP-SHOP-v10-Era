@@ -107,8 +107,23 @@ const ThinBanner = ({ banner, navigate }: { banner: any; navigate: any }) => {
   );
 };
 
+// Helper for Section Headers (Defined outside component to prevent re-creation and TDZ issues)
+const SectionHeader: React.FC<{ title: string }> = ({ title }) => (
+  <div className="flex justify-between items-center mb-4 pt-4">
+    <h2
+      className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"
+      style={{ fontFamily: "'Comfortaa', cursive", letterSpacing: "-0.02em" }}
+    >
+      {title}
+    </h2>
+  </div>
+);
+
 const Home: React.FC<{ userData?: any }> = ({ userData }) => {
+  const navigate = useNavigate();
   const { formatPrice } = useRegion();
+  const { isDark } = useTheme();
+
   const email = userData?.email?.toLowerCase().trim();
   const isAdmin = Boolean(
     userData?.role === "admin" ||
@@ -122,17 +137,18 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     email === "deepshopbysam@gmail.com"
   );
 
+  // Strictly verify seller status so regular buyers never get seller privileges
   const isSeller = Boolean(
-    userData?.role === "seller" ||
-    userData?.isSeller === true ||
-    userData?.sellerStatus === "approved" ||
-    userData?.type === "seller" ||
-    userData?.shopName ||
-    userData?.sellerId
+    (userData?.role === "seller" || userData?.isSeller === true || userData?.type === "seller") &&
+    userData?.role !== "customer" &&
+    userData?.role !== "buyer" &&
+    userData?.sellerStatus !== "rejected" &&
+    userData?.sellerStatus !== "pending"
   );
 
+  // Only verified sellers and admins can add stories
   const canAddStory = Boolean(isAdmin || isSeller);
-  const { isDark } = useTheme();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
@@ -259,8 +275,6 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     };
   }, []);
 
-  const navigate = useNavigate();
-
   const brandLogos = useMemo(() => {
     const uniqueBrands = Array.from(
       new Set(products.map((p) => p.brand).filter(Boolean)),
@@ -339,18 +353,6 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       } as LogoItem;
     });
   }, [sellers]);
-
-  // Helper for Section Headers
-  const SectionHeader = ({ title }: { title: string }) => (
-    <div className="flex justify-between items-center mb-4 pt-4">
-      <h2
-        className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"
-        style={{ fontFamily: "'Comfortaa', cursive", letterSpacing: "-0.02em" }}
-      >
-        {title}
-      </h2>
-    </div>
-  );
 
   return (
     <div className="relative pt-4 bg-white dark:bg-[#121212] w-full min-h-screen font-sans pb-0">

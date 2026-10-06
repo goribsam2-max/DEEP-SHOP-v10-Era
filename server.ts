@@ -580,6 +580,8 @@ app.use(async (req, res, next) => {
         return res.json({
           success: true,
           url: result.data.url.replace(/^http:\/\//i, "https://"),
+          thumbUrl: result.data.thumb?.url ? result.data.thumb.url.replace(/^http:\/\//i, "https://") : undefined,
+          mediumUrl: result.data.medium?.url ? result.data.medium.url.replace(/^http:\/\//i, "https://") : undefined,
           display_url: result.data.display_url,
         });
       }

@@ -11,6 +11,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { ImageSkeletonShimmer } from './ProgressiveImage';
 
 interface ChatMediaGalleryModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [userToggledControls, setUserToggledControls] = useState(true);
+  const [isImageLoading, setIsImageLoading] = useState(true);
 
   // Sync index when initialIndex changes or modal opens
   useEffect(() => {
@@ -41,13 +43,15 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
       setZoom(1);
       setOffset({ x: 0, y: 0 });
       setUserToggledControls(true);
+      setIsImageLoading(true);
     }
   }, [isOpen, initialIndex, images.length]);
 
-  // Reset zoom when navigating between photos
+  // Reset zoom and set loading when navigating between photos
   useEffect(() => {
     setZoom(1);
     setOffset({ x: 0, y: 0 });
+    setIsImageLoading(true);
   }, [currentIndex]);
 
   // Keyboard navigation
@@ -271,15 +275,27 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
             }}
             onDoubleClick={handleDoubleTapOrClick}
           >
+            {isImageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="w-[320px] sm:w-[420px] aspect-[4/3] max-w-[85vw] max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl">
+                  <ImageSkeletonShimmer />
+                </div>
+              </div>
+            )}
             <motion.img
               src={currentImage}
               alt={`Photo ${currentIndex + 1}`}
+              onLoad={() => setIsImageLoading(false)}
+              onError={() => setIsImageLoading(false)}
               style={{
                 scale: zoom,
                 x: offset.x,
                 y: offset.y,
               }}
-              className="max-w-full max-h-[82vh] object-contain rounded-xl shadow-2xl select-none pointer-events-auto transition-transform duration-100 ease-out"
+              className={cn(
+                "max-w-full max-h-[82vh] object-contain rounded-xl shadow-2xl select-none pointer-events-auto transition-transform duration-100 ease-out",
+                isImageLoading ? "opacity-0" : "opacity-100 transition-opacity duration-300"
+              )}
               onClick={(e) => {
                 e.stopPropagation();
                 if (isZoomedIn) {

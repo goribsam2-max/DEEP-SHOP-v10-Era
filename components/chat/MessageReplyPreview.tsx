@@ -1,6 +1,7 @@
 import React from 'react';
 import { CornerUpLeft, Image as ImageIcon, Mic } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { ProgressiveImage } from './ProgressiveImage';
 
 export interface ReplyData {
   id?: string;
@@ -89,7 +90,13 @@ export const MessageReplyPreview: React.FC<MessageReplyPreviewProps> = ({
       {/* Image Thumbnail */}
       {replyTo.imageUrl && (
         <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-black/10 dark:border-white/10 bg-black/10">
-          <img src={replyTo.imageUrl} alt="preview" className="w-full h-full object-cover" />
+          <ProgressiveImage
+            src={replyTo.imageUrl}
+            alt="preview"
+            containerClassName="w-10 h-10 min-h-0"
+            showShimmerIcon={false}
+            className="w-full h-full object-cover"
+          />
         </div>
       )}
     </div>

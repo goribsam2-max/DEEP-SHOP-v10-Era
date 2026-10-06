@@ -1,4 +1,4 @@
-import { uploadToImgbb } from '../services/imgbb';
+import { uploadToImgbb, generateMicroThumb } from '../services/imgbb';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,6 +29,7 @@ import { ChatBottomBar } from '../components/chat/ChatBottomBar';
 import { NewMessageModal } from '../components/chat/NewMessageModal';
 import { MessageReplyPreview } from '../components/chat/MessageReplyPreview';
 import { MessageMediaGrid } from '../components/chat/MessageMediaGrid';
+import { ProgressiveImage } from '../components/chat/ProgressiveImage';
 import { ChatMediaGalleryModal } from '../components/chat/ChatMediaGalleryModal';
 import { ChatTypingIndicator } from '../components/chat/ChatTypingIndicator';
 
@@ -516,6 +517,7 @@ export default function Messages() {
   const typingTimeoutRef = useRef<any>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [previewThumbs, setPreviewThumbs] = useState<string[]>([]);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -2335,10 +2337,11 @@ const handleCreateChannel = async () => {
       setIsUploadingAttachment(true);
 
       try {
-        // Fast parallel compressed upload through server proxy
-        const uploadedUrls = await Promise.all(
-          newValidFiles.map(file => uploadToImgbb(file))
-        );
+        // Fast parallel compressed upload & instant micro-thumbnail generation
+        const microThumbs = await Promise.all(newValidFiles.map(f => generateMicroThumb(f)));
+        setPreviewThumbs(prev => [...prev, ...microThumbs]);
+
+        const uploadedUrls = await Promise.all(newValidFiles.map(file => uploadToImgbb(file)));
 
         // Replace local object URLs with permanent remote URLs
         setPreviewUrls(prev => {
@@ -2357,15 +2360,7 @@ const handleCreateChannel = async () => {
   const handleAttachmentChange = handleFileSelect;
 
   const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('image', file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=e0b1df667ddc10816a3036a7edb7e289`, {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error("Upload failed");
-    return data.data.url;
+    return await uploadToImgbb(file);
   };
 
   const handleSendMessage = async (forcedAudioUrl?: string) => {
@@ -2391,13 +2386,16 @@ const handleCreateChannel = async () => {
       setNewMessage('');
       
       let imageUrls: string[] = [...previewUrls];
+      let currentThumbs: string[] = [...previewThumbs];
       setPreviewUrls([]);
+      setPreviewThumbs([]);
 
       try {
         const msgData: any = {
           text: messageText || null,
           images: imageUrls,
           imageUrl: imageUrls[0] || null, // fallback
+          imageThumbs: currentThumbs.length > 0 ? currentThumbs : null,
           audioUrl: audioUrlToSend || null,
           audioDuration: recordingDuration || 12,
           senderId: user.uid,
@@ -2456,7 +2454,9 @@ const handleCreateChannel = async () => {
       setNewMessage('');
       
       let imageUrls: string[] = [...previewUrls];
+      let currentThumbs: string[] = [...previewThumbs];
       setPreviewUrls([]);
+      setPreviewThumbs([]);
       setAttachments([]);
       
       const otherUserId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
@@ -2534,6 +2534,7 @@ const handleCreateChannel = async () => {
         text: messageText,
         images: imageUrls,
         imageUrl: imageUrls[0] || null,
+        imageThumbs: currentThumbs.length > 0 ? currentThumbs : null,
         audioUrl: audioUrlToSend || null,
         audioDuration: recordingDuration || 12,
         senderId: user.uid,
@@ -4515,7 +4516,7 @@ const handleCreateChannel = async () => {
                            )}
                          >
                            <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-200 dark:bg-zinc-800 shrink-0 border border-zinc-200 dark:border-zinc-300 dark:border-zinc-700 relative">
-                             <img src={channel.imageUrl} alt={channel.name} className="w-full h-full object-cover" />
+                             <ProgressiveImage src={channel.imageUrl} alt={channel.name} containerClassName="w-full h-full rounded-full min-h-0" showShimmerIcon={false} className="w-full h-full object-cover" />
                              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center">
                                <Sparkles className="w-2 h-2 text-zinc-900 dark:text-white fill-white" />
                              </div>
@@ -4759,7 +4760,7 @@ const handleCreateChannel = async () => {
 
                      <div className="p-4 sm:p-6 w-full max-w-2xl mx-auto flex flex-col items-center flex-1 pb-24">
                         <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 mb-4 border border-zinc-300 dark:border-zinc-700 shadow-md">
-                            <img src={activeChannel.imageUrl} alt="Channel cover" className="w-full h-full object-cover" />
+                            <ProgressiveImage src={activeChannel.imageUrl} alt="Channel cover" containerClassName="w-24 h-24 rounded-full min-h-0" className="w-full h-full object-cover" />
                         </div>
                         <h2 className="text-2xl font-black text-zinc-900 dark:text-white flex items-center gap-1.5 tracking-tight text-center">
                             {activeChannel.name}
@@ -5612,7 +5613,7 @@ const handleCreateChannel = async () => {
                               
                               <div className="relative w-10 h-10 shrink-0">
                                   <div className="w-full h-full rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
-                                      <img src={activeChannel.imageUrl} alt={activeChannel.name} className="w-full h-full object-cover" />
+                                      <ProgressiveImage src={activeChannel.imageUrl} alt={activeChannel.name} containerClassName="w-full h-full rounded-full min-h-0" showShimmerIcon={false} className="w-full h-full object-cover" />
                                   </div>
                               </div>
                               
@@ -5929,6 +5930,7 @@ const handleCreateChannel = async () => {
                                             <div className="mb-1">
                                               <MessageMediaGrid
                                                 images={msg.images && msg.images.length > 0 ? msg.images : (msg.imageUrl ? [msg.imageUrl] : [])}
+                                                thumbnailSrcs={msg.imageThumbs || (msg.thumbUrl ? [msg.thumbUrl] : undefined)}
                                                 messageId={msg.id}
                                                 isMe={isMe}
                                                 dataSaverMode={privacySettings.dataSaverMode}
@@ -6737,6 +6739,7 @@ const handleCreateChannel = async () => {
                                               <div className="mb-1">
                                                 <MessageMediaGrid
                                                   images={msg.images && msg.images.length > 0 ? msg.images : (msg.imageUrl ? [msg.imageUrl] : [])}
+                                                  thumbnailSrcs={msg.imageThumbs || (msg.thumbUrl ? [msg.thumbUrl] : undefined)}
                                                   messageId={msg.id}
                                                   isMe={isMe}
                                                   dataSaverMode={privacySettings.dataSaverMode}
@@ -7895,7 +7898,13 @@ const handleCreateChannel = async () => {
               <div className="p-3 bg-zinc-50 dark:bg-white dark:bg-zinc-200 dark:bg-zinc-800/50 shadow-sm dark:shadow-none rounded-xl mb-4 border border-zinc-100 dark:border-zinc-800/80 text-xs">
                 <p className="font-extrabold text-[#EF8020] mb-1">Previewing Content:</p>
                 {forwardingMessage.imageUrl && (
-                  <img src={forwardingMessage.imageUrl} alt="Forward attachment" className="w-16 h-16 object-cover rounded-lg mb-1" />
+                  <ProgressiveImage
+                    src={forwardingMessage.imageUrl}
+                    alt="Forward attachment"
+                    containerClassName="w-16 h-16 rounded-lg mb-1 min-h-0"
+                    showShimmerIcon={false}
+                    className="w-full h-full object-cover"
+                  />
                 )}
                 <p className="text-zinc-600 dark:text-zinc-300 italic truncate">"{forwardingMessage.text || 'Image Attachment'}"</p>
               </div>

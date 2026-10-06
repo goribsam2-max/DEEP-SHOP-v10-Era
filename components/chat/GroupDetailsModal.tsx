@@ -49,6 +49,7 @@ import {
 import { db } from '../../firebase';
 import { uploadToImgbb } from '../../services/imgbb';
 import { cn } from '../../lib/utils';
+import { ProgressiveImage } from './ProgressiveImage';
 
 export interface GroupMember {
   id: string;
@@ -1783,7 +1784,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                             onClick={() => setPreviewMediaUrl(src)}
                             className="aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 cursor-pointer hover:opacity-90 transition relative group"
                           >
-                            <img src={src} alt="" className="w-full h-full object-cover" />
+                            <ProgressiveImage src={src} alt="" containerClassName="w-full h-full min-h-0" showShimmerIcon={false} className="w-full h-full object-cover" />
                           </div>
                         );
                       })}
