@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { PhoneCall, MessageCircle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from './LanguageContext';
 
 export const Footer = () => {
-  const [settings, setSettings] = useState<any>({ instagramUrl: 'https://www.instagram.com/deep.shop.official', tiktokUrl: '', footerLogo: '', footerPaymentLogos: [] });
+  const [settings, setSettings] = useState<any>({
+    instagramUrl: 'https://www.instagram.com/deep.shop.official',
+    tiktokUrl: '',
+    footerLogo: '',
+    footerPaymentLogos: []
+  });
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [waReason, setWaReason] = useState('Order Issue');
@@ -16,17 +21,54 @@ export const Footer = () => {
   const waNumber = "17247648185"; // without + for link
 
   useEffect(() => {
-    getDoc(doc(db, 'settings', 'payments')).then(snap => {
+    // 1. Subscribe to payments settings
+    const unsubPayments = onSnapshot(doc(db, 'settings', 'payments'), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        setSettings({
-          instagramUrl: data.instagramUrl || 'https://www.instagram.com/deep.shop.official',
-          tiktokUrl: data.tiktokUrl || '',
-          footerLogo: data.footerLogo || '',
+        setSettings((prev: any) => ({
+          ...prev,
+          instagramUrl: data.instagramUrl || prev.instagramUrl,
+          tiktokUrl: data.tiktokUrl || prev.tiktokUrl,
+          footerLogo: data.footerLogo || data.logoUrl || prev.footerLogo,
           footerPaymentLogos: data.footerPaymentLogos || []
-        });
+        }));
       }
     });
+
+    // 2. Subscribe to SEO settings for logo/appIconUrl
+    const unsubSeo = onSnapshot(doc(db, 'settings', 'seo'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const seoLogo = data.logoUrl || data.appIconUrl || data.faviconUrl || data.metaImage;
+        if (seoLogo) {
+          setSettings((prev: any) => ({
+            ...prev,
+            footerLogo: prev.footerLogo ? prev.footerLogo : seoLogo,
+            seoFallbackLogo: seoLogo
+          }));
+        }
+      }
+    });
+
+    // 3. Subscribe to Platform settings for logoUrl
+    const unsubPlatform = onSnapshot(doc(db, 'settings', 'platform'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const platLogo = data.footerLogo || data.logoUrl;
+        if (platLogo) {
+          setSettings((prev: any) => ({
+            ...prev,
+            footerLogo: platLogo
+          }));
+        }
+      }
+    });
+
+    return () => {
+      unsubPayments();
+      unsubSeo();
+      unsubPlatform();
+    };
   }, []);
 
   const handleWhatsAppSend = () => {

@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { auth, db } from "../firebase";
 import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { cn } from "@/lib/utils";
+import { BangladeshAddressSelector } from "../components/BangladeshAddressSelector";
+import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
 
 const ShippingAddress: React.FC = () => {
   const navigate = useNavigate();
@@ -83,13 +85,36 @@ const ShippingAddress: React.FC = () => {
   }, []);
 
   const handleAdd = async () => {
-    if (!newAddress.name || !newAddress.phone || !newAddress.district || !newAddress.street) {
-      return notify("Please complete all required fields.", "error");
+    if (!newAddress.name?.trim() || !newAddress.phone?.trim() || !newAddress.street?.trim()) {
+      return notify("অনুগ্রহ করে সকল প্রয়োজনীয় তথ্য পূরণ করুন।", "error");
     }
-    const computedAddress = `${newAddress.street}, ${newAddress.district}${newAddress.landmark ? `, ${newAddress.landmark}` : ""}`;
+
+    // Abuse check
+    const abuseName = detectAbuse(newAddress.name);
+    const abuseStreet = detectAbuse(newAddress.street);
+    const abusePhone = detectAbuse(newAddress.phone);
+    if (abuseName.hasAbuse || abuseStreet.hasAbuse || abusePhone.hasAbuse) {
+      const strikeRes = await recordAbuseStrike("Address form abusive text");
+      notify(strikeRes.message, "error");
+      return;
+    }
+
+    // BD Phone validation
+    const phoneVal = validateBangladeshiPhone(newAddress.phone);
+    if (!phoneVal.isValid) {
+      return notify(phoneVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন।", "error");
+    }
+
+    const computedAddress = newAddress.street.trim();
     const newAddrObj = { 
       id: Math.random().toString(36).substring(7), 
-      ...newAddress,
+      name: newAddress.name.trim(),
+      phone: phoneVal.normalized,
+      district: newAddress.district,
+      street: computedAddress,
+      landmark: newAddress.landmark,
+      category: newAddress.category,
+      isDefault: newAddress.isDefault,
       address: computedAddress
     };
     const newAddrs = [...savedAddresses, newAddrObj];
@@ -106,16 +131,16 @@ const ShippingAddress: React.FC = () => {
         setSelectedAddressId(newAddrObj.id);
         setIsAdding(false);
         setNewAddress({ name: "", phone: "", district: "", street: "", landmark: "", category: "Home", isDefault: true });
-        notify("Address saved to account!", "success");
+        notify("ঠিকানা সফলভাবে সেভ করা হয়েছে!", "success");
       } catch (e) {
-        notify("Error saving address.", "error");
+        notify("ঠিকানা সেভ করতে ব্যর্থ হয়েছে।", "error");
       }
     } else {
       setSavedAddresses(newAddrs);
       setSelectedAddressId(newAddrObj.id);
       setIsAdding(false);
       localStorage.setItem("vibe_shipping_addresses_v2", JSON.stringify(newAddrs));
-      notify("Address saved locally!", "success");
+      notify("ঠিকানা সফলভাবে সেভ করা হয়েছে!", "success");
     }
   };
 
@@ -214,34 +239,17 @@ const ShippingAddress: React.FC = () => {
               </div>
             </div>
 
-            <div className="pt-2 pb-1 border-t border-zinc-100 dark:border-zinc-800 mt-2">
-              <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-base">Address information</h3>
-            </div>
-
-            {/* District / Zone / Area */}
+            {/* Integrated A-Z Bangladesh Geographic Selector */}
             <div className="space-y-2">
-              <Label className="font-semibold text-zinc-700 dark:text-zinc-300">District / Zone / Area <span className="text-rose-500">*</span></Label>
-              <Input className="py-6 rounded-xl border-zinc-200 dark:border-zinc-800 focus-visible:ring-emerald-500 bg-transparent text-base" placeholder="Please select a District/Zone/Area" value={newAddress.district} onChange={(e) => setNewAddress({...newAddress, district: e.target.value})} />
-            </div>
-
-            {/* Street Name... */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label className="font-semibold text-zinc-700 dark:text-zinc-300">Street Name, Building, Apartment No <span className="text-rose-500">*</span></Label>
-                <button type="button" onClick={() => setNewAddress({...newAddress, street: ""})} className="text-xs text-rose-500 font-bold hover:underline">Clear</button>
-              </div>
-              <textarea 
-                className="w-full min-h-[100px] p-4 text-base rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-zinc-900 dark:text-zinc-100 outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-zinc-400 resize-none" 
-                placeholder="Building & Apartment No." 
-                value={newAddress.street} 
-                onChange={(e) => setNewAddress({...newAddress, street: e.target.value})} 
+              <BangladeshAddressSelector
+                onAddressChange={(formatted, structured) => {
+                  setNewAddress(prev => ({
+                    ...prev,
+                    street: formatted,
+                    district: structured.district
+                  }));
+                }}
               />
-            </div>
-
-            {/* Landmark */}
-            <div className="space-y-2">
-              <Label className="font-semibold text-zinc-700 dark:text-zinc-300">Landmark (Optional)</Label>
-              <Input className="py-6 rounded-xl border-zinc-200 dark:border-zinc-800 focus-visible:ring-emerald-500 bg-transparent text-base" placeholder="Add additional info" value={newAddress.landmark} onChange={(e) => setNewAddress({...newAddress, landmark: e.target.value})} />
             </div>
 
             {/* Category */}

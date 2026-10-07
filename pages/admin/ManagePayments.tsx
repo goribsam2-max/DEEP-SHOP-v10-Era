@@ -3,7 +3,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
 import { Button } from "../../components/ui/button";
-import { isForbiddenNumber } from "@/lib/utils";
+import { isForbiddenNumber, cn } from "@/lib/utils";
 import { uploadToImgbb } from "../../services/imgbb";
 
 const ManagePayments: React.FC = () => {
@@ -86,6 +86,9 @@ const ManagePayments: React.FC = () => {
       setData((prev) => ({
         ...prev,
         ...mergedData,
+        footerPaymentLogos: Array.isArray(mergedData.footerPaymentLogos)
+          ? mergedData.footerPaymentLogos
+          : (prev.footerPaymentLogos || []),
         bkashAccounts: bkashAccs,
         nagadAccounts: nagadAccs,
         bkashNumbers: bkashList,
@@ -94,11 +97,49 @@ const ManagePayments: React.FC = () => {
         pathaoPayNumber: nagadList[0] || prev.pathaoPayNumber,
       }));
       setLoading(false);
+    }).catch((err) => {
+      console.error("Error loading payment settings:", err);
+      setLoading(false);
     });
   }, []);
 
-  const handleSave = async (overrideData?: typeof data) => {
-    const payload = overrideData || data;
+  const handleSave = async (overrideData?: any) => {
+    // If overrideData is a DOM/React Event, ignore it
+    const isExplicitData = overrideData && typeof overrideData === "object" && !("nativeEvent" in overrideData) && !("preventDefault" in overrideData) && ("bkashAccounts" in overrideData || "bkashNumbers" in overrideData || "instagramUrl" in overrideData);
+    const baseData = isExplicitData ? overrideData : data;
+
+    // Auto-commit any typed number in newBkashInput if valid
+    let finalBkashAccs = Array.isArray(baseData.bkashAccounts) ? [...baseData.bkashAccounts] : [];
+    if (newBkashInput && newBkashInput.trim()) {
+      const val = newBkashInput.trim();
+      if (!isForbiddenNumber(val) && !finalBkashAccs.some((a) => a.number === val)) {
+        finalBkashAccs.push({ number: val, type: newBkashType });
+      }
+    }
+
+    // Auto-commit any typed number in newNagadInput if valid
+    let finalNagadAccs = Array.isArray(baseData.nagadAccounts) ? [...baseData.nagadAccounts] : [];
+    if (newNagadInput && newNagadInput.trim()) {
+      const val = newNagadInput.trim();
+      if (!isForbiddenNumber(val) && !finalNagadAccs.some((a) => a.number === val)) {
+        finalNagadAccs.push({ number: val, type: newNagadType });
+      }
+    }
+
+    const finalBkashNumbers = finalBkashAccs.map((a) => a.number);
+    const finalNagadNumbers = finalNagadAccs.map((a) => a.number);
+
+    const payload = {
+      ...baseData,
+      bkashAccounts: finalBkashAccs,
+      nagadAccounts: finalNagadAccs,
+      bkashNumbers: finalBkashNumbers,
+      nagadNumbers: finalNagadNumbers,
+      npsbNumber: finalBkashNumbers[0] || baseData.npsbNumber || "",
+      pathaoPayNumber: finalNagadNumbers[0] || baseData.pathaoPayNumber || "",
+      footerPaymentLogos: Array.isArray(baseData.footerPaymentLogos) ? baseData.footerPaymentLogos : [],
+    };
+
     setSaving(true);
     try {
       await setDoc(doc(db, "settings", "payments"), payload, { merge: true });
@@ -111,13 +152,17 @@ const ManagePayments: React.FC = () => {
           nagadNumbers: payload.nagadNumbers,
           bkashNumber: payload.bkashNumbers[0] || payload.npsbNumber || "",
           nagadNumber: payload.nagadNumbers[0] || payload.pathaoPayNumber || "",
+          footerLogo: payload.footerLogo || "",
         },
         { merge: true }
       );
-      notify("Payment settings saved and synced successfully!", "success");
-    } catch (e) {
-      console.error(e);
-      notify("Failed to save settings", "error");
+      setData(payload);
+      setNewBkashInput("");
+      setNewNagadInput("");
+      notify("Payment & Social settings saved successfully!", "success");
+    } catch (e: any) {
+      console.error("Error saving payment settings:", e);
+      notify(`Failed to save settings: ${e?.message || "Unknown error"}`, "error");
     } finally {
       setSaving(false);
     }
@@ -128,22 +173,26 @@ const ManagePayments: React.FC = () => {
   }
 
   const handleAddFooterLogo = () => {
+    const currentList = Array.isArray(data.footerPaymentLogos) ? data.footerPaymentLogos : [];
     setData({
       ...data,
-      footerPaymentLogos: [...data.footerPaymentLogos, { name: "", icon: "" }]
+      footerPaymentLogos: [...currentList, { name: "", icon: "" }]
     });
   };
 
   const handleUpdateFooterLogo = (index: number, field: "name" | "icon", value: string) => {
-    const newLogos = [...data.footerPaymentLogos];
-    newLogos[index][field] = value;
-    setData({ ...data, footerPaymentLogos: newLogos });
+    const currentList = Array.isArray(data.footerPaymentLogos) ? [...data.footerPaymentLogos] : [];
+    if (!currentList[index]) {
+      currentList[index] = { name: "", icon: "" };
+    }
+    currentList[index] = { ...currentList[index], [field]: value };
+    setData({ ...data, footerPaymentLogos: currentList });
   };
 
   const handleRemoveFooterLogo = (index: number) => {
-    const newLogos = [...data.footerPaymentLogos];
-    newLogos.splice(index, 1);
-    setData({ ...data, footerPaymentLogos: newLogos });
+    const currentList = Array.isArray(data.footerPaymentLogos) ? [...data.footerPaymentLogos] : [];
+    currentList.splice(index, 1);
+    setData({ ...data, footerPaymentLogos: currentList });
   };
 
   return (
@@ -177,14 +226,52 @@ const ManagePayments: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Footer Logo URL</label>
-            <input
-              type="text"
-              value={data.footerLogo}
-              onChange={(e) => setData({ ...data, footerLogo: e.target.value })}
-              className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1cdb5e]/50 text-zinc-900 dark:text-white"
-              placeholder="https://example.com/logo.png"
-            />
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Footer Logo</label>
+            <div className="flex items-center gap-3">
+              {data.footerLogo ? (
+                <div className="relative group w-12 h-12 shrink-0 bg-black/10 rounded-xl p-1 border border-zinc-200 dark:border-zinc-700">
+                  <img src={data.footerLogo} alt="Footer Logo" className="w-full h-full object-contain rounded-lg" />
+                  <button
+                    type="button"
+                    onClick={() => setData({ ...data, footerLogo: "" })}
+                    className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-red-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-zinc-400 text-xs shrink-0">
+                  Logo
+                </div>
+              )}
+              <div className="flex-1 space-y-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      notify("Uploading logo, please wait...", "info");
+                      try {
+                        const url = await uploadToImgbb(file);
+                        setData({ ...data, footerLogo: url });
+                        notify("Footer logo uploaded successfully!", "success");
+                      } catch (err) {
+                        notify("Failed to upload footer logo", "error");
+                      }
+                    }
+                  }}
+                  className="text-xs w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={data.footerLogo}
+                  onChange={(e) => setData({ ...data, footerLogo: e.target.value })}
+                  className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-xs text-zinc-900 dark:text-white"
+                  placeholder="Or enter image URL: https://example.com/logo.png"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -267,12 +354,14 @@ const ManagePayments: React.FC = () => {
                       notify("This number is not allowed", "error");
                       return;
                     }
-                    if (data.bkashAccounts.some(a => a.number === val) || data.bkashNumbers.includes(val)) {
+                    const curAccs = data.bkashAccounts || [];
+                    const curNums = data.bkashNumbers || [];
+                    if (curAccs.some(a => a.number === val) || curNums.includes(val)) {
                       notify("This number is already in the list", "error");
                       return;
                     }
                     const newAcc = { number: val, type: newBkashType };
-                    const updatedAccounts = [...data.bkashAccounts, newAcc];
+                    const updatedAccounts = [...curAccs, newAcc];
                     const updatedNumbers = updatedAccounts.map(a => a.number);
                     const nextData = {
                       ...data,
@@ -297,12 +386,14 @@ const ManagePayments: React.FC = () => {
                     notify("This number is not allowed", "error");
                     return;
                   }
-                  if (data.bkashAccounts.some(a => a.number === val) || data.bkashNumbers.includes(val)) {
+                  const curAccs = data.bkashAccounts || [];
+                  const curNums = data.bkashNumbers || [];
+                  if (curAccs.some(a => a.number === val) || curNums.includes(val)) {
                     notify("This number is already in the list", "error");
                     return;
                   }
                   const newAcc = { number: val, type: newBkashType };
-                  const updatedAccounts = [...data.bkashAccounts, newAcc];
+                  const updatedAccounts = [...curAccs, newAcc];
                   const updatedNumbers = updatedAccounts.map(a => a.number);
                   const nextData = {
                     ...data,
@@ -321,27 +412,28 @@ const ManagePayments: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
-              {data.bkashAccounts.map((acc, i) => (
+              {(data.bkashAccounts || []).map((acc, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-pink-300 dark:border-pink-800 px-3 py-1.5 rounded-xl shadow-xs"
                 >
                   <span className="text-xs font-bold text-[#E2125B]">#{i + 1}</span>
-                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc.number}</span>
+                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
                   <span className={cn(
                     "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                    acc.type === "payment"
+                    acc?.type === "payment"
                       ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                      : acc.type === "cashout"
+                      : acc?.type === "cashout"
                       ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
                       : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
                   )}>
-                    {acc.type === "payment" ? "Payment" : acc.type === "cashout" ? "Cash Out" : "Personal"}
+                    {acc?.type === "payment" ? "Payment" : acc?.type === "cashout" ? "Cash Out" : "Personal"}
                   </span>
                   <button
                     type="button"
                     onClick={() => {
-                      const updatedAccounts = data.bkashAccounts.filter((_, idx) => idx !== i);
+                      const currentAccounts = data.bkashAccounts || [];
+                      const updatedAccounts = currentAccounts.filter((_, idx) => idx !== i);
                       const updatedNumbers = updatedAccounts.map(a => a.number);
                       const nextData = {
                         ...data,
@@ -358,7 +450,7 @@ const ManagePayments: React.FC = () => {
                   </button>
                 </div>
               ))}
-              {data.bkashAccounts.length === 0 && (
+              {(!data.bkashAccounts || data.bkashAccounts.length === 0) && (
                 <p className="text-xs text-amber-600 font-medium">কোনো বিকাশ নাম্বার যোগ করা নেই (গ্রাহক বিকাশ নির্বাচন করতে পারবে না)</p>
               )}
             </div>
@@ -400,12 +492,14 @@ const ManagePayments: React.FC = () => {
                       notify("This number is not allowed", "error");
                       return;
                     }
-                    if (data.nagadAccounts.some(a => a.number === val) || data.nagadNumbers.includes(val)) {
+                    const curAccs = data.nagadAccounts || [];
+                    const curNums = data.nagadNumbers || [];
+                    if (curAccs.some(a => a.number === val) || curNums.includes(val)) {
                       notify("This number is already in the list", "error");
                       return;
                     }
                     const newAcc = { number: val, type: newNagadType };
-                    const updatedAccounts = [...data.nagadAccounts, newAcc];
+                    const updatedAccounts = [...curAccs, newAcc];
                     const updatedNumbers = updatedAccounts.map(a => a.number);
                     const nextData = {
                       ...data,
@@ -430,12 +524,14 @@ const ManagePayments: React.FC = () => {
                     notify("This number is not allowed", "error");
                     return;
                   }
-                  if (data.nagadAccounts.some(a => a.number === val) || data.nagadNumbers.includes(val)) {
+                  const curAccs = data.nagadAccounts || [];
+                  const curNums = data.nagadNumbers || [];
+                  if (curAccs.some(a => a.number === val) || curNums.includes(val)) {
                     notify("This number is already in the list", "error");
                     return;
                   }
                   const newAcc = { number: val, type: newNagadType };
-                  const updatedAccounts = [...data.nagadAccounts, newAcc];
+                  const updatedAccounts = [...curAccs, newAcc];
                   const updatedNumbers = updatedAccounts.map(a => a.number);
                   const nextData = {
                     ...data,
@@ -454,27 +550,28 @@ const ManagePayments: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
-              {data.nagadAccounts.map((acc, i) => (
+              {(data.nagadAccounts || []).map((acc, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-xl shadow-xs"
                 >
                   <span className="text-xs font-bold text-[#F57C20]">#{i + 1}</span>
-                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc.number}</span>
+                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
                   <span className={cn(
                     "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                    acc.type === "payment"
+                    acc?.type === "payment"
                       ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                      : acc.type === "cashout"
+                      : acc?.type === "cashout"
                       ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
                       : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
                   )}>
-                    {acc.type === "payment" ? "Payment" : acc.type === "cashout" ? "Cash Out" : "Personal"}
+                    {acc?.type === "payment" ? "Payment" : acc?.type === "cashout" ? "Cash Out" : "Personal"}
                   </span>
                   <button
                     type="button"
                     onClick={() => {
-                      const updatedAccounts = data.nagadAccounts.filter((_, idx) => idx !== i);
+                      const currentAccounts = data.nagadAccounts || [];
+                      const updatedAccounts = currentAccounts.filter((_, idx) => idx !== i);
                       const updatedNumbers = updatedAccounts.map(a => a.number);
                       const nextData = {
                         ...data,
@@ -491,7 +588,7 @@ const ManagePayments: React.FC = () => {
                   </button>
                 </div>
               ))}
-              {data.nagadAccounts.length === 0 && (
+              {(!data.nagadAccounts || data.nagadAccounts.length === 0) && (
                 <p className="text-xs text-amber-600 font-medium">কোনো নগদ নাম্বার যোগ করা নেই (গ্রাহক নগদ নির্বাচন করতে পারবে না)</p>
               )}
             </div>
@@ -505,14 +602,14 @@ const ManagePayments: React.FC = () => {
            <Button onClick={handleAddFooterLogo} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-200">Add Logo</Button>
         </div>
         <div className="space-y-4">
-          {data.footerPaymentLogos.map((logo, index) => (
+          {(data.footerPaymentLogos || []).map((logo, index) => (
              <div key={index} className="flex gap-4 items-start p-4 border border-zinc-100 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
                 <div className="flex-grow space-y-3">
                    <div>
                       <label className="block text-xs font-medium text-zinc-500 mb-1">Method Name</label>
                       <input 
                          type="text" 
-                         value={logo.name} 
+                         value={logo?.name || ""} 
                          onChange={(e) => handleUpdateFooterLogo(index, "name", e.target.value)} 
                          className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#1cdb5e]"
                          placeholder="e.g. bKash"
@@ -523,7 +620,7 @@ const ManagePayments: React.FC = () => {
                       <div className="flex gap-2">
                         <input 
                            type="text" 
-                           value={logo.icon} 
+                           value={logo?.icon || ""} 
                            onChange={(e) => handleUpdateFooterLogo(index, "icon", e.target.value)} 
                            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#1cdb5e]"
                            placeholder="https://..."
@@ -533,7 +630,7 @@ const ManagePayments: React.FC = () => {
                           <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                              const file = e.target.files?.[0];
                              if (file) {
-                               const oldIcon = logo.icon;
+                               const oldIcon = logo?.icon || "";
                                handleUpdateFooterLogo(index, "icon", "Uploading...");
                                try {
                                  const url = await uploadToImgbb(file);
@@ -547,8 +644,8 @@ const ManagePayments: React.FC = () => {
                           }} />
                         </label>
                       </div>
-                      {logo.icon && logo.icon !== "Uploading..." && (
-                         <img src={logo.icon} alt={logo.name} className="mt-2 h-8 object-contain" />
+                      {logo?.icon && logo.icon !== "Uploading..." && (
+                         <img src={logo.icon} alt={logo.name || "logo"} className="mt-2 h-8 object-contain" />
                       )}
                    </div>
                 </div>
@@ -557,13 +654,15 @@ const ManagePayments: React.FC = () => {
                 </button>
              </div>
           ))}
-          {data.footerPaymentLogos.length === 0 && <p className="text-zinc-500 text-sm text-center">No logos added.</p>}
+          {(!data.footerPaymentLogos || data.footerPaymentLogos.length === 0) && (
+            <p className="text-zinc-500 text-sm text-center">No logos added.</p>
+          )}
         </div>
       </div>
 
       <div className="flex justify-end pb-12">
         <Button
-          onClick={handleSave}
+          onClick={() => handleSave()}
           disabled={saving}
           className="bg-[#1cdb5e] hover:bg-[#17ba4f] text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95"
         >

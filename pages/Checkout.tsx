@@ -1,4 +1,4 @@
-import { formatPrice, isForbiddenNumber } from "@/lib/utils";
+import { formatPrice } from "../lib/utils";
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { auth, db } from "../firebase";
@@ -21,6 +21,8 @@ import { useTheme } from "../components/ThemeContext";
 import { useLanguage } from "../components/LanguageContext";
 import { uploadToImgbb } from "../services/imgbb";
 import { PixelImage } from "../components/ui/PixelImage";
+import { BangladeshAddressSelector } from "../components/BangladeshAddressSelector";
+import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
 
 import { Button } from "../components/ui/button";
 import {
@@ -56,9 +58,36 @@ import {
   PhoneCall,
   AlertCircle,
   Loader2,
-  Sparkles
+  Sparkles,
+  Settings
 } from "lucide-react";
 import { cn } from "../lib/utils";
+
+function formatAddressText(val: any): string {
+  if (!val) return "";
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number") return String(val);
+  if (typeof val === "object" && val !== null) {
+    try {
+      if (typeof val.address === "string" && val.address.trim()) return val.address.trim();
+      if (typeof val.fullAddressText === "string" && val.fullAddressText.trim()) return val.fullAddressText.trim();
+      if (typeof val.street === "string" && val.street.trim()) return val.street.trim();
+
+      const parts: string[] = [];
+      const keys = ["detailedHouseRoad", "areaUnion", "upazila", "district", "division"];
+      for (const k of keys) {
+        if (typeof val[k] === "string" && val[k].trim()) parts.push(val[k].trim());
+      }
+      if (parts.length > 0) return parts.join(", ");
+
+      const strVals = Object.values(val).filter((v): v is string => typeof v === "string" && !!v.trim());
+      return strVals.join(", ");
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -244,14 +273,25 @@ export default function CheckoutPage() {
             const data = snap.data();
             setUserCoins(data.coins || 0);
             if (data.addresses && Array.isArray(data.addresses) && data.addresses.length > 0) {
-              setSavedAddresses(data.addresses);
-              setSelectedAddressId(data.addresses[0].id);
+              const cleaned = data.addresses
+                .filter(Boolean)
+                .map((a: any, idx: number) => ({
+                  id: a?.id || `addr_${idx}_${Date.now()}`,
+                  name: typeof a?.name === "string" ? a.name : (data.displayName || "User"),
+                  phone: typeof a?.phone === "string" ? a.phone : (data.phoneNumber || ""),
+                  address: formatAddressText(a?.address || a),
+                  isDefault: Boolean(a?.isDefault)
+                }));
+              setSavedAddresses(cleaned);
+              if (cleaned.length > 0) setSelectedAddressId(cleaned[0].id);
+              else setIsAddingNewAddress(true);
             } else if (data.address) {
+              const addrStr = formatAddressText(data.address);
               const singleAddr = {
                 id: "addr_1",
-                name: data.displayName || "User",
-                phone: data.phoneNumber || "",
-                address: data.address,
+                name: typeof data.displayName === "string" ? data.displayName : "User",
+                phone: typeof data.phoneNumber === "string" ? data.phoneNumber : "",
+                address: addrStr,
                 isDefault: true
               };
               setSavedAddresses([singleAddr]);
@@ -265,12 +305,30 @@ export default function CheckoutPage() {
           setIsLoading(false);
         }).catch(() => setIsLoading(false));
       } else {
-        const localAddresses = JSON.parse(
-          localStorage.getItem("vibe_shipping_addresses_v2") || "[]",
-        );
-        setSavedAddresses(localAddresses);
-        if (localAddresses.length > 0) setSelectedAddressId(localAddresses[0].id);
-        else setIsAddingNewAddress(true);
+        const rawLocal = localStorage.getItem("vibe_shipping_addresses_v2") || "[]";
+        try {
+          const parsed = JSON.parse(rawLocal);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const cleaned = parsed
+              .filter(Boolean)
+              .map((a: any, idx: number) => ({
+                id: a?.id || `addr_${idx}_${Date.now()}`,
+                name: typeof a?.name === "string" ? a.name : "User",
+                phone: typeof a?.phone === "string" ? a.phone : "",
+                address: formatAddressText(a?.address || a),
+                isDefault: Boolean(a?.isDefault)
+              }));
+            setSavedAddresses(cleaned);
+            if (cleaned.length > 0) setSelectedAddressId(cleaned[0].id);
+            else setIsAddingNewAddress(true);
+          } else {
+            setSavedAddresses([]);
+            setIsAddingNewAddress(true);
+          }
+        } catch {
+          setSavedAddresses([]);
+          setIsAddingNewAddress(true);
+        }
         setIsLoading(false);
       }
     });
@@ -446,12 +504,41 @@ export default function CheckoutPage() {
   const dueOnDelivery = Math.max(0, total - requiredAdvance);
 
   const handleSaveAddress = async () => {
-    if (!newAddress.name || !newAddress.phone || !newAddress.address) {
-      return notify("Please complete all required fields.", "error");
+    if (!newAddress.name?.trim() || !newAddress.phone?.trim() || !newAddress.address?.trim()) {
+      return notify("অনুগ্রহ করে সকল প্রয়োজনীয় তথ্য পূরণ করুন।", "error");
     }
+
+    // Abuse detection
+    const abuseName = detectAbuse(newAddress.name);
+    const abuseAddr = detectAbuse(newAddress.address);
+    const abusePhone = detectAbuse(newAddress.phone);
+    if (abuseName.hasAbuse || abuseAddr.hasAbuse || abusePhone.hasAbuse) {
+      const strikeRes = await recordAbuseStrike("Address form abusive language");
+      notify(strikeRes.message, "error");
+      return;
+    }
+
+    // Bangladeshi Phone validation
+    const phoneVal = validateBangladeshiPhone(newAddress.phone);
+    if (!phoneVal.isValid) {
+      return notify(phoneVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন।", "error");
+    }
+
+    let normalizedAlt = "";
+    if (newAddress.altPhone && newAddress.altPhone.trim()) {
+      const altVal = validateBangladeshiPhone(newAddress.altPhone);
+      if (!altVal.isValid) {
+        return notify(altVal.error || "বিকল্প নম্বরটি সঠিক বাংলাদেশি নম্বর নয়।", "error");
+      }
+      normalizedAlt = altVal.normalized;
+    }
+
     const newAddrObj = {
       id: Math.random().toString(36).substring(7),
-      ...newAddress,
+      name: newAddress.name.trim(),
+      phone: phoneVal.normalized,
+      altPhone: normalizedAlt,
+      address: newAddress.address.trim(),
     };
     const newAddrs = [...savedAddresses, newAddrObj];
     const u = auth.currentUser;
@@ -462,16 +549,16 @@ export default function CheckoutPage() {
           doc(db, "users", u.uid),
           { 
             addresses: newAddrs,
-            address: newAddress.address
+            address: newAddrObj.address
           },
           { merge: true },
         );
         setSavedAddresses(newAddrs);
         setSelectedAddressId(newAddrObj.id);
         setIsAddingNewAddress(false);
-        notify("Address saved to account.", "success");
+        notify("ঠিকানা সফলভাবে সেভ করা হয়েছে।", "success");
       } catch (e) {
-        notify("Error saving address.", "error");
+        notify("ঠিকানা সেভ করতে ব্যর্থ হয়েছে।", "error");
       }
     } else {
       setSavedAddresses(newAddrs);
@@ -481,7 +568,7 @@ export default function CheckoutPage() {
         "vibe_shipping_addresses_v2",
         JSON.stringify(newAddrs),
       );
-      notify("Address saved locally.", "success");
+      notify("ঠিকানা সফলভাবে যুক্ত করা হয়েছে।", "success");
     }
   };
 
@@ -549,10 +636,42 @@ export default function CheckoutPage() {
        return notify("You are placing orders too quickly. Please wait a moment.", "error");
     }
 
-    const activeAddress = savedAddresses.find(
+    const rawActiveAddress = savedAddresses.find(
       (a) => a.id === selectedAddressId,
     );
-    if (!activeAddress) return notify("Address required", "error");
+    if (!rawActiveAddress) return notify("ডেলিভারি ঠিকানা আবশ্যক (Address required)", "error");
+
+    const activeAddress = {
+      ...rawActiveAddress,
+      name: typeof rawActiveAddress.name === "string" ? rawActiveAddress.name.trim() : "User",
+      phone: typeof rawActiveAddress.phone === "string" ? rawActiveAddress.phone.trim() : "",
+      address: formatAddressText(rawActiveAddress.address)
+    };
+
+    // Abuse checks
+    const abuseName = detectAbuse(activeAddress.name);
+    const abuseAddr = detectAbuse(activeAddress.address);
+    const abuseGift = isGift ? detectAbuse(giftNote) : { hasAbuse: false };
+    if (abuseName.hasAbuse || abuseAddr.hasAbuse || abuseGift.hasAbuse) {
+      const strikeRes = await recordAbuseStrike("Order submission with abusive details");
+      notify(strikeRes.message, "error");
+      return;
+    }
+
+    // Validate phone numbers
+    const phoneVal = validateBangladeshiPhone(activeAddress.phone);
+    if (!phoneVal.isValid) {
+      return notify(`গ্রাহকের ফোন নম্বর সঠিক নয়: ${phoneVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন"}`, "error");
+    }
+
+    let validGuardian = "";
+    if (hasBypassProduct) {
+      const guardianVal = validateBangladeshiPhone(guardianNumber);
+      if (!guardianVal.isValid) {
+        return notify(`অভিভাবকের ফোন নম্বর সঠিক নয়: ${guardianVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন"}`, "error");
+      }
+      validGuardian = guardianVal.normalized;
+    }
 
     if (paymentType === "vgcoin") {
       const coinCost = advanceType === "full" ? total : requiredAdvance;
@@ -589,7 +708,7 @@ export default function CheckoutPage() {
 
       const orderData: any = {
         userId: auth.currentUser?.uid || "guest",
-        customerName: activeAddress.name,
+        customerName: activeAddress.name.trim(),
         items: items.map((i: any) => ({
           productId: i.id,
           quantity: i.quantity,
@@ -617,11 +736,11 @@ export default function CheckoutPage() {
         accountNameSender: customerSenderNumber.trim(),
         transactionId: customerTrxId.trim(),
         lastDigits: customerTrxId.trim(),
-        guardianNumber: guardianNumber.trim() || null,
+        guardianNumber: validGuardian || null,
         nidCardUrl: nidCardUrl.trim() || null,
         productClassification: isAllBypass ? "Bypass" : isAllOffer ? "Offer" : hasBypassProduct ? "Mixed Bypass" : "Normal Border",
         shippingAddress: activeAddress.address,
-        contactNumber: activeAddress.phone,
+        contactNumber: phoneVal.normalized,
         altNumber: activeAddress.altPhone || "",
         ipAddress: userIp,
         createdAt: Date.now(),
@@ -707,12 +826,13 @@ export default function CheckoutPage() {
           }
           
           // Notify the customer themselves
-          if (user?.uid) {
+          const currentLoggedInUser = auth.currentUser;
+          if (currentLoggedInUser?.uid) {
             fetch("/api/send-push-user", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                userId: user.uid,
+                userId: currentLoggedInUser.uid,
                 title: "Order Placed Successfully! 🎉",
                 body: `Thank you for shopping! Your order for ৳${total} has been received.`,
                 link: "/my-orders"
@@ -914,7 +1034,7 @@ export default function CheckoutPage() {
                   className={cn(
                     "w-4 sm:w-8 h-0.5",
                     currentStep > step
-                      ? "bg-zinc-100 dark:bg-zinc-8000"
+                      ? "bg-zinc-900 dark:bg-zinc-100"
                       : "bg-zinc-200 dark:bg-zinc-800",
                   )}
                 />
@@ -936,61 +1056,143 @@ export default function CheckoutPage() {
                   </h2>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-6">
-                  {savedAddresses.length > 0 ? (
+                  {savedAddresses && savedAddresses.length > 0 ? (
                     <div className="space-y-3">
-                      {savedAddresses.map((addr) => (
-                        <div
-                          key={addr.id}
-                          onClick={() => setSelectedAddressId(addr.id)}
-                          className={cn(
-                            "p-4 border-2 rounded-2xl cursor-pointer transition-all",
-                            selectedAddressId === addr.id
-                              ? "border-zinc-900 dark:border-zinc-100 bg-zinc-100 dark:bg-zinc-800/50 dark:bg-emerald-900/10"
-                              : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700",
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
+                      {savedAddresses
+                        .filter(Boolean)
+                        .map((addr, idx) => {
+                          const addrId = String(addr?.id || `addr_${idx}`);
+                          const addrName = typeof addr?.name === "string" ? addr.name : "User";
+                          const addrPhone = typeof addr?.phone === "string" ? addr.phone : "";
+                          const addrText = formatAddressText(addr?.address || addr);
+
+                          return (
                             <div
+                              key={addrId}
+                              onClick={() => setSelectedAddressId(addrId)}
                               className={cn(
-                                "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                                selectedAddressId === addr.id
-                                  ? "border-zinc-900 dark:border-zinc-100"
-                                  : "border-zinc-300",
+                                "p-4 border-2 rounded-2xl cursor-pointer transition-all",
+                                selectedAddressId === addrId
+                                  ? "border-emerald-600 dark:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
+                                  : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700",
                               )}
                             >
-                              {selectedAddressId === addr.id && (
-                                <div className="w-2 h-2 rounded-full bg-zinc-100 dark:bg-zinc-8000" />
-                              )}
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={cn(
+                                    "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
+                                    selectedAddressId === addrId
+                                      ? "border-emerald-600 dark:border-emerald-500"
+                                      : "border-zinc-300 dark:border-zinc-600",
+                                  )}
+                                >
+                                  {selectedAddressId === addrId && (
+                                    <div className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-500" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                                    {addrName}
+                                  </div>
+                                  {addrPhone ? (
+                                    <div className="text-sm font-medium text-zinc-500">
+                                      {addrPhone}
+                                    </div>
+                                  ) : null}
+                                  {addrText ? (
+                                    <div className="text-sm mt-1 text-zinc-600 dark:text-zinc-400">
+                                      {addrText}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex-1">
-                              <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                                {addr.name}
-                              </div>
-                              <div className="text-sm font-medium text-zinc-500">
-                                {addr.phone}
-                              </div>
-                              <div className="text-sm mt-1 text-zinc-600 dark:text-zinc-400">
-                                {addr.address}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        className="w-full mt-2 border-dashed"
-                        onClick={() => navigate('/shipping-address')}
-                      >
-                        + Add New Address
-                      </Button>
+                          );
+                        })}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="sm:col-span-2 border-dashed border-emerald-500/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-2xl py-2.5 px-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all"
+                          onClick={() => setIsAddingNewAddress(!isAddingNewAddress)}
+                        >
+                          {isAddingNewAddress ? (
+                            <>✕ বাতিল করুন (Close)</>
+                          ) : (
+                            <>+ নতুন ঠিকানা যোগ করুন</>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-2xl py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                          onClick={() => navigate('/shipping-address')}
+                        >
+                          <Settings className="w-3.5 h-3.5 text-zinc-400" />
+                          <span>ঠিকানা ম্যানেজ</span>
+                        </Button>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl">
-                      <MapPin className="w-10 h-10 text-zinc-400 mb-3" />
-                      <h3 className="font-bold text-zinc-900 dark:text-zinc-100 mb-1">{t('No Address Found') || 'No Address Found'}</h3>
-                      <p className="text-sm text-zinc-500 mb-4">{t('Please add a shipping address to continue.') || 'Please add a shipping address to continue.'}</p>
-                      <Button onClick={() => navigate('/shipping-address')}>
-                        {t('Add Shipping Address') || 'Add Shipping Address'}
+                  ) : null}
+
+                  {/* Add New Address Form with Bangladesh Selector */}
+                  {(isAddingNewAddress || savedAddresses.length === 0) && (
+                    <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border-2 border-emerald-500/30 space-y-4 shadow-sm">
+                      <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                        <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                          নতুন ডেলিভারি ঠিকানা যুক্ত করুন
+                        </h3>
+                        {savedAddresses.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsAddingNewAddress(false)}
+                            className="text-xs text-zinc-500"
+                          >
+                            ✕
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">
+                            আপনার পুরো নাম (Full Name) <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            placeholder="যেমন: মোঃ সাব্বির আহমেদ"
+                            value={newAddress.name}
+                            onChange={(e) => setNewAddress({ ...newAddress, name: e.target.value })}
+                            className="bg-zinc-50 dark:bg-zinc-800"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">
+                            বাংলাদেশি ফোন নম্বর (Phone) <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            type="tel"
+                            placeholder="01XXXXXXXXX (11 Digits)"
+                            value={newAddress.phone}
+                            onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
+                            className="bg-zinc-50 dark:bg-zinc-800"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Integrated A-Z Bangladesh Geographic Selector */}
+                      <BangladeshAddressSelector
+                        onAddressChange={(formatted) => {
+                          setNewAddress((prev: any) => ({ ...prev, address: formatted }));
+                        }}
+                      />
+
+                      <Button
+                        onClick={handleSaveAddress}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-2xl shadow-lg shadow-emerald-600/20"
+                      >
+                        ঠিকানা সংরক্ষণ করুন (Save Delivery Address)
                       </Button>
                     </div>
                   )}
@@ -1366,25 +1568,25 @@ export default function CheckoutPage() {
                     <div className="space-y-2">
                       <Label className="text-zinc-500">Shipping Details</Label>
                       <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-sm font-medium">
-                        <p>
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100">
                           {
-                            savedAddresses.find(
-                              (a) => a.id === selectedAddressId,
-                            )?.name
+                            typeof savedAddresses.find((a) => a.id === selectedAddressId)?.name === "string"
+                              ? savedAddresses.find((a) => a.id === selectedAddressId)?.name
+                              : "User"
                           }
                         </p>
-                        <p>
+                        <p className="text-zinc-500">
                           {
-                            savedAddresses.find(
-                              (a) => a.id === selectedAddressId,
-                            )?.phone
+                            typeof savedAddresses.find((a) => a.id === selectedAddressId)?.phone === "string"
+                              ? savedAddresses.find((a) => a.id === selectedAddressId)?.phone
+                              : ""
                           }
                         </p>
-                        <p className="mt-2">
+                        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
                           {
-                            savedAddresses.find(
-                              (a) => a.id === selectedAddressId,
-                            )?.address
+                            formatAddressText(
+                              savedAddresses.find((a) => a.id === selectedAddressId)?.address
+                            )
                           }
                         </p>
                       </div>

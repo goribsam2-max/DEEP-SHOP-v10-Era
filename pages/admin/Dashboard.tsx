@@ -29,7 +29,8 @@ import {
   Phone,
   MessageSquare,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  Activity
 } from "lucide-react";
 import {
   AreaChart,
@@ -44,6 +45,14 @@ import {
 import { StaffContext } from "../../components/AdminLayout";
 
 const ADMIN_PIN_ITEMS: PinListItem[] = [
+  {
+    id: 'system-diagnostics',
+    name: 'System Health & Error Diagnostics Hub',
+    info: 'Real-time site health scanner, 1-click auto-fix & AI prompts',
+    icon: Activity,
+    pinned: true,
+    href: 'diagnostics'
+  },
   {
     id: 'manage-security',
     name: 'Security & Threat Radar',

@@ -1190,19 +1190,71 @@ const toSlug = (text?: string) => {
     .replace(/(^-|-$)+/g, "");
 };
 
-const fetchProductData = async (productId: string) => {
+const fetchProductData = async (productIdOrSlug: string) => {
+  if (hasValidFirebaseAdmin) {
     try {
-      const res = await fetch(
-        `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/products/${productId}`,
-      );
-      if (!res.ok) return null;
+      // 1. Try direct ID lookup
+      const docSnap = await admin.firestore().collection("products").doc(productIdOrSlug).get();
+      if (docSnap.exists) {
+        return docSnap.data();
+      }
+      // 2. Try slug matching
+      const allProds = await admin.firestore().collection("products").get();
+      for (const d of allProds.docs) {
+        const data = d.data();
+        const slug = toSlug(data.title || data.name || "");
+        if (slug === productIdOrSlug || d.id === productIdOrSlug) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.error("Firebase Admin product fetch error:", e);
+    }
+  }
+
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/products/${productIdOrSlug}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.fields;
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+};
+
+const fetchBlogData = async (slugOrId: string) => {
+  if (hasValidFirebaseAdmin) {
+    try {
+      // 1. Try slug query
+      const querySnap = await admin.firestore().collection("blogs").where("slug", "==", slugOrId).limit(1).get();
+      if (!querySnap.empty) {
+        return querySnap.docs[0].data();
+      }
+      // 2. Try doc ID
+      const docSnap = await admin.firestore().collection("blogs").doc(slugOrId).get();
+      if (docSnap.exists) {
+        return docSnap.data();
+      }
+    } catch (e) {
+      console.error("Firebase Admin blog fetch error:", e);
+    }
+  }
+
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/blogs/${slugOrId}`,
+    );
+    if (res.ok) {
       const data = await res.json();
       return data.fields;
-    } catch (e) {
-      console.error(e);
-      return null;
     }
-  };
+  } catch (e) {}
+
+  return null;
+};
 
   
 let appInitialized = false;
@@ -1229,6 +1281,22 @@ export async function initializeAppAsync() {
     });
     app.use(vite.middlewares);
   }
+
+  // Favicon & Icon static handlers
+  app.get("/favicon.ico", (_req, res) => {
+    const icoPath = path.join(process.cwd(), "public", "favicon.ico");
+    if (fs.existsSync(icoPath)) {
+      res.setHeader("Content-Type", "image/x-icon");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.sendFile(icoPath);
+    }
+    const pngPath = path.join(process.cwd(), "public", "favicon.png");
+    if (fs.existsSync(pngPath)) {
+      res.setHeader("Content-Type", "image/png");
+      return res.sendFile(pngPath);
+    }
+    res.status(204).end();
+  });
 
   // Explicit XML sitemap route for Google Search Console and crawlers
   app.get("/sitemap.xml", async (_req, res) => {
@@ -1300,7 +1368,6 @@ export async function initializeAppAsync() {
         }
       }
 
-      // Check if it's a product page matching `/product/:id` or `/:slug`
       const knownAppRoutes = [
         '/', '/all-products', '/cart', '/checkout', '/admin', '/seller', '/courier', 
         '/messages', '/profile', '/orders', '/login', '/register', '/signup', '/settings', 
@@ -1312,38 +1379,49 @@ export async function initializeAppAsync() {
       const hasExtension = req.path.includes('.');
 
       const productMatch = req.path.match(/^\/product\/(.+)/);
+      const blogMatch = req.path.match(/^\/blog\/(.+)/);
       const isSlugMatch = !isKnownRoute && !hasExtension && !req.path.startsWith("/api");
 
       let product: any = null;
+      let blog: any = null;
+
       if (productMatch && productMatch[1]) {
-        const productId = productMatch[1].split("/")[0];
-        product = await fetchProductData(productId);
-      } else if (isSlugMatch && hasValidFirebaseAdmin) {
-        try {
-          const snapshot = await getFirestore().collection("products").get();
-          for (const doc of snapshot.docs) {
-            const data = doc.data();
-            const slug = toSlug(data.title || data.name || "");
-            if (slug && `/${slug}` === req.path) {
-              product = data;
-              break;
-            }
-          }
-        } catch (e) {}
+        const segments = productMatch[1].split("/").filter(Boolean);
+        const lastPart = segments[segments.length - 1];
+        const firstPart = segments[0];
+        product = await fetchProductData(lastPart);
+        if (!product && lastPart !== firstPart) {
+          product = await fetchProductData(firstPart);
+        }
+      } else if (blogMatch && blogMatch[1]) {
+        const blogSlug = blogMatch[1].split("/")[0];
+        blog = await fetchBlogData(blogSlug);
+      } else if (isSlugMatch) {
+        const cleanSlug = req.path.replace(/^\//, "");
+        product = await fetchProductData(cleanSlug);
+        if (!product) {
+          blog = await fetchBlogData(cleanSlug);
+        }
       }
 
       if (product) {
-        const title = product.title?.stringValue || "Product";
-        const description = product.description?.stringValue || "";
-        const imageUrl =
+        const title = product.title?.stringValue || product.title || product.name?.stringValue || product.name || "Product";
+        const description = product.description?.stringValue || product.description || `Buy ${title} at DEEP SHOP - 100% authentic border cross devices with fast delivery in Bangladesh.`;
+        let imageUrl =
           product.image?.stringValue ||
+          product.image ||
+          (Array.isArray(product.images) ? product.images[0] : null) ||
           product.images?.arrayValue?.values?.[0]?.stringValue ||
-          "/favicon.png";
+          "https://www.deepshop.top/favicon.png";
+        
+        if (imageUrl.startsWith("/")) {
+          imageUrl = `https://www.deepshop.top${imageUrl}`;
+        }
         const price =
           product.price?.numberValue ||
           product.price?.integerValue ||
           product.price?.doubleValue ||
-          0;
+          (typeof product.price === "number" ? product.price : 0);
 
         let metaTags = `
           <title>${title} | DEEP SHOP</title>
@@ -1369,37 +1447,12 @@ export async function initializeAppAsync() {
             "@type": "Product",
             "name": ${JSON.stringify(title)},
             "image": [${JSON.stringify(imageUrl)}],
-            "description": ${JSON.stringify(description || `Buy ${title} at DEEP SHOP premium store. 100% authentic border cross devices with fast delivery in Bangladesh.`)},
+            "description": ${JSON.stringify(description)},
             "sku": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
-            "mpn": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
-            "productID": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
             "brand": {
               "@type": "Brand",
               "name": "DEEP SHOP"
             },
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": "4.8",
-              "reviewCount": 12,
-              "bestRating": "5",
-              "worstRating": "1"
-            },
-            "review": [
-              {
-                "@type": "Review",
-                "reviewRating": {
-                  "@type": "Rating",
-                  "ratingValue": "5",
-                  "bestRating": "5",
-                  "worstRating": "1"
-                },
-                "author": {
-                  "@type": "Person",
-                  "name": "Verified Customer"
-                },
-                "reviewBody": "100% authentic and original product with official warranty support from DEEP SHOP."
-              }
-            ],
             "offers": {
               "@type": "Offer",
               "url": "https://www.deepshop.top${req.path}",
@@ -1407,115 +1460,139 @@ export async function initializeAppAsync() {
               "price": ${price || 0},
               "priceValidUntil": "2027-12-31",
               "availability": "https://schema.org/InStock",
-              "itemCondition": "https://schema.org/NewCondition",
-              "hasMerchantReturnPolicy": {
-                "@type": "MerchantReturnPolicy",
-                "applicableCountry": "BD",
-                "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-                "merchantReturnDays": 7,
-                "returnMethod": "https://schema.org/ReturnByMail",
-                "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility"
-              },
-              "shippingDetails": {
-                "@type": "OfferShippingDetails",
-                "shippingRate": {
-                  "@type": "MonetaryAmount",
-                  "value": 120,
-                  "currency": "BDT"
-                },
-                "shippingDestination": {
-                  "@type": "DefinedRegion",
-                  "addressCountry": "BD"
-                },
-                "deliveryTime": {
-                  "@type": "ShippingDeliveryTime",
-                  "handlingTime": {
-                    "@type": "QuantitativeValue",
-                    "minValue": 0,
-                    "maxValue": 1,
-                    "unitCode": "DAY"
-                  },
-                  "transitTime": {
-                    "@type": "QuantitativeValue",
-                    "minValue": 1,
-                    "maxValue": 3,
-                    "unitCode": "DAY"
-                  }
-                }
-              }
+              "itemCondition": "https://schema.org/NewCondition"
             }
           }
           </script>
         `;
 
-        // Inject meta tags
-        const metaRegex =
-          /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
+        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
         if (metaRegex.test(template)) {
           template = template.replace(metaRegex, metaTags);
         } else {
           template = template.replace("</head>", `${metaTags}\n</head>`);
         }
+      } else if (blog) {
+        const title = blog.title?.stringValue || blog.title || "Blog Post";
+        let rawContent = blog.content?.stringValue || blog.content || "";
+        const cleanContent = rawContent.replace(/\[\[.*?\]\]/g, "").replace(/[#*`_]/g, "").slice(0, 160);
+        const description = blog.excerpt?.stringValue || blog.excerpt || cleanContent || "Read the latest update on DEEP SHOP.";
+        let imageUrl =
+          blog.image?.stringValue ||
+          blog.image ||
+          blog.coverImage?.stringValue ||
+          blog.coverImage ||
+          "https://www.deepshop.top/favicon.png";
 
-        // Basic HTML Pre-rendering for AEO / Bots
-        const preRenderedHTML = `
-          <div style="display: none;" aria-hidden="true">
-            <h1>${title}</h1>
-            <p>${description}</p>
-            <img src="${imageUrl}" alt="${title}" />
-            <p>Price: BDT ${price}</p>
-          </div>
+        if (imageUrl.startsWith("/")) {
+          imageUrl = `https://www.deepshop.top${imageUrl}`;
+        }
+
+        let metaTags = `
+          <title>${title} | DEEP SHOP Blog</title>
+          <meta name="description" content="${description}" />
+          <meta property="og:title" content="${title} | DEEP SHOP" />
+          <meta property="og:description" content="${description}" />
+          <meta property="og:image" content="${imageUrl}" />
+          <meta property="og:type" content="article" />
+          <meta property="og:url" content="https://www.deepshop.top${req.path}" />
+          <link rel="canonical" href="https://www.deepshop.top${req.path}" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content="${title}" />
+          <meta name="twitter:description" content="${description}" />
+          <meta name="twitter:image" content="${imageUrl}" />
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "headline": ${JSON.stringify(title)},
+            "image": [${JSON.stringify(imageUrl)}],
+            "description": ${JSON.stringify(description)},
+            "publisher": {
+              "@type": "Organization",
+              "name": "DEEP SHOP",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://www.deepshop.top/favicon.png"
+              }
+            },
+            "mainEntityOfPage": {
+              "@type": "WebPage",
+              "@id": "https://www.deepshop.top${req.path}"
+            }
+          }
+          </script>
         `;
-        template = template.replace('<div id="root"></div>', '<div id="root">' + preRenderedHTML + '</div>');
+
+        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
+        if (metaRegex.test(template)) {
+          template = template.replace(metaRegex, metaTags);
+        } else {
+          template = template.replace("</head>", `${metaTags}\n</head>`);
+        }
       } else if (req.path === "/all-products") {
         const category = req.query.category ? String(req.query.category) : "All";
         const canonicalUrl = category !== "All" ? `https://www.deepshop.top/all-products?category=${encodeURIComponent(category)}` : `https://www.deepshop.top/all-products`;
         
         let metaTags = `
           <title>${category === "All" ? "All Products" : `${category} Products`} | DEEP SHOP</title>
-          <meta name="description" content="Browse our collection of ${category} at DEEP SHOP." />
+          <meta name="description" content="Browse our collection of authentic border cross devices and tech products at DEEP SHOP." />
           <meta property="og:title" content="${category === "All" ? "All Products" : `${category} Products`} | DEEP SHOP" />
+          <meta property="og:description" content="Browse our collection of authentic border cross devices and tech products at DEEP SHOP." />
+          <meta property="og:image" content="https://www.deepshop.top/favicon.png" />
+          <meta name="twitter:image" content="https://www.deepshop.top/favicon.png" />
           <link rel="canonical" href="${canonicalUrl}" />
           <meta property="og:url" content="${canonicalUrl}" />
         `;
         
-        const metaRegex =/<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
+        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
         if (metaRegex.test(template)) {
           template = template.replace(metaRegex, metaTags);
         } else {
           template = template.replace("</head>", `${metaTags}\n</head>`);
         }
-      } else if (req.path === "/" && hasValidFirebaseAdmin) {
+      } else if (req.path === "/" || req.path === "") {
         // Fetch home SEO
-        try {
-          const seoSnap = await getFirestore()
-            .collection("settings")
-            .doc("seo")
-            .get();
-          if (seoSnap.exists) {
-            const data = seoSnap.data() as any;
-            const title = data.metaTitle || "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site";
-            const description =
-              data.metaDescription ||
-              "border cross devices, border cross products, illegal products buy sell site";
-            const imageUrl =
-              data.metaImage || "/favicon.png";
+        let title = "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site";
+        let description = "border cross devices, border cross products, illegal products buy sell site";
+        let imageUrl = "https://www.deepshop.top/favicon.png";
 
-            let metaTags = `
-                <title>${title}</title>
-                <meta name="description" content="${description}" />
-                <meta property="og:title" content="${title}" />
-                <meta property="og:description" content="${description}" />
-                <meta property="og:image" content="${imageUrl}" />
-                <meta property="og:type" content="website" />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content="${title}" />
-                <meta name="twitter:description" content="${description}" />
-                <meta name="twitter:image" content="${imageUrl}" />
-             `;
-            template = template.replace("</head>", `${metaTags}\n</head>`);
-          }
-        } catch (e) {}
+        if (hasValidFirebaseAdmin) {
+          try {
+            const seoSnap = await getFirestore().collection("settings").doc("seo").get();
+            if (seoSnap.exists) {
+              const data = seoSnap.data() as any;
+              if (data.metaTitle) title = data.metaTitle;
+              if (data.metaDescription) description = data.metaDescription;
+              if (data.metaImage) {
+                imageUrl = data.metaImage.startsWith("http") ? data.metaImage : `https://www.deepshop.top${data.metaImage}`;
+              } else if (data.appIconUrl) {
+                imageUrl = data.appIconUrl.startsWith("http") ? data.appIconUrl : `https://www.deepshop.top${data.appIconUrl}`;
+              }
+            }
+          } catch (e) {}
+        }
+
+        let metaTags = `
+            <title>${title}</title>
+            <meta name="description" content="${description}" />
+            <meta property="og:title" content="${title}" />
+            <meta property="og:description" content="${description}" />
+            <meta property="og:image" content="${imageUrl}" />
+            <meta property="og:type" content="website" />
+            <meta property="og:url" content="https://www.deepshop.top/" />
+            <link rel="canonical" href="https://www.deepshop.top/" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content="${title}" />
+            <meta name="twitter:description" content="${description}" />
+            <meta name="twitter:image" content="${imageUrl}" />
+         `;
+        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
+        if (metaRegex.test(template)) {
+          template = template.replace(metaRegex, metaTags);
+        } else {
+          template = template.replace("</head>", `${metaTags}\n</head>`);
+        }
       }
 
       res.status(200).set({ "Content-Type": "text/html" }).end(template);

@@ -122,7 +122,15 @@ const customIconMapping: Record<string, keyof typeof LucideIcons> = {
   'quote-right': 'Quote',
   'heart': 'Heart',
   'cog': 'Settings',
+  'logout': 'LogOut',
+  'log-out': 'LogOut',
+  'sign-out': 'LogOut',
   'sign-out-alt': 'LogOut',
+  'login': 'LogIn',
+  'log-in': 'LogIn',
+  'sign-in': 'LogIn',
+  'sign-in-alt': 'LogIn',
+  'close': 'X',
   'lock': 'Lock',
   'unlock': 'Unlock',
   'smile': 'Smile',
@@ -160,7 +168,6 @@ const customIconMapping: Record<string, keyof typeof LucideIcons> = {
   'help-circle': 'HelpCircle',
   'info': 'Info',
   'minus': 'Minus',
-  'log-out': 'LogOut',
   'bar-chart': 'BarChart3',
   'layout': 'Layout',
   'store': 'Store',
@@ -258,8 +265,14 @@ function initCustomIconsListener() {
 }
 
 const Icon: React.FC<IconProps> = ({ name, className = '', solid = false, ...props }) => {
-  const pascalName = (customIconMapping[name] || formatNameToPascal(name)) as keyof typeof LucideIcons;
-  const LucideIcon = LucideIcons[pascalName] as React.FC<any> | undefined;
+  const normKey = (name || '').toLowerCase().trim();
+  const pascalName = (customIconMapping[name] || customIconMapping[normKey] || formatNameToPascal(name)) as keyof typeof LucideIcons;
+  const LucideIcon = (LucideIcons[pascalName] || 
+    (pascalName === ('Logout' as any) ? LucideIcons.LogOut : undefined) || 
+    (pascalName === ('Login' as any) ? LucideIcons.LogIn : undefined) ||
+    (normKey === 'logout' ? LucideIcons.LogOut : undefined) ||
+    (normKey === 'login' ? LucideIcons.LogIn : undefined)
+  ) as React.FC<any> | undefined;
 
   const [customSvg, setCustomSvg] = useState<string | null>(() => {
     const key = name.toLowerCase();

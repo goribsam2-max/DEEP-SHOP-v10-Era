@@ -1354,13 +1354,53 @@ const SellerDashboard: React.FC = () => {
                     </div>
                     <div className="space-y-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                       <div className="flex items-start gap-2.5">
-                        <MapPin className="w-4 h-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 shrink-0 mt-0.5" />
-                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300">{(typeof order.shippingAddress === 'string' ? order.shippingAddress : order.shippingAddress?.address) || "No address specified"}</span>
+                        <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Full Delivery Address:</span>
+                          <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-relaxed block mt-0.5">
+                            {(typeof order.shippingAddress === 'string' ? order.shippingAddress : `${order.shippingAddress?.address || ''}, ${order.shippingAddress?.upazila || ''}, ${order.shippingAddress?.district || order.shippingAddress?.city || ''}, ${order.shippingAddress?.division || ''}`) || "No address specified"}
+                          </span>
+                        </div>
                       </div>
+                      
                       <div className="flex items-start gap-2.5">
-                        <Phone className="w-4 h-4 text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 shrink-0 mt-0.5" />
-                        <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300">{order.contactNumber || order.shippingAddress?.phone || "No phone specified"}</span>
+                        <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Primary Phone:</span>
+                          <span className="font-mono font-bold text-xs text-zinc-900 dark:text-zinc-100 block mt-0.5">
+                            {order.contactNumber || order.shippingAddress?.phone || "No phone specified"}
+                          </span>
+                          {order.altNumber && (
+                            <span className="font-mono text-[11px] text-zinc-500 block mt-0.5">
+                              Alt Phone: {order.altNumber}
+                            </span>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Bypass Verification Info for Seller */}
+                      {(order.guardianNumber || order.nidCardUrl) && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200/60 dark:border-amber-900/50 text-xs space-y-1">
+                          <span className="font-bold text-amber-800 dark:text-amber-300 block">⚠️ Bypass Customer Info:</span>
+                          {order.guardianNumber && (
+                            <p><span className="text-zinc-500">Guardian Number:</span> <span className="font-mono font-bold text-amber-900 dark:text-amber-200">{order.guardianNumber}</span></p>
+                          )}
+                          {order.nidCardUrl && (
+                            <p>
+                              <span className="text-zinc-500">NID Document:</span>{" "}
+                              <a href={order.nidCardUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold">
+                                View Customer NID ↗
+                              </a>
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {order.isGift && order.giftNote && (
+                        <div className="p-2.5 bg-pink-50 dark:bg-pink-950/30 rounded-xl border border-pink-200 dark:border-pink-900 text-xs">
+                          <span className="font-bold text-pink-700 dark:text-pink-300">🎁 Gift Order Note:</span> {order.giftNote}
+                        </div>
+                      )}
                     </div>
                   </div>
 

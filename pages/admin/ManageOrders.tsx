@@ -409,19 +409,91 @@ const ManageOrders: React.FC = () => {
                       <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Shipping Information</h4>
-                            <div className="text-sm bg-white dark:bg-zinc-900 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                              <p><span className="font-medium text-zinc-400">Name:</span> {order.customerName}</p>
-                              <p><span className="font-medium text-zinc-400">Phone:</span> {order.contactNumber}</p>
-                              <p><span className="font-medium text-zinc-400">Address:</span> {typeof order.shippingAddress === 'string' ? order.shippingAddress : `${(order.shippingAddress as any).address}, ${(order.shippingAddress as any).city}, ${(order.shippingAddress as any).zone}`}</p>
-                              {typeof order.shippingAddress !== 'string' && (order.shippingAddress as any).area && <p><span className="font-medium text-zinc-400">Area:</span> {(order.shippingAddress as any).area}</p>}
+                            <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Customer & Shipping Information</h4>
+                            <div className="text-sm bg-white dark:bg-zinc-900 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                                <div>
+                                  <span className="text-[11px] font-medium text-zinc-400 block">Customer Name:</span>
+                                  <span className="font-bold text-zinc-900 dark:text-zinc-100">{order.customerName || "N/A"}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[11px] font-medium text-zinc-400 block">Primary Contact:</span>
+                                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{order.contactNumber || "N/A"}</span>
+                                </div>
+                                {order.altNumber && (
+                                  <div>
+                                    <span className="text-[11px] font-medium text-zinc-400 block">Alternative Phone:</span>
+                                    <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">{order.altNumber}</span>
+                                  </div>
+                                )}
+                                {order.productClassification && (
+                                  <div>
+                                    <span className="text-[11px] font-medium text-zinc-400 block">Classification:</span>
+                                    <span className="inline-block text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                                      {order.productClassification}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <span className="text-[11px] font-medium text-zinc-400 block">Full Delivery Address:</span>
+                                <p className="font-medium text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-lg text-xs leading-relaxed mt-0.5 border border-zinc-100 dark:border-zinc-800">
+                                  {typeof order.shippingAddress === 'string' ? order.shippingAddress : `${(order.shippingAddress as any).address || ''}, ${(order.shippingAddress as any).upazila || ''}, ${(order.shippingAddress as any).district || (order.shippingAddress as any).city || ''}, ${(order.shippingAddress as any).division || ''}`}
+                                </p>
+                              </div>
+
+                              {/* Bypass Verification details if any */}
+                              {(order.guardianNumber || order.nidCardUrl) && (
+                                <div className="p-2.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-lg border border-amber-200/60 dark:border-amber-900/40 text-xs space-y-1">
+                                  <span className="font-bold text-amber-800 dark:text-amber-300 block">⚠️ Bypass Verification Data:</span>
+                                  {order.guardianNumber && (
+                                    <p><span className="text-zinc-500">Guardian Phone:</span> <span className="font-mono font-bold text-amber-900 dark:text-amber-200">{order.guardianNumber}</span></p>
+                                  )}
+                                  {order.nidCardUrl && (
+                                    <p>
+                                      <span className="text-zinc-500">NID Document:</span>{" "}
+                                      <a href={order.nidCardUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-semibold">
+                                        View Uploaded NID ↗
+                                      </a>
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {order.isGift && order.giftNote && (
+                                <div className="p-2 bg-pink-50 dark:bg-pink-950/30 rounded-lg border border-pink-200 dark:border-pink-900 text-xs">
+                                  <span className="font-bold text-pink-700 dark:text-pink-300">🎁 Gift Order Note:</span> {order.giftNote}
+                                </div>
+                              )}
                               
-                              <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs space-y-1">
-                                <p><span className="font-bold text-zinc-500">Payment Method:</span> {order.paymentMethod || "COD"}</p>
-                                <p><span className="font-medium text-zinc-400">Sender Number:</span> <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{order.accountNameSender || order.senderNumber || order.contactNumber || "N/A"}</span></p>
-                                <p><span className="font-medium text-zinc-400">Received On (Store):</span> <span className="font-mono font-bold text-purple-600 dark:text-purple-400">{order.receiverNumber || "Store Number"}</span></p>
-                                {order.gatewayUsed && <p className="font-bold text-pink-600 dark:text-pink-400"><span className="font-medium text-zinc-400">Payment Gateway:</span> {order.gatewayUsed.toUpperCase()} (৳150 Delivery Fee Paid)</p>}
-                                {(order.transactionId || order.trxId) && <p><span className="font-medium text-zinc-400">TrxID/Ref:</span> <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{order.transactionId || order.trxId}</span></p>}
+                              <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs space-y-1.5">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-zinc-400">Payment Option:</span>
+                                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{order.paymentOption || order.paymentMethod || "COD"}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-zinc-400">Advance Paid:</span>
+                                  <span className="font-black text-emerald-600 dark:text-emerald-400">৳{order.advanceAmount || order.advancePaid || 0}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-zinc-400">Due On Delivery (COD):</span>
+                                  <span className="font-black text-rose-600 dark:text-rose-400">৳{order.dueAmount ?? Math.max(0, (order.total || 0) - (order.advanceAmount || 0))}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-zinc-400">Sender Number:</span>
+                                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{order.accountNameSender || order.senderNumber || order.contactNumber || "N/A"}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-zinc-400">Store Receiver:</span>
+                                  <span className="font-mono font-bold text-purple-600 dark:text-purple-400">{order.receiverNumber || "Store Fallback Number"}</span>
+                                </div>
+                                {(order.transactionId || order.trxId) && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-zinc-400">TrxID / Reference:</span>
+                                    <span className="font-mono font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">{order.transactionId || order.trxId}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

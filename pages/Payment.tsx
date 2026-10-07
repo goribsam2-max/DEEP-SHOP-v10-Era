@@ -24,6 +24,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useNotify } from "../components/Notifications";
 import { formatPrice, isForbiddenNumber } from "@/lib/utils";
+import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
 import { sendOrderToTelegram } from "../services/telegram";
 import { OrderStatus } from "../types";
 
@@ -296,22 +297,42 @@ const Payment: React.FC = () => {
   const displayTrxRef = `TRX-${orderId?.slice(0, 8).toUpperCase()}`;
 
   // Step 2 Submission -> validates Sender Number and proceeds to Step 3
-  const handleProceedToStep3 = () => {
-    const cleaned = senderNumber.trim().replace(/\D/g, "");
-    if (!cleaned || cleaned.length < 11) {
-      return notify("অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর লিখুন।", "error");
+  const handleProceedToStep3 = async () => {
+    // Abuse check
+    const abuseCheck = detectAbuse(senderNumber);
+    if (abuseCheck.hasAbuse) {
+      const strikeRes = await recordAbuseStrike("Payment sender number abusive text");
+      notify(strikeRes.message, "error");
+      return;
     }
+
+    const phoneValidation = validateBangladeshiPhone(senderNumber);
+    if (!phoneValidation.isValid) {
+      return notify(phoneValidation.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন।", "error");
+    }
+    setSenderNumber(phoneValidation.normalized);
     setStep(3);
   };
 
   // Step 3 Final Verification Submission
   const handleConfirmFinalPayment = async () => {
-    if (!senderNumber.trim()) {
-      notify("অনুগ্রহ করে প্রেরক নম্বর লিখুন।", "error");
+    // Abuse check
+    const abuseCheckSender = detectAbuse(senderNumber);
+    const abuseCheckTrx = detectAbuse(trxId);
+    if (abuseCheckSender.hasAbuse || abuseCheckTrx.hasAbuse) {
+      const strikeRes = await recordAbuseStrike("Payment TrxID or note abusive text");
+      notify(strikeRes.message, "error");
+      return;
+    }
+
+    const phoneValidation = validateBangladeshiPhone(senderNumber);
+    if (!phoneValidation.isValid) {
+      notify(phoneValidation.error || "অনুগ্রহ করে সঠিক প্রেরক নম্বর লিখুন।", "error");
       setStep(2);
       return;
     }
-    if (!trxId.trim() || trxId.trim().length < 4) {
+    const cleanTrx = trxId.trim();
+    if (!cleanTrx || cleanTrx.length < 4) {
       notify("অনুগ্রহ করে TrxID অথবা ট্রানজেকশনের শেষ ৪টি ডিজিট লিখুন।", "error");
       setShowTrxAccordion(true);
       return;
@@ -322,10 +343,10 @@ const Payment: React.FC = () => {
       if (orderId) {
         const orderRef = doc(db, "orders", orderId);
         const updatePayload: any = {
-          accountNameSender: senderNumber.trim(),
-          senderNumber: senderNumber.trim(),
-          transactionId: trxId.trim(),
-          lastDigits: trxId.trim(),
+          accountNameSender: phoneValidation.normalized,
+          senderNumber: phoneValidation.normalized,
+          transactionId: cleanTrx,
+          lastDigits: cleanTrx,
           paymentMethod: selectedMethod === "bkash" ? "bKash" : "Nagad",
           receiverNumber: currentReceiverNumber,
           paymentStatus: "paid_pending",

@@ -5,17 +5,33 @@ import Icon from "./Icon";
 import { ShieldAlert } from "lucide-react";
 
 export default function BanOverlay() {
-  const [isBanned, setIsBanned] = useState(false);
+  const [isBanned, setIsBanned] = useState(() => {
+    try {
+      return localStorage.getItem("deepshop_banned") === "true";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     let unsubProfile: any = null;
+
+    const onTriggerBan = () => {
+      setIsBanned(true);
+    };
+    window.addEventListener("triggerBanOverlay", onTriggerBan);
 
     const checkBan = async (uid: string) => {
       unsubProfile = onSnapshot(doc(db, "users", uid), (docSnap) => {
         if (docSnap.exists() && docSnap.data().isBanned) {
           setIsBanned(true);
+          try { localStorage.setItem("deepshop_banned", "true"); } catch {}
         } else {
-          setIsBanned(false);
+          // Check local
+          const localBan = localStorage.getItem("deepshop_banned") === "true";
+          if (!localBan) {
+            setIsBanned(false);
+          }
         }
       });
     };
@@ -30,6 +46,7 @@ export default function BanOverlay() {
           const snap = await getDoc(doc(db, "config", "banned_ips"));
           if (snap.exists() && snap.data()[formattedIp] === true) {
             setIsBanned(true);
+            try { localStorage.setItem("deepshop_banned", "true"); } catch {}
           }
           
           if (currentUserUid) {
@@ -42,19 +59,25 @@ export default function BanOverlay() {
       }
     };
 
-    checkIP(); // old call
+    checkIP();
 
     const unsubAuth = auth.onAuthStateChanged((user) => {
       if (user) {
         checkBan(user.uid);
       } else {
         if (unsubProfile) unsubProfile();
-        setIsBanned(false);
-        checkIP(); // old call // recheck IP when logged out
+        const localBan = localStorage.getItem("deepshop_banned") === "true";
+        if (localBan) {
+          setIsBanned(true);
+        } else {
+          setIsBanned(false);
+          checkIP();
+        }
       }
     });
 
     return () => {
+      window.removeEventListener("triggerBanOverlay", onTriggerBan);
       unsubAuth();
       if (unsubProfile) unsubProfile();
     };
@@ -63,17 +86,18 @@ export default function BanOverlay() {
   if (!isBanned) return null;
 
   return (
-    <div className="fixed inset-0 z-[999999] bg-black/95 flex flex-col items-center justify-center p-6 text-center select-none" style={{ pointerEvents: 'all' }}>
-      <div className="bg-zinc-900 border border-red-500/30 p-8 rounded-3xl max-w-sm w-full shadow-[0_0_100px_rgba(239,68,68,0.2)]">
+    <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center select-none" style={{ pointerEvents: 'all' }}>
+      <div className="bg-zinc-900 border border-red-500/40 p-8 rounded-3xl max-w-sm w-full shadow-[0_0_100px_rgba(239,68,68,0.3)]">
         <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
           <ShieldAlert className="w-10 h-10 text-red-500 animate-pulse" />
         </div>
-        <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Access Denied</h1>
-        <p className="text-sm font-semibold text-zinc-400 mb-6 leading-relaxed">
-          আপনার অ্যাকাউন্ট বা ডিভাইস থেকে এই সাইটে প্রবেশ স্থগিত করা হয়েছে। নিয়ম লঙ্ঘনের কারণে (misbehave) আপনাকে ব্যান করা হয়েছে।
+        <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Access Denied (ব্যান করা হয়েছে)</h1>
+        <p className="text-sm font-semibold text-zinc-300 mb-6 leading-relaxed">
+          আপনার অ্যাকাউন্ট বা ডিভাইস থেকে এই সাইটে প্রবেশ সম্পূর্ণ নিষিদ্ধ করা হয়েছে। ৩ বার গালিগালাজ বা আপত্তিকর তথ্য ব্যবহার করার কারণে আপনার ডিভাইস স্থায়ীভাবে ব্যান করা হয়েছে।
         </p>
-        <div className="bg-black/50 p-4 rounded-2xl border border-white/5">
-          <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Status: Banned</p>
+        <div className="bg-black/60 p-4 rounded-2xl border border-red-500/20">
+          <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Status: Permanently Banned</p>
+          <p className="text-[11px] text-zinc-500 mt-1">Policy: Zero Tolerance for Abuse & Fake Details</p>
         </div>
       </div>
     </div>
