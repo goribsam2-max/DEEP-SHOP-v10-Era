@@ -387,17 +387,28 @@ export async function approveSubscription(
     autoRenew: false,
   };
 
+  // Helper to remove undefined properties before saving to Firestore
+  const cleanPayload = (obj: Record<string, any>) => {
+    const cleaned: Record<string, any> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (val !== undefined) {
+        cleaned[key] = val;
+      }
+    }
+    return cleaned;
+  };
+
   // 1. Update subscription request status
   await setDoc(
     subRef,
-    {
+    cleanPayload({
       ...subData,
       status: "approved",
       approvedAt: now,
-      approvedBy: adminIdentifier,
+      approvedBy: adminIdentifier || "Admin",
       startDate: now,
       expiryDate: expiryDate,
-    },
+    }),
     { merge: true }
   );
 
@@ -543,16 +554,26 @@ export async function rejectSubscription(
 
   const now = Date.now();
 
+  const cleanPayload = (obj: Record<string, any>) => {
+    const cleaned: Record<string, any> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (val !== undefined) {
+        cleaned[key] = val;
+      }
+    }
+    return cleaned;
+  };
+
   await setDoc(
     subRef,
-    {
+    cleanPayload({
       ...subData,
       status: "rejected",
       rejectedAt: now,
-      rejectedBy: adminIdentifier,
+      rejectedBy: adminIdentifier || "Admin",
       notes: reason,
       rejectionReason: reason,
-    },
+    }),
     { merge: true }
   );
 

@@ -4,6 +4,7 @@ import {
   collection,
   onSnapshot,
   query,
+  where,
   orderBy,
   doc,
   getDocs
@@ -437,7 +438,7 @@ export default function ManageSubscriptions() {
                       <div className="flex items-center justify-between pt-1 border-t border-amber-200/40 dark:border-amber-900/40 font-bold">
                         <span className="text-zinc-700 dark:text-zinc-300">ফি পরিমাণ:</span>
                         <span className="text-sm font-black text-zinc-900 dark:text-white">
-                          ৳{sub.price.toLocaleString("en-BD")}
+                          ৳{(sub.price || 0).toLocaleString("en-BD")}
                         </span>
                       </div>
                     </div>
@@ -546,7 +547,7 @@ export default function ManageSubscriptions() {
                 </div>
                 <div className="flex justify-between pt-1 border-t border-zinc-200 dark:border-zinc-800 font-bold">
                   <span>পেমেন্ট ফি:</span>
-                  <span className="text-sm">৳{approveModalSub.price.toLocaleString("en-BD")}</span>
+                  <span className="text-sm">৳{(approveModalSub.price || 0).toLocaleString("en-BD")}</span>
                 </div>
               </div>
 
