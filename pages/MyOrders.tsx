@@ -15,7 +15,8 @@ import { formatPrice } from "../lib/utils";
 import { useNotify } from "../components/Notifications";
 import { useIllustrations } from "../lib/useIllustrations";
 import Icon from "../components/Icon";
-import { Zap, Smartphone, Sparkles, ShieldCheck, Lock, MapPin } from "lucide-react";
+import { Zap, Smartphone, Sparkles, ShieldCheck, Lock, MapPin, Crown, CheckCircle2, XCircle, Clock, AlertTriangle, RefreshCw, Calendar, Phone, CreditCard } from "lucide-react";
+import { SubscriptionRecord } from "../services/subscription";
 
 const StatusIconSmall = ({ status }: { status: OrderStatus }) => {
   const base =
@@ -87,19 +88,17 @@ const StatusIconSmall = ({ status }: { status: OrderStatus }) => {
 
 const MyOrders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [customPayments, setCustomPayments] = useState<any[]>([]);
-  const [exchanges, setExchanges] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(Date.now());
-  const [activeTab, setActiveTab] = useState<"Pending" | "Active" | "Cancelled" | "Border Offers" | "Custom/Exchange">("Pending");
+  const [activeTab, setActiveTab] = useState<"Pending" | "Active" | "Subscription" | "Cancelled">("Pending");
   const navigate = useNavigate();
   const illustrations = useIllustrations();
   const notify = useNotify();
 
   useEffect(() => {
     let unsubscribeOrders: (() => void) | null = null;
-    let unsubscribePay: (() => void) | null = null;
-    let unsubscribeExchanges: (() => void) | null = null;
+    let unsubscribeSubs: (() => void) | null = null;
 
     // Redirect if not logged in, or link order if logged in
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
@@ -139,19 +138,15 @@ const MyOrders: React.FC = () => {
         setLoading(false);
       });
 
-      // Subscriptions for Custom Payments & Exchanges
-      const payQ = query(collection(db, "custom_payments"), where("userId", "==", uid));
-      unsubscribePay = onSnapshot(payQ, (snapshot) => {
-        const payList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        payList.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-        setCustomPayments(payList);
-      });
-
-      const exQ = query(collection(db, "exchanges"), where("userId", "==", uid));
-      unsubscribeExchanges = onSnapshot(exQ, (snapshot) => {
-        const exList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        exList.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-        setExchanges(exList);
+      // Fetch user's subscription records
+      const subQ = query(collection(db, "subscriptions"), where("userId", "==", uid));
+      unsubscribeSubs = onSnapshot(subQ, (snapshot) => {
+        const list: SubscriptionRecord[] = [];
+        snapshot.forEach((doc) => {
+          list.push({ id: doc.id, ...(doc.data() as any) });
+        });
+        list.sort((a, b) => (b.requestedAt || 0) - (a.requestedAt || 0));
+        setSubscriptions(list);
       });
     });
 
@@ -159,8 +154,7 @@ const MyOrders: React.FC = () => {
     return () => {
       unsubscribeAuth();
       if (unsubscribeOrders) unsubscribeOrders();
-      if (unsubscribePay) unsubscribePay();
-      if (unsubscribeExchanges) unsubscribeExchanges();
+      if (unsubscribeSubs) unsubscribeSubs();
       clearInterval(timer);
     };
   }, [navigate, notify]);
@@ -184,11 +178,6 @@ const MyOrders: React.FC = () => {
   };
 
   const filteredOrders = orders.filter(order => {
-    if (activeTab === "Border Offers") {
-      return order.isBorderOffer === true ||
-             order.productClassification?.toLowerCase().includes("border") ||
-             order.items?.some((i: any) => i.isBorderOffer || i.productType === 'border_offer');
-    }
     if (activeTab === "Pending") {
       return order.status === OrderStatus.PENDING;
     }
@@ -202,144 +191,226 @@ const MyOrders: React.FC = () => {
   });
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-6 pb-[120px] md:pb-12 animate-fade-in min-h-screen bg-zinc-50 dark:bg-zinc-800">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-[120px] md:pb-12 animate-fade-in min-h-screen bg-zinc-50 dark:bg-zinc-800">
       
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div className="w-10"></div>
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">My Order</h1>
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">My Orders & Subscriptions</h1>
         <div className="w-10"></div>
       </div>
 
-      <div className="flex bg-white dark:bg-zinc-900 rounded-[24px] p-1.5 mb-8 border border-zinc-100 dark:border-zinc-800 shadow-sm gap-1 overflow-x-auto no-scrollbar">
-        {["Pending", "Active", "Border Offers", "Cancelled", "Custom/Exchange"].map((tab) => (
+      {/* Tabs */}
+      <div className="flex bg-white dark:bg-zinc-900 rounded-[24px] p-1.5 mb-6 border border-zinc-100 dark:border-zinc-800 shadow-sm gap-1 overflow-x-auto no-scrollbar">
+        {[
+          { id: "Pending", label: "অপেক্ষমাণ" },
+          { id: "Active", label: "সক্রিয়" },
+          { id: "Subscription", label: "সাবস্ক্রিপশন (VIP)" },
+          { id: "Cancelled", label: "বাতিলকৃত" },
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`grow shrink-0 min-w-[80px] whitespace-nowrap text-center py-2 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-bold transition-all ${
-              activeTab === tab
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`grow shrink-0 min-w-[85px] whitespace-nowrap text-center py-2 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-bold transition-all ${
+              activeTab === tab.id
                 ? "bg-zinc-900 text-white dark:bg-amber-500 dark:text-black shadow-md"
                 : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 bg-transparent"
             }`}
           >
-            {tab === "Border Offers" ? "বর্ডার অফার (Border Offers)" : tab}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {activeTab === "Custom/Exchange" ? (
-        <div className="space-y-8 animate-fade-in">
-          {/* Custom Payments Section */}
-          <div className="space-y-4">
-            <h2 className="text-[14px] font-black text-zinc-800 dark:text-zinc-200 uppercase tracking-wider pl-1 flex items-center gap-2">
-              <Icon name="wallet" className="w-4 h-4 text-[#EF8020]" />
-              Custom Payments
-            </h2>
-            {customPayments.length === 0 ? (
-              <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/80 p-8 rounded-[24px] text-center text-zinc-400 text-xs font-semibold">
-                No custom payments found.
+      {activeTab === "Subscription" ? (
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                <Crown className="w-4 h-4" />
               </div>
-            ) : (
-              <div className="space-y-3">
-                {customPayments.map((p) => (
-                  <div key={p.id} className="bg-white dark:bg-zinc-900 p-5 rounded-[24px] border border-zinc-100 dark:border-zinc-800/80 shadow-sm flex flex-col gap-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-zinc-400 font-mono">
-                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ""}
-                      </span>
-                      {p.status === "pending" ? (
-                        <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full text-[10px] font-bold border border-amber-500/10 uppercase tracking-wider">
-                          Pending Approval
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-bold border border-emerald-500/10 uppercase tracking-wider">
-                          Verified & Approved
-                        </span>
-                      )}
-                    </div>
+              <h2 className="text-sm sm:text-base font-black text-zinc-900 dark:text-white uppercase tracking-wider">
+                DEEP SHOP VIP সাবস্ক্রিপশন
+              </h2>
+            </div>
 
-                    <div className="flex justify-between items-end border-b border-zinc-50 dark:border-zinc-800/50 pb-3">
-                      <div>
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-wider block">Sender Number</span>
-                        <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 font-mono">{p.senderNumber}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-wider block">Amount Paid</span>
-                        <span className="text-sm font-black text-zinc-900 dark:text-white">{formatPrice(p.amount)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider block">Transaction ID (TrxID)</span>
-                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">{p.trxId}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <button
+              onClick={() => navigate("/subscription")}
+              className="px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs flex items-center gap-1 shadow-sm transition-all"
+            >
+              <Crown className="w-3.5 h-3.5" />
+              <span>নতুন পাস নিন</span>
+            </button>
           </div>
 
-          {/* Exchanges Section */}
-          <div className="space-y-4">
-            <h2 className="text-[14px] font-black text-zinc-800 dark:text-zinc-200 uppercase tracking-wider pl-1 flex items-center gap-2">
-              <Icon name="sync-alt" className="w-4 h-4 text-[#EF8020]" />
-              Exchange Requests
-            </h2>
-            {exchanges.length === 0 ? (
-              <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800/80 p-8 rounded-[24px] text-center text-zinc-400 text-xs font-semibold">
-                No exchange requests found.
+          {subscriptions.length === 0 ? (
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 p-8 sm:p-12 rounded-[28px] text-center space-y-4 shadow-xs">
+              <Crown className="w-12 h-12 text-amber-500 mx-auto opacity-70" />
+              <div className="space-y-1">
+                <h3 className="font-bold text-base text-zinc-800 dark:text-zinc-200">
+                  কোনো ভিআইপি সাবস্ক্রিপশন রেকর্ড পাওয়া যায়নি
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
+                  আপনার অ্যাকাউন্টে কোনো ভিআইপি সাবস্ক্রিপশন চালু নেই। ০ টাকা অগ্রিমে ফুল ক্যাশ অন ডেলিভারিতে যেকোনো পণ্য অর্ডার করতে এখনই DEEP SHOP VIP পাস নিন।
+                </p>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {exchanges.map((ex) => (
-                  <div key={ex.id} className="bg-white dark:bg-zinc-900 p-5 rounded-[24px] border border-zinc-100 dark:border-zinc-800/80 shadow-sm flex flex-col gap-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-zinc-400 font-mono">
-                        {ex.createdAt ? new Date(ex.createdAt).toLocaleDateString() : ""}
-                      </span>
-                      <span className="px-2.5 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-full text-[10px] font-black border border-orange-500/10 uppercase tracking-wider">
-                        {ex.status.replace(/_/g, " ")}
+              <button
+                onClick={() => navigate("/subscription")}
+                className="px-6 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs shadow-md transition-all hover:scale-105"
+              >
+                ভিআইপি প্ল্যান দেখুন
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {subscriptions.map((sub) => {
+                const now = Date.now();
+                const isExpired = sub.status === "approved" && sub.expiryDate && sub.expiryDate < now;
+                const daysRemaining = sub.expiryDate
+                  ? Math.max(0, Math.ceil((sub.expiryDate - now) / (1000 * 60 * 60 * 24)))
+                  : 0;
+
+                const requestedDateStr = sub.requestedAt
+                  ? new Date(sub.requestedAt).toLocaleDateString("bn-BD", { day: "numeric", month: "long", year: "numeric" })
+                  : "N/A";
+                const startDateStr = sub.startDate
+                  ? new Date(sub.startDate).toLocaleDateString("bn-BD", { day: "numeric", month: "long", year: "numeric" })
+                  : "N/A";
+                const expiryDateStr = sub.expiryDate
+                  ? new Date(sub.expiryDate).toLocaleDateString("bn-BD", { day: "numeric", month: "long", year: "numeric" })
+                  : "N/A";
+
+                return (
+                  <div
+                    key={sub.id}
+                    className="bg-white dark:bg-zinc-900 p-5 rounded-[28px] border border-zinc-200/80 dark:border-zinc-800 shadow-sm space-y-4 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all overflow-hidden"
+                  >
+                    {/* Top Header Row */}
+                    <div className="flex items-start justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1">
+                          <Crown className="w-3 h-3" />
+                          <span>DEEP SHOP VIP &bull; {sub.durationDays} দিন</span>
+                        </span>
+                        <h3 className="font-black text-base sm:text-lg text-zinc-900 dark:text-white mt-0.5">
+                          {sub.planName}
+                        </h3>
+                      </div>
+
+                      {/* Status Badge */}
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                          isExpired
+                            ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900"
+                            : sub.status === "approved"
+                            ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900"
+                            : sub.status === "pending"
+                            ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900"
+                            : "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900"
+                        }`}
+                      >
+                        {isExpired
+                          ? "মেয়াদ শেষ"
+                          : sub.status === "approved"
+                          ? "👑 সক্রিয় VIP"
+                          : sub.status === "pending"
+                          ? "⏳ অপেক্ষমাণ"
+                          : "❌ বাতিলকৃত"}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 bg-[#F5F5F7] dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800/85">
-                      <div>
-                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider block">Your Device</span>
-                        <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-0.5 block">{ex.phoneName}</span>
-                        <span className="text-[10px] text-zinc-500 font-medium mt-1 inline-block bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded-md">
-                          {ex.condition} | {ex.storage}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider block">Desired Device</span>
-                        <span className="text-xs font-black text-orange-500 mt-0.5 block">{ex.targetPhone}</span>
-                        {ex.customPaymentAmount > 0 && (
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1 inline-block">
-                            Paid Amount: {formatPrice(ex.customPaymentAmount)}
+                    {/* Status & Timing Banner */}
+                    {sub.status === "approved" && !isExpired ? (
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/40 text-xs space-y-2">
+                        <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-300 font-bold">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span>ভিআইপি মেম্বারশিপ সক্রিয় আছে</span>
                           </span>
-                        )}
+                          <span className="text-[11px] bg-emerald-500/20 px-2 py-0.5 rounded-full font-black">
+                            অবশিষ্ট {daysRemaining} দিন
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[11px] text-zinc-600 dark:text-zinc-400 pt-1 border-t border-emerald-200/40 dark:border-emerald-800/40">
+                          <div>
+                            <span className="text-zinc-400 block">শুরুর তারিখ:</span>
+                            <span className="font-bold text-zinc-800 dark:text-zinc-200">{startDateStr}</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-400 block">মেয়াদ শেষের তারিখ:</span>
+                            <span className="font-bold text-zinc-800 dark:text-zinc-200">{expiryDateStr}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : sub.status === "pending" ? (
+                      <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 text-xs space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300 font-bold">
+                          <Clock className="w-4 h-4 text-amber-500 animate-spin" />
+                          <span>আবেদন ভেরিফিকেশন চলছে</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                          আপনার ট্রানজেকশন আইডি (<span className="font-mono font-bold">{sub.trxId}</span>) অ্যাডমিন প্যানেলে যাচাই করা হচ্ছে। সাধারণত ১-৭ ঘণ্টার মধ্যে সাবস্ক্রিপশনটি সক্রিয় করে দেওয়া হয়।
+                        </p>
+                      </div>
+                    ) : sub.status === "rejected" ? (
+                      <div className="p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 text-xs space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-rose-800 dark:text-rose-300 font-bold">
+                          <AlertTriangle className="w-4 h-4 text-rose-500" />
+                          <span>আবেদনটি বাতিল করা হয়েছে</span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white/80 dark:bg-zinc-900/80 border border-rose-200/50 dark:border-rose-900/30 space-y-0.5">
+                          <span className="text-[10px] font-black uppercase text-rose-500 tracking-wider block">
+                            বাতিলের কারণ (Admin Reason):
+                          </span>
+                          <p className="font-bold text-zinc-800 dark:text-zinc-200 text-xs leading-snug">
+                            {sub.rejectionReason || sub.notes || "পেমেন্ট তথ্য বা TrxID মিল পাওয়া যায়নি।"}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/50 text-xs space-y-2">
+                        <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-300 font-bold">
+                          <span>মেয়াদ উত্তীর্ণ হয়েছে</span>
+                          <button
+                            onClick={() => navigate("/subscription")}
+                            className="px-3 py-1 rounded-full bg-amber-500 text-zinc-950 font-bold text-[11px] hover:bg-amber-600 transition-all flex items-center gap-1"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>রিনিউ করুন</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Details Footer */}
+                    <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/80 text-xs space-y-1.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div>
+                          <span className="text-[10px] text-zinc-400 font-medium block">পেমেন্ট মেথড</span>
+                          <span className="font-bold text-zinc-800 dark:text-zinc-200">{sub.paymentMethod}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-zinc-400 font-medium block">সেন্ডার নম্বর</span>
+                          <span className="font-bold font-mono text-zinc-800 dark:text-zinc-200">{sub.senderNumber || "N/A"}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-zinc-400 font-medium block">TrxID</span>
+                          <span className="font-black font-mono text-amber-600 dark:text-amber-400">{sub.trxId}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800/50 text-[11px] text-zinc-500">
+                        <span>আবেদনের সময়: {requestedDateStr}</span>
+                        <span className="font-black text-zinc-900 dark:text-white text-xs">
+                          ৳{sub.price?.toLocaleString("en-BD")}
+                        </span>
                       </div>
                     </div>
-
-                    {(ex.status === "cancelled" && ex.cancelReason) && (
-                      <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 p-3 rounded-xl">
-                        <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider block">Reason for Rejection</span>
-                        <p className="text-xs font-semibold text-rose-700 dark:text-rose-400 mt-0.5">{ex.cancelReason}</p>
-                      </div>
-                    )}
-                    {(ex.status === "returned" && ex.returnReason) && (
-                      <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 p-3 rounded-xl">
-                        <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider block">Reason for Return</span>
-                        <p className="text-xs font-semibold text-rose-700 dark:text-rose-400 mt-0.5">{ex.returnReason}</p>
-                      </div>
-                    )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
         loading ? (

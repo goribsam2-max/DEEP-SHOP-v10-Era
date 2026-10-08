@@ -30,7 +30,8 @@ import {
   MessageSquare,
   ShieldCheck,
   ArrowRight,
-  Activity
+  Activity,
+  Crown
 } from "lucide-react";
 import {
   AreaChart,
@@ -68,6 +69,14 @@ const ADMIN_PIN_ITEMS: PinListItem[] = [
     icon: PackageSearch,
     pinned: true,
     href: 'products'
+  },
+  {
+    id: 'manage-subscriptions',
+    name: 'Manage Subscriptions (VIP COD Club)',
+    info: 'ক্যাশ অন ডেলিভারি (০ অগ্রিম) সাবস্ক্রিপশন আবেদন ও অনুমোদন',
+    icon: Crown,
+    pinned: true,
+    href: 'subscriptions'
   },
   {
     id: 'manage-orders',

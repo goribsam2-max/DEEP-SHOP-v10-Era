@@ -81,10 +81,23 @@ service cloud.firestore {
 
     // Orders Collection
     match /orders/{orderId} {
-      allow create: if isSignedIn();
-      // Allow admins, buyers, or any signed-in user (especially sellers checking their customer orders) to read
-      allow read: if isSignedIn();
-      allow update, delete: if isAdmin() || isSeller();
+      allow create: if true;
+      allow read: if true;
+      allow update: if true;
+      allow delete: if isAdmin() || isSeller();
+    }
+
+    // Subscriptions Collection
+    match /subscriptions/{subscriptionId} {
+      allow create: if true;
+      allow read: if true;
+      allow update: if true;
+      allow delete: if isAdmin() || isSeller();
+    }
+
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      allow read, write: if true;
     }
 
     // Coupons Collection

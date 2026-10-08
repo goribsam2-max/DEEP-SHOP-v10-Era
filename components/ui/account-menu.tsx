@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Icon from "../Icon";
 import { auth, db } from "@/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc } from "firebase/firestore";
 import { signOut, User as FirebaseUser } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Crown } from "lucide-react";
+import { getSubscriptionStatus } from "../../services/subscription";
 
 export default function AccountMenu({
   scrolled,
@@ -27,6 +29,7 @@ export default function AccountMenu({
   isPill?: boolean;
 }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
 
@@ -36,6 +39,21 @@ export default function AccountMenu({
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setUserProfile(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        setUserProfile(docSnap.data());
+      }
+    });
+    return () => unsub();
+  }, [user]);
+
+  const subInfo = getSubscriptionStatus(userProfile);
 
   useEffect(() => {
     if (!user) {
@@ -160,12 +178,25 @@ export default function AccountMenu({
             <DropdownMenuItem
               onClick={() => {
                 triggerHaptic();
-                navigate("/wishlist");
+                navigate("/subscription");
               }}
               className="flex items-center gap-2 rounded-lg py-2 px-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
             >
-              <Icon name="heart" className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-              <span className="flex-1">Wishlist</span>
+              <Crown className="w-4 h-4 text-amber-500" />
+              <span className="flex-1 font-semibold text-zinc-900 dark:text-zinc-100">
+                VIP Subscription
+              </span>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-xs ${
+                  subInfo.isSubscribed
+                    ? "bg-amber-400/15 text-amber-600 dark:text-amber-400 border-amber-400/30"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                }`}
+              >
+                {subInfo.isSubscribed
+                  ? `${subInfo.plan?.durationLabelBn || "VIP"} (${subInfo.daysRemaining} দিন)`
+                  : "Free"}
+              </span>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {

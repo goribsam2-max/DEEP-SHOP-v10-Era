@@ -24,7 +24,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public async componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('An unexpected error occurred.', error, errorInfo);
+    console.error('An unexpected error occurred in React component tree:', error?.message || error, error?.stack, errorInfo?.componentStack);
     try {
       await sendSystemAlertToTelegram(error.message, errorInfo.componentStack || '');
       this.setState({ reported: true });

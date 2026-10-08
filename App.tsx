@@ -265,6 +265,7 @@ import EditProfile from './pages/EditProfile';
 import NewPassword from './pages/NewPassword';
 import ForgotPassword from './pages/ForgotPassword';
 import Wishlist from './pages/Wishlist';
+import SubscriptionPage from './pages/Subscription';
 import ShippingAddress from './pages/ShippingAddress';
 import Coupon from './pages/Coupon';
 import PaymentMethods from './pages/PaymentMethods';
@@ -329,6 +330,7 @@ import AdminLayout from './components/AdminLayout';
 import ManageFakeOrders from './pages/admin/ManageFakeOrders';
 import Deposit from './pages/Deposit';
 import ManageDeposits from './pages/admin/ManageDeposits';
+import ManageSubscriptions from './pages/admin/ManageSubscriptions';
 import BonusProducts from './pages/BonusProducts';
 import ShoppingCredits from './pages/ShoppingCredits';
 import BundleDeals from './pages/BundleDeals';
@@ -1017,6 +1019,7 @@ const AppContent: React.FC = () => {
           <Route path="/orders/:actionName" element={<PageWrapper><OrderActionPage /></PageWrapper>} />
           <Route path="/notifications" element={<PageWrapper><NotificationsPage /></PageWrapper>} />
           <Route path="/wishlist" element={<PageWrapper><Wishlist /></PageWrapper>} />
+          <Route path="/subscription" element={<PageWrapper><SubscriptionPage /></PageWrapper>} />
           <Route path="/search" element={<PageWrapper><Search /></PageWrapper>} />
           <Route path="/all-products" element={<PageWrapper><AllProducts /></PageWrapper>} />
           <Route path="/flash-sale" element={<PageWrapper><FlashSale /></PageWrapper>} />
@@ -1066,6 +1069,7 @@ const AppContent: React.FC = () => {
                   <Route path="password-resets" element={<PageWrapper><ManagePasswordResets /></PageWrapper>} />
                   <Route path="push-notifications" element={<PageWrapper><ManagePushNotifications /></PageWrapper>} />
                   <Route path="orders" element={<PageWrapper><ManageOrders /></PageWrapper>} />
+                  <Route path="subscriptions" element={<PageWrapper><ManageSubscriptions /></PageWrapper>} />
                   <Route path="reviews" element={<PageWrapper><ManageReviews /></PageWrapper>} />
                   <Route path="fake-orders" element={<PageWrapper><ManageFakeOrders /></PageWrapper>} />
                   <Route path="deposits" element={<PageWrapper><ManageDeposits /></PageWrapper>} />

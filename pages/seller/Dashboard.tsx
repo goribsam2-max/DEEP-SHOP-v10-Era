@@ -27,8 +27,10 @@ import {
   X, ArrowLeft, ShieldAlert, Award, ChevronRight, ChevronDown, Menu, Home as HomeIcon,
   BookOpen, Bell, CreditCard, Truck, Percent, Users, Edit3, Settings, Shield,
   ArrowRight, Video, FileText, CheckCircle, MessageSquare, Search, SlidersHorizontal,
-  MapPin, Phone, LayoutDashboard, ClipboardList, Boxes, Sliders, Copy
+  MapPin, Phone, LayoutDashboard, ClipboardList, Boxes, Sliders, Copy,
+  Crown
 } from "lucide-react";
+import ManageSubscriptions from "../admin/ManageSubscriptions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,7 +89,7 @@ const SellerDashboard: React.FC = () => {
   // Custom navigation structure (Tabs/views inside the full-screen space)
   const initialTab = (searchParams.get("tab") as any) || "home";
   const [activeTab, setActiveTab] = useState<
-    "home" | "orders" | "products" | "blog" | "settings_store" | "settings_payment" | "settings_shipping" | "settings_coupons" | "settings_categories" | "settings_members" | "add_product" | "edit_product" | "add_story" | "more" | "settings_tax"
+    "home" | "orders" | "products" | "subscriptions" | "blog" | "settings_store" | "settings_payment" | "settings_shipping" | "settings_coupons" | "settings_categories" | "settings_members" | "add_product" | "edit_product" | "add_story" | "more" | "settings_tax"
   >(initialTab);
 
   // Dynamic Store Settings states

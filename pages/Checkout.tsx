@@ -59,8 +59,10 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
-  Settings
+  Settings,
+  Crown
 } from "lucide-react";
+import { hasActiveSubscription } from "../services/subscription";
 import { cn } from "../lib/utils";
 
 function formatAddressText(val: any): string {
@@ -117,6 +119,27 @@ export default function CheckoutPage() {
   const [userCoins, setUserCoins] = useState<number>(0);
   const [resolvedAdvanceAmount, setResolvedAdvanceAmount] = useState<number | null>(null);
   const [sellerPaymentNumbers, setSellerPaymentNumbers] = useState<{bkash: string, nagad: string} | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      if (u) {
+        try {
+          const snap = await getDoc(doc(db, "users", u.uid));
+          if (snap.exists()) {
+            setUserProfile(snap.data());
+          }
+        } catch (e) {
+          console.error("Error loading user profile in checkout:", e);
+        }
+      } else {
+        setUserProfile(null);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const isVipSubscriber = hasActiveSubscription(userProfile);
 
   // Address
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
@@ -493,7 +516,10 @@ export default function CheckoutPage() {
   });
 
   let requiredAdvance = 0;
-  if (isAllBypass) {
+  if (isVipSubscriber) {
+    // 👑 VIP Subscription: 100% Cash On Delivery with 0 advance!
+    requiredAdvance = 0;
+  } else if (isAllBypass) {
     requiredAdvance = 0;
   } else if (isAllOffer) {
     requiredAdvance = total;
@@ -665,7 +691,7 @@ export default function CheckoutPage() {
     }
 
     let validGuardian = "";
-    if (hasBypassProduct) {
+    if (hasBypassProduct && !isVipSubscriber) {
       const guardianVal = validateBangladeshiPhone(guardianNumber);
       if (!guardianVal.isValid) {
         return notify(`অভিভাবকের ফোন নম্বর সঠিক নয়: ${guardianVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন"}`, "error");
@@ -694,6 +720,9 @@ export default function CheckoutPage() {
       if (paymentType === "vgcoin") {
         paymentStr = "DP Coins";
         paymentOptStr = advanceType === "full" ? "Full Payment with DP Coins" : `Advance ৳${requiredAdvance} with DP Coins`;
+      } else if (isVipSubscriber) {
+        paymentStr = "Cash on Delivery";
+        paymentOptStr = "👑 VIP Member 0% Advance Full COD";
       } else if (requiredAdvance > 0) {
         paymentStr = selectedPaymentMethod === "bkash" ? "bKash" : "Nagad";
         paymentOptStr = isAllOffer 
@@ -709,6 +738,7 @@ export default function CheckoutPage() {
       const orderData: any = {
         userId: auth.currentUser?.uid || "guest",
         customerName: activeAddress.name.trim(),
+        isVipOrder: !!isVipSubscriber,
         items: items.map((i: any) => ({
           productId: i.id,
           quantity: i.quantity,
@@ -936,7 +966,7 @@ export default function CheckoutPage() {
   const validateStep = (step: number) => {
     if (step === 1) {
       if (!selectedAddressId) return false;
-      if (hasBypassProduct && (!guardianNumber.trim() || guardianNumber.trim().replace(/\D/g, "").length < 11)) {
+      if (hasBypassProduct && !isVipSubscriber && (!guardianNumber.trim() || guardianNumber.trim().replace(/\D/g, "").length < 11)) {
         return false;
       }
       return true;
@@ -956,7 +986,7 @@ export default function CheckoutPage() {
       if (!selectedAddressId) {
         return notify("অনুগ্রহ করে একটি ডেলিভারি ঠিকানা নির্বাচন করুন।", "error");
       }
-      if (hasBypassProduct && (!guardianNumber.trim() || guardianNumber.trim().replace(/\D/g, "").length < 11)) {
+      if (hasBypassProduct && !isVipSubscriber && (!guardianNumber.trim() || guardianNumber.trim().replace(/\D/g, "").length < 11)) {
         return notify("বাইপাস অর্ডারের জন্য গার্ডিয়ান / অভিভাবকের ১১ ডিজিটের মোবাইল নম্বর প্রদান করুন।", "error");
       }
     }
@@ -1230,7 +1260,7 @@ export default function CheckoutPage() {
                       )}
 
                       {/* Bypass Mal Verification Section */}
-                      {hasBypassProduct && (
+                      {hasBypassProduct && !isVipSubscriber && (
                         <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-4 mt-4">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
@@ -1369,50 +1399,63 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-6">
                   {requiredAdvance === 0 ? (
-                    /* Bypass Mal / Free COD Confirmation */
-                    <div className="space-y-5">
-                      <div className="p-5 sm:p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-sm">
-                            <Truck className="w-5 h-5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-2 whitespace-nowrap">
-                              <h3 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
-                                ক্যাশ অন ডেলিভারি (COD)
-                              </h3>
-                              <span className="text-[10px] bg-emerald-500 text-white font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                                বাইপাস প্রোডাক্ট
-                              </span>
+                    /* Bypass Mal / VIP COD Confirmation */
+                    <div className="space-y-4">
+                      <div className="p-4 sm:p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-4 overflow-hidden">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-sm shrink-0">
+                              {isVipSubscriber ? <Crown className="w-5 h-5" /> : <Truck className="w-5 h-5" />}
                             </div>
-                            <p className="text-[11px] sm:text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                              এই অর্ডারে কোনো প্রকার অগ্রিম পেমেন্ট করতে হবে না
-                            </p>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 leading-snug break-words">
+                                {isVipSubscriber ? "ভিআইপি ফুল ক্যাশ অন ডেলিভারি" : "ক্যাশ অন ডেলিভারি (COD)"}
+                              </h3>
+                              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 leading-relaxed break-words">
+                                {isVipSubscriber
+                                  ? "ভিআইপি মেম্বারশিপ সক্রিয় থাকায় কোনো প্রকার অগ্রিম পেমেন্ট ছাড়াই সরাসরি ক্যাশ অন ডেলিভারিতে অর্ডার সম্পন্ন হচ্ছে।"
+                                  : "এই অর্ডারে কোনো প্রকার অগ্রিম পেমেন্ট করতে হবে না।"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="shrink-0 self-start sm:self-center">
+                            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-emerald-500 text-white font-bold px-3 py-1 rounded-full shadow-sm">
+                              {isVipSubscriber ? "👑 VIP মেম্বার (০৳ অগ্রিম)" : "বাইপাস প্রোডাক্ট"}
+                            </span>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                          <div className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 flex sm:flex-col justify-between sm:justify-start items-center sm:items-start">
-                            <span className="text-[11px] sm:text-xs text-zinc-500 whitespace-nowrap">মোট অর্ডার মূল্য</span>
-                            <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{formatPrice(total)}</span>
+                          <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 flex justify-between sm:flex-col sm:justify-start items-center sm:items-start gap-1">
+                            <span className="text-xs text-zinc-500">মোট অর্ডার মূল্য</span>
+                            <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</span>
                           </div>
-                          <div className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 rounded-xl border border-emerald-500/30 flex sm:flex-col justify-between sm:justify-start items-center sm:items-start">
-                            <span className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium whitespace-nowrap">অগ্রিম প্রদেয়</span>
-                            <span className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">৳০ (কোনো অগ্রিম নেই)</span>
+                          <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-emerald-500/30 flex justify-between sm:flex-col sm:justify-start items-center sm:items-start gap-1">
+                            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">অগ্রিম প্রদেয়</span>
+                            <span className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400">৳০ (কোনো অগ্রিম নেই)</span>
                           </div>
-                          <div className="p-2.5 sm:p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 flex sm:flex-col justify-between sm:justify-start items-center sm:items-start">
-                            <span className="text-[11px] sm:text-xs text-zinc-500 whitespace-nowrap">ডেলিভারির সময় প্রদেয়</span>
-                            <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">{formatPrice(total)}</span>
+                          <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 flex justify-between sm:flex-col sm:justify-start items-center sm:items-start gap-1">
+                            <span className="text-xs text-zinc-500">ডেলিভারির সময় প্রদেয়</span>
+                            <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</span>
                           </div>
                         </div>
 
-                        <div className="p-3 bg-white/80 dark:bg-zinc-900/80 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs space-y-1 text-zinc-700 dark:text-zinc-300">
-                          <p className="font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                            <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            <span className="whitespace-nowrap overflow-hidden text-ellipsis">অভিভাবক নম্বর: <strong className="font-mono">{guardianNumber || "দেওয়া হয়নি"}</strong></span>
-                          </p>
-                          <p className="text-zinc-500 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">
-                            পণ্য হাতে পেয়ে যাচাই করে কুরিয়ার কর্মীকে ক্যাশ পরিশোধ করবেন
+                        <div className="p-3 sm:p-4 bg-white/80 dark:bg-zinc-900/80 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs space-y-1.5 text-zinc-700 dark:text-zinc-300">
+                          {isVipSubscriber ? (
+                            <p className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 leading-relaxed break-words">
+                              <Crown className="w-4 h-4 text-amber-500 shrink-0" />
+                              <span>ভিআইপি মেম্বারশিপ প্রিভিলেজ সক্রিয় রয়েছে — কোনো সার্ভিস বা অগ্রিম চার্জ নেই!</span>
+                            </p>
+                          ) : (
+                            guardianNumber && (
+                              <p className="font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 leading-relaxed break-words">
+                                <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                <span>অভিভাবক নম্বর: <strong className="font-mono">{guardianNumber}</strong></span>
+                              </p>
+                            )
+                          )}
+                          <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed break-words">
+                            পণ্য হাতে পেয়ে পুরোপুরি যাচাই করে কুরিয়ার কর্মীকে ক্যাশ পরিশোধ করবেন।
                           </p>
                         </div>
                       </div>
@@ -1420,6 +1463,31 @@ export default function CheckoutPage() {
                   ) : (
                     /* Advance Payment via Rotating bKash / Nagad */
                     <div className="space-y-6">
+                      {/* VIP Subscription CTA for Free Tier */}
+                      <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-amber-500/5 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-amber-400 text-zinc-950 flex items-center justify-center font-black shrink-0 shadow-md">
+                            <Crown className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white">
+                              কোনো অগ্রিম ছাড়া ফুল ক্যাশ অন ডেলিভারিতে অর্ডার করতে চান?
+                            </div>
+                            <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                              ভিআইপি মেম্বারশিপ নিলে কোনো অগ্রিম (৳{requiredAdvance}) ছাড়াই অর্ডার করতে পারবেন!
+                            </div>
+                          </div>
+                        </div>
+                        <Link
+                          to="/subscription"
+                          target="_blank"
+                          className="px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-zinc-950 font-black text-xs shrink-0 shadow-md text-center transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Crown className="w-3.5 h-3.5" />
+                          <span>ভিআইপি নিন</span>
+                        </Link>
+                      </div>
+
                       {/* Product Advance Type Banner */}
                       <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 flex items-start gap-2.5">
                         <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -1601,13 +1669,17 @@ export default function CheckoutPage() {
                           </div>
                         ) : requiredAdvance === 0 ? (
                           <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-emerald-600 dark:text-emerald-400">ক্যাশ অন ডেলিভারি (বাইপাস পণ্য)</span>
-                              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">0 Advance</span>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                {isVipSubscriber ? "ভিআইপি ফুল ক্যাশ অন ডেলিভারি" : "ক্যাশ অন ডেলিভারি (বাইপাস পণ্য)"}
+                              </span>
+                              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0">
+                                {isVipSubscriber ? "👑 VIP 0 Advance" : "0 Advance"}
+                              </span>
                             </div>
                             <p className="text-xs text-zinc-600 dark:text-zinc-300">অগ্রিম প্রদেয়: <strong className="text-zinc-900 dark:text-zinc-100">৳০ (কোনো অগ্রিম নেই)</strong></p>
                             <p className="text-xs text-zinc-600 dark:text-zinc-300">ডেলিভারির সময় প্রদেয়: <strong className="text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</strong></p>
-                            {guardianNumber && (
+                            {!isVipSubscriber && guardianNumber && (
                               <p className="text-xs text-zinc-600 dark:text-zinc-300">গার্ডিয়ান মোবাইল: <strong className="font-mono">{guardianNumber}</strong></p>
                             )}
                             {nidCardUrl && (
