@@ -558,8 +558,8 @@ const AdminDashboard: React.FC = () => {
                 Chart Data
               </div>
             </div>
-            <div className="h-[280px] w-full relative z-10">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[280px] w-full min-w-0 min-h-[200px] relative z-10">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <AreaChart
                   data={chartData}
                 >

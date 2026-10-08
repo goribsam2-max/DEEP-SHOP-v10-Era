@@ -369,26 +369,30 @@ const Payment: React.FC = () => {
 
         await updateDoc(orderRef, updatePayload);
 
-        // If this is a subscription order, also record in subscriptions collection
+        // If this is a subscription order, also record in subscriptions collection using orderId as doc key
         if (order.type === "subscription") {
           try {
-            await addDoc(collection(db, "subscriptions"), {
-              orderId: orderId,
-              userId: order.userId || (typeof window !== "undefined" ? auth?.currentUser?.uid : "") || "",
-              userName: order.customerName || auth?.currentUser?.displayName || "Customer",
-              userEmail: order.customerEmail || auth?.currentUser?.email || "",
-              userPhone: phoneValidation.normalized,
-              planId: order.planId || "30days",
-              planName: order.planName || "VIP Pass",
-              durationDays: Number(order.durationDays || 30),
-              price: Number(calculations.amountToPay || order.total || 0),
-              paymentMethod: selectedMethod === "bkash" ? "bKash" : "Nagad",
-              senderNumber: phoneValidation.normalized,
-              trxId: cleanTrx,
-              status: "pending",
-              requestedAt: Date.now(),
-              notes: `Order #${orderId} subscription payment`,
-            });
+            await setDoc(
+              doc(db, "subscriptions", orderId),
+              {
+                orderId: orderId,
+                userId: order.userId || (typeof window !== "undefined" ? auth?.currentUser?.uid : "") || "",
+                userName: order.customerName || auth?.currentUser?.displayName || "Customer",
+                userEmail: order.customerEmail || auth?.currentUser?.email || "",
+                userPhone: phoneValidation.normalized,
+                planId: order.planId || "30days",
+                planName: order.planName || "VIP Pass",
+                durationDays: Number(order.durationDays || 30),
+                price: Number(calculations.amountToPay || order.total || 0),
+                paymentMethod: selectedMethod === "bkash" ? "bKash" : "Nagad",
+                senderNumber: phoneValidation.normalized,
+                trxId: cleanTrx,
+                status: "pending",
+                requestedAt: Date.now(),
+                notes: `Order #${orderId} subscription payment`,
+              },
+              { merge: true }
+            );
           } catch (subErr) {
             console.error("Error creating subscription record from payment:", subErr);
           }

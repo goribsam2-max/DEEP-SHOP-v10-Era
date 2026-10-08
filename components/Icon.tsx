@@ -150,7 +150,7 @@ const customIconMapping: Record<string, keyof typeof LucideIcons> = {
   'file-csv': 'FileSpreadsheet',
   'trend-up': 'TrendingUp',
   'shield': 'Shield',
-  'inbox': 'Inbox',
+  'inbox': 'Mail',
   'video': 'Video',
   'clock': 'Clock',
   'profile-order-pay': 'CreditCard',
@@ -346,10 +346,15 @@ const Icon: React.FC<IconProps> = ({ name, className = '', solid = false, ...pro
   }
 
   if (!LucideIcon) {
-    if (name !== 'default') {
-      console.warn(`Icon ${name} not found in Lucide (pascal: ${pascalName})`);
-    }
-    return null;
+    const FallbackIcon = LucideIcons.Mail || LucideIcons.HelpCircle || LucideIcons.Square;
+    return (
+      <span 
+        className={`inline-flex shrink-0 items-center justify-center [&>svg]:w-full [&>svg]:h-full ${hasWidthClass ? '' : 'w-[1em] h-[1em]'} ${finalClass}`}
+        {...props}
+      >
+        {FallbackIcon ? <FallbackIcon strokeWidth={solid ? 3 : 2} fill={solid ? "currentColor" : "none"} /> : null}
+      </span>
+    );
   }
 
   return (

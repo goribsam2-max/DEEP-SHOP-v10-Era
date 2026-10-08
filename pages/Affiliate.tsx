@@ -1240,8 +1240,8 @@ const AffiliatePage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="h-56 w-full relative z-10 -ml-2">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-56 w-full min-w-0 min-h-[200px] relative z-10 -ml-2">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <AreaChart
                   data={chartData}
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

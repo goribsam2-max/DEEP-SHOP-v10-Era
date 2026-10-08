@@ -58,8 +58,33 @@ export default function ManageSubscriptions() {
     const updateCombinedList = () => {
       const combinedMap = new Map<string, SubscriptionRecord>();
       
+      // 1. Populate orders
       listOrders.forEach((o) => combinedMap.set(o.id, o));
-      listSubs.forEach((s) => combinedMap.set(s.id, s));
+
+      // 2. Merge subscriptions collection items by orderId/id/trxId to prevent duplicates
+      listSubs.forEach((s) => {
+        const subAny = s as any;
+        const targetId = subAny.orderId || s.id;
+
+        const existingKey = Array.from(combinedMap.keys()).find(
+          (k) => k === targetId || k === s.id || (s.trxId && combinedMap.get(k)?.trxId === s.trxId)
+        );
+
+        if (existingKey) {
+          const existing = combinedMap.get(existingKey)!;
+          combinedMap.set(existingKey, {
+            ...existing,
+            ...s,
+            id: existing.id,
+            status: s.status || existing.status,
+            trxId: s.trxId || existing.trxId,
+            senderNumber: s.senderNumber || existing.senderNumber,
+            paymentMethod: s.paymentMethod || existing.paymentMethod,
+          });
+        } else {
+          combinedMap.set(targetId, s);
+        }
+      });
 
       const merged = Array.from(combinedMap.values());
       merged.sort((a, b) => (b.requestedAt || 0) - (a.requestedAt || 0));
@@ -89,19 +114,48 @@ export default function ManageSubscriptions() {
         listOrders = [];
         snap.forEach((d) => {
           const data = d.data() as any;
+
+          // Ignore unpaid draft subscription orders where user has not submitted payment/trxId yet
+          if (
+            data.status === "pending_payment" ||
+            data.paymentStatus === "unpaid" ||
+            (!data.customerTrxId && !data.transactionId && !data.bankingTrxId && !data.lastDigits)
+          ) {
+            return;
+          }
+
+          const realTrxId = data.customerTrxId || data.transactionId || data.bankingTrxId || data.lastDigits;
+          if (!realTrxId) return;
+
+          const methodLower = (data.paymentMethod || "").toLowerCase();
+          const paymentMethod = methodLower.includes("nagad")
+            ? "Nagad"
+            : methodLower.includes("rocket")
+            ? "Rocket"
+            : methodLower.includes("upay")
+            ? "Upay"
+            : "bKash";
+
+          const senderNum =
+            data.customerSenderNumber ||
+            data.senderNumber ||
+            data.accountNameSender ||
+            data.customerPhone ||
+            "";
+
           listOrders.push({
             id: d.id,
             userId: data.userId || "guest",
             userName: data.customerName || data.shippingAddress?.name || "VIP Member",
             userEmail: data.customerEmail || "",
-            userPhone: data.customerPhone || data.shippingAddress?.phone || "",
+            userPhone: senderNum || data.customerPhone || "",
             planId: data.planId || data.items?.[0]?.id || "30days",
             planName: data.planName || data.items?.[0]?.name || "DEEP SHOP VIP Pass",
             durationDays: Number(data.durationDays || 30),
             price: Number(data.total || data.amountToPay || 0),
-            paymentMethod: data.paymentMethod?.toLowerCase().includes("nagad") ? "Nagad" : "bKash",
-            senderNumber: data.customerSenderNumber || data.customerPhone || "",
-            trxId: data.customerTrxId || data.bankingTrxId || ("TRX" + d.id.slice(0, 6).toUpperCase()),
+            paymentMethod: paymentMethod,
+            senderNumber: senderNum,
+            trxId: realTrxId,
             status: data.status === "Completed" ? "approved" : data.status === "Cancelled" ? "rejected" : "pending",
             requestedAt: data.createdAt || Date.now(),
             notes: data.notes || data.rejectionReason || "",
@@ -128,12 +182,12 @@ export default function ManageSubscriptions() {
       const adminName = auth.currentUser?.email || "Admin";
       await approveSubscription(targetSub.id, adminName);
       notify(`${targetSub.userName}-এর সাবস্ক্রিপশন সফলভাবে চালু করা হয়েছে!`, "success");
-      setApproveModalSub(null);
     } catch (err: any) {
-      console.error(err);
+      console.error("Approve error:", err);
       notify(err?.message || "অনুমোদন করা সম্ভব হয়নি।", "error");
     } finally {
       setActionLoading(null);
+      setApproveModalSub(null);
     }
   };
 
@@ -147,12 +201,12 @@ export default function ManageSubscriptions() {
       const adminName = auth.currentUser?.email || "Admin";
       await rejectSubscription(targetSub.id, reason, adminName);
       notify("সাবস্ক্রিপশন আবেদনটি বাতিল করা হয়েছে।", "info");
-      setRejectModalSub(null);
     } catch (err: any) {
-      console.error(err);
+      console.error("Reject error:", err);
       notify(err?.message || "বাতিল করা সম্ভব হয়নি।", "error");
     } finally {
       setActionLoading(null);
+      setRejectModalSub(null);
     }
   };
 

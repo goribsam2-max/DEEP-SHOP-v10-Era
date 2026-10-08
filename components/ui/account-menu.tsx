@@ -180,21 +180,23 @@ export default function AccountMenu({
                 triggerHaptic();
                 navigate("/subscription");
               }}
-              className="flex items-center gap-2 rounded-lg py-2 px-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              className="flex items-center justify-between gap-2 rounded-lg py-2 px-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer overflow-hidden"
             >
-              <Crown className="w-4 h-4 text-amber-500" />
-              <span className="flex-1 font-semibold text-zinc-900 dark:text-zinc-100">
-                VIP Subscription
-              </span>
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <Crown className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="font-bold text-zinc-900 dark:text-zinc-100 text-[11px] whitespace-nowrap truncate">
+                  VIP Subscription
+                </span>
+              </div>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-xs ${
+                className={`text-[9px] leading-none font-extrabold px-2 py-1 rounded-full border shadow-2xs whitespace-nowrap shrink-0 ${
                   subInfo.isSubscribed
                     ? "bg-amber-400/15 text-amber-600 dark:text-amber-400 border-amber-400/30"
                     : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
                 }`}
               >
                 {subInfo.isSubscribed
-                  ? `${subInfo.plan?.durationLabelBn || "VIP"} (${subInfo.daysRemaining} দিন)`
+                  ? `VIP (${subInfo.daysRemaining} দিন)`
                   : "Free"}
               </span>
             </DropdownMenuItem>
