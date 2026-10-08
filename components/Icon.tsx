@@ -266,12 +266,14 @@ function initCustomIconsListener() {
 
 const Icon: React.FC<IconProps> = ({ name, className = '', solid = false, ...props }) => {
   const normKey = (name || '').toLowerCase().trim();
-  const pascalName = (customIconMapping[name] || customIconMapping[normKey] || formatNameToPascal(name)) as keyof typeof LucideIcons;
+  const pascalName = (customIconMapping[normKey] || customIconMapping[name] || formatNameToPascal(name)) as keyof typeof LucideIcons;
   const LucideIcon = (LucideIcons[pascalName] || 
     (pascalName === ('Logout' as any) ? LucideIcons.LogOut : undefined) || 
     (pascalName === ('Login' as any) ? LucideIcons.LogIn : undefined) ||
     (normKey === 'logout' ? LucideIcons.LogOut : undefined) ||
-    (normKey === 'login' ? LucideIcons.LogIn : undefined)
+    (normKey === 'login' ? LucideIcons.LogIn : undefined) ||
+    (normKey === 'inbox' ? LucideIcons.Mail : undefined) ||
+    (pascalName === ('Inbox' as any) ? LucideIcons.Mail : undefined)
   ) as React.FC<any> | undefined;
 
   const [customSvg, setCustomSvg] = useState<string | null>(() => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, addDoc, collection, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, addDoc, collection, onSnapshot } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { 
