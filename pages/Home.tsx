@@ -33,7 +33,7 @@ import StoryViewer from "../components/ui/StoryViewer";
 import { ProductCard } from "../components/ui/ProductCard";
 import { OfferSlider } from "../components/ui/OfferSlider";
 import { BorderOfferSection } from "../components/ui/BorderOfferSection";
-import { Tag, Zap, Crown, Users, Sparkles, Star, Play, MoreHorizontal, ChevronRight, ShoppingBag } from "lucide-react";
+import { Tag, Zap, Crown, Users, Sparkles, Star, Play, MoreHorizontal, ChevronRight, ShoppingBag, GraduationCap } from "lucide-react";
 import { PixelImage } from "../components/ui/PixelImage";
 import { HeroSlider } from "../components/ui/hero-slider";
 import { LogoTimeline, type LogoItem } from "../components/ui/logo-timeline";
@@ -430,6 +430,39 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           </motion.div>
         </div>
       )}
+
+      {/* Reseller VIP & Masterclass Teacher Banner */}
+      <div className="mb-8 w-full animate-fade-in px-0 md:px-4">
+        <div
+          onClick={() => navigate("/subscription")}
+          className="relative overflow-hidden rounded-2xl bg-zinc-900 dark:bg-zinc-900 border border-zinc-800 text-white p-4 sm:p-5 shadow-xs cursor-pointer active:scale-[0.99] transition-all hover:border-zinc-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start sm:items-center gap-3.5 z-10 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <Crown className="w-5 h-5 text-amber-400" />
+            </div>
+            <div className="space-y-1 min-w-0">
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-400 tracking-wide">
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>রিসেলার মাস্টারক্লাস ও ভিআইপি গাইড</span>
+              </div>
+              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
+                রিসেলারদের জন্য ০৳ অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারি
+              </h3>
+              <p className="text-xs text-zinc-400 font-normal leading-relaxed">
+                কোনো অগ্রিম চার্জ বা কলার ভেরিফিকেশন ছাড়া কাস্টমারের কাছে পার্সেল পাঠান। কীভাবে সাবস্ক্রিপশন নিয়ে আয় করবেন দেখুন।
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-center shrink-0 z-10">
+            <span className="px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-colors">
+              <span>গাইড ও প্ল্যান দেখুন</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Refer & Earn (Only if not logged in) */}
       {!userData && (

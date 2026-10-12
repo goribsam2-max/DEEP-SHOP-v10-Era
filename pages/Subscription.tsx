@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import {
@@ -32,6 +32,7 @@ import {
 } from "../services/subscription";
 import { useNotify } from "../components/Notifications";
 import BillingWarningAlertDialog from "../components/ui/billing-warning-alert-dialog";
+import ResellerTeacherGuide from "../components/ResellerTeacherGuide";
 
 export default function SubscriptionPage() {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ export default function SubscriptionPage() {
 
   // Warning Dialog State
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const pricingRef = useRef<HTMLDivElement>(null);
 
   // Track auth state & user profile
   useEffect(() => {
@@ -280,8 +282,17 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
+        {/* Reseller Masterclass & Teacher Guide */}
+        <ResellerTeacherGuide
+          user={currentUser}
+          userData={userData}
+          onScrollToPlans={() =>
+            pricingRef.current?.scrollIntoView({ behavior: "smooth" })
+          }
+        />
+
         {/* Pricing6 Component */}
-        <div className="relative">
+        <div ref={pricingRef} className="relative pt-2">
           {creatingOrder && (
             <div className="absolute inset-0 z-30 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xs flex items-center justify-center rounded-3xl">
               <div className="flex items-center gap-2 text-sm font-bold text-zinc-800 dark:text-zinc-200">

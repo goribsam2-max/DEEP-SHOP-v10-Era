@@ -54,69 +54,68 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     if (isDark === nextIsDark && theme === mode) return;
 
-    if (!document.startViewTransition || !event) {
+    if (!document.startViewTransition) {
       setThemeState(mode);
+      setIsDark(nextIsDark);
+      applyThemeClass(nextIsDark);
       localStorage.setItem('theme', mode);
       return;
     }
 
-    let centerX = 0;
-    let centerY = 0;
+    let centerX = window.innerWidth / 2;
+    let centerY = 50;
 
-    if ('clientX' in event && typeof event.clientX === 'number') {
-      centerX = event.clientX;
-      centerY = event.clientY;
-    } else if (event instanceof Element) {
-      const rect = event.getBoundingClientRect();
-      centerX = rect.left + rect.width / 2;
-      centerY = rect.top + rect.height / 2;
-    } else if ('currentTarget' in event && event.currentTarget instanceof Element) {
-      const rect = event.currentTarget.getBoundingClientRect();
-      centerX = rect.left + rect.width / 2;
-      centerY = rect.top + rect.height / 2;
+    if (event) {
+      if ('clientX' in event && typeof event.clientX === 'number' && event.clientX > 0) {
+        centerX = event.clientX;
+        centerY = event.clientY;
+      } else if (event instanceof Element) {
+        const rect = event.getBoundingClientRect();
+        centerX = rect.left + rect.width / 2;
+        centerY = rect.top + rect.height / 2;
+      } else if ('currentTarget' in event && event.currentTarget instanceof Element) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        centerX = rect.left + rect.width / 2;
+        centerY = rect.top + rect.height / 2;
+      }
     }
 
-    const transition = document.startViewTransition(() => {
-      flushSync(() => {
-        setThemeState(mode);
-        setIsDark(nextIsDark);
-        applyThemeClass(nextIsDark);
-        localStorage.setItem('theme', mode);
-      });
-    });
-
     try {
+      const transition = document.startViewTransition(() => {
+        flushSync(() => {
+          setThemeState(mode);
+          setIsDark(nextIsDark);
+          applyThemeClass(nextIsDark);
+          localStorage.setItem('theme', mode);
+        });
+      });
+
       await transition.ready;
       const maxDistance = Math.hypot(
         Math.max(centerX, window.innerWidth - centerX),
         Math.max(centerY, window.innerHeight - centerY)
       );
 
-      // Randomize the animation style based on whether it's a system change or explicit light/dark
-      let clipPath = [
+      const clipPath = [
         `circle(0px at ${centerX}px ${centerY}px)`,
         `circle(${maxDistance}px at ${centerX}px ${centerY}px)`,
       ];
-
-      if (mode === 'system') {
-        clipPath = [
-          `inset(100% 100% 100% 100%)`,
-          `inset(0% 0% 0% 0%)`,
-        ];
-      }
 
       document.documentElement.animate(
         {
           clipPath,
         },
         {
-          duration: 400,
-          easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+          duration: 260,
+          easing: "cubic-bezier(0.2, 0, 0, 1)",
           pseudoElement: "::view-transition-new(root)",
         }
       );
     } catch (e) {
-      // Transition failed
+      setThemeState(mode);
+      setIsDark(nextIsDark);
+      applyThemeClass(nextIsDark);
+      localStorage.setItem('theme', mode);
     }
 
   }, [isDark, theme]);

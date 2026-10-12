@@ -267,14 +267,7 @@ function initCustomIconsListener() {
 const Icon: React.FC<IconProps> = ({ name, className = '', solid = false, ...props }) => {
   const normKey = (name || '').toLowerCase().trim();
   const pascalName = (customIconMapping[normKey] || customIconMapping[name] || formatNameToPascal(name)) as keyof typeof LucideIcons;
-  const LucideIcon = (LucideIcons[pascalName] || 
-    (pascalName === ('Logout' as any) ? LucideIcons.LogOut : undefined) || 
-    (pascalName === ('Login' as any) ? LucideIcons.LogIn : undefined) ||
-    (normKey === 'logout' ? LucideIcons.LogOut : undefined) ||
-    (normKey === 'login' ? LucideIcons.LogIn : undefined) ||
-    (normKey === 'inbox' ? LucideIcons.Mail : undefined) ||
-    (pascalName === ('Inbox' as any) ? LucideIcons.Mail : undefined)
-  ) as React.FC<any> | undefined;
+  const LucideIcon = LucideIcons[pascalName] as React.FC<any> | undefined;
 
   const [customSvg, setCustomSvg] = useState<string | null>(() => {
     const key = name.toLowerCase();
@@ -348,7 +341,7 @@ const Icon: React.FC<IconProps> = ({ name, className = '', solid = false, ...pro
   }
 
   if (!LucideIcon) {
-    const FallbackIcon = LucideIcons.Mail || LucideIcons.HelpCircle || LucideIcons.Square;
+    const FallbackIcon = (LucideIcons as any)['Mail'] || (LucideIcons as any)['HelpCircle'] || (LucideIcons as any)['Square'];
     return (
       <span 
         className={`inline-flex shrink-0 items-center justify-center [&>svg]:w-full [&>svg]:h-full ${hasWidthClass ? '' : 'w-[1em] h-[1em]'} ${finalClass}`}

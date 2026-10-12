@@ -28,7 +28,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { useTheme } from "../components/ThemeContext";
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Wallet, TrendingUp, Eye, RefreshCw, ArrowDown, ArrowUp, ArrowLeftRight, Clock, Bitcoin, Link as LinkIcon, Gift, LayoutDashboard, Presentation, Loader2 } from "lucide-react"
+import { Wallet, TrendingUp, Eye, RefreshCw, ArrowDown, ArrowUp, ArrowLeftRight, Clock, Bitcoin, Link as LinkIcon, Gift, LayoutDashboard, Presentation, Loader2, Crown, GraduationCap } from "lucide-react"
 
 import { DiscreteTabs, TabItem } from "../components/ui/discrete-tab";
 import { TourProvider, TourAlertDialog, useTour } from "@/components/ui/tour";
@@ -718,13 +718,19 @@ const AffiliatePage: React.FC = () => {
 
         const qLogs = query(
           collection(db, "affiliate_logs"),
-          where("affiliateId", "==", user.uid),
-          orderBy("createdAt", "desc")
+          where("affiliateId", "==", user.uid)
         );
         const unsubLogs = onSnapshot(qLogs, (snap) => {
-          setLogs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          list.sort((a: any, b: any) => {
+            const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt || 0);
+            const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt || 0);
+            return Number(timeB) - Number(timeA);
+          });
+          setLogs(list);
         }, (error) => {
-          console.error("Error fetching affiliate_logs", error);
+          console.warn("Notice fetching affiliate_logs:", error);
+          setLogs([]);
         });
 
         return () => {
@@ -1372,6 +1378,34 @@ const AffiliatePage: React.FC = () => {
                   </div>
                </div>
              </div>
+          </div>
+
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10 mt-6">
+            <div
+              onClick={() => navigate("/subscription")}
+              className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-700 transition-all shadow-2xs"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Crown className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-0.5">
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>রিসেলিং শিক্ষক ও ভিআইপি মেম্বারশিপ</span>
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                    ০ টাকা অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারিতে প্রোডাক্ট রিসেলিং করুন
+                  </h4>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    কোনো প্রোডাক্ট স্টক না রেখে কাস্টমারের ঠিকানায় পার্সেল পাঠিয়ে ঘরে বসে আয়ের সম্পূর্ণ নির্দেশিকা।
+                  </p>
+                </div>
+              </div>
+              <span className="px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold shrink-0 self-start sm:self-center">
+                গাইড ও প্ল্যান দেখুন ➔
+              </span>
+            </div>
           </div>
 
           <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10 pb-8 mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">

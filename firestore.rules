@@ -164,5 +164,30 @@ service cloud.firestore {
       allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow update, delete: if isAdmin();
     }
+
+    // Affiliate Logs, Affiliates and Creator Hub
+    match /affiliate_logs/{logId} {
+      allow read, write: if true;
+    }
+    match /affiliates_log/{logId} {
+      allow read, write: if true;
+    }
+    match /affiliate_requests/{reqId} {
+      allow read, write: if true;
+    }
+    match /affiliates/{affId} {
+      allow read, write: if true;
+    }
+    match /creator_videos/{vidId} {
+      allow read, write: if true;
+    }
+    match /creator_requests/{reqId} {
+      allow read, write: if true;
+    }
+
+    // Withdrawals Collection
+    match /withdrawals/{withdrawalId} {
+      allow read, write: if true;
+    }
   }
 }

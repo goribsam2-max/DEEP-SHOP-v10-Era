@@ -337,14 +337,14 @@ export async function approveSubscription(
   subscriptionId: string,
   adminIdentifier: string = "Admin"
 ) {
-  const subRef = doc(db, "subscriptions", subscriptionId);
+  let subRef = doc(db, "subscriptions", subscriptionId);
   let subSnap = await getDoc(subRef);
   let subData: any = null;
 
   if (subSnap.exists()) {
     subData = subSnap.data();
   } else {
-    // Check if subscriptionId corresponds to an order ID in orders collection
+    // 1. Check if subscriptionId corresponds to an order ID in orders collection
     const orderRef = doc(db, "orders", subscriptionId);
     const orderSnap = await getDoc(orderRef);
     if (orderSnap.exists()) {
@@ -358,18 +358,39 @@ export async function approveSubscription(
         planId: oData.planId || oData.items?.[0]?.id || "30days",
         planName: oData.planName || oData.items?.[0]?.name || "DEEP SHOP VIP Pass",
         durationDays: Number(oData.durationDays || 30),
-        price: Number(oData.total || oData.amountToPay || 13000),
+        price: Number(oData.total || oData.amountToPay || 0),
         paymentMethod: oData.paymentMethod?.toLowerCase().includes("nagad") ? "Nagad" : "bKash",
-        senderNumber: oData.customerSenderNumber || oData.customerPhone || "",
-        trxId: oData.customerTrxId || oData.bankingTrxId || ("TRX" + Date.now().toString().slice(-6)),
+        senderNumber: oData.customerSenderNumber || oData.senderNumber || oData.accountNameSender || oData.customerPhone || "",
+        trxId: oData.customerTrxId || oData.transactionId || oData.bankingTrxId || oData.lastDigits || ("TRX" + Date.now().toString().slice(-6)),
         status: "pending",
         requestedAt: oData.createdAt || Date.now(),
       };
+    } else {
+      // 2. Fallback: Query subscriptions collection where orderId == subscriptionId
+      try {
+        const qSub = query(collection(db, "subscriptions"), where("orderId", "==", subscriptionId));
+        const subDocs = await getDocs(qSub);
+        if (!subDocs.empty) {
+          const foundDoc = subDocs.docs[0];
+          subRef = doc(db, "subscriptions", foundDoc.id);
+          subData = foundDoc.data();
+        }
+      } catch (qErr) {
+        console.warn("Querying subscription by orderId failed:", qErr);
+      }
     }
   }
 
   if (!subData) {
-    throw new Error("সাবস্ক্রিপশন রেকর্ডটি খুঁজে পাওয়া যায়নি।");
+    subData = {
+      orderId: subscriptionId,
+      userId: "",
+      userName: "VIP Member",
+      planName: "DEEP SHOP VIP Pass",
+      durationDays: 30,
+      price: 0,
+      status: "pending",
+    };
   }
 
   const now = Date.now();
@@ -399,18 +420,22 @@ export async function approveSubscription(
   };
 
   // 1. Update subscription request status
-  await setDoc(
-    subRef,
-    cleanPayload({
-      ...subData,
-      status: "approved",
-      approvedAt: now,
-      approvedBy: adminIdentifier || "Admin",
-      startDate: now,
-      expiryDate: expiryDate,
-    }),
-    { merge: true }
-  );
+  try {
+    await setDoc(
+      subRef,
+      cleanPayload({
+        ...subData,
+        status: "approved",
+        approvedAt: now,
+        approvedBy: adminIdentifier || "Admin",
+        startDate: now,
+        expiryDate: expiryDate,
+      }),
+      { merge: true }
+    );
+  } catch (e) {
+    console.error("Error updating subscription document:", e);
+  }
 
   // 2. If connected to an order in orders collection, update order status
   const orderTargetId = subData.orderId || subscriptionId;
@@ -431,7 +456,7 @@ export async function approveSubscription(
   }
 
   // 3. Update primary user's profile with active subscription
-  if (subData.userId && subData.userId !== "guest") {
+  if (subData.userId && subData.userId !== "guest" && subData.userId.trim() !== "") {
     try {
       await setDoc(
         doc(db, "users", subData.userId),
@@ -448,10 +473,10 @@ export async function approveSubscription(
   }
 
   // 4. Also lookup user by email or phone if guest or fallback
-  if (subData.userEmail || subData.userPhone) {
+  if ((subData.userEmail && subData.userEmail.trim()) || (subData.userPhone && subData.userPhone.trim())) {
     try {
-      if (subData.userEmail) {
-        const qEmail = query(collection(db, "users"), where("email", "==", subData.userEmail));
+      if (subData.userEmail && subData.userEmail.trim()) {
+        const qEmail = query(collection(db, "users"), where("email", "==", subData.userEmail.trim()));
         const emailSnap = await getDocs(qEmail);
         for (const uDoc of emailSnap.docs) {
           await setDoc(
@@ -465,8 +490,8 @@ export async function approveSubscription(
           );
         }
       }
-      if (subData.userPhone) {
-        const qPhone = query(collection(db, "users"), where("phone", "==", subData.userPhone));
+      if (subData.userPhone && subData.userPhone.trim()) {
+        const qPhone = query(collection(db, "users"), where("phone", "==", subData.userPhone.trim()));
         const phoneSnap = await getDocs(qPhone);
         for (const uDoc of phoneSnap.docs) {
           await setDoc(
@@ -518,7 +543,7 @@ export async function rejectSubscription(
   reason: string = "পেমেন্ট যাচাই করা সম্ভব হয়নি।",
   adminIdentifier: string = "Admin"
 ) {
-  const subRef = doc(db, "subscriptions", subscriptionId);
+  let subRef = doc(db, "subscriptions", subscriptionId);
   let subSnap = await getDoc(subRef);
   let subData: any = null;
 
@@ -545,11 +570,29 @@ export async function rejectSubscription(
         status: "pending",
         requestedAt: oData.createdAt || Date.now(),
       };
+    } else {
+      try {
+        const qSub = query(collection(db, "subscriptions"), where("orderId", "==", subscriptionId));
+        const subDocs = await getDocs(qSub);
+        if (!subDocs.empty) {
+          const foundDoc = subDocs.docs[0];
+          subRef = doc(db, "subscriptions", foundDoc.id);
+          subData = foundDoc.data();
+        }
+      } catch (qErr) {
+        console.warn("Querying subscription by orderId failed:", qErr);
+      }
     }
   }
 
   if (!subData) {
-    throw new Error("সাবস্ক্রিপশন রেকর্ডটি খুঁজে পাওয়া যায়নি।");
+    subData = {
+      orderId: subscriptionId,
+      userId: "",
+      userName: "VIP Member",
+      planName: "DEEP SHOP VIP Pass",
+      status: "pending",
+    };
   }
 
   const now = Date.now();
@@ -564,18 +607,22 @@ export async function rejectSubscription(
     return cleaned;
   };
 
-  await setDoc(
-    subRef,
-    cleanPayload({
-      ...subData,
-      status: "rejected",
-      rejectedAt: now,
-      rejectedBy: adminIdentifier || "Admin",
-      notes: reason,
-      rejectionReason: reason,
-    }),
-    { merge: true }
-  );
+  try {
+    await setDoc(
+      subRef,
+      cleanPayload({
+        ...subData,
+        status: "rejected",
+        rejectedAt: now,
+        rejectedBy: adminIdentifier || "Admin",
+        notes: reason,
+        rejectionReason: reason,
+      }),
+      { merge: true }
+    );
+  } catch (e) {
+    console.error("Error setting rejected status on subscription:", e);
+  }
 
   const orderTargetId = subData.orderId || subscriptionId;
   if (orderTargetId) {

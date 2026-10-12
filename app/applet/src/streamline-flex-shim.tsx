@@ -415,3 +415,6 @@ export const Smile = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 1
 export const BellOff = c(["M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5", "M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7", "M10.3 21a1.94 1.94 0 0 0 3.4 0", "m2 2 20 20"]);
 export const Ban = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "m4.93 4.93 14.14 14.14"]);
 export const MessageSquareWarning = c(["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", "M12 7v3", "M12 13h.01"]);
+export const GraduationCap = c(["M22 10v6M2 10l10-5 10 5-10 5z", "M6 12v5c3 3 9 3 12 0v-5"]);
+export const Square = c(["M3 3h18v18H3z"]);
+
