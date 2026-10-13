@@ -12,6 +12,7 @@ import { triggerHaptic } from "../../lib/haptics";
 import { Heart, Star, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
 
 export const ProductCard = ({ product, index }: { product: Product, index?: number }) => {
   const navigate = useNavigate();
@@ -118,7 +119,7 @@ export const ProductCard = ({ product, index }: { product: Product, index?: numb
           {/* Image Container */}
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-xl sm:rounded-t-2xl bg-zinc-100 dark:bg-zinc-800">
             <PixelImage
-              src={product.image}
+              src={getProductDisplayImage(product)}
               alt={product.name}
               className="w-full h-full z-10"
               imgClassName={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${product.isSold || product.stock === 0 ? "opacity-30 grayscale" : ""}`}

@@ -26,6 +26,7 @@ import Icon from "../components/Icon";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { PixelImage } from "../components/ui/PixelImage";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 import { getProductCoinReward } from "../lib/coinRewards";
 import { CustomSectionEmbed } from "../components/CustomSectionEmbed";
 import { useTheme } from "../components/ThemeContext";
@@ -752,11 +753,11 @@ const ProductDetails: React.FC = () => {
     );
 
   const images =
-    product.images && product.images.length > 0
+    product.images && product.images.length > 0 && product.images[0]
       ? product.images
       : product.image
         ? [product.image]
-        : ["https://placehold.co/600x600/png"];
+        : [getProductDisplayImage(product)];
 
   const basePrice = mysteryOffer
     ? mysteryOffer.discountPrice

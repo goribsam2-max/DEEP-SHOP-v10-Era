@@ -9,6 +9,7 @@ import { useNotify } from "../Notifications";
 import { cn } from "../../lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { PixelImage } from "./PixelImage";
+import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
 
 function OfferProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
@@ -75,8 +76,6 @@ function OfferProductCard({ product }: { product: Product }) {
     window.dispatchEvent(new CustomEvent('cartUpdated'));
   };
 
-  const hasMultipleImages = product.images && product.images.length > 0;
-  const imageUrl = hasMultipleImages ? product.images[0] : (product.image || "");
   const productSlug = product.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
   return (
@@ -86,7 +85,7 @@ function OfferProductCard({ product }: { product: Product }) {
     >
       <div className="relative h-[290px] sm:h-[320px] md:h-[350px] w-full overflow-hidden rounded-[15px] md:rounded-[15px] bg-zinc-100 dark:bg-zinc-800 shadow-lg border border-zinc-200/50 dark:border-zinc-800/50 group hover:-translate-y-1 transition-transform duration-300">
         <PixelImage
-          src={imageUrl}
+          src={getProductDisplayImage(product)}
           alt={product.name}
           className="absolute inset-0 w-full h-full"
           imgClassName="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

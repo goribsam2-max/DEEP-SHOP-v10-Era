@@ -81,6 +81,28 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     try {
+      // Create a style element to prevent standard view-transition flashing
+      const styleId = 'theme-transition-style';
+      let styleEl = document.getElementById(styleId);
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        styleEl.textContent = `
+          ::view-transition-old(root),
+          ::view-transition-new(root) {
+            animation: none !important;
+            mix-blend-mode: normal !important;
+          }
+          ::view-transition-old(root) {
+            z-index: 1 !important;
+          }
+          ::view-transition-new(root) {
+            z-index: 9999 !important;
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+
       const transition = document.startViewTransition(() => {
         flushSync(() => {
           setThemeState(mode);
@@ -101,16 +123,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         `circle(${maxDistance}px at ${centerX}px ${centerY}px)`,
       ];
 
-      document.documentElement.animate(
+      const anim = document.documentElement.animate(
         {
           clipPath,
         },
         {
-          duration: 260,
-          easing: "cubic-bezier(0.2, 0, 0, 1)",
+          duration: 320,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
           pseudoElement: "::view-transition-new(root)",
         }
       );
+
+      await anim.finished;
     } catch (e) {
       setThemeState(mode);
       setIsDark(nextIsDark);

@@ -33,8 +33,9 @@ import StoryViewer from "../components/ui/StoryViewer";
 import { ProductCard } from "../components/ui/ProductCard";
 import { OfferSlider } from "../components/ui/OfferSlider";
 import { BorderOfferSection } from "../components/ui/BorderOfferSection";
-import { Tag, Zap, Crown, Users, Sparkles, Star, Play, MoreHorizontal, ChevronRight, ShoppingBag, GraduationCap } from "lucide-react";
+import { Tag, Zap, Crown, Users, Sparkles, Star, Play, MoreHorizontal, ChevronRight, ShoppingBag, GraduationCap, Wrench, Cpu, Battery, Camera, Smartphone } from "lucide-react";
 import { PixelImage } from "../components/ui/PixelImage";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 import { HeroSlider } from "../components/ui/hero-slider";
 import { LogoTimeline, type LogoItem } from "../components/ui/logo-timeline";
 import { Footer } from "../components/Footer";
@@ -441,16 +442,16 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
               <Crown className="w-5 h-5 text-amber-400" />
             </div>
-            <div className="space-y-1 min-w-0">
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-400 tracking-wide">
-                <GraduationCap className="w-3.5 h-3.5" />
+            <div className="space-y-0.5 min-w-0">
+              <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-amber-400 tracking-wide whitespace-nowrap">
+                <GraduationCap className="w-3.5 h-3.5 shrink-0" />
                 <span>রিসেলার মাস্টারক্লাস ও ভিআইপি গাইড</span>
               </div>
-              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
+              <h3 className="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight truncate">
                 রিসেলারদের জন্য ০৳ অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারি
               </h3>
-              <p className="text-xs text-zinc-400 font-normal leading-relaxed">
-                কোনো অগ্রিম চার্জ বা কলার ভেরিফিকেশন ছাড়া কাস্টমারের কাছে পার্সেল পাঠান। কীভাবে সাবস্ক্রিপশন নিয়ে আয় করবেন দেখুন।
+              <p className="text-[10px] sm:text-xs text-zinc-400 font-normal leading-tight truncate">
+                কোনো অগ্রিম চার্জ ছাড়া সরাসরি কাস্টমারকে পার্সেল পাঠান। বিস্তারিত গাইড দেখুন।
               </p>
             </div>
           </div>
@@ -642,6 +643,108 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           </div>
         )}
 
+        {/* Dedicated Phone & Device Replacement Parts Section (Display, Battery, Camera, Logic) */}
+        <div className="mb-8 w-full animate-fade-in group">
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0"></span>
+              <div className="flex items-baseline gap-2 min-w-0">
+                <h2
+                  className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-1.5 whitespace-nowrap"
+                  style={{
+                    fontFamily: "'Comfortaa', cursive",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  <Wrench className="w-4 h-4 text-blue-500 shrink-0" />
+                  <span>ফোন পার্টস (Parts)</span>
+                </h2>
+                <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate hidden sm:inline-block">
+                  iPhone &amp; Android অরিজিনাল ডিসপ্লে, ব্যাটারি, ক্যামেরা ও লজিক বোর্ড
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/all-products?category=Phone+Parts+(%E0%A6%AA%E0%A6%BE%E0%A6%B0%E0%A7%8D%E0%A6%9F%E0%A6%B8)")}
+              className="text-[11px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0 whitespace-nowrap ml-2"
+            >
+              See All
+            </button>
+          </div>
+
+          {/* Quick Sub-Categories Pills with Vibrant Lucide UI SVG Icons */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-2.5 pt-0.5 scrollbar-hide">
+            {[
+              {
+                label: "অল পার্টস",
+                cat: "Phone Parts",
+                icon: <Smartphone className="w-3.5 h-3.5 text-blue-500 shrink-0" />,
+                badgeClass: "bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/20",
+              },
+              {
+                label: "ডিসপ্লে",
+                cat: "Display",
+                icon: <Smartphone className="w-3.5 h-3.5 text-cyan-500 shrink-0" />,
+                badgeClass: "bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/20",
+              },
+              {
+                label: "ব্যাটারি",
+                cat: "Battery",
+                icon: <Battery className="w-3.5 h-3.5 text-emerald-500 shrink-0" />,
+                badgeClass: "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+              },
+              {
+                label: "ক্যামেরা",
+                cat: "Camera",
+                icon: <Camera className="w-3.5 h-3.5 text-purple-500 shrink-0" />,
+                badgeClass: "bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/20",
+              },
+              {
+                label: "লজিক বোর্ড",
+                cat: "Logic",
+                icon: <Cpu className="w-3.5 h-3.5 text-amber-500 shrink-0" />,
+                badgeClass: "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/20",
+              },
+            ].map((sub, sIdx) => (
+              <button
+                key={sIdx}
+                onClick={() => {
+                  setActiveCategory(sub.cat);
+                  document.getElementById("popular-products")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold shrink-0 border transition-all active:scale-95 whitespace-nowrap cursor-pointer shadow-2xs ${sub.badgeClass}`}
+              >
+                {sub.icon}
+                <span>{sub.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Parts Product Cards Horizontal Grid */}
+          {products.filter((p) =>
+            ["part", "পার্টস", "display", "স্ক্রিন", "battery", "ব্যাটারি", "camera", "ক্যামেরা", "logic", "motherboard", "মাদারবোর্ড"].some((word) =>
+              (p.category || "").toLowerCase().includes(word) ||
+              (p.name || "").toLowerCase().includes(word)
+            )
+          ).length > 0 && (
+            <div className="flex gap-4 overflow-x-auto pb-4 pt-1 px-1 scrollbar-hide snap-x">
+              {products
+                .filter((p) =>
+                  ["part", "পার্টস", "display", "স্ক্রিন", "battery", "ব্যাটারি", "camera", "ক্যামেরা", "logic", "motherboard", "মাদারবোর্ড"].some((word) =>
+                    (p.category || "").toLowerCase().includes(word) ||
+                    (p.name || "").toLowerCase().includes(word)
+                  )
+                )
+                .slice(0, 10)
+                .map((product, index) => (
+                  <div key={product.id ? `${product.id}-parts-${index}` : index} className="min-w-[200px] sm:min-w-[240px] snap-center transform hover:scale-[1.02] transition-all duration-300">
+                    <ProductCard product={product} index={index} />
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
         {/* Original Mobiles & Gear Section - Skinny List Style Layout ("chikon shape list") */}
         {products.filter((p) =>
           ["accessories", "cover", "charger", "cable", "phone", "mobile"].some((word) =>
@@ -690,7 +793,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                       {/* Left Square Pic */}
                       <div className="w-16 h-16 rounded-xl overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shrink-0">
                         <PixelImage 
-                          src={product.image} 
+                          src={getProductDisplayImage(product)} 
                           alt={product.name} 
                           className="w-full h-full bg-transparent"
                           imgClassName="w-full h-full object-cover group-hover/row:scale-105 transition-transform duration-300" 

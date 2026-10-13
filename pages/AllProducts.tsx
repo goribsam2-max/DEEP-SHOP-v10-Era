@@ -36,7 +36,19 @@ const AllProducts: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  const tabs = ["All", "Mobile", "Border Cross", "Mobiles", "Original Phones", "Chargers"];
+  const tabs = [
+    "All",
+    "Phone Parts (পার্টস)",
+    "Display (ডিসপ্লে)",
+    "Battery (ব্যাটারি)",
+    "Camera (ক্যামেরা)",
+    "Logic Board (মাদারবোর্ড)",
+    "Mobile",
+    "Border Cross",
+    "Mobiles",
+    "Original Phones",
+    "Chargers",
+  ];
 
   return (
     <div className="p-6 md:p-12 bg-zinc-50 dark:bg-[#000000] max-w-[1440px] mx-auto min-h-screen font-inter animate-fade-in relative overflow-hidden">
@@ -74,15 +86,56 @@ const AllProducts: React.FC = () => {
               .fill(0)
               .map((_, i) => <ProductSkeleton key={i} />)
           : products
-              .filter((p) => activeTab === "All" || p.category === activeTab)
+              .filter((p) => {
+                if (activeTab === "All") return true;
+                if (p.category === activeTab) return true;
+                const catLower = (p.category || "").toLowerCase();
+                const nameLower = (p.name || "").toLowerCase();
+                if (activeTab.includes("Phone Parts") || activeTab.includes("পার্টস")) {
+                  return ["part", "পার্টস", "display", "battery", "camera", "logic", "motherboard", "স্ক্রিন", "ব্যাটারি", "ক্যামেরা"].some(w => catLower.includes(w) || nameLower.includes(w));
+                }
+                if (activeTab.includes("Display") || activeTab.includes("ডিসপ্লে")) {
+                  return catLower.includes("display") || nameLower.includes("display") || catLower.includes("oled") || nameLower.includes("oled") || catLower.includes("স্ক্রিন");
+                }
+                if (activeTab.includes("Battery") || activeTab.includes("ব্যাটারি")) {
+                  return catLower.includes("battery") || nameLower.includes("battery") || catLower.includes("ব্যাটারি") || nameLower.includes("mah");
+                }
+                if (activeTab.includes("Camera") || activeTab.includes("ক্যামেরা")) {
+                  return catLower.includes("camera") || nameLower.includes("camera") || catLower.includes("ক্যামেরা") || nameLower.includes("lens");
+                }
+                if (activeTab.includes("Logic") || activeTab.includes("মাদারবোর্ড")) {
+                  return catLower.includes("logic") || nameLower.includes("logic") || catLower.includes("motherboard") || nameLower.includes("motherboard") || catLower.includes("মাদারবোর্ড");
+                }
+                return false;
+              })
               .map((product, index) => (
                 <ProductCard key={product.id} product={product} index={index} />
               ))}
       </div>
 
       {products.length > 0 &&
-        products.filter((p) => activeTab === "All" || p.category === activeTab)
-          .length === 0 && (
+        products.filter((p) => {
+          if (activeTab === "All") return true;
+          if (p.category === activeTab) return true;
+          const catLower = (p.category || "").toLowerCase();
+          const nameLower = (p.name || "").toLowerCase();
+          if (activeTab.includes("Phone Parts") || activeTab.includes("পার্টস")) {
+            return ["part", "পার্টস", "display", "battery", "camera", "logic", "motherboard", "স্ক্রিন", "ব্যাটারি", "ক্যামেরা"].some(w => catLower.includes(w) || nameLower.includes(w));
+          }
+          if (activeTab.includes("Display") || activeTab.includes("ডিসপ্লে")) {
+            return catLower.includes("display") || nameLower.includes("display") || catLower.includes("oled") || nameLower.includes("oled") || catLower.includes("স্ক্রিন");
+          }
+          if (activeTab.includes("Battery") || activeTab.includes("ব্যাটারি")) {
+            return catLower.includes("battery") || nameLower.includes("battery") || catLower.includes("ব্যাটারি") || nameLower.includes("mah");
+          }
+          if (activeTab.includes("Camera") || activeTab.includes("ক্যামেরা")) {
+            return catLower.includes("camera") || nameLower.includes("camera") || catLower.includes("ক্যামেরা") || nameLower.includes("lens");
+          }
+          if (activeTab.includes("Logic") || activeTab.includes("মাদারবোর্ড")) {
+            return catLower.includes("logic") || nameLower.includes("logic") || catLower.includes("motherboard") || nameLower.includes("motherboard") || catLower.includes("মাদারবোর্ড");
+          }
+          return false;
+        }).length === 0 && (
           <div className="py-40 text-center opacity-30 flex flex-col items-center">
             <Icon name="box-open" className="text-xl mb-8" />
             <p className="text-[12px] font-semibold  tracking-normal">

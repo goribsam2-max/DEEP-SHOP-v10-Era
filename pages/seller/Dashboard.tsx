@@ -30,6 +30,7 @@ import {
   MapPin, Phone, LayoutDashboard, ClipboardList, Boxes, Sliders, Copy,
   Crown
 } from "lucide-react";
+import { generatePartSvg } from "../../src/lib/phonePartsArt";
 import ManageSubscriptions from "../admin/ManageSubscriptions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -681,8 +682,15 @@ const SellerDashboard: React.FC = () => {
         );
       }
       
-      const combinedImages = [...(productForm.existingImages || []), ...uploadedUrls];
-      const primaryImage = combinedImages[0] || "";
+      let combinedImages = [...(productForm.existingImages || []), ...uploadedUrls];
+      let primaryImage = combinedImages[0] || "";
+
+      if (!primaryImage && !productEditingId) {
+        const cat = productForm.isBorderOffer ? "Border Cross Products" : (productForm.category === "custom" ? customCategoryName : productForm.category);
+        const autoPartImg = generatePartSvg(productForm.name, cat);
+        primaryImage = autoPartImg;
+        combinedImages = [autoPartImg];
+      }
 
       const calcAdvanceAmount = productForm.advanceType === "full"
         ? Number(productForm.price || 0)
