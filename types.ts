@@ -47,6 +47,7 @@ export interface Product {
   advanceMode?: 'fixed' | 'percentage';
   advanceAmount?: number;
   advancePercentage?: number;
+  resellerPrice?: number;
 }
 
 export interface UserProfile {
@@ -58,6 +59,16 @@ export interface UserProfile {
   email: string;
   displayName: string;
   photoURL?: string;
+  role?: string;
+  isReseller?: boolean;
+  resellerStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+  socialPlatform?: string;
+  socialLink?: string;
+  customerProofUrl?: string;
+  resellerApprovedAt?: number;
+  hasActiveSubscription?: boolean;
+  subscriptionPlanId?: string;
+  subscriptionEnd?: number;
   address?: string;
   phoneNumber?: string;
   coverPhoto?: string;

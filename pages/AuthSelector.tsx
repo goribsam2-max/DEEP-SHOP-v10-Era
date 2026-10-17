@@ -287,10 +287,10 @@ const AuthSelector: React.FC = () => {
           type="button" 
           variant="outline"
           size="lg"
-          className="w-full font-semibold border-emerald-500/30 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-          onClick={() => navigate(`/signup?role=seller${querySuffix ? "&" + querySuffix.slice(1) : ""}`)}
+          className="w-full font-semibold border-amber-500/30 dark:border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/50 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+          onClick={() => navigate(`/signup?role=reseller${querySuffix ? "&" + querySuffix.slice(1) : ""}`)}
         >
-          Become a Seller (Partner)
+          Become a Reseller (রিসেলার পার্টনার)
         </Button>
         <Button 
           type="button" 

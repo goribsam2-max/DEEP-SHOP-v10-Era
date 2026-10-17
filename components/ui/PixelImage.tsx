@@ -38,23 +38,22 @@ export const PixelImage: React.FC<PixelImageProps> = ({
     setIsLoaded(false);
     setHasError(false);
 
-    if (!src) {
+    if (!src || !src.trim()) {
       setHasError(true);
       return;
     }
 
-    // Pre-test image cache or load
+    // Pre-test image cache or load only with non-empty string
     const img = new Image();
+    img.onload = () => {
+      setIsLoaded(true);
+    };
+    img.onerror = () => {
+      setHasError(true);
+    };
     img.src = src;
     if (img.complete && img.naturalWidth > 0) {
       setIsLoaded(true);
-    } else {
-      img.onload = () => {
-        setIsLoaded(true);
-      };
-      img.onerror = () => {
-        setHasError(true);
-      };
     }
   }, [src]);
 
@@ -98,7 +97,7 @@ export const PixelImage: React.FC<PixelImageProps> = ({
       )}
 
       {/* Main Image with smooth fade-in and scale-in */}
-      {src && !hasError && (
+      {Boolean(src && src.trim() && !hasError) && (
         <img
           ref={imgRef}
           src={src}

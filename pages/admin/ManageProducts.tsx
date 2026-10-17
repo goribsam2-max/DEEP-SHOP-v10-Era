@@ -41,6 +41,7 @@ const ManageProducts: React.FC = () => {
   const [formData, setFormData] = useState({
     name: "",
     price: 0,
+    resellerPrice: 0,
     description: "",
     category: "Mobile",
     customCategory: "",
@@ -69,6 +70,7 @@ const ManageProducts: React.FC = () => {
     setFormData({
       name: product.name || "",
       price: product.price || 0,
+      resellerPrice: product.resellerPrice || 0,
       description: product.description || "",
       category: product.category || "Mobile",
       customCategory: "",
@@ -113,6 +115,7 @@ const ManageProducts: React.FC = () => {
       const productData: any = {
         name: formData.name,
         price: Number(formData.price),
+        resellerPrice: Number(formData.resellerPrice || 0),
         description: formData.description,
         category: formData.category === "Custom" ? formData.customCategory : formData.category,
         stock: Number(formData.stock),
@@ -155,6 +158,7 @@ const ManageProducts: React.FC = () => {
       setFormData({
         name: "",
         price: 0,
+        resellerPrice: 0,
         description: "",
         category: "Mobile",
         customCategory: "",
@@ -288,10 +292,10 @@ const ManageProducts: React.FC = () => {
               </div>
             </div>
 
-                  <div className="md:flex md:items-center md:space-x-4">
-                    <div className="md:w-1/2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
                       <Label htmlFor="price" className="font-medium text-xs text-zinc-500 mb-2 block">
-                        Price (৳)
+                        Regular Price (৳)
                       </Label>
                       <Input
                         id="price"
@@ -301,7 +305,23 @@ const ManageProducts: React.FC = () => {
                         required
                       />
                     </div>
-                    <div className="mt-4 md:mt-0 md:w-1/2">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label htmlFor="resellerPrice" className="font-medium text-xs text-amber-600 dark:text-amber-400 block font-bold">
+                          Reseller Price (৳)
+                        </Label>
+                        <span className="text-[10px] text-zinc-400">Exclusive</span>
+                      </div>
+                      <Input
+                        id="resellerPrice"
+                        type="number"
+                        placeholder="e.g. 18000"
+                        className="border-amber-500/40 focus:border-amber-500"
+                        value={formData.resellerPrice || ""}
+                        onChange={(e) => setFormData({ ...formData, resellerPrice: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
                       <Label htmlFor="stock" className="font-medium text-xs text-zinc-500 mb-2 block">
                         Stock Amount
                       </Label>

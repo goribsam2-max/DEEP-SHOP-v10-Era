@@ -1263,23 +1263,35 @@ export async function initializeAppAsync() {
   if (appInitialized) return;
   appInitialized = true;
 
-  const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL;
+  const isExplicitDev = process.env.NODE_ENV === "development";
+  const distExists = fs.existsSync(path.join(process.cwd(), "dist", "index.html"));
+  const isCloudRun = !!process.env.K_SERVICE || !!process.env.K_REVISION;
+  const isProd = !isExplicitDev && (process.env.NODE_ENV === "production" || !!process.env.VERCEL || isCloudRun || distExists);
   let vite: any;
   const distPath = path.join(process.cwd(), "dist");
 
   // Only use static serving locally in production, NOT on Vercel
   // because on Vercel, static files are handled by vercel static routing if present.
   if (isProd && !process.env.VERCEL) {
+    if (fs.existsSync(distPath)) {
       app.use(express.static(distPath, { index: false }));
+    }
   }
 
   if (!isProd) {
-    const { createServer: createViteServer } = await import("vite");
-    vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      vite = await createViteServer({
+        server: { middlewareMode: true, hmr: false },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (viteErr) {
+      console.warn("Vite dev server failed to start, falling back to static serving:", viteErr);
+      if (fs.existsSync(distPath)) {
+        app.use(express.static(distPath, { index: false }));
+      }
+    }
   }
 
   // Favicon & Icon static handlers
@@ -1350,7 +1362,7 @@ export async function initializeAppAsync() {
     try {
       let template: string = "";
 
-      if (!isProd) {
+      if (!isProd && vite) {
         template = fs.readFileSync(path.resolve("index.html"), "utf-8");
         template = await vite.transformIndexHtml(req.originalUrl, template);
       } else {
@@ -1607,10 +1619,14 @@ export async function initializeAppAsync() {
 }
 
 if (!process.env.VERCEL) {
-  initializeAppAsync().then(() => {
-    const PORT = 3000;
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+  const PORT = parseInt(process.env.PORT || "3000", 10);
+  initializeAppAsync()
+    .catch((err) => {
+      console.error("Error during initializeAppAsync:", err);
+    })
+    .finally(() => {
+      app.listen(PORT, "0.0.0.0", () => {
+        console.log(`Server running on http://0.0.0.0:${PORT}`);
+      });
     });
-  });
 }

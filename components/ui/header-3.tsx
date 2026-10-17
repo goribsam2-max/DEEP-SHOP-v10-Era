@@ -477,7 +477,20 @@ export function Header() {
             </Button>
             <AnimatedThemeToggler className="rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white" />
 
-            {location.pathname !== "/profile" && (
+            {location.pathname === "/profile" ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate("/settings");
+                }}
+                className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white flex items-center justify-center cursor-pointer"
+                aria-label="Settings"
+              >
+                <Settings className="w-5 h-5" strokeWidth={1.8} />
+              </Button>
+            ) : (
               <AccountMenu scrolled={scrolled} isPill />
             )}
           </div>

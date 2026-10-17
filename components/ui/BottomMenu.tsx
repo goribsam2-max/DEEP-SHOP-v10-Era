@@ -8,7 +8,7 @@ import { useLanguage } from "../../components/LanguageContext";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth, db } from "../../firebase";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 import { triggerHaptic } from "../../lib/haptics";
 import { doc, onSnapshot as firestoreOnSnapshot } from "firebase/firestore";
 
@@ -332,9 +332,23 @@ const BottomMenu = () => {
         </div>
       </div>
 
-      {/* Floating Profile / Auth Button (Height 54px) */}
+      {/* Floating Profile / Auth / Dynamic Back Button (Height 54px) */}
       <div className="pointer-events-auto h-[54px] flex items-center">
-        {user ? (
+        {location.pathname === "/profile" ? (
+          <button
+            onClick={() => {
+              triggerHaptic();
+              navigate(-1);
+              setView("default");
+            }}
+            className="w-[54px] h-[54px] rounded-full bg-white/90 dark:bg-[#141518]/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] flex items-center justify-center transition-transform active:scale-95 cursor-pointer border border-zinc-200/60 dark:border-zinc-800/60 group"
+            aria-label="Back"
+          >
+            <div className="w-[40px] h-[40px] rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center m-auto text-zinc-800 dark:text-zinc-200 group-hover:text-black dark:group-hover:text-white transition-colors">
+              <ArrowLeft className="w-5 h-5" strokeWidth={2.2} />
+            </div>
+          </button>
+        ) : user ? (
           <button
             onClick={() => {
                triggerHaptic();

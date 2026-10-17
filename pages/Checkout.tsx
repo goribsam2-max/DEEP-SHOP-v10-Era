@@ -1139,18 +1139,14 @@ export default function CheckoutPage() {
                             </div>
                           );
                         })}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
                         <Button
                           variant="outline"
                           type="button"
-                          className="sm:col-span-2 border-dashed border-emerald-500/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-2xl py-2.5 px-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all"
-                          onClick={() => setIsAddingNewAddress(!isAddingNewAddress)}
+                          className="border-dashed border-emerald-500/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-2xl py-2.5 px-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all"
+                          onClick={() => navigate('/shipping-address')}
                         >
-                          {isAddingNewAddress ? (
-                            <>✕ বাতিল করুন (Close)</>
-                          ) : (
-                            <>+ নতুন ঠিকানা যোগ করুন</>
-                          )}
+                          + নতুন ঠিকানা যোগ করুন
                         </Button>
                         <Button
                           variant="outline"
@@ -1165,64 +1161,22 @@ export default function CheckoutPage() {
                     </div>
                   ) : null}
 
-                  {/* Add New Address Form with Bangladesh Selector */}
-                  {(isAddingNewAddress || savedAddresses.length === 0) && (
-                    <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border-2 border-emerald-500/30 space-y-4 shadow-sm">
-                      <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800">
-                        <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                          নতুন ডেলিভারি ঠিকানা যুক্ত করুন
-                        </h3>
-                        {savedAddresses.length > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsAddingNewAddress(false)}
-                            className="text-xs text-zinc-500"
-                          >
-                            ✕
-                          </Button>
-                        )}
+                  {/* Empty Address State navigating to shipping address page */}
+                  {savedAddresses.length === 0 && (
+                    <div className="p-6 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 border border-dashed border-zinc-200 dark:border-zinc-700 text-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                        <MapPin className="w-6 h-6" />
                       </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold">
-                            আপনার পুরো নাম (Full Name) <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            placeholder="যেমন: মোঃ সাব্বির আহমেদ"
-                            value={newAddress.name}
-                            onChange={(e) => setNewAddress({ ...newAddress, name: e.target.value })}
-                            className="bg-zinc-50 dark:bg-zinc-800"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold">
-                            বাংলাদেশি ফোন নম্বর (Phone) <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            type="tel"
-                            placeholder="01XXXXXXXXX (11 Digits)"
-                            value={newAddress.phone}
-                            onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
-                            className="bg-zinc-50 dark:bg-zinc-800"
-                          />
-                        </div>
+                      <div>
+                        <h4 className="font-bold text-zinc-900 dark:text-white text-sm sm:text-base">কোনো ডেলিভারি ঠিকানা পাওয়া যায়নি</h4>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">অর্ডার সম্পন্ন করতে অনুগ্রহ করে একটি ডেলিভারি ঠিকানা যুক্ত করুন</p>
                       </div>
-
-                      {/* Integrated A-Z Bangladesh Geographic Selector */}
-                      <BangladeshAddressSelector
-                        onAddressChange={(formatted) => {
-                          setNewAddress((prev: any) => ({ ...prev, address: formatted }));
-                        }}
-                      />
-
                       <Button
-                        onClick={handleSaveAddress}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-2xl shadow-lg shadow-emerald-600/20"
+                        type="button"
+                        onClick={() => navigate('/shipping-address')}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-full text-xs shadow-md"
                       >
-                        ঠিকানা সংরক্ষণ করুন (Save Delivery Address)
+                        + নতুন ঠিকানা যোগ করুন
                       </Button>
                     </div>
                   )}
@@ -1584,17 +1538,17 @@ export default function CheckoutPage() {
                               setAdvanceType("full");
                             }}
                             className={cn(
-                              "w-full flex items-center justify-between p-3.5 rounded-xl border text-xs transition-colors cursor-pointer",
+                              "w-full flex items-center justify-between p-3 rounded-xl border text-xs transition-colors cursor-pointer gap-2 overflow-hidden",
                               paymentType === "vgcoin"
                                 ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-100"
                                 : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300"
                             )}
                           >
-                            <span className="font-semibold">
-                              💎 আপনার ডিপি কয়েন দিয়ে পে করতে চান? (ব্যালেন্স: {userCoins} কয়েন)
+                            <span className="font-semibold text-[11px] sm:text-xs whitespace-nowrap overflow-hidden text-ellipsis truncate">
+                              💎 ডিপি কয়েন ব্যালেন্স: {userCoins} কয়েন
                             </span>
-                            <span className="font-bold underline">
-                              {paymentType === "vgcoin" ? "কয়েন পেমেন্ট সক্রিয় ✓" : "কয়েন দিয়ে পরিশোধ করুন"}
+                            <span className="font-bold underline text-[11px] sm:text-xs whitespace-nowrap shrink-0">
+                              {paymentType === "vgcoin" ? "সক্রিয় ✓" : "কয়েন ব্যবহার করুন"}
                             </span>
                           </button>
                         </div>
@@ -1664,26 +1618,27 @@ export default function CheckoutPage() {
                       <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-sm font-medium space-y-2.5">
                         {paymentType === "vgcoin" ? (
                           <div>
-                            <p className="font-bold text-zinc-900 dark:text-zinc-100">DP Coins (${advanceType === "full" ? "সম্পূর্ণ পেমেন্ট" : "অগ্রিম বুকিং"})</p>
-                            <p className="text-xs text-zinc-500 mt-1">পেমেন্ট স্ট্যাটাস: কয়েন দিয়ে সংরক্ষিত</p>
+                            <p className="font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis truncate">
+                              DP Coins ({advanceType === "full" ? "সম্পূর্ণ পেমেন্ট" : "অগ্রিম বুকিং"})
+                            </p>
+                            <p className="text-[11px] sm:text-xs text-zinc-500 mt-1 whitespace-nowrap truncate">পেমেন্ট স্ট্যাটাস: কয়েন দিয়ে সংরক্ষিত</p>
                           </div>
                         ) : requiredAdvance === 0 ? (
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                {isVipSubscriber ? "ভিআইপি ফুল ক্যাশ অন ডেলিভারি" : "ক্যাশ অন ডেলিভারি (বাইপাস পণ্য)"}
+                          <div className="space-y-1.5 overflow-hidden">
+                            <div className="flex items-center justify-between gap-2 overflow-hidden">
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis truncate">
+                                {isVipSubscriber ? "ভিআইপি ফুল ক্যাশ অন ডেলিভারি" : "ক্যাশ অন ডেলিভারি (বাইপাস)"}
                               </span>
-                              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0">
+                              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0 whitespace-nowrap">
                                 {isVipSubscriber ? "👑 VIP 0 Advance" : "0 Advance"}
                               </span>
                             </div>
-                            <p className="text-xs text-zinc-600 dark:text-zinc-300">অগ্রিম প্রদেয়: <strong className="text-zinc-900 dark:text-zinc-100">৳০ (কোনো অগ্রিম নেই)</strong></p>
-                            <p className="text-xs text-zinc-600 dark:text-zinc-300">ডেলিভারির সময় প্রদেয়: <strong className="text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</strong></p>
+                            <p className="text-xs text-zinc-600 dark:text-zinc-300 whitespace-nowrap truncate">অগ্রিম প্রদেয়: <strong className="text-zinc-900 dark:text-zinc-100">৳০</strong> • বাকি: <strong className="text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</strong></p>
                             {!isVipSubscriber && guardianNumber && (
-                              <p className="text-xs text-zinc-600 dark:text-zinc-300">গার্ডিয়ান মোবাইল: <strong className="font-mono">{guardianNumber}</strong></p>
+                              <p className="text-xs text-zinc-600 dark:text-zinc-300 whitespace-nowrap truncate">গার্ডিয়ান মোবাইল: <strong className="font-mono">{guardianNumber}</strong></p>
                             )}
                             {nidCardUrl && (
-                              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 whitespace-nowrap truncate">
                                 ✓ এনআইডি কার্ড সংযুক্ত হয়েছে
                               </p>
                             )}

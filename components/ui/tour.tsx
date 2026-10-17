@@ -424,7 +424,19 @@ export function TourProvider({
 export function useTour() {
   const context = useContext(TourContext)
   if (!context) {
-    throw new Error("useTour must be used within a TourProvider")
+    return {
+      currentStep: -1,
+      totalSteps: 0,
+      nextStep: () => {},
+      previousStep: () => {},
+      endTour: () => {},
+      isActive: false,
+      startTour: () => {},
+      setSteps: () => {},
+      steps: [],
+      isTourCompleted: true,
+      setIsTourCompleted: () => {},
+    }
   }
   return context
 }
