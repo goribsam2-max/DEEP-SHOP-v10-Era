@@ -149,6 +149,12 @@ const adminLinks: LinkItem[] = [
 
 const productLinks: LinkItem[] = [
   {
+    title: "News Hub",
+    href: "/news-hub",
+    description: "Scam alerts, verified reports & community stories",
+    icon: "comment-dots",
+  },
+  {
     title: "Build Box",
     href: "/build-box",
     description: "Create your custom tech bundle",

@@ -251,6 +251,9 @@ export const Torus = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 1
 export const Trash = c(["M3 6h18", "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"]);
 export const Trash2 = Trash;
 export const TrendingUp = c(["M23 6L13.5 15.5l-5-5L1 18", "M17 6h6v6"]);
+export const TrendingDown = c(["M23 18l-9.5-9.5-5 5L1 6", "M17 18h6v-6"]);
+export const Handshake = Award;
+export const PieChart = BarChart3;
 export const Truck = c(["M1 3h15v13H1V3zm15 5h4l3 3v5h-7V8z", "M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"]);
 export const User = c(["M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M5 21a7 7 0 0 1 14 0"]);
 export const UserMinus = c(["M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm14.5 0h-6"]);
@@ -424,6 +427,14 @@ export const Login = LogIn;
 export const Wrench = c(["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"]);
 export const Cpu = c(["M4 4h16v16H4z", "M9 9h6v6H9z", "M9 1v3", "M15 1v3", "M9 20v3", "M15 20v3", "M20 9h3", "M20 14h3", "M1 9h3", "M1 14h3"]);
 export const Battery = c(["M2 7h16v10H2z", "M22 11v2"]);
+export const Square = c(["M3 3h18v18H3z"]);
+export const ThumbsUp = c(["M7 10v12", "M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3"]);
+export const ThumbsDown = c(["M17 14V2", "M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3"]);
+export const Flame = c(["M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"]);
+export const Building = c(["M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z", "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2", "M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2", "M10 6h4", "M10 10h4", "M10 14h4", "M10 18h4"]);
+export const FileCheck = c(["M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", "M14 2v4a2 2 0 0 0 2 2h4", "m9 15 2 2 4-4"]);
+export const UserCheck = c(["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "m16 11 2 2 4-4"]);
+export const Reply = c(["M9 17 4 12l5-5", "M4 12h11a5 5 0 0 1 5 5v1"]);
 
 
 

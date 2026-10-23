@@ -206,6 +206,55 @@ export interface Blog {
   metaImage?: string;
 }
 
+export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry';
+
+export interface ScamReaction {
+  userId: string;
+  userName: string;
+  type: ReactionType;
+  createdAt: number;
+}
+
+export interface ScamComment {
+  id: string;
+  postId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  text: string;
+  imageUrl?: string;
+  replyToCommentId?: string;
+  replyToUserName?: string;
+  mentions?: string[];
+  createdAt: number;
+}
+
+export interface ScamPost {
+  id: string;
+  postType?: 'scam' | 'news' | 'discussion';
+  title: string;
+  description: string;
+  scammerName?: string;
+  scammerPhone?: string;
+  scammerBkash?: string;
+  scammerSocialLink?: string;
+  scammedAmount?: number;
+  category: 'electronics' | 'delivery' | 'advance_payment' | 'fake_account' | 'tech_news' | 'market_update' | 'other';
+  images: string[];
+  reporterId: string;
+  reporterName: string;
+  reporterAvatar?: string;
+  votes: number;
+  votedUserIds?: string[];
+  reactions?: Record<string, ReactionType>;
+  reactionsCount?: Record<ReactionType, number>;
+  reactionsUsers?: Record<string, { userName: string; userAvatar?: string; type: ReactionType; timestamp: number }>;
+  commentsCount: number;
+  createdAt: number;
+  status?: 'trending' | 'active' | 'verified' | 'resolved';
+  views?: number;
+}
+
 export interface AffiliateLog {
   id: string;
   affiliateId: string;

@@ -24,7 +24,22 @@
       http-equiv="Content-Security-Policy"
       content="upgrade-insecure-requests"
     />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" id="theme-color-meta" content="#ffffff" />
+    <script>
+      (function() {
+        function updateThemeColor() {
+          var isDark = document.documentElement.classList.contains('dark') || 
+            (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var meta = document.getElementById('theme-color-meta');
+          if (meta) meta.setAttribute('content', isDark ? '#000000' : '#ffffff');
+        }
+        updateThemeColor();
+        var observer = new MutationObserver(updateThemeColor);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+      })();
+    </script>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
@@ -165,23 +180,23 @@
         font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important;
       }
       :root {
-        --themeC: #5F2CFF;
-        --headC: #110833;
-        --bodyC: #110833;
-        --bodyCa: #3d2b6b;
-        --bodyB: #DFF6FF;
-        --linkC: #5F2CFF;
-        --linkB: #5F2CFF;
-        --waveB: #a3e3f8;
-        --iconC: #5F2CFF;
-        --iconCa: #5F2CFF;
-        --iconCs: #5F2CFF;
-        --headerC: #110833;
-        --headerB: #DFF6FF;
-        --contentB: #DFF6FF;
-        --contentL: #b5e4f8;
-        --notifU: #cceefc;
-        --notifC: #110833;
+        --themeC: #ffffff;
+        --headC: #09090b;
+        --bodyC: #09090b;
+        --bodyCa: #71717a;
+        --bodyB: #ffffff;
+        --linkC: #2563eb;
+        --linkB: #2563eb;
+        --waveB: #f8fafc;
+        --iconC: #2563eb;
+        --iconCa: #2563eb;
+        --iconCs: #2563eb;
+        --headerC: #09090b;
+        --headerB: #ffffff;
+        --contentB: #ffffff;
+        --contentL: #f1f5f9;
+        --notifU: #eff6ff;
+        --notifC: #09090b;
         --buttonR: 50px;
         --greetR: 10px;
         --iconHr: 15px;
@@ -189,48 +204,57 @@
         --srchMr: 20px;
         --srchDr: 20px;
 
-        --zinc-50: #DFF6FF;
-        --zinc-100: #cceefc;
-        --zinc-200: #b5e4f8;
-        --zinc-900: #110833;
-        --primary: #5F2CFF;
+        --zinc-50: #ffffff;
+        --zinc-100: #f4f4f5;
+        --zinc-200: #e4e4e7;
+        --zinc-900: #09090b;
+        --primary: #2563eb;
         --primary-foreground: #ffffff;
 
-        --context-card-border: #b5e4f8;
-        --ds-gray-1000: #110833;
-        --ds-gray-alpha-400: rgba(95, 44, 255, 0.12);
-        --ds-background-200: #cceefc;
-        --ds-background-200-alpha-800: rgba(223, 246, 255, 0.85);
-        --accents-1: #DFF6FF;
-        --accents-2: #cceefc;
-        --ds-background-100: #DFF6FF;
-        --ds-overlay: rgba(17, 8, 51, 0.4);
+        --context-card-border: #e4e4e7;
+        --ds-gray-1000: #09090b;
+        --ds-gray-alpha-400: rgba(37, 99, 235, 0.12);
+        --ds-background-200: #f4f4f5;
+        --ds-background-200-alpha-800: rgba(255, 255, 255, 0.85);
+        --accents-1: #ffffff;
+        --accents-2: #f4f4f5;
+        --ds-background-100: #ffffff;
+        --ds-overlay: rgba(0, 0, 0, 0.4);
 
         /* Plus UI Box Shadow Palette */
-        --ds-shadow-card: 0 5px 35px rgba(95, 44, 255, 0.08);
-        --ds-shadow-button: rgba(95, 44, 255, 0.2) 0px 7px 29px 0px;
-        --ds-shadow-pill: 0 8px 25px 0 rgba(95, 44, 255, 0.1);
-        --ds-shadow-header: 0 0 15px rgba(95, 44, 255, 0.08);
+        --ds-shadow-card: 0 4px 20px rgba(0, 0, 0, 0.04);
+        --ds-shadow-button: rgba(37, 99, 235, 0.15) 0px 4px 15px 0px;
+        --ds-shadow-pill: 0 4px 15px 0 rgba(0, 0, 0, 0.05);
+        --ds-shadow-header: 0 1px 3px rgba(0, 0, 0, 0.05);
 
-        --ds-shadow-border: 0 0 0 1px rgba(95, 44, 255, 0.1);
-        --ds-shadow-small: 0 5px 15px rgba(95, 44, 255, 0.05);
-        --ds-shadow-border-small: 0 5px 15px rgba(95, 44, 255, 0.08);
-        --ds-shadow-medium: 0 5px 35px rgba(95, 44, 255, 0.08);
-        --ds-shadow-border-medium: 0 5px 35px rgba(95, 44, 255, 0.08);
-        --ds-shadow-large: 0 10px 25px -3px rgba(95, 44, 255, 0.12);
-        --ds-shadow-border-large: 0 10px 25px -3px rgba(95, 44, 255, 0.12);
-        --ds-shadow-tooltip: 0 5px 20px 0 rgba(95, 44, 255, 0.1);
-        --ds-shadow-menu: 0 5px 35px rgba(95, 44, 255, 0.12);
-        --ds-shadow-modal: 0 5px 30px 0 rgba(95, 44, 255, 0.12);
-        --ds-shadow-fullscreen: 0 5px 35px rgba(95, 44, 255, 0.12);
+        --ds-shadow-border: 0 0 0 1px rgba(0, 0, 0, 0.08);
+        --ds-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.04);
+        --ds-shadow-border-small: 0 2px 8px rgba(0, 0, 0, 0.04);
+        --ds-shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.06);
+        --ds-shadow-border-medium: 0 4px 20px rgba(0, 0, 0, 0.06);
+        --ds-shadow-large: 0 10px 25px -3px rgba(0, 0, 0, 0.08);
+        --ds-shadow-border-large: 0 10px 25px -3px rgba(0, 0, 0, 0.08);
+        --ds-shadow-tooltip: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
+        --ds-shadow-menu: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --ds-shadow-modal: 0 10px 30px 0 rgba(0, 0, 0, 0.12);
+        --ds-shadow-fullscreen: 0 10px 30px 0 rgba(0, 0, 0, 0.12);
+      }
+      html {
+        background-color: #ffffff;
+      }
+      html.dark {
+        background-color: #000000;
       }
       body {
         font-family: "Satoshi", "Inter", sans-serif;
-        background-color: var(--bodyB);
-        color: var(--bodyC);
+        background-color: #ffffff;
+        background-image: radial-gradient(ellipse 90% 380px at 50% 0px, rgba(59, 130, 246, 0.12), transparent 100%);
+        background-repeat: no-repeat;
+        color: #09090b;
         user-select: none;
         scroll-behavior: smooth;
         overscroll-behavior-y: none;
+        min-height: 100vh;
       }
       * {
         -webkit-tap-highlight-color: transparent !important;
@@ -246,40 +270,42 @@
       }
       .dark body, html.dark, .drK {
         background-color: #000000 !important;
-        color: #ffffff !important;
+        background-image: radial-gradient(ellipse 90% 380px at 50% 0px, rgba(37, 99, 235, 0.22), transparent 100%) !important;
+        background-repeat: no-repeat;
+        color: #f4f4f5 !important;
         --themeC: #000000;
         --headC: #ffffff;
         --bodyC: #ffffff;
-        --bodyCa: #E2D5F8;
+        --bodyCa: #a1a1aa;
         --bodyB: #000000;
-        --linkC: #8E05C2;
-        --linkB: #8E05C2;
-        --darkU: #8E05C2;
+        --linkC: #3b82f6;
+        --linkB: #3b82f6;
+        --darkU: #2563eb;
         --darkT: #ffffff;
-        --darkTa: #E2D5F8;
+        --darkTa: #a1a1aa;
         --darkB: #000000;
-        --darkBa: #3E065F;
-        --darkBs: #700B97;
+        --darkBa: #09090b;
+        --darkBs: #18181b;
 
-        --primary: #8E05C2;
+        --primary: #3b82f6;
         --primary-foreground: #ffffff;
 
-        --context-card-border: #700B97;
+        --context-card-border: #27272a;
         --ds-gray-1000: #ffffff;
-        --ds-gray-alpha-400: rgba(142, 5, 194, 0.25);
-        --ds-background-200: #3E065F;
-        --ds-background-200-alpha-800: rgba(62, 6, 95, 0.9);
-        --accents-2: #700B97;
-        --accents-1: #3E065F;
-        --ds-background-100: #3E065F;
+        --ds-gray-alpha-400: rgba(59, 130, 246, 0.25);
+        --ds-background-200: #18181b;
+        --ds-background-200-alpha-800: rgba(0, 0, 0, 0.9);
+        --accents-2: #27272a;
+        --accents-1: #18181b;
+        --ds-background-100: #09090b;
 
         /* Plus UI Dark Mode Shadows */
         --ds-shadow-card: 0 10px 40px rgba(0, 0, 0, 0.5);
-        --ds-shadow-button: 0 10px 40px rgba(142, 5, 194, 0.3);
-        --ds-shadow-pill: 0 10px 40px rgba(142, 5, 194, 0.25);
+        --ds-shadow-button: 0 10px 40px rgba(37, 99, 235, 0.2);
+        --ds-shadow-pill: 0 10px 40px rgba(37, 99, 235, 0.15);
         --ds-shadow-header: 0 10px 30px rgba(0, 0, 0, 0.5);
 
-        --ds-shadow-border: 0 0 0 1px #700B97;
+        --ds-shadow-border: 0 0 0 1px #27272a;
         --ds-shadow-small: 0 10px 25px rgba(0, 0, 0, 0.3);
         --ds-shadow-border-small: 0 10px 25px rgba(0, 0, 0, 0.3);
         --ds-shadow-medium: 0 10px 40px rgba(0, 0, 0, 0.4);

@@ -7,7 +7,7 @@ export const PageLoadingContext = createContext<{
   isPageLoading: boolean;
   setIsPageLoading: (val: boolean) => void;
 }>({
-  isPageLoading: true,
+  isPageLoading: false,
   setIsPageLoading: () => {}
 });
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -296,6 +296,15 @@ import BlogList from './pages/BlogList';
 import BlogDetails from './pages/BlogDetails';
 import CreateBlog from './pages/CreateBlog';
 import NotFound from './pages/NotFound';
+import NewsHub from './pages/NewsHub';
+import CreateScamPost from './pages/CreateScamPost';
+import NewsDetails from './pages/NewsDetails';
+import CreatorDashboard from './pages/CreatorDashboard';
+import AuthorProfile from './pages/AuthorProfile';
+import BuyStars from './pages/BuyStars';
+import SponsorCreator from './pages/SponsorCreator';
+import CreatorSubscriptionSetup from './pages/CreatorSubscriptionSetup';
+import NewsHubNotifications from './pages/NewsHubNotifications';
 import RegionSelect from './pages/RegionSelect';
 import SellerDashboard from './pages/seller/Dashboard';
 import AddStory from './pages/seller/AddStory';
@@ -467,44 +476,17 @@ const PageSkeleton = ({ pathname }: { pathname: string }) => {
 
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const [loadingPath, setLoadingPath] = useState(location.pathname);
-  const [loading, setLoading] = useState(location.pathname !== '/help-center');
   const { setIsPageLoading } = useContext(PageLoadingContext);
-
-  if (loadingPath !== location.pathname) {
-    setLoadingPath(location.pathname);
-    if (location.pathname === '/help-center') {
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-  }
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [location.pathname]);
-
-  useEffect(() => {
-     if (location.pathname === '/help-center') {
-        setLoading(false);
-        setIsPageLoading(false);
-        return;
-     }
-     setIsPageLoading(true);
-     const timer = setTimeout(() => {
-        setLoading(false);
-        setIsPageLoading(false);
-     }, 2000);
-     return () => clearTimeout(timer);
+    setIsPageLoading(false);
   }, [location.pathname, setIsPageLoading]);
 
   return (
     <ErrorBoundary>
       <div className="w-full">
-        {loading && document.body ? createPortal(<PageSkeleton pathname={location.pathname} />, document.body) : null}
-        <div style={{ display: loading ? 'none' : 'block' }}>
-           {children}
-        </div>
+        {children}
       </div>
     </ErrorBoundary>
   );
@@ -572,7 +554,7 @@ const fetchIPAndLocation = async () => {
 
 const AppContent: React.FC = () => {
   const [userData, setUserData] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const { isPageLoading } = useContext(PageLoadingContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -953,12 +935,6 @@ const AppContent: React.FC = () => {
     };
   }, [userData?.uid]);
 
-  if (loading) return (
-    <div className="w-full min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center z-[9999]">
-       <IosSpinner className="text-zinc-500" size={32} />
-    </div>
-  );
-
   const showNav = ['/', '/profile', '/search', '/notifications', '/orders', '/wishlist'].includes(location.pathname);
   
   // Basic check: we allow access to admin routes if they are an admin or we assume staff will be blocked on specific routes later.
@@ -1027,6 +1003,20 @@ const AppContent: React.FC = () => {
           <Route path="/blog/create" element={<PageWrapper><CreateBlog /></PageWrapper>} />
           <Route path="/blog/edit/:slug" element={<PageWrapper><CreateBlog /></PageWrapper>} />
           <Route path="/blog/:slug" element={<PageWrapper><BlogDetails /></PageWrapper>} />
+          <Route path="/news-hub" element={<PageWrapper><NewsHub /></PageWrapper>} />
+          <Route path="/news-hub/create" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
+          <Route path="/news-hub/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
+          <Route path="/news-hub/notifications" element={<PageWrapper><NewsHubNotifications /></PageWrapper>} />
+          <Route path="/creator-dashboard" element={<PageWrapper><CreatorDashboard /></PageWrapper>} />
+          <Route path="/creator/subscription-setup" element={<PageWrapper><CreatorSubscriptionSetup /></PageWrapper>} />
+          <Route path="/buy-stars" element={<PageWrapper><BuyStars /></PageWrapper>} />
+          <Route path="/sponsor/:creatorId" element={<PageWrapper><SponsorCreator /></PageWrapper>} />
+          <Route path="/author/:id" element={<PageWrapper><AuthorProfile /></PageWrapper>} />
+          <Route path="/creator/:id" element={<PageWrapper><AuthorProfile /></PageWrapper>} />
+          <Route path="/news/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
+          <Route path="/scam/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
+          <Route path="/scam-alert" element={<PageWrapper><NewsHub /></PageWrapper>} />
+          <Route path="/news" element={<Navigate to="/news-hub" replace />} />
           <Route path="/track-order/:id" element={<PageWrapper><TrackOrder /></PageWrapper>} />
           <Route path="/e-receipt/:id" element={<PageWrapper><EReceipt /></PageWrapper>} />
           <Route path="/leave-review" element={<PageWrapper><LeaveReview /></PageWrapper>} />
@@ -1251,7 +1241,7 @@ import { CookieConsent } from './components/CookieConsent';
 
 const App: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(false);
 
   useEffect(() => {
     // Auto subscribe if they already granted permission in the past

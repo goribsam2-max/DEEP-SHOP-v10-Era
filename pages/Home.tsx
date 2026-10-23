@@ -39,6 +39,7 @@ import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 import { HeroSlider } from "../components/ui/hero-slider";
 import { LogoTimeline, type LogoItem } from "../components/ui/logo-timeline";
 import { Footer } from "../components/Footer";
+import { TopNavTabSwitcher } from "../components/TopNavTabSwitcher";
 
 const BrandIcon = ({ brandName }: { brandName: string }) => {
   return (
@@ -366,13 +367,11 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       
       <CustomSectionEmbed location="home_top" />
 
-      {/* Stories Section (Hidden from regular users when no stories exist) */}
-      {(hasStories || canAddStory) && (
-        <div id="home-stories" className="mb-4 w-full">
-          <SectionHeader title="Top Stories" />
-          <StoryViewer stories={stories} isAdmin={isAdmin} isSeller={isSeller} canAddStory={canAddStory} />
-        </div>
-      )}
+      {/* Top Left Tab Switcher: [Shop] & [News Hub] */}
+      <div className="flex items-center mb-4 pt-1">
+        <TopNavTabSwitcher />
+      </div>
+
 
       {/* Hero Slider */}
       {heroBanners.length > 0 && (

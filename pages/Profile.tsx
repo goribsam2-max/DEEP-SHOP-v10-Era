@@ -40,6 +40,7 @@ import {
   Pencil,
   AlertCircle,
   ExternalLink,
+  ShieldAlert,
 } from "lucide-react";
 import { useTheme } from "../components/ThemeContext";
 
@@ -579,6 +580,13 @@ const ProfileView: React.FC<ProfileProps> = ({ userData: initialUserData }) => {
 
               {/* Section 3: Creator & Partner Hub / Management Tools */}
               <WireframeCard title="Tools & Hub">
+                <WireframeRow
+                  icon={<ShieldAlert className="w-5 h-5 text-rose-500" strokeWidth={1.8} />}
+                  label="News Hub & Scam Defense"
+                  subtitle="Report fraud, check scam database & vote"
+                  badge="New"
+                  onClick={() => navigate("/news-hub")}
+                />
                 <WireframeRow
                   icon={<Sparkles className="w-5 h-5 text-[#FF6611]" strokeWidth={1.8} />}
                   label="Invites Friends & Earn"

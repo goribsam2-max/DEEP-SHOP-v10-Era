@@ -65,7 +65,17 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const showNav = ['/', '/profile', '/search', '/notifications', '/orders', '/wishlist'].includes(location.pathname);
 
-  const isNoHeaderPage = location.pathname === '/help-center' || location.pathname === '/messages' || isPageLoading;
+  const isNoHeaderPage = 
+    location.pathname === '/help-center' || 
+    location.pathname === '/messages' || 
+    location.pathname.startsWith('/news-hub') || 
+    location.pathname.startsWith('/news') || 
+    location.pathname.startsWith('/author') || 
+    location.pathname.startsWith('/creator') || 
+    location.pathname.startsWith('/creator-dashboard') ||
+    location.pathname.startsWith('/buy-stars') ||
+    location.pathname.startsWith('/sponsor') ||
+    isPageLoading;
 
   return (
     <div 
@@ -76,7 +86,7 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           : 'calc(var(--pwa-banner-height, 0px) + 3.5rem)'
       }}
     >
-      {location.pathname !== '/help-center' && location.pathname !== '/messages' && !isPageLoading && <Header />}
+      {!isNoHeaderPage && <Header />}
       <div className="flex-1 flex w-full flex-col min-h-[calc(100vh-56px)]">
         {/* Main Content Area */}
         <div className={`transition-all duration-300 flex-1 w-full max-w-full ${sidebarOpen ? 'md:pl-72' : ''} bg-transparent`}>

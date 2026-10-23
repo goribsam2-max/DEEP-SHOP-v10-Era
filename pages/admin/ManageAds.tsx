@@ -33,6 +33,7 @@ interface PhotoAdConfig {
   clicks?: number;
   id: string;
   active: boolean;
+  adType?: 'display' | 'in_feed' | 'in_article' | 'multiplex';
   images: AdMedia[];
   title: string;
   text: string;
@@ -180,6 +181,7 @@ const ManageAds: React.FC = () => {
     setPhotoAds([...photoAds, {
       id: Date.now().toString(),
       active: true,
+      adType: 'in_feed',
       images: [{ url: '', ratio: '4/3' }],
       title: "",
       text: "",
@@ -517,6 +519,20 @@ const ManageAds: React.FC = () => {
                             </div>
                           </div>
                         ))}
+                      </div>
+
+                      <div>
+                         <label className="block text-xs font-bold mb-1 text-zinc-500">Ad Format Type</label>
+                         <select
+                           value={ad.adType || 'in_feed'}
+                           onChange={(e) => updatePhotoAd(adIndex, "adType", e.target.value)}
+                           className="w-full bg-white dark:bg-zinc-900 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none font-bold"
+                         >
+                           <option value="display">Display Ad (Auto-sizing / Rich Media)</option>
+                           <option value="in_feed">In-Feed Ad (Blends in Article Feeds)</option>
+                           <option value="in_article">In-Article Ad (Between Written Paragraphs)</option>
+                           <option value="multiplex">Multiplex Ad (Grid Recommendation Layout)</option>
+                         </select>
                       </div>
 
                       <div>

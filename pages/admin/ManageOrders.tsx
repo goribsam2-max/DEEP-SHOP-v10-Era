@@ -17,7 +17,7 @@ import { useNotify } from "../../components/Notifications";
 import { AnimatePresence, motion } from "framer-motion";
 import Icon from "../../components/Icon";
 import { OrderSkeleton } from "../../components/Skeletons";
-import { Trash2, Plus, X, Search, Package, User as UserIcon, Phone, MapPin, Check } from "lucide-react";
+import { Trash2, Plus, X, Search, Package, User as UserIcon, Phone, MapPin, Check, Edit3, DollarSign, Layers, AlertCircle } from "lucide-react";
 
 const ManageOrders: React.FC = () => {
   const navigate = useNavigate();
@@ -38,6 +38,7 @@ const ManageOrders: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [initialStatus, setInitialStatus] = useState<OrderStatus>(OrderStatus.PENDING);
   const [shippingFee, setShippingFee] = useState(150);
+  const [advancePaid, setAdvancePaid] = useState<number | "">("");
   const [estimatedDelivery, setEstimatedDelivery] = useState("1 Month+ (approx 30 - 45 days)");
   const [orderItems, setOrderItems] = useState<{
     id: string;
@@ -46,7 +47,40 @@ const ManageOrders: React.FC = () => {
     quantity: number;
     image: string;
   }[]>([]);
+  const [showCustomProductForm, setShowCustomProductForm] = useState(false);
+  const [customProdName, setCustomProdName] = useState("");
+  const [customProdPrice, setCustomProdPrice] = useState<number | "">("");
+  const [customProdQty, setCustomProdQty] = useState(1);
+  const [customProdImage, setCustomProdImage] = useState("");
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  // Edit Order Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [editCustomerName, setEditCustomerName] = useState("");
+  const [editContactNumber, setEditContactNumber] = useState("");
+  const [editAltNumber, setEditAltNumber] = useState("");
+  const [editShippingAddress, setEditShippingAddress] = useState("");
+  const [editStatus, setEditStatus] = useState<OrderStatus>(OrderStatus.PENDING);
+  const [editPaymentMethod, setEditPaymentMethod] = useState("COD");
+  const [editShippingFee, setEditShippingFee] = useState(150);
+  const [editAdvanceAmount, setEditAdvanceAmount] = useState<number | "">("");
+  const [editTrackingId, setEditTrackingId] = useState("");
+  const [editCourierName, setEditCourierName] = useState("");
+  const [editRiderNumber, setEditRiderNumber] = useState("");
+  const [editItems, setEditItems] = useState<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image: string;
+  }[]>([]);
+  const [editShowCustomProduct, setEditShowCustomProduct] = useState(false);
+  const [editCustomProdName, setEditCustomProdName] = useState("");
+  const [editCustomProdPrice, setEditCustomProdPrice] = useState<number | "">("");
+  const [editCustomProdQty, setEditCustomProdQty] = useState(1);
+  const [editCustomProdImage, setEditCustomProdImage] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
@@ -108,12 +142,44 @@ const ManageOrders: React.FC = () => {
     setOrderItems(orderItems.filter(i => i.id !== prodId));
   };
 
+  const handleAddCustomProduct = () => {
+    if (!customProdName.trim()) {
+      notify("Please enter a custom product name", "error");
+      return;
+    }
+    const priceNum = Number(customProdPrice);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      notify("Please enter a valid price for the custom product", "error");
+      return;
+    }
+    const newItem = {
+      id: "custom_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+      name: customProdName.trim(),
+      price: priceNum,
+      quantity: Math.max(1, Number(customProdQty) || 1),
+      image: customProdImage.trim() || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200",
+    };
+    setOrderItems([...orderItems, newItem]);
+    setCustomProdName("");
+    setCustomProdPrice("");
+    setCustomProdQty(1);
+    setCustomProdImage("");
+    setShowCustomProductForm(false);
+    notify(`Added custom product: "${newItem.name}"`, "success");
+  };
+
   const calculateSubtotal = () => {
     return orderItems.reduce((acc, i) => acc + (i.price * i.quantity), 0);
   };
 
   const calculateTotal = () => {
     return calculateSubtotal() + Number(shippingFee || 0);
+  };
+
+  const calculateDue = () => {
+    const total = calculateTotal();
+    const adv = Number(advancePaid) || 0;
+    return Math.max(0, total - adv);
   };
 
   const handleCreateOrderSubmit = async (e: React.FormEvent) => {
@@ -129,12 +195,17 @@ const ManageOrders: React.FC = () => {
 
     setIsCreatingOrder(true);
     try {
+      const grandTotal = calculateTotal();
+      const advAmount = Number(advancePaid) || 0;
+      const due = Math.max(0, grandTotal - advAmount);
+
       const orderPayload: any = {
         userId: selectedUserId || "guest_" + Date.now(),
         customerName: customerName.trim(),
         contactNumber: contactNumber.trim(),
         shippingAddress: shippingAddress.trim(),
         paymentMethod: paymentMethod,
+        paymentOption: advAmount > 0 ? (advAmount >= grandTotal ? "Full Payment" : "Custom Advance") : "Cash on Delivery",
         status: initialStatus,
         items: orderItems.map(i => ({
           id: i.id,
@@ -146,7 +217,9 @@ const ManageOrders: React.FC = () => {
         })),
         subtotal: calculateSubtotal(),
         deliveryFee: Number(shippingFee || 0),
-        total: calculateTotal(),
+        total: grandTotal,
+        advanceAmount: advAmount,
+        dueAmount: due,
         estimatedDelivery: estimatedDelivery || "1 Month+ (approx 30 - 45 days)",
         deliveryNotice: "1 Month+ border cross imported product delivery time",
         createdAt: Date.now(),
@@ -155,7 +228,7 @@ const ManageOrders: React.FC = () => {
       };
 
       const docRef = await addDoc(collection(db, "orders"), orderPayload);
-      notify(`Order #${docRef.id.slice(0, 8)} created successfully!`, "success");
+      notify(`Order #${docRef.id.slice(0, 8)} created successfully! Total: ৳${grandTotal}, Due: ৳${due}`, "success");
       
       // Reset form
       setShowCreateModal(false);
@@ -163,12 +236,139 @@ const ManageOrders: React.FC = () => {
       setCustomerName("");
       setContactNumber("");
       setShippingAddress("");
+      setAdvancePaid("");
       setOrderItems([]);
     } catch (err) {
       console.error("Error creating order:", err);
       notify("Failed to create order", "error");
     } finally {
       setIsCreatingOrder(false);
+    }
+  };
+
+  // --- EDIT ORDER LOGIC ---
+  const handleOpenEditModal = (order: Order) => {
+    setEditingOrder(order);
+    setEditCustomerName(order.customerName || "");
+    setEditContactNumber(order.contactNumber || "");
+    setEditAltNumber(order.altNumber || "");
+    setEditShippingAddress(
+      typeof order.shippingAddress === "string"
+        ? order.shippingAddress
+        : `${(order.shippingAddress as any)?.address || ""}, ${(order.shippingAddress as any)?.upazila || ""}, ${(order.shippingAddress as any)?.city || (order.shippingAddress as any)?.district || ""}`
+    );
+    setEditStatus((order.status as OrderStatus) || OrderStatus.PENDING);
+    setEditPaymentMethod(order.paymentMethod || "COD");
+    setEditShippingFee(Number(order.deliveryFee ?? 150));
+    setEditAdvanceAmount(Number(order.advanceAmount ?? (order as any).advancePaid ?? 0));
+    setEditTrackingId(order.trackingId || "");
+    setEditCourierName(order.courierName || "");
+    setEditRiderNumber(order.riderNumber || "");
+    setEditItems(
+      (order.items || []).map((i) => ({
+        id: i.id || "item_" + Math.random().toString(36).substring(2, 7),
+        name: i.name,
+        price: i.priceAtPurchase || i.price || 0,
+        quantity: i.quantity || 1,
+        image: i.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200",
+      }))
+    );
+    setEditShowCustomProduct(false);
+    setShowEditModal(true);
+  };
+
+  const handleEditAddCustomProduct = () => {
+    if (!editCustomProdName.trim()) {
+      notify("Enter product name", "error");
+      return;
+    }
+    const price = Number(editCustomProdPrice);
+    if (isNaN(price) || price <= 0) {
+      notify("Enter valid price", "error");
+      return;
+    }
+    const newItem = {
+      id: "custom_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+      name: editCustomProdName.trim(),
+      price: price,
+      quantity: Math.max(1, Number(editCustomProdQty) || 1),
+      image: editCustomProdImage.trim() || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200",
+    };
+    setEditItems([...editItems, newItem]);
+    setEditCustomProdName("");
+    setEditCustomProdPrice("");
+    setEditCustomProdQty(1);
+    setEditCustomProdImage("");
+    setEditShowCustomProduct(false);
+    notify(`Added "${newItem.name}" to order items`, "success");
+  };
+
+  const calculateEditSubtotal = () => {
+    return editItems.reduce((acc, i) => acc + (Number(i.price) * Number(i.quantity)), 0);
+  };
+
+  const calculateEditTotal = () => {
+    return calculateEditSubtotal() + Number(editShippingFee || 0);
+  };
+
+  const calculateEditDue = () => {
+    return Math.max(0, calculateEditTotal() - Number(editAdvanceAmount || 0));
+  };
+
+  const handleSaveEditOrderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOrder) return;
+    if (!editCustomerName.trim() || !editContactNumber.trim()) {
+      notify("Customer name and contact number are required", "error");
+      return;
+    }
+    if (editItems.length === 0) {
+      notify("Order must contain at least one product item", "error");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const newTotal = calculateEditTotal();
+      const advance = Number(editAdvanceAmount || 0);
+      const due = Math.max(0, newTotal - advance);
+
+      const updatePayload: any = {
+        customerName: editCustomerName.trim(),
+        contactNumber: editContactNumber.trim(),
+        altNumber: editAltNumber.trim() || null,
+        shippingAddress: editShippingAddress.trim(),
+        status: editStatus,
+        paymentMethod: editPaymentMethod,
+        paymentOption: advance > 0 ? (advance >= newTotal ? "Full Payment" : "Custom Advance") : "Cash on Delivery",
+        deliveryFee: Number(editShippingFee || 0),
+        subtotal: calculateEditSubtotal(),
+        total: newTotal,
+        advanceAmount: advance,
+        dueAmount: due,
+        trackingId: editTrackingId.trim() || null,
+        courierName: editCourierName.trim() || null,
+        riderNumber: editRiderNumber.trim() || null,
+        items: editItems.map((i) => ({
+          id: i.id,
+          name: i.name,
+          price: Number(i.price),
+          priceAtPurchase: Number(i.price),
+          quantity: Number(i.quantity),
+          image: i.image,
+        })),
+        updatedAt: Date.now(),
+      };
+
+      await updateDoc(doc(db, "orders", editingOrder.id), updatePayload);
+      notify(`Order #${editingOrder.id.slice(0, 8)} updated successfully! Total: ৳${newTotal}, Due: ৳${due}`, "success");
+      setShowEditModal(false);
+      setEditingOrder(null);
+    } catch (err) {
+      console.error("Error updating order:", err);
+      notify("Failed to update order", "error");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -382,6 +582,19 @@ const ManageOrders: React.FC = () => {
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-400 pointer-events-none"
                       />
                     </div>
+
+                    {/* Edit Order Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditModal(order);
+                      }}
+                      className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-900/50 transition active:scale-95 cursor-pointer shadow-xs"
+                      title="Edit Order Details & Items"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
 
                     {/* Delete Order Button */}
                     <button
@@ -665,17 +878,26 @@ const ManageOrders: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm outline-none focus:border-pink-500"
                   />
                 </div>
-
-                {/* 3. Product Selection */}
+                {/* 2. Add Products to Order */}
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
-                    2. Add Products to Order
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                      2. Add Products to Order
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomProductForm(!showCustomProductForm)}
+                      className="text-xs font-bold text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      {showCustomProductForm ? "Hide Custom Product Form" : "+ Add Custom Product"}
+                    </button>
+                  </div>
                   
                   {/* Product Picker Dropdown */}
                   <div className="flex gap-2">
                     <select
-                      className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm outline-none focus:border-pink-500"
+                      className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm outline-none focus:border-pink-500 font-medium"
                       onChange={(e) => {
                         const pid = e.target.value;
                         if (!pid) return;
@@ -693,11 +915,83 @@ const ManageOrders: React.FC = () => {
                     </select>
                   </div>
 
+                  {/* Custom Product Creator Box */}
+                  <AnimatePresence>
+                    {showCustomProductForm && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-3 p-3.5 rounded-2xl bg-pink-50/60 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/40 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-pink-700 dark:text-pink-300 flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5" /> Custom Product Details
+                          </span>
+                          <span className="text-[10px] text-zinc-500">Add any unlisted or custom phone/gadget</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 block mb-0.5">Product Name *</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. iPhone 15 Pro Max (Custom Import)"
+                              value={customProdName}
+                              onChange={(e) => setCustomProdName(e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 block mb-0.5">Unit Price (৳) *</label>
+                            <input
+                              type="number"
+                              placeholder="৳ Price"
+                              value={customProdPrice}
+                              onChange={(e) => setCustomProdPrice(e.target.value ? Number(e.target.value) : "")}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
+                          <div>
+                            <label className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 block mb-0.5">Quantity</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={customProdQty}
+                              onChange={(e) => setCustomProdQty(Math.max(1, Number(e.target.value) || 1))}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 block mb-0.5">Image URL (Optional)</label>
+                            <input
+                              type="text"
+                              placeholder="https://..."
+                              value={customProdImage}
+                              onChange={(e) => setCustomProdImage(e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <button
+                              type="button"
+                              onClick={handleAddCustomProduct}
+                              className="w-full py-1.5 px-3 rounded-lg bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold shadow-xs transition"
+                            >
+                              + Add Item
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   {/* Selected Items List */}
                   <div className="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1">
                     {orderItems.length === 0 ? (
                       <div className="p-4 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 text-center text-xs text-zinc-400">
-                        No products added yet. Select a product above.
+                        No products added yet. Select from catalog or add a custom product above.
                       </div>
                     ) : (
                       orderItems.map((item) => (
@@ -751,8 +1045,8 @@ const ManageOrders: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 4. Payment, Status & Delivery Info */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 4. Payment, Advance Paid, Status & Delivery Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                       Payment Method
@@ -763,11 +1057,23 @@ const ManageOrders: React.FC = () => {
                       className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-semibold outline-none"
                     >
                       <option value="COD">Cash on Delivery (COD)</option>
-                      <option value="bKash">bKash (Paid)</option>
-                      <option value="Nagad">Nagad (Paid)</option>
-                      <option value="Rocket">Rocket (Paid)</option>
-                      <option value="Card">Card (Paid)</option>
+                      <option value="bKash">bKash (Paid / Partial)</option>
+                      <option value="Nagad">Nagad (Paid / Partial)</option>
+                      <option value="Rocket">Rocket (Paid / Partial)</option>
+                      <option value="Card">Card (Paid / Partial)</option>
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Advance Paid Amount (৳)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="0 (if user paid earlier)"
+                      value={advancePaid}
+                      onChange={(e) => setAdvancePaid(e.target.value ? Number(e.target.value) : "")}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-semibold outline-none text-emerald-600 dark:text-emerald-400"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
@@ -811,7 +1117,7 @@ const ManageOrders: React.FC = () => {
                   <p className="text-[10px] text-zinc-400 mt-1">Standard: 1 Month+ for imported border-cross products</p>
                 </div>
 
-                {/* Calculation Summary */}
+                {/* Calculation Summary with Advance & Due */}
                 <div className="p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs space-y-1.5">
                   <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
                     <span>Items Subtotal:</span>
@@ -821,9 +1127,20 @@ const ManageOrders: React.FC = () => {
                     <span>Delivery Fee:</span>
                     <span>৳{shippingFee}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-bold text-zinc-900 dark:text-white pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
+                  <div className="flex justify-between text-zinc-900 dark:text-white font-bold pt-1 border-t border-zinc-200 dark:border-zinc-700">
                     <span>Grand Total:</span>
-                    <span className="text-pink-600 dark:text-pink-400">৳{calculateTotal()}</span>
+                    <span>৳{calculateTotal()}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span>Advance / Already Paid:</span>
+                    <span>- ৳{Number(advancePaid) || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-extrabold text-rose-600 dark:text-rose-400 pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
+                    <span className="flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Remaining Due (To Collect on Delivery):
+                    </span>
+                    <span>৳{calculateDue()}</span>
                   </div>
                 </div>
 
@@ -842,6 +1159,421 @@ const ManageOrders: React.FC = () => {
                     className="px-6 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-xs font-bold shadow-md transition cursor-pointer"
                   >
                     {isCreatingOrder ? "Creating Order..." : "Create & Place Order"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Order Modal */}
+      <AnimatePresence>
+        {showEditModal && editingOrder && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col p-6 my-8 text-zinc-900 dark:text-zinc-100"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-zinc-150 dark:border-zinc-800">
+                <div>
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <Edit3 className="w-5 h-5 text-blue-500" />
+                    Edit Order #{editingOrder.id.slice(0, 8)}
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Modify customer details, items, advance payment, due balance, and fulfillment
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditOrderSubmit} className="space-y-5 pt-4">
+                {/* 1. Customer & Phone */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Customer Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editCustomerName}
+                      onChange={(e) => setEditCustomerName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Primary Contact *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editContactNumber}
+                      onChange={(e) => setEditContactNumber(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm outline-none focus:border-blue-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Alternative Phone
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Optional"
+                      value={editAltNumber}
+                      onChange={(e) => setEditAltNumber(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm outline-none focus:border-blue-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Shipping Address */}
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Shipping Address *
+                  </label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={editShippingAddress}
+                    onChange={(e) => setEditShippingAddress(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* 3. Items Editor */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                      Order Items & Products ({editItems.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setEditShowCustomProduct(!editShowCustomProduct)}
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      {editShowCustomProduct ? "Close Custom Form" : "+ Add Custom Item"}
+                    </button>
+                  </div>
+
+                  {/* Add catalog product dropdown */}
+                  <div className="flex gap-2 mb-2">
+                    <select
+                      className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs outline-none focus:border-blue-500"
+                      onChange={(e) => {
+                        const pid = e.target.value;
+                        if (!pid) return;
+                        const prod = availableProducts.find(p => p.id === pid);
+                        if (prod) {
+                          setEditItems([
+                            ...editItems,
+                            {
+                              id: prod.id,
+                              name: prod.title || prod.name || "Product",
+                              price: prod.price || 0,
+                              quantity: 1,
+                              image: prod.images?.[0] || prod.imageUrl || prod.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200",
+                            }
+                          ]);
+                          notify(`Added "${prod.title || prod.name}"`, "success");
+                        }
+                        e.target.value = "";
+                      }}
+                    >
+                      <option value="">+ Add a product from catalog...</option>
+                      {availableProducts.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.title || p.name} - ৳{p.price}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Custom Product Add in Edit Modal */}
+                  <AnimatePresence>
+                    {editShowCustomProduct && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mb-3 p-3 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 space-y-2.5"
+                      >
+                        <span className="text-xs font-bold text-blue-700 dark:text-blue-300 block">
+                          Add Custom Product to this Order
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Product Title"
+                            value={editCustomProdName}
+                            onChange={(e) => setEditCustomProdName(e.target.value)}
+                            className="sm:col-span-2 px-2.5 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 outline-none"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Price (৳)"
+                            value={editCustomProdPrice}
+                            onChange={(e) => setEditCustomProdPrice(e.target.value ? Number(e.target.value) : "")}
+                            className="px-2.5 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 outline-none"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            placeholder="Qty"
+                            value={editCustomProdQty}
+                            onChange={(e) => setEditCustomProdQty(Math.max(1, Number(e.target.value) || 1))}
+                            className="w-20 px-2.5 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 outline-none"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Optional Image URL"
+                            value={editCustomProdImage}
+                            onChange={(e) => setEditCustomProdImage(e.target.value)}
+                            className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleEditAddCustomProduct}
+                            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Edit Items List */}
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {editItems.map((item, idx) => (
+                      <div key={item.id + "_" + idx} className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <img src={item.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-zinc-200 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(e) => {
+                                const newItems = [...editItems];
+                                newItems[idx].name = e.target.value;
+                                setEditItems(newItems);
+                              }}
+                              className="text-xs font-bold w-full bg-transparent border-b border-transparent focus:border-blue-400 outline-none"
+                            />
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[11px] text-zinc-500">Unit: ৳</span>
+                              <input
+                                type="number"
+                                value={item.price}
+                                onChange={(e) => {
+                                  const newItems = [...editItems];
+                                  newItems[idx].price = Number(e.target.value) || 0;
+                                  setEditItems(newItems);
+                                }}
+                                className="w-20 text-xs font-mono font-semibold bg-white dark:bg-zinc-700 px-1 py-0.5 rounded border border-zinc-300 dark:border-zinc-600 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center border border-zinc-300 dark:border-zinc-600 rounded-lg overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (item.quantity > 1) {
+                                  const newItems = [...editItems];
+                                  newItems[idx].quantity -= 1;
+                                  setEditItems(newItems);
+                                } else {
+                                  setEditItems(editItems.filter((_, i) => i !== idx));
+                                }
+                              }}
+                              className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-bold"
+                            >
+                              -
+                            </button>
+                            <span className="px-2.5 text-xs font-bold">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newItems = [...editItems];
+                                newItems[idx].quantity += 1;
+                                setEditItems(newItems);
+                              }}
+                              className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-bold"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <span className="text-xs font-bold w-16 text-right">৳{item.price * item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditItems(editItems.filter((_, i) => i !== idx))}
+                            className="text-rose-500 hover:text-rose-700 p-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Status, Payment & Financials */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Order Status
+                    </label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as OrderStatus)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-semibold outline-none"
+                    >
+                      {Object.values(OrderStatus).map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Payment Method
+                    </label>
+                    <select
+                      value={editPaymentMethod}
+                      onChange={(e) => setEditPaymentMethod(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-semibold outline-none"
+                    >
+                      <option value="COD">Cash on Delivery (COD)</option>
+                      <option value="bKash">bKash</option>
+                      <option value="Nagad">Nagad</option>
+                      <option value="Rocket">Rocket</option>
+                      <option value="Card">Card</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Delivery Fee (৳)
+                    </label>
+                    <input
+                      type="number"
+                      value={editShippingFee}
+                      onChange={(e) => setEditShippingFee(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-semibold outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Advance Paid (৳)
+                    </label>
+                    <input
+                      type="number"
+                      value={editAdvanceAmount}
+                      onChange={(e) => setEditAdvanceAmount(e.target.value ? Number(e.target.value) : "")}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-semibold outline-none text-emerald-600 dark:text-emerald-400 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Logistics / Fulfillment */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Tracking ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. TRK452126542"
+                      value={editTrackingId}
+                      onChange={(e) => setEditTrackingId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Courier Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Steadfast / SA Paribahan"
+                      value={editCourierName}
+                      onChange={(e) => setEditCourierName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Rider Contact Phone
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="017..."
+                      value={editRiderNumber}
+                      onChange={(e) => setEditRiderNumber(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Edit Summary Box */}
+                <div className="p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-xs space-y-1.5">
+                  <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
+                    <span>Items Subtotal:</span>
+                    <span>৳{calculateEditSubtotal()}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
+                    <span>Delivery Fee:</span>
+                    <span>৳{editShippingFee}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-900 dark:text-white font-bold pt-1 border-t border-zinc-200 dark:border-zinc-700">
+                    <span>Calculated Total:</span>
+                    <span>৳{calculateEditTotal()}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span>Advance Already Paid:</span>
+                    <span>- ৳{Number(editAdvanceAmount) || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-extrabold text-rose-600 dark:text-rose-400 pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
+                    <span className="flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Due On Delivery (COD Balance):
+                    </span>
+                    <span>৳{calculateEditDue()}</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingEdit}
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold shadow-md transition cursor-pointer"
+                  >
+                    {isSavingEdit ? "Saving Changes..." : "Save Order Changes"}
                   </button>
                 </div>
               </form>

@@ -17,6 +17,9 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: "autoUpdate",
+        devOptions: {
+          enabled: false,
+        },
         includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png"],
         workbox: {
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MB limit
@@ -47,6 +50,19 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
+    optimizeDeps: {
+      include: [
+        "firebase/app",
+        "firebase/auth",
+        "firebase/firestore",
+        "firebase/messaging",
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react-router-dom",
+        "framer-motion"
+      ]
+    },
     build: {
       sourcemap: false,
       minify: "esbuild",

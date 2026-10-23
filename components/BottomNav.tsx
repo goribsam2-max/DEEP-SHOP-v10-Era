@@ -37,12 +37,14 @@ const BottomNav: React.FC = () => {
     { to: "/profile", iconKey: "user", label: "Profile" },
   ];
 
-  // Hide BottomNav on product detail pages, messages, and seller routes
+  // Hide BottomNav on product detail pages, messages, seller, and news-hub routes
   if (
     location.pathname.startsWith("/product/") ||
     location.pathname.startsWith("/messages") ||
     location.pathname.startsWith("/seller") ||
-    location.pathname.startsWith("/admin")
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/news-hub") ||
+    location.pathname.startsWith("/news")
   ) {
     return null;
   }
