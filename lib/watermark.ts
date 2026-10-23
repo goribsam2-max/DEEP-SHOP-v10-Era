@@ -62,42 +62,8 @@ export const applyWatermarkToImage = async (
         // 1. Draw original image
         ctx.drawImage(img, 0, 0, width, height);
 
-        // 2. Draw repeating angled watermark grid
-        ctx.save();
-        ctx.globalAlpha = opacity;
-        ctx.fillStyle = "#ffffff";
-        ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 1.5;
-        ctx.shadowOffsetY = 1.5;
-
-        // Calculate dynamic font size based on image width
-        const baseFontSize = Math.max(13, Math.min(24, Math.round(width / 32)));
-        ctx.font = `bold ${baseFontSize}px Inter, -apple-system, sans-serif`;
-        ctx.textBaseline = "middle";
-        ctx.textAlign = "center";
-
-        // Create diagonal tiled pattern
-        const angle = -25 * (Math.PI / 180);
-        const stepX = patternDensity * (width / 500);
-        const stepY = patternDensity * 0.7 * (height / 600);
-
-        const diag = Math.sqrt(width * width + height * height);
-
-        ctx.translate(width / 2, height / 2);
-        ctx.rotate(angle);
-
-        for (let y = -diag; y <= diag; y += Math.max(60, stepY)) {
-          for (let x = -diag; x <= diag; x += Math.max(140, stepX)) {
-            // Main watermark text
-            ctx.fillText(watermarkText, x, y);
-            // Optional tiny shield subtext
-            ctx.save();
-            ctx.font = `600 ${Math.max(9, Math.round(baseFontSize * 0.55))}px Inter, sans-serif`;
-            ctx.fillText("DEEP SHOP ALERT", x, y + baseFontSize * 0.85);
-            ctx.restore();
-          }
-        }
+        // 2. Clean image display (Middle tiled diagonal text omitted per user request for clean images)
+        // Watermark badge is positioned elegantly at the bottom shape banner below.
         ctx.restore();
 
         // 3. Official Bottom Verification Banner

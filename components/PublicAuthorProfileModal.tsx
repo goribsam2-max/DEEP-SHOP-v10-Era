@@ -19,6 +19,7 @@ import {
   Building2
 } from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { useNotify } from './Notifications';
 import { triggerHaptic } from '../lib/haptics';
@@ -41,6 +42,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
   onOpenGiftStars
 }) => {
   const notify = useNotify();
+  const navigate = useNavigate();
   const currentUser = auth.currentUser;
 
   const [profileData, setProfileData] = useState<any>(null);
@@ -231,7 +233,11 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
             <div className="grid grid-cols-2 gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setShowSponsorModal(true)}
+                onClick={() => {
+                  triggerHaptic();
+                  onClose();
+                  navigate(`/sponsor/${userId || "creator"}`);
+                }}
                 className="py-2.5 px-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Handshake className="w-4 h-4" />
@@ -241,12 +247,9 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
               <button
                 type="button"
                 onClick={() => {
-                  if (onOpenGiftStars && userId) {
-                    onClose();
-                    onOpenGiftStars(userId, displayName);
-                  } else {
-                    notify("Open comments to gift stars directly!", "info");
-                  }
+                  triggerHaptic();
+                  onClose();
+                  navigate(`/gift-stars/${userId || "creator"}`);
                 }}
                 className="py-2.5 px-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
               >

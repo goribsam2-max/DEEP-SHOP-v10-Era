@@ -303,6 +303,7 @@ import CreatorDashboard from './pages/CreatorDashboard';
 import AuthorProfile from './pages/AuthorProfile';
 import BuyStars from './pages/BuyStars';
 import SponsorCreator from './pages/SponsorCreator';
+import GiftStarsPage from './pages/GiftStarsPage';
 import CreatorSubscriptionSetup from './pages/CreatorSubscriptionSetup';
 import NewsHubNotifications from './pages/NewsHubNotifications';
 import RegionSelect from './pages/RegionSelect';
@@ -694,21 +695,16 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener("openAccountCenter", handleOpen);
   }, []);
 
-  // Update saved accounts from local storage when it opens or on mount
+  // Update saved accounts from local storage when opened
   useEffect(() => {
     try {
-        const str = localStorage.getItem("vibe_saved_accounts");
-        if (str) {
-            const accounts = JSON.parse(str);
-            setSavedAccounts(accounts);
-            // If they are visiting index or profile and are NOT logged in, and have saved accounts
-            if (accounts.length > 0 && !auth.currentUser && !loading && ['/','/profile'].includes(location.pathname)) {
-                 // user wants this to show every time they visit or refresh and are logged out
-                 setIsAccountCenterOpen(true);
-            }
-        }
-    } catch(e) {}
-  }, [loading, location.pathname]);
+      const str = localStorage.getItem("vibe_saved_accounts");
+      if (str) {
+        const accounts = JSON.parse(str);
+        setSavedAccounts(accounts);
+      }
+    } catch (e) {}
+  }, [location.pathname]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search || location.search);
@@ -1011,6 +1007,7 @@ const AppContent: React.FC = () => {
           <Route path="/creator/subscription-setup" element={<PageWrapper><CreatorSubscriptionSetup /></PageWrapper>} />
           <Route path="/buy-stars" element={<PageWrapper><BuyStars /></PageWrapper>} />
           <Route path="/sponsor/:creatorId" element={<PageWrapper><SponsorCreator /></PageWrapper>} />
+          <Route path="/gift-stars/:creatorId" element={<PageWrapper><GiftStarsPage /></PageWrapper>} />
           <Route path="/author/:id" element={<PageWrapper><AuthorProfile /></PageWrapper>} />
           <Route path="/creator/:id" element={<PageWrapper><AuthorProfile /></PageWrapper>} />
           <Route path="/news/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />

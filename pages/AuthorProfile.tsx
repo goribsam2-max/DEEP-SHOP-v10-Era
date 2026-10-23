@@ -375,7 +375,10 @@ export const AuthorProfile: React.FC = () => {
         <div className="grid grid-cols-2 gap-2.5 pt-2">
           <button
             type="button"
-            onClick={() => setShowSponsorModal(true)}
+            onClick={() => {
+              triggerHaptic();
+              navigate(`/sponsor/${id || "author_demo"}`);
+            }}
             className="py-3 px-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Handshake className="w-4 h-4" />
@@ -384,7 +387,10 @@ export const AuthorProfile: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setShowGiftModal(true)}
+            onClick={() => {
+              triggerHaptic();
+              navigate(`/gift-stars/${id || "author_demo"}`);
+            }}
             className="py-3 px-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-extrabold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Star className="w-4 h-4 fill-white" />

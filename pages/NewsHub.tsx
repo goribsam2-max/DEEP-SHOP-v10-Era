@@ -415,7 +415,7 @@ export const NewsHub: React.FC = () => {
     }
   };
 
-  // 2. Fetch or Sync Posts from Firestore with Local Fallback
+  // 2. Fetch or Sync Posts from Firestore
   useEffect(() => {
     let unsub: (() => void) | null = null;
     try {
@@ -427,30 +427,18 @@ export const NewsHub: React.FC = () => {
             const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ScamPost);
             setPosts(list);
           } else {
-            // Seed local storage with default posts
-            const saved = localStorage.getItem("deep_scam_posts");
-            if (saved) {
-              try {
-                setPosts(JSON.parse(saved));
-              } catch (e) {
-                setPosts(DEFAULT_POSTS);
-              }
-            } else {
-              setPosts(DEFAULT_POSTS);
-              localStorage.setItem("deep_scam_posts", JSON.stringify(DEFAULT_POSTS));
-            }
+            setPosts([]);
           }
           setLoading(false);
         },
         (err) => {
-          console.warn("Firestore error, using local posts:", err);
-          const saved = localStorage.getItem("deep_scam_posts");
-          setPosts(saved ? JSON.parse(saved) : DEFAULT_POSTS);
+          console.warn("Firestore error:", err);
+          setPosts([]);
           setLoading(false);
         }
       );
     } catch (e) {
-      setPosts(DEFAULT_POSTS);
+      setPosts([]);
       setLoading(false);
     }
     return () => {
@@ -560,6 +548,32 @@ export const NewsHub: React.FC = () => {
     } catch (e) {}
   };
 
+  // Real-time comments listener for active drawer
+  useEffect(() => {
+    if (!commentsDrawerPostId) return;
+    try {
+      const q = query(
+        collection(db, `scam_posts/${commentsDrawerPostId}/comments`),
+        orderBy("createdAt", "desc")
+      );
+      const unsub = onSnapshot(q, (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScamComment));
+        setPostComments((prev) => ({ ...prev, [commentsDrawerPostId]: list }));
+      });
+      return () => unsub();
+    } catch (e) {}
+  }, [commentsDrawerPostId]);
+
+  // Navigate to post detail with real-time Firestore view count increment
+  const handleNavigateToPost = async (postId: string) => {
+    try {
+      await updateDoc(doc(db, "scam_posts", postId), {
+        views: increment(1),
+      });
+    } catch (e) {}
+    navigate(`/news-hub/post/${postId}`);
+  };
+
   // Comments: Handle uploading an image into a comment (with automatic canvas watermark!)
   const handleCommentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -603,6 +617,15 @@ export const NewsHub: React.FC = () => {
       createdAt: Date.now(),
     };
 
+    try {
+      await addDoc(collection(db, `scam_posts/${postId}/comments`), comment);
+      await updateDoc(doc(db, "scam_posts", postId), {
+        commentsCount: increment(1),
+      });
+    } catch (e) {
+      console.warn("Could not save comment to Firestore:", e);
+    }
+
     const currentList = postComments[postId] || [];
     const updatedList = [comment, ...currentList];
     setPostComments({ ...postComments, [postId]: updatedList });
@@ -612,7 +635,6 @@ export const NewsHub: React.FC = () => {
       p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p
     );
     setPosts(updatedPosts);
-    localStorage.setItem("deep_scam_posts", JSON.stringify(updatedPosts));
 
     setNewCommentText("");
     setCommentImagePreview(null);
@@ -987,7 +1009,7 @@ export const NewsHub: React.FC = () => {
                       {post.images.length >= 3 ? (
                         <div
                           className="relative h-64 sm:h-72 w-full flex items-center justify-center cursor-pointer group"
-                          onClick={() => navigate(`/news-hub/post/${post.id}`)}
+                          onClick={() => handleNavigateToPost(post.id)}
                         >
                           {/* Left card tilted */}
                           <div className="absolute w-[60%] sm:w-[55%] h-full rounded-3xl overflow-hidden shadow-md transform -rotate-12 -translate-x-16 border-2 border-white dark:border-zinc-800 transition duration-300 group-hover:-translate-x-20">
@@ -1049,7 +1071,7 @@ export const NewsHub: React.FC = () => {
                         /* Single or Double Image Layout */
                         <div
                           className="relative h-64 sm:h-72 w-full rounded-3xl overflow-hidden shadow-sm border border-zinc-200 dark:border-zinc-800 cursor-pointer"
-                          onClick={() => navigate(`/news-hub/post/${post.id}`)}
+                          onClick={() => handleNavigateToPost(post.id)}
                         >
                           <img
                             src={post.images[0]}
@@ -1083,7 +1105,7 @@ export const NewsHub: React.FC = () => {
                   <div className="space-y-1.5">
                     <h3
                       className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white leading-snug cursor-pointer hover:underline"
-                      onClick={() => navigate(`/news-hub/post/${post.id}`)}
+                      onClick={() => handleNavigateToPost(post.id)}
                     >
                       {post.title}
                     </h3>
@@ -1092,8 +1114,8 @@ export const NewsHub: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* SCAMMER INFO MINI BADGE BOX (Strictly single line on mobile) */}
-                  {(post.scammerName || post.scammerPhone || post.scammedAmount) && (
+                  {/* SCAMMER INFO MINI BADGE BOX (Only for Scam Alert posts) */}
+                  {((post.category === "advance_payment" || post.category === "delivery" || post.category === "electronics" || post.category === "scam" || post.postType === "scam" || (post as any).isScamAlert === true) && (post.scammerName || post.scammerPhone || post.scammedAmount)) ? (
                     <div className="p-2.5 sm:p-3 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/40 text-xs space-y-1 overflow-hidden">
                       <div className="flex items-center justify-between gap-1.5 font-bold text-rose-800 dark:text-rose-300 min-w-0">
                         <span className="flex items-center gap-1 min-w-0 text-[10px] sm:text-xs whitespace-nowrap">
@@ -1112,11 +1134,11 @@ export const NewsHub: React.FC = () => {
                         </p>
                       )}
                     </div>
-                  )}
+                  ) : null}
 
                   {/* INTERACTIVE ACTION BAR (Strictly single line on mobile) */}
                   <div className="flex items-center justify-between gap-1 sm:gap-2 pt-1">
-                    {/* Left Pill: [♡ 2.1k  💬 2.1k] */}
+                    {/* Left Pill: Reactions */}
                     <div className="relative shrink-0">
                       <button
                         type="button"
@@ -1126,13 +1148,13 @@ export const NewsHub: React.FC = () => {
                         <span className="flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
                           <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${post.reactions?.[currentUser?.uid] ? "fill-rose-500 text-rose-500" : ""}`} />
                           <span className="whitespace-nowrap">
-                            {Object.values(post.reactionsCount || {}).reduce((a, b) => a + b, 0) || "2.1k"}
+                            {Object.values(post.reactionsCount || {}).reduce((a, b) => a + b, 0)}
                           </span>
                         </span>
                         <span className="text-zinc-300 dark:text-zinc-600">•</span>
                         <span className="flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
                           <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          <span className="whitespace-nowrap">{post.commentsCount || "2.1k"}</span>
+                          <span className="whitespace-nowrap">{post.commentsCount || 0}</span>
                         </span>
                       </button>
 
@@ -1161,17 +1183,17 @@ export const NewsHub: React.FC = () => {
                       </AnimatePresence>
                     </div>
 
-                    {/* Middle Pill: [💬 Comments here] */}
+                    {/* Middle Pill: Comments */}
                     <button
                       type="button"
                       onClick={() => setCommentsDrawerPostId(post.id)}
                       className="flex-1 min-w-0 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] sm:text-xs font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer whitespace-nowrap shrink-0"
                     >
                       <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span className="whitespace-nowrap">Comments here</span>
+                      <span className="whitespace-nowrap">Comments ({post.commentsCount || 0})</span>
                     </button>
 
-                    {/* Right Circle: [ ⋮ ] */}
+                    {/* Right Circle: Share */}
                     <button
                       type="button"
                       onClick={() => handleSharePost(post)}
@@ -1182,24 +1204,26 @@ export const NewsHub: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Scammer Community Voting Bar (Strictly single line on mobile) */}
-                  <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-1.5 text-xs">
-                    <span className="text-[10px] sm:text-[11px] text-zinc-500 font-medium whitespace-nowrap truncate min-w-0">
-                      Confirmed by: <strong className="text-zinc-900 dark:text-white font-bold">{post.votes} victims</strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleVoteScammer(post.id)}
-                      className={`px-2.5 sm:px-3 py-1 rounded-full font-bold text-[10px] sm:text-xs flex items-center gap-1 sm:gap-1.5 transition whitespace-nowrap shrink-0 ${
-                        (post.votedUserIds || []).includes(currentUser?.uid)
-                          ? "bg-rose-600 text-white"
-                          : "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100"
-                      }`}
-                    >
-                      <ThumbsUp className="w-3 h-3 shrink-0" />
-                      <span className="whitespace-nowrap">{(post.votedUserIds || []).includes(currentUser?.uid) ? "Confirmed" : "Vote Scammer"}</span>
-                    </button>
-                  </div>
+                  {/* Scammer Community Voting Bar (ONLY FOR SCAM ALERT POSTS) */}
+                  {(post.category === "advance_payment" || post.category === "delivery" || post.category === "electronics" || post.category === "scam" || post.postType === "scam" || (post as any).isScamAlert === true) ? (
+                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-1.5 text-xs">
+                      <span className="text-[10px] sm:text-[11px] text-zinc-500 font-medium whitespace-nowrap truncate min-w-0">
+                        Confirmed by: <strong className="text-zinc-900 dark:text-white font-bold">{post.votes || 0} victims</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleVoteScammer(post.id)}
+                        className={`px-2.5 sm:px-3 py-1 rounded-full font-bold text-[10px] sm:text-xs flex items-center gap-1 sm:gap-1.5 transition whitespace-nowrap shrink-0 ${
+                          (post.votedUserIds || []).includes(currentUser?.uid)
+                            ? "bg-rose-600 text-white"
+                            : "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100"
+                        }`}
+                      >
+                        <ThumbsUp className="w-3 h-3 shrink-0" />
+                        <span className="whitespace-nowrap">{(post.votedUserIds || []).includes(currentUser?.uid) ? "Confirmed" : "Vote Scammer"}</span>
+                      </button>
+                    </div>
+                  ) : null}
                 </article>
 
                 {/* DYNAMIC ADMIN CONFIGURED AD (In-feed, Display, Multiplex, In-article) */}
@@ -1615,16 +1639,32 @@ export const NewsHub: React.FC = () => {
                 )}
 
                 <div className="flex items-center gap-2">
-                  <label className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-blue-500 cursor-pointer">
-                    <Camera className="w-4 h-4" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleCommentImageUpload}
-                      disabled={isWatermarkingCommentImage}
-                    />
-                  </label>
+                  {(() => {
+                    const activeCommentPost = posts.find((p) => p.id === commentsDrawerPostId);
+                    const isScamForComment = activeCommentPost
+                      ? activeCommentPost.category === "advance_payment" ||
+                        activeCommentPost.category === "delivery" ||
+                        activeCommentPost.category === "electronics" ||
+                        activeCommentPost.category === "scam" ||
+                        activeCommentPost.postType === "scam" ||
+                        (activeCommentPost as any).isScamAlert === true
+                      : false;
+
+                    if (!isScamForComment) return null;
+
+                    return (
+                      <label className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-blue-500 cursor-pointer" title="Attach Proof (Watermarked Evidence)">
+                        <Camera className="w-4 h-4" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleCommentImageUpload}
+                          disabled={isWatermarkingCommentImage}
+                        />
+                      </label>
+                    );
+                  })()}
 
                   <input
                     type="text"

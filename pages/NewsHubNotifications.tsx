@@ -7,6 +7,7 @@ import {
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { subscribeToWebPush } from '../lib/push';
 
 interface NewsNotification {
   id: string;
@@ -41,6 +42,19 @@ export const NewsHubNotifications: React.FC = () => {
     scamAlerts: true,
   });
 
+  const requestPushPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const res = await window.Notification.requestPermission();
+        if (res === 'granted' && user?.uid) {
+          subscribeToWebPush(user.uid);
+        }
+      } catch (e) {
+        console.warn('Push permission error:', e);
+      }
+    }
+  };
+
   useEffect(() => {
     // Dismiss tooltip after 6 seconds automatically or on interaction
     const timer = setTimeout(() => setShowSettingsTooltip(false), 6000);
@@ -64,52 +78,13 @@ export const NewsHubNotifications: React.FC = () => {
             date: d.data().createdAt ? new Date(d.data().createdAt.toDate?.() || d.data().createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'
           }));
 
-          if (loaded.length > 0) {
-            setNotifications(loaded);
-            setLoading(false);
-            return;
-          }
+          setNotifications(loaded);
+        } else {
+          setNotifications([]);
         }
-
-        // Demo seed notifications tailored to News Hub experience
-        const demoNotifs: NewsNotification[] = [
-          {
-            id: 'demo-1',
-            type: 'star',
-            title: 'Stars received from Community',
-            body: 'You received 50 Stars for your verified scam alert report. Keep empowering buyers!',
-            avatarText: '⭐',
-            avatarBg: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400',
-            date: 'Dec 16, 2024',
-            read: false,
-            link: '/creator-dashboard'
-          },
-          {
-            id: 'demo-2',
-            type: 'follow',
-            title: 'Tanvir Hossain followed you',
-            body: 'Tanvir started following your investigator updates and scam alerts in News Hub.',
-            avatarText: 'TH',
-            avatarBg: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400',
-            date: 'Dec 12, 2024',
-            read: false,
-            link: '/news-hub'
-          },
-          {
-            id: 'demo-3',
-            type: 'comment',
-            title: 'New Evidence Submitted',
-            body: 'A user submitted screenshot evidence regarding WhatsApp transaction scammer #88017.',
-            avatarText: 'EV',
-            avatarBg: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400',
-            date: 'Dec 8, 2024',
-            read: true,
-            link: '/news-hub'
-          }
-        ];
-        setNotifications(demoNotifs);
       } catch (err) {
         console.error('Error fetching notifications:', err);
+        setNotifications([]);
       } finally {
         setLoading(false);
       }
@@ -123,6 +98,7 @@ export const NewsHubNotifications: React.FC = () => {
   };
 
   const handleNotificationClick = (notif: NewsNotification) => {
+    requestPushPermission();
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
     if (notif.link) {
       navigate(notif.link);
@@ -405,8 +381,11 @@ export const NewsHubNotifications: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setShowPreferencesModal(false)}
-                className="py-3 px-4 rounded-xl text-sm font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 transition-colors"
+                onClick={() => {
+                  requestPushPermission();
+                  setShowPreferencesModal(false);
+                }}
+                className="py-3 px-4 rounded-xl text-sm font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 transition-colors cursor-pointer"
               >
                 Get notified
               </button>

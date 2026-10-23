@@ -13,7 +13,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { auth, db } from "../firebase";
-import { doc, getDoc, addDoc, collection, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, addDoc, collection, onSnapshot, query, where, getDocs, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
@@ -124,6 +124,9 @@ export const SponsorCreator: React.FC = () => {
     triggerHaptic();
 
     try {
+      const officialNum = paymentMethod === "bkash" ? bkashNumber : nagadNumber;
+      const cleanTrx = trxId.trim().toUpperCase();
+
       await addDoc(collection(db, "sponsor_requests"), {
         sponsorUserId: currentUser.uid,
         sponsorName: currentUser.displayName || currentUser.email?.split("@")[0] || "Supporter",
@@ -134,14 +137,86 @@ export const SponsorCreator: React.FC = () => {
         amountBDT: activeAmount,
         paymentMethod,
         senderPhone,
-        trxId: trxId.trim().toUpperCase(),
-        officialNumber: paymentMethod === "bkash" ? bkashNumber : nagadNumber,
+        trxId: cleanTrx,
+        officialNumber: officialNum,
         status: "pending",
         createdAt: Date.now()
       });
 
-      notify(`Sponsorship request of ৳${activeAmount} for ${creator?.displayName} submitted! Admin will verify and activate your sponsor badge.`, "success");
-      navigate(`/author/${creatorId}`);
+      // Find or create P2P chat with creator to auto-dispatch receipt details into site inbox
+      let targetChatId = "";
+      if (creatorId && creatorId !== currentUser.uid) {
+        try {
+          const qExisting = query(
+            collection(db, "p2p_chats"),
+            where("participants", "array-contains", currentUser.uid)
+          );
+          const snapExisting = await getDocs(qExisting);
+          const foundDoc = snapExisting.docs.find((d) => {
+            const data = d.data();
+            const p = data.participants;
+            return Array.isArray(p) && p.includes(creatorId) && !data.isGroup && data.type !== "group";
+          });
+
+          if (foundDoc) {
+            targetChatId = foundDoc.id;
+          } else {
+            const newChatRef = await addDoc(collection(db, "p2p_chats"), {
+              participants: [currentUser.uid, creatorId],
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              lastMessage: `🤝 Sponsorship Request: ৳${activeAmount} BDT`,
+              lastSenderId: currentUser.uid,
+              seenBy: [currentUser.uid]
+            });
+            targetChatId = newChatRef.id;
+          }
+
+          const tierLabels: Record<string, string> = {
+            monthly: "Monthly Supporter",
+            yearly: "Yearly VIP Patron",
+            per_post: "Per-Post Scam Sponsor",
+            custom: "Custom Sponsorship"
+          };
+
+          const receiptText =
+            `🤝 SPONSORSHIP REQUEST SUBMITTED\n\n` +
+            `• Creator: ${creator?.displayName || "Creator"} (@${creator?.username || "creator"})\n` +
+            `• Tier: ${tierLabels[tierType] || tierType}\n` +
+            `• Amount: ৳${activeAmount} BDT\n` +
+            `• Payment Gateway: ${paymentMethod.toUpperCase()} (${officialNum})\n` +
+            `• Sender Phone: ${senderPhone}\n` +
+            `• Transaction ID (TrxID): ${cleanTrx}\n\n` +
+            `Status: Pending Admin Verification. Your sponsorship badge will activate shortly upon approval.`;
+
+          await addDoc(collection(db, "p2p_chats", targetChatId, "messages"), {
+            text: receiptText,
+            senderId: currentUser.uid,
+            senderName: currentUser.displayName || currentUser.email?.split("@")[0] || "Supporter",
+            senderPhoto: currentUser.photoURL || "",
+            createdAt: Date.now(),
+            timestamp: serverTimestamp(),
+            seenBy: [currentUser.uid]
+          });
+
+          await updateDoc(doc(db, "p2p_chats", targetChatId), {
+            updatedAt: serverTimestamp(),
+            lastMessage: `🤝 Sponsorship Request: ৳${activeAmount} BDT`,
+            lastSenderId: currentUser.uid,
+            seenBy: [currentUser.uid]
+          });
+        } catch (chatErr) {
+          console.warn("Could not dispatch receipt message to site inbox:", chatErr);
+        }
+      }
+
+      notify(`Sponsorship request of ৳${activeAmount} for ${creator?.displayName} submitted! Details sent to site inbox.`, "success");
+      
+      if (targetChatId) {
+        navigate(`/messages?chatId=${targetChatId}`);
+      } else {
+        navigate(`/author/${creatorId}`);
+      }
     } catch (err) {
       console.error(err);
       notify("Failed to submit sponsorship request. Please try again.", "error");
@@ -323,29 +398,41 @@ export const SponsorCreator: React.FC = () => {
                 Send to {paymentMethod === "bkash" ? "bKash" : "Nagad"} Number:
               </span>
               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
-                Official Account
+                {creator?.bkashNumber || creator?.nagadNumber ? "Creator Account" : "Official Account"}
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-              <span className="text-base font-black font-mono tracking-wider text-zinc-900 dark:text-white">
-                {paymentMethod === "bkash" ? bkashNumber : nagadNumber}
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  handleCopy(
-                    paymentMethod === "bkash" ? bkashNumber : nagadNumber,
-                    paymentMethod,
-                    paymentMethod.toUpperCase()
-                  )
-                }
-                className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-200 transition cursor-pointer"
-              >
-                {copiedKey === paymentMethod ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedKey === paymentMethod ? "Copied" : "Copy"}</span>
-              </button>
-            </div>
+            {((paymentMethod === "bkash" && (creator?.bkashNumber || bkashNumber)) ||
+              (paymentMethod === "nagad" && (creator?.nagadNumber || nagadNumber))) ? (
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                <span className="text-base font-black font-mono tracking-wider text-zinc-900 dark:text-white">
+                  {paymentMethod === "bkash"
+                    ? creator?.bkashNumber || bkashNumber
+                    : creator?.nagadNumber || nagadNumber}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCopy(
+                      paymentMethod === "bkash"
+                        ? creator?.bkashNumber || bkashNumber
+                        : creator?.nagadNumber || nagadNumber,
+                      paymentMethod,
+                      paymentMethod.toUpperCase()
+                    )
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-200 transition cursor-pointer"
+                >
+                  {copiedKey === paymentMethod ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedKey === paymentMethod ? "Copied" : "Copy"}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>bKash / Nagad number not configured by creator in Creator Dashboard yet.</span>
+              </div>
+            )}
 
             <div className="text-[11px] text-zinc-500 space-y-1">
               <p>• Send exactly: <strong className="text-zinc-900 dark:text-white">৳{activeAmount} BDT</strong></p>

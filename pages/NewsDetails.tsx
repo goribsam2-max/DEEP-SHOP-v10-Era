@@ -444,6 +444,13 @@ export const NewsDetails: React.FC = () => {
 
     loadPost();
 
+    // Increment view count in real time
+    try {
+      updateDoc(doc(db, "scam_posts", id), {
+        views: increment(1),
+      });
+    } catch (e) {}
+
     // Real-time listener for comments
     try {
       const commentsQuery = query(
@@ -459,47 +466,20 @@ export const NewsDetails: React.FC = () => {
             );
             setComments(list);
           } else {
-            // Load local comments
             const localComms = localStorage.getItem(`comments_${id}`);
             if (localComms) {
               try {
                 setComments(JSON.parse(localComms));
-              } catch (e) {}
+              } catch (e) {
+                setComments([]);
+              }
             } else {
-              // Seed default comments
-              setComments([
-                {
-                  id: "comm_1",
-                  postId: id,
-                  userId: "user_alert_1",
-                  userName: "Tanvir Hasan",
-                  userAvatar:
-                    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
-                  text: "This same number tried to scam me yesterday for an iPad Pro! Thanks for revealing on DEEP SHOP.",
-                  createdAt: Date.now() - 3600 * 1000,
-                },
-                {
-                  id: "comm_2",
-                  postId: id,
-                  userId: "user_alert_2",
-                  userName: "Afsana Mimi",
-                  userAvatar:
-                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
-                  text: "Police Cyber Crime Unit e complaint drop korun please. Proof gula download kore print koren.",
-                  createdAt: Date.now() - 1800 * 1000,
-                },
-              ]);
+              setComments([]);
             }
           }
         },
         () => {
-          // Fallback to local storage
-          const localComms = localStorage.getItem(`comments_${id}`);
-          if (localComms) {
-            try {
-              setComments(JSON.parse(localComms));
-            } catch (e) {}
-          }
+          setComments([]);
         }
       );
       return () => unsubComments();
@@ -755,7 +735,13 @@ export const NewsDetails: React.FC = () => {
   }
 
   const currentUserReaction = currentUser ? post.reactions?.[currentUser.uid] : null;
-  const isScam = post.postType === "scam" || !post.postType;
+  const isScam =
+    post.category === "advance_payment" ||
+    post.category === "delivery" ||
+    post.category === "electronics" ||
+    post.category === "scam" ||
+    post.postType === "scam" ||
+    (post as any).isScamAlert === true;
   const reactionsList = Object.entries(post.reactionsUsers || {}).map(([uid, data]) => ({
     userId: uid,
     ...data,
@@ -1130,33 +1116,35 @@ export const NewsDetails: React.FC = () => {
             </div>
           )}
 
-          {/* COMMUNITY VOTING BOX (Strictly single line on mobile) */}
-          <div className="bg-zinc-50 dark:bg-zinc-800/40 rounded-2xl p-3 sm:p-5 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 overflow-hidden">
-            <div className="space-y-0.5 min-w-0">
-              <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 whitespace-nowrap truncate">
-                <Flame className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                <span className="whitespace-nowrap truncate">Community Verification</span>
-              </h4>
-              <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap truncate">
-                {post.votes.toLocaleString()} members confirmed report
-              </p>
-            </div>
+          {/* COMMUNITY VOTING BOX (Strictly single line on mobile - Scam Alert only) */}
+          {isScam && (
+            <div className="bg-zinc-50 dark:bg-zinc-800/40 rounded-2xl p-3 sm:p-5 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 overflow-hidden">
+              <div className="space-y-0.5 min-w-0">
+                <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 whitespace-nowrap truncate">
+                  <Flame className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <span className="whitespace-nowrap truncate">Community Verification</span>
+                </h4>
+                <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap truncate">
+                  {post.votes.toLocaleString()} members confirmed report
+                </p>
+              </div>
 
-            <button
-              type="button"
-              onClick={handleVote}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black transition active:scale-95 cursor-pointer shadow-xs whitespace-nowrap shrink-0 ${
-                post.votedUserIds?.includes(currentUser?.uid)
-                  ? "bg-rose-600 text-white hover:bg-rose-700"
-                  : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white border border-zinc-300 dark:border-zinc-700 hover:border-rose-500 hover:text-rose-600"
-              }`}
-            >
-              <ThumbsUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-              <span className="whitespace-nowrap">
-                {post.votedUserIds?.includes(currentUser?.uid) ? "Voted: Confirmed!" : "Vote Scammer"}
-              </span>
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={handleVote}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black transition active:scale-95 cursor-pointer shadow-xs whitespace-nowrap shrink-0 ${
+                  post.votedUserIds?.includes(currentUser?.uid)
+                    ? "bg-rose-600 text-white hover:bg-rose-700"
+                    : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white border border-zinc-300 dark:border-zinc-700 hover:border-rose-500 hover:text-rose-600"
+                }`}
+              >
+                <ThumbsUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="whitespace-nowrap">
+                  {post.votedUserIds?.includes(currentUser?.uid) ? "Voted: Confirmed!" : "Vote Scammer"}
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* REACTION BAR & BREAKDOWN (Facebook-style - Strictly single line on mobile) */}
           <div className="border-t border-zinc-100 dark:border-zinc-800/80 pt-3 space-y-2.5">
@@ -1335,17 +1323,19 @@ export const NewsDetails: React.FC = () => {
                 )}
 
                 <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer px-2 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">
-                    <Camera className="w-4 h-4 text-rose-500" />
-                    <span>{isWatermarkingCommentImage ? "Watermarking..." : "Attach Proof"}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleCommentImage}
-                      disabled={isWatermarkingCommentImage}
-                    />
-                  </label>
+                  {isScam ? (
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer px-2 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">
+                      <Camera className="w-4 h-4 text-rose-500" />
+                      <span>{isWatermarkingCommentImage ? "Watermarking..." : "Attach Proof"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleCommentImage}
+                        disabled={isWatermarkingCommentImage}
+                      />
+                    </label>
+                  ) : <div />}
 
                   <button
                     type="submit"

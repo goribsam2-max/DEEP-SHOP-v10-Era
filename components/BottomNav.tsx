@@ -1,20 +1,31 @@
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import Icon from "./Icon";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import {
+  Home,
+  Activity,
+  Plus,
+  Compass,
+  User,
+  ShoppingBag,
+  Sparkles
+} from "lucide-react";
 import { triggerHaptic } from "../lib/haptics";
 
 const BottomNav: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [cartCount, setCartCount] = React.useState(0);
 
   React.useEffect(() => {
     const updateCount = () => {
       try {
-        const cartStr = localStorage.getItem('f_cart');
+        const cartStr = localStorage.getItem("f_cart");
         let cart = [];
-        try { cart = cartStr && cartStr !== "undefined" ? JSON.parse(cartStr) : []; } catch(e){}
+        try {
+          cart = cartStr && cartStr !== "undefined" ? JSON.parse(cartStr) : [];
+        } catch (e) {}
         if (Array.isArray(cart)) {
-          const validItems = cart.filter(item => item && (item.id || item.productId));
+          const validItems = cart.filter((item) => item && (item.id || item.productId));
           const count = validItems.reduce((acc: number, item: any) => acc + (item.quantity || 1), 0);
           setCartCount(count);
         } else {
@@ -29,60 +40,89 @@ const BottomNav: React.FC = () => {
     return () => window.removeEventListener("update_cart", updateCount);
   }, []);
 
-  const links = [
-    { to: "/", iconKey: "home", label: "Home" },
-    { to: "/affiliate", iconKey: "profile-affiliate", label: "Creator" },
-    { to: "/aichat", iconKey: "comment-dots", label: "Chat" },
-    { to: "/cart", iconKey: "shopping-cart", label: "Cart" },
-    { to: "/profile", iconKey: "user", label: "Profile" },
-  ];
-
-  // Hide BottomNav on product detail pages, messages, seller, and news-hub routes
+  // Hide BottomNav on full-screen detail views
   if (
     location.pathname.startsWith("/product/") ||
     location.pathname.startsWith("/messages") ||
     location.pathname.startsWith("/seller") ||
     location.pathname.startsWith("/admin") ||
-    location.pathname.startsWith("/news-hub") ||
-    location.pathname.startsWith("/news")
+    location.pathname.startsWith("/checkout") ||
+    location.pathname.startsWith("/payment/")
   ) {
     return null;
   }
 
+  const navItems = [
+    { to: "/", label: "Home", icon: Home },
+    { to: "/orders", label: "Activity", icon: Activity },
+    { to: "/news-hub/create", label: "Create", icon: Plus, isCreate: true },
+    { to: "/news-hub", label: "Explore", icon: Compass },
+    { to: "/profile", label: "Profile", icon: User },
+  ];
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 w-full bg-white dark:bg-zinc-900 z-[100] md:hidden border-t border-zinc-200 dark:border-zinc-800 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] pb-[max(0.75rem,env(safe-area-inset-bottom,10px))] pt-1.5 transition-all">
-      <div className="flex w-full justify-between items-center px-4 h-[72px]">
-          {links.map((link) => {
-            const isActive = location.pathname === link.to || (link.to !== '/' && location.pathname.startsWith(link.to));
-            
+    <div className="fixed bottom-3 left-3 right-3 z-[100] md:hidden max-w-md mx-auto pointer-events-none">
+      {/* FLOATING LIQUID GLASS PILL CONTAINER (Matching IMG_4760_f05ecd46.jpeg) */}
+      <nav className="pointer-events-auto bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 rounded-full shadow-2xl px-2.5 py-1.5 flex items-center justify-between transition-all">
+        {navItems.map((item) => {
+          const isActive =
+            location.pathname === item.to ||
+            (item.to !== "/" && location.pathname.startsWith(item.to));
+
+          if (item.isCreate) {
             return (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={() => triggerHaptic()}
-                className="flex flex-col items-center justify-center flex-1 h-full relative group"
+              <button
+                key={item.to}
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate(item.to);
+                }}
+                className="w-10 h-10 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-black flex items-center justify-center shadow-lg active:scale-90 transition hover:opacity-90 cursor-pointer -mt-1 mx-1 shrink-0"
+                title="Create Scam Report or Post"
               >
-                <div className="relative flex items-center justify-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 mb-1 ${isActive ? "bg-[#1cdb5e]/15 dark:bg-[#1cdb5e]/25 text-[#1cdb5e]" : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"}`}>
-                    <Icon
-                      name={link.iconKey}
-                      className={`w-5 h-5 transition-transform duration-300 ${isActive ? "scale-110" : "inactive-nav-icon"}`}
-                      solid={false}
-                    />
-                  </div>
-                  {link.to === "/cart" && cartCount > 0 && (
-                    <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
-                      {cartCount}
-                    </span>
-                  )}
-                </div>
-                <span className={`text-[11px] font-bold tracking-tight transition-colors duration-300 ${isActive ? "text-[#1cdb5e]" : "text-zinc-400"}`}>
-                  {link.label}
-                </span>
-              </NavLink>
+                <Plus className="w-5 h-5 stroke-[2.5]" />
+              </button>
             );
-          })}
-      </div>
+          }
+
+          const IconComp = item.icon;
+
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => triggerHaptic()}
+              className="flex-1 flex flex-col items-center justify-center py-1 relative group cursor-pointer"
+            >
+              <div className="relative flex items-center justify-center">
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isActive
+                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60"
+                      : "text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200"
+                  }`}
+                >
+                  <IconComp className={`w-4 h-4 transition-transform duration-300 ${isActive ? "scale-110" : ""}`} />
+                </div>
+              </div>
+
+              <span
+                className={`text-[10px] font-extrabold tracking-tight transition-colors duration-300 ${
+                  isActive ? "text-blue-600 dark:text-blue-400" : "text-zinc-400"
+                }`}
+              >
+                {item.label}
+              </span>
+
+              {/* Active liquid dot indicator below label */}
+              {isActive && (
+                <span className="w-1 h-1 rounded-full bg-blue-600 dark:bg-blue-400 absolute -bottom-0.5" />
+              )}
+            </NavLink>
+          );
+        })}
+      </nav>
     </div>
   );
 };
