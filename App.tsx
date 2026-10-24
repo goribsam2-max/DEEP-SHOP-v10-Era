@@ -489,7 +489,14 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    setIsPageLoading(false);
+    // Ensure the loading animation is visible for a moment even on fast loads
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      setIsPageLoading(true);
+    };
   }, [location.pathname, setIsPageLoading]);
 
   return (
@@ -960,6 +967,18 @@ const AppContent: React.FC = () => {
         savedAccounts={savedAccounts} 
         currentUid={auth.currentUser?.uid}
       />
+      <AnimatePresence>
+        {isPageLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-white/60 dark:bg-zinc-950/60 backdrop-blur-md flex items-center justify-center"
+          >
+            <IosSpinner className="text-[#1877F2]" size={32} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="min-h-screen selection:bg-zinc-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
         <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageWrapper><Home userData={userData} /></PageWrapper>} />
@@ -1009,6 +1028,7 @@ const AppContent: React.FC = () => {
           <Route path="/blog/edit/:slug" element={<PageWrapper><CreateBlog /></PageWrapper>} />
           <Route path="/blog/:slug" element={<PageWrapper><BlogDetails /></PageWrapper>} />
           <Route path="/news-hub" element={<PageWrapper><NewsHub /></PageWrapper>} />
+          <Route path="/news-hub/create-story" element={<PageWrapper><AddStory /></PageWrapper>} />
           <Route path="/news-hub/create" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/news-hub/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/news-hub/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
@@ -1058,6 +1078,7 @@ const AppContent: React.FC = () => {
           <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
           <Route path="/seller/dashboard" element={<PageWrapper><SellerDashboard /></PageWrapper>} />
           <Route path="/add-story" element={<PageWrapper><AddStory /></PageWrapper>} />
+          <Route path="/seller/add-story" element={<PageWrapper><AddStory /></PageWrapper>} />
           <Route path="/__/auth/action" element={<PageWrapper><NewPassword /></PageWrapper>} />
           <Route path="/auth/action" element={<PageWrapper><NewPassword /></PageWrapper>} />
           
@@ -1254,7 +1275,7 @@ import { CookieConsent } from './components/CookieConsent';
 
 const App: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
     // Auto subscribe if they already granted permission in the past

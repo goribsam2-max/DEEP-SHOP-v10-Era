@@ -1,92 +1,65 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { collection, addDoc, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, getDoc, doc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
 import { uploadToImgbb } from "../../services/imgbb";
-import { canAccessSellerDashboard } from "../../lib/admin";
 import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Music,
-  Loader2,
-  Play,
-  Pause,
   X,
+  ChevronDown,
+  Music,
+  LayoutGrid,
+  Zap,
+  Smile,
+  Sparkles,
+  Pencil,
+  MoreHorizontal,
   Search,
   Check,
-  RotateCcw,
-  Volume2,
-  Sliders
+  ChevronRight,
+  Plus,
+  ArrowLeft,
+  Loader2,
+  Image as ImageIcon,
+  Camera,
+  History,
+  Send,
+  Users,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { triggerHaptic } from "../../lib/haptics";
 
-const PRESET_SONGS = [
-  {
-    id: "preset-1",
-    title: "Golden Brown x Love Story",
-    artist: "Elliot Sutton",
-    plays: "658K",
-    coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=200&q=80",
-    url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3",
-  },
-  {
-    id: "preset-2",
-    title: "Dramamine",
-    artist: "Flawed Mangoes",
-    plays: "891K",
-    coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=200&q=80",
-    url: "https://cdn.pixabay.com/download/audio/2022/10/24/audio_34b4ce6dcb.mp3?filename=uplifting-upbeat-corporate-125086.mp3",
-  },
-  {
-    id: "preset-3",
-    title: "X-COOL! (Slowed and Reverb)",
-    artist: "tienanh109, HDN, MC K3",
-    plays: "148K",
-    coverUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=200&q=80",
-    url: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_249ea36566.mp3?filename=cyberpunk-2099-10701.mp3",
-  },
-  {
-    id: "preset-4",
-    title: "Let Him Cook",
-    artist: "XNIMXS",
-    plays: "641K",
-    coverUrl: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=200&q=80",
-    url: "https://cdn.pixabay.com/download/audio/2021/08/04/audio_c6ccf3232f.mp3?filename=summer-nights-tropical-house-music-11440.mp3",
-  },
-  {
-    id: "preset-5",
-    title: "BAILA LENTO",
-    artist: "sma$her, MC DA$ILVA",
-    plays: "42K",
-    coverUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=200&q=80",
-    url: "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=electronic-future-beats-117997.mp3",
-  },
-  {
-    id: "preset-6",
-    title: "ACIDO III (Over Slowed)",
-    artist: "UdieNnx, Mc Denny",
-    plays: "863K",
-    coverUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=200&q=80",
-    url: "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a831e5.mp3?filename=chill-abstract-intention-12099.mp3",
-  },
-  {
-    id: "preset-7",
-    title: "Skins (Ultra Slowed + Reverb)",
-    artist: "KREZUS, Surreal_dvd",
-    plays: "990K",
-    coverUrl: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=200&q=80",
-    url: "https://cdn.pixabay.com/download/audio/2022/05/16/audio_db6591201e.mp3?filename=lofi-vibes-113884.mp3",
-  },
-  {
-    id: "preset-8",
-    title: "Safar",
-    artist: "Bayaan, Sherazam",
-    plays: "2.6M",
-    coverUrl: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=200&q=80",
-    url: "https://cdn.pixabay.com/download/audio/2022/08/02/audio_884fe92db3.mp3?filename=soft-ambient-118546.mp3",
-  },
+type Step = "picker" | "editor";
+
+interface MediaItem {
+  id: string;
+  url: string;
+  type: "image" | "video";
+}
+
+const FONTS = [
+  { id: "classic", name: "Classic", className: "font-sans" },
+  { id: "modern", name: "Modern", className: "font-serif" },
+  { id: "neon", name: "Neon", className: "font-mono" },
+  { id: "typewriter", name: "Typewriter", className: "font-mono italic" },
+  { id: "strong", name: "Strong", className: "font-sans font-black" },
+];
+
+const COLORS = [
+  "#FFFFFF", "#000000", "#FF3B30", "#FF9500", "#FFCC00", "#4CD964", "#5AC8FA", "#007AFF", "#5856D6", "#FF2D55"
+];
+
+const STICKERS = [
+  { id: "location", label: "LOCATION", icon: "📍" },
+  { id: "mention", label: "@MENTION", icon: "@" },
+  { id: "add_yours", label: "ADD YOURS", icon: "📸" },
+  { id: "questions", label: "QUESTIONS", icon: "❓" },
+  { id: "music", label: "MUSIC", icon: "🎵" },
+  { id: "poll", label: "POLL", icon: "📊" },
+  { id: "quiz", label: "QUIZ", icon: "📝" },
+  { id: "link", label: "LINK", icon: "🔗" },
+  { id: "emoji", label: "😍", icon: "😍" },
 ];
 
 export default function AddStory() {
@@ -94,678 +67,489 @@ export default function AddStory() {
   const [searchParams] = useSearchParams();
   const fromNewsHub = searchParams.get("from") === "news-hub";
   const notify = useNotify();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const [step, setStep] = useState<Step>("picker");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [sellerInfo, setSellerInfo] = useState<any>(null);
-  const [dbSongs, setDbSongs] = useState<any[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<{ url: string; type: "image" | "video" }[]>([]);
+  // Selection state
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [gallery, setGallery] = useState<MediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [linkUrl, setLinkUrl] = useState("");
 
-  // Music State
-  const [selectedSong, setSelectedSong] = useState<any>(null);
-  const [audioStart, setAudioStart] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(15);
+  // Editor state
+  const [textStudioOpen, setTextStudioOpen] = useState(false);
+  const [stickersOpen, setStickersOpen] = useState(false);
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  
+  const [storyText, setStoryText] = useState("");
+  const [selectedFont, setSelectedFont] = useState(FONTS[0]);
+  const [selectedColor, setSelectedColor] = useState(COLORS[0]);
+  const [textAlignment, setTextAlignment] = useState<"left" | "center" | "right">("center");
+  const [textBg, setTextBg] = useState(false);
 
-  // Modals State
-  const [isSelectSongOpen, setIsSelectSongOpen] = useState(false);
-  const [isTrimmerOpen, setIsTrimmerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"forYou" | "trending">("forYou");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Preview Audio Player in list & trimmer
-  const [previewingSongUrl, setPreviewingSongUrl] = useState<string | null>(null);
-  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [placedStickers, setPlacedStickers] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchSongs = async () => {
-      try {
-        const snap = await getDocs(collection(db, "story_songs"));
-        const songsFromDb = snap.docs.map((d) => ({
-          id: d.id,
-          title: d.data().title,
-          artist: d.data().artist || "Artist",
-          coverUrl: d.data().coverUrl || "",
-          url: d.data().url,
-          plays: "Trending",
-        }));
-        setDbSongs(songsFromDb);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
-        setCheckingAccess(false);
-        navigate("/signin", { replace: true });
-        return;
-      }
-      try {
-        const uSnap = await getDoc(doc(db, "users", u.uid));
-        const uData = uSnap.exists() ? uSnap.data() : null;
-        setSellerInfo(
-          uData
-            ? { uid: u.uid, ...uData }
-            : {
-                uid: u.uid,
-                email: u.email || "",
-                displayName:
-                  u.displayName || u.email?.split("@")[0] || "Community Member",
-                photoURL: u.photoURL || "",
-              }
-        );
-        setCheckingAccess(false);
-        fetchSongs();
-      } catch (err) {
-        console.error(err);
-        setSellerInfo({
-          uid: u.uid,
-          email: u.email || "",
-          displayName:
-            u.displayName || u.email?.split("@")[0] || "Community Member",
-          photoURL: u.photoURL || "",
-        });
-        setCheckingAccess(false);
-        fetchSongs();
-      }
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setCurrentUser(u);
+      setLoading(false);
+      if (!u) navigate("/signin");
     });
-
     return () => unsub();
   }, [navigate]);
 
-  const allSongs = [...dbSongs, ...PRESET_SONGS];
+  useEffect(() => {
+    // Mock gallery data
+    const mockGallery: MediaItem[] = Array.from({ length: 24 }).map((_, i) => ({
+      id: `mock-${i}`,
+      url: `https://picsum.photos/seed/${i + 100}/1080/1920`,
+      type: "image",
+    }));
+    setGallery(mockGallery);
+  }, []);
 
-  const filteredSongs = allSongs.filter(
-    (s) =>
-      s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.artist.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Audio preview playback handler
-  const handleTogglePlaySong = (songUrl: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-
-    if (previewingSongUrl === songUrl && isPlayingPreview) {
-      if (audioPreviewRef.current) {
-        audioPreviewRef.current.pause();
-      }
-      setIsPlayingPreview(false);
-    } else {
-      if (audioPreviewRef.current) {
-        audioPreviewRef.current.pause();
-      }
-      const audio = new Audio(songUrl);
-      audioPreviewRef.current = audio;
-      audio.play().then(() => {
-        setPreviewingSongUrl(songUrl);
-        setIsPlayingPreview(true);
-      }).catch(err => console.log("Audio play error", err));
-
-      audio.onended = () => {
-        setIsPlayingPreview(false);
-      };
-    }
-  };
-
-  const stopAudioPreview = () => {
-    if (audioPreviewRef.current) {
-      audioPreviewRef.current.pause();
-    }
-    setIsPlayingPreview(false);
-  };
-
-  const handleSelectSongRow = (song: any) => {
-    stopAudioPreview();
-    setSelectedSong(song);
-    setAudioStart(0);
-    setIsSelectSongOpen(false);
-    setIsTrimmerOpen(true);
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     setUploading(true);
-    const newItems: { url: string; type: "image" | "video" }[] = [];
-
-    for (const file of files) {
-      try {
-        if (file.type.startsWith("image/")) {
-          const url = await uploadToImgbb(file);
-          newItems.push({ url, type: "image" });
-        } else if (file.type.startsWith("video/")) {
-          const objectUrl = URL.createObjectURL(file);
-          newItems.push({ url: objectUrl, type: "video" });
-        }
-      } catch (err: any) {
-        notify(`Failed to upload ${file.name}: ${err.message}`, "error");
-      }
-    }
-
-    setUploadedFiles((prev) => [...prev, ...newItems]);
-    setUploading(false);
-  };
-
-  const handleRemoveFile = (index: number) => {
-    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async () => {
-    if (uploadedFiles.length === 0) {
-      notify("Please upload at least 1 image or video for story.", "error");
-      return;
-    }
-
-    setSubmitting(true);
     try {
-      const currentU = auth.currentUser;
-      const isSellerOrAdmin = canAccessSellerDashboard(sellerInfo, currentU);
-      const authorName =
-        sellerInfo?.shopName ||
-        sellerInfo?.displayName ||
-        currentU?.displayName ||
-        currentU?.email?.split("@")[0] ||
-        "Member";
-      const authorAvatar =
-        sellerInfo?.shopLogo ||
-        sellerInfo?.photoURL ||
-        currentU?.photoURL ||
-        "";
-      const nowIso = new Date().toISOString();
-
-      for (const item of uploadedFiles) {
-        const storyPayload = {
-          mediaUrl: item.url,
-          type: item.type,
-          category: authorName,
-          linkUrl: linkUrl.trim(),
-          duration: duration || 15,
-          audioUrl: selectedSong?.url || null,
-          songTitle: selectedSong?.title || "",
-          songArtist: selectedSong?.artist || "",
-          songCoverUrl: selectedSong?.coverUrl || "",
-          audioStart: Number(audioStart) || 0,
-          userId: currentU?.uid || "",
-          userName: authorName,
-          userAvatar: authorAvatar,
-          sellerId: currentU?.uid || "",
-          sellerName: authorName,
-          sellerLogo: authorAvatar,
-          source: fromNewsHub || !isSellerOrAdmin ? "news_hub" : "shop",
-          createdAt: nowIso,
-          createdAtMs: Date.now(),
-          updatedAt: nowIso,
-        };
-
-        try {
-          await addDoc(collection(db, "stories"), storyPayload);
-        } catch {
-          // Fallback to public community feed story collection when live rules restrict `stories` to sellers
-          const docRef = await addDoc(collection(db, "creator_videos"), {
-            ...storyPayload,
-            kind: "news_story",
-          });
-          try {
-            const localStories = JSON.parse(
-              localStorage.getItem("deep_news_stories_local") || "[]"
-            );
-            localStorage.setItem(
-              "deep_news_stories_local",
-              JSON.stringify([
-                { id: docRef.id, ...storyPayload, kind: "news_story" },
-                ...(Array.isArray(localStories) ? localStories : []),
-              ])
-            );
-          } catch {}
-        }
-      }
-
-      notify("Story published to Feed!", "success");
-      navigate(fromNewsHub || !isSellerOrAdmin ? "/news-hub" : "/");
-    } catch (err: any) {
-      notify("Failed to publish story: " + err.message, "error");
+      const url = await uploadToImgbb(file);
+      const newItem: MediaItem = {
+        id: Date.now().toString(),
+        url,
+        type: file.type.startsWith("video/") ? "video" : "image",
+      };
+      setGallery([newItem, ...gallery]);
+      setSelectedMedia(newItem);
+      setStep("editor");
+      triggerHaptic();
+    } catch (err) {
+      notify("Failed to upload media", "error");
     } finally {
-      setSubmitting(false);
+      setUploading(false);
     }
   };
 
-  if (checkingAccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
-      </div>
-    );
-  }
+  const handlePublish = async (isCloseFriends = false) => {
+    if (!selectedMedia) return;
+    setUploading(true);
+    try {
+      const storyPayload = {
+        mediaUrl: selectedMedia.url,
+        type: selectedMedia.type,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || "Member",
+        userAvatar: currentUser.photoURL || "",
+        createdAt: new Date().toISOString(),
+        createdAtMs: Date.now(),
+        isCloseFriends,
+        text: storyText,
+        font: selectedFont.id,
+        color: selectedColor,
+        stickers: placedStickers,
+        source: "news_hub",
+      };
+
+      await addDoc(collection(db, "stories"), storyPayload);
+      notify("Story shared!", "success");
+      navigate(fromNewsHub ? "/news-hub" : "/");
+    } catch (err) {
+      notify("Failed to share story", "error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="h-screen bg-black flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-white" />
+    </div>
+  );
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 min-h-screen">
-      {/* Header with back button */}
-      <div className="mb-6 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() =>
-            navigate(
-              fromNewsHub || !canAccessSellerDashboard(sellerInfo, auth.currentUser)
-                ? "/news-hub"
-                : (-1 as any)
-            )
-          }
-          className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer shrink-0"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-black text-zinc-900 dark:text-zinc-100">
-            Create New Story
-          </h1>
-          <p className="text-xs text-zinc-500 font-medium mt-0.5">
-            Share photos or videos with music directly to the News Hub story feed.
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
-        {/* Upload Box */}
-        <div>
-          <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-2 block">
-            Upload Images / Videos *
-          </label>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            multiple
-            accept="image/*,video/*"
-            className="hidden"
-          />
-
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-pink-500 dark:hover:border-pink-500 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 group"
+    <div className="h-screen bg-black text-white overflow-hidden relative font-sans">
+      <AnimatePresence mode="wait">
+        {step === "picker" ? (
+          <motion.div
+            key="picker"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="h-full flex flex-col"
           >
-            {uploading ? (
-              <div className="flex flex-col items-center gap-2 text-pink-500">
-                <Loader2 className="w-8 h-8 animate-spin" />
-                <span className="text-xs font-bold">Uploading media...</span>
-              </div>
-            ) : (
-              <>
-                <div className="w-12 h-12 bg-pink-500/10 text-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Plus className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                  Click to choose photos or videos
-                </span>
-                <span className="text-[10px] text-zinc-400">Multiple images allowed</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Uploaded Previews */}
-        {uploadedFiles.length > 0 && (
-          <div>
-            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-2 block">
-              Uploaded Slides ({uploadedFiles.length})
-            </label>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {uploadedFiles.map((file, idx) => (
-                <div key={idx} className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black group border border-zinc-200 dark:border-zinc-800">
-                  {file.type === "image" ? (
-                    <img src={file.url} className="w-full h-full object-cover" alt="" />
-                  ) : (
-                    <video src={file.url} className="w-full h-full object-cover" />
-                  )}
-                  <button
-                    onClick={() => handleRemoveFile(idx)}
-                    className="absolute top-1.5 right-1.5 p-1 bg-black/60 text-white rounded-lg hover:bg-rose-600 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Target Link */}
-        <div>
-          <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
-            Target Product or Web Link (Optional)
-          </label>
-          <input
-            type="text"
-            value={linkUrl}
-            onChange={(e) => setLinkUrl(e.target.value)}
-            placeholder="e.g. /product/123 or https://..."
-            className="w-full h-10 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-semibold text-zinc-900 dark:text-zinc-100"
-          />
-        </div>
-
-        {/* Background Music Selector UI */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center justify-between">
-            <span>Background Music</span>
-            {selectedSong && (
-              <button
-                onClick={() => setSelectedSong(null)}
-                className="text-[10px] text-rose-500 font-bold hover:underline"
-              >
-                Remove Music
+            {/* Picker Header */}
+            <header className="px-4 py-3 flex items-center justify-between z-10 bg-black/50 backdrop-blur-md">
+              <button onClick={() => navigate(-1)} className="p-2">
+                <X className="w-6 h-6" />
               </button>
-            )}
-          </label>
-
-          {selectedSong ? (
-            <div className="flex items-center justify-between p-3.5 bg-zinc-900 text-white dark:bg-zinc-800 rounded-2xl border border-zinc-700 shadow-md">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-700 shrink-0 border border-zinc-600 flex items-center justify-center">
-                  {selectedSong.coverUrl ? (
-                    <img src={selectedSong.coverUrl} className="w-full h-full object-cover" alt="" />
-                  ) : (
-                    <Music className="w-5 h-5 text-pink-400" />
-                  )}
-                </div>
-                <div className="overflow-hidden">
-                  <h4 className="font-bold text-xs truncate">{selectedSong.title}</h4>
-                  <p className="text-[11px] text-zinc-400 truncate">{selectedSong.artist}</p>
-                  <p className="text-[10px] text-pink-400 font-mono mt-0.5">
-                    Trimmed from {audioStart}s • Duration {duration}s
-                  </p>
-                </div>
+              <div className="flex items-center gap-1 font-bold text-lg cursor-pointer">
+                <span>Recents</span>
+                <ChevronDown className="w-4 h-4" />
               </div>
+              <button className="p-2 bg-white/10 rounded-full">
+                <LayoutGrid className="w-5 h-5" />
+              </button>
+            </header>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => setIsTrimmerOpen(true)}
-                  className="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-[11px] font-bold transition-all"
-                >
-                  Trim
-                </button>
-                <button
-                  onClick={() => setIsSelectSongOpen(true)}
-                  className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-xl text-[11px] font-bold transition-all"
-                >
-                  Change
-                </button>
+            {/* Feature Buttons */}
+            <div className="px-4 py-3 flex items-center gap-3 overflow-x-auto no-scrollbar">
+              <button className="px-4 py-2 bg-white/10 rounded-full flex items-center gap-2 whitespace-nowrap text-sm font-bold border border-white/5">
+                <Zap className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                Add yours
+              </button>
+              <button className="px-4 py-2 bg-white/10 rounded-full flex items-center gap-2 whitespace-nowrap text-sm font-bold border border-white/5">
+                <Music className="w-4 h-4" />
+                Music
+              </button>
+              <button className="px-4 py-2 bg-white/10 rounded-full flex items-center gap-2 whitespace-nowrap text-sm font-bold border border-white/5">
+                <LayoutGrid className="w-4 h-4" />
+                Collage
+              </button>
+            </div>
+
+            {/* Gallery Grid */}
+            <div className="flex-1 overflow-y-auto px-1">
+              <div className="grid grid-cols-3 gap-1">
+                {/* Camera Cell */}
+                <label className="aspect-[9/16] bg-zinc-900 flex flex-col items-center justify-center gap-2 cursor-pointer border border-white/5">
+                  <Camera className="w-8 h-8 text-zinc-400" />
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Camera</span>
+                  <input type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={handleMediaUpload} />
+                </label>
+                
+                {gallery.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedMedia(item);
+                      setStep("editor");
+                      triggerHaptic();
+                    }}
+                    className="aspect-[9/16] relative bg-zinc-900 cursor-pointer overflow-hidden group"
+                  >
+                    <img
+                      src={item.url}
+                      className="w-full h-full object-cover transition-transform group-active:scale-95"
+                      alt=""
+                      loading="lazy"
+                    />
+                    {item.type === "video" && (
+                      <div className="absolute top-2 right-2">
+                        <Zap className="w-3 h-3 text-white fill-white" />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-          ) : (
-            <button
-              onClick={() => setIsSelectSongOpen(true)}
-              className="w-full py-3.5 px-4 bg-zinc-50 dark:bg-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl flex items-center justify-between text-zinc-700 dark:text-zinc-200 transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-pink-500/10 text-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Music className="w-4 h-4" />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="editor"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            className="h-full flex flex-col relative"
+          >
+            {/* Media Preview */}
+            <div className="absolute inset-0 z-0">
+              {selectedMedia?.type === "image" ? (
+                <img src={selectedMedia.url} className="w-full h-full object-cover" alt="" />
+              ) : (
+                <video src={selectedMedia?.url} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+              )}
+            </div>
+
+            {/* Editor Overlay */}
+            <div className="absolute inset-0 z-10 flex flex-col p-4 bg-gradient-to-b from-black/20 via-transparent to-black/20">
+              {/* Editor Header */}
+              <header className="flex items-center justify-between">
+                <button
+                  onClick={() => {
+                    setStep("picker");
+                    triggerHaptic();
+                  }}
+                  className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center"
+                >
+                  <ArrowLeft className="w-6 h-6" />
+                </button>
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setStickersOpen(true)} className="p-1"><Smile className="w-7 h-7 drop-shadow-md" /></button>
+                  <button onClick={() => setTextStudioOpen(true)} className="p-1">
+                    <svg viewBox="0 0 24 24" className="w-7 h-7 drop-shadow-md" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M4 18l4-12 4 12M5.3 15h5.4M15 12a3 3 0 100 6 3 3 0 000-6zM18 12v6" />
+                    </svg>
+                  </button>
+                  <button className="p-1"><Sparkles className="w-7 h-7 drop-shadow-md" /></button>
+                  <button className="p-1"><Pencil className="w-7 h-7 drop-shadow-md" /></button>
+                  <button className="p-1"><MoreHorizontal className="w-7 h-7 drop-shadow-md" /></button>
                 </div>
-                <span className="text-xs font-bold">Add Background Song</span>
+              </header>
+
+              {/* Placed Text/Stickers */}
+              <div className="flex-1 relative flex items-center justify-center">
+                {storyText && (
+                  <motion.div
+                    drag
+                    dragConstraints={{ top: -200, bottom: 200, left: -150, right: 150 }}
+                    onClick={() => setTextStudioOpen(true)}
+                    className={`p-3 rounded-lg text-center cursor-move max-w-[80%] ${selectedFont.className}`}
+                    style={{
+                      color: selectedColor,
+                      backgroundColor: textBg ? (selectedColor === "#FFFFFF" ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)") : "transparent",
+                      fontSize: "2rem",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {storyText}
+                  </motion.div>
+                )}
               </div>
-              <span className="text-xs font-bold text-pink-500">Select Music &rarr;</span>
-            </button>
-          )}
-        </div>
 
-        {/* Submit Button */}
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || uploadedFiles.length === 0}
-          className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white rounded-2xl font-bold text-sm shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Publishing Stories...</span>
-            </>
-          ) : (
-            <span>Publish Story Slide(s)</span>
-          )}
-        </button>
-      </div>
+              {/* Editor Footer */}
+              <footer className="flex items-center justify-between gap-3 pb-8">
+                <div className="flex items-center gap-2 flex-1">
+                   <button 
+                    onClick={() => setShareSheetOpen(true)}
+                    className="flex-1 h-14 bg-white/20 backdrop-blur-xl rounded-full flex items-center gap-3 pl-2 pr-6 border border-white/10 group active:scale-95 transition-all"
+                   >
+                     <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20">
+                       <img src={currentUser?.photoURL || "https://picsum.photos/200"} className="w-full h-full object-cover" alt="" />
+                     </div>
+                     <span className="text-sm font-bold">Your Story</span>
+                   </button>
+                   
+                   <button 
+                    onClick={() => handlePublish(true)}
+                    className="h-14 aspect-square bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 active:scale-95 transition-all"
+                   >
+                     <div className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center border border-white/20">
+                       <Users className="w-4 h-4 text-white fill-white" />
+                     </div>
+                   </button>
+                </div>
 
-      {/* ========================================================= */}
-      {/* MODAL 1: SELECT SONG (Full Screen / Large Popup like Screenshot 1) */}
-      {/* ========================================================= */}
-      {isSelectSongOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-md flex flex-col animate-fade-in max-w-md mx-auto my-auto h-full sm:h-[90vh] sm:rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 shadow-2xl">
-          {/* Top Bar */}
-          <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-            <div className="w-8" />
-            <h2 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Select Song</h2>
-            <button
-              onClick={() => {
-                stopAudioPreview();
-                setIsSelectSongOpen(false);
-              }}
-              className="p-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded-full bg-zinc-100 dark:bg-zinc-800"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+                <button 
+                  onClick={() => setShareSheetOpen(true)}
+                  className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-black shadow-xl active:scale-90 transition-all"
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </button>
+              </footer>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Search Input */}
-          <div className="p-4 pt-2 pb-2 shrink-0">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search lyrics, songs or artists..."
-                className="w-full h-10 pl-10 pr-4 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 text-zinc-900 dark:text-white text-xs font-medium placeholder-zinc-400 dark:placeholder-zinc-500 border border-zinc-200 dark:border-zinc-700 outline-none focus:border-pink-500"
+      {/* Text Studio Modal */}
+      <AnimatePresence>
+        {textStudioOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 flex flex-col p-4"
+          >
+            <header className="flex items-center justify-between">
+              <button onClick={() => setTextAlignment(prev => prev === "left" ? "center" : prev === "center" ? "right" : "left")} className="p-2">
+                <LayoutGrid className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={() => setTextBg(!textBg)}
+                className={`px-3 py-1 rounded-md text-xs font-bold border ${textBg ? 'bg-white text-black border-white' : 'text-white border-white/30'}`}
+              >
+                A
+              </button>
+              <button 
+                onClick={() => {
+                  setTextStudioOpen(false);
+                  triggerHaptic();
+                }}
+                className="text-lg font-bold"
+              >
+                Done
+              </button>
+            </header>
+
+            <div className="flex-1 flex items-center justify-center">
+              <textarea
+                autoFocus
+                value={storyText}
+                onChange={(e) => setStoryText(e.target.value)}
+                placeholder="Type something..."
+                className={`w-full bg-transparent text-center text-4xl font-bold outline-none placeholder-white/30 resize-none ${selectedFont.className}`}
+                style={{ color: selectedColor, textAlign: textAlignment }}
               />
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => setActiveTab("forYou")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  activeTab === "forYou"
-                    ? "bg-blue-600 text-white"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                }`}
-              >
-                For you
-              </button>
-              <button
-                onClick={() => setActiveTab("trending")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  activeTab === "trending"
-                    ? "bg-blue-600 text-white"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                }`}
-              >
-                Trending
-              </button>
-            </div>
-          </div>
-
-          {/* Song List (Scrollable, slim full width rows with circular thumbnail) */}
-          <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1.5 divide-y divide-zinc-100 dark:divide-zinc-800/50">
-            {filteredSongs.map((song) => {
-              const isPlayingThis = previewingSongUrl === song.url && isPlayingPreview;
-              return (
-                <div
-                  key={song.id}
-                  onClick={() => handleSelectSongRow(song)}
-                  className="flex items-center justify-between gap-3 py-3 px-2 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-800/60 cursor-pointer group transition-colors"
-                >
-                  {/* Left: Circular Image & Details */}
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center">
-                      {song.coverUrl ? (
-                        <img src={song.coverUrl} className="w-full h-full object-cover" alt="" />
-                      ) : (
-                        <Music className="w-5 h-5 text-pink-500" />
-                      )}
-                    </div>
-                    <div className="overflow-hidden">
-                      <h3 className="font-bold text-xs text-zinc-900 dark:text-white group-hover:text-pink-500 transition-colors truncate">
-                        {song.title}
-                      </h3>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                        {song.artist} {song.plays ? `• ${song.plays}` : ""}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right: Play/Pause Audio Preview Button */}
+            <div className="pb-8 space-y-6">
+              {/* Color Picker */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
+                {COLORS.map(color => (
                   <button
-                    onClick={(e) => handleTogglePlaySong(song.url, e)}
-                    className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0 transition-transform active:scale-90"
-                    title="Play Preview"
+                    key={color}
+                    onClick={() => setSelectedColor(color)}
+                    className={`w-8 h-8 rounded-full flex-shrink-0 border-2 ${selectedColor === color ? 'border-white scale-110' : 'border-transparent'}`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+
+              {/* Font Selector */}
+              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-2">
+                {FONTS.map(font => (
+                  <button
+                    key={font.id}
+                    onClick={() => setSelectedFont(font)}
+                    className={`px-6 py-2 rounded-full flex-shrink-0 text-sm font-bold border transition-all ${selectedFont.id === font.id ? 'bg-white text-black border-white' : 'bg-black/50 text-white border-white/30'}`}
                   >
-                    {isPlayingThis ? (
-                      <Pause className="w-4 h-4 text-pink-500 fill-pink-500" />
-                    ) : (
-                      <Play className="w-4 h-4 text-zinc-800 dark:text-white fill-zinc-800 dark:fill-white ml-0.5" />
-                    )}
+                    {font.name}
                   </button>
-                </div>
-              );
-            })}
-
-            {filteredSongs.length === 0 && (
-              <div className="py-12 text-center text-zinc-400 text-xs">
-                No songs match your search query.
+                ))}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* ========================================================= */}
-      {/* MODAL 2: AUDIO TRIMMER POPUP (Matching Screenshot 2) */}
-      {/* ========================================================= */}
-      {isTrimmerOpen && selectedSong && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 text-zinc-900 dark:text-white shadow-2xl relative space-y-5">
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                stopAudioPreview();
-                setIsTrimmerOpen(false);
-              }}
-              className="absolute top-4 right-4 p-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+      {/* Stickers Tray */}
+      <AnimatePresence>
+        {stickersOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setStickersOpen(false)}
+              className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed inset-x-0 bottom-0 z-[70] h-[85vh] bg-zinc-900 rounded-t-[40px] flex flex-col p-6 overflow-hidden"
             >
-              <X className="w-4 h-4" />
-            </button>
-
-            <h3 className="text-center font-bold text-sm text-zinc-800 dark:text-zinc-200">
-              Trim Story Music
-            </h3>
-
-            {/* Visual Waveform Trimmer Bar (Matching Screenshot 2 handles!) */}
-            <div className="p-4 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-3">
-              <div className="relative h-16 bg-zinc-100 dark:bg-zinc-900 rounded-xl overflow-hidden flex items-center justify-between px-2 border border-zinc-200 dark:border-zinc-800">
-                {/* Waveform Bars Representation */}
-                <div className="absolute inset-0 flex items-center justify-around px-4 opacity-40">
-                  <span className="w-1 h-8 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-12 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-6 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-10 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-14 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-7 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-11 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-5 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-9 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-12 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-8 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-14 bg-zinc-800 dark:bg-white rounded-full" />
-                  <span className="w-1 h-6 bg-zinc-800 dark:bg-white rounded-full" />
-                </div>
-
-                {/* Highlighted Blue Selection Box with side handles (Screenshot 2 style) */}
-                <div className="absolute inset-y-1 left-8 right-8 bg-blue-600/30 border-2 border-blue-500 rounded-xl flex items-center justify-between pointer-events-none">
-                  <div className="w-2 h-full bg-blue-500 rounded-l-lg flex items-center justify-center">
-                    <span className="w-0.5 h-4 bg-white rounded-full" />
-                  </div>
-                  <div className="w-2 h-full bg-blue-500 rounded-r-lg flex items-center justify-center">
-                    <span className="w-0.5 h-4 bg-white rounded-full" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Start Time Slider */}
-              <div>
-                <div className="flex justify-between text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mb-1">
-                  <span>Start Trim: {audioStart}s</span>
-                  <span>Duration: {duration}s</span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={60}
-                  value={audioStart}
-                  onChange={(e) => setAudioStart(Number(e.target.value))}
-                  className="w-full accent-blue-500 cursor-pointer h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg"
+              <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6" />
+              
+              <div className="relative mb-6">
+                <Search className="w-5 h-5 absolute left-4 top-3.5 text-zinc-500" />
+                <input 
+                  type="text" 
+                  placeholder="Search" 
+                  className="w-full h-12 bg-white/10 rounded-2xl pl-12 pr-4 text-white font-bold outline-none border border-white/5 focus:border-white/20"
                 />
               </div>
-            </div>
 
-            {/* Song Card Bottom Bar (Matching Screenshot 2!) */}
-            <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              {/* Left Change Button */}
-              <button
-                onClick={() => {
-                  stopAudioPreview();
-                  setIsTrimmerOpen(false);
-                  setIsSelectSongOpen(true);
-                }}
-                className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 hover:bg-blue-500 transition-colors"
-                title="Change Song"
-              >
-                <RotateCcw className="w-5 h-5" />
-              </button>
+              <div className="flex-1 overflow-y-auto no-scrollbar">
+                <div className="grid grid-cols-3 gap-4">
+                  {STICKERS.map(sticker => (
+                    <button
+                      key={sticker.id}
+                      onClick={() => {
+                        setPlacedStickers([...placedStickers, sticker]);
+                        setStickersOpen(false);
+                        triggerHaptic();
+                      }}
+                      className="aspect-square bg-white/10 rounded-3xl flex flex-col items-center justify-center gap-2 border border-white/5 active:scale-90 transition-all"
+                    >
+                      <span className="text-3xl">{sticker.icon}</span>
+                      <span className="text-[10px] font-black tracking-widest text-zinc-400">{sticker.label}</span>
+                    </button>
+                  ))}
+                </div>
 
-              {/* Middle Song Info */}
-              <div className="text-center overflow-hidden px-2">
-                <h4 className="font-bold text-xs text-zinc-900 dark:text-white truncate">{selectedSong.title}</h4>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{selectedSong.artist}</p>
-                <button
-                  onClick={() => {
-                    stopAudioPreview();
-                    setIsTrimmerOpen(false);
-                    setIsSelectSongOpen(true);
-                  }}
-                  className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold hover:underline block mx-auto"
+                <div className="mt-8">
+                   <h3 className="text-sm font-bold text-zinc-500 mb-4 px-2">RECENT EMOJIS</h3>
+                   <div className="grid grid-cols-6 gap-2">
+                     {["😍", "😂", "🔥", "🙌", "❤️", "✨", "💯", "😭", "😮", "🙏", "👏", "✔️"].map((emoji, i) => (
+                       <button key={i} className="text-3xl p-2 active:scale-75 transition-transform">{emoji}</button>
+                     ))}
+                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Share Sheet */}
+      <AnimatePresence>
+        {shareSheetOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShareSheetOpen(false)}
+              className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed inset-x-0 bottom-0 z-[70] bg-zinc-900 rounded-t-[40px] flex flex-col p-8 pb-12 space-y-6"
+            >
+              <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-2" />
+              
+              <h2 className="text-xl font-black text-center">Share</h2>
+
+              <div className="space-y-3">
+                <button 
+                  onClick={() => handlePublish(false)}
+                  className="w-full h-16 bg-white rounded-2xl flex items-center justify-between px-5 group active:scale-[0.98] transition-all"
                 >
-                  Tap to change
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-black/5">
+                      <img src={currentUser?.photoURL || "https://picsum.photos/200"} className="w-full h-full object-cover" alt="" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-black text-black">Your Story</p>
+                      <p className="text-[11px] font-bold text-zinc-500">Everyone on Deep Shop</p>
+                    </div>
+                  </div>
+                  <div className="w-6 h-6 rounded-full border-2 border-zinc-200 flex items-center justify-center group-focus:bg-blue-500 group-focus:border-blue-500 transition-colors">
+                    <Check className="w-3 h-3 text-white hidden group-focus:block" />
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => handlePublish(true)}
+                  className="w-full h-16 bg-white/10 rounded-2xl flex items-center justify-between px-5 group active:scale-[0.98] transition-all border border-white/5"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center border-2 border-white/10">
+                      <Users className="w-5 h-5 text-white fill-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-black text-white">Close Friends</p>
+                      <p className="text-[11px] font-bold text-zinc-500">Only your close friends</p>
+                    </div>
+                  </div>
+                  <div className="w-6 h-6 rounded-full border-2 border-white/20" />
                 </button>
               </div>
 
-              {/* Right Play Preview Button */}
-              <button
-                onClick={() => handleTogglePlaySong(selectedSong.url)}
-                className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white flex items-center justify-center shrink-0 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-              >
-                {previewingSongUrl === selectedSong.url && isPlayingPreview ? (
-                  <Pause className="w-5 h-5 text-blue-500 fill-blue-500" />
-                ) : (
-                  <Play className="w-5 h-5 text-zinc-800 dark:text-white fill-zinc-800 dark:fill-white ml-0.5" />
-                )}
-              </button>
-            </div>
+              <div className="pt-4">
+                <button 
+                  onClick={() => handlePublish(false)}
+                  className="w-full h-14 bg-blue-600 hover:bg-blue-500 rounded-full font-black text-sm transition-all shadow-xl shadow-blue-600/20"
+                >
+                  Share Story
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
-            {/* Apply Button */}
-            <button
-              onClick={() => {
-                stopAudioPreview();
-                setIsTrimmerOpen(false);
-              }}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-lg transition-all"
-            >
-              Done & Attach Song
-            </button>
-          </div>
+      {/* Global Uploading Overlay */}
+      {uploading && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-4">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="font-black text-lg animate-pulse">Publishing Story...</p>
         </div>
       )}
     </div>

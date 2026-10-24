@@ -27,6 +27,7 @@ import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { checkContainsBannedWord } from '../lib/wordFilter';
 import { useNotify } from '../components/Notifications';
 import { subscribeToFollowerStats, toggleFollowUser } from '../lib/follow';
+import UserAvatar from '../components/UserAvatar';
 
 const StoreProfile: React.FC = () => {
   const { sellerId } = useParams();
@@ -320,9 +321,11 @@ const StoreProfile: React.FC = () => {
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shrink-0">
-               <img src={seller.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${seller.displayName}`} alt="Avatar" className="w-full h-full object-cover" />
-            </div>
+            <UserAvatar
+              src={seller.photoURL}
+              fallbackText={seller.displayName || seller.shopName}
+              className="w-10 h-10"
+            />
             <div className="flex flex-col min-w-0">
               <span className="font-semibold text-[15px] leading-tight dark:text-white truncate">{seller.displayName || 'Seller'}</span>
               <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">ID: {seller.id.substring(0, 7).toUpperCase()}</span>
@@ -653,10 +656,10 @@ const StoreProfile: React.FC = () => {
        <div className="px-4 sm:px-6 relative -mt-16">
           <div className="flex justify-between items-end gap-3 flex-wrap">
              <div className="relative p-1 bg-white dark:bg-zinc-950 rounded-full inline-block">
-                <img
-                   src={seller.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(seller.displayName || 'User')}&background=random`}
-                   alt={seller.displayName || 'User'}
-                   className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-zinc-100 dark:border-zinc-800"
+                <UserAvatar
+                   src={seller.photoURL}
+                   fallbackText={seller.displayName || seller.shopName}
+                   className="w-28 h-28 sm:w-32 sm:h-32 border-4 border-zinc-100 dark:border-zinc-800"
                 />
              </div>
              

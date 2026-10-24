@@ -46,7 +46,7 @@ import {
   NewsLinkPreviewCards,
   extractHashtagsFromText,
 } from "../components/NewsRichText";
-import { FEED_THEMES, FEED_THEME_GROUPS } from "./FeedPersonalization";
+import { FEED_THEMES, FEED_THEME_GROUPS } from "../lib/feed-themes";
 import { resolvePostById } from "./NewsHubSubPages";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
@@ -800,6 +800,12 @@ export const CreateScamPost: React.FC = () => {
   };
 
   const handlePublish = async () => {
+    if (!currentUser) {
+      notify("Please sign in or sign up to create a post.", "error");
+      navigate("/signin");
+      return;
+    }
+
     if (isRecording) {
       stopVoiceRecording();
     }
@@ -811,7 +817,7 @@ export const CreateScamPost: React.FC = () => {
       !videoUrl.trim()
     ) {
       notify(
-        "Write something, record a voice note, or attach a photo first.",
+        "Write something or add a photo first.",
         "error"
       );
       return;

@@ -35,7 +35,8 @@ import {
   checkStaffRecord,
 } from "../lib/admin";
 import { subscribeToFollowerStats, toggleFollowUser } from "../lib/follow";
-import { getFeedThemeMeta } from "./FeedPersonalization";
+import UserAvatar from "../components/UserAvatar";
+import { getFeedThemeMeta } from "../lib/feed-themes";
 
 const DEFAULT_ONLINE_INTERESTS = [
   { label: "Cyber News", icon: "🛡️" },
@@ -307,7 +308,13 @@ export const AuthorProfile: React.FC = () => {
   const handle = author.username || author.email?.split("@")[0] || author.displayName?.toLowerCase().replace(/\s+/g, "") || "user";
   const xp = author.xp || 0;
   const totalXp = author.totalXp || 100;
-  const likesCount = author.likes || (posts.reduce((acc, p) => acc + (p.votes || 0), 0));
+  const likesCount = posts.reduce((acc, p) => {
+    if (p.reactionsCount) {
+      const rxSum = (Object.values(p.reactionsCount) as number[]).reduce((a, b) => a + (b || 0), 0);
+      return acc + (rxSum > 0 ? rxSum : (p.votes || 0));
+    }
+    return acc + (p.votes || 0);
+  }, 0) || author.likes || 0;
   const messagesCount = author.messages || 0;
   const giftedStars = author.earnedStars || 0;
 
@@ -375,10 +382,10 @@ export const AuthorProfile: React.FC = () => {
 
           {/* Centered Avatar pill badge if cover is landscape */}
           <div className="absolute bottom-3 left-4 flex items-center gap-2.5">
-            <img
-              src={author.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"}
-              alt=""
-              className="w-14 h-14 rounded-2xl object-cover border-2 border-white dark:border-black shadow-lg"
+            <UserAvatar
+              src={author.photoURL}
+              fallbackText={author.displayName}
+              className="w-14 h-14 border-2 border-white dark:border-black shadow-lg"
             />
             <div className="bg-white/95 dark:bg-black/95 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-xs border border-zinc-200 dark:border-zinc-800">
               <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1">

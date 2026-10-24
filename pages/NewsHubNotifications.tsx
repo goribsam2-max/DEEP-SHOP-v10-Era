@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Settings, Bell, Check, MessageSquare, 
-  UserPlus, Star, ShieldAlert, Sparkles, X, ChevronRight 
-} from 'lucide-react';
+import Icon from '../components/Icon';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
@@ -114,19 +111,18 @@ export const NewsHubNotifications: React.FC = () => {
       {/* Top subtle blue fade gradient glow per user specification */}
       <div className="absolute top-0 left-0 right-0 h-64 pointer-events-none bg-gradient-to-b from-blue-500/10 via-blue-500/5 to-transparent dark:from-blue-600/15 dark:via-blue-600/5 dark:to-transparent" />
 
-      {/* Main Container */}
-      <div className="max-w-md mx-auto min-h-screen flex flex-col relative px-4 pb-12">
-        {/* Top Header bar */}
-        <header className="sticky top-0 z-20 bg-white/90 dark:bg-black/90 backdrop-blur-md pt-4 pb-3 flex items-center justify-between border-b border-slate-100 dark:border-zinc-900">
+      {/* Top Header bar spanning full width */}
+      <header className="sticky top-0 z-20 w-full bg-white dark:bg-black border-b border-slate-100 dark:border-zinc-900 shadow-sm">
+        <div className="w-full px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
             aria-label="Back"
-            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-slate-700 dark:text-zinc-200"
+            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-slate-700 dark:text-zinc-200 cursor-pointer"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <Icon name="arrow-left" className="w-5 h-5" />
           </button>
 
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
             Notifications
           </h1>
 
@@ -137,9 +133,9 @@ export const NewsHubNotifications: React.FC = () => {
                 setShowPreferencesModal(true);
               }}
               aria-label="Customize notifications"
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-slate-700 dark:text-zinc-200"
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-slate-700 dark:text-zinc-200 cursor-pointer"
             >
-              <Settings className="w-5 h-5" />
+              <Icon name="cog" className="w-5 h-5" />
             </button>
 
             {/* Mockup Tooltip: Customize your notifications! */}
@@ -158,7 +154,11 @@ export const NewsHubNotifications: React.FC = () => {
               </div>
             )}
           </div>
-        </header>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <div className="w-full flex flex-col relative px-4 pb-12">
 
         {/* Content Area */}
         <main className="flex-1 pt-4">
@@ -299,7 +299,7 @@ export const NewsHubNotifications: React.FC = () => {
                 onClick={() => setShowPreferencesModal(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
               >
-                <X className="w-5 h-5" />
+                <Icon name="close" className="w-5 h-5" />
               </button>
             </div>
 
@@ -311,7 +311,7 @@ export const NewsHubNotifications: React.FC = () => {
             <div className="bg-slate-50 dark:bg-zinc-800/60 rounded-2xl p-4 border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-700/50 space-y-3">
               <label className="flex items-center justify-between pt-1 cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <MessageSquare className="w-5 h-5 text-slate-500" />
+                  <Icon name="message-square" className="w-5 h-5 text-slate-500" />
                   <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-zinc-200">
                     Your comments or evidence get replied to
                   </span>
@@ -326,7 +326,7 @@ export const NewsHubNotifications: React.FC = () => {
 
               <label className="flex items-center justify-between pt-3 cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                  <Icon name="star" className="w-5 h-5 text-amber-500 fill-amber-500" />
                   <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-zinc-200">
                     You receive Stars or creator sponsorship
                   </span>
@@ -341,7 +341,7 @@ export const NewsHubNotifications: React.FC = () => {
 
               <label className="flex items-center justify-between pt-3 cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <UserPlus className="w-5 h-5 text-blue-500" />
+                  <Icon name="user-plus" className="w-5 h-5 text-blue-500" />
                   <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-zinc-200">
                     Someone follows your scam alerts
                   </span>
@@ -356,7 +356,7 @@ export const NewsHubNotifications: React.FC = () => {
 
               <label className="flex items-center justify-between pt-3 cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <ShieldAlert className="w-5 h-5 text-rose-500" />
+                  <Icon name="shield-alert" className="w-5 h-5 text-rose-500" />
                   <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-zinc-200">
                     Critical scam alerts in your tagged category
                   </span>

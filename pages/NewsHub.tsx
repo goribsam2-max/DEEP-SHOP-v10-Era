@@ -26,6 +26,7 @@ import {
   Eye,
   UserPlus,
   UserCheck,
+  Bell,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -48,9 +49,12 @@ import {
   loadFeedPreferences,
   FeedPreferencesData,
   DEFAULT_FEED_PREFERENCES,
-  FEED_THEMES,
-  getFeedThemeMeta,
 } from "./FeedPersonalization";
+import { 
+  FEED_THEMES, 
+  getFeedThemeMeta 
+} from "../lib/feed-themes";
+import Icon from "../components/Icon";
 import {
   getSavedPostIdsLocal,
   toggleSavePostHelper,
@@ -64,6 +68,7 @@ import {
   checkStaffRecord,
 } from "../lib/admin";
 import { toggleFollowUser, useFollowedIds } from "../lib/follow";
+import { IosSpinner } from "../components/ui/ios-spinner";
 
 import defaultAvatarImg from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -629,8 +634,22 @@ export const NewsHub: React.FC = () => {
                 </h1>
               </div>
 
-              {/* Right Circular Buttons: Creator Dashboard + Unfilled Outline Shield + Unfilled Outline Palette */}
+              {/* Right Circular Buttons: Notifications + Creator Dashboard + Unfilled Outline Shield + Unfilled Outline Palette */}
               <div className="flex items-center gap-2 shrink-0">
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate("/news-hub/notifications");
+                  }}
+                  title="Notifications"
+                  aria-label="Notifications"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 transition cursor-pointer relative"
+                >
+                  <Icon name="bell" className="w-5 h-5 stroke-[2.2]" />
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -641,7 +660,7 @@ export const NewsHub: React.FC = () => {
                   aria-label="Creator Dashboard"
                   className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 transition cursor-pointer"
                 >
-                  <LayoutDashboard fill="none" className="w-5 h-5 stroke-[1.9]" />
+                  <Icon name="layout" className="w-5 h-5 stroke-[2.2]" />
                 </button>
 
                 <button
@@ -665,9 +684,9 @@ export const NewsHub: React.FC = () => {
                   }`}
                 >
                   {scamOnlyMode ? (
-                    <ShieldAlert fill="none" className="w-5 h-5 stroke-[1.9]" />
+                    <Icon name="shield-alert" className="w-5 h-5 stroke-[2.2]" />
                   ) : (
-                    <Shield fill="none" className="w-5 h-5 stroke-[1.9]" />
+                    <Icon name="shield" className="w-5 h-5 stroke-[2.2]" />
                   )}
                 </button>
 
@@ -681,7 +700,7 @@ export const NewsHub: React.FC = () => {
                   aria-label="Feed Personalization"
                   className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 transition cursor-pointer"
                 >
-                  <Palette fill="none" className="w-5 h-5 stroke-[1.9]" />
+                  <Icon name="palette" className="w-5 h-5 stroke-[2.2]" />
                   {isPersonalizedActive && (
                     <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#1877F2]" />
                   )}
@@ -689,62 +708,64 @@ export const NewsHub: React.FC = () => {
               </div>
             </header>
 
-            {/* 2. Horizontal Circular Stories Row (Everyone can add a story in News Hub + Real Community Stories) */}
-            <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  if (!currentUser) {
-                    notify("Please sign in to share your story!", "info");
-                    navigate("/signin");
-                    return;
-                  }
-                  navigate("/add-story?from=news-hub");
-                }}
-                className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-              >
-                <div className="relative w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
-                  <img
-                    src={userAvatar}
-                    alt="Your Story"
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
-                  />
-                  <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-zinc-900 dark:bg-[#1877F2] text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center">
-                    <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
-                  </span>
-                </div>
-                <span className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-100">
-                  Your Story
-                </span>
-              </button>
-
-              {/* Real Community Stories from Firestore */}
-              {stories.map((st) => (
+            {/* 2. Horizontal Circular Stories Row - Restricted to Admins only for now */}
+            {isAdmin && (
+              <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
                 <button
-                  key={st.id}
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    navigate(`/news-hub/story/${st.id}`);
+                    if (!currentUser) {
+                      notify("Please sign in to share your story!", "info");
+                      navigate("/signin");
+                      return;
+                    }
+                    navigate("/news-hub/create-story?from=news-hub");
                   }}
                   className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
                 >
-                  <div className="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#1877F2] to-[#38BDF8] shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
+                  <div className="relative w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
                     <img
-                      src={st.avatar}
-                      alt={st.name}
+                      src={userAvatar}
+                      alt="Your Story"
                       referrerPolicy="no-referrer"
-                      className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
+                      className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
                     />
+                    <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-zinc-900 dark:bg-[#1877F2] text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center">
+                      <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
+                    </span>
                   </div>
-                  <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
-                    {st.name}
+                  <span className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-100">
+                    Your Story
                   </span>
                 </button>
-              ))}
-            </div>
+
+                {/* Real Community Stories from Firestore */}
+                {stories.map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      navigate(`/news-hub/story/${st.id}`);
+                    }}
+                    className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+                  >
+                    <div className="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#1877F2] to-[#38BDF8] shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
+                      <img
+                        src={st.avatar}
+                        alt={st.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
+                      />
+                    </div>
+                    <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
+                      {st.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* 3. Composer Card */}
             <section className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3.5">
@@ -891,22 +912,8 @@ export const NewsHub: React.FC = () => {
 
             {/* 4. Feed Stream */}
             {loading && visiblePosts.length === 0 ? (
-              <div className="space-y-4">
-                {[1, 2].map((n) => (
-                  <div
-                    key={n}
-                    className="bg-white dark:bg-zinc-900 rounded-[28px] p-5 space-y-4 animate-pulse"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-slate-200 dark:bg-zinc-800" />
-                      <div className="space-y-2 flex-1">
-                        <div className="w-32 h-3.5 rounded-full bg-slate-200 dark:bg-zinc-800" />
-                        <div className="w-24 h-2.5 rounded-full bg-slate-100 dark:bg-zinc-800" />
-                      </div>
-                    </div>
-                    <div className="w-full h-56 rounded-[22px] bg-slate-200 dark:bg-zinc-800" />
-                  </div>
-                ))}
+              <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-700">
+                <IosSpinner className="text-[#1877F2]" size={32} />
               </div>
             ) : visiblePosts.length === 0 ? (
               <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-10 text-center space-y-3 shadow-xs">
@@ -1184,38 +1191,23 @@ export const NewsHub: React.FC = () => {
                       {/* Auto Stylish Link Preview Cards when post contains URLs */}
                       <NewsLinkPreviewCards text={rawBody} />
 
-                      {/* Scam Incident Summary Pill — ONLY on Scam Posts */}
-                      {isScam &&
-                        (post.scamLocation ||
-                          post.scammerName ||
-                          post.scammerPhone) && (
-                          <div className="rounded-2xl bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs">
-                            <div className="min-w-0 space-y-0.5">
-                              {post.scamLocation && (
-                                <p className="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1 truncate">
-                                  <MapPin className="w-3.5 h-3.5 shrink-0" />
-                                  <span>Happened on: {post.scamLocation}</span>
-                                </p>
-                              )}
-                              {(post.scammerName || post.scammerPhone) && (
-                                <p className="text-zinc-600 dark:text-zinc-300 truncate">
-                                  Reported:{" "}
-                                  <span className="font-semibold">
-                                    {post.scammerName || "Seller"}
-                                  </span>
-                                  {post.scammerPhone
-                                    ? ` · ${post.scammerPhone}`
-                                    : ""}
-                                </p>
-                              )}
-                            </div>
-                            {post.scammedAmount ? (
-                              <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white font-bold tabular-nums shrink-0">
-                                ৳{post.scammedAmount.toLocaleString()}
-                              </span>
-                            ) : null}
+                      {isScam && (post.scamLocation || post.scammerName || post.scammerPhone) && (
+                        <div className="rounded-full bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 px-3 py-1.5 flex items-center justify-between gap-2 text-[11px] w-full overflow-hidden whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+                            <Icon name="shield-alert" className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                            <span className="font-bold text-rose-700 dark:text-rose-300 shrink-0">Verified Scam Report</span>
+                            <span className="text-rose-300 dark:text-rose-700 shrink-0">·</span>
+                            <span className="truncate font-semibold text-rose-600 dark:text-rose-400 min-w-0">
+                              {post.scamLocation || "Online Marketplace"}
+                            </span>
                           </div>
-                        )}
+                          {post.scammedAmount ? (
+                            <span className="font-bold text-rose-700 dark:text-rose-300 tabular-nums shrink-0 ml-1">
+                              ৳{post.scammedAmount.toLocaleString()}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
 
                       {/* Post Media */}
                       <NewsPostMedia
@@ -1291,7 +1283,11 @@ export const NewsHub: React.FC = () => {
                                 }`}
                               />
                             )}
-                            <span>{formatCompactCount(totalReactions)}</span>
+                            <span className={`whitespace-nowrap overflow-hidden ${totalReactions > 999 ? 'text-[10px]' : (totalReactions > 99 ? 'text-[11px]' : 'text-[12px]')}`}>
+                              {isScam
+                                ? `Confirm (${formatCompactCount(totalReactions)})`
+                                : formatCompactCount(totalReactions)}
+                            </span>
                           </button>
 
                           <button

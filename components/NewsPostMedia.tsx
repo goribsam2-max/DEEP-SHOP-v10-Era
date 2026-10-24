@@ -1,14 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Maximize2,
-  Play,
-  Pause,
-  ShieldAlert,
-  MapPin,
-  Volume2,
-} from "lucide-react";
+import Icon from "./Icon";
 import { ScamPost, ImageLayoutStyle, ImageAspectMode } from "../types";
 import { triggerHaptic } from "../lib/haptics";
 
@@ -284,9 +275,9 @@ export const VoiceNoteCard: React.FC<{
         aria-label={playing ? "Pause voice note" : "Play voice note"}
       >
         {playing ? (
-          <Pause className="w-4 h-4 fill-current" />
+          <Icon name="pause" className="w-4 h-4" />
         ) : (
-          <Play className="w-4 h-4 fill-current ml-0.5" />
+          <Icon name="play" className="w-4 h-4 ml-0.5" />
         )}
       </button>
 
@@ -315,7 +306,8 @@ export const VoiceNoteCard: React.FC<{
       </div>
 
       <div className="flex items-center gap-1 text-xs font-semibold tabular-nums text-slate-600 dark:text-zinc-300 shrink-0">
-        <Volume2
+        <Icon
+          name="volume-2"
           className={`w-3.5 h-3.5 text-[#1877F2] ${
             playing ? "animate-pulse" : ""
           }`}
@@ -406,9 +398,9 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
     return (
       <>
         <div className="absolute top-3 left-3 right-12 flex items-center gap-2 pointer-events-none">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/95 backdrop-blur-md text-white text-[11px] font-semibold shadow-sm max-w-full">
-            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Scam Report · {place}</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-600/95 backdrop-blur-md text-white text-[11px] font-bold shadow-md whitespace-nowrap overflow-hidden max-w-full">
+            <Icon name="shield-alert" className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Verified Scam Report · {place}</span>
           </div>
         </div>
         {!isDataUrlStamped && (
@@ -418,7 +410,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                 SCAM REPORT · DEEP SHOP
               </p>
               <p className="text-[11px] font-medium text-rose-200 truncate flex items-center gap-1">
-                <MapPin className="w-3 h-3 shrink-0" />
+                <Icon name="map-marker" className="w-3 h-3 shrink-0" />
                 <span>Scam Happened on: {place}</span>
               </p>
             </div>
@@ -450,6 +442,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
 
   return (
     <div className="space-y-3">
+
       {/* Voice Note Player if present */}
       {post.audioUrl && (
         <VoiceNoteCard
@@ -493,7 +486,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
             className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/45 hover:bg-black/65 backdrop-blur-md text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer"
             aria-label="Open full screen image"
           >
-            <Maximize2 className="w-3.5 h-3.5" />
+            <Icon name="maximize-2" className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -532,7 +525,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
               className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-900/90 text-zinc-900 dark:text-white shadow-md flex items-center justify-center hover:scale-105 active:scale-95 transition cursor-pointer"
               aria-label="Previous image"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <Icon name="chevron-left" className="w-4 h-4" />
             </button>
           )}
           {carouselIdx < images.length - 1 && (
@@ -546,7 +539,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
               className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 dark:bg-zinc-900/90 text-zinc-900 dark:text-white shadow-md flex items-center justify-center hover:scale-105 active:scale-95 transition cursor-pointer"
               aria-label="Next image"
             >
-              <ChevronRight className="w-4 h-4" />
+              <Icon name="chevron-right" className="w-4 h-4" />
             </button>
           )}
 

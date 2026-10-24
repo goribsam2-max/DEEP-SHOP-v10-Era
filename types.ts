@@ -236,6 +236,8 @@ export interface ScamComment {
   createdAt: number;
   updatedAt?: number;
   isEdited?: boolean;
+  reactions?: Record<string, ReactionType>;
+  reactionsCount?: Record<string, number>;
 }
 
 export type ImageLayoutStyle = 'collage' | 'carousel' | 'grid' | 'stack';
@@ -261,6 +263,12 @@ export interface ScamPost {
   audioDuration?: number;
   audioWaveform?: number[];
   videoUrl?: string;
+  music?: {
+    audioUrl: string;
+    title: string;
+    artist: string;
+    cover: string;
+  };
   themes?: string[];
   contentType?: 'text' | 'image' | 'voice' | 'video' | 'affirmation' | 'scam';
   textStyle?: 'normal' | 'large' | 'quote';

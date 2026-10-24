@@ -29,6 +29,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  addDoc,
   collection,
   query,
   orderBy,
@@ -330,8 +331,13 @@ export const NewsDetails: React.FC = () => {
 
   const handleReaction = async (chosen: ReactionType) => {
     if (!post) return;
+    if (!currentUser) {
+      notify("Please sign in or sign up to react to posts.", "error");
+      navigate("/signin");
+      return;
+    }
     triggerHaptic();
-    const uid = currentUser?.uid || "guest_local";
+    const uid = currentUser.uid;
     const currentReaction = post.reactions?.[uid] || localReaction;
     const removing = currentReaction === chosen;
 
@@ -379,6 +385,19 @@ export const NewsDetails: React.FC = () => {
           reactions: updatedReactions,
           reactionsCount: counts,
         });
+
+        if (!removing && post.reporterId && post.reporterId !== uid) {
+          addDoc(collection(db, "news_hub_notifications"), {
+            userId: post.reporterId,
+            type: "reaction",
+            title: `${currentUser.displayName || "Someone"} reacted to your post`,
+            body: `Gave a ${chosen} reaction to "${post.title || post.description?.slice(0, 30)}..."`,
+            avatarText: (currentUser.displayName || "U").slice(0, 1).toUpperCase(),
+            createdAt: new Date().toISOString(),
+            read: false,
+            link: `/news-hub/post/${post.id}`,
+          }).catch(() => {});
+        }
       } catch {}
     }
   };
@@ -445,6 +464,11 @@ export const NewsDetails: React.FC = () => {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      notify("Please sign in or sign up to leave a comment.", "error");
+      navigate("/signin");
+      return;
+    }
     if (submittingCommentRef.current) return;
     if (!post || (!commentText.trim() && !commentImage)) return;
 
@@ -500,6 +524,19 @@ export const NewsDetails: React.FC = () => {
         await updateDoc(doc(db, "scam_posts", post.id), {
           commentsCount: increment(1),
         });
+        // Trigger notification for post author
+        if (post.reporterId && post.reporterId !== currentUser?.uid) {
+          addDoc(collection(db, "news_hub_notifications"), {
+            userId: post.reporterId,
+            type: "comment",
+            title: `${authorName} commented on your post`,
+            body: `"${newCommentObj.text.slice(0, 50)}"`,
+            avatarText: authorName.slice(0, 1).toUpperCase(),
+            createdAt: new Date().toISOString(),
+            read: false,
+            link: `/news-hub/post/${post.id}`,
+          }).catch(() => {});
+        }
       } else {
         const allLocal = JSON.parse(
           localStorage.getItem("deep_post_comments") || "{}"
@@ -531,6 +568,68 @@ export const NewsDetails: React.FC = () => {
     } finally {
       submittingCommentRef.current = false;
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleCommentReaction = async (cmt: ScamComment, emoji: ReactionType) => {
+    if (!currentUser) {
+      notify("Please sign in or sign up to react to comments.", "error");
+      navigate("/signin");
+      return;
+    }
+    if (!post) return;
+    triggerHaptic();
+
+    const uid = currentUser.uid;
+    const currentReaction = cmt.reactions?.[uid];
+    const isRemoving = currentReaction === emoji;
+
+    const updatedReactions = { ...(cmt.reactions || {}) };
+    if (isRemoving) {
+      delete updatedReactions[uid];
+    } else {
+      updatedReactions[uid] = emoji;
+    }
+
+    const counts: Record<string, number> = { ...(cmt.reactionsCount || {}) };
+    if (currentReaction && counts[currentReaction]) {
+      counts[currentReaction] = Math.max(0, counts[currentReaction] - 1);
+    }
+    if (!isRemoving) {
+      counts[emoji] = (counts[emoji] || 0) + 1;
+    }
+
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === cmt.id
+          ? { ...c, reactions: updatedReactions, reactionsCount: counts }
+          : c
+      )
+    );
+
+    if (!post.id.startsWith("showcase_") && !String(cmt.id).startsWith("cmt_")) {
+      try {
+        await updateDoc(
+          doc(db, "scam_posts", post.id, "comments", cmt.id),
+          {
+            reactions: updatedReactions,
+            reactionsCount: counts,
+          }
+        );
+
+        if (!isRemoving && cmt.userId && cmt.userId !== uid) {
+          addDoc(collection(db, "news_hub_notifications"), {
+            userId: cmt.userId,
+            type: "comment_reaction",
+            title: `${currentUser.displayName || "Someone"} reacted to your comment`,
+            body: `Gave a reaction to "${cmt.text.slice(0, 40)}..."`,
+            avatarText: (currentUser.displayName || "U").slice(0, 1).toUpperCase(),
+            createdAt: new Date().toISOString(),
+            read: false,
+            link: `/news-hub/post/${post.id}`,
+          }).catch(() => {});
+        }
+      } catch {}
     }
   };
 
@@ -876,26 +975,27 @@ export const NewsDetails: React.FC = () => {
           {/* SCAM INCIDENT DOSSIER — Shown ONLY when post is a Scam Report */}
           {isScam && (
             <div className="rounded-[24px] bg-rose-50/75 dark:bg-rose-950/25 border border-rose-200/80 dark:border-rose-900/50 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold text-xs">
+              <div className="flex items-center justify-between gap-2 w-full">
+                <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold text-xs min-w-0 flex-1">
                   <ShieldAlert className="w-4 h-4 shrink-0" />
-                  <span>
-                    Verified Scam Report
-                    {post.scamLocation ? ` · ${post.scamLocation}` : ""}
+                  <span className="truncate">
+                    Verified Scam Report{post.scamLocation ? ` · ${post.scamLocation}` : ""}
                   </span>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleConfirmScamVote}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 whitespace-nowrap ${
                     post.votedUserIds?.includes(uid)
                       ? "bg-rose-600 text-white"
                       : "bg-white dark:bg-zinc-800 text-rose-600 border border-rose-200 dark:border-zinc-700"
                   }`}
                 >
                   <ThumbsUp className="w-3.5 h-3.5" />
-                  <span>Confirm ({post.votes || 0})</span>
+                  <span className={`whitespace-nowrap overflow-hidden ${(post.votes || 0) > 999 ? 'text-[10px]' : ((post.votes || 0) > 99 ? 'text-[11px]' : 'text-[12px]')}`}>
+                    Confirm ({post.votes || 0})
+                  </span>
                 </button>
               </div>
 
@@ -1178,6 +1278,33 @@ export const NewsDetails: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-3 pl-2 pt-1">
+                          {/* Comment Reaction Quick Picker */}
+                          <div className="flex items-center gap-1.5">
+                            {[
+                              { type: "love", emoji: "❤️" },
+                              { type: "like", emoji: "👍" },
+                              { type: "haha", emoji: "😆" },
+                            ].map((re) => {
+                              const count = cmt.reactionsCount?.[re.type] || 0;
+                              const isMine = cmt.reactions?.[currentUser?.uid || ""] === re.type;
+                              return (
+                                <button
+                                  key={re.type}
+                                  type="button"
+                                  onClick={() => handleCommentReaction(cmt, re.type as ReactionType)}
+                                  className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium flex items-center gap-1 transition cursor-pointer ${
+                                    isMine
+                                      ? "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-bold"
+                                      : "hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500"
+                                  }`}
+                                >
+                                  <span>{re.emoji}</span>
+                                  {count > 0 && <span className="text-[10px]">{count}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+
                           <button
                             type="button"
                             onClick={() => {
