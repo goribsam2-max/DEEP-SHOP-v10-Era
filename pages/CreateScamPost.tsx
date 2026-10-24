@@ -46,7 +46,7 @@ import {
   NewsLinkPreviewCards,
   extractHashtagsFromText,
 } from "../components/NewsRichText";
-import { FEED_THEMES } from "./FeedPersonalization";
+import { FEED_THEMES, FEED_THEME_GROUPS } from "./FeedPersonalization";
 import { resolvePostById } from "./NewsHubSubPages";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
@@ -170,8 +170,9 @@ const createSynthesizedVoiceDataUrl = (durationSeconds = 5): string => {
 
 export const CreateScamPost: React.FC = () => {
   const navigate = useNavigate();
-  const { editId } = useParams<{ editId?: string }>();
+  const { editId: paramEditId } = useParams<{ editId?: string }>();
   const [searchParams] = useSearchParams();
+  const editId = paramEditId || searchParams.get("edit") || undefined;
   const notify = useNotify();
 
   const initialTab = searchParams.get("tab") || "";
@@ -190,7 +191,10 @@ export const CreateScamPost: React.FC = () => {
   const [textStyle, setTextStyle] = useState<"normal" | "large" | "quote">(
     "normal"
   );
-  const [selectedThemes, setSelectedThemes] = useState<string[]>(["gadgets"]);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>(
+    initialTab === "scam" ? ["scam_watch", "cyber_news"] : ["tech_news"]
+  );
+  const [activeCategoryGroup, setActiveCategoryGroup] = useState<string>("All");
   const [privacy, setPrivacy] = useState<"public" | "followers" | "only_me">(
     "public"
   );
@@ -312,7 +316,22 @@ export const CreateScamPost: React.FC = () => {
       setRecordCentiseconds(found.audioDuration ? found.audioDuration * 100 : 0);
       setAudioWaveform(found.audioWaveform || []);
       setVideoUrl(found.videoUrl || "");
-      if (found.themes?.length) setSelectedThemes(found.themes);
+      if (found.themes?.length) {
+        const validIds = new Set(FEED_THEMES.map((t) => t.id));
+        const filtered = found.themes.filter((t) => validIds.has(t));
+        setSelectedThemes(
+          filtered.length > 0
+            ? filtered
+            : scam
+            ? ["scam_watch", "cyber_news"]
+            : ["tech_news"]
+        );
+      } else if (
+        found.category &&
+        FEED_THEMES.some((t) => t.id === found.category)
+      ) {
+        setSelectedThemes([found.category]);
+      }
       if (scam) {
         setScamLocation(found.scamLocation || "Facebook Page");
         setScammerName(found.scammerName || "");
@@ -838,16 +857,20 @@ export const CreateScamPost: React.FC = () => {
       const isOwnerEditing =
         !editId || !originalPost || originalPost.reporterId === authorId;
 
+      const effectiveThemes =
+        postType === "scam"
+          ? Array.from(new Set(["scam_watch", ...selectedThemes]))
+          : selectedThemes.length > 0
+          ? selectedThemes
+          : ["tech_news"];
+
       const postPayload: Record<string, any> = {
         postType,
         title: autoTitle,
         description: description.trim(),
         textStyle,
-        category: postType === "scam" ? "advance_payment" : "lifestyle",
-        themes:
-          postType === "scam"
-            ? Array.from(new Set([...selectedThemes, "scam_watch"]))
-            : selectedThemes,
+        category: effectiveThemes[0] || (postType === "scam" ? "scam_watch" : "tech_news"),
+        themes: effectiveThemes,
         contentType: resolvedContentType,
         images: processedImages,
         imageLayout,
@@ -1247,6 +1270,83 @@ export const CreateScamPost: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* VISIBLE POST CATEGORY / TOPIC SELECTOR (Synced with Online, Cyber & Tech Feed Categories) */}
+                <div className="rounded-[24px] bg-[#F6F8FB] dark:bg-zinc-800/55 border border-slate-200/70 dark:border-zinc-700/60 p-3.5 sm:p-4 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                      Category & Topics ({selectedThemes.length} selected)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowVideoInput((v) => !v)}
+                      className="text-xs font-semibold text-[#1877F2] flex items-center gap-1 cursor-pointer"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      <span>{showVideoInput ? "Hide Video" : "Add Video URL"}</span>
+                    </button>
+                  </div>
+
+                  {showVideoInput && (
+                    <input
+                      type="url"
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="Paste direct MP4/WebM video URL (optional)..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 text-xs outline-none border border-slate-200 dark:border-zinc-700"
+                    />
+                  )}
+
+                  {/* Category Group Tabs */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                    {["All", ...FEED_THEME_GROUPS].map((grp) => {
+                      const active = activeCategoryGroup === grp;
+                      return (
+                        <button
+                          key={grp}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setActiveCategoryGroup(grp);
+                          }}
+                          className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition cursor-pointer shrink-0 ${
+                            active
+                              ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                              : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700"
+                          }`}
+                        >
+                          {grp}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Category Chips */}
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-0.5">
+                    {(activeCategoryGroup === "All"
+                      ? FEED_THEMES
+                      : FEED_THEMES.filter((t) => t.group === activeCategoryGroup)
+                    ).map((theme) => {
+                      const active = selectedThemes.includes(theme.id);
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => toggleThemeSelection(theme.id)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                            active
+                              ? "bg-[#1877F2] text-white shadow-2xs"
+                              : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700 hover:border-[#1877F2]/50"
+                          }`}
+                        >
+                          <span>{theme.emoji}</span>
+                          <span>{theme.label}</span>
+                          {active && <Check className="w-3 h-3 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* ATTACHED PHOTOS, ASPECT RATIO & MULTI-IMAGE LAYOUT CONTROLS */}
                 {(processedImages.length > 0 ||

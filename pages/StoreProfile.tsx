@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, addDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase';
 
@@ -26,6 +26,7 @@ import { Product } from '../types';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { checkContainsBannedWord } from '../lib/wordFilter';
 import { useNotify } from '../components/Notifications';
+import { subscribeToFollowerStats, toggleFollowUser } from '../lib/follow';
 
 const StoreProfile: React.FC = () => {
   const { sellerId } = useParams();
@@ -43,6 +44,7 @@ const StoreProfile: React.FC = () => {
   
   // Real stats
   const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [totalSold, setTotalSold] = useState(0);
   const [positivePercent, setPositivePercent] = useState(0);
   const [regularBuyers, setRegularBuyers] = useState(0);
@@ -127,22 +129,15 @@ const StoreProfile: React.FC = () => {
         const avgRat = safeReviews.length > 0 ? (totalRating / safeReviews.length) : 0;
         const posPerc = safeReviews.length > 0 ? Math.round((posCount / safeReviews.length) * 100) : 0;
         
-        // Admins can override these values in seller doc
-        const fCount = sData?.followersCount ?? sData?.customFollowersCount ?? (sData?.followers?.length || 0);
         const tSold = sData?.customTotalSold ?? totalSoldCalc;
         const pPerc = sData?.customPositiveReviewPercent ?? posPerc;
-        const rBuyers = sData?.customRegularBuyer ?? Math.floor(tSold * 0.1); // Mock regular buyers as 10% of total sold if not available natively
+        const rBuyers = sData?.customRegularBuyer ?? Math.floor(tSold * 0.1);
         const aRat = sData?.customRating ?? avgRat;
         
-        setFollowersCount(fCount);
         setTotalSold(tSold);
         setPositivePercent(pPerc);
         setRegularBuyers(rBuyers);
         setAverageRating(aRat);
-        
-        if (user && sData?.followers?.includes(user.uid)) {
-          setIsFollowing(true);
-        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -152,24 +147,41 @@ const StoreProfile: React.FC = () => {
     fetchData();
   }, [sellerId, user]);
 
+  // Real-time follower & following count subscription
+  useEffect(() => {
+    if (!sellerId) return;
+    const unsub = subscribeToFollowerStats(sellerId, user?.uid, (stats) => {
+      setFollowersCount(stats.followersCount);
+      setFollowingCount(stats.followingCount);
+      setIsFollowing(stats.isFollowing);
+    });
+    return () => unsub();
+  }, [sellerId, user?.uid]);
+
   const handleFollowToggle = async () => {
-    if (!user || !seller) return;
-    try {
-      const sellerRef = doc(db, 'users', seller.id);
-      if (isFollowing) {
-        await updateDoc(sellerRef, {
-          followers: arrayRemove(user.uid)
-        });
-        setFollowersCount(prev => prev - 1);
-      } else {
-        await updateDoc(sellerRef, {
-          followers: arrayUnion(user.uid)
-        });
-        setFollowersCount(prev => prev + 1);
+    if (!user) {
+      notify('Please sign in to follow!', 'error');
+      navigate('/signin');
+      return;
+    }
+    if (!seller || user.uid === seller.id) return;
+    const res = await toggleFollowUser({
+      targetUid: seller.id,
+      targetName: seller.shopName || seller.displayName || 'User',
+      currentUser: user,
+      currentlyFollowing: isFollowing,
+    });
+    if (res.ok) {
+      setIsFollowing(res.isFollowing);
+      if (typeof res.followersCount === 'number') {
+        setFollowersCount(res.followersCount);
       }
-      setIsFollowing(!isFollowing);
-    } catch (err) {
-      console.error(err);
+      notify(
+        res.isFollowing
+          ? `Following ${seller.shopName || seller.displayName || 'profile'}`
+          : `Unfollowed ${seller.shopName || seller.displayName || 'profile'}`,
+        res.isFollowing ? 'success' : 'info'
+      );
     }
   };
   
@@ -299,12 +311,20 @@ const StoreProfile: React.FC = () => {
       <div className="bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white font-sans max-w-md mx-auto">
         {/* Top Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0 cursor-pointer"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shrink-0">
                <img src={seller.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${seller.displayName}`} alt="Avatar" className="w-full h-full object-cover" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-semibold text-[15px] leading-tight dark:text-white">{seller.displayName || 'Seller'}</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-[15px] leading-tight dark:text-white truncate">{seller.displayName || 'Seller'}</span>
               <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">ID: {seller.id.substring(0, 7).toUpperCase()}</span>
             </div>
           </div>
@@ -408,11 +428,13 @@ const StoreProfile: React.FC = () => {
                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="w-full h-full text-[#8B5CF6]"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.974 0-5.699-1.06-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" /></svg>
             </div>
             
-            <div className="relative z-10 flex justify-between items-start mb-2">
-               <h1 className="text-[20px] font-bold text-zinc-800 dark:text-zinc-100">{seller.shopName || seller.displayName}</h1>
-               <button onClick={handleFollowToggle} className={`${isFollowing ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'bg-[#8B5CF6] text-white'} px-5 py-1.5 rounded-full text-sm font-medium`}>
-                 {isFollowing ? 'Following' : 'Follow'}
-               </button>
+            <div className="relative z-10 flex justify-between items-start mb-2 gap-2">
+               <h1 className="text-[20px] font-bold text-zinc-800 dark:text-zinc-100 truncate">{seller.shopName || seller.displayName}</h1>
+               {user?.uid !== seller.id && (
+                 <button onClick={handleFollowToggle} className={`${isFollowing ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'bg-[#8B5CF6] text-white'} px-5 py-1.5 rounded-full text-sm font-semibold shrink-0 cursor-pointer transition active:scale-95`}>
+                   {isFollowing ? 'Following' : 'Follow'}
+                 </button>
+               )}
             </div>
             
             <div className="relative z-10">
@@ -428,7 +450,7 @@ const StoreProfile: React.FC = () => {
               
               <div className="flex items-center gap-4 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
                  <span>{positivePercent}% Positive seller ratings</span>
-                 <span>{(followersCount >= 1000 ? (followersCount / 1000).toFixed(1) + 'k' : followersCount)} Followers</span>
+                 <span>{(followersCount >= 1000 ? (followersCount / 1000).toFixed(1) + 'k' : followersCount.toLocaleString())} Followers</span>
               </div>
             </div>
           </div>
@@ -436,18 +458,25 @@ const StoreProfile: React.FC = () => {
           {/* Stats Row */}
           <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 flex justify-between items-center text-center">
              <div className="flex-1">
+               <div className="text-lg font-bold text-zinc-900 dark:text-white tabular-nums">
+                 {followersCount >= 1000 ? (followersCount / 1000).toFixed(1) + 'k' : followersCount.toLocaleString()}
+               </div>
+               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Followers</div>
+             </div>
+             <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800"></div>
+             <div className="flex-1">
                <div className="text-lg font-bold text-zinc-900 dark:text-white">{positivePercent}%</div>
-               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Positive Reviews</div>
+               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Positive</div>
              </div>
              <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800"></div>
              <div className="flex-1">
                <div className="text-lg font-bold text-zinc-900 dark:text-white">{totalSold >= 1000 ? (totalSold / 1000).toFixed(1) + 'k+' : totalSold}</div>
-               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Sold by Store</div>
+               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Sold</div>
              </div>
              <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800"></div>
              <div className="flex-1">
                <div className="text-lg font-bold text-zinc-900 dark:text-white">{regularBuyers >= 1000 ? (regularBuyers / 1000).toFixed(1) + 'k+' : regularBuyers}</div>
-               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Regular Buyer</div>
+               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Buyers</div>
              </div>
           </div>
         </div>
@@ -606,42 +635,60 @@ const StoreProfile: React.FC = () => {
 
   // Normal User Profile
   return (
-    <div className="w-full bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white">
+    <div className="w-full max-w-2xl mx-auto bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white pb-24">
        <div
           className="relative h-48 sm:h-64 bg-cover bg-center overflow-hidden transition-all duration-300"
-         style={{ backgroundImage: `url(${seller.profileBg || seller.coverPhoto || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"})` }}
+          style={{ backgroundImage: `url(${seller.profileBg || seller.coverPhoto || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"})` }}
        >
-
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition cursor-pointer"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
        </div>
        
        <div className="px-4 sm:px-6 relative -mt-16">
-          <div className="flex justify-between items-end">
+          <div className="flex justify-between items-end gap-3 flex-wrap">
              <div className="relative p-1 bg-white dark:bg-zinc-950 rounded-full inline-block">
                 <img
-                   src={seller.photoURL || `https://ui-avatars.com/api/?name=${seller.displayName || 'User'}&background=random`}
-                   className="w-32 h-32 rounded-full object-cover border-4 border-zinc-100 dark:border-zinc-800"
+                   src={seller.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(seller.displayName || 'User')}&background=random`}
+                   alt={seller.displayName || 'User'}
+                   className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-zinc-100 dark:border-zinc-800"
                 />
              </div>
              
-             <div className="mb-2 flex gap-2">
-                <button onClick={() => navigate(`/messages?chatId=${seller.id}`)} className="px-4 py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg font-bold text-sm shadow-sm">
-                   Message
-                </button>
-                <button
-                   onClick={handleFollowToggle}
-                  className={`px-6 py-2 rounded-lg text-sm font-bold shadow-sm transition-all ${isFollowing ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                >
-                  {isFollowing ? 'Following' : 'Follow'}
-                </button>
-             </div>
+             {user?.uid !== seller.id && (
+               <div className="mb-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/messages?chatId=${seller.id}`)}
+                    className="px-4 py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl font-bold text-sm shadow-sm cursor-pointer"
+                  >
+                     Message
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleFollowToggle}
+                    className={`px-6 py-2 rounded-xl text-sm font-bold shadow-sm transition-all cursor-pointer active:scale-95 ${isFollowing ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </button>
+               </div>
+             )}
           </div>
           
-          <div className="mt-2">
+          <div className="mt-3">
              <h1 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
                {seller.displayName || seller.shopName || "User"}
                {seller.kycStatus === 'verified' && <CheckCircle2 className="w-4 h-4 text-blue-500" />}
              </h1>
-             {seller.bio && <p className="text-sm mt-1 text-zinc-600 dark:text-zinc-400">{seller.bio}</p>}
+             <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+               @{seller.username || seller.email?.split('@')[0] || seller.displayName?.toLowerCase().replace(/\s+/g, '') || 'user'}
+             </p>
+             {seller.bio && <p className="text-sm mt-2 text-zinc-600 dark:text-zinc-400">{seller.bio}</p>}
              
              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-zinc-500 font-medium">
                 {seller.address && (
@@ -652,9 +699,29 @@ const StoreProfile: React.FC = () => {
                 )}
              </div>
              
-             <div className="flex gap-4 mt-3 text-sm">
-                <div className="font-bold text-zinc-900 dark:text-white">{followersCount} <span className="font-normal text-zinc-500">Followers</span></div>
-                <div className="font-bold text-zinc-900 dark:text-white">{seller.following?.length || 0} <span className="font-normal text-zinc-500">Following</span></div>
+             <div className="grid grid-cols-2 sm:w-72 gap-3 mt-4">
+                <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 px-4 py-3 text-center">
+                  <div className="text-lg font-black text-zinc-900 dark:text-white tabular-nums">
+                    {followersCount.toLocaleString()}
+                  </div>
+                  <div className="text-xs font-semibold text-zinc-500">Followers</div>
+                </div>
+                <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 px-4 py-3 text-center">
+                  <div className="text-lg font-black text-zinc-900 dark:text-white tabular-nums">
+                    {followingCount.toLocaleString()}
+                  </div>
+                  <div className="text-xs font-semibold text-zinc-500">Following</div>
+                </div>
+             </div>
+
+             <div className="mt-4">
+               <button
+                 type="button"
+                 onClick={() => navigate(`/author/${seller.id}`)}
+                 className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-xs font-bold text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+               >
+                 View Feed Posts & Creator Profile &rarr;
+               </button>
              </div>
              
              {/* Social Links */}

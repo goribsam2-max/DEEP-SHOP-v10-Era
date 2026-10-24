@@ -19,7 +19,9 @@ import {
   X,
   CreditCard,
   Pencil,
-  Trash2
+  Trash2,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { doc, getDoc, deleteDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
@@ -32,18 +34,17 @@ import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
 } from "../lib/admin";
+import { subscribeToFollowerStats, toggleFollowUser } from "../lib/follow";
+import { getFeedThemeMeta } from "./FeedPersonalization";
 
-// Seed fallback data matching user's demo image IMG_4750.webp
-const DEMO_STORIES: any[] = [];
-
-const INTERESTS = [
-  { label: "Cooking", icon: "🍲" },
-  { label: "Movies", icon: "🎬" },
-  { label: "Fitness", icon: "🏋️" },
-  { label: "Reading", icon: "📖" },
-  { label: "Travel", icon: "✈️" },
-  { label: "Scam Defense", icon: "🛡️" },
-  { label: "Tech News", icon: "📱" }
+const DEFAULT_ONLINE_INTERESTS = [
+  { label: "Cyber News", icon: "🛡️" },
+  { label: "Tech News", icon: "💻" },
+  { label: "Cybersecurity", icon: "🔐" },
+  { label: "Scam Alerts", icon: "🚨" },
+  { label: "AI & Tools", icon: "🤖" },
+  { label: "Gadgets & Mobile", icon: "📱" },
+  { label: "E-Commerce", icon: "🛒" },
 ];
 
 export const AuthorProfile: React.FC = () => {
@@ -54,8 +55,10 @@ export const AuthorProfile: React.FC = () => {
 
   const [author, setAuthor] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  const [authorStories, setAuthorStories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followingCount, setFollowingCount] = useState<number>(0);
   const [showStoryMode, setShowStoryMode] = useState(false);
   const [activeStoryIndex, setActiveStoryIndex] = useState(0);
 
@@ -129,35 +132,82 @@ export const AuthorProfile: React.FC = () => {
       setLoading(true);
       try {
         if (id) {
-          const userSnap = await getDoc(doc(db, "users", id));
-          if (userSnap.exists()) {
-            setAuthor({ id: userSnap.id, ...userSnap.data() });
+          const [userSnap, postsSnap, storiesMainSnap, storiesCommSnap] =
+            await Promise.all([
+              getDoc(doc(db, "users", id)).catch(() => null),
+              getDocs(
+                query(collection(db, "scam_posts"), where("reporterId", "==", id))
+              ).catch(() => null),
+              getDocs(
+                query(collection(db, "stories"), where("sellerId", "==", id))
+              ).catch(() => null),
+              getDocs(
+                query(collection(db, "creator_videos"), where("userId", "==", id))
+              ).catch(() => null),
+            ]);
+
+          const list: any[] = [];
+          postsSnap?.forEach((d) => list.push({ id: d.id, ...d.data() }));
+          list.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+          setPosts(list);
+
+          const stList: any[] = [];
+          storiesMainSnap?.forEach((d) => {
+            const data = d.data();
+            if (data.mediaUrl) {
+              stList.push({
+                id: d.id,
+                image: data.mediaUrl,
+                type: data.type || "image",
+                title: data.songTitle || data.userName || data.sellerName || "Story",
+                subtitle: data.caption || "",
+              });
+            }
+          });
+          storiesCommSnap?.forEach((d) => {
+            const data = d.data();
+            if (data?.kind === "news_story" && data.mediaUrl) {
+              stList.push({
+                id: d.id,
+                image: data.mediaUrl,
+                type: data.type || "image",
+                title: data.songTitle || data.userName || "Story",
+                subtitle: data.caption || "",
+              });
+            }
+          });
+          setAuthorStories(stList);
+
+          const fallbackPost = list[0];
+          if (userSnap && userSnap.exists()) {
+            const uData = userSnap.data();
+            setAuthor({
+              id: userSnap.id,
+              ...uData,
+              displayName:
+                uData.displayName ||
+                uData.shopName ||
+                fallbackPost?.reporterName ||
+                "User",
+              photoURL: uData.photoURL || fallbackPost?.reporterAvatar || "",
+            });
           } else {
-            // Check local fallback
             setAuthor({
               id: id || "author_demo",
-              displayName: "User",
-              username: "user",
-              photoURL: "",
+              displayName: fallbackPost?.reporterName || "User",
+              username:
+                fallbackPost?.reporterName
+                  ?.toLowerCase()
+                  .replace(/\s+/g, "") || "user",
+              photoURL: fallbackPost?.reporterAvatar || "",
               coverImage: "",
               bio: "",
               earnedStars: 0,
               xp: 0,
               totalXp: 100,
               likes: 0,
-              messages: 0
+              messages: 0,
             });
-          }
-
-          // Fetch posts by author
-          const q = query(collection(db, "scam_posts"), where("reporterId", "==", id));
-          const postsSnap = await getDocs(q);
-          const list: any[] = [];
-          postsSnap.forEach((d) => list.push({ id: d.id, ...d.data() }));
-          if (list.length > 0) {
-            setPosts(list);
-          } else {
-            setPosts([]);
           }
         }
       } catch (err) {
@@ -172,43 +222,43 @@ export const AuthorProfile: React.FC = () => {
 
   const [followerCount, setFollowerCount] = useState<number>(0);
 
+  // Real-time follower count & follow state subscription
   useEffect(() => {
-    if (!id || !author) return;
-    try {
-      const savedFollows: string[] = JSON.parse(localStorage.getItem("followed_creators") || "[]");
-      const isF = savedFollows.includes(id);
-      setIsFollowing(isF);
-
-      // Use database count if available, otherwise 0
-      setFollowerCount(author.followersCount || (author.followers ? author.followers.length : 0));
-    } catch (e) {}
-  }, [id, author]);
+    if (!id) return;
+    const unsub = subscribeToFollowerStats(id, currentUser?.uid, (stats) => {
+      setFollowerCount(stats.followersCount);
+      setFollowingCount(stats.followingCount);
+      setIsFollowing(stats.isFollowing);
+    });
+    return () => unsub();
+  }, [id, currentUser?.uid]);
 
   const handleFollowToggle = async () => {
     if (!author || !currentUser) {
       notify("Please sign in to follow creators!", "error");
+      navigate("/signin");
       return;
     }
+    if (!id || currentUser.uid === id) return;
     triggerHaptic();
-    const authorId = id || "author_demo";
-    try {
-      const savedFollows: string[] = JSON.parse(localStorage.getItem("followed_creators") || "[]");
-      const isNowFollowing = !isFollowing;
-      setIsFollowing(isNowFollowing);
-
-      let updatedList: string[];
-      if (isNowFollowing) {
-        updatedList = Array.from(new Set([...savedFollows, authorId]));
-        setFollowerCount(prev => prev + 1);
-        notify(`Now following @${author?.username || "creator"}!`, "success");
-        // In a real app, you'd update the Firestore followers collection/count here
-      } else {
-        updatedList = savedFollows.filter((i) => i !== authorId);
-        setFollowerCount(prev => Math.max(0, prev - 1));
-        notify(`Unfollowed @${author?.username || "creator"}`, "info");
+    const res = await toggleFollowUser({
+      targetUid: id,
+      targetName: author?.displayName || author?.username || "creator",
+      currentUser,
+      currentlyFollowing: isFollowing,
+    });
+    if (res.ok) {
+      setIsFollowing(res.isFollowing);
+      if (typeof res.followersCount === "number") {
+        setFollowerCount(res.followersCount);
       }
-      localStorage.setItem("followed_creators", JSON.stringify(updatedList));
-    } catch (e) {}
+      notify(
+        res.isFollowing
+          ? `Now following @${author?.username || author?.displayName || "creator"}!`
+          : `Unfollowed @${author?.username || author?.displayName || "creator"}`,
+        res.isFollowing ? "success" : "info"
+      );
+    }
   };
 
   const handleSponsorSubmit = async (e: React.FormEvent) => {
@@ -280,19 +330,30 @@ export const AuthorProfile: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-2">
-          {/* Top Right '+' Follow / Add button from IMG_4750.webp */}
-          <button
-            type="button"
-            onClick={handleFollowToggle}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md ${
-              isFollowing
-                ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                : "bg-black dark:bg-white text-white dark:text-black hover:opacity-90"
-            }`}
-            title={isFollowing ? "Following" : "Follow Creator"}
-          >
-            {isFollowing ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4 stroke-[2.5]" />}
-          </button>
+          {currentUser?.uid !== id && (
+            <button
+              type="button"
+              onClick={handleFollowToggle}
+              className={`px-4 h-10 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm ${
+                isFollowing
+                  ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                  : "bg-[#1877F2] hover:bg-[#1465D8] text-white"
+              }`}
+              title={isFollowing ? "Following" : "Follow Creator"}
+            >
+              {isFollowing ? (
+                <>
+                  <UserCheck className="w-4 h-4" />
+                  <span>Following</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  <span>Follow</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </header>
 
@@ -327,56 +388,110 @@ export const AuthorProfile: React.FC = () => {
           </div>
         </div>
 
-        {/* HANDLE & XP / LEVEL BADGE ROW (Exact match to IMG_4750.webp) */}
+        {/* HANDLE & XP / LEVEL BADGE ROW */}
         <div className="flex items-center justify-between gap-3 pt-1">
           <div className="space-y-0.5 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-white truncate">
-              @{handle}
+              {author.displayName && author.displayName !== "User"
+                ? author.displayName
+                : `@${handle}`}
             </h1>
-            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-              {author.bio || "You're on your way!"}
+            <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+              @{handle} · {followerCount.toLocaleString()} Followers ·{" "}
+              {followingCount.toLocaleString()} Following
             </p>
+            {author.bio && (
+              <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300 pt-0.5">
+                {author.bio}
+              </p>
+            )}
           </div>
 
-          {/* XP Badge Pill (⭐ 140 / 500 XP from IMG_4750.webp) */}
+          {/* XP Badge Pill */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/60 shadow-xs whitespace-nowrap shrink-0">
             <Star className="w-3.5 h-3.5 fill-blue-500 text-blue-500" />
             <span>{xp} / {totalXp} XP</span>
           </div>
         </div>
 
-        {/* OPEN FULL STORY MODE ACTION BUTTON (Exact match to black pill in IMG_4750.webp) */}
-        <button
-          type="button"
-          onClick={() => setShowStoryMode(true)}
-          className="w-full py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-extrabold text-xs shadow-md hover:opacity-90 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <span>Open full story mode</span>
-        </button>
+        {/* FOLLOW + STORY MODE ACTION ROW */}
+        <div className="flex items-center gap-2.5">
+          {currentUser?.uid !== id && (
+            <button
+              type="button"
+              onClick={handleFollowToggle}
+              className={`flex-1 py-3.5 rounded-full font-extrabold text-xs shadow-md active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer ${
+                isFollowing
+                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700"
+                  : "bg-[#1877F2] hover:bg-[#1465D8] text-white"
+              }`}
+            >
+              {isFollowing ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Following ({followerCount.toLocaleString()})</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                  <span>Follow ({followerCount.toLocaleString()})</span>
+                </>
+              )}
+            </button>
+          )}
 
-        {/* STATS DIVIDER CARD: Followers | Likes | Gifted (Exact match to IMG_4750.webp) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (authorStories.length === 0) {
+                notify("No active stories from this user yet.", "info");
+                return;
+              }
+              setActiveStoryIndex(0);
+              setShowStoryMode(true);
+            }}
+            className="flex-1 py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-extrabold text-xs shadow-md hover:opacity-90 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>
+              {authorStories.length > 0
+                ? `View Stories (${authorStories.length})`
+                : "Story Mode"}
+            </span>
+          </button>
+        </div>
+
+        {/* STATS DIVIDER CARD: Followers | Following | Likes | Gifted */}
         <div className="bg-zinc-50/90 dark:bg-zinc-900/80 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
-          <div className="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800 text-center">
-            <div className="px-2">
-              <span className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+          <div className="grid grid-cols-4 divide-x divide-zinc-200 dark:divide-zinc-800 text-center">
+            <div className="px-1.5">
+              <span className="block text-[10px] sm:text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Followers
               </span>
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white block mt-0.5">
+              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
                 {followerCount.toLocaleString()}
               </span>
             </div>
 
-            <div className="px-2">
-              <span className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+            <div className="px-1.5">
+              <span className="block text-[10px] sm:text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Following
+              </span>
+              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
+                {followingCount.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="px-1.5">
+              <span className="block text-[10px] sm:text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Likes
               </span>
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white block mt-0.5">
+              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
                 {likesCount.toLocaleString()}
               </span>
             </div>
 
-            <div className="px-2">
-              <span className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+            <div className="px-1.5">
+              <span className="block text-[10px] sm:text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Gifted
               </span>
               <span className="text-base sm:text-lg font-black text-amber-500 block mt-0.5 font-mono">
@@ -386,22 +501,35 @@ export const AuthorProfile: React.FC = () => {
           </div>
         </div>
 
-        {/* INTERESTS PILLS SECTION (Exact match to IMG_4750.webp) */}
+        {/* INTERESTS / TOPICS SECTION */}
         <div className="space-y-2.5 pt-1">
           <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white tracking-wide">
-            Interests
+            Online & Tech Topics
           </h3>
 
           <div className="flex flex-wrap gap-2">
-            {INTERESTS.map((item, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 shadow-2xs whitespace-nowrap"
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </span>
-            ))}
+            {(() => {
+              const userThemeIds: string[] = Array.isArray(
+                author?.feedPreferences?.selectedThemes
+              )
+                ? author.feedPreferences.selectedThemes.slice(0, 8)
+                : [];
+              const mappedThemes = userThemeIds
+                .map((tid) => getFeedThemeMeta(tid))
+                .filter(Boolean)
+                .map((m) => ({ label: m!.label, icon: m!.emoji }));
+              const displayTopics =
+                mappedThemes.length > 0 ? mappedThemes : DEFAULT_ONLINE_INTERESTS;
+              return displayTopics.map((item, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 shadow-2xs whitespace-nowrap"
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </span>
+              ));
+            })()}
           </div>
         </div>
 
@@ -433,7 +561,7 @@ export const AuthorProfile: React.FC = () => {
         </div>
 
         {/* RECENT STORIES CAROUSEL */}
-        {DEMO_STORIES.length > 0 && (
+        {authorStories.length > 0 && (
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white tracking-wide">
@@ -445,7 +573,7 @@ export const AuthorProfile: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {DEMO_STORIES.slice(0, 2).map((story, i) => (
+            {authorStories.slice(0, 2).map((story, i) => (
               <div
                 key={story.id}
                 onClick={() => {
@@ -549,7 +677,7 @@ export const AuthorProfile: React.FC = () => {
 
       {/* FULL STORY MODE LIGHTBOX MODAL */}
       <AnimatePresence>
-        {showStoryMode && (
+        {showStoryMode && authorStories[activeStoryIndex] && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -559,7 +687,7 @@ export const AuthorProfile: React.FC = () => {
             {/* Top Bar with progress indicators */}
             <div className="space-y-3 pt-2">
               <div className="flex gap-1.5 w-full">
-                {DEMO_STORIES.map((_, i) => (
+                {authorStories.map((_, i) => (
                   <div key={i} className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
                     <div
                       className={`h-full bg-white transition-all duration-300 ${
@@ -579,7 +707,7 @@ export const AuthorProfile: React.FC = () => {
                   />
                   <div>
                     <span className="font-bold text-xs block">@{handle}</span>
-                    <span className="text-[10px] opacity-70 block">Story {activeStoryIndex + 1} of {DEMO_STORIES.length}</span>
+                    <span className="text-[10px] opacity-70 block">Story {activeStoryIndex + 1} of {authorStories.length}</span>
                   </div>
                 </div>
 
@@ -596,13 +724,13 @@ export const AuthorProfile: React.FC = () => {
             {/* Story Active Slide */}
             <div className="relative flex-1 my-4 rounded-3xl overflow-hidden flex items-center justify-center">
               <img
-                src={DEMO_STORIES[activeStoryIndex].image}
+                src={authorStories[activeStoryIndex].image}
                 alt=""
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-6 text-white space-y-1">
-                <h3 className="text-xl font-black">{DEMO_STORIES[activeStoryIndex].title}</h3>
-                <p className="text-xs opacity-90">{DEMO_STORIES[activeStoryIndex].subtitle}</p>
+                <h3 className="text-xl font-black">{authorStories[activeStoryIndex].title}</h3>
+                <p className="text-xs opacity-90">{authorStories[activeStoryIndex].subtitle}</p>
               </div>
             </div>
 
@@ -619,7 +747,7 @@ export const AuthorProfile: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (activeStoryIndex < DEMO_STORIES.length - 1) {
+                  if (activeStoryIndex < authorStories.length - 1) {
                     setActiveStoryIndex((prev) => prev + 1);
                   } else {
                     setShowStoryMode(false);
@@ -627,7 +755,7 @@ export const AuthorProfile: React.FC = () => {
                 }}
                 className="flex-1 py-3 rounded-full bg-white text-black font-extrabold text-xs cursor-pointer"
               >
-                {activeStoryIndex < DEMO_STORIES.length - 1 ? "Next" : "Done"}
+                {activeStoryIndex < authorStories.length - 1 ? "Next" : "Done"}
               </button>
             </div>
           </motion.div>

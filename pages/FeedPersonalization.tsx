@@ -27,27 +27,78 @@ export interface FeedPreferencesData {
   };
 }
 
+export type FeedThemeGroup =
+  | "Cyber & Security"
+  | "Tech & AI"
+  | "Online & Business"
+  | "Digital & Gaming";
+
+export const FEED_THEME_GROUPS: FeedThemeGroup[] = [
+  "Cyber & Security",
+  "Tech & AI",
+  "Online & Business",
+  "Digital & Gaming",
+];
+
 export interface ThemeDefinition {
   id: string;
   label: string;
   emoji: string;
-  group: "Sports & Fitness" | "Creativity & Craft" | "Tech & Safety";
+  group: FeedThemeGroup;
 }
 
 export const FEED_THEMES: ThemeDefinition[] = [
-  { id: "dogs", label: "Dogs", emoji: "🐶", group: "Creativity & Craft" },
-  { id: "art", label: "Art", emoji: "🎨", group: "Creativity & Craft" },
-  { id: "tennis", label: "Tennis", emoji: "🎾", group: "Sports & Fitness" },
-  { id: "nature", label: "Nature", emoji: "🌳", group: "Sports & Fitness" },
-  { id: "kpop", label: "K-Pop", emoji: "🎧", group: "Creativity & Craft" },
-  { id: "ballet", label: "Ballet", emoji: "🩰", group: "Sports & Fitness" },
-  { id: "pancakes", label: "Pancakes", emoji: "🥞", group: "Creativity & Craft" },
-  { id: "fantasy", label: "Fantasy", emoji: "⚔️", group: "Creativity & Craft" },
-  { id: "gadgets", label: "Gadgets", emoji: "📱", group: "Tech & Safety" },
-  { id: "scam_watch", label: "Scam Watch", emoji: "🛡️", group: "Tech & Safety" },
-  { id: "fitness", label: "Fitness", emoji: "🏃", group: "Sports & Fitness" },
-  { id: "reviews", label: "Reviews", emoji: "⭐", group: "Tech & Safety" },
+  // Cyber & Security
+  { id: "cyber_news", label: "Cyber News", emoji: "🛡️", group: "Cyber & Security" },
+  { id: "cybersecurity", label: "Cybersecurity", emoji: "🔐", group: "Cyber & Security" },
+  { id: "scam_watch", label: "Scam Alerts", emoji: "🚨", group: "Cyber & Security" },
+  { id: "ethical_hacking", label: "Ethical Hacking", emoji: "🕵️", group: "Cyber & Security" },
+  { id: "data_breach", label: "Data Breaches", emoji: "⚠️", group: "Cyber & Security" },
+  { id: "online_privacy", label: "Online Privacy", emoji: "🔒", group: "Cyber & Security" },
+
+  // Tech & AI
+  { id: "tech_news", label: "Tech News", emoji: "💻", group: "Tech & AI" },
+  { id: "ai_tools", label: "AI & Tools", emoji: "🤖", group: "Tech & AI" },
+  { id: "software_apps", label: "Software & Apps", emoji: "🧩", group: "Tech & AI" },
+  { id: "gadgets", label: "Gadgets & Mobile", emoji: "📱", group: "Tech & AI" },
+  { id: "programming", label: "Coding & Dev", emoji: "👨‍💻", group: "Tech & AI" },
+  { id: "cloud_server", label: "Cloud & Hosting", emoji: "☁️", group: "Tech & AI" },
+
+  // Online & Business
+  { id: "ecommerce", label: "E-Commerce", emoji: "🛒", group: "Online & Business" },
+  { id: "freelancing", label: "Freelancing", emoji: "💼", group: "Online & Business" },
+  { id: "digital_marketing", label: "Digital Marketing", emoji: "📈", group: "Online & Business" },
+  { id: "crypto_web3", label: "Crypto & Web3", emoji: "🪙", group: "Online & Business" },
+  { id: "fintech_banking", label: "bKash & Fintech", emoji: "💳", group: "Online & Business" },
+  { id: "online_earning", label: "Online Earning", emoji: "💰", group: "Online & Business" },
+
+  // Digital & Gaming
+  { id: "social_media", label: "Social Media", emoji: "🌐", group: "Digital & Gaming" },
+  { id: "gaming_esports", label: "Gaming & Esports", emoji: "🎮", group: "Digital & Gaming" },
+  { id: "telecom_isp", label: "SIM, WiFi & ISP", emoji: "📡", group: "Digital & Gaming" },
+  { id: "pc_hardware", label: "PC & Hardware", emoji: "🖥️", group: "Digital & Gaming" },
+  { id: "tech_tutorials", label: "Tech Tips", emoji: "⚡", group: "Digital & Gaming" },
+  { id: "reviews", label: "Tech Reviews", emoji: "⭐", group: "Digital & Gaming" },
 ];
+
+const VALID_THEME_ID_SET = new Set(FEED_THEMES.map((t) => t.id));
+
+export const sanitizeSelectedThemes = (rawThemes?: unknown): string[] => {
+  if (!Array.isArray(rawThemes)) {
+    return FEED_THEMES.map((t) => t.id);
+  }
+  const valid = rawThemes.filter(
+    (id): id is string => typeof id === "string" && VALID_THEME_ID_SET.has(id)
+  );
+  // If user previously had legacy offline themes (e.g. dogs/cats/pancakes) or all 12 old themes selected,
+  // ensure all valid online/cyber/tech themes are available if nothing valid remains
+  return valid.length > 0 ? Array.from(new Set(valid)) : FEED_THEMES.map((t) => t.id);
+};
+
+export const getFeedThemeMeta = (id?: string | null): ThemeDefinition | undefined => {
+  if (!id) return undefined;
+  return FEED_THEMES.find((t) => t.id === id);
+};
 
 export const DEFAULT_FEED_PREFERENCES: FeedPreferencesData = {
   selectedThemes: FEED_THEMES.map((t) => t.id),
@@ -66,10 +117,16 @@ export const loadFeedPreferences = (): FeedPreferencesData => {
     const raw = localStorage.getItem("vibe_feed_preferences");
     if (!raw) return DEFAULT_FEED_PREFERENCES;
     const parsed = JSON.parse(raw);
+    const hadLegacyInvalid =
+      Array.isArray(parsed.selectedThemes) &&
+      parsed.selectedThemes.some(
+        (id: any) => typeof id === "string" && !VALID_THEME_ID_SET.has(id)
+      );
+    const sanitized = hadLegacyInvalid
+      ? FEED_THEMES.map((t) => t.id)
+      : sanitizeSelectedThemes(parsed.selectedThemes);
     return {
-      selectedThemes: Array.isArray(parsed.selectedThemes)
-        ? parsed.selectedThemes
-        : DEFAULT_FEED_PREFERENCES.selectedThemes,
+      selectedThemes: sanitized,
       contentPreferences: {
         ...DEFAULT_FEED_PREFERENCES.contentPreferences,
         ...(parsed.contentPreferences || {}),
@@ -102,7 +159,14 @@ export const FeedPersonalization: React.FC = () => {
         const remote = snap.data()?.feedPreferences;
         if (remote) {
           if (Array.isArray(remote.selectedThemes)) {
-            setSelectedThemes(remote.selectedThemes);
+            const hasRemovedLegacy = remote.selectedThemes.some(
+              (id: any) => typeof id === "string" && !VALID_THEME_ID_SET.has(id)
+            );
+            setSelectedThemes(
+              hasRemovedLegacy
+                ? FEED_THEMES.map((t) => t.id)
+                : sanitizeSelectedThemes(remote.selectedThemes)
+            );
           }
           if (remote.contentPreferences) {
             setContentPreferences((prev) => ({
@@ -230,12 +294,7 @@ export const FeedPersonalization: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              {[
-                "All Selected",
-                "Sports & Fitness",
-                "Creativity & Craft",
-                "Tech & Safety",
-              ].map((tab) => {
+              {["All Selected", ...FEED_THEME_GROUPS].map((tab) => {
                 const active = activeThemeTab === tab;
                 return (
                   <button
@@ -258,15 +317,29 @@ export const FeedPersonalization: React.FC = () => {
             </div>
           </div>
 
-          {/* Theme Tiles Grid (4 columns matching screenshot) */}
+          {/* Theme Tiles Grid (3 columns on compact mobile, 4 columns on sm+ for clean readability) */}
           <div className="mt-5">
-            <h3 className="text-[16px] font-bold text-zinc-900 dark:text-white mb-3.5">
-              {activeThemeTab === "All Selected"
-                ? `All selected (${selectedThemes.length})`
-                : activeThemeTab}
-            </h3>
+            <div className="flex items-center justify-between gap-2 mb-3.5">
+              <h3 className="text-[16px] font-bold text-zinc-900 dark:text-white">
+                {activeThemeTab === "All Selected"
+                  ? `Online & Tech Categories (${selectedThemes.length}/${FEED_THEMES.length})`
+                  : activeThemeTab}
+              </h3>
+              {selectedThemes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setSelectedThemes(["cyber_news", "tech_news", "scam_watch"]);
+                  }}
+                  className="text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
+                >
+                  Clear extras
+                </button>
+              )}
+            </div>
 
-            <div className="grid grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
               {visibleThemes.map((theme) => {
                 const isSelected = selectedThemes.includes(theme.id);
                 return (
@@ -284,7 +357,7 @@ export const FeedPersonalization: React.FC = () => {
                       <span>{theme.emoji}</span>
                     </div>
 
-                    <span className="text-[12.5px] font-medium text-zinc-800 dark:text-zinc-200 mt-2.5 leading-tight truncate w-full">
+                    <span className="text-[12px] font-semibold text-zinc-800 dark:text-zinc-200 mt-2.5 leading-snug line-clamp-2 w-full">
                       {theme.label}
                     </span>
 

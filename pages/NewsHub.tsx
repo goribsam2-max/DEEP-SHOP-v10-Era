@@ -24,6 +24,8 @@ import {
   Edit3,
   Trash2,
   Eye,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -47,6 +49,7 @@ import {
   FeedPreferencesData,
   DEFAULT_FEED_PREFERENCES,
   FEED_THEMES,
+  getFeedThemeMeta,
 } from "./FeedPersonalization";
 import {
   getSavedPostIdsLocal,
@@ -59,8 +62,8 @@ import { formatDhakaFeedTime } from "../lib/dhakaTime";
 import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
-  canAccessSellerDashboard,
 } from "../lib/admin";
+import { toggleFollowUser, useFollowedIds } from "../lib/follow";
 
 import defaultAvatarImg from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -98,6 +101,7 @@ export const NewsHub: React.FC = () => {
   const [firestorePosts, setFirestorePosts] = useState<ScamPost[]>([]);
   const [stories, setStories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const followedIds = useFollowedIds(currentUser?.uid);
 
   const [scamOnlyMode, setScamOnlyMode] = useState(() =>
     location.pathname.includes("scam-alert")
@@ -204,31 +208,79 @@ export const NewsHub: React.FC = () => {
     return () => unsub();
   }, []);
 
-  // Real-time Firestore stories listener (ONLY real stories — zero demo stories)
+  // Real-time Firestore stories listener (merges `stories` + community `creator_videos` stories)
   useEffect(() => {
+    let mainStories: any[] = [];
+    let communityStories: any[] = [];
+
+    const mapStoryDoc = (id: string, data: Record<string, any>) => {
+      const rawLabel =
+        data.userName || data.sellerName || data.category || "Story";
+      const createdAtMs =
+        typeof data.createdAtMs === "number"
+          ? data.createdAtMs
+          : data.createdAt
+          ? new Date(data.createdAt).getTime() || 0
+          : 0;
+      return {
+        id,
+        name: String(rawLabel).split(" ")[0],
+        avatar:
+          data.userAvatar ||
+          data.sellerLogo ||
+          data.sellerAvatar ||
+          data.mediaUrl ||
+          defaultAvatarImg,
+        createdAtMs,
+      };
+    };
+
+    const emitMergedStories = () => {
+      const mergedMap = new Map<string, any>();
+      mainStories.forEach((s) => mergedMap.set(s.id, s));
+      communityStories.forEach((s) => mergedMap.set(s.id, s));
+      try {
+        const localStories = JSON.parse(
+          localStorage.getItem("deep_news_stories_local") || "[]"
+        );
+        if (Array.isArray(localStories)) {
+          localStories.forEach((ls: any) => {
+            if (ls?.id && !mergedMap.has(ls.id)) {
+              mergedMap.set(ls.id, mapStoryDoc(ls.id, ls));
+            }
+          });
+        }
+      } catch {}
+      const sorted = Array.from(mergedMap.values()).sort(
+        (a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0)
+      );
+      setStories(sorted);
+    };
+
     const unsubStories = onSnapshot(
       collection(db, "stories"),
       (snap) => {
-        const remote = snap.docs.map((d) => {
-          const data = d.data();
-          const rawLabel =
-            data.sellerName || data.userName || data.category || "Story";
-          return {
-            id: d.id,
-            name: String(rawLabel).split(" ")[0],
-            avatar:
-              data.sellerLogo ||
-              data.sellerAvatar ||
-              data.userAvatar ||
-              data.mediaUrl ||
-              defaultAvatarImg,
-          };
-        });
-        setStories(remote);
+        mainStories = snap.docs.map((d) => mapStoryDoc(d.id, d.data()));
+        emitMergedStories();
       },
-      () => {}
+      () => emitMergedStories()
     );
-    return () => unsubStories();
+
+    const unsubCommunityStories = onSnapshot(
+      collection(db, "creator_videos"),
+      (snap) => {
+        communityStories = snap.docs
+          .filter((d) => d.data()?.kind === "news_story")
+          .map((d) => mapStoryDoc(d.id, d.data()));
+        emitMergedStories();
+      },
+      () => emitMergedStories()
+    );
+
+    return () => {
+      unsubStories();
+      unsubCommunityStories();
+    };
   }, []);
 
   // Merge real Firestore posts + real user-created offline fallback posts only
@@ -297,11 +349,19 @@ export const NewsHub: React.FC = () => {
           return false;
       }
 
-      if (!allThemesSelected && post.themes && post.themes.length > 0) {
-        const matchesTheme = post.themes.some((t) =>
-          prefs.selectedThemes.includes(t)
-        );
-        if (!matchesTheme) return false;
+      if (!allThemesSelected) {
+        const validIds = new Set(FEED_THEMES.map((t) => t.id));
+        const rawPostThemes = [
+          ...(Array.isArray(post.themes) ? post.themes : []),
+          ...(post.category ? [post.category] : []),
+        ].filter((t): t is string => Boolean(t) && validIds.has(t));
+
+        if (rawPostThemes.length > 0) {
+          const matchesTheme = rawPostThemes.some((t) =>
+            prefs.selectedThemes.includes(t)
+          );
+          if (!matchesTheme) return false;
+        }
       }
 
       return true;
@@ -409,9 +469,37 @@ export const NewsHub: React.FC = () => {
     }
   };
 
+  const handleFollowFromCard = async (
+    e: React.MouseEvent,
+    post: ScamPost
+  ) => {
+    e.stopPropagation();
+    triggerHaptic();
+    if (!currentUser?.uid) {
+      notify("Please sign in to follow users!", "error");
+      navigate("/signin");
+      return;
+    }
+    if (!post.reporterId || post.reporterId === currentUser.uid) return;
+    const isNowFollowed = followedIds.includes(post.reporterId);
+    const res = await toggleFollowUser({
+      targetUid: post.reporterId,
+      targetName: post.reporterName,
+      currentUser,
+      currentlyFollowing: isNowFollowed,
+    });
+    if (res.ok) {
+      notify(
+        res.isFollowing
+          ? `Following ${post.reporterName}`
+          : `Unfollowed ${post.reporterName}`,
+        res.isFollowing ? "success" : "info"
+      );
+    }
+  };
+
   const isAdmin =
     hasImmediateAdminOrStaffRole(userProfile, currentUser) || isStaffDoc;
-  const canAddStory = canAccessSellerDashboard(userProfile, currentUser);
   const userAvatar = userProfile?.photoURL || currentUser?.photoURL || defaultAvatarImg;
   const isPersonalizedActive =
     prefs.selectedThemes.length < FEED_THEMES.length ||
@@ -601,61 +689,62 @@ export const NewsHub: React.FC = () => {
               </div>
             </header>
 
-            {/* 2. Horizontal Circular Stories Row (Your Story ONLY for verified Sellers/Admins + Real Firestore Stories) */}
-            {(canAddStory || stories.length > 0) && (
-              <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
-                {canAddStory && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      navigate("/add-story");
-                    }}
-                    className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-                  >
-                    <div className="relative w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
-                      <img
-                        src={userAvatar}
-                        alt="Your Story"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
-                      />
-                      <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-zinc-900 dark:bg-[#1877F2] text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center">
-                        <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
-                      </span>
-                    </div>
-                    <span className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-100">
-                      Your Story
-                    </span>
-                  </button>
-                )}
+            {/* 2. Horizontal Circular Stories Row (Everyone can add a story in News Hub + Real Community Stories) */}
+            <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  if (!currentUser) {
+                    notify("Please sign in to share your story!", "info");
+                    navigate("/signin");
+                    return;
+                  }
+                  navigate("/add-story?from=news-hub");
+                }}
+                className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+              >
+                <div className="relative w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
+                  <img
+                    src={userAvatar}
+                    alt="Your Story"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
+                  />
+                  <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-zinc-900 dark:bg-[#1877F2] text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center">
+                    <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
+                  </span>
+                </div>
+                <span className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-100">
+                  Your Story
+                </span>
+              </button>
 
-                {/* Real Community Stories from Firestore */}
-                {stories.map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      navigate(`/news-hub/story/${st.id}`);
-                    }}
-                    className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-                  >
-                    <div className="w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
-                      <img
-                        src={st.avatar}
-                        alt={st.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
-                      />
-                    </div>
-                    <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
-                      {st.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
+              {/* Real Community Stories from Firestore */}
+              {stories.map((st) => (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate(`/news-hub/story/${st.id}`);
+                  }}
+                  className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+                >
+                  <div className="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#1877F2] to-[#38BDF8] shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
+                    <img
+                      src={st.avatar}
+                      alt={st.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
+                    />
+                  </div>
+                  <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
+                    {st.name}
+                  </span>
+                </button>
+              ))}
+            </div>
 
             {/* 3. Composer Card */}
             <section className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3.5">
@@ -925,6 +1014,19 @@ export const NewsHub: React.FC = () => {
 
                             <div className="flex items-center gap-1.5 text-[11.5px] text-zinc-500 dark:text-zinc-400 whitespace-nowrap overflow-hidden">
                               <span className="truncate">{formatFeedTimestamp(post.createdAt)}</span>
+                              {(() => {
+                                const primaryTheme = getFeedThemeMeta(
+                                  post.themes?.[0] || post.category
+                                );
+                                return primaryTheme ? (
+                                  <>
+                                    <span className="shrink-0">·</span>
+                                    <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
+                                      {primaryTheme.label}
+                                    </span>
+                                  </>
+                                ) : null;
+                              })()}
                               {post.isEdited && (
                                 <>
                                   <span className="shrink-0">·</span>
@@ -939,8 +1041,34 @@ export const NewsHub: React.FC = () => {
 
                         <div
                           onClick={(e) => e.stopPropagation()}
-                          className="relative shrink-0"
+                          className="relative shrink-0 flex items-center gap-1.5"
                         >
+                          {post.reporterId &&
+                            post.reporterId !== "member_local" &&
+                            currentUser?.uid !== post.reporterId && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleFollowFromCard(e, post)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                                  followedIds.includes(post.reporterId)
+                                    ? "bg-[#F4F5F7] dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200"
+                                    : "bg-[#1877F2]/10 hover:bg-[#1877F2]/20 text-[#1877F2] dark:text-[#58A6FF]"
+                                }`}
+                              >
+                                {followedIds.includes(post.reporterId) ? (
+                                  <>
+                                    <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Following</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Follow</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+
                           <button
                             type="button"
                             onClick={() => {

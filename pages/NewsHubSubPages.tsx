@@ -1100,53 +1100,77 @@ export const NewsStoryViewerPage: React.FC = () => {
   const [stories, setStories] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [canAddStory, setCanAddStory] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(() => Boolean(auth.currentUser));
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) {
-        setCanAddStory(false);
-        return;
-      }
-      try {
-        const uSnap = await getDoc(doc(db, "users", u.uid));
-        const uData = uSnap.exists() ? uSnap.data() : null;
-        setCanAddStory(canAccessSellerDashboard(uData, u));
-      } catch {
-        setCanAddStory(canAccessSellerDashboard(null, u));
-      }
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setIsSignedIn(Boolean(u));
     });
     return () => unsub();
   }, []);
 
   useEffect(() => {
+    const mapDoc = (id: string, data: Record<string, any>) => {
+      const createdAtMs =
+        typeof data.createdAtMs === "number"
+          ? data.createdAtMs
+          : data.createdAt
+          ? new Date(data.createdAt).getTime() || 0
+          : 0;
+      return {
+        id,
+        authorName:
+          data.userName ||
+          data.sellerName ||
+          data.category ||
+          "Community Member",
+        avatar:
+          data.userAvatar ||
+          data.sellerLogo ||
+          data.sellerAvatar ||
+          data.mediaUrl ||
+          defaultAvatarImg,
+        mediaUrl: data.mediaUrl || data.imageUrl || "",
+        mediaType: data.type || "image",
+        linkUrl: data.linkUrl || "",
+        caption: data.caption || data.songTitle || "",
+        createdAtMs,
+        createdAtLabel: data.createdAt
+          ? formatDhakaDateTime(data.createdAt)
+          : "Recent",
+      };
+    };
+
     const loadStories = async () => {
       try {
-        const snap = await getDocs(collection(db, "stories"));
-        const remote = snap.docs.map((d) => {
+        const [snapMain, snapCommunity] = await Promise.all([
+          getDocs(collection(db, "stories")).catch(() => null),
+          getDocs(collection(db, "creator_videos")).catch(() => null),
+        ]);
+        const merged = new Map<string, any>();
+        snapMain?.docs.forEach((d) => merged.set(d.id, mapDoc(d.id, d.data())));
+        snapCommunity?.docs.forEach((d) => {
           const data = d.data();
-          return {
-            id: d.id,
-            authorName:
-              data.sellerName ||
-              data.userName ||
-              data.category ||
-              "Community Member",
-            avatar:
-              data.sellerLogo ||
-              data.sellerAvatar ||
-              data.userAvatar ||
-              data.mediaUrl ||
-              defaultAvatarImg,
-            mediaUrl: data.mediaUrl || data.imageUrl || "",
-            mediaType: data.type || "image",
-            linkUrl: data.linkUrl || "",
-            caption: data.caption || data.songTitle || "",
-            createdAtLabel: data.createdAt
-              ? formatDhakaDateTime(data.createdAt)
-              : "Recent",
-          };
+          if (data?.kind === "news_story") {
+            merged.set(d.id, mapDoc(d.id, data));
+          }
         });
+        try {
+          const localList = JSON.parse(
+            localStorage.getItem("deep_news_stories_local") || "[]"
+          );
+          if (Array.isArray(localList)) {
+            localList.forEach((ls: any) => {
+              if (ls?.id && !merged.has(ls.id)) {
+                merged.set(ls.id, mapDoc(ls.id, ls));
+              }
+            });
+          }
+        } catch {}
+
+        const remote = Array.from(merged.values()).sort(
+          (a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0)
+        );
         setStories(remote);
         const foundIdx = remote.findIndex((s) => s.id === storyId);
         if (foundIdx >= 0) setActiveIdx(foundIdx);
@@ -1213,16 +1237,16 @@ export const NewsStoryViewerPage: React.FC = () => {
             )}
           </div>
 
-          {canAddStory && (
-            <button
-              type="button"
-              onClick={() => navigate("/add-story")}
-              className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Story</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() =>
+              navigate(isSignedIn ? "/add-story?from=news-hub" : "/signin")
+            }
+            className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Story</span>
+          </button>
         </div>
       </header>
 
