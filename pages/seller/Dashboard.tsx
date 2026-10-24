@@ -20,7 +20,7 @@ import { OrderStatus } from "../../types";
 import { uploadToImgbb } from "../../services/imgbb";
 import { useNotify, useConfirm } from "../../components/Notifications";
 import { formatPrice, cn, isForbiddenNumber } from "../../lib/utils";
-import { isSuperAdminOrAdmin } from "../../lib/admin";
+import { isSuperAdminOrAdmin, canAccessSellerDashboard } from "../../lib/admin";
 import {
   extractConfiguredMobileAccounts,
   normalizeAccountType,
@@ -93,6 +93,7 @@ const SellerDashboard: React.FC = () => {
   const confirm = useConfirm();
   const [user, setUser] = useState<User | null>(null);
   const [sellerProfile, setSellerProfile] = useState<any>(null);
+  const [checkingAccess, setCheckingAccess] = useState(true);
   
   // Custom navigation structure (Tabs/views inside the full-screen space)
   const initialTab = (searchParams.get("tab") as any) || "home";
@@ -416,65 +417,73 @@ const SellerDashboard: React.FC = () => {
           console.error("Error reading local seller settings", e);
         }
 
-        unsubProfile = onSnapshot(doc(db, "users", u.uid), (snap) => {
-          const profile = snap.exists()
-            ? snap.data()
-            : isSuperAdminOrAdmin(null, u)
-            ? {
-                uid: u.uid,
-                email: u.email || "",
-                role: "admin",
-                shopName: u.displayName || "Deep Shop",
-              }
-            : null;
+        unsubProfile = onSnapshot(
+          doc(db, "users", u.uid),
+          (snap) => {
+            const profile = snap.exists()
+              ? snap.data()
+              : isSuperAdminOrAdmin(null, u)
+              ? {
+                  uid: u.uid,
+                  email: u.email || "",
+                  role: "admin",
+                  shopName: u.displayName || "Deep Shop",
+                }
+              : null;
 
-          if (!profile) {
-            notify("Seller profile not found.", "error");
-            navigate("/");
-            return;
-          }
+            if (!profile || !canAccessSellerDashboard(profile, u)) {
+              setCheckingAccess(false);
+              notify(
+                "Access Denied. Only verified sellers can view Seller Dashboard.",
+                "error"
+              );
+              navigate("/", { replace: true });
+              return;
+            }
 
-          if (profile.role !== "seller" && !isSuperAdminOrAdmin(profile, u)) {
-            notify("Access Denied. Only registered sellers can view this dashboard.", "error");
-            navigate("/");
-            return;
-          }
+            setSellerProfile(profile);
+            setCheckingAccess(false);
+            if (!dataFetchedRef.current) {
+              fetchSellerData(u.uid, true);
+              dataFetchedRef.current = true;
 
-          setSellerProfile(profile);
-          if (!dataFetchedRef.current) {
-            fetchSellerData(u.uid, true);
-            dataFetchedRef.current = true;
-
-            // Real-time listener for orders
-            const unsubOrders = onSnapshot(
-              collection(db, "orders"),
-              (orderSnap) => {
-                const allOrders = orderSnap.docs.map((d) => ({
-                  id: d.id,
-                  ...d.data(),
-                }));
-                setOrders(() => {
-                  const sellerOrders = allOrders.filter(
-                    (ord: any) =>
-                      ord.status !== "awaiting_payment" &&
-                      ord.status !== "payment_pending" &&
-                      (ord.sellerId === u.uid ||
-                        ord.items?.some((item: any) => item.sellerId === u.uid))
-                  );
-                  return sellerOrders.sort((a: any, b: any) => {
-                    const tA = a.createdAt || a.timestamp || 0;
-                    const tB = b.createdAt || b.timestamp || 0;
-                    return tB - tA;
+              // Real-time listener for orders
+              const unsubOrders = onSnapshot(
+                collection(db, "orders"),
+                (orderSnap) => {
+                  const allOrders = orderSnap.docs.map((d) => ({
+                    id: d.id,
+                    ...d.data(),
+                  }));
+                  setOrders(() => {
+                    const sellerOrders = allOrders.filter(
+                      (ord: any) =>
+                        ord.status !== "awaiting_payment" &&
+                        ord.status !== "payment_pending" &&
+                        (ord.sellerId === u.uid ||
+                          ord.items?.some((item: any) => item.sellerId === u.uid))
+                    );
+                    return sellerOrders.sort((a: any, b: any) => {
+                      const tA = a.createdAt || a.timestamp || 0;
+                      const tB = b.createdAt || b.timestamp || 0;
+                      return tB - tA;
+                    });
                   });
-                });
-              },
-              (err) => console.error("Real-time orders listener error:", err)
-            );
-            unsubOrdersRef = unsubOrders;
+                },
+                (err) => console.error("Real-time orders listener error:", err)
+              );
+              unsubOrdersRef = unsubOrders;
+            }
+          },
+          (err) => {
+            console.error("Seller profile check error:", err);
+            setCheckingAccess(false);
+            navigate("/", { replace: true });
           }
-        });
+        );
       } else {
-        navigate("/signin");
+        setCheckingAccess(false);
+        navigate("/signin", { replace: true });
       }
     });
     return () => {
@@ -1290,6 +1299,14 @@ const SellerDashboard: React.FC = () => {
       }
     }
   };
+
+  if (checkingAccess || !sellerProfile) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-zinc-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div id="seller-dashboard-page" className="min-h-screen bg-[#F5F5F7] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100 font-sans flex flex-col md:flex-row pb-24 md:pb-0 relative">

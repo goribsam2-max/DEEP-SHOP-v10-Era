@@ -234,6 +234,8 @@ export interface ScamComment {
   replyToUserName?: string;
   mentions?: string[];
   createdAt: number;
+  updatedAt?: number;
+  isEdited?: boolean;
 }
 
 export type ImageLayoutStyle = 'collage' | 'carousel' | 'grid' | 'stack';
@@ -274,6 +276,8 @@ export interface ScamPost {
   sharesCount?: number;
   savedByUserIds?: string[];
   createdAt: number;
+  updatedAt?: number;
+  isEdited?: boolean;
   status?: 'trending' | 'active' | 'verified' | 'resolved' | 'under_review';
   views?: number;
 }

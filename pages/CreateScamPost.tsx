@@ -28,6 +28,7 @@ import {
   collection,
   addDoc,
   doc,
+  getDoc,
   updateDoc,
 } from "firebase/firestore";
 import {
@@ -50,6 +51,10 @@ import { resolvePostById } from "./NewsHubSubPages";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
+import {
+  hasImmediateAdminOrStaffRole,
+  checkStaffRecord,
+} from "../lib/admin";
 
 import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -250,11 +255,35 @@ export const CreateScamPost: React.FC = () => {
   const recordStartMsRef = useRef<number>(0);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authReady, setAuthReady] = useState<boolean>(() => Boolean(auth.currentUser));
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [originalPost, setOriginalPost] = useState<ScamPost | null>(null);
 
-  // Auth listener (allow viewing composer and prompt sign-in only if needed, or use current user)
+  // Auth listener & Admin check
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((u) => {
+    const unsub = auth.onAuthStateChanged(async (u) => {
       setCurrentUser(u);
+      setAuthReady(true);
+      if (!u) {
+        setIsAdmin(false);
+        return;
+      }
+      if (hasImmediateAdminOrStaffRole(null, u)) {
+        setIsAdmin(true);
+        return;
+      }
+      try {
+        const snap = await getDoc(doc(db, "users", u.uid));
+        const uData = snap.exists() ? snap.data() : null;
+        if (hasImmediateAdminOrStaffRole(uData, u)) {
+          setIsAdmin(true);
+          return;
+        }
+        const staffRes = await checkStaffRecord(uData?.email || u.email);
+        setIsAdmin(staffRes.isStaff);
+      } catch {
+        setIsAdmin(false);
+      }
     });
     return unsub;
   }, []);
@@ -263,7 +292,12 @@ export const CreateScamPost: React.FC = () => {
   useEffect(() => {
     if (!editId) return;
     resolvePostById(editId).then((found) => {
-      if (!found) return;
+      if (!found) {
+        notify("Post not found", "error");
+        navigate("/news-hub", { replace: true });
+        return;
+      }
+      setOriginalPost(found);
       const scam = isScamPostRecord(found);
       setPostType(scam ? "scam" : "normal");
       setDescription(found.description || found.title || "");
@@ -294,7 +328,21 @@ export const CreateScamPost: React.FC = () => {
         setActiveInlinePanel("voice");
       }
     });
-  }, [editId]);
+  }, [editId, navigate, notify]);
+
+  // Verify edit permission once both auth and originalPost are ready
+  useEffect(() => {
+    if (!editId || !authReady || !originalPost) return;
+    if (!currentUser) {
+      notify("Please sign in to edit your post.", "error");
+      navigate("/signin", { replace: true });
+      return;
+    }
+    if (originalPost.reporterId !== currentUser.uid && !isAdmin) {
+      notify("You can only edit your own posts.", "error");
+      navigate(`/news-hub/post/${editId}`, { replace: true });
+    }
+  }, [editId, authReady, originalPost, currentUser, isAdmin, navigate, notify]);
 
   // Re-process uploaded raw files whenever postType (Normal vs Scam) or scamLocation changes!
   useEffect(() => {
@@ -787,6 +835,9 @@ export const CreateScamPost: React.FC = () => {
           ? "Voice Note Update"
           : "Community Post");
 
+      const isOwnerEditing =
+        !editId || !originalPost || originalPost.reporterId === authorId;
+
       const postPayload: Record<string, any> = {
         postType,
         title: autoTitle,
@@ -808,10 +859,12 @@ export const CreateScamPost: React.FC = () => {
           audioUrl && audioWaveform.length > 0 ? audioWaveform : null,
         videoUrl: videoUrl.trim() || null,
         privacy,
-        reporterId: authorId,
-        reporterName: authorName,
-        reporterAvatar: authorAvatar,
-        status: "active",
+        reporterId: isOwnerEditing ? authorId : originalPost.reporterId,
+        reporterName: isOwnerEditing ? authorName : originalPost.reporterName,
+        reporterAvatar: isOwnerEditing
+          ? authorAvatar
+          : originalPost.reporterAvatar || creatorAvatar1,
+        status: originalPost?.status || "active",
       };
 
       if (postType === "scam") {
@@ -830,9 +883,15 @@ export const CreateScamPost: React.FC = () => {
       }
 
       if (editId) {
+        const editUpdatePayload = {
+          ...postPayload,
+          isEdited: true,
+          updatedAt: Date.now(),
+        };
+
         try {
           if (!editId.startsWith("showcase_")) {
-            await updateDoc(doc(db, "scam_posts", editId), postPayload);
+            await updateDoc(doc(db, "scam_posts", editId), editUpdatePayload);
           }
         } catch {}
 
@@ -841,7 +900,7 @@ export const CreateScamPost: React.FC = () => {
             localStorage.getItem("deep_scam_posts") || "[]"
           );
           const updated = existing.map((item: any) =>
-            item.id === editId ? { ...item, ...postPayload } : item
+            item.id === editId ? { ...item, ...editUpdatePayload } : item
           );
           localStorage.setItem("deep_scam_posts", JSON.stringify(updated));
         } catch {}

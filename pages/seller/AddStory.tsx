@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, getDocs, doc, getDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
 import { uploadToImgbb } from "../../services/imgbb";
+import { canAccessSellerDashboard } from "../../lib/admin";
 import {
   Plus,
   Trash2,
@@ -114,49 +116,9 @@ export default function AddStory() {
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
 
   useEffect(() => {
-    const fetchSeller = async () => {
-      if (!auth.currentUser) {
-        navigate("/login");
-        return;
-      }
-      try {
-        const uSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-        if (uSnap.exists()) {
-          const uData = uSnap.data();
-          setSellerInfo(uData);
-
-          const email = auth.currentUser.email?.toLowerCase().trim();
-          const isAdmin =
-            uData.role === "admin" ||
-            uData.isAdmin === true ||
-            uData.type === "admin" ||
-            email === "admin@deep.shop" ||
-            email === "admin@deepshop.top" ||
-            email === "deepshop@gmail.com" ||
-            email === "goribsam2@gmail.com" ||
-            email === "vibegadgetfeni@gmail.com" ||
-            email === "deepshopbysam@gmail.com";
-
-          const isSeller =
-            uData.role === "seller" ||
-            uData.isSeller === true ||
-            uData.sellerStatus === "approved" ||
-            uData.type === "seller" ||
-            uData.shopName ||
-            uData.sellerId;
-
-          if (!isAdmin && !isSeller) {
-            notify("Only verified Sellers and Admins can post stories.", "error");
-            navigate("/");
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
     const fetchSongs = async () => {
       try {
         const snap = await getDocs(collection(db, "story_songs"));
@@ -174,9 +136,39 @@ export default function AddStory() {
       }
     };
 
-    fetchSeller();
-    fetchSongs();
-  }, []);
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        setCheckingAccess(false);
+        navigate("/signin", { replace: true });
+        return;
+      }
+      try {
+        const uSnap = await getDoc(doc(db, "users", u.uid));
+        const uData = uSnap.exists() ? uSnap.data() : null;
+        if (!canAccessSellerDashboard(uData, u)) {
+          setCheckingAccess(false);
+          notify("Only verified Sellers and Admins can post stories.", "error");
+          navigate("/", { replace: true });
+          return;
+        }
+        setSellerInfo(
+          uData || {
+            uid: u.uid,
+            email: u.email || "",
+            displayName: u.displayName || "Deep Shop",
+          }
+        );
+        setCheckingAccess(false);
+        fetchSongs();
+      } catch (err) {
+        console.error(err);
+        setCheckingAccess(false);
+        navigate("/", { replace: true });
+      }
+    });
+
+    return () => unsub();
+  }, [navigate]);
 
   const allSongs = [...dbSongs, ...PRESET_SONGS];
 
@@ -292,6 +284,14 @@ export default function AddStory() {
       setSubmitting(false);
     }
   };
+
+  if (checkingAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 min-h-screen">

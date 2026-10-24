@@ -28,12 +28,12 @@ import { auth, db } from "../firebase";
 import {
   doc,
   getDoc,
+  setDoc,
   collection,
   query,
   orderBy,
   onSnapshot,
   updateDoc,
-  addDoc,
   increment,
   deleteDoc,
   arrayUnion,
@@ -55,10 +55,14 @@ import {
   applyWatermarkToImage,
   processCleanImage,
 } from "../lib/watermark";
-import { useNotify } from "../components/Notifications";
+import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { formatDhakaDateTime, formatDhakaFeedTime } from "../lib/dhakaTime";
+import {
+  hasImmediateAdminOrStaffRole,
+  checkStaffRecord,
+} from "../lib/admin";
 
 import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -77,9 +81,11 @@ export const NewsDetails: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const notify = useNotify();
+  const confirm = useConfirm();
 
   const commentInputRef = useRef<HTMLInputElement | null>(null);
   const commentFileRef = useRef<HTMLInputElement | null>(null);
+  const submittingCommentRef = useRef(false);
 
   const [post, setPost] = useState<ScamPost | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,17 +96,20 @@ export const NewsDetails: React.FC = () => {
   const [commentText, setCommentText] = useState("");
   const [commentImage, setCommentImage] = useState<string | null>(null);
   const [processingCommentImg, setProcessingCommentImg] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{
     commentId: string;
     userName: string;
   } | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
+  const [savingCommentEdit, setSavingCommentEdit] = useState(false);
 
   const [showInlineReactions, setShowInlineReactions] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>(() =>
     getSavedPostIdsLocal()
   );
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [localReaction, setLocalReaction] = useState<ReactionType | null>(null);
 
@@ -112,22 +121,22 @@ export const NewsDetails: React.FC = () => {
         setIsAdmin(false);
         return;
       }
-      const email = u.email?.toLowerCase().trim() || "";
-      if (
-        email === "admin@deep.shop" ||
-        email === "deepshop@gmail.com" ||
-        email === "deepshopbysam@gmail.com" ||
-        localStorage.getItem("isAdmin") === "true"
-      ) {
+      if (hasImmediateAdminOrStaffRole(null, u)) {
         setIsAdmin(true);
         return;
       }
       try {
         const snap = await getDoc(doc(db, "users", u.uid));
-        if (snap.exists() && ["admin", "staff"].includes(snap.data().role)) {
+        const uData = snap.exists() ? snap.data() : null;
+        if (hasImmediateAdminOrStaffRole(uData, u)) {
           setIsAdmin(true);
+          return;
         }
-      } catch {}
+        const staffRes = await checkStaffRecord(uData?.email || u.email);
+        setIsAdmin(staffRes.isStaff);
+      } catch {
+        setIsAdmin(false);
+      }
     });
     return unsub;
   }, []);
@@ -192,6 +201,20 @@ export const NewsDetails: React.FC = () => {
       }
     };
 
+    const saveLocalCommentsForPost = (nextList: ScamComment[]) => {
+      try {
+        const all = JSON.parse(
+          localStorage.getItem("deep_post_comments") || "{}"
+        );
+        if (nextList.length === 0) {
+          delete all[id];
+        } else {
+          all[id] = nextList;
+        }
+        localStorage.setItem("deep_post_comments", JSON.stringify(all));
+      } catch {}
+    };
+
     if (id.startsWith("showcase_") || id.startsWith("post_")) {
       setComments(loadLocalComments());
     }
@@ -210,9 +233,36 @@ export const NewsDetails: React.FC = () => {
         const local = loadLocalComments();
         const map = new Map<string, ScamComment>();
         remote.forEach((c) => map.set(c.id, c));
-        local.forEach((c) => {
-          if (!map.has(c.id)) map.set(c.id, c);
+
+        // Clean out local fallback comments that have already synced to Firestore
+        // or legacy temp `cmt_*` duplicates created with a different ID
+        const unsyncedLocal: ScamComment[] = [];
+        let localChanged = false;
+        local.forEach((lc) => {
+          if (map.has(lc.id)) {
+            localChanged = true;
+            return;
+          }
+          const isLegacyDuplicate =
+            String(lc.id).startsWith("cmt_") &&
+            remote.some(
+              (rc) =>
+                rc.userId === lc.userId &&
+                (rc.text || "") === (lc.text || "") &&
+                Math.abs((rc.createdAt || 0) - (lc.createdAt || 0)) < 25000
+            );
+          if (isLegacyDuplicate) {
+            localChanged = true;
+            return;
+          }
+          unsyncedLocal.push(lc);
+          map.set(lc.id, lc);
         });
+
+        if (localChanged) {
+          saveLocalCommentsForPost(unsyncedLocal);
+        }
+
         setComments(
           Array.from(map.values()).sort((a, b) => a.createdAt - b.createdAt)
         );
@@ -395,7 +445,11 @@ export const NewsDetails: React.FC = () => {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingCommentRef.current) return;
     if (!post || (!commentText.trim() && !commentImage)) return;
+
+    submittingCommentRef.current = true;
+    setIsSubmittingComment(true);
     triggerHaptic();
 
     const authorName =
@@ -403,6 +457,14 @@ export const NewsDetails: React.FC = () => {
       currentUser?.email?.split("@")[0] ||
       "Community Member";
     const authorAvatar = currentUser?.photoURL || creatorAvatar1;
+    const isLocalOnlyPost =
+      post.id.startsWith("showcase_") || post.id.startsWith("post_");
+
+    // Pre-generate the exact Firestore document reference so optimistic UI and Firestore share ONE identical ID
+    const commentRef = !isLocalOnlyPost
+      ? doc(collection(db, "scam_posts", post.id, "comments"))
+      : null;
+    const commentId = commentRef ? commentRef.id : `cmt_${Date.now()}`;
 
     const newCommentObj: Omit<ScamComment, "id"> = {
       postId: post.id,
@@ -410,16 +472,21 @@ export const NewsDetails: React.FC = () => {
       userName: authorName,
       userAvatar: authorAvatar,
       text: commentText.trim(),
-      imageUrl: commentImage || undefined,
-      replyToCommentId: replyingTo?.commentId,
-      replyToUserName: replyingTo?.userName,
+      ...(commentImage ? { imageUrl: commentImage } : {}),
+      ...(replyingTo
+        ? {
+            replyToCommentId: replyingTo.commentId,
+            replyToUserName: replyingTo.userName,
+          }
+        : {}),
       createdAt: Date.now(),
     };
 
-    const tempId = `cmt_${Date.now()}`;
-    const fullComment: ScamComment = { id: tempId, ...newCommentObj };
+    const fullComment: ScamComment = { id: commentId, ...newCommentObj };
 
-    setComments((prev) => [...prev, fullComment]);
+    setComments((prev) =>
+      prev.some((c) => c.id === commentId) ? prev : [...prev, fullComment]
+    );
     setPost((prev) =>
       prev ? { ...prev, commentsCount: (prev.commentsCount || 0) + 1 } : null
     );
@@ -428,31 +495,157 @@ export const NewsDetails: React.FC = () => {
     setReplyingTo(null);
 
     try {
-      const allLocal = JSON.parse(
-        localStorage.getItem("deep_post_comments") || "{}"
-      );
-      const list = Array.isArray(allLocal[post.id]) ? allLocal[post.id] : [];
-      list.push(fullComment);
-      allLocal[post.id] = list;
-      localStorage.setItem("deep_post_comments", JSON.stringify(allLocal));
-    } catch {}
-
-    if (!post.id.startsWith("showcase_")) {
-      try {
-        await addDoc(
-          collection(db, "scam_posts", post.id, "comments"),
-          newCommentObj
-        );
+      if (commentRef) {
+        await setDoc(commentRef, newCommentObj);
         await updateDoc(doc(db, "scam_posts", post.id), {
           commentsCount: increment(1),
         });
+      } else {
+        const allLocal = JSON.parse(
+          localStorage.getItem("deep_post_comments") || "{}"
+        );
+        const list: ScamComment[] = Array.isArray(allLocal[post.id])
+          ? allLocal[post.id]
+          : [];
+        if (!list.some((c) => c.id === commentId)) {
+          list.push(fullComment);
+        }
+        allLocal[post.id] = list;
+        localStorage.setItem("deep_post_comments", JSON.stringify(allLocal));
+      }
+    } catch {
+      // Offline / permission fallback so user's comment is still preserved locally with the same ID
+      try {
+        const allLocal = JSON.parse(
+          localStorage.getItem("deep_post_comments") || "{}"
+        );
+        const list: ScamComment[] = Array.isArray(allLocal[post.id])
+          ? allLocal[post.id]
+          : [];
+        if (!list.some((c) => c.id === commentId)) {
+          list.push(fullComment);
+        }
+        allLocal[post.id] = list;
+        localStorage.setItem("deep_post_comments", JSON.stringify(allLocal));
+      } catch {}
+    } finally {
+      submittingCommentRef.current = false;
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleStartEditComment = (cmt: ScamComment) => {
+    triggerHaptic();
+    setEditingCommentId(cmt.id);
+    setEditingCommentText(cmt.text || "");
+  };
+
+  const handleSaveCommentEdit = async (cmt: ScamComment) => {
+    if (!post) return;
+    const trimmed = editingCommentText.trim();
+    if (!trimmed && !cmt.imageUrl) {
+      notify("Comment cannot be empty", "error");
+      return;
+    }
+    setSavingCommentEdit(true);
+    triggerHaptic();
+    const updatedAt = Date.now();
+
+    setComments((prev) =>
+      prev.map((item) =>
+        item.id === cmt.id
+          ? { ...item, text: trimmed, isEdited: true, updatedAt }
+          : item
+      )
+    );
+    setEditingCommentId(null);
+    setEditingCommentText("");
+
+    try {
+      const allLocal = JSON.parse(
+        localStorage.getItem("deep_post_comments") || "{}"
+      );
+      if (Array.isArray(allLocal[post.id])) {
+        allLocal[post.id] = allLocal[post.id].map((item: ScamComment) =>
+          item.id === cmt.id
+            ? { ...item, text: trimmed, isEdited: true, updatedAt }
+            : item
+        );
+        localStorage.setItem("deep_post_comments", JSON.stringify(allLocal));
+      }
+    } catch {}
+
+    if (!post.id.startsWith("showcase_") && !String(cmt.id).startsWith("cmt_")) {
+      try {
+        await updateDoc(doc(db, "scam_posts", post.id, "comments", cmt.id), {
+          text: trimmed,
+          isEdited: true,
+          updatedAt,
+        });
+      } catch {
+        notify("Could not sync comment edit", "error");
+      }
+    }
+    setSavingCommentEdit(false);
+    notify("Comment updated", "success");
+  };
+
+  const handleDeleteComment = async (cmt: ScamComment) => {
+    if (!post) return;
+    triggerHaptic();
+    const ok = await confirm({
+      title: "Delete Comment?",
+      message: "Are you sure you want to delete this comment?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+    if (!ok) return;
+
+    setComments((prev) => prev.filter((item) => item.id !== cmt.id));
+    setPost((prev) =>
+      prev
+        ? { ...prev, commentsCount: Math.max(0, (prev.commentsCount || 1) - 1) }
+        : null
+    );
+    if (editingCommentId === cmt.id) {
+      setEditingCommentId(null);
+      setEditingCommentText("");
+    }
+
+    try {
+      const allLocal = JSON.parse(
+        localStorage.getItem("deep_post_comments") || "{}"
+      );
+      if (Array.isArray(allLocal[post.id])) {
+        allLocal[post.id] = allLocal[post.id].filter(
+          (item: ScamComment) => item.id !== cmt.id
+        );
+        localStorage.setItem("deep_post_comments", JSON.stringify(allLocal));
+      }
+    } catch {}
+
+    if (!post.id.startsWith("showcase_") && !String(cmt.id).startsWith("cmt_")) {
+      try {
+        await deleteDoc(doc(db, "scam_posts", post.id, "comments", cmt.id));
+        await updateDoc(doc(db, "scam_posts", post.id), {
+          commentsCount: increment(-1),
+        });
       } catch {}
     }
+    notify("Comment deleted", "info");
   };
 
   const handleDeletePost = async () => {
     if (!post) return;
     triggerHaptic();
+    const ok = await confirm({
+      title: "Delete Post?",
+      message: "This post and its discussion will be permanently removed.",
+      confirmText: "Delete Post",
+      cancelText: "Cancel",
+    });
+    if (!ok) return;
+
     try {
       if (!post.id.startsWith("showcase_")) {
         await deleteDoc(doc(db, "scam_posts", post.id));
@@ -557,24 +750,15 @@ export const NewsDetails: React.FC = () => {
                   <span>Edit</span>
                 </button>
 
-                {!confirmDelete ? (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-zinc-900 text-rose-600 flex items-center justify-center shadow-2xs cursor-pointer shrink-0"
-                    aria-label="Delete post"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleDeletePost}
-                    className="px-3.5 h-9 sm:h-10 rounded-full bg-rose-600 text-white text-xs font-bold cursor-pointer whitespace-nowrap"
-                  >
-                    Confirm Delete
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleDeletePost}
+                  className="px-3.5 h-9 sm:h-10 rounded-full bg-white dark:bg-zinc-900 text-rose-600 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer whitespace-nowrap"
+                  aria-label="Delete post"
+                >
+                  <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Delete</span>
+                </button>
               </>
             )}
           </div>
@@ -606,6 +790,12 @@ export const NewsDetails: React.FC = () => {
                     <span className="truncate">
                       {formatDhakaDateTime(post.createdAt)}
                     </span>
+                    {post.isEdited && (
+                      <>
+                        <span className="shrink-0">·</span>
+                        <span className="shrink-0">Edited</span>
+                      </>
+                    )}
                     <span className="shrink-0">·</span>
                     <Globe className="w-3 h-3 shrink-0" />
                   </p>
@@ -884,72 +1074,151 @@ export const NewsDetails: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                comments.map((cmt) => (
-                  <div
-                    key={cmt.id}
-                    className={`flex items-start gap-2.5 sm:gap-3 ${
-                      cmt.replyToCommentId ? "pl-7 sm:pl-8" : ""
-                    }`}
-                  >
-                    <img
-                      src={cmt.userAvatar || creatorAvatar1}
-                      alt={cmt.userName}
-                      referrerPolicy="no-referrer"
-                      onClick={() => navigate(`/author/${cmt.userId}`)}
-                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shrink-0 cursor-pointer"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800 px-3.5 py-2.5 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                            {cmt.userName}
-                          </span>
-                          <span className="text-[10px] text-zinc-400 whitespace-nowrap shrink-0">
-                            {formatDhakaFeedTime(cmt.createdAt)}
-                          </span>
+                comments.map((cmt) => {
+                  const isCommentOwner = Boolean(
+                    currentUser?.uid && currentUser.uid === cmt.userId
+                  );
+                  const canDeleteComment =
+                    isCommentOwner ||
+                    isAdmin ||
+                    Boolean(
+                      currentUser?.uid && currentUser.uid === post.reporterId
+                    );
+                  const isEditingThis = editingCommentId === cmt.id;
+
+                  return (
+                    <div
+                      key={cmt.id}
+                      className={`flex items-start gap-2.5 sm:gap-3 ${
+                        cmt.replyToCommentId ? "pl-7 sm:pl-8" : ""
+                      }`}
+                    >
+                      <img
+                        src={cmt.userAvatar || creatorAvatar1}
+                        alt={cmt.userName}
+                        referrerPolicy="no-referrer"
+                        onClick={() => navigate(`/author/${cmt.userId}`)}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shrink-0 cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800 px-3.5 py-2.5 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                              {cmt.userName}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 whitespace-nowrap shrink-0">
+                              {formatDhakaFeedTime(cmt.createdAt)}
+                              {cmt.isEdited ? " · Edited" : ""}
+                            </span>
+                          </div>
+
+                          {cmt.replyToUserName && (
+                            <span className="text-[11px] font-semibold text-[#1877F2] block">
+                              @{cmt.replyToUserName}
+                            </span>
+                          )}
+
+                          {isEditingThis ? (
+                            <div className="space-y-2 pt-0.5">
+                              <input
+                                type="text"
+                                value={editingCommentText}
+                                onChange={(e) =>
+                                  setEditingCommentText(e.target.value)
+                                }
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSaveCommentEdit(cmt);
+                                  } else if (e.key === "Escape") {
+                                    setEditingCommentId(null);
+                                    setEditingCommentText("");
+                                  }
+                                }}
+                                className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-white outline-none focus:border-[#1877F2]"
+                              />
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingCommentId(null);
+                                    setEditingCommentText("");
+                                  }}
+                                  className="px-2.5 py-1 rounded-full bg-zinc-200/80 dark:bg-zinc-700 text-[10.5px] font-semibold text-zinc-700 dark:text-zinc-200 cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={savingCommentEdit}
+                                  onClick={() => handleSaveCommentEdit(cmt)}
+                                  className="px-3 py-1 rounded-full bg-[#1877F2] text-white text-[10.5px] font-bold disabled:opacity-50 cursor-pointer"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            cmt.text && (
+                              <p className="text-xs text-zinc-700 dark:text-zinc-200 leading-relaxed break-words">
+                                <NewsRichText text={cmt.text} />
+                              </p>
+                            )
+                          )}
+
+                          {cmt.imageUrl && (
+                            <img
+                              src={cmt.imageUrl}
+                              alt="Comment media"
+                              referrerPolicy="no-referrer"
+                              className="rounded-xl max-h-48 w-auto object-cover mt-1"
+                            />
+                          )}
                         </div>
 
-                        {cmt.replyToUserName && (
-                          <span className="text-[11px] font-semibold text-[#1877F2] block">
-                            @{cmt.replyToUserName}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-3 pl-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyingTo({
+                                commentId: cmt.id,
+                                userName: cmt.userName,
+                              });
+                              commentInputRef.current?.focus();
+                            }}
+                            className="text-[11px] font-semibold text-zinc-500 hover:text-[#1877F2] flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                          >
+                            <Reply className="w-3 h-3" />
+                            <span>Reply</span>
+                          </button>
 
-                        {cmt.text && (
-                          <p className="text-xs text-zinc-700 dark:text-zinc-200 leading-relaxed break-words">
-                            <NewsRichText text={cmt.text} />
-                          </p>
-                        )}
+                          {isCommentOwner && !isEditingThis && (
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditComment(cmt)}
+                              className="text-[11px] font-semibold text-zinc-500 hover:text-[#1877F2] flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                          )}
 
-                        {cmt.imageUrl && (
-                          <img
-                            src={cmt.imageUrl}
-                            alt="Comment media"
-                            referrerPolicy="no-referrer"
-                            className="rounded-xl max-h-48 w-auto object-cover mt-1"
-                          />
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3 pl-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setReplyingTo({
-                              commentId: cmt.id,
-                              userName: cmt.userName,
-                            });
-                            commentInputRef.current?.focus();
-                          }}
-                          className="text-[11px] font-semibold text-zinc-500 hover:text-[#1877F2] flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                        >
-                          <Reply className="w-3 h-3" />
-                          <span>Reply</span>
-                        </button>
+                          {canDeleteComment && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(cmt)}
+                              className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
@@ -1017,7 +1286,9 @@ export const NewsDetails: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={!commentText.trim() && !commentImage}
+                  disabled={
+                    isSubmittingComment || (!commentText.trim() && !commentImage)
+                  }
                   className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#1877F2] text-white flex items-center justify-center disabled:opacity-45 shrink-0 cursor-pointer"
                   aria-label="Send comment"
                 >

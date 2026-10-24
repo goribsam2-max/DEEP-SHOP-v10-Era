@@ -21,6 +21,9 @@ import {
   LayoutDashboard,
   TrendingUp,
   Search,
+  Edit3,
+  Trash2,
+  Eye,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -30,6 +33,7 @@ import {
   onSnapshot,
   doc,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { ScamPost, ReactionType } from "../types";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
@@ -48,10 +52,15 @@ import {
   getSavedPostIdsLocal,
   toggleSavePostHelper,
 } from "./NewsHubSubPages";
-import { useNotify } from "../components/Notifications";
+import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { formatDhakaFeedTime } from "../lib/dhakaTime";
+import {
+  hasImmediateAdminOrStaffRole,
+  checkStaffRecord,
+  canAccessSellerDashboard,
+} from "../lib/admin";
 
 import defaultAvatarImg from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -81,8 +90,11 @@ export const NewsHub: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const notify = useNotify();
+  const confirm = useConfirm();
 
   const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isStaffDoc, setIsStaffDoc] = useState(false);
   const [firestorePosts, setFirestorePosts] = useState<ScamPost[]>([]);
   const [stories, setStories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +114,7 @@ export const NewsHub: React.FC = () => {
   const [openReactionPostId, setOpenReactionPostId] = useState<string | null>(
     null
   );
+  const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [localUserReactions, setLocalUserReactions] = useState<
     Record<string, ReactionType>
   >(() => {
@@ -113,9 +126,39 @@ export const NewsHub: React.FC = () => {
   });
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((u) => setCurrentUser(u));
-    return unsub;
+    let unsubUserDoc: (() => void) | null = null;
+    const unsub = auth.onAuthStateChanged((u) => {
+      setCurrentUser(u);
+      if (unsubUserDoc) {
+        unsubUserDoc();
+        unsubUserDoc = null;
+      }
+      if (!u) {
+        setUserProfile(null);
+        setIsStaffDoc(false);
+        return;
+      }
+      unsubUserDoc = onSnapshot(
+        doc(db, "users", u.uid),
+        (snap) => {
+          setUserProfile(snap.exists() ? snap.data() : null);
+        },
+        () => {}
+      );
+      checkStaffRecord(u.email).then((res) => setIsStaffDoc(res.isStaff));
+    });
+    return () => {
+      unsub();
+      if (unsubUserDoc) unsubUserDoc();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!openMenuPostId) return;
+    const closeMenu = () => setOpenMenuPostId(null);
+    window.addEventListener("click", closeMenu);
+    return () => window.removeEventListener("click", closeMenu);
+  }, [openMenuPostId]);
 
   useEffect(() => {
     const syncPrefs = () => setPrefs(loadFeedPreferences());
@@ -335,7 +378,41 @@ export const NewsHub: React.FC = () => {
     );
   };
 
-  const userAvatar = currentUser?.photoURL || defaultAvatarImg;
+  const handleDeletePost = async (post: ScamPost) => {
+    triggerHaptic();
+    setOpenMenuPostId(null);
+    const ok = await confirm({
+      title: "Delete Post?",
+      message: "Are you sure you want to permanently delete this post?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+    if (!ok) return;
+
+    try {
+      if (!post.id.startsWith("showcase_")) {
+        await deleteDoc(doc(db, "scam_posts", post.id));
+      }
+      setFirestorePosts((prev) => prev.filter((p) => p.id !== post.id));
+      try {
+        const existing = JSON.parse(
+          localStorage.getItem("deep_scam_posts") || "[]"
+        );
+        localStorage.setItem(
+          "deep_scam_posts",
+          JSON.stringify(existing.filter((p: any) => p.id !== post.id))
+        );
+      } catch {}
+      notify("Post deleted", "info");
+    } catch {
+      notify("Could not delete post", "error");
+    }
+  };
+
+  const isAdmin =
+    hasImmediateAdminOrStaffRole(userProfile, currentUser) || isStaffDoc;
+  const canAddStory = canAccessSellerDashboard(userProfile, currentUser);
+  const userAvatar = userProfile?.photoURL || currentUser?.photoURL || defaultAvatarImg;
   const isPersonalizedActive =
     prefs.selectedThemes.length < FEED_THEMES.length ||
     Object.values(prefs.contentPreferences).some((v) => !v);
@@ -524,58 +601,61 @@ export const NewsHub: React.FC = () => {
               </div>
             </header>
 
-            {/* 2. Horizontal Circular Stories Row (Your Story + Real Firestore Stories Only) */}
-            <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
-              {/* Your Story */}
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/add-story");
-                }}
-                className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-              >
-                <div className="relative w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
-                  <img
-                    src={userAvatar}
-                    alt="Your Story"
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
-                  />
-                  <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-zinc-900 dark:bg-[#1877F2] text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center">
-                    <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
-                  </span>
-                </div>
-                <span className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-100">
-                  Your Story
-                </span>
-              </button>
+            {/* 2. Horizontal Circular Stories Row (Your Story ONLY for verified Sellers/Admins + Real Firestore Stories) */}
+            {(canAddStory || stories.length > 0) && (
+              <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
+                {canAddStory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      navigate("/add-story");
+                    }}
+                    className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+                  >
+                    <div className="relative w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
+                      <img
+                        src={userAvatar}
+                        alt="Your Story"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
+                      />
+                      <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-zinc-900 dark:bg-[#1877F2] text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center">
+                        <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-100">
+                      Your Story
+                    </span>
+                  </button>
+                )}
 
-              {/* Real Community Stories from Firestore */}
-              {stories.map((st) => (
-                <button
-                  key={st.id}
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    navigate(`/news-hub/story/${st.id}`);
-                  }}
-                  className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-                >
-                  <div className="w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
-                    <img
-                      src={st.avatar}
-                      alt={st.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
-                    />
-                  </div>
-                  <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
-                    {st.name}
-                  </span>
-                </button>
-              ))}
-            </div>
+                {/* Real Community Stories from Firestore */}
+                {stories.map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      navigate(`/news-hub/story/${st.id}`);
+                    }}
+                    className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+                  >
+                    <div className="w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
+                      <img
+                        src={st.avatar}
+                        alt={st.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
+                      />
+                    </div>
+                    <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
+                      {st.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* 3. Composer Card */}
             <section className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3.5">
@@ -845,24 +925,94 @@ export const NewsHub: React.FC = () => {
 
                             <div className="flex items-center gap-1.5 text-[11.5px] text-zinc-500 dark:text-zinc-400 whitespace-nowrap overflow-hidden">
                               <span className="truncate">{formatFeedTimestamp(post.createdAt)}</span>
+                              {post.isEdited && (
+                                <>
+                                  <span className="shrink-0">·</span>
+                                  <span className="shrink-0">Edited</span>
+                                </>
+                              )}
                               <span className="shrink-0">·</span>
                               <Globe className="w-3 h-3 stroke-[2] shrink-0" />
                             </div>
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            triggerHaptic();
-                            navigate(`/news-hub/post/${post.id}`);
-                          }}
-                          className="w-10 h-10 rounded-full bg-[#F6F7F9] dark:bg-zinc-800 hover:bg-[#ECEEF2] flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0 cursor-pointer"
-                          aria-label="Post options and details"
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="relative shrink-0"
                         >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setOpenMenuPostId((prev) =>
+                                prev === post.id ? null : post.id
+                              );
+                            }}
+                            className="w-10 h-10 rounded-full bg-[#F6F7F9] dark:bg-zinc-800 hover:bg-[#ECEEF2] dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0 cursor-pointer"
+                            aria-label="Post options"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {openMenuPostId === post.id && (
+                            <div className="absolute right-0 top-11 z-30 w-44 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-[0_12px_32px_rgba(15,23,42,0.14)] p-1.5 space-y-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuPostId(null);
+                                  navigate(`/news-hub/post/${post.id}`);
+                                }}
+                                className="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-left cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span>View Post</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuPostId(null);
+                                  handleToggleSave(post);
+                                }}
+                                className="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-left cursor-pointer"
+                              >
+                                <Bookmark className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span>{saved ? "Remove Saved" : "Save Post"}</span>
+                              </button>
+
+                              {(isAdmin ||
+                                Boolean(
+                                  currentUser?.uid &&
+                                    currentUser.uid === post.reporterId
+                                )) && (
+                                <>
+                                  <div className="my-1 border-t border-slate-100 dark:border-zinc-800" />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenMenuPostId(null);
+                                      navigate(`/news-hub/edit/${post.id}`);
+                                    }}
+                                    className="w-full px-3 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-semibold text-[#1877F2] flex items-center gap-2 text-left cursor-pointer"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Edit Post</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePost(post)}
+                                    className="w-full px-3 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold text-rose-600 flex items-center gap-2 text-left cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Delete Post</span>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Caption / Body Text with Clickable Blue #Hashtags & Stylish Inline Links */}

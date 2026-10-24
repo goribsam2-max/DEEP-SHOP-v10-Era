@@ -54,6 +54,32 @@ export function hasImmediateAdminOrStaffRole(
   return role === "staff" || role === "moderator";
 }
 
+export function isVerifiedSeller(userData?: any | null): boolean {
+  if (!userData) return false;
+  const role = String(userData?.role || "").toLowerCase().trim();
+  const type = String(userData?.type || "").toLowerCase().trim();
+  const sellerStatus = String(userData?.sellerStatus || "")
+    .toLowerCase()
+    .trim();
+
+  if (role === "customer" || role === "buyer") return false;
+  if (sellerStatus === "rejected" || sellerStatus === "pending") return false;
+
+  return (
+    role === "seller" ||
+    type === "seller" ||
+    userData?.isSeller === true ||
+    sellerStatus === "approved"
+  );
+}
+
+export function canAccessSellerDashboard(
+  userData?: any | null,
+  authUser?: FirebaseUser | null
+): boolean {
+  return isSuperAdminOrAdmin(userData, authUser) || isVerifiedSeller(userData);
+}
+
 export async function checkStaffRecord(
   email?: string | null
 ): Promise<{ isStaff: boolean; permissions: string[] }> {

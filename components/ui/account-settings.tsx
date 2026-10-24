@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNotify, useConfirm } from '@/components/Notifications';
 import Icon from '../Icon';
 import { useTheme } from '@/components/ThemeContext';
+import { canAccessSellerDashboard } from '@/lib/admin';
 
 export function AccountSettings() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export function AccountSettings() {
   const [hideEmail, setHideEmail] = useState(false);
   const [hidePhone, setHidePhone] = useState(false);
   const [disableCalls, setDisableCalls] = useState(false);
-  const [userRole, setUserRole] = useState<string>('user');
+  const [canManageStore, setCanManageStore] = useState(false);
   const [ordersPaused, setOrdersPaused] = useState(false);
   const [pauseReason, setPauseReason] = useState('');
   const [showPauseModal, setShowPauseModal] = useState(false);
@@ -43,6 +44,7 @@ export function AccountSettings() {
     if (user) {
       setEmail(user.email || '');
       setName(user.displayName || '');
+      setCanManageStore(canAccessSellerDashboard(null, user));
       
       // Fetch username & seller settings from DB
       import('firebase/firestore').then(({ doc, getDoc }) => {
@@ -55,7 +57,7 @@ export function AccountSettings() {
             setHideEmail(data.hideEmail || false);
             setHidePhone(data.hidePhone || false);
             setDisableCalls(data.disableCalls || false);
-            setUserRole(data.role || 'user');
+            setCanManageStore(canAccessSellerDashboard(data, user));
             setOrdersPaused(!!data.ordersPaused);
             setPauseReason(data.pauseReason || '');
             setTempPauseReason(data.pauseReason || '');
@@ -435,8 +437,8 @@ export function AccountSettings() {
            );
         })()}
 
-        {/* Seller / Store Settings (for sellers/admins) */}
-        {(userRole === 'seller' || userRole === 'admin') && (
+        {/* Seller / Store Settings (for verified sellers/admins) */}
+        {canManageStore && (
           <div className="bg-white dark:bg-zinc-900 rounded-[28px] overflow-hidden shadow-sm p-2 border border-amber-500/20">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 px-4 py-2 mt-2 mb-1 flex items-center gap-1.5">
               <span>🏪 Seller Store Management</span>

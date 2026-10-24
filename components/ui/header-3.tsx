@@ -21,7 +21,10 @@ import {
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 
 import { triggerHaptic } from "../../lib/haptics";
-import { hasImmediateAdminOrStaffRole } from "../../lib/admin";
+import {
+  hasImmediateAdminOrStaffRole,
+  checkStaffRecord,
+} from "../../lib/admin";
 
 type LinkItem = {
   title: string;
@@ -178,6 +181,7 @@ export function Header() {
   const [open, setOpen] = React.useState(false);
   const [user, setUser] = React.useState<any>(null);
   const [userProfile, setUserProfile] = React.useState<any>(null);
+  const [isStaffDoc, setIsStaffDoc] = React.useState(false);
   const [categories, setCategories] = React.useState<string[]>([]);
   const scrolled = useScroll(10);
   useTheme();
@@ -219,12 +223,15 @@ export function Header() {
   const isHomePage = location.pathname === "/";
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isAffiliate = location.pathname.startsWith("/affiliate");
+  const userHasAdminAccess =
+    hasImmediateAdminOrStaffRole(userProfile, user) || isStaffDoc;
+  const showAdminMenu = isAdminRoute && userHasAdminAccess;
   const isInnerPage =
     location.pathname !== "/" &&
     location.pathname !== "/profile" &&
     location.pathname !== "/admin" &&
     !isAffiliate;
-  const linksToShow = isAdminRoute ? adminLinks : productLinks;
+  const linksToShow = showAdminMenu ? adminLinks : productLinks;
 
   useEffect(() => {
     let unsubscribeChats: (() => void) | null = null;
@@ -324,10 +331,27 @@ export function Header() {
   }, [open]);
 
   useEffect(() => {
+    let active = true;
+    const email = userProfile?.email || user?.email;
+    if (!email) {
+      setIsStaffDoc(false);
+      return;
+    }
+    if (hasImmediateAdminOrStaffRole(userProfile, user)) {
+      setIsStaffDoc(true);
+      return;
+    }
+    checkStaffRecord(email).then((res) => {
+      if (active) setIsStaffDoc(res.isStaff);
+    });
+    return () => {
+      active = false;
+    };
+  }, [user, userProfile]);
+
+  useEffect(() => {
     window.dispatchEvent(new CustomEvent("toggleSidebar", { detail: open }));
   }, [open]);
-
-  const userHasAdminAccess = hasImmediateAdminOrStaffRole(userProfile, user);
 
   // News Hub-matching circular white floating button style for Shop Home (/)
   const newsHubCircleBtnClass =
@@ -632,7 +656,7 @@ export function Header() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar w-full">
           <div className="flex w-full flex-col gap-y-1.5 pb-4 px-2">
             <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 px-2 mt-4 mb-2 block">
-              {isAdminRoute ? "Admin Pages" : "Explore Pages"}
+              {showAdminMenu ? "Admin Pages" : "Explore Pages"}
             </span>
             {linksToShow.map((link) => (
               <ListItem
@@ -645,7 +669,7 @@ export function Header() {
               />
             ))}
 
-            {!isAdminRoute && categories.length > 0 && (
+            {!showAdminMenu && categories.length > 0 && (
               <>
                 <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 px-4 mt-6 mb-2 block">
                   Categories
@@ -672,7 +696,7 @@ export function Header() {
 
         {/* Bottom actions sticky */}
         <div className="flex flex-col gap-2 p-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 w-full shrink-0 pb-6 md:pb-4">
-          {userHasAdminAccess && !isAdminRoute && (
+          {userHasAdminAccess && !showAdminMenu && (
             <Button
               className="w-full bg-[#1877F2] hover:bg-[#1465D8] text-white font-bold"
               onClick={() => {
@@ -684,7 +708,7 @@ export function Header() {
             </Button>
           )}
 
-          {isAdminRoute && (
+          {showAdminMenu && (
             <Button
               variant="outline"
               className="w-full bg-transparent border-zinc-200 dark:border-zinc-700 mb-2 text-zinc-700 dark:text-zinc-200"

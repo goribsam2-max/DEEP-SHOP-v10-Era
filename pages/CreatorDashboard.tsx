@@ -18,7 +18,8 @@ import {
   BarChart3,
   ChevronRight,
   Wallet,
-  Lock
+  Lock,
+  Pencil
 } from "lucide-react";
 import { User, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -26,11 +27,12 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   collection,
   getDocs,
   addDoc
 } from "firebase/firestore";
-import { useNotify } from "../components/Notifications";
+import { useNotify, useConfirm } from "../components/Notifications";
 import SEO from "../components/SEO";
 import { triggerHaptic } from "../lib/haptics";
 import {
@@ -50,6 +52,7 @@ export const CreatorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const notify = useNotify();
+  const confirm = useConfirm();
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
   const [authChecked, setAuthChecked] = useState(false);
@@ -179,6 +182,36 @@ export const CreatorDashboard: React.FC = () => {
     } catch (err) {
       console.error("Failed to persist creator setting:", err);
     }
+  };
+
+  const handleDeleteCreatorPost = (e: React.MouseEvent, postId: string) => {
+    e.stopPropagation();
+    triggerHaptic();
+    confirm({
+      title: "Delete Post?",
+      message:
+        "Are you sure you want to permanently delete this post? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, "scam_posts", postId));
+        } catch {}
+        try {
+          const local = JSON.parse(
+            localStorage.getItem("scam_posts_local_v1") || "[]"
+          );
+          if (Array.isArray(local)) {
+            localStorage.setItem(
+              "scam_posts_local_v1",
+              JSON.stringify(local.filter((p: any) => p.id !== postId))
+            );
+          }
+        } catch {}
+        setPosts((prev) => prev.filter((p) => p.id !== postId));
+        notify("Post deleted successfully", "success");
+      },
+    });
   };
 
   const followerCount =
@@ -823,13 +856,39 @@ export const CreatorDashboard: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="text-right shrink-0">
-                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block font-mono whitespace-nowrap">
-                            ৳{postEstBDT}
-                          </span>
-                          <span className="text-[10px] text-zinc-400 block font-mono whitespace-nowrap">
-                            {pEngRate}% eng.
-                          </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-right">
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block font-mono whitespace-nowrap">
+                              ৳{postEstBDT}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono whitespace-nowrap">
+                              {pEngRate}% eng.
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerHaptic();
+                                navigate(`/news-hub/create?edit=${post.id}`);
+                              }}
+                              className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer"
+                              aria-label="Edit post"
+                              title="Edit post"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteCreatorPost(e, post.id)}
+                              className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center transition cursor-pointer"
+                              aria-label="Delete post"
+                              title="Delete post"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1299,16 +1358,41 @@ export const CreatorDashboard: React.FC = () => {
                   <div
                     key={p.id}
                     onClick={() => navigate(`/news-hub/post/${p.id}`)}
-                    className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-2"
+                    className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-2.5"
                   >
                     <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 whitespace-nowrap">
                       <span>{p.postType === "scam" ? "Scam Report" : "Community Post"}</span>
-                      <span>{formatDhakaDateTime(p.createdAt)}</span>
+                      <span>
+                        {formatDhakaDateTime(p.createdAt)}
+                        {p.isEdited ? " · Edited" : ""}
+                      </span>
                     </div>
                     <h4 className="font-bold text-sm text-zinc-900 dark:text-white line-clamp-1">
                       {p.title || "Community Update"}
                     </h4>
                     <p className="text-xs text-zinc-500 line-clamp-2">{p.description}</p>
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic();
+                          navigate(`/news-hub/create?edit=${p.id}`);
+                        }}
+                        className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-200 inline-flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteCreatorPost(e, p.id)}
+                        className="px-3 py-1.5 rounded-full bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-xs font-bold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

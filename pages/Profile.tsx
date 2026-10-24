@@ -79,6 +79,7 @@ import { triggerHaptic } from "../lib/haptics";
 import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
+  isVerifiedSeller,
 } from "../lib/admin";
 
 interface ProfileProps {
@@ -284,11 +285,7 @@ export const Profile: React.FC<ProfileProps> = ({
   const isAdmin =
     hasImmediateAdminOrStaffRole(effectiveProfile, authUser) || isStaffDoc;
 
-  const isSeller = Boolean(
-    effectiveProfile?.role === "seller" ||
-      effectiveProfile?.isSeller === true ||
-      effectiveProfile?.type === "seller"
-  );
+  const isSeller = isVerifiedSeller(effectiveProfile);
 
   const handleLogout = async () => {
     setShowLogoutModal(false);
@@ -345,6 +342,13 @@ export const Profile: React.FC<ProfileProps> = ({
       (effectiveProfile?.followers ? effectiveProfile.followers.length : 0)
   );
 
+  const canSetupCreatorSubs = Boolean(
+    effectiveProfile?.isCreator === true ||
+      (effectiveProfile as any)?.creatorStatus === "approved" ||
+      followers >= 1000 ||
+      isAdmin
+  );
+
   const allSections: ProfileMenuSection[] = useMemo(() => {
     const dashboardItems: ProfileMenuItem[] = [];
 
@@ -360,41 +364,129 @@ export const Profile: React.FC<ProfileProps> = ({
       });
     }
 
-    dashboardItems.push(
-      {
-        id: "seller-dashboard",
-        title: "Seller Dashboard",
-        subtitle: isSeller
-          ? "Manage your shop products, stories & sales"
-          : "Open seller tools & storefront management",
-        badge: isSeller ? "SELLER" : undefined,
-        icon: <Store className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
-        onClick: () => navigate("/seller/dashboard"),
-        keywords: "seller shop store dashboard vendor",
-      },
-      {
-        id: "add-story",
-        title: "Add Story Highlight",
-        subtitle: "Publish a new 48h story to Shop & News Hub",
-        icon: <Plus className="w-5 h-5 text-[#1877F2]" />,
-        onClick: () => navigate("/add-story"),
-        keywords: "story highlight upload status",
-      },
-      {
-        id: "creator-dashboard",
-        title: "Creator Studio & Analytics",
-        subtitle: "Audience insights, star earnings & creator tools",
-        icon: <LayoutDashboard className="w-5 h-5 text-emerald-500" />,
-        onClick: () => navigate("/creator-dashboard"),
-        keywords: "creator studio analytics earnings",
-      },
-      {
+    if (isSeller || isAdmin) {
+      dashboardItems.push(
+        {
+          id: "seller-dashboard",
+          title: "Seller Dashboard",
+          subtitle: "Manage your shop products, stories & sales",
+          badge: "SELLER",
+          icon: <Store className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
+          onClick: () => navigate("/seller/dashboard"),
+          keywords: "seller shop store dashboard vendor",
+        },
+        {
+          id: "add-story",
+          title: "Add Story Highlight",
+          subtitle: "Publish a new 48h story to Shop & News Hub",
+          icon: <Plus className="w-5 h-5 text-[#1877F2]" />,
+          onClick: () => navigate("/add-story"),
+          keywords: "story highlight upload status",
+        }
+      );
+    }
+
+    dashboardItems.push({
+      id: "creator-dashboard",
+      title: "Creator Studio & Analytics",
+      subtitle: "Audience insights, star earnings & payout numbers",
+      icon: <LayoutDashboard className="w-5 h-5 text-emerald-500" />,
+      onClick: () => navigate("/creator-dashboard"),
+      keywords: "creator studio analytics earnings bkash nagad",
+    });
+
+    if (canSetupCreatorSubs) {
+      dashboardItems.push({
         id: "creator-sub-setup",
         title: "Creator Subscription Setup",
         subtitle: "Configure fan tiers & monthly supporter perks",
         icon: <Crown className="w-5 h-5 text-amber-500" />,
         onClick: () => navigate("/creator/subscription-setup"),
         keywords: "creator subscription tiers setup",
+      });
+    }
+
+    const communityItems: ProfileMenuItem[] = [
+      {
+        id: "news-hub",
+        title: "News Hub & Scam Defense Feed",
+        subtitle: "Community updates, voice notes & verified scam alerts",
+        icon: <Newspaper className="w-5 h-5 text-[#1877F2]" />,
+        onClick: () => navigate("/news-hub"),
+        keywords: "news hub feed scam alert community",
+      },
+      {
+        id: "create-post",
+        title: "Create Feed Post / Report Scam",
+        subtitle: "Share photos, voice notes, links or expose a scammer",
+        icon: <ShieldAlert className="w-5 h-5 text-rose-500" />,
+        onClick: () => navigate("/news-hub/create"),
+        keywords: "create post scam report voice",
+      },
+      {
+        id: "saved-posts",
+        title: "Saved Feed Posts",
+        subtitle: "Bookmarked posts & scam reports",
+        icon: <Bookmark className="w-5 h-5 text-blue-500" />,
+        onClick: () => navigate("/news-hub/saved"),
+        keywords: "saved posts bookmarks feed",
+      },
+      {
+        id: "feed-personalization",
+        title: "Feed Personalization",
+        subtitle: "Customize feed themes & content preferences",
+        icon: <Palette className="w-5 h-5 text-indigo-500" />,
+        onClick: () => navigate("/news-hub/personalization"),
+        keywords: "feed personalization customize themes",
+      },
+      {
+        id: "news-notifications",
+        title: "News Hub Activity",
+        subtitle: "Reactions, comments & mentions on your posts",
+        icon: <Bell className="w-5 h-5 text-sky-500" />,
+        onClick: () => navigate("/news-hub/notifications"),
+        keywords: "news hub notifications comments reactions",
+      },
+      {
+        id: "blogs",
+        title: "Tech Blogs & Buying Guides",
+        subtitle: "Read mobile reviews, tips & platform guides",
+        icon: <BookOpen className="w-5 h-5 text-emerald-600" />,
+        onClick: () => navigate("/blog"),
+        keywords: "blog articles tech news guides",
+      },
+    ];
+
+    if (isAdmin) {
+      communityItems.push({
+        id: "create-blog",
+        title: "Write a Blog Article",
+        subtitle: "Publish a guide or review to the blog",
+        icon: <Pencil className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />,
+        onClick: () => navigate("/blog/create"),
+        keywords: "write create blog article",
+      });
+    }
+
+    communityItems.push(
+      {
+        id: "messages",
+        title: "Inbox & Live Messages",
+        subtitle: "Chat with sellers, community & support",
+        badge: unreadMessages > 0 ? String(unreadMessages) : undefined,
+        icon: <MessageSquare className="w-5 h-5 text-blue-600" />,
+        onClick: () => navigate("/messages"),
+        keywords: "messages inbox chat live",
+      },
+      {
+        id: "notifications",
+        title: "App Notifications",
+        subtitle: "Order updates, alerts & announcements",
+        badge:
+          unreadNotifications > 0 ? String(unreadNotifications) : undefined,
+        icon: <Bell className="w-5 h-5 text-amber-500" />,
+        onClick: () => navigate("/notifications"),
+        keywords: "notifications alerts updates",
       }
     );
 
@@ -552,14 +644,6 @@ export const Profile: React.FC<ProfileProps> = ({
             keywords: "stars gift creator support",
           },
           {
-            id: "custom-pay",
-            title: "Custom Payment",
-            subtitle: "Send a custom invoice or installment payment",
-            icon: <QrCode className="w-5 h-5 text-blue-500" />,
-            onClick: () => navigate("/custom-pay"),
-            keywords: "custom pay payment invoice",
-          },
-          {
             id: "payment-methods",
             title: "Saved Payment Methods",
             subtitle: "Manage bKash, Nagad & card payment options",
@@ -596,83 +680,7 @@ export const Profile: React.FC<ProfileProps> = ({
       {
         id: "community-content",
         heading: "News Hub, Blogs & Inbox",
-        items: [
-          {
-            id: "news-hub",
-            title: "News Hub & Scam Defense Feed",
-            subtitle: "Community updates, voice notes & verified scam alerts",
-            icon: <Newspaper className="w-5 h-5 text-[#1877F2]" />,
-            onClick: () => navigate("/news-hub"),
-            keywords: "news hub feed scam alert community",
-          },
-          {
-            id: "create-post",
-            title: "Create Feed Post / Report Scam",
-            subtitle: "Share photos, voice notes, links or expose a scammer",
-            icon: <ShieldAlert className="w-5 h-5 text-rose-500" />,
-            onClick: () => navigate("/news-hub/create"),
-            keywords: "create post scam report voice",
-          },
-          {
-            id: "saved-posts",
-            title: "Saved Feed Posts",
-            subtitle: "Bookmarked posts & scam reports",
-            icon: <Bookmark className="w-5 h-5 text-blue-500" />,
-            onClick: () => navigate("/news-hub/saved"),
-            keywords: "saved posts bookmarks feed",
-          },
-          {
-            id: "feed-personalization",
-            title: "Feed Personalization",
-            subtitle: "Customize feed themes & content preferences",
-            icon: <Palette className="w-5 h-5 text-indigo-500" />,
-            onClick: () => navigate("/news-hub/personalization"),
-            keywords: "feed personalization customize themes",
-          },
-          {
-            id: "news-notifications",
-            title: "News Hub Activity",
-            subtitle: "Reactions, comments & mentions on your posts",
-            icon: <Bell className="w-5 h-5 text-sky-500" />,
-            onClick: () => navigate("/news-hub/notifications"),
-            keywords: "news hub notifications comments reactions",
-          },
-          {
-            id: "blogs",
-            title: "Tech Blogs & Buying Guides",
-            subtitle: "Read mobile reviews, tips & platform guides",
-            icon: <BookOpen className="w-5 h-5 text-emerald-600" />,
-            onClick: () => navigate("/blog"),
-            keywords: "blog articles tech news guides",
-          },
-          {
-            id: "create-blog",
-            title: "Write a Blog Article",
-            subtitle: "Publish a guide or review to the blog",
-            icon: <Pencil className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />,
-            onClick: () => navigate("/blog/create"),
-            keywords: "write create blog article",
-          },
-          {
-            id: "messages",
-            title: "Inbox & Live Messages",
-            subtitle: "Chat with sellers, community & support",
-            badge: unreadMessages > 0 ? String(unreadMessages) : undefined,
-            icon: <MessageSquare className="w-5 h-5 text-blue-600" />,
-            onClick: () => navigate("/messages"),
-            keywords: "messages inbox chat live",
-          },
-          {
-            id: "notifications",
-            title: "App Notifications",
-            subtitle: "Order updates, alerts & announcements",
-            badge:
-              unreadNotifications > 0 ? String(unreadNotifications) : undefined,
-            icon: <Bell className="w-5 h-5 text-amber-500" />,
-            onClick: () => navigate("/notifications"),
-            keywords: "notifications alerts updates",
-          },
-        ],
+        items: communityItems,
       },
       {
         id: "account-security",
@@ -870,10 +878,11 @@ export const Profile: React.FC<ProfileProps> = ({
           },
         ],
       },
-    ];
+    ].filter((sec) => sec.items.length > 0);
   }, [
     isAdmin,
     isSeller,
+    canSetupCreatorSubs,
     cartCount,
     walletBalance,
     coins,

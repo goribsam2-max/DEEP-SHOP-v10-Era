@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { db, auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   doc,
   setDoc,
@@ -10,10 +11,15 @@ import {
   collection,
   getDocs,
 } from "firebase/firestore";
+import { Loader2 } from "lucide-react";
 import { Product } from "../types";
 import { useNotify } from "../components/Notifications";
 import { uploadToImgbb } from "../services/imgbb";
 import Icon from "../components/Icon";
+import {
+  hasImmediateAdminOrStaffRole,
+  checkStaffRecord,
+} from "../lib/admin";
 
 const CreateBlog: React.FC = () => {
   const navigate = useNavigate();
@@ -29,6 +35,7 @@ const CreateBlog: React.FC = () => {
   const [seoDesc, setSeoDesc] = useState("");
 
   const [saving, setSaving] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [showProductSelect, setShowProductSelect] = useState(false);
@@ -37,25 +44,60 @@ const CreateBlog: React.FC = () => {
   const inlineImgInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const fetchProductsAndBlog = async () => {
-      const snap = await getDocs(query(collection(db, "products")));
-      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Product));
-
-      if (slug) {
-        const bDoc = await getDoc(doc(db, "blogs", slug));
-        if (bDoc.exists()) {
-          const b = bDoc.data();
-          setTitle(b.title || "");
-          setExcerpt(b.excerpt || "");
-          setContent(b.content || "");
-          setSeoTitle(b.seoTitle || "");
-          setSeoDesc(b.seoDescription || "");
-          setExistingImage(b.image || "");
-        }
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        setCheckingAccess(false);
+        navigate("/signin", { replace: true });
+        return;
       }
-    };
-    fetchProductsAndBlog();
-  }, [slug]);
+
+      try {
+        const uSnap = await getDoc(doc(db, "users", u.uid));
+        const uData = uSnap.exists() ? uSnap.data() : null;
+        let allowed = hasImmediateAdminOrStaffRole(uData, u);
+        if (!allowed) {
+          const staffCheck = await checkStaffRecord(uData?.email || u.email);
+          allowed = staffCheck.isStaff;
+        }
+
+        if (!allowed) {
+          setCheckingAccess(false);
+          notify(
+            "Access denied. Only admins and staff can publish blog articles.",
+            "error"
+          );
+          navigate("/blog", { replace: true });
+          return;
+        }
+
+        setCheckingAccess(false);
+
+        const snap = await getDocs(query(collection(db, "products")));
+        setProducts(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Product)
+        );
+
+        if (slug) {
+          const bDoc = await getDoc(doc(db, "blogs", slug));
+          if (bDoc.exists()) {
+            const b = bDoc.data();
+            setTitle(b.title || "");
+            setExcerpt(b.excerpt || "");
+            setContent(b.content || "");
+            setSeoTitle(b.seoTitle || "");
+            setSeoDesc(b.seoDescription || "");
+            setExistingImage(b.image || "");
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        setCheckingAccess(false);
+        navigate("/blog", { replace: true });
+      }
+    });
+
+    return () => unsub();
+  }, [slug, navigate]);
 
   const insertText = (text: string) => {
     const textarea = textareaRef.current;
@@ -177,6 +219,14 @@ const CreateBlog: React.FC = () => {
     }
     setSaving(false);
   };
+
+  if (checkingAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 min-h-screen bg-zinc-50 dark:bg-zinc-800 font-inter">

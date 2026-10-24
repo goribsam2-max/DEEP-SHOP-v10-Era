@@ -24,7 +24,10 @@ import {
   Plus,
   X,
   ExternalLink,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "../firebase";
 import {
   doc,
@@ -34,6 +37,7 @@ import {
   query,
   orderBy,
   updateDoc,
+  deleteDoc,
   increment,
   arrayUnion,
   arrayRemove,
@@ -47,10 +51,15 @@ import {
 } from "../components/NewsRichText";
 import { NewsBottomDock } from "../components/NewsBottomDock";
 import { downloadWatermarkedImage } from "../lib/watermark";
-import { useNotify } from "../components/Notifications";
+import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { formatDhakaDateTime } from "../lib/dhakaTime";
+import {
+  canAccessSellerDashboard,
+  hasImmediateAdminOrStaffRole,
+  checkStaffRecord,
+} from "../lib/admin";
 
 import defaultAvatarImg from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -605,6 +614,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const notify = useNotify();
+  const confirm = useConfirm();
 
   const initialTab = location.pathname.includes("/saved") ? "saved" : "explore";
   const urlTag = searchParams.get("tag") || "";
@@ -622,6 +632,33 @@ export const NewsSavedAndSearchPage: React.FC = () => {
     "all"
   );
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(
+    () => auth.currentUser
+  );
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setCurrentUser(u);
+      if (!u) {
+        setIsAdmin(false);
+        return;
+      }
+      try {
+        const uSnap = await getDoc(doc(db, "users", u.uid));
+        const uData = uSnap.exists() ? uSnap.data() : null;
+        if (hasImmediateAdminOrStaffRole(uData, u)) {
+          setIsAdmin(true);
+          return;
+        }
+        const staffRes = await checkStaffRecord(uData?.email || u.email);
+        setIsAdmin(staffRes.isStaff);
+      } catch {
+        setIsAdmin(hasImmediateAdminOrStaffRole(null, u));
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     setTab(location.pathname.includes("/saved") ? "saved" : "explore");
@@ -645,7 +682,35 @@ export const NewsSavedAndSearchPage: React.FC = () => {
     });
   }, []);
 
-  const uid = auth.currentUser?.uid;
+  const uid = currentUser?.uid;
+
+  const handleDeletePost = (post: ScamPost, e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic();
+    confirm({
+      title: "Delete Post?",
+      message:
+        "Are you sure you want to permanently delete this post? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, "scam_posts", post.id));
+        } catch {}
+        try {
+          const local: ScamPost[] = JSON.parse(
+            localStorage.getItem("scam_posts_local_v1") || "[]"
+          );
+          localStorage.setItem(
+            "scam_posts_local_v1",
+            JSON.stringify(local.filter((p) => p.id !== post.id))
+          );
+        } catch {}
+        setPosts((prev) => prev.filter((p) => p.id !== post.id));
+        notify("Post deleted successfully", "success");
+      },
+    });
+  };
 
   const isSaved = (post: ScamPost) =>
     savedIds.includes(post.id) ||
@@ -887,6 +952,13 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                   )
                 : post.votes || 0;
 
+              const canManage = Boolean(
+                (uid &&
+                  (post.reporterId === uid ||
+                    (post as any).authorId === uid)) ||
+                  isAdmin
+              );
+
               return (
                 <article
                   key={post.id}
@@ -913,27 +985,56 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                         </p>
                         <p className="text-[11px] text-zinc-500 whitespace-nowrap truncate">
                           {formatDhakaDateTime(post.createdAt)}
+                          {post.isEdited ? " · Edited" : ""}
                         </p>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleSave(post);
-                      }}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shrink-0 ${
-                        saved
-                          ? "bg-[#1877F2]/10 text-[#1877F2]"
-                          : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                      }`}
-                      aria-label="Toggle bookmark"
-                    >
-                      <Bookmark
-                        className={`w-4 h-4 ${saved ? "fill-current" : ""}`}
-                      />
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {canManage && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerHaptic();
+                              navigate(`/news-hub/create?edit=${post.id}`);
+                            }}
+                            className="w-9 h-9 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer transition"
+                            aria-label="Edit post"
+                            title="Edit post"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeletePost(post, e)}
+                            className="w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center cursor-pointer transition"
+                            aria-label="Delete post"
+                            title="Delete post"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSave(post);
+                        }}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shrink-0 ${
+                          saved
+                            ? "bg-[#1877F2]/10 text-[#1877F2]"
+                            : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                        }`}
+                        aria-label="Toggle bookmark"
+                      >
+                        <Bookmark
+                          className={`w-4 h-4 ${saved ? "fill-current" : ""}`}
+                        />
+                      </button>
+                    </div>
                   </div>
 
                   {post.description && (
@@ -999,6 +1100,24 @@ export const NewsStoryViewerPage: React.FC = () => {
   const [stories, setStories] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [canAddStory, setCanAddStory] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        setCanAddStory(false);
+        return;
+      }
+      try {
+        const uSnap = await getDoc(doc(db, "users", u.uid));
+        const uData = uSnap.exists() ? uSnap.data() : null;
+        setCanAddStory(canAccessSellerDashboard(uData, u));
+      } catch {
+        setCanAddStory(canAccessSellerDashboard(null, u));
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const loadStories = async () => {
@@ -1094,14 +1213,16 @@ export const NewsStoryViewerPage: React.FC = () => {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate("/add-story")}
-            className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Story</span>
-          </button>
+          {canAddStory && (
+            <button
+              type="button"
+              onClick={() => navigate("/add-story")}
+              className="px-3.5 py-2 rounded-full bg-white/15 hover:bg-white/25 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Story</span>
+            </button>
+          )}
         </div>
       </header>
 

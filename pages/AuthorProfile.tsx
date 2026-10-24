@@ -17,14 +17,21 @@ import {
   Download,
   Flame,
   X,
-  CreditCard
+  CreditCard,
+  Pencil,
+  Trash2
 } from "lucide-react";
-import { doc, getDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { doc, getDoc, deleteDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
-import { useNotify } from "../components/Notifications";
+import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { GiftStarsModal } from "../components/GiftStarsModal";
+import {
+  hasImmediateAdminOrStaffRole,
+  checkStaffRecord,
+} from "../lib/admin";
 
 // Seed fallback data matching user's demo image IMG_4750.webp
 const DEMO_STORIES: any[] = [];
@@ -43,6 +50,7 @@ export const AuthorProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const notify = useNotify();
+  const confirm = useConfirm();
 
   const [author, setAuthor] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -58,7 +66,63 @@ export const AuthorProfile: React.FC = () => {
   const [sponsorPhone, setSponsorPhone] = useState("");
   const [sponsorTxId, setSponsorTxId] = useState("");
 
-  const currentUser = auth.currentUser;
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(
+    () => auth.currentUser
+  );
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setCurrentUser(u);
+      if (!u) {
+        setIsAdmin(false);
+        return;
+      }
+      try {
+        const uSnap = await getDoc(doc(db, "users", u.uid));
+        const uData = uSnap.exists() ? uSnap.data() : null;
+        if (hasImmediateAdminOrStaffRole(uData, u)) {
+          setIsAdmin(true);
+          return;
+        }
+        const staffRes = await checkStaffRecord(uData?.email || u.email);
+        setIsAdmin(staffRes.isStaff);
+      } catch {
+        setIsAdmin(hasImmediateAdminOrStaffRole(null, u));
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const handleDeleteAuthorPost = (e: React.MouseEvent, postId: string) => {
+    e.stopPropagation();
+    triggerHaptic();
+    confirm({
+      title: "Delete Post?",
+      message:
+        "Are you sure you want to permanently delete this post? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, "scam_posts", postId));
+        } catch {}
+        try {
+          const local = JSON.parse(
+            localStorage.getItem("scam_posts_local_v1") || "[]"
+          );
+          if (Array.isArray(local)) {
+            localStorage.setItem(
+              "scam_posts_local_v1",
+              JSON.stringify(local.filter((item: any) => item.id !== postId))
+            );
+          }
+        } catch {}
+        setPosts((prev) => prev.filter((item) => item.id !== postId));
+        notify("Post deleted successfully", "success");
+      },
+    });
+  };
 
   useEffect(() => {
     const fetchAuthor = async () => {
@@ -421,28 +485,64 @@ export const AuthorProfile: React.FC = () => {
           </div>
 
           <div className="space-y-2.5">
-            {posts.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => navigate(`/news-hub/post/${p.id}`)}
-                className="p-3.5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-1 shadow-2xs"
-              >
-                <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white line-clamp-1">
-                  {p.title}
-                </h4>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
-                  {p.description}
-                </p>
-                <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
-                  <span className="uppercase font-bold text-rose-600 dark:text-rose-400">
-                    {p.category ? p.category.replace(/_/g, " ") : "Scam Alert"}
-                  </span>
-                  <span className="font-mono font-bold text-zinc-600 dark:text-zinc-300">
-                    {(p.votes || 0).toLocaleString()} votes
-                  </span>
+            {posts.map((p) => {
+              const canManagePost = Boolean(
+                (currentUser &&
+                  (p.reporterId === currentUser.uid ||
+                    p.authorId === currentUser.uid)) ||
+                  isAdmin
+              );
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => navigate(`/news-hub/post/${p.id}`)}
+                  className="p-3.5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-1 shadow-2xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white line-clamp-1">
+                      {p.title || "Community Post"}
+                    </h4>
+                    {canManagePost && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic();
+                            navigate(`/news-hub/create?edit=${p.id}`);
+                          }}
+                          className="w-7 h-7 rounded-full bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer"
+                          aria-label="Edit post"
+                          title="Edit post"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteAuthorPost(e, p.id)}
+                          className="w-7 h-7 rounded-full bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center transition cursor-pointer"
+                          aria-label="Delete post"
+                          title="Delete post"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                    {p.description}
+                  </p>
+                  <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
+                    <span className="uppercase font-bold text-rose-600 dark:text-rose-400">
+                      {p.category ? p.category.replace(/_/g, " ") : "Scam Alert"}
+                    </span>
+                    <span className="font-mono font-bold text-zinc-600 dark:text-zinc-300">
+                      {(p.votes || 0).toLocaleString()} votes
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </main>

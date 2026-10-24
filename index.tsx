@@ -27,15 +27,28 @@ window.ResizeObserver = class ResizeObserver extends OriginalResizeObserver {
   }
 };
 
+const isBenignDevClientNoise = (msg: string, stack: string, filename = ""): boolean => {
+  const combined = `${msg} ${stack} ${filename}`.toLowerCase();
+  return (
+    combined.includes("@vite/client") ||
+    combined.includes("vite") && combined.includes("websocket") ||
+    combined.includes("waitforsuccessfulping") ||
+    combined.includes("failed to register a serviceworker") ||
+    combined.includes("resizeobserver loop")
+  );
+};
+
 window.addEventListener('error', (e) => {
-  if (e.message && (e.message.includes('ResizeObserver loop completed with undelivered notifications.') || e.message.includes('ResizeObserver loop limit exceeded'))) {
+  const msg = e.message || '';
+  const stack = e.error?.stack || '';
+  if (isBenignDevClientNoise(msg, stack, e.filename || '')) {
     e.stopImmediatePropagation();
     e.preventDefault();
     return;
   }
   // Global error handler
   try {
-    sendSystemAlertToTelegram(`Global Error: ${e.message}`, e.error?.stack || 'No stack trace available');
+    sendSystemAlertToTelegram(`Global Error: ${msg}`, stack || 'No stack trace available');
   } catch (err) {
     console.error('Failed to dispatch to telegram', err);
   }
@@ -43,12 +56,22 @@ window.addEventListener('error', (e) => {
 
 window.addEventListener('unhandledrejection', (e) => {
   try {
-    const errorMsg = e.reason?.message || (typeof e.reason === 'string' ? e.reason : 'Unhandled Promise Rejection');
-    if (errorMsg.includes('Failed to register a ServiceWorker')) {
-        return; // Ignore benign PWA registration errors
+    const errorMsg =
+      e.reason?.message ||
+      (typeof e.reason === 'string' ? e.reason : '');
+    const stack = e.reason?.stack || '';
+    if (
+      !errorMsg && (!stack || stack.includes('@vite/client')) ||
+      isBenignDevClientNoise(errorMsg || 'Unhandled Promise Rejection', stack)
+    ) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
     }
-    const stack = e.reason?.stack || 'No stack trace';
-    sendSystemAlertToTelegram(`Unhandled Rejection: ${errorMsg}`, stack);
+    sendSystemAlertToTelegram(
+      `Unhandled Rejection: ${errorMsg || 'Unhandled Promise Rejection'}`,
+      stack || 'No stack trace'
+    );
   } catch (err) {
     console.error('Failed to dispatch to telegram', err);
   }
