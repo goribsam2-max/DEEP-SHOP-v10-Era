@@ -35,6 +35,14 @@ export function NotificationPermissionModal() {
          return () => clearTimeout(timer);
       }
     }
+
+    const handleManualPrompt = () => {
+       setOpen(true);
+    };
+    window.addEventListener('showNotificationPrompt', handleManualPrompt);
+    return () => {
+       window.removeEventListener('showNotificationPrompt', handleManualPrompt);
+    };
   }, []);
 
   const handleAllow = async () => {

@@ -188,6 +188,10 @@ const NotificationsPage: React.FC = () => {
     }
 
     if (notif.link) {
+      // Trigger push permission prompt if not granted yet
+      if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'default') {
+         window.dispatchEvent(new CustomEvent('showNotificationPrompt'));
+      }
       navigate(notif.link);
     } else if (notif.type === 'ticket') {
       navigate('/help-center');
@@ -227,7 +231,7 @@ const NotificationsPage: React.FC = () => {
     <div className="max-w-[600px] mx-auto px-4 py-10 pb-[120px] md:pb-10 min-h-screen bg-background relative overflow-hidden flex flex-col items-center">
       
 
-      <Card className="flex w-full flex-col gap-6 p-4 shadow-none md:p-8 relative z-10 bg-card/60 backdrop-blur-xl border-border/50">
+      <Card className="flex w-full flex-col gap-6 p-4 shadow-none md:p-8 relative z-10 bg-card/60 backdrop-blur-xl border-border/50 rounded-[32px] overflow-hidden">
         <CardHeader className="p-0">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xl leading-none font-semibold tracking-tight text-foreground">

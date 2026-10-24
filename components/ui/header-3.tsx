@@ -9,43 +9,19 @@ import Icon from "../Icon";
 import AccountMenu from "./account-menu";
 import { useIsland } from "./dynamic-island";
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
-import {
-  Home,
-  Search,
   ShoppingBag,
   Heart,
-  User,
-  Bell,
-  Box,
-  ShoppingCart,
-  Newspaper,
-  Headset,
-  Moon,
-  Sun,
   ChevronLeft,
-  ListOrdered,
-  Star,
-  Image as ImageIcon,
-  DollarSign,
-  Layout,
-  MessageSquare,
-  Users,
-  Bike,
-  FileText,
   Settings,
-  LogOut,
+  Shield,
+  Search,
+  ShoppingCart,
+  MessageSquare,
 } from "lucide-react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 
 import { triggerHaptic } from "../../lib/haptics";
-import { Modal } from "@/components/ui/modal";
+import { hasImmediateAdminOrStaffRole } from "../../lib/admin";
 
 type LinkItem = {
   title: string;
@@ -200,11 +176,11 @@ const productLinks: LinkItem[] = [
 
 export function Header() {
   const [open, setOpen] = React.useState(false);
-  const [showBackDialog, setShowBackDialog] = React.useState(false);
   const [user, setUser] = React.useState<any>(null);
+  const [userProfile, setUserProfile] = React.useState<any>(null);
   const [categories, setCategories] = React.useState<string[]>([]);
   const scrolled = useScroll(10);
-  const { isDark, toggleTheme } = useTheme();
+  useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const isIslandActive = useIsland();
@@ -214,17 +190,24 @@ export function Header() {
   useEffect(() => {
     const updateCount = () => {
       try {
-        const cartStr = localStorage.getItem('f_cart');
+        const cartStr = localStorage.getItem("f_cart");
         let cart = [];
-        try { cart = cartStr && cartStr !== "undefined" ? JSON.parse(cartStr) : []; } catch(e){}
+        try {
+          cart = cartStr && cartStr !== "undefined" ? JSON.parse(cartStr) : [];
+        } catch {}
         if (Array.isArray(cart)) {
-          const validItems = cart.filter(item => item && (item.id || item.productId));
-          const count = validItems.reduce((acc: number, item: any) => acc + (item.quantity || 1), 0);
+          const validItems = cart.filter(
+            (item) => item && (item.id || item.productId)
+          );
+          const count = validItems.reduce(
+            (acc: number, item: any) => acc + (item.quantity || 1),
+            0
+          );
           setCartCount(count);
         } else {
           setCartCount(0);
         }
-      } catch (e) {
+      } catch {
         setCartCount(0);
       }
     };
@@ -233,14 +216,19 @@ export function Header() {
     return () => window.removeEventListener("update_cart", updateCount);
   }, []);
 
-  const isAdmin = location.pathname.startsWith("/admin");
+  const isHomePage = location.pathname === "/";
+  const isAdminRoute = location.pathname.startsWith("/admin");
   const isAffiliate = location.pathname.startsWith("/affiliate");
   const isInnerPage =
-    location.pathname !== "/" && location.pathname !== "/profile" && location.pathname !== "/admin" && !isAffiliate;
-  const linksToShow = isAdmin ? adminLinks : productLinks;
+    location.pathname !== "/" &&
+    location.pathname !== "/profile" &&
+    location.pathname !== "/admin" &&
+    !isAffiliate;
+  const linksToShow = isAdminRoute ? adminLinks : productLinks;
 
   useEffect(() => {
     let unsubscribeChats: (() => void) | null = null;
+    let unsubscribeUserDoc: (() => void) | null = null;
     let unsubscribeAuth: (() => void) | null = null;
 
     import("@/firebase").then(({ auth, db }) => {
@@ -250,31 +238,49 @@ export function Header() {
           unsubscribeChats();
           unsubscribeChats = null;
         }
+        if (unsubscribeUserDoc) {
+          unsubscribeUserDoc();
+          unsubscribeUserDoc = null;
+        }
 
         if (u) {
-          import("firebase/firestore").then(({ collection, query, where, onSnapshot }) => {
-            const q = query(
-              collection(db, "p2p_chats"),
-              where("participants", "array-contains", u.uid)
-            );
-            unsubscribeChats = onSnapshot(q, (snapshot) => {
-              let count = 0;
-              snapshot.docs.forEach((doc) => {
-                const data = doc.data();
-                if (
-                  data.lastMessage &&
-                  data.lastSenderId !== u.uid &&
-                  (!data.seenBy || !data.seenBy.includes(u.uid))
-                ) {
-                  count += 1;
+          import("firebase/firestore").then(
+            ({ collection, query, where, onSnapshot, doc }) => {
+              unsubscribeUserDoc = onSnapshot(
+                doc(db, "users", u.uid),
+                (snap) => {
+                  if (snap.exists()) setUserProfile(snap.data());
                 }
-              });
-              setUnreadMessagesCount(count);
-            }, (err) => {
-              console.error("Error listening to chats:", err);
-            });
-          });
+              );
+
+              const q = query(
+                collection(db, "p2p_chats"),
+                where("participants", "array-contains", u.uid)
+              );
+              unsubscribeChats = onSnapshot(
+                q,
+                (snapshot) => {
+                  let count = 0;
+                  snapshot.docs.forEach((d) => {
+                    const data = d.data();
+                    if (
+                      data.lastMessage &&
+                      data.lastSenderId !== u.uid &&
+                      (!data.seenBy || !data.seenBy.includes(u.uid))
+                    ) {
+                      count += 1;
+                    }
+                  });
+                  setUnreadMessagesCount(count);
+                },
+                (err) => {
+                  console.error("Error listening to chats:", err);
+                }
+              );
+            }
+          );
         } else {
+          setUserProfile(null);
           setUnreadMessagesCount(0);
         }
       });
@@ -285,11 +291,11 @@ export function Header() {
             const q = query(collection(db, "products"));
             const snapshot = await getDocs(q);
             const allCategories = new Set<string>();
-            snapshot.forEach((doc) => {
-              const data = doc.data();
+            snapshot.forEach((d) => {
+              const data = d.data();
               if (data.category) allCategories.add(data.category);
             });
-            setCategories(Array.from(allCategories).slice(0, 8)); // Get top 8 categories
+            setCategories(Array.from(allCategories).slice(0, 8));
           } catch (error) {
             console.error("Failed to fetch categories:", error);
           }
@@ -310,6 +316,7 @@ export function Header() {
     return () => {
       if (unsubscribeAuth) unsubscribeAuth();
       if (unsubscribeChats) unsubscribeChats();
+      if (unsubscribeUserDoc) unsubscribeUserDoc();
       document.body.style.overflow = "";
       document.body.style.overflowX = "";
       document.documentElement.style.overflowX = "";
@@ -317,39 +324,52 @@ export function Header() {
   }, [open]);
 
   useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent("toggleSidebar", { detail: open }),
-    );
+    window.dispatchEvent(new CustomEvent("toggleSidebar", { detail: open }));
   }, [open]);
 
-  let headerBgClass = "bg-transparent border-transparent";
-  let isDarkHeaderBg = true;
+  const userHasAdminAccess = hasImmediateAdminOrStaffRole(userProfile, user);
 
-  const buttonClass = "transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 bg-zinc-100 dark:bg-zinc-800 border-none text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 shadow-sm rounded-full w-10 h-10";
+  // News Hub-matching circular white floating button style for Shop Home (/)
+  const newsHubCircleBtnClass =
+    "relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer shrink-0 border-none";
+
+  const standardDesktopBtnClass =
+    "transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 bg-zinc-100 dark:bg-zinc-800 border-none text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 shadow-sm rounded-full w-10 h-10";
 
   return (
     <header
       className={cn(
-        "fixed z-[120] w-full transition-all duration-300 ease-in-out pointer-events-auto",
-        scrolled || open ? "bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm" : "bg-transparent border-transparent"
+        "fixed top-0 z-[120] w-full transition-all duration-300 ease-in-out pointer-events-auto",
+        scrolled || open
+          ? isHomePage
+            ? "bg-white/85 dark:bg-zinc-900/90 backdrop-blur-xl border-b border-white/60 dark:border-zinc-800 shadow-[0_4px_20px_rgba(15,23,42,0.06)]"
+            : "bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm"
+          : "bg-transparent border-transparent"
       )}
-      style={{ top: 'var(--pwa-banner-height, 0px)' }}
     >
       <nav
-        className="mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 lg:px-6 h-14 md:h-16 transition-all duration-500"
+        className={cn(
+          "mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 lg:px-6 transition-all duration-300",
+          isHomePage ? "h-15 md:h-16" : "h-14 md:h-16"
+        )}
       >
-        <div className="flex items-center gap-1 md:gap-3 pointer-events-auto">
+        <div className="flex items-center gap-2 md:gap-3 pointer-events-auto">
+          {/* Top-left Menu Button: Hidden on mobile ONLY on Home ("/"), visible on desktop & all other pages */}
           <Button
             size="icon"
             variant="ghost"
             onClick={() => {
               triggerHaptic();
-              if (location.pathname === '/withdraw') {
-                  navigate('/affiliate');
-              } else if (location.pathname.startsWith('/messages')) {
+              if (location.pathname === "/withdraw") {
+                navigate("/affiliate");
+              } else if (location.pathname.startsWith("/messages")) {
                 const params = new URLSearchParams(location.search);
-                if (params.has('chatId') || params.has('channelId') || params.get('tab') === 'settings') {
-                  navigate('/messages');
+                if (
+                  params.has("chatId") ||
+                  params.has("channelId") ||
+                  params.get("tab") === "settings"
+                ) {
+                  navigate("/messages");
                 } else {
                   navigate(-1);
                 }
@@ -359,7 +379,12 @@ export function Header() {
                 setOpen(!open);
               }
             }}
-            className="flex items-center justify-center transition-all w-10 h-10 border-transparent shadow-none rounded-full shrink-0"
+            className={cn(
+              "items-center justify-center transition-all w-10 h-10 rounded-full shrink-0",
+              isHomePage
+                ? "hidden md:flex bg-white dark:bg-zinc-900 shadow-[0_4px_14px_rgba(15,23,42,0.08)] border-none"
+                : "flex border-transparent shadow-none"
+            )}
             aria-expanded={open}
             aria-controls="mobile-menu"
             aria-label="Toggle menu"
@@ -367,139 +392,235 @@ export function Header() {
             {isInnerPage ? (
               <ChevronLeft className="size-6 text-zinc-900 dark:text-white" />
             ) : (
-              <MenuToggleIcon open={open} className="size-5 text-zinc-900 dark:text-white" duration={300} />
+              <MenuToggleIcon
+                open={open}
+                className="size-5 text-zinc-900 dark:text-white"
+                duration={300}
+              />
             )}
           </Button>
+
+          {/* Left Brand Title — Matches News Hub's circular blue gradient badge + bold clean title on Home */}
           <NavLink
-            to={isAdmin ? "/admin" : "/"}
-            className={cn("p-1 flex items-center shrink-0 rounded-3xl border-none ring-0 shadow-none hover:shadow-none bg-transparent transition-all duration-300", isIslandActive ? "opacity-0 scale-95 pointer-events-none w-0 overflow-hidden" : "opacity-100 scale-100 w-auto")}
+            to={isAdminRoute ? "/admin" : "/"}
+            className={cn(
+              "flex items-center gap-2.5 shrink-0 rounded-3xl border-none ring-0 shadow-none bg-transparent transition-all duration-300",
+              isIslandActive
+                ? "opacity-0 scale-95 pointer-events-none w-0 overflow-hidden"
+                : "opacity-100 scale-100 w-auto"
+            )}
           >
-            <WordmarkIcon className="h-5 sm:h-6 w-auto" />
+            {isHomePage ? (
+              <span className="font-brand lowercase text-[24px] sm:text-[26px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
+                deep shop
+              </span>
+            ) : (
+              <WordmarkIcon />
+            )}
           </NavLink>
         </div>
 
-        <div className={cn("hidden items-center gap-2 md:flex pointer-events-auto transition-all duration-300", isIslandActive ? "opacity-0 scale-95 pointer-events-none" : "opacity-100 scale-100")}>
-          <Button
-            variant="ghost"
-            size="icon"
+        {/* DESKTOP RIGHT ACTION BUTTONS */}
+        <div
+          className={cn(
+            "hidden items-center gap-2.5 md:flex pointer-events-auto transition-all duration-300",
+            isIslandActive
+              ? "opacity-0 scale-95 pointer-events-none"
+              : "opacity-100 scale-100"
+          )}
+        >
+          <button
+            type="button"
             onClick={() => {
               triggerHaptic();
               navigate("/search");
             }}
-            className={buttonClass}
+            className={
+              isHomePage ? newsHubCircleBtnClass : standardDesktopBtnClass
+            }
             aria-label="Search"
           >
-            <Icon name="search" className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
+            <Search fill="none" className="w-5 h-5 stroke-[1.9]" />
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               triggerHaptic();
               navigate("/wishlist");
             }}
-            className={buttonClass}
+            className={
+              isHomePage ? newsHubCircleBtnClass : standardDesktopBtnClass
+            }
             aria-label="Wishlist"
           >
-            <Heart className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
+            <Heart fill="none" className="w-5 h-5 stroke-[1.9]" />
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               triggerHaptic();
               navigate("/cart");
             }}
-            className={cn("relative", buttonClass)}
+            className={cn(
+              "relative",
+              isHomePage ? newsHubCircleBtnClass : standardDesktopBtnClass
+            )}
             aria-label="Shopping Cart"
           >
-            <Icon name="shopping-cart" className="w-5 h-5" />
+            <ShoppingCart fill="none" className="w-5 h-5 stroke-[1.9]" />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#5F2CFF] text-white text-[10px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-800 shadow-sm">
+              <span className="absolute -top-1 -right-1 bg-[#1877F2] text-white text-[10px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
                 {cartCount}
               </span>
             )}
-          </Button>
+          </button>
 
-          <div className="flex items-center gap-1 rounded-full p-1.5 bg-transparent shadow-none">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/messages");
-              }}
-              className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
-              aria-label="Messages"
-            >
-              <Icon name="message-square" className="w-5 h-5" />
-              {unreadMessagesCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm animate-bounce">
-                  {unreadMessagesCount}
-                </span>
-              )}
-            </Button>
-            <AnimatedThemeToggler className="rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white" />
-            {location.pathname !== "/profile" && (
-              <AccountMenu scrolled={scrolled} isPill />
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              navigate("/messages");
+            }}
+            className={
+              isHomePage
+                ? newsHubCircleBtnClass
+                : "relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex items-center justify-center text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white cursor-pointer"
+            }
+            aria-label="Messages"
+          >
+            <MessageSquare fill="none" className="w-5 h-5 stroke-[1.9]" />
+            {unreadMessagesCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+                {unreadMessagesCount}
+              </span>
             )}
-          </div>
-        </div>
-        <div className={cn("flex items-center gap-2 md:hidden pointer-events-auto transition-all duration-300", isIslandActive ? "opacity-0 scale-95 pointer-events-none" : "opacity-100 scale-100")}>
-          <div className="flex items-center gap-1 rounded-full p-1.5 bg-transparent shadow-none">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/cart");
-              }}
-              className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
-              aria-label="Shopping Cart"
-            >
-              <Icon name="shopping-cart" className="w-5 h-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-[#5F2CFF] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
-                  {cartCount}
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/messages");
-              }}
-              className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white flex"
-              aria-label="Messages"
-            >
-              <Icon name="message-square" className="w-5 h-5" />
-              {unreadMessagesCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm animate-bounce">
-                  {unreadMessagesCount}
-                </span>
-              )}
-            </Button>
-            <AnimatedThemeToggler className="rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white" />
+          </button>
 
-            {location.pathname === "/profile" ? (
+          <AnimatedThemeToggler
+            className={
+              isHomePage
+                ? newsHubCircleBtnClass
+                : "rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
+            }
+          />
+
+          {location.pathname !== "/profile" && (
+            <AccountMenu
+              scrolled={scrolled}
+              isPill={!isHomePage}
+              isNewsHubStyle={isHomePage}
+            />
+          )}
+        </div>
+
+        {/* MOBILE RIGHT ACTION BUTTONS */}
+        <div
+          className={cn(
+            "flex items-center gap-2 md:hidden pointer-events-auto transition-all duration-300",
+            isIslandActive
+              ? "opacity-0 scale-95 pointer-events-none"
+              : "opacity-100 scale-100"
+          )}
+        >
+          {isHomePage ? (
+            /* News Hub-style crisp floating circular buttons on Shop Home */
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate("/cart");
+                }}
+                className={newsHubCircleBtnClass}
+                aria-label="Shopping Cart"
+              >
+                <ShoppingCart fill="none" className="w-5 h-5 stroke-[1.9]" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-[#1877F2] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate("/messages");
+                }}
+                className={newsHubCircleBtnClass}
+                aria-label="Messages"
+              >
+                <MessageSquare fill="none" className="w-5 h-5 stroke-[1.9]" />
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+                    {unreadMessagesCount}
+                  </span>
+                )}
+              </button>
+
+              <AnimatedThemeToggler className={newsHubCircleBtnClass} />
+
+              <AccountMenu scrolled={scrolled} isNewsHubStyle />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 rounded-full p-1.5 bg-transparent shadow-none">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => {
                   triggerHaptic();
-                  navigate("/settings");
+                  navigate("/cart");
                 }}
-                className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white flex items-center justify-center cursor-pointer"
-                aria-label="Settings"
+                className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
+                aria-label="Shopping Cart"
               >
-                <Settings className="w-5 h-5" strokeWidth={1.8} />
+                <Icon name="shopping-cart" className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-[#5F2CFF] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+                    {cartCount}
+                  </span>
+                )}
               </Button>
-            ) : (
-              <AccountMenu scrolled={scrolled} isPill />
-            )}
-          </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate("/messages");
+                }}
+                className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white flex"
+                aria-label="Messages"
+              >
+                <Icon name="message-square" className="w-5 h-5" />
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm animate-bounce">
+                    {unreadMessagesCount}
+                  </span>
+                )}
+              </Button>
+              <AnimatedThemeToggler className="rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white" />
+
+              {location.pathname === "/profile" ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate("/settings");
+                  }}
+                  className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white flex items-center justify-center cursor-pointer"
+                  aria-label="Settings"
+                >
+                  <Settings className="w-5 h-5" strokeWidth={1.8} />
+                </Button>
+              ) : (
+                <AccountMenu scrolled={scrolled} isPill />
+              )}
+            </div>
+          )}
         </div>
       </nav>
 
@@ -508,11 +629,10 @@ export function Header() {
         onClose={() => setOpen(false)}
         className="bg-white dark:bg-zinc-900 border-l md:border-l-0 md:border-r border-zinc-200 dark:border-zinc-800"
       >
-        {/* Top scrollable links and categories */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar w-full">
           <div className="flex w-full flex-col gap-y-1.5 pb-4 px-2">
             <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 px-2 mt-4 mb-2 block">
-              {isAdmin ? "Admin Pages" : "Explore Pages"}
+              {isAdminRoute ? "Admin Pages" : "Explore Pages"}
             </span>
             {linksToShow.map((link) => (
               <ListItem
@@ -525,7 +645,7 @@ export function Header() {
               />
             ))}
 
-            {!isAdmin && categories.length > 0 && (
+            {!isAdminRoute && categories.length > 0 && (
               <>
                 <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 px-4 mt-6 mb-2 block">
                   Categories
@@ -552,7 +672,19 @@ export function Header() {
 
         {/* Bottom actions sticky */}
         <div className="flex flex-col gap-2 p-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 w-full shrink-0 pb-6 md:pb-4">
-          {isAdmin && (
+          {userHasAdminAccess && !isAdminRoute && (
+            <Button
+              className="w-full bg-[#1877F2] hover:bg-[#1465D8] text-white font-bold"
+              onClick={() => {
+                setOpen(false);
+                navigate("/admin");
+              }}
+            >
+              <Shield className="w-4 h-4 mr-2" /> Admin Control Panel
+            </Button>
+          )}
+
+          {isAdminRoute && (
             <Button
               variant="outline"
               className="w-full bg-transparent border-zinc-200 dark:border-zinc-700 mb-2 text-zinc-700 dark:text-zinc-200"
@@ -564,6 +696,7 @@ export function Header() {
               <ChevronLeft className="w-4 h-4 mr-2" /> Back to Store
             </Button>
           )}
+
           {!user ? (
             <>
               <Button
@@ -596,7 +729,7 @@ export function Header() {
                   navigate("/profile");
                 }}
               >
-                Account
+                Account & All Pages
               </Button>
               <Button
                 className="w-full bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900"
@@ -620,12 +753,18 @@ type MobileMenuProps = React.ComponentProps<"div"> & {
   onClose?: () => void;
 };
 
-function MobileMenu({ open, children, onClose, className, ...props }: MobileMenuProps) {
+function MobileMenu({
+  open,
+  children,
+  onClose,
+  className,
+  ...props
+}: MobileMenuProps) {
   if (!open || typeof window === "undefined") return null;
 
   return createPortal(
     <>
-      <div 
+      <div
         className={cn(
           "fixed inset-0 z-[150000] bg-black/20 dark:bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -638,14 +777,11 @@ function MobileMenu({ open, children, onClose, className, ...props }: MobileMenu
         className={cn(
           "bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800",
           "fixed z-[150100] md:z-[110] flex flex-col overflow-hidden shadow-2xl md:shadow-none",
-          // Mobile view floating styles:
           "top-4 bottom-4 left-4 w-72 rounded-[20px] pt-4 pb-4",
-          // Desktop view overrides:
           "md:top-0 md:bottom-0 md:left-0 md:w-72 md:rounded-none md:border-r md:border-l-0 md:border-t-0 md:border-b-0 md:pt-16 md:pb-4 md:border-zinc-200 md:dark:border-zinc-800",
-          // Slide in from left on both mobile and desktop.
           "data-[slot=open]:animate-in data-[slot=closed]:animate-out ease-out duration-300",
           "data-[slot=open]:slide-in-from-left-full data-[slot=closed]:slide-out-to-left-full",
-          className,
+          className
         )}
         {...props}
       >
@@ -654,7 +790,7 @@ function MobileMenu({ open, children, onClose, className, ...props }: MobileMenu
         </div>
       </div>
     </>,
-    document.body,
+    document.body
   );
 }
 
@@ -674,13 +810,16 @@ function ListItem({
         cn(
           "w-full flex items-center flex-row gap-x-3 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 rounded-xl px-2.5 py-1.5 transition-colors overflow-hidden max-w-full box-border",
           isActive && "bg-zinc-100 dark:bg-zinc-800 font-medium",
-          className,
+          className
         )
       }
     >
       <div className="bg-zinc-100 dark:bg-zinc-800 flex aspect-square size-10 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm shrink-0">
         {typeof IconComp === "string" ? (
-          <Icon name={IconComp} className="text-zinc-700 dark:text-zinc-300 size-4.5" />
+          <Icon
+            name={IconComp}
+            className="text-zinc-700 dark:text-zinc-300 size-4.5"
+          />
         ) : (
           <IconComp className="text-zinc-700 dark:text-zinc-300 size-4.5" />
         )}
@@ -713,7 +852,7 @@ function useScroll(threshold: number) {
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll(); // Initial check
+    onScroll();
 
     return () => window.removeEventListener("scroll", onScroll);
   }, [threshold]);
@@ -721,14 +860,15 @@ function useScroll(threshold: number) {
   return scrolled;
 }
 
-const WordmarkIcon = (props: React.ComponentProps<"span">) => (
+const WordmarkIcon = ({
+  className,
+  ...props
+}: React.ComponentProps<"span">) => (
   <span
-    className="lowercase text-[28px] tracking-tight mt-0.5 text-zinc-900 dark:text-white"
-    style={{
-      fontFamily: "'Comfortaa', 'Righteous', cursive",
-      fontWeight: 800,
-      letterSpacing: "-0.02em",
-    }}
+    className={cn(
+      "font-brand lowercase text-[24px] sm:text-[26px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap",
+      className
+    )}
     {...props}
   >
     deep shop

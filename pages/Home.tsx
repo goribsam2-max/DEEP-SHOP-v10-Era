@@ -40,6 +40,8 @@ import { HeroSlider } from "../components/ui/hero-slider";
 import { LogoTimeline, type LogoItem } from "../components/ui/logo-timeline";
 import { Footer } from "../components/Footer";
 import { TopNavTabSwitcher } from "../components/TopNavTabSwitcher";
+import { auth } from "../firebase";
+import { hasImmediateAdminOrStaffRole } from "../lib/admin";
 
 const BrandIcon = ({ brandName }: { brandName: string }) => {
   return (
@@ -126,18 +128,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const { formatPrice } = useRegion();
   const { isDark } = useTheme();
 
-  const email = userData?.email?.toLowerCase().trim();
-  const isAdmin = Boolean(
-    userData?.role === "admin" ||
-    userData?.isAdmin === true ||
-    userData?.type === "admin" ||
-    email === "admin@deep.shop" ||
-    email === "admin@deepshop.top" ||
-    email === "deepshop@gmail.com" ||
-    email === "goribsam2@gmail.com" ||
-    email === "vibegadgetfeni@gmail.com" ||
-    email === "deepshopbysam@gmail.com"
-  );
+  const isAdmin = hasImmediateAdminOrStaffRole(userData, auth.currentUser);
 
   // Strictly verify seller status so regular buyers never get seller privileges
   const isSeller = Boolean(
@@ -357,8 +348,8 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   }, [sellers]);
 
   return (
-    <div className="relative pt-4 bg-white dark:bg-[#121212] w-full min-h-screen font-sans pb-0">
-      <div className="max-w-[1440px] mx-auto px-5 md:px-12">
+    <div className="relative pt-2 sm:pt-3 bg-transparent dark:bg-[#121212] w-full min-h-screen font-sans pb-0">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-5 md:px-12">
       <SEO
         title="DEEP SHOP | Border Cross Products & Genuine Mobiles Bangladesh"
         description="DEEP SHOP is Bangladesh's trusted platform for Border Cross Products & genuine mobiles. Find 100% authentic and trusted global tech products."

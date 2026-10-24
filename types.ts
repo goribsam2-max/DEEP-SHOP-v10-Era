@@ -58,8 +58,15 @@ export interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
+  username?: string;
   photoURL?: string;
-  role?: string;
+  isAdmin?: boolean;
+  isSeller?: boolean;
+  sellerStatus?: string;
+  type?: string;
+  stars?: number;
+  purchasedStars?: number;
+  xp?: number;
   isReseller?: boolean;
   resellerStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   socialPlatform?: string;
@@ -83,7 +90,7 @@ export interface UserProfile {
   positiveReviews?: number;
   totalSold?: number;
   regularBuyers?: number;
-  role: 'user' | 'admin' | 'staff' | 'seller';
+  role: 'user' | 'admin' | 'staff' | 'seller' | string;
   isBanned: boolean;
   createdAt: number;
   isRegisteredBadge?: boolean;
@@ -229,18 +236,32 @@ export interface ScamComment {
   createdAt: number;
 }
 
+export type ImageLayoutStyle = 'collage' | 'carousel' | 'grid' | 'stack';
+export type ImageAspectMode = 'original' | 'square' | 'portrait' | 'landscape';
+
 export interface ScamPost {
   id: string;
-  postType?: 'scam' | 'news' | 'discussion';
+  postType?: 'scam' | 'news' | 'discussion' | 'normal';
   title: string;
   description: string;
   scammerName?: string;
   scammerPhone?: string;
   scammerBkash?: string;
   scammerSocialLink?: string;
+  scamLocation?: string;
   scammedAmount?: number;
-  category: 'electronics' | 'delivery' | 'advance_payment' | 'fake_account' | 'tech_news' | 'market_update' | 'other';
+  category: 'electronics' | 'delivery' | 'advance_payment' | 'fake_account' | 'tech_news' | 'market_update' | 'lifestyle' | 'other' | string;
   images: string[];
+  imageLayout?: ImageLayoutStyle;
+  imageAspectRatio?: ImageAspectMode;
+  imageNaturalRatios?: number[];
+  audioUrl?: string;
+  audioDuration?: number;
+  audioWaveform?: number[];
+  videoUrl?: string;
+  themes?: string[];
+  contentType?: 'text' | 'image' | 'voice' | 'video' | 'affirmation' | 'scam';
+  textStyle?: 'normal' | 'large' | 'quote';
   reporterId: string;
   reporterName: string;
   reporterAvatar?: string;
@@ -250,8 +271,10 @@ export interface ScamPost {
   reactionsCount?: Record<ReactionType, number>;
   reactionsUsers?: Record<string, { userName: string; userAvatar?: string; type: ReactionType; timestamp: number }>;
   commentsCount: number;
+  sharesCount?: number;
+  savedByUserIds?: string[];
   createdAt: number;
-  status?: 'trending' | 'active' | 'verified' | 'resolved';
+  status?: 'trending' | 'active' | 'verified' | 'resolved' | 'under_review';
   views?: number;
 }
 

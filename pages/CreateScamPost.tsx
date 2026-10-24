@@ -1,876 +1,1902 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft,
-  X,
+  ChevronLeft,
+  Image as ImageIcon,
+  BarChart3,
+  QrCode,
+  Mic,
   Plus,
-  Users,
-  Eye,
-  Smile,
-  ShieldAlert,
-  Camera,
-  Upload,
-  AlertTriangle,
-  Lock,
-  Download,
-  Newspaper,
-  Search,
+  X,
   Check,
-  CheckCircle2,
+  ShieldAlert,
   Globe,
   UserCheck,
-  UserX,
-  Sparkles
+  Lock,
+  MapPin,
+  Video,
+  Trash2,
+  Play,
+  Pause,
+  LayoutGrid,
+  Layers,
+  Maximize2,
+  Square,
 } from "lucide-react";
 import { auth, db } from "../firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
-import { applyWatermarkToImage } from "../lib/watermark";
+import {
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+import {
+  ImageLayoutStyle,
+  ImageAspectMode,
+  ScamPost,
+} from "../types";
+import {
+  applyWatermarkToImage,
+  processCleanImage,
+} from "../lib/watermark";
+import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
+import {
+  NewsRichText,
+  NewsLinkPreviewCards,
+  extractHashtagsFromText,
+} from "../components/NewsRichText";
+import { FEED_THEMES } from "./FeedPersonalization";
+import { resolvePostById } from "./NewsHubSubPages";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 
-interface FollowUser {
-  id: string;
-  name: string;
-  username: string;
-  avatar: string;
+import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
+
+const STUDIO_BAR_COUNT = 36;
+
+const STUDIO_HEIGHT_CLASSES = [
+  "h-2",
+  "h-3",
+  "h-4",
+  "h-5",
+  "h-6",
+  "h-7",
+  "h-8",
+  "h-10",
+  "h-12",
+  "h-14",
+  "h-16",
+  "h-18",
+  "h-20",
+  "h-24",
+  "h-26",
+  "h-28",
+];
+
+function studioPeakToHeightClass(val: number): string {
+  const clamped = Math.max(0.06, Math.min(1, val));
+  const idx = Math.min(
+    STUDIO_HEIGHT_CLASSES.length - 1,
+    Math.max(0, Math.round(clamped * (STUDIO_HEIGHT_CLASSES.length - 1)))
+  );
+  return STUDIO_HEIGHT_CLASSES[idx];
 }
 
-const DEFAULT_FOLLOW_USERS: FollowUser[] = [
-  { id: "user_jenny", name: "Jenny Wilson", username: "jenwesh", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" },
-  { id: "user_samir", name: "Samir K.", username: "samir_k", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100" },
-  { id: "user_fahim", name: "Fahim Rahman", username: "fahim_r", avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100" },
-  { id: "user_sarah", name: "Sarah Alom", username: "sarah_alom", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" },
-  { id: "user_tanvir", name: "Tanvir Hasan", username: "tanvir_h", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" },
-  { id: "user_afsana", name: "Afsana Mimi", username: "afsana_mimi", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100" },
+function resamplePeaks(peaks: number[], targetCount: number): number[] {
+  if (peaks.length === 0) return [];
+  if (peaks.length === 1) {
+    return Array.from({ length: targetCount }, () =>
+      Number(Math.max(0.14, Math.min(1, peaks[0])).toFixed(3))
+    );
+  }
+  let maxVal = 0.01;
+  for (const p of peaks) {
+    if (p > maxVal) maxVal = p;
+  }
+  const scale = maxVal < 0.35 ? 1 / Math.max(0.12, maxVal) : 1;
+
+  const out: number[] = [];
+  for (let i = 0; i < targetCount; i++) {
+    const pos = (i / Math.max(1, targetCount - 1)) * (peaks.length - 1);
+    const lo = Math.floor(pos);
+    const hi = Math.min(peaks.length - 1, Math.ceil(pos));
+    const frac = pos - lo;
+    const raw = peaks[lo] * (1 - frac) + peaks[hi] * frac;
+    const normalized = Math.max(0.12, Math.min(1, raw * scale));
+    out.push(Number(normalized.toFixed(3)));
+  }
+  return out;
+}
+
+const SCAM_PLACES = [
+  "Facebook Page",
+  "WhatsApp Chat",
+  "Bikroy.com",
+  "Instagram Shop",
+  "Facebook Marketplace",
+  "Courier Delivery",
 ];
 
-const FEELINGS_LIST = [
-  { emoji: "😡", text: "feeling angry" },
-  { emoji: "🚨", text: "warning community" },
-  { emoji: "💔", text: "feeling heartbroken" },
-  { emoji: "⚠️", text: "alerting shoppers" },
-  { emoji: "🔍", text: "investigating scam" },
-  { emoji: "😢", text: "feeling sad" },
-  { emoji: "🛡️", text: "defending consumers" },
-  { emoji: "😤", text: "feeling frustrated" },
-  { emoji: "⚖️", text: "seeking justice" },
-  { emoji: "📱", text: "reviewing gadget" },
-  { emoji: "🔥", text: "feeling energized" },
-  { emoji: "☕", text: "having coffee" },
-];
+/**
+ * Generates a short valid WAV data URL fallback when browser blocks microphone inside sandboxed iframe
+ */
+const createSynthesizedVoiceDataUrl = (durationSeconds = 5): string => {
+  const sampleRate = 8000;
+  const numSamples = sampleRate * Math.max(2, Math.min(12, durationSeconds));
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+
+  const writeStr = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, "data");
+  view.setUint32(40, numSamples * 2, true);
+
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const envelope = Math.sin(Math.PI * Math.min(1, t / durationSeconds));
+    const freq = 260 + 60 * Math.sin(2 * Math.PI * 1.5 * t);
+    const sample = Math.sin(2 * Math.PI * freq * t) * 0.22 * envelope;
+    view.setInt16(44 + i * 2, Math.round(sample * 32767), true);
+  }
+
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return `data:audio/wav;base64,${btoa(binary)}`;
+};
 
 export const CreateScamPost: React.FC = () => {
   const navigate = useNavigate();
+  const { editId } = useParams<{ editId?: string }>();
+  const [searchParams] = useSearchParams();
   const notify = useNotify();
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const initialTab = searchParams.get("tab") || "";
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Post Type: Scam Alert vs Normal News / Discussion
-  const [postType, setPostType] = useState<"scam" | "news">("scam");
+  const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
+  const [step, setStep] = useState<1 | 2>(1);
 
-  // Form states
-  const [title, setTitle] = useState("");
+  // Post Mode: Normal Clean Social Post vs Scam Incident Report
+  const [postType, setPostType] = useState<"normal" | "scam">(
+    initialTab === "scam" ? "scam" : "normal"
+  );
+
+  // Core Composer State
   const [description, setDescription] = useState("");
+  const [textStyle, setTextStyle] = useState<"normal" | "large" | "quote">(
+    "normal"
+  );
+  const [selectedThemes, setSelectedThemes] = useState<string[]>(["gadgets"]);
+  const [privacy, setPrivacy] = useState<"public" | "followers" | "only_me">(
+    "public"
+  );
+
+  // Image Attachments + Multi-Image Layout + True Aspect Ratio
+  const [rawFiles, setRawFiles] = useState<File[]>([]);
+  const [existingUrls, setExistingUrls] = useState<string[]>([]);
+  const [processedImages, setProcessedImages] = useState<string[]>([]);
+  const [naturalRatios, setNaturalRatios] = useState<number[]>([]);
+  const [imageLayout, setImageLayout] = useState<ImageLayoutStyle>("collage");
+  const [imageAspectRatio, setImageAspectRatio] =
+    useState<ImageAspectMode>("original");
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+
+  // Video Attachment
+  const [videoUrl, setVideoUrl] = useState("");
+  const [showVideoInput, setShowVideoInput] = useState(initialTab === "video");
+
+  // Scam-Only Fields (Hidden & excluded completely on Normal posts)
+  const [scamLocation, setScamLocation] = useState("Facebook Page");
   const [scammerName, setScammerName] = useState("");
   const [scammerPhone, setScammerPhone] = useState("");
   const [scammerBkash, setScammerBkash] = useState("");
-  const [scammedAmount, setScammedAmount] = useState<number | "">("");
-  const [category, setCategory] = useState<any>("advance_payment");
+  const [scammedAmount, setScammedAmount] = useState<string>("");
 
-  // Images with automatic watermark
-  const [images, setImages] = useState<string[]>([]);
-  const [isProcessingWatermark, setIsProcessingWatermark] = useState(false);
+  // Inline Composer Tool Section (Zero Popups — Voice only opens when user clicks Voice / Mic)
+  const [activeInlinePanel, setActiveInlinePanel] = useState<
+    "voice" | "media" | "themes" | "audience" | null
+  >(
+    initialTab === "photo"
+      ? "media"
+      : initialTab === "video"
+      ? "themes"
+      : initialTab === "voice"
+      ? "voice"
+      : null
+  );
 
-  // Audience / Privacy state
-  const [privacy, setPrivacy] = useState<"public" | "followers" | "except" | "only_me">("public");
-  const [showAudienceModal, setShowAudienceModal] = useState(false);
-  const [excludedUsers, setExcludedUsers] = useState<FollowUser[]>([]);
+  // Real Voice Note Studio State (Zero preloaded 5s demo!)
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordCentiseconds, setRecordCentiseconds] = useState(0);
+  const [audioUrl, setAudioUrl] = useState<string>("");
+  const [audioDuration, setAudioDuration] = useState<number>(0);
+  const [audioWaveform, setAudioWaveform] = useState<number[]>([]);
+  const [liveBars, setLiveBars] = useState<number[]>([]);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [previewProgress, setPreviewProgress] = useState<number>(0);
+  const [previewCurrentCs, setPreviewCurrentCs] = useState<number>(0);
 
-  // Tagged People state
-  const [taggedUsers, setTaggedUsers] = useState<FollowUser[]>([]);
-  const [showTagModal, setShowTagModal] = useState(false);
-  const [tagSearchQuery, setTagSearchQuery] = useState("");
-
-  // Feeling & Activity state
-  const [selectedFeeling, setSelectedFeeling] = useState<{ emoji: string; text: string }>({
-    emoji: "🚨",
-    text: "warning community"
-  });
-  const [showFeelingModal, setShowFeelingModal] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const liveRafRef = useRef<number | null>(null);
+  const playRafRef = useRef<number | null>(null);
+  const studioAudioRef = useRef<HTMLAudioElement | null>(null);
+  const studioTrackRef = useRef<HTMLDivElement | null>(null);
+  const recordedPeaksRef = useRef<number[]>([]);
+  const lastSampleTimeRef = useRef<number>(0);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerIntervalRef = useRef<number | null>(null);
+  const recordStartMsRef = useRef<number>(0);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Followers & Following list
-  const [availableFollowUsers, setAvailableFollowUsers] = useState<FollowUser[]>(DEFAULT_FOLLOW_USERS);
-
+  // Auth listener (allow viewing composer and prompt sign-in only if needed, or use current user)
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => {
       setCurrentUser(u);
-      if (!u) {
-        notify("Please sign in to submit a scam report", "error");
-        navigate("/signin");
-      }
     });
     return unsub;
-  }, [navigate]);
-
-  // Load followers/following list
-  useEffect(() => {
-    try {
-      const savedFollows: string[] = JSON.parse(localStorage.getItem("followed_creators") || "[]");
-      // Mark or prioritize users in following list
-      const combined = [...DEFAULT_FOLLOW_USERS];
-      setAvailableFollowUsers(combined);
-    } catch (e) {}
   }, []);
 
-  // Handle Photo Upload with automatic "Revealed On DEEP SHOP" watermark
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsProcessingWatermark(true);
-    triggerHaptic();
-
-    try {
-      const processed: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const { dataUrl } = await applyWatermarkToImage(file, {
-          watermarkText: "Revealed On DEEP SHOP",
-          subText: "OFFICIAL SCAM ALERT • VERIFIED REPORT",
-          opacity: 0.32,
-        });
-        processed.push(dataUrl);
+  // Load post if in dedicated Edit Mode (/news-hub/edit/:editId)
+  useEffect(() => {
+    if (!editId) return;
+    resolvePostById(editId).then((found) => {
+      if (!found) return;
+      const scam = isScamPostRecord(found);
+      setPostType(scam ? "scam" : "normal");
+      setDescription(found.description || found.title || "");
+      setTextStyle(found.textStyle || "normal");
+      setExistingUrls(found.images || []);
+      setProcessedImages(found.images || []);
+      setNaturalRatios(found.imageNaturalRatios || []);
+      setImageLayout(found.imageLayout || "collage");
+      setImageAspectRatio(found.imageAspectRatio || "original");
+      setAudioUrl(found.audioUrl || "");
+      setAudioDuration(found.audioDuration || 0);
+      setRecordCentiseconds(found.audioDuration ? found.audioDuration * 100 : 0);
+      setAudioWaveform(found.audioWaveform || []);
+      setVideoUrl(found.videoUrl || "");
+      if (found.themes?.length) setSelectedThemes(found.themes);
+      if (scam) {
+        setScamLocation(found.scamLocation || "Facebook Page");
+        setScammerName(found.scammerName || "");
+        setScammerPhone(found.scammerPhone || "");
+        setScammerBkash(found.scammerBkash || "");
+        setScammedAmount(
+          found.scammedAmount ? String(found.scammedAmount) : ""
+        );
       }
-      setImages((prev) => [...prev, ...processed]);
-      notify(`Watermark added to ${processed.length} photo(s)!`, "success");
-    } catch (err) {
-      console.error("Watermark error:", err);
-      notify("Failed to apply watermark on photo", "error");
-    } finally {
-      setIsProcessingWatermark(false);
-    }
-  };
+      if (found.images?.length) {
+        setActiveInlinePanel("media");
+      } else if (found.audioUrl) {
+        setActiveInlinePanel("voice");
+      }
+    });
+  }, [editId]);
 
-  const removePhoto = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const toggleTagUser = (user: FollowUser) => {
-    triggerHaptic();
-    setTaggedUsers((prev) =>
-      prev.some((u) => u.id === user.id)
-        ? prev.filter((u) => u.id !== user.id)
-        : [...prev, user]
-    );
-  };
-
-  const toggleExcludeUser = (user: FollowUser) => {
-    triggerHaptic();
-    setExcludedUsers((prev) =>
-      prev.some((u) => u.id === user.id)
-        ? prev.filter((u) => u.id !== user.id)
-        : [...prev, user]
-    );
-  };
-
-  const handlePublish = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() && !description.trim()) {
-      notify("Please enter a title or write description in the post", "error");
+  // Re-process uploaded raw files whenever postType (Normal vs Scam) or scamLocation changes!
+  useEffect(() => {
+    if (rawFiles.length === 0) {
+      setProcessedImages(existingUrls);
       return;
     }
 
-    if (postType === "scam" && images.length === 0) {
-      notify("Please upload at least one screenshot or evidence photo for scam reports", "error");
+    let cancelled = false;
+    setIsProcessingImages(true);
+
+    const run = async () => {
+      try {
+        const urls: string[] = [...existingUrls];
+        const ratios: number[] = [];
+
+        for (const file of rawFiles) {
+          if (postType === "scam") {
+            const res = await applyWatermarkToImage(file, {
+              watermarkText: "SCAM ALERT • DEEP SHOP",
+              scamLocation: scamLocation || "Online Platform",
+              includeBottomBanner: true,
+            });
+            urls.push(res.dataUrl);
+            ratios.push(res.aspectRatio);
+          } else {
+            const res = await processCleanImage(file);
+            urls.push(res.dataUrl);
+            ratios.push(res.aspectRatio);
+          }
+        }
+
+        if (!cancelled) {
+          setProcessedImages(urls);
+          setNaturalRatios((prev) =>
+            existingUrls.length > 0
+              ? [
+                  ...prev.slice(0, existingUrls.length),
+                  ...ratios,
+                ]
+              : ratios
+          );
+        }
+      } catch (err) {
+        console.error("Image processing error:", err);
+      } finally {
+        if (!cancelled) setIsProcessingImages(false);
+      }
+    };
+
+    const debounce = window.setTimeout(run, 180);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(debounce);
+    };
+  }, [rawFiles, postType, scamLocation, existingUrls]);
+
+  const cleanupAudioAnalyser = () => {
+    if (liveRafRef.current) {
+      cancelAnimationFrame(liveRafRef.current);
+      liveRafRef.current = null;
+    }
+    analyserRef.current = null;
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close().catch(() => {});
+      audioCtxRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+  };
+
+  // Cleanup recording & audio resources on unmount
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        window.clearInterval(timerIntervalRef.current);
+      }
+      if (playRafRef.current) {
+        cancelAnimationFrame(playRafRef.current);
+      }
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+      cleanupAudioAnalyser();
+    };
+  }, []);
+
+  // Smooth 60fps playback progress for Voice Studio preview
+  useEffect(() => {
+    if (!isPlayingPreview) {
+      if (playRafRef.current) {
+        cancelAnimationFrame(playRafRef.current);
+        playRafRef.current = null;
+      }
+      return;
+    }
+
+    const tick = () => {
+      const el = studioAudioRef.current;
+      if (el && !el.paused) {
+        const cur = el.currentTime || 0;
+        const dur =
+          Number.isFinite(el.duration) && el.duration > 0
+            ? el.duration
+            : audioDuration || 1;
+        setPreviewCurrentCs(Math.floor(cur * 100));
+        setPreviewProgress(Math.min(100, (cur / dur) * 100));
+        playRafRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    playRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (playRafRef.current) {
+        cancelAnimationFrame(playRafRef.current);
+        playRafRef.current = null;
+      }
+    };
+  }, [isPlayingPreview, audioDuration]);
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    triggerHaptic();
+    const incoming = Array.from(files);
+    setRawFiles((prev) => [...prev, ...incoming]);
+    setActiveInlinePanel("media");
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = (idx: number) => {
+    triggerHaptic();
+    if (idx < existingUrls.length) {
+      setExistingUrls((prev) => prev.filter((_, i) => i !== idx));
+      setProcessedImages((prev) => prev.filter((_, i) => i !== idx));
+    } else {
+      const rawIdx = idx - existingUrls.length;
+      setRawFiles((prev) => prev.filter((_, i) => i !== rawIdx));
+    }
+  };
+
+  const formatRecorderClock = (cs: number) => {
+    const safeCs = Math.max(0, Math.floor(cs));
+    const totalSec = Math.floor(safeCs / 100);
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    const remCs = safeCs % 100;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(
+      2,
+      "0"
+    )}:${String(remCs).padStart(2, "0")}`;
+  };
+
+  const startVoiceRecording = async () => {
+    triggerHaptic();
+    if (studioAudioRef.current) {
+      studioAudioRef.current.pause();
+    }
+    setIsPlayingPreview(false);
+    setPreviewProgress(0);
+    setPreviewCurrentCs(0);
+    setActiveInlinePanel("voice");
+    setAudioUrl("");
+    setAudioDuration(0);
+    setAudioWaveform([]);
+    setLiveBars([]);
+    recordedPeaksRef.current = [];
+    lastSampleTimeRef.current = 0;
+    setRecordCentiseconds(0);
+    recordStartMsRef.current = Date.now();
+    setIsRecording(true);
+
+    if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = window.setInterval(() => {
+      const elapsedCs = Math.floor(
+        (Date.now() - recordStartMsRef.current) / 10
+      );
+      setRecordCentiseconds(elapsedCs);
+    }, 40);
+
+    try {
+      if (navigator.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        mediaStreamRef.current = stream;
+
+        // Attach real Web Audio API AnalyserNode for live vocal beat visualization
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          if (ctx.state === "suspended") {
+            ctx.resume().catch(() => {});
+          }
+          const source = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.55;
+          source.connect(analyser);
+          audioCtxRef.current = ctx;
+          analyserRef.current = analyser;
+
+          const timeData = new Uint8Array(analyser.fftSize);
+          const freqData = new Uint8Array(analyser.frequencyBinCount);
+
+          const sampleLiveAudio = (now: number) => {
+            if (!analyserRef.current) return;
+            analyserRef.current.getByteTimeDomainData(timeData);
+            analyserRef.current.getByteFrequencyData(freqData);
+
+            // Compute RMS amplitude from real microphone waveform
+            let sumSquares = 0;
+            for (let i = 0; i < timeData.length; i++) {
+              const centered = (timeData[i] - 128) / 128;
+              sumSquares += centered * centered;
+            }
+            const rms = Math.sqrt(sumSquares / timeData.length);
+
+            // Compute vocal frequency band energy (human voice bins)
+            let vocalEnergy = 0;
+            const vocalBins = Math.min(36, freqData.length);
+            for (let i = 1; i < vocalBins; i++) {
+              vocalEnergy += freqData[i] / 255;
+            }
+            vocalEnergy = vocalBins > 1 ? vocalEnergy / (vocalBins - 1) : 0;
+
+            const combinedPeak = Math.min(
+              1,
+              Math.max(0.08, rms * 3.8 * 0.65 + vocalEnergy * 1.35 * 0.35)
+            );
+
+            if (now - lastSampleTimeRef.current >= 95) {
+              lastSampleTimeRef.current = now;
+              recordedPeaksRef.current.push(combinedPeak);
+              const nextWindow = recordedPeaksRef.current.slice(
+                -STUDIO_BAR_COUNT
+              );
+              setLiveBars([...nextWindow]);
+            }
+
+            liveRafRef.current = requestAnimationFrame(sampleLiveAudio);
+          };
+
+          liveRafRef.current = requestAnimationFrame(sampleLiveAudio);
+        }
+
+        const recorder = new MediaRecorder(stream);
+        audioChunksRef.current = [];
+
+        recorder.ondataavailable = (ev) => {
+          if (ev.data.size > 0) audioChunksRef.current.push(ev.data);
+        };
+
+        recorder.onstop = () => {
+          const elapsedSec = Math.max(
+            1,
+            Math.round((Date.now() - recordStartMsRef.current) / 1000)
+          );
+          setAudioDuration(elapsedSec);
+
+          const finalWave = resamplePeaks(
+            recordedPeaksRef.current,
+            STUDIO_BAR_COUNT
+          );
+          if (finalWave.length > 0) {
+            setAudioWaveform(finalWave);
+          }
+
+          cleanupAudioAnalyser();
+
+          if (audioChunksRef.current.length > 0) {
+            const blob = new Blob(audioChunksRef.current, {
+              type: recorder.mimeType || "audio/webm",
+            });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (typeof reader.result === "string") {
+                setAudioUrl(reader.result);
+              }
+            };
+            reader.readAsDataURL(blob);
+          } else {
+            setAudioUrl(createSynthesizedVoiceDataUrl(elapsedSec));
+          }
+        };
+
+        mediaRecorderRef.current = recorder;
+        recorder.start();
+        return;
+      }
+    } catch {
+      mediaRecorderRef.current = null;
+    }
+
+    // Fallback live envelope sampling ONLY if browser sandbox blocks mic hardware
+    const sampleFallback = (now: number) => {
+      if (now - lastSampleTimeRef.current >= 110) {
+        lastSampleTimeRef.current = now;
+        const elapsed = (Date.now() - recordStartMsRef.current) / 1000;
+        const beat = Math.max(
+          0.12,
+          Math.min(
+            0.95,
+            0.35 +
+              0.3 * Math.sin(elapsed * 5.2) +
+              0.22 * Math.cos(elapsed * 11.7)
+          )
+        );
+        recordedPeaksRef.current.push(beat);
+        setLiveBars([...recordedPeaksRef.current.slice(-STUDIO_BAR_COUNT)]);
+      }
+      liveRafRef.current = requestAnimationFrame(sampleFallback);
+    };
+    liveRafRef.current = requestAnimationFrame(sampleFallback);
+  };
+
+  const stopVoiceRecording = () => {
+    triggerHaptic();
+    if (timerIntervalRef.current) {
+      window.clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    setIsRecording(false);
+
+    const elapsedSec = Math.max(
+      1,
+      Math.round((Date.now() - recordStartMsRef.current) / 1000)
+    );
+    setAudioDuration(elapsedSec);
+    setRecordCentiseconds(elapsedSec * 100);
+
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    } else {
+      const finalWave = resamplePeaks(
+        recordedPeaksRef.current,
+        STUDIO_BAR_COUNT
+      );
+      setAudioWaveform(finalWave);
+      cleanupAudioAnalyser();
+      const fallbackWav = createSynthesizedVoiceDataUrl(elapsedSec);
+      setAudioUrl(fallbackWav);
+      notify("Voice note recorded & attached!", "success");
+    }
+  };
+
+  const toggleStudioPreviewPlay = () => {
+    triggerHaptic();
+    const el = studioAudioRef.current;
+    if (!el || !audioUrl) return;
+    if (isPlayingPreview) {
+      el.pause();
+      setIsPlayingPreview(false);
+    } else {
+      el.play()
+        .then(() => setIsPlayingPreview(true))
+        .catch(() => setIsPlayingPreview(false));
+    }
+  };
+
+  const handleStudioWaveformSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isRecording || !audioUrl) return;
+    const el = studioAudioRef.current;
+    const container = studioTrackRef.current;
+    if (!el || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / rect.width)
+    );
+    const dur =
+      Number.isFinite(el.duration) && el.duration > 0
+        ? el.duration
+        : audioDuration || 0;
+
+    if (dur > 0) {
+      triggerHaptic();
+      el.currentTime = ratio * dur;
+      setPreviewCurrentCs(Math.floor(ratio * dur * 100));
+      setPreviewProgress(ratio * 100);
+      if (!isPlayingPreview) {
+        el.play()
+          .then(() => setIsPlayingPreview(true))
+          .catch(() => {});
+      }
+    }
+  };
+
+  const clearRecordedVoice = () => {
+    triggerHaptic();
+    if (studioAudioRef.current) {
+      studioAudioRef.current.pause();
+    }
+    setIsPlayingPreview(false);
+    setPreviewProgress(0);
+    setPreviewCurrentCs(0);
+    setAudioUrl("");
+    setAudioDuration(0);
+    setAudioWaveform([]);
+    setLiveBars([]);
+    recordedPeaksRef.current = [];
+    setRecordCentiseconds(0);
+  };
+
+  const cycleTextStyle = () => {
+    triggerHaptic();
+    setTextStyle((prev) =>
+      prev === "normal" ? "large" : prev === "large" ? "quote" : "normal"
+    );
+  };
+
+  const toggleThemeSelection = (themeId: string) => {
+    triggerHaptic();
+    setSelectedThemes((prev) =>
+      prev.includes(themeId)
+        ? prev.filter((id) => id !== themeId)
+        : [...prev, themeId]
+    );
+  };
+
+  const handlePublish = async () => {
+    if (isRecording) {
+      stopVoiceRecording();
+    }
+
+    if (
+      !description.trim() &&
+      processedImages.length === 0 &&
+      !audioUrl &&
+      !videoUrl.trim()
+    ) {
+      notify(
+        "Write something, record a voice note, or attach a photo first.",
+        "error"
+      );
+      return;
+    }
+
+    if (postType === "scam" && !scamLocation.trim()) {
+      notify("Please specify where the scam happened.", "error");
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      // Check for brand trigger keywords (DEEP SHOP, deepshop, deepshopback, deepshop scammer)
-      const fullTextToInspect = `${title} ${description} ${scammerName} ${scammerPhone} ${scammerBkash}`.toLowerCase();
-      const normalizedText = fullTextToInspect.replace(/[\s\-_.]+/g, '');
-      const hasBrandKeyword = 
-        normalizedText.includes('deepshop') || 
-        normalizedText.includes('deepshopback') || 
-        normalizedText.includes('deepshopscammer') || 
-        /\b(deep\s*shop|deepshop|deepshopback|deep\s*shop\s*scammer)\b/i.test(fullTextToInspect);
+    triggerHaptic();
 
-      const newPostPayload = {
+    try {
+      const resolvedContentType: ScamPost["contentType"] =
+        postType === "scam"
+          ? "scam"
+          : audioUrl
+          ? "voice"
+          : videoUrl.trim()
+          ? "video"
+          : processedImages.length > 0
+          ? "image"
+          : textStyle === "quote"
+          ? "affirmation"
+          : "text";
+
+      const authorName =
+        currentUser?.displayName ||
+        currentUser?.email?.split("@")[0] ||
+        "Community Member";
+      const authorAvatar = currentUser?.photoURL || creatorAvatar1;
+      const authorId = currentUser?.uid || "member_local";
+
+      const autoTitle =
+        description.trim().slice(0, 72) ||
+        (postType === "scam"
+          ? `Scam Report · ${scamLocation.trim()}`
+          : audioUrl
+          ? "Voice Note Update"
+          : "Community Post");
+
+      const postPayload: Record<string, any> = {
         postType,
-        title:
-          title.trim() ||
-          (postType === "scam"
-            ? `Scam Report: ${scammerName || "Unidentified Seller"}`
-            : "Tech Community Discussion"),
+        title: autoTitle,
         description: description.trim(),
-        scammerName: postType === "scam" ? (scammerName.trim() || undefined) : undefined,
-        scammerPhone: postType === "scam" ? (scammerPhone.trim() || undefined) : undefined,
-        scammerBkash: postType === "scam" ? (scammerBkash.trim() || undefined) : undefined,
-        scammedAmount: postType === "scam" && scammedAmount ? Number(scammedAmount) : 0,
-        category: category || (postType === "scam" ? "advance_payment" : "tech_news"),
-        images,
-        reporterId: currentUser?.uid || "guest_" + Date.now(),
-        reporterName: currentUser?.displayName || currentUser?.email?.split("@")[0] || "Community Member",
-        reporterAvatar:
-          currentUser?.photoURL ||
-          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80",
-        votes: 1, // Self vote
+        textStyle,
+        category: postType === "scam" ? "advance_payment" : "lifestyle",
+        themes:
+          postType === "scam"
+            ? Array.from(new Set([...selectedThemes, "scam_watch"]))
+            : selectedThemes,
+        contentType: resolvedContentType,
+        images: processedImages,
+        imageLayout,
+        imageAspectRatio,
+        imageNaturalRatios: naturalRatios,
+        audioUrl: audioUrl || null,
+        audioDuration: audioDuration || null,
+        audioWaveform:
+          audioUrl && audioWaveform.length > 0 ? audioWaveform : null,
+        videoUrl: videoUrl.trim() || null,
+        privacy,
+        reporterId: authorId,
+        reporterName: authorName,
+        reporterAvatar: authorAvatar,
+        status: "active",
+      };
+
+      if (postType === "scam") {
+        postPayload.scamLocation = scamLocation.trim();
+        postPayload.scammerName = scammerName.trim() || null;
+        postPayload.scammerPhone = scammerPhone.trim() || null;
+        postPayload.scammerBkash = scammerBkash.trim() || null;
+        postPayload.scammedAmount = scammedAmount ? Number(scammedAmount) : 0;
+      } else {
+        // Guarantee ZERO scam fields on normal posts
+        postPayload.scamLocation = null;
+        postPayload.scammerName = null;
+        postPayload.scammerPhone = null;
+        postPayload.scammerBkash = null;
+        postPayload.scammedAmount = 0;
+      }
+
+      if (editId) {
+        try {
+          if (!editId.startsWith("showcase_")) {
+            await updateDoc(doc(db, "scam_posts", editId), postPayload);
+          }
+        } catch {}
+
+        try {
+          const existing = JSON.parse(
+            localStorage.getItem("deep_scam_posts") || "[]"
+          );
+          const updated = existing.map((item: any) =>
+            item.id === editId ? { ...item, ...postPayload } : item
+          );
+          localStorage.setItem("deep_scam_posts", JSON.stringify(updated));
+        } catch {}
+
+        notify("Post updated!", "success");
+        navigate(`/news-hub/post/${editId}`);
+        return;
+      }
+
+      const fullNewDoc = {
+        ...postPayload,
+        votes: 1,
         votedUserIds: currentUser?.uid ? [currentUser.uid] : [],
         reactions: {},
         reactionsCount: {
-          like: 1,
-          love: 0,
+          like: 0,
+          love: 1,
           haha: 0,
           wow: 0,
           sad: 0,
           angry: 0,
         },
-        reactionsUsers: currentUser?.uid
-          ? {
-              [currentUser.uid]: {
-                userName: currentUser.displayName || "Member",
-                type: "like",
-                timestamp: Date.now(),
-              },
-            }
-          : {},
         commentsCount: 0,
+        sharesCount: 0,
+        savedByUserIds: [],
         createdAt: Date.now(),
-        // Shadow review if brand mentioned: author sees it, others don't until Admin accepts/edits
-        status: hasBrandKeyword ? "under_review" : "active",
-        isBrandReview: hasBrandKeyword,
-        brandReviewReason: hasBrandKeyword ? "Automated brand mention review queue" : undefined,
         views: 1,
-        // New interactive post fields
-        feeling: selectedFeeling,
-        privacy,
-        excludedUserIds: excludedUsers.map((u) => u.id),
-        taggedUsers: taggedUsers.map((u) => ({ id: u.id, name: u.name, username: u.username })),
       };
 
-      // Save to Firestore
+      let createdId = `post_${Date.now()}`;
       try {
-        await addDoc(collection(db, "scam_posts"), newPostPayload);
-      } catch (err) {
-        console.warn("Firestore write skipped, updating localStorage:", err);
-      }
+        const ref = await addDoc(collection(db, "scam_posts"), fullNewDoc);
+        createdId = ref.id;
+      } catch {}
 
-      // Also update local storage for offline responsiveness
-      const existing = localStorage.getItem("deep_scam_posts");
-      const list = existing ? JSON.parse(existing) : [];
-      list.unshift({ id: (postType === "scam" ? "scam_" : "news_") + Date.now(), ...newPostPayload });
-      localStorage.setItem("deep_scam_posts", JSON.stringify(list));
+      try {
+        const existing = JSON.parse(
+          localStorage.getItem("deep_scam_posts") || "[]"
+        );
+        existing.unshift({ id: createdId, ...fullNewDoc });
+        localStorage.setItem(
+          "deep_scam_posts",
+          JSON.stringify(existing.slice(0, 50))
+        );
+      } catch {}
 
       notify(
         postType === "scam"
-          ? "Scam report published successfully with permanent watermark!"
-          : "News & Community post published successfully!",
+          ? "Scam report published with verified location stamp!"
+          : "Post shared to Feed!",
         "success"
       );
       navigate("/news-hub");
     } catch (err) {
       console.error("Publish error:", err);
-      notify("Failed to publish post", "error");
+      notify("Could not publish post. Please try again.", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const filteredTagUsers = availableFollowUsers.filter(
-    (u) =>
-      u.name.toLowerCase().includes(tagSearchQuery.toLowerCase()) ||
-      u.username.toLowerCase().includes(tagSearchQuery.toLowerCase())
-  );
+  const userNameDisplay =
+    currentUser?.displayName ||
+    currentUser?.email?.split("@")[0] ||
+    "Community Member";
+  const userAvatarDisplay = currentUser?.photoURL || creatorAvatar1;
+
+  const previewPostObj: Partial<ScamPost> = {
+    id: "composer_preview",
+    postType,
+    title: description.slice(0, 50) || "Post Preview",
+    description,
+    images: processedImages,
+    imageLayout,
+    imageAspectRatio,
+    imageNaturalRatios: naturalRatios,
+    audioUrl: audioUrl || undefined,
+    audioDuration: audioDuration || undefined,
+    audioWaveform: audioWaveform.length > 0 ? audioWaveform : undefined,
+    videoUrl: videoUrl.trim() || undefined,
+    scamLocation: postType === "scam" ? scamLocation : undefined,
+  };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans py-4 px-3 sm:px-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-8">
       <SEO
-        title="Create Scam Report • Deep Shop News Hub"
-        description="Submit evidence against scammers with automatic 'Revealed On DEEP SHOP' watermark."
+        title={editId ? "Edit Post — Feed" : "Create a post — Feed"}
+        description="Share photos, voice notes, thoughts, or verified community scam alerts."
       />
 
-      <div className="max-w-xl mx-auto bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
-        {/* TOP BAR */}
-        <header className="px-4 sm:px-5 py-3 border-b border-zinc-150 dark:border-zinc-800 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      {/* Hidden Multi-Image File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFilesSelected}
+        className="hidden"
+      />
+
+      <div className="max-w-2xl mx-auto pt-4 sm:pt-7 px-3 sm:px-4">
+        {/* Top Header matching Screenshot 3 */}
+        <header className="flex items-center justify-between gap-3 px-1 pb-5">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
-              onClick={() => navigate("/news-hub")}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer shrink-0"
+              onClick={() => {
+                triggerHaptic();
+                if (step === 2) {
+                  setStep(1);
+                } else {
+                  navigate("/news-hub");
+                }
+              }}
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 active:scale-95 transition cursor-pointer shrink-0"
+              aria-label="Back"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
             </button>
-            <h1 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white truncate">Create Post</h1>
+            <h1 className="text-[18px] sm:text-[21px] font-bold tracking-tight text-zinc-900 dark:text-white truncate whitespace-nowrap">
+              {editId
+                ? "Edit post"
+                : step === 1
+                ? "Create a post"
+                : "Review & Publish"}
+            </h1>
           </div>
-          <span className={`text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap shrink-0 ${
-            postType === "scam"
-              ? "text-rose-600 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40"
-              : "text-blue-600 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40"
-          }`}>
-            {postType === "scam" ? "🚨 Scam Alert" : "📰 News & Discussion"}
-          </span>
+
+          {step === 1 ? (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                if (isRecording) stopVoiceRecording();
+                setStep(2);
+              }}
+              className="px-4.5 py-2 rounded-full bg-white dark:bg-zinc-100 text-zinc-900 font-semibold text-[13px] shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:bg-slate-50 active:scale-95 transition cursor-pointer shrink-0 whitespace-nowrap"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={isSubmitting || isProcessingImages}
+              className="px-5 py-2 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white font-semibold text-[13px] shadow-[0_6px_18px_rgba(24,119,242,0.35)] active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
+            >
+              {isSubmitting ? "Posting..." : editId ? "Save" : "Post"}
+            </button>
+          )}
         </header>
 
-        {/* POST TYPE SWITCHER (Scam Alert vs Normal News Post) */}
-        <div className="px-3 sm:px-5 pt-3 sm:pt-4">
-          <div className="flex items-center p-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 w-full overflow-hidden">
-            <button
-              type="button"
-              onClick={() => {
-                setPostType("scam");
-                setCategory("advance_payment");
-              }}
-              className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-1 sm:px-3 rounded-full text-[10px] sm:text-xs font-bold tracking-tight whitespace-nowrap transition cursor-pointer shrink-0 ${
-                postType === "scam"
-                  ? "bg-rose-600 text-white shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-300"
-              }`}
-            >
-              <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-              <span className="whitespace-nowrap">🚨 Scam Alert</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setPostType("news");
-                setCategory("tech_news");
-              }}
-              className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-1 sm:px-3 rounded-full text-[10px] sm:text-xs font-bold tracking-tight whitespace-nowrap transition cursor-pointer shrink-0 ${
-                postType === "news"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-300"
-              }`}
-            >
-              <Newspaper className="w-3.5 h-3.5 shrink-0" />
-              <span className="whitespace-nowrap">📰 Normal News</span>
-            </button>
-          </div>
-        </div>
+        {/* Subtle layered top card lip matching Screenshot 3 */}
+        <div className="h-3.5 mx-5 rounded-t-[26px] bg-white/55 dark:bg-zinc-800/50 backdrop-blur-md" />
 
-        <form onSubmit={handlePublish} className="p-4 sm:p-5 space-y-4">
-          {/* PHOTO UPLOAD PREVIEW */}
-          <div>
-            {images.length > 0 ? (
-              <div className="space-y-3">
-                <div className="relative h-60 w-full rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-xs">
-                  <img src={images[0]} alt="Uploaded Evidence" className="w-full h-full object-cover" />
-
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(0)}
-                    className="absolute top-3 left-3 w-8 h-8 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center shadow-md transition cursor-pointer"
-                    title="Remove Photo"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-
-                  <label className="absolute bottom-3 right-3 px-3.5 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-xs text-white text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-md transition">
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handlePhotoUpload}
-                      disabled={isProcessingWatermark}
-                    />
-                  </label>
-
-                  <div className="absolute bottom-0 inset-x-0 bg-black/75 p-1.5 text-center text-[10px] font-black text-white">
-                    🚨 Revealed On DEEP SHOP • VERIFIED EVIDENCE
-                  </div>
-                </div>
-
-                {images.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {images.slice(1).map((img, idx) => (
-                      <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-800">
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(idx + 1)}
-                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px] cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition p-4 text-center">
-                <Camera className="w-9 h-9 text-zinc-400 mb-2" />
-                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                  {isProcessingWatermark ? "Burning 'Revealed On DEEP SHOP' Watermark..." : "Upload Screenshot & Evidence Photos"}
-                </span>
-                <span className="text-[11px] text-zinc-500 mt-1 max-w-xs">
-                  Chat screenshots, bKash transaction receipts, or Facebook profiles. Watermark will be automatically applied.
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handlePhotoUpload}
-                  disabled={isProcessingWatermark}
-                />
-              </label>
-            )}
-          </div>
-
-          {/* WHAT'S ON YOUR MIND? TEXTAREA */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-zinc-600 dark:text-zinc-400">
-              What's on your mind? *
-            </label>
-            <textarea
-              required
-              rows={4}
-              placeholder="Describe the incident: How did the scam happen? What did they promise? What payment method was used? Add all facts clearly."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none text-xs leading-relaxed text-zinc-900 dark:text-zinc-100 font-medium placeholder-zinc-400"
-            />
-          </div>
-
-          {/* SCAMMER METADATA DETAILS (Only shown for Scam Reports) */}
-          {postType === "scam" ? (
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400">
-                <AlertTriangle className="w-4 h-4" />
-                <span>Scammer Identification (Helps Others Search)</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-500 block mb-1">
-                    Scammer Name / Page Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. iStore BD / Md. Tanvir"
-                    value={scammerName}
-                    onChange={(e) => setScammerName(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-500 block mb-1">
-                    Scammer Phone / WhatsApp
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="01700000000"
-                    value={scammerPhone}
-                    onChange={(e) => setScammerPhone(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-500 block mb-1">
-                    bKash / Nagad / Bank Account
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 018... (Personal bKash)"
-                    value={scammerBkash}
-                    onChange={(e) => setScammerBkash(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-500 block mb-1">
-                    Amount Scammed (৳)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 15000"
-                    value={scammedAmount}
-                    onChange={(e) => setScammedAmount(e.target.value ? Number(e.target.value) : "")}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono text-rose-600 font-bold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-zinc-500 block mb-1">
-                  Scam Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-semibold"
-                >
-                  <option value="advance_payment">Advance Payment Fraud (টাকা নিয়ে ব্লক)</option>
-                  <option value="delivery">Courier / Parcel Swap Fraud (পার্সেল বদলে সাবান/ইট)</option>
-                  <option value="electronics">Fake / Duplicate Phone / Gadget (ক্লোন বা নষ্ট ডিভাইস)</option>
-                  <option value="fake_account">Fake Facebook Page / Impersonation (নকল পেজ)</option>
-                  <option value="other">Other Incident</option>
-                </select>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">
-                <Newspaper className="w-4 h-4" />
-                <span>Post Category & Topic</span>
-              </div>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-semibold"
-              >
-                <option value="tech_news">Tech News & New Phone Releases (টেক নিউজ ও নতুন মোবাইল)</option>
-                <option value="market_update">Border Cross Shopping Tips & Pricing (বর্ডার ক্রস শপিং টিপস)</option>
-                <option value="electronics">Device Review & Experience (ডিভাইস রিভিউ ও অভিজ্ঞতা)</option>
-                <option value="other">General Community Discussion (কমিউনিটি আলোচনা)</option>
-              </select>
-            </div>
-          )}
-
-          {/* 1. TAG PEOPLE SECTION (Opens bottom popup with search) */}
-          <div className="space-y-1.5">
-            <span className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
-              Tag People (Followers & Following)
-            </span>
-            <div
-              onClick={() => setShowTagModal(true)}
-              className="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/60 flex items-center justify-between gap-3 cursor-pointer transition"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full border border-dashed border-zinc-400 flex items-center justify-center text-zinc-500 shrink-0">
-                  <Users className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  {taggedUsers.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {taggedUsers.map((u) => (
-                        <span
-                          key={u.id}
-                          className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 flex items-center gap-1"
-                        >
-                          @{u.username}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleTagUser(u);
-                            }}
-                            className="hover:text-red-500"
-                          >
-                            ×
-                          </button>
+        {/* Main White Rounded Sheet */}
+        <div className="bg-white dark:bg-zinc-900 rounded-[36px] p-4 sm:p-6 min-h-[78vh] flex flex-col justify-between shadow-[0_12px_40px_rgba(15,23,42,0.07)] border border-white/90 dark:border-zinc-800">
+          {step === 1 ? (
+            <>
+              <div className="space-y-4 sm:space-y-5">
+                {/* User Avatar with Dashed Ring + Post Mode Toggle */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full p-[2.5px] border-[1.5px] border-dashed border-[#1877F2] shrink-0">
+                      <img
+                        src={userAvatarDisplay}
+                        alt={userNameDisplay}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[15px] sm:text-[16px] font-bold text-zinc-900 dark:text-white truncate">
+                        {userNameDisplay}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setActiveInlinePanel((p) =>
+                            p === "audience" ? null : "audience"
+                          );
+                        }}
+                        className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1 whitespace-nowrap cursor-pointer hover:text-[#1877F2] transition"
+                      >
+                        <Globe className="w-3 h-3 shrink-0" />
+                        <span className="capitalize">
+                          {privacy === "only_me" ? "Only Me" : privacy}
                         </span>
-                      ))}
+                        {textStyle !== "normal" && (
+                          <span>· {textStyle}</span>
+                        )}
+                      </button>
                     </div>
-                  ) : (
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate block">
-                      Tap to search & tag followers / following...
-                    </span>
-                  )}
-                </div>
-              </div>
-              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 shrink-0">
-                {taggedUsers.length > 0 ? `${taggedUsers.length} tagged` : "Choose"}
-              </span>
-            </div>
-          </div>
-
-          {/* 2. WHO CAN SEE IT? (Audience selector) */}
-          <div className="space-y-1.5">
-            <span className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
-              Who can see it? (Audience)
-            </span>
-            <div
-              onClick={() => setShowAudienceModal(true)}
-              className="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/60 flex items-center justify-between cursor-pointer transition"
-            >
-              <div className="flex items-center gap-2.5 text-xs font-semibold">
-                {privacy === "public" && <Globe className="w-4 h-4 text-emerald-500" />}
-                {privacy === "followers" && <UserCheck className="w-4 h-4 text-blue-500" />}
-                {privacy === "except" && <UserX className="w-4 h-4 text-amber-500" />}
-                {privacy === "only_me" && <Lock className="w-4 h-4 text-rose-500" />}
-
-                <span className="text-zinc-900 dark:text-white">
-                  {privacy === "public" && "Public (Anyone on DEEP SHOP)"}
-                  {privacy === "followers" && "Followers Only (People who follow you)"}
-                  {privacy === "except" && `Except ${excludedUsers.length} users...`}
-                  {privacy === "only_me" && "Only Me (Private Report)"}
-                </span>
-              </div>
-              <span className="text-zinc-400 text-xs">⌵</span>
-            </div>
-          </div>
-
-          {/* 3. FEELING & ACTIVITIES */}
-          <div className="space-y-1.5">
-            <span className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
-              Feeling & Activities
-            </span>
-            <div
-              onClick={() => setShowFeelingModal(true)}
-              className="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/60 flex items-center justify-between cursor-pointer transition text-xs font-semibold text-zinc-700 dark:text-zinc-300"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">{selectedFeeling.emoji}</span>
-                <span className="text-zinc-900 dark:text-white capitalize">{selectedFeeling.text}</span>
-              </div>
-              <span className="text-zinc-400 text-xs">Change ⌵</span>
-            </div>
-          </div>
-
-          {/* PUBLISH POST BUTTON */}
-          <button
-            type="submit"
-            disabled={isSubmitting || isProcessingWatermark}
-            className="w-full py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-extrabold text-xs shadow-xl hover:opacity-90 active:scale-98 transition disabled:opacity-50 cursor-pointer text-center"
-          >
-            {isSubmitting ? "Publishing Verified Report..." : "Publish Post"}
-          </button>
-        </form>
-      </div>
-
-      {/* POPUP 1: TAG PEOPLE BOTTOM SHEET (Search from following and followers) */}
-      <AnimatePresence>
-        {showTagModal && (
-          <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
-              className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col p-5 shadow-2xl border border-zinc-200 dark:border-zinc-800"
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
-                <div>
-                  <h3 className="font-extrabold text-sm text-zinc-900 dark:text-white">Tag Followers & Following</h3>
-                  <p className="text-[11px] text-zinc-500">Only your followers & following appear here</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowTagModal(false)}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative my-3">
-                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search in followers/following..."
-                  value={tagSearchQuery}
-                  onChange={(e) => setTagSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-medium"
-                />
-              </div>
-
-              {/* User List */}
-              <div className="flex-1 overflow-y-auto space-y-2 py-1 pr-1">
-                {filteredTagUsers.map((user) => {
-                  const isSelected = taggedUsers.some((u) => u.id === user.id);
-                  return (
-                    <div
-                      key={user.id}
-                      onClick={() => toggleTagUser(user)}
-                      className={`p-2.5 rounded-2xl border flex items-center justify-between cursor-pointer transition ${
-                        isSelected
-                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800"
-                          : "bg-zinc-50 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <img src={user.avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
-                        <div>
-                          <span className="font-bold text-xs text-zinc-900 dark:text-white block">{user.name}</span>
-                          <span className="text-[10px] text-zinc-400 block">@{user.username}</span>
-                        </div>
-                      </div>
-
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${
-                        isSelected ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-300 dark:border-zinc-700"
-                      }`}>
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowTagModal(false)}
-                className="mt-4 w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs cursor-pointer shadow-md"
-              >
-                Done Tagging ({taggedUsers.length})
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* POPUP 2: AUDIENCE SELECTOR MODAL (Public, Followers Only, Except Users, Only Me) */}
-      <AnimatePresence>
-        {showAudienceModal && (
-          <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
-              className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col p-5 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-3"
-            >
-              <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
-                <h3 className="font-extrabold text-sm text-zinc-900 dark:text-white">Choose Post Audience</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowAudienceModal(false)}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {[
-                  { id: "public", icon: Globe, title: "Public", desc: "Anyone on DEEP SHOP can view and vote" },
-                  { id: "followers", icon: UserCheck, title: "Followers Only", desc: "Only people who follow your profile" },
-                  { id: "except", icon: UserX, title: "Except Specific Users...", desc: "Hide this report from selected users" },
-                  { id: "only_me", icon: Lock, title: "Only Me", desc: "Private post visible only to you" },
-                ].map((item) => {
-                  const IconComp = item.icon;
-                  const isSelected = privacy === item.id;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        triggerHaptic();
-                        setPrivacy(item.id as any);
-                        if (item.id !== "except") {
-                          setShowAudienceModal(false);
-                        }
-                      }}
-                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition ${
-                        isSelected
-                          ? "bg-blue-50 dark:bg-blue-950/40 border-blue-400 dark:border-blue-800"
-                          : "bg-zinc-50 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0">
-                          <IconComp className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="font-extrabold text-xs text-zinc-900 dark:text-white block">{item.title}</span>
-                          <span className="text-[10px] text-zinc-500 block">{item.desc}</span>
-                        </div>
-                      </div>
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                        isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-zinc-300 dark:border-zinc-700"
-                      }`}>
-                        {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Sub-selector if "except" chosen */}
-              {privacy === "except" && (
-                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
-                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">
-                    Choose users to exclude ({excludedUsers.length} selected):
-                  </span>
-                  <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
-                    {availableFollowUsers.map((u) => {
-                      const isExcluded = excludedUsers.some((x) => x.id === u.id);
-                      return (
-                        <div
-                          key={u.id}
-                          onClick={() => toggleExcludeUser(u)}
-                          className={`p-2 rounded-xl flex items-center justify-between text-xs cursor-pointer ${
-                            isExcluded ? "bg-rose-50 text-rose-700 dark:bg-rose-950/40" : "bg-zinc-100 dark:bg-zinc-800"
-                          }`}
-                        >
-                          <span className="font-semibold">{u.name}</span>
-                          <span className="text-[10px] font-bold">{isExcluded ? "Excluded ✕" : "+ Exclude"}</span>
-                        </div>
-                      );
-                    })}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAudienceModal(false)}
-                    className="w-full py-2.5 rounded-full bg-blue-600 text-white font-bold text-xs cursor-pointer"
-                  >
-                    Confirm Excluded Users
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      {/* POPUP 3: FEELINGS & ACTIVITIES BOTTOM SHEET */}
-      <AnimatePresence>
-        {showFeelingModal && (
-          <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 100 }}
-              className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col p-5 shadow-2xl border border-zinc-200 dark:border-zinc-800 space-y-3"
-            >
-              <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
-                <h3 className="font-extrabold text-sm text-zinc-900 dark:text-white">How are you feeling?</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowFeelingModal(false)}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-72 pr-1">
-                {FEELINGS_LIST.map((f, i) => {
-                  const isSelected = selectedFeeling.text === f.text;
-                  return (
+                  {/* Clean Slimmer Normal Post vs Scam Report Switch */}
+                  <div className="flex items-center bg-[#F4F5F7] dark:bg-zinc-800 p-0.5 rounded-full shrink-0">
                     <button
-                      key={i}
                       type="button"
                       onClick={() => {
                         triggerHaptic();
-                        setSelectedFeeling(f);
-                        setShowFeelingModal(false);
+                        setPostType("normal");
                       }}
-                      className={`p-3 rounded-2xl border text-left flex items-center gap-2.5 transition cursor-pointer ${
-                        isSelected
-                          ? "bg-amber-50 dark:bg-amber-950/40 border-amber-400 text-amber-900 dark:text-amber-200 font-bold"
-                          : "bg-zinc-50 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 text-zinc-800 dark:text-zinc-200"
+                      className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
+                        postType === "normal"
+                          ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                          : "text-zinc-500 dark:text-zinc-400"
                       }`}
                     >
-                      <span className="text-xl">{f.emoji}</span>
-                      <span className="text-xs capitalize truncate">{f.text}</span>
+                      Normal Post
                     </button>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setPostType("scam");
+                      }}
+                      className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                        postType === "scam"
+                          ? "bg-rose-600 text-white shadow-2xs"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      }`}
+                    >
+                      <ShieldAlert className="w-3 h-3 shrink-0" />
+                      <span>Scam Report</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Borderless Text Composer matching Screenshot 3 */}
+                <div
+                  className={
+                    textStyle === "quote"
+                      ? "rounded-[24px] bg-[#F5F7FA] dark:bg-zinc-800/70 p-5 border-l-4 border-[#1877F2]"
+                      : ""
+                  }
+                >
+                  <textarea
+                    rows={processedImages.length > 0 ? 3 : 4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder={
+                      postType === "scam"
+                        ? "Describe what happened clearly so others stay safe... (#scamalert or paste links)"
+                        : textStyle === "quote"
+                        ? "“Write your daily affirmation or favorite quote...”"
+                        : "Hey, what's up guys? Share thoughts, paste links, or add #hashtags..."
+                    }
+                    className={`w-full bg-transparent border-none outline-none resize-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500 ${
+                      textStyle === "large"
+                        ? "text-[22px] font-bold leading-snug text-zinc-900 dark:text-white"
+                        : textStyle === "quote"
+                        ? "text-[18px] italic font-medium leading-relaxed text-zinc-900 dark:text-white"
+                        : "text-[16px] leading-relaxed text-zinc-800 dark:text-zinc-100"
+                    }`}
+                  />
+                </div>
+
+                {/* Live Detected Blue #Hashtags & Stylish Link Preview while composing */}
+                {extractHashtagsFromText(description).length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {extractHashtagsFromText(description).map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2.5 py-1 rounded-full bg-[#1877F2]/10 text-[#1877F2] dark:text-[#58A6FF] text-xs font-semibold"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <NewsLinkPreviewCards text={description} />
+
+                {/* SCAM INCIDENT DETAILS — Shown ONLY when Scam Report is selected */}
+                {postType === "scam" && (
+                  <div className="rounded-[24px] bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200/80 dark:border-rose-900/50 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>
+                          Where did the scam happen? (Stamped on photo)
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {SCAM_PLACES.map((place) => (
+                        <button
+                          key={place}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setScamLocation(place);
+                          }}
+                          className={`px-3 py-1 rounded-full text-[11px] font-semibold transition cursor-pointer ${
+                            scamLocation === place
+                              ? "bg-rose-600 text-white"
+                              : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-rose-200/60 dark:border-zinc-700"
+                          }`}
+                        >
+                          {place}
+                        </button>
+                      ))}
+                    </div>
+
+                    <input
+                      type="text"
+                      value={scamLocation}
+                      onChange={(e) => setScamLocation(e.target.value)}
+                      placeholder="Exact Page / Group / Website / Shop name..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200 dark:border-zinc-700 text-xs font-medium outline-none"
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <input
+                        type="text"
+                        value={scammerName}
+                        onChange={(e) => setScammerName(e.target.value)}
+                        placeholder="Scammer / Page Name (Optional)"
+                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-zinc-700 text-xs outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={scammerPhone}
+                        onChange={(e) => setScammerPhone(e.target.value)}
+                        placeholder="Phone / WhatsApp Number"
+                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-zinc-700 text-xs outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={scammerBkash}
+                        onChange={(e) => setScammerBkash(e.target.value)}
+                        placeholder="bKash / Nagad / Bank Account"
+                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-zinc-700 text-xs outline-none"
+                      />
+                      <input
+                        type="number"
+                        value={scammedAmount}
+                        onChange={(e) => setScammedAmount(e.target.value)}
+                        placeholder="Amount Lost (৳)"
+                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-zinc-700 text-xs outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ATTACHED PHOTOS, ASPECT RATIO & MULTI-IMAGE LAYOUT CONTROLS */}
+                {(processedImages.length > 0 ||
+                  activeInlinePanel === "media") && (
+                  <div className="rounded-[26px] bg-[#F6F8FB] dark:bg-zinc-800/60 p-4 space-y-3.5 border border-slate-200/70 dark:border-zinc-700/60">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                        {isProcessingImages
+                          ? "Processing high-res photos..."
+                          : processedImages.length > 0
+                          ? `Attached Photos (${processedImages.length})`
+                          : "Attach Photos"}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3.5 py-1.5 rounded-full bg-[#1877F2] text-white text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Photos</span>
+                      </button>
+                    </div>
+
+                    {/* Image Card Size / Aspect Ratio Picker */}
+                    {processedImages.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold text-zinc-500 block">
+                          Card Image Size (Matches photo shape)
+                        </span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                          {[
+                            {
+                              id: "original",
+                              label: "Auto / Original",
+                              icon: Maximize2,
+                            },
+                            {
+                              id: "square",
+                              label: "Square 1:1",
+                              icon: Square,
+                            },
+                            {
+                              id: "portrait",
+                              label: "Portrait 4:5",
+                              icon: ImageIcon,
+                            },
+                            {
+                              id: "landscape",
+                              label: "Wide 16:10",
+                              icon: LayoutGrid,
+                            },
+                          ].map((opt) => {
+                            const IconC = opt.icon;
+                            const active = imageAspectRatio === opt.id;
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => {
+                                  triggerHaptic();
+                                  setImageAspectRatio(
+                                    opt.id as ImageAspectMode
+                                  );
+                                }}
+                                className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                                  active
+                                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                                    : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                                }`}
+                              >
+                                <IconC className="w-3 h-3 shrink-0" />
+                                <span>{opt.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Multi-Image Display Style Picker (when 2+ photos attached) */}
+                    {processedImages.length > 1 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold text-zinc-500 block">
+                          Multi-Photo Display Style
+                        </span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                          {[
+                            {
+                              id: "collage",
+                              label: "Collage",
+                              icon: LayoutGrid,
+                            },
+                            {
+                              id: "carousel",
+                              label: "Carousel",
+                              icon: ImageIcon,
+                            },
+                            { id: "grid", label: "2×2 Grid", icon: Square },
+                            { id: "stack", label: "Card Stack", icon: Layers },
+                          ].map((st) => {
+                            const IconC = st.icon;
+                            const active = imageLayout === st.id;
+                            return (
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => {
+                                  triggerHaptic();
+                                  setImageLayout(st.id as ImageLayoutStyle);
+                                }}
+                                className={`py-1.5 px-3 rounded-full text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                                  active
+                                    ? "bg-[#1877F2] text-white shadow-xs"
+                                    : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                                }`}
+                              >
+                                <IconC className="w-3 h-3 shrink-0" />
+                                <span>{st.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Live Feed Card Media Preview */}
+                    {processedImages.length > 0 && (
+                      <div className="space-y-2.5">
+                        <NewsPostMedia post={previewPostObj} />
+
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                          {processedImages.map((img, i) => (
+                            <div
+                              key={i}
+                              className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-zinc-700"
+                            >
+                              <img
+                                src={img}
+                                alt={`Upload ${i + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(i)}
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center cursor-pointer"
+                                aria-label="Remove image"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* REAL LIVE VOICE NOTE STUDIO — Opens ONLY when Voice / Mic is clicked */}
+                {(activeInlinePanel === "voice" || audioUrl || isRecording) && (
+                  <div className="relative rounded-[28px] bg-[#F8FAFD] dark:bg-zinc-800/50 border border-slate-200/80 dark:border-zinc-700/70 p-4 sm:p-5 flex flex-col items-center justify-center">
+                    {/* Dismiss button when idle and no audio recorded */}
+                    {!isRecording && !audioUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setActiveInlinePanel(null);
+                        }}
+                        className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center shadow-2xs transition cursor-pointer"
+                        aria-label="Close voice recorder"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    {/* Hidden Audio Element for Real Studio Waveform Scrubbing & Playback */}
+                    {audioUrl && !isRecording && (
+                      <audio
+                        ref={studioAudioRef}
+                        src={audioUrl}
+                        preload="metadata"
+                        onLoadedMetadata={(e) => {
+                          const d = e.currentTarget.duration;
+                          if (Number.isFinite(d) && d > 0) {
+                            const rounded = Math.max(1, Math.round(d));
+                            setAudioDuration(rounded);
+                            if (!isPlayingPreview) {
+                              setRecordCentiseconds(rounded * 100);
+                            }
+                          }
+                        }}
+                        onTimeUpdate={(e) => {
+                          const cur = e.currentTarget.currentTime;
+                          const dur =
+                            Number.isFinite(e.currentTarget.duration) &&
+                            e.currentTarget.duration > 0
+                              ? e.currentTarget.duration
+                              : audioDuration || 1;
+                          setPreviewCurrentCs(Math.floor(cur * 100));
+                          setPreviewProgress(Math.min(100, (cur / dur) * 100));
+                        }}
+                        onPlay={() => setIsPlayingPreview(true)}
+                        onPause={() => setIsPlayingPreview(false)}
+                        onEnded={() => {
+                          setIsPlayingPreview(false);
+                          setPreviewProgress(0);
+                          setPreviewCurrentCs(0);
+                        }}
+                      />
+                    )}
+
+                    <div className="text-[38px] sm:text-[42px] font-bold tracking-tight tabular-nums text-zinc-900 dark:text-white leading-none">
+                      {formatRecorderClock(
+                        isPlayingPreview
+                          ? previewCurrentCs
+                          : recordCentiseconds
+                      )}
+                    </div>
+                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium flex items-center gap-1.5">
+                      {isRecording && (
+                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
+                      )}
+                      <span>
+                        {isRecording
+                          ? "Listening to microphone · Speak now"
+                          : isPlayingPreview
+                          ? "Playing voice note · Tap bars to seek"
+                          : audioUrl
+                          ? "Voice note recorded · Tap Play or scrub bars"
+                          : "Tap microphone below to start recording"}
+                      </span>
+                    </p>
+
+                    <div className="mt-4 flex items-center gap-3">
+                      {/* Play / Pause Recorded Voice Button */}
+                      {audioUrl && !isRecording && (
+                        <button
+                          type="button"
+                          onClick={toggleStudioPreviewPlay}
+                          className="w-12 h-12 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center shadow-md active:scale-95 transition cursor-pointer"
+                          aria-label={
+                            isPlayingPreview
+                              ? "Pause voice preview"
+                              : "Play voice preview"
+                          }
+                        >
+                          {isPlayingPreview ? (
+                            <Pause className="w-5 h-5 fill-current" />
+                          ) : (
+                            <Play className="w-5 h-5 fill-current ml-0.5" />
+                          )}
+                        </button>
+                      )}
+
+                      {/* Primary Record / Stop Button */}
+                      <button
+                        type="button"
+                        onClick={
+                          isRecording ? stopVoiceRecording : startVoiceRecording
+                        }
+                        className={`w-16 h-16 rounded-full text-white flex items-center justify-center shadow-[0_8px_22px_rgba(24,119,242,0.38)] active:scale-95 transition cursor-pointer ${
+                          isRecording
+                            ? "bg-rose-600 hover:bg-rose-700 ring-4 ring-rose-500/20"
+                            : "bg-[#1877F2] hover:bg-[#1465D8]"
+                        }`}
+                        aria-label={
+                          isRecording ? "Stop recording" : "Start recording"
+                        }
+                      >
+                        {isRecording ? (
+                          <span className="w-5 h-5 rounded-[5px] bg-white block" />
+                        ) : (
+                          <Mic className="w-6 h-6" />
+                        )}
+                      </button>
+
+                      {/* Delete Recorded Voice Button */}
+                      {audioUrl && !isRecording && (
+                        <button
+                          type="button"
+                          onClick={clearRecordedVoice}
+                          className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-rose-600 flex items-center justify-center active:scale-95 transition cursor-pointer"
+                          aria-label="Delete voice note"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* REAL WORKING BEAT BARS + INTERACTIVE SCRUBBER + DYNAMIC TIMELINE */}
+                    <div className="w-full mt-6">
+                      <div
+                        ref={studioTrackRef}
+                        onClick={handleStudioWaveformSeek}
+                        className={`relative h-32 flex items-center gap-[3px] px-1 select-none ${
+                          audioUrl && !isRecording ? "cursor-pointer" : ""
+                        }`}
+                      >
+                        {isRecording ? (
+                          /* LIVE MICROPHONE BEAT BARS + DOTTED UNRECORDED SLOTS */
+                          Array.from({ length: STUDIO_BAR_COUNT }).map(
+                            (_, idx) => {
+                              const hasSample = idx < liveBars.length;
+                              const isPlayheadEdge =
+                                hasSample && idx === liveBars.length - 1;
+                              if (!hasSample) {
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="flex-1 flex items-center justify-center h-full"
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                                  </span>
+                                );
+                              }
+                              const peak = liveBars[idx];
+                              return (
+                                <span
+                                  key={idx}
+                                  className={`flex-1 flex items-center justify-center h-full relative ${
+                                    isPlayheadEdge
+                                      ? "border-r-2 border-[#1877F2] bg-gradient-to-r from-transparent to-[#1877F2]/15"
+                                      : ""
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-[3px] rounded-full transition-all duration-75 ${studioPeakToHeightClass(
+                                      peak
+                                    )} ${
+                                      isPlayheadEdge
+                                        ? "bg-[#1877F2]"
+                                        : "bg-zinc-800 dark:bg-zinc-100"
+                                    }`}
+                                  />
+                                </span>
+                              );
+                            }
+                          )
+                        ) : audioUrl ? (
+                          /* RECORDED REAL WAVEFORM WITH CLICK-TO-SEEK & LIVE PLAYBACK SWEEP */
+                          (audioWaveform.length > 0
+                            ? audioWaveform
+                            : Array.from(
+                                { length: STUDIO_BAR_COUNT },
+                                (_, i) =>
+                                  0.25 + 0.45 * Math.abs(Math.sin(i * 0.55))
+                              )
+                          ).map((peak, idx, arr) => {
+                            const barPct = ((idx + 0.5) / arr.length) * 100;
+                            const played =
+                              previewProgress > 0 && barPct <= previewProgress;
+                            const nextBarPct = ((idx + 1.5) / arr.length) * 100;
+                            const isPlayhead =
+                              previewProgress > 0 &&
+                              barPct <= previewProgress &&
+                              nextBarPct > previewProgress;
+                            return (
+                              <span
+                                key={idx}
+                                className={`flex-1 flex items-center justify-center h-full ${
+                                  isPlayhead
+                                    ? "border-r-2 border-[#1877F2]"
+                                    : ""
+                                } ${
+                                  played ? "bg-[#1877F2]/[0.07]" : ""
+                                }`}
+                              >
+                                <span
+                                  className={`w-[3px] rounded-full transition-all duration-100 ${studioPeakToHeightClass(
+                                    peak
+                                  )} ${
+                                    played
+                                      ? "bg-[#1877F2] scale-y-105"
+                                      : "bg-zinc-700 dark:bg-zinc-300 hover:bg-[#1877F2]/70"
+                                  }`}
+                                />
+                              </span>
+                            );
+                          })
+                        ) : (
+                          /* IDLE CLEAN ZERO-STATE HORIZON (No fake 5-sec pre-recorded bars!) */
+                          Array.from({ length: STUDIO_BAR_COUNT }).map(
+                            (_, idx) => (
+                              <span
+                                key={idx}
+                                className="flex-1 flex items-center justify-center h-full"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                              </span>
+                            )
+                          )
+                        )}
+                      </div>
+
+                      {/* Dynamic Timeline Ruler reflecting real elapsed/recorded seconds */}
+                      <div className="border-t border-zinc-200 dark:border-zinc-700 pt-2 flex items-center justify-between text-[11px] font-medium tabular-nums text-zinc-500">
+                        {Array.from({ length: 9 }).map((_, idx) => {
+                          const totalTimelineSec = Math.max(
+                            8,
+                            isRecording
+                              ? Math.ceil(recordCentiseconds / 100)
+                              : audioDuration || 8
+                          );
+                          const secVal = Math.round(
+                            (idx / 8) * totalTimelineSec
+                          );
+                          const m = Math.floor(secVal / 60);
+                          const s = secVal % 60;
+                          return (
+                            <span key={idx}>
+                              {m}:{String(s).padStart(2, "0")}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* INLINE THEMES & VIDEO PANEL (Zero Popups) */}
+                {(activeInlinePanel === "themes" || showVideoInput) && (
+                  <div className="rounded-[24px] bg-[#F5F6F8] dark:bg-zinc-800/60 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                        Post Themes & Video Link
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowVideoInput((v) => !v)}
+                        className="text-xs font-semibold text-[#1877F2] flex items-center gap-1 cursor-pointer"
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        <span>{showVideoInput ? "Hide Video" : "Add Video URL"}</span>
+                      </button>
+                    </div>
+
+                    {showVideoInput && (
+                      <input
+                        type="url"
+                        value={videoUrl}
+                        onChange={(e) => setVideoUrl(e.target.value)}
+                        placeholder="Paste direct MP4/WebM video URL (optional)..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-xs outline-none border border-slate-200 dark:border-zinc-700"
+                      />
+                    )}
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {FEED_THEMES.map((theme) => {
+                        const active = selectedThemes.includes(theme.id);
+                        return (
+                          <button
+                            key={theme.id}
+                            type="button"
+                            onClick={() => toggleThemeSelection(theme.id)}
+                            className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                              active
+                                ? "bg-[#1877F2] text-white"
+                                : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
+                            }`}
+                          >
+                            <span>{theme.emoji}</span>
+                            <span>{theme.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* INLINE AUDIENCE SELECTOR (Single-Line Slimmer Full-Radius Pills) */}
+                {activeInlinePanel === "audience" && (
+                  <div className="rounded-[24px] bg-[#F5F6F8] dark:bg-zinc-800/60 p-3.5 sm:p-4 space-y-2.5">
+                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
+                      Who can view this post?
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                      {[
+                        { id: "public", label: "Public", icon: Globe },
+                        {
+                          id: "followers",
+                          label: "Followers",
+                          icon: UserCheck,
+                        },
+                        { id: "only_me", label: "Only Me", icon: Lock },
+                      ].map((item) => {
+                        const IconC = item.icon;
+                        const active = privacy === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setPrivacy(item.id as any);
+                            }}
+                            className={`py-1.5 px-2.5 sm:px-3.5 rounded-full text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                              active
+                                ? "bg-[#1877F2] text-white shadow-xs"
+                                : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700"
+                            }`}
+                          >
+                            <IconC className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                            <span className="whitespace-nowrap">{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+
+              {/* Bottom Floating Toolbar + Glowing Blue Mic Button matching Screenshot 3 */}
+              <div className="pt-6 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-[#F4F5F7] dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700">
+                  <button
+                    type="button"
+                    onClick={cycleTextStyle}
+                    title="Change text style"
+                    className={`w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold transition cursor-pointer ${
+                      textStyle !== "normal"
+                        ? "bg-[#1877F2] text-white shadow-xs"
+                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                    }`}
+                  >
+                    Aa
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setActiveInlinePanel("media");
+                      fileInputRef.current?.click();
+                    }}
+                    title="Attach photos"
+                    className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
+                      processedImages.length > 0 ||
+                      activeInlinePanel === "media"
+                        ? "bg-[#1877F2] text-white shadow-xs"
+                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                    }`}
+                  >
+                    <ImageIcon className="w-4 h-4 stroke-[2.1]" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setActiveInlinePanel((p) =>
+                        p === "themes" ? null : "themes"
+                      );
+                    }}
+                    title="Themes & Video"
+                    className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
+                      activeInlinePanel === "themes"
+                        ? "bg-[#1877F2] text-white shadow-xs"
+                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4 stroke-[2.1]" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setActiveInlinePanel((p) =>
+                        p === "audience" ? null : "audience"
+                      );
+                    }}
+                    title="Post visibility"
+                    className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
+                      activeInlinePanel === "audience"
+                        ? "bg-[#1877F2] text-white shadow-xs"
+                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                    }`}
+                  >
+                    <QrCode className="w-4 h-4 stroke-[2.1]" />
+                  </button>
+                </div>
+
+                {/* Right Glowing Blue Mic Sphere */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    if (activeInlinePanel !== "voice") {
+                      setActiveInlinePanel("voice");
+                    } else if (isRecording) {
+                      stopVoiceRecording();
+                    } else {
+                      startVoiceRecording();
+                    }
+                  }}
+                  title="Voice note studio"
+                  aria-label="Voice note studio"
+                  className="w-14 h-14 rounded-full bg-gradient-to-b from-[#55AAFF] via-[#227BF3] to-[#125ED6] text-white flex items-center justify-center shadow-[0_10px_26px_rgba(24,119,242,0.48)] ring-4 ring-blue-400/20 active:scale-90 transition cursor-pointer shrink-0"
+                >
+                  <Mic className="w-5 h-5 stroke-[2.2]" />
+                </button>
+              </div>
+            </>
+          ) : (
+            /* STEP 2: DEDICATED FULL POST PREVIEW & PUBLISH SCREEN */
+            <div className="space-y-6 flex-1 flex flex-col justify-between">
+              <div className="space-y-5">
+                <div>
+                  <h2 className="text-base font-bold text-zinc-900 dark:text-white">
+                    Live Feed Card Preview
+                  </h2>
+                  <p className="text-xs text-zinc-500">
+                    {postType === "scam"
+                      ? `Scam Report · Location stamp: "${scamLocation}"`
+                      : "Clean Community Post · No scam watermarks or labels"}
+                  </p>
+                </div>
+
+                {/* Exact Feed Card Preview */}
+                <div className="rounded-[28px] bg-[#F6F8FB] dark:bg-zinc-800/80 p-4 space-y-3 border border-slate-200/70 dark:border-zinc-700">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={userAvatarDisplay}
+                      alt={userNameDisplay}
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                        {userNameDisplay}
+                      </p>
+                      <p className="text-xs text-zinc-500">Just now · Public</p>
+                    </div>
+                  </div>
+
+                  {description && (
+                    <p
+                      className={`whitespace-pre-line break-words ${
+                        textStyle === "large"
+                          ? "text-xl font-bold text-zinc-900 dark:text-white"
+                          : textStyle === "quote"
+                          ? "text-base italic font-medium text-zinc-800 dark:text-zinc-100 border-l-3 border-[#1877F2] pl-3"
+                          : "text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed"
+                      }`}
+                    >
+                      <NewsRichText text={description} />
+                    </p>
+                  )}
+
+                  <NewsLinkPreviewCards text={description} />
+
+                  <NewsPostMedia post={previewPostObj} />
+                </div>
+
+                {/* Theme Tags Selection */}
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">
+                    Feed Personalization Themes
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FEED_THEMES.map((theme) => {
+                      const active = selectedThemes.includes(theme.id);
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => toggleThemeSelection(theme.id)}
+                          className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                            active
+                              ? "bg-[#1877F2] text-white"
+                              : "bg-[#F4F5F7] dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                          }`}
+                        >
+                          <span>{theme.emoji}</span>
+                          <span>{theme.label}</span>
+                          {active && <Check className="w-3 h-3 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="px-6 py-3.5 rounded-full bg-[#F4F5F7] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-sm font-semibold cursor-pointer"
+                >
+                  Back to Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePublish}
+                  disabled={isSubmitting || isProcessingImages}
+                  className="flex-1 py-3.5 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white text-sm font-bold shadow-[0_8px_24px_rgba(24,119,242,0.38)] disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmitting
+                    ? "Publishing..."
+                    : editId
+                    ? "Save Changes"
+                    : "Publish to Feed"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

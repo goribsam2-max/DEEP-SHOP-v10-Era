@@ -87,10 +87,9 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
   const displayName = profileData?.displayName || authorName || "Community Member";
   const avatar = profileData?.photoURL || authorAvatar;
   const username = profileData?.username || profileData?.email?.split('@')[0] || displayName.toLowerCase().replace(/\s+/g, '_');
-  const bio = profileData?.bio || "Verified Community Creator & Scam Reporter on Deep Shop.";
-  const starsReceived = profileData?.earnedStars || profileData?.sparks || 1280;
-  const likesReceived = profileData?.totalLikes || authorPosts.reduce((acc, p) => acc + (p.votes || 0), 0) + 2450;
-  const postsCount = authorPosts.length > 0 ? authorPosts.length : 12;
+  const starsReceived = profileData?.earnedStars || profileData?.purchasedStars || profileData?.stars || 0;
+  const likesReceived = profileData?.totalLikes || authorPosts.reduce((acc, p) => acc + (p.votes || 0), 0);
+  const postsCount = authorPosts.length;
 
   const handleSponsorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

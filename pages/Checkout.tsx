@@ -64,6 +64,12 @@ import {
 } from "lucide-react";
 import { hasActiveSubscription } from "../services/subscription";
 import { cn } from "../lib/utils";
+import { isSuperAdminOrAdmin } from "../lib/admin";
+import {
+  extractConfiguredMobileAccounts,
+  getNextRefreshSeed,
+  pickAccountBySeed,
+} from "../lib/dhakaTime";
 
 function formatAddressText(val: any): string {
   if (!val) return "";
@@ -118,7 +124,8 @@ export default function CheckoutPage() {
   const [settings, setSettings] = useState<any>(null);
   const [userCoins, setUserCoins] = useState<number>(0);
   const [resolvedAdvanceAmount, setResolvedAdvanceAmount] = useState<number | null>(null);
-  const [sellerPaymentNumbers, setSellerPaymentNumbers] = useState<{bkash: string, nagad: string} | null>(null);
+  const [sellerProfileData, setSellerProfileData] = useState<any>(null);
+  const [checkoutRefreshSeed] = useState<number>(() => getNextRefreshSeed("checkout_pay"));
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -283,6 +290,46 @@ export default function CheckoutPage() {
     }
     setItems(cart);
 
+    // Enrich cart items with sellerId from products/{id} if missing, and load seller profile
+    (async () => {
+      try {
+        const enriched = await Promise.all(
+          cart.map(async (item: any) => {
+            if (item?.sellerId) return item;
+            const pid = item?.id || item?.productId;
+            if (!pid) return item;
+            try {
+              const pSnap = await getDoc(doc(db, "products", String(pid)));
+              if (pSnap.exists()) {
+                const pData = pSnap.data();
+                if (pData?.sellerId) {
+                  return { ...item, sellerId: pData.sellerId };
+                }
+              }
+            } catch {
+              // Ignore individual product lookup error
+            }
+            return item;
+          })
+        );
+        setItems(enriched);
+
+        const firstSellerId = enriched.find((i: any) => i?.sellerId)?.sellerId;
+        if (firstSellerId) {
+          const sSnap = await getDoc(doc(db, "users", String(firstSellerId)));
+          if (sSnap.exists()) {
+            setSellerProfileData({ id: sSnap.id, ...sSnap.data() });
+          } else {
+            setSellerProfileData(null);
+          }
+        } else {
+          setSellerProfileData(null);
+        }
+      } catch (err) {
+        console.error("Failed to enrich checkout seller info:", err);
+      }
+    })();
+
     if (isForeign) {
       setPaymentType("advance");
       setAdvanceType("full");
@@ -364,36 +411,37 @@ export default function CheckoutPage() {
     };
   }, [navigate]);
 
-  // Rotate Bkash and Nagad numbers when payment settings load
+  // Rotate bKash and Nagad numbers per refresh: non-admin seller orders use ONLY that seller's numbers;
+  // Main Admin (e.g. deepshop@gmail.com) or platform orders use Admin settings/payments numbers.
   useEffect(() => {
-    if (paymentSettings) {
-      // 1. Bkash numbers
-      const bkashList: string[] = (Array.isArray(paymentSettings.bkashNumbers) && paymentSettings.bkashNumbers.length > 0)
-        ? paymentSettings.bkashNumbers.filter(Boolean)
-        : [paymentSettings.bkashNumber, paymentSettings.npsbNumber, sellerPaymentNumbers?.bkash].filter(Boolean) as string[];
+    const isNonAdminSeller = Boolean(
+      sellerProfileData && !isSuperAdminOrAdmin(sellerProfileData)
+    );
 
-      const validBkash = bkashList.filter(n => n && n !== "01700000000");
-      if (validBkash.length > 0) {
-        const randomBkash = validBkash[Math.floor(Math.random() * validBkash.length)];
-        setActiveBkashNumber(randomBkash);
-      } else {
-        setActiveBkashNumber("");
-      }
-
-      // 2. Nagad numbers
-      const nagadList: string[] = (Array.isArray(paymentSettings.nagadNumbers) && paymentSettings.nagadNumbers.length > 0)
-        ? paymentSettings.nagadNumbers.filter(Boolean)
-        : [paymentSettings.nagadNumber, paymentSettings.pathaoPayNumber, sellerPaymentNumbers?.nagad].filter(Boolean) as string[];
-
-      const validNagad = nagadList.filter(n => n && n !== "01800000000");
-      if (validNagad.length > 0) {
-        const randomNagad = validNagad[Math.floor(Math.random() * validNagad.length)];
-        setActiveNagadNumber(randomNagad);
-      } else {
-        setActiveNagadNumber("");
+    let extracted = { bkash: [] as any[], nagad: [] as any[] };
+    if (isNonAdminSeller) {
+      extracted = extractConfiguredMobileAccounts(sellerProfileData);
+    } else {
+      const adminMerged = { ...(settings || {}), ...(paymentSettings || {}) };
+      extracted = extractConfiguredMobileAccounts(adminMerged);
+      if (
+        extracted.bkash.length === 0 &&
+        extracted.nagad.length === 0 &&
+        sellerProfileData
+      ) {
+        extracted = extractConfiguredMobileAccounts(sellerProfileData);
       }
     }
-  }, [paymentSettings, sellerPaymentNumbers]);
+
+    const pickedBkash = pickAccountBySeed(extracted.bkash, checkoutRefreshSeed);
+    const pickedNagad = pickAccountBySeed(
+      extracted.nagad,
+      checkoutRefreshSeed + 1
+    );
+
+    setActiveBkashNumber(pickedBkash?.number || "");
+    setActiveNagadNumber(pickedNagad?.number || "");
+  }, [paymentSettings, settings, sellerProfileData, checkoutRefreshSeed]);
 
   const hasBkashNumber = Boolean(activeBkashNumber && activeBkashNumber !== "01700000000");
   const hasNagadNumber = Boolean(activeNagadNumber && activeNagadNumber !== "01800000000");
@@ -710,9 +758,10 @@ export default function CheckoutPage() {
 
     setIsLoading(true);
     try {
-      const activeReceiver = selectedPaymentMethod === "bkash" 
-        ? (activeBkashNumber || "01700000000")
-        : (activeNagadNumber || "01800000000");
+      const activeReceiver =
+        selectedPaymentMethod === "bkash"
+          ? activeBkashNumber || ""
+          : activeNagadNumber || "";
 
       let paymentStr = "Cash on Delivery";
       let paymentOptStr = "Cash on Delivery";
@@ -735,8 +784,12 @@ export default function CheckoutPage() {
         paymentOptStr = "Cash on Delivery (Bypass Product)";
       }
 
+      const resolvedPrimarySellerId =
+        items.find((i: any) => i?.sellerId)?.sellerId || null;
+
       const orderData: any = {
         userId: auth.currentUser?.uid || "guest",
+        sellerId: resolvedPrimarySellerId,
         customerName: activeAddress.name.trim(),
         isVipOrder: !!isVipSubscriber,
         items: items.map((i: any) => ({

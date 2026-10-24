@@ -1,24 +1,20 @@
-import { formatPrice } from "@/lib/utils";
 import React, { useState, useEffect, useContext } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
-import Icon from './Icon';
 
 import { useTheme } from './ThemeContext';
 import { Header } from './ui/header-3';
 import { HeaderNotification } from './HeaderNotification';
 import { PageLoadingContext } from '../App';
 
-
 const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [cartCount, setCartCount] = useState(0);
-  const [cartTotal, setCartTotal] = useState(0);
+  const [, setCartCount] = useState(0);
+  const [, setCartTotal] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { isDark, toggleTheme } = useTheme();
+  useTheme();
   const { isPageLoading } = useContext(PageLoadingContext);
 
   useEffect(() => {
@@ -49,7 +45,7 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     };
     updateCart();
     window.addEventListener('storage', updateCart);
-    const interval = setInterval(updateCart, 1000); // Polling for fast local updates
+    const interval = setInterval(updateCart, 1000);
     return () => {
       window.removeEventListener('storage', updateCart);
       clearInterval(interval);
@@ -62,35 +58,43 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     navigate('/');
     window.dispatchEvent(new CustomEvent('openAccountCenter'));
   };
+  void handleLogout;
 
-  const showNav = ['/', '/profile', '/search', '/notifications', '/orders', '/wishlist'].includes(location.pathname);
+  const isHomePage = location.pathname === '/';
 
-  const isNoHeaderPage = 
-    location.pathname === '/help-center' || 
-    location.pathname === '/messages' || 
-    location.pathname.startsWith('/news-hub') || 
-    location.pathname.startsWith('/news') || 
-    location.pathname.startsWith('/author') || 
-    location.pathname.startsWith('/creator') || 
+  const isNoHeaderPage =
+    location.pathname === '/help-center' ||
+    location.pathname === '/messages' ||
+    location.pathname.startsWith('/news-hub') ||
+    location.pathname.startsWith('/news') ||
+    location.pathname.startsWith('/author') ||
+    location.pathname.startsWith('/creator') ||
     location.pathname.startsWith('/creator-dashboard') ||
     location.pathname.startsWith('/buy-stars') ||
+    location.pathname.startsWith('/gift-stars') ||
     location.pathname.startsWith('/sponsor') ||
     isPageLoading;
 
   return (
-    <div 
-      className="min-h-screen bg-transparent flex flex-col transition-all duration-300"
-      style={{
-        paddingTop: isNoHeaderPage 
-          ? 'var(--pwa-banner-height, 0px)' 
-          : 'calc(var(--pwa-banner-height, 0px) + 3.5rem)'
-      }}
+    <div
+      className={`relative min-h-screen flex flex-col transition-all duration-300 ${
+        isHomePage ? 'bg-[#F5F9FF]/45 dark:bg-[#121212] pt-15 md:pt-16' : 'bg-transparent'
+      } ${!isHomePage && !isNoHeaderPage ? 'pt-14 md:pt-16' : ''}`}
     >
+      {/* News Hub Sky-Blue Ambient Top Gradient on Shop Home (/) */}
+      {isHomePage && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-gradient-to-b from-[#6BB2F8]/85 via-[#DCEEFF]/60 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent z-0"
+        />
+      )}
+
       {!isNoHeaderPage && <Header />}
-      <div className="flex-1 flex w-full flex-col min-h-[calc(100vh-56px)]">
+
+      <div className="relative z-10 flex-1 flex w-full flex-col min-h-[calc(100vh-56px)]">
         {/* Main Content Area */}
         <div className={`transition-all duration-300 flex-1 w-full max-w-full ${sidebarOpen ? 'md:pl-72' : ''} bg-transparent`}>
-          {location.pathname === '/' && !isPageLoading && <HeaderNotification />}
+          {isHomePage && !isPageLoading && <HeaderNotification />}
           <div className="w-full max-w-[1920px] mx-auto pb-0 min-h-[70vh]">
             {children}
           </div>

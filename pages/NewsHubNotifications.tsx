@@ -98,7 +98,11 @@ export const NewsHubNotifications: React.FC = () => {
   };
 
   const handleNotificationClick = (notif: NewsNotification) => {
-    requestPushPermission();
+    // If permission is not granted, trigger the prompt logic
+    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission !== 'granted') {
+       window.dispatchEvent(new CustomEvent('showNotificationPrompt'));
+    }
+
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
     if (notif.link) {
       navigate(notif.link);

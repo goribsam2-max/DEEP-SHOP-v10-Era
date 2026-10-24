@@ -29,6 +29,7 @@
 
   --font-sans: "Satoshi", "Hind Siliguri", "Inter", "Apple Color Emoji", sans-serif;
   --font-outfit: "Outfit", "Apple Color Emoji", sans-serif;
+  --font-brand: "Comfortaa", "Righteous", cursive;
 
   --radius-tremor-default: 0.5rem;
   --radius-tremor-small: 0.375rem;
@@ -953,3 +954,26 @@ html.dark .dark\:text-slate-400 {
 
 
 
+
+/* Liquid/Gooey Filter for animations */
+.liquid-goo {
+  filter: url('#goo');
+}
+
+@keyframes liquid {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.1) translate(2px, -2px); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+
+.liquid-animate {
+  animation: liquid 4s ease-in-out infinite;
+}
+
+.glass-morphism {
+  @apply bg-white/70 dark:bg-black/70 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-xl;
+}
+
+.liquid-card {
+  @apply relative overflow-hidden transition-all duration-500 ease-in-out hover:scale-[1.02] active:scale-[0.98];
+}

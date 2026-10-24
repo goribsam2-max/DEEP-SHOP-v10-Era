@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   collection,
   addDoc,
+  getDoc,
   getDocs,
   deleteDoc,
   doc,
@@ -19,6 +20,12 @@ import { OrderStatus } from "../../types";
 import { uploadToImgbb } from "../../services/imgbb";
 import { useNotify, useConfirm } from "../../components/Notifications";
 import { formatPrice, cn, isForbiddenNumber } from "../../lib/utils";
+import { isSuperAdminOrAdmin } from "../../lib/admin";
+import {
+  extractConfiguredMobileAccounts,
+  normalizeAccountType,
+  toAdminPaymentType,
+} from "../../lib/dhakaTime";
 import { motion, AnimatePresence } from "framer-motion";
 import Icon from "../../components/Icon";
 import {
@@ -101,8 +108,16 @@ const SellerDashboard: React.FC = () => {
   const [nagadNumber, setNagadNumber] = useState("");
   const [bkashNumbers, setBkashNumbers] = useState<string[]>([]);
   const [nagadNumbers, setNagadNumbers] = useState<string[]>([]);
+  const [bkashAccounts, setBkashAccounts] = useState<
+    { number: string; type: "Personal" | "Payment" | "Agent" }[]
+  >([]);
+  const [nagadAccounts, setNagadAccounts] = useState<
+    { number: string; type: "Personal" | "Payment" | "Agent" }[]
+  >([]);
   const [newBkashInput, setNewBkashInput] = useState("");
   const [newNagadInput, setNewNagadInput] = useState("");
+  const [newBkashType, setNewBkashType] = useState<"Personal" | "Payment" | "Agent">("Personal");
+  const [newNagadType, setNewNagadType] = useState<"Personal" | "Payment" | "Agent">("Personal");
   const [coupons, setCoupons] = useState<any[]>([]);
   const [newCouponCode, setNewCouponCode] = useState("");
   const [newCouponDiscount, setNewCouponDiscount] = useState("");
@@ -402,29 +417,49 @@ const SellerDashboard: React.FC = () => {
         }
 
         unsubProfile = onSnapshot(doc(db, "users", u.uid), (snap) => {
-          if (snap.exists()) {
-            const profile = snap.data();
-            if (profile.role !== "seller" && profile.role !== "admin") {
-              notify("Access Denied. Only registered sellers can view this dashboard.", "error");
-              navigate("/");
-              return;
-            }
-            setSellerProfile(profile);
-            if (!dataFetchedRef.current) {
-              fetchSellerData(u.uid, true);
-              dataFetchedRef.current = true;
+          const profile = snap.exists()
+            ? snap.data()
+            : isSuperAdminOrAdmin(null, u)
+            ? {
+                uid: u.uid,
+                email: u.email || "",
+                role: "admin",
+                shopName: u.displayName || "Deep Shop",
+              }
+            : null;
 
-              // Real-time listener for orders
-              const unsubOrders = onSnapshot(collection(db, "orders"), (orderSnap) => {
-                const allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                setOrders(prev => {
-                  const sellerOrders = allOrders.filter((ord: any) =>
-                    ord.status !== "awaiting_payment" &&
-                    ord.status !== "payment_pending" &&
-                    (
-                      ord.sellerId === u.uid ||
-                      ord.items?.some((item: any) => item.sellerId === u.uid)
-                    )
+          if (!profile) {
+            notify("Seller profile not found.", "error");
+            navigate("/");
+            return;
+          }
+
+          if (profile.role !== "seller" && !isSuperAdminOrAdmin(profile, u)) {
+            notify("Access Denied. Only registered sellers can view this dashboard.", "error");
+            navigate("/");
+            return;
+          }
+
+          setSellerProfile(profile);
+          if (!dataFetchedRef.current) {
+            fetchSellerData(u.uid, true);
+            dataFetchedRef.current = true;
+
+            // Real-time listener for orders
+            const unsubOrders = onSnapshot(
+              collection(db, "orders"),
+              (orderSnap) => {
+                const allOrders = orderSnap.docs.map((d) => ({
+                  id: d.id,
+                  ...d.data(),
+                }));
+                setOrders(() => {
+                  const sellerOrders = allOrders.filter(
+                    (ord: any) =>
+                      ord.status !== "awaiting_payment" &&
+                      ord.status !== "payment_pending" &&
+                      (ord.sellerId === u.uid ||
+                        ord.items?.some((item: any) => item.sellerId === u.uid))
                   );
                   return sellerOrders.sort((a: any, b: any) => {
                     const tA = a.createdAt || a.timestamp || 0;
@@ -432,12 +467,10 @@ const SellerDashboard: React.FC = () => {
                     return tB - tA;
                   });
                 });
-              }, (err) => console.error("Real-time orders listener error:", err));
-              unsubOrdersRef = unsubOrders;
-            }
-          } else {
-            notify("Seller profile not found.", "error");
-            navigate("/");
+              },
+              (err) => console.error("Real-time orders listener error:", err)
+            );
+            unsubOrdersRef = unsubOrders;
           }
         });
       } else {
@@ -451,60 +484,270 @@ const SellerDashboard: React.FC = () => {
     };
   }, [navigate]);
 
+  // Populate non-payment store fields once from sellerProfile, and sync payment accounts
+  // (Non-admin sellers: strictly from users/{uid}; Main Admin like deepshop@gmail.com: live two-way sync with settings/payments)
   useEffect(() => {
-    if (sellerProfile && !settingsLoadedRef.current) {
+    if (!sellerProfile) return;
+
+    if (!settingsLoadedRef.current) {
       if (sellerProfile.shopName) setShopName(sellerProfile.shopName);
       if (sellerProfile.photoURL || sellerProfile.avatarUrl) {
         setShopLogo(sellerProfile.photoURL || sellerProfile.avatarUrl);
       }
       if (sellerProfile.tiktokId) setTiktokId(sellerProfile.tiktokId);
-      
-      let bList: string[] = [];
-      if (Array.isArray(sellerProfile.bkashNumbers)) bList = [...sellerProfile.bkashNumbers];
-      else if (sellerProfile.bkashNumber) bList = [sellerProfile.bkashNumber];
-      setBkashNumbers(bList);
-      setBkashNumber(bList[0] || "");
-
-      let nList: string[] = [];
-      if (Array.isArray(sellerProfile.nagadNumbers)) nList = [...sellerProfile.nagadNumbers];
-      else if (sellerProfile.nagadNumber) nList = [sellerProfile.nagadNumber];
-      setNagadNumbers(nList);
-      setNagadNumber(nList[0] || "");
-
-      if (sellerProfile.defaultAdvanceAmount !== undefined) setDefaultAdvanceAmount(sellerProfile.defaultAdvanceAmount);
+      if (sellerProfile.defaultAdvanceAmount !== undefined) {
+        setDefaultAdvanceAmount(sellerProfile.defaultAdvanceAmount);
+      }
       if (sellerProfile.taxRate !== undefined) setTaxRate(sellerProfile.taxRate);
       if (sellerProfile.binNumber !== undefined) setBinNumber(sellerProfile.binNumber);
-      if (sellerProfile.taxInclusive !== undefined) setTaxInclusive(sellerProfile.taxInclusive);
+      if (sellerProfile.taxInclusive !== undefined) {
+        setTaxInclusive(sellerProfile.taxInclusive);
+      }
       settingsLoadedRef.current = true;
     }
-  }, [sellerProfile]);
+
+    const isMainAdmin = isSuperAdminOrAdmin(sellerProfile, user);
+    if (!isMainAdmin) {
+      const extracted = extractConfiguredMobileAccounts(sellerProfile);
+      const bAccs = extracted.bkash.map((a) => ({
+        number: a.number,
+        type: a.type,
+      }));
+      const nAccs = extracted.nagad.map((a) => ({
+        number: a.number,
+        type: a.type,
+      }));
+      const bList = bAccs.map((a) => a.number);
+      const nList = nAccs.map((a) => a.number);
+
+      setBkashAccounts(bAccs);
+      setBkashNumbers(bList);
+      setBkashNumber(bList[0] || "");
+      setNagadAccounts(nAccs);
+      setNagadNumbers(nList);
+      setNagadNumber(nList[0] || "");
+    }
+  }, [sellerProfile, user]);
+
+  // Live listener on settings/payments for Main Admin (e.g. deepshop@gmail.com) so Admin Panel <-> Seller Dashboard stay in sync
+  useEffect(() => {
+    if (!user || !isSuperAdminOrAdmin(sellerProfile, user)) return;
+
+    const unsubAdminPay = onSnapshot(
+      doc(db, "settings", "payments"),
+      async (paySnap) => {
+        const payData = paySnap.exists() ? paySnap.data() : null;
+        const hasAdminPaymentFields =
+          payData &&
+          (Array.isArray(payData.bkashAccounts) ||
+            Array.isArray(payData.nagadAccounts) ||
+            Array.isArray(payData.bkashNumbers) ||
+            Array.isArray(payData.nagadNumbers));
+
+        const payUpdatedAt = Number(payData?.updatedAt || 0);
+        const profileUpdatedAt = Number(sellerProfile?.updatedAt || 0);
+
+        let chosenSource: any = payData;
+        if (
+          !hasAdminPaymentFields ||
+          (profileUpdatedAt > payUpdatedAt &&
+            payUpdatedAt === 0 &&
+            (Array.isArray(sellerProfile?.bkashAccounts) ||
+              Array.isArray(sellerProfile?.nagadAccounts)))
+        ) {
+          chosenSource = sellerProfile;
+        }
+
+        const extracted = extractConfiguredMobileAccounts(chosenSource);
+        const bAccs = extracted.bkash.map((a) => ({
+          number: a.number,
+          type: a.type,
+        }));
+        const nAccs = extracted.nagad.map((a) => ({
+          number: a.number,
+          type: a.type,
+        }));
+        const bList = bAccs.map((a) => a.number);
+        const nList = nAccs.map((a) => a.number);
+
+        setBkashAccounts(bAccs);
+        setBkashNumbers(bList);
+        setBkashNumber(bList[0] || "");
+        setNagadAccounts(nAccs);
+        setNagadNumbers(nList);
+        setNagadNumber(nList[0] || "");
+      },
+      (err) => {
+        console.error("Error syncing admin payment settings in Seller Dashboard:", err);
+      }
+    );
+
+    return () => unsubAdminPay();
+  }, [user, sellerProfile?.updatedAt, sellerProfile?.role, sellerProfile?.email]);
 
   // Firestore Write Operations
   const saveStoreSettings = async (overrideData?: any) => {
     if (!user) return;
-    const cleanOverride = overrideData && typeof overrideData === 'object' && !('nativeEvent' in overrideData) && !('target' in overrideData) && !('preventDefault' in overrideData) ? overrideData : {};
-    const finalBkashList = cleanOverride.bkashNumbers !== undefined ? cleanOverride.bkashNumbers : bkashNumbers;
-    const finalNagadList = cleanOverride.nagadNumbers !== undefined ? cleanOverride.nagadNumbers : nagadNumbers;
+    const cleanOverride =
+      overrideData &&
+      typeof overrideData === "object" &&
+      !("nativeEvent" in overrideData) &&
+      !("target" in overrideData) &&
+      !("preventDefault" in overrideData)
+        ? overrideData
+        : {};
+
+    let rawBkashAccs: { number: string; type: "Personal" | "Payment" | "Agent" }[] =
+      cleanOverride.bkashAccounts !== undefined
+        ? [...cleanOverride.bkashAccounts]
+        : [...bkashAccounts];
+
+    if (
+      cleanOverride.bkashAccounts === undefined &&
+      newBkashInput &&
+      newBkashInput.trim()
+    ) {
+      const val = newBkashInput.trim();
+      if (
+        !isForbiddenNumber(val) &&
+        !rawBkashAccs.some((a) => a.number === val && a.type === newBkashType)
+      ) {
+        rawBkashAccs.push({ number: val, type: newBkashType });
+        setNewBkashInput("");
+      }
+    }
+
+    let rawNagadAccs: { number: string; type: "Personal" | "Payment" | "Agent" }[] =
+      cleanOverride.nagadAccounts !== undefined
+        ? [...cleanOverride.nagadAccounts]
+        : [...nagadAccounts];
+
+    if (
+      cleanOverride.nagadAccounts === undefined &&
+      newNagadInput &&
+      newNagadInput.trim()
+    ) {
+      const val = newNagadInput.trim();
+      if (
+        !isForbiddenNumber(val) &&
+        !rawNagadAccs.some((a) => a.number === val && a.type === newNagadType)
+      ) {
+        rawNagadAccs.push({ number: val, type: newNagadType });
+        setNewNagadInput("");
+      }
+    }
+
+    const finalBkashAccounts = rawBkashAccs
+      .filter(
+        (a: any) =>
+          a &&
+          typeof a.number === "string" &&
+          a.number.trim() &&
+          !isForbiddenNumber(a.number.trim())
+      )
+      .map((a: any) => ({
+        number: a.number.trim(),
+        type: normalizeAccountType(a.type),
+      }));
+
+    const finalNagadAccounts = rawNagadAccs
+      .filter(
+        (a: any) =>
+          a &&
+          typeof a.number === "string" &&
+          a.number.trim() &&
+          !isForbiddenNumber(a.number.trim())
+      )
+      .map((a: any) => ({
+        number: a.number.trim(),
+        type: normalizeAccountType(a.type),
+      }));
+
+    const finalBkashList = finalBkashAccounts.map((a) => a.number);
+    const finalNagadList = finalNagadAccounts.map((a) => a.number);
+    const now = Date.now();
 
     setIsSavingSettings(true);
     const updateData = {
-      shopName: shopName,
+      ...cleanOverride,
+      shopName: cleanOverride.shopName !== undefined ? cleanOverride.shopName : shopName,
       photoURL: shopLogo,
       avatarUrl: shopLogo,
-      tiktokId: tiktokId,
-      bkashNumber: finalBkashList[0] || bkashNumber || "",
-      nagadNumber: finalNagadList[0] || nagadNumber || "",
+      tiktokId: cleanOverride.tiktokId !== undefined ? cleanOverride.tiktokId : tiktokId,
+      bkashNumber: finalBkashList[0] || "",
+      nagadNumber: finalNagadList[0] || "",
       bkashNumbers: finalBkashList,
       nagadNumbers: finalNagadList,
-      defaultAdvanceAmount: defaultAdvanceAmount === "" ? "" : Number(defaultAdvanceAmount),
+      bkashAccounts: finalBkashAccounts,
+      nagadAccounts: finalNagadAccounts,
+      defaultAdvanceAmount:
+        defaultAdvanceAmount === "" ? "" : Number(defaultAdvanceAmount),
       taxRate: Number(taxRate),
       binNumber: binNumber,
       taxInclusive: taxInclusive,
-      ...cleanOverride
+      updatedAt: now,
     };
+
     try {
       await setDoc(doc(db, "users", user.uid), updateData, { merge: true });
-      localStorage.setItem(`vibe_seller_settings_${user.uid}`, JSON.stringify(updateData));
+
+      // ONLY Main Admin (e.g. deepshop@gmail.com) syncs store payment numbers to Admin Panel settings/payments & settings/platform
+      if (isSuperAdminOrAdmin(sellerProfile, user)) {
+        const adminBkashAccounts = finalBkashAccounts.map((a) => ({
+          number: a.number,
+          type: toAdminPaymentType(a.type),
+        }));
+        const adminNagadAccounts = finalNagadAccounts.map((a) => ({
+          number: a.number,
+          type: toAdminPaymentType(a.type),
+        }));
+
+        try {
+          await Promise.all([
+            setDoc(
+              doc(db, "settings", "payments"),
+              {
+                bkashAccounts: adminBkashAccounts,
+                nagadAccounts: adminNagadAccounts,
+                bkashNumbers: finalBkashList,
+                nagadNumbers: finalNagadList,
+                bkashNumber: finalBkashList[0] || "",
+                nagadNumber: finalNagadList[0] || "",
+                npsbNumber: finalBkashList[0] || "",
+                pathaoPayNumber: finalNagadList[0] || "",
+                updatedAt: now,
+              },
+              { merge: true }
+            ),
+            setDoc(
+              doc(db, "settings", "platform"),
+              {
+                bkashAccounts: adminBkashAccounts,
+                nagadAccounts: adminNagadAccounts,
+                bkashNumbers: finalBkashList,
+                nagadNumbers: finalNagadList,
+                bkashNumber: finalBkashList[0] || "",
+                nagadNumber: finalNagadList[0] || "",
+                updatedAt: now,
+              },
+              { merge: true }
+            ),
+          ]);
+        } catch (syncErr) {
+          console.error("Failed to sync seller settings to admin payment settings:", syncErr);
+        }
+      }
+
+      setBkashAccounts(finalBkashAccounts);
+      setNagadAccounts(finalNagadAccounts);
+      setBkashNumbers(finalBkashList);
+      setNagadNumbers(finalNagadList);
+      setBkashNumber(finalBkashList[0] || "");
+      setNagadNumber(finalNagadList[0] || "");
+      localStorage.setItem(
+        `vibe_seller_settings_${user.uid}`,
+        JSON.stringify(updateData)
+      );
       setSellerProfile((prev: any) => ({ ...prev, ...updateData }));
       notify("Store configuration saved successfully!", "success");
     } catch (err: any) {
@@ -2077,12 +2320,12 @@ const SellerDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* --- STORE SETTINGS TAB --- */}
-            {activeTab === "settings_store" && !selectedOrderId && (
+            {/* --- STORE & PAYMENT SETTINGS TAB --- */}
+            {(activeTab === "settings_store" || activeTab === "settings_payment") && !selectedOrderId && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-                 <h2 className="text-[17px] font-bold text-zinc-900 dark:text-zinc-100 mb-6">Store Settings</h2>
+                 <h2 className="text-[17px] font-bold text-zinc-900 dark:text-zinc-100 mb-6">Store & Payment Settings</h2>
                  
-                 <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 dark:border-zinc-800 dark:border-zinc-800 space-y-6">
+                 <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 dark:border-zinc-800 space-y-6">
                     {/* Logo Upload */}
                     <div className="flex flex-col items-center gap-4 pb-6 border-b border-zinc-100 dark:border-zinc-800">
                        <div className="w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden border border-zinc-200 dark:border-zinc-750 flex items-center justify-center text-3xl font-bold text-zinc-400 dark:text-zinc-500">
@@ -2100,31 +2343,53 @@ const SellerDashboard: React.FC = () => {
                     <div className="space-y-4">
                        <div>
                           <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Store Name</Label>
-                          <Input value={shopName} onChange={e => setShopName(e.target.value)} placeholder="e.g. DEEP SHOP" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" />
+                          <Input value={shopName} onChange={e => setShopName(e.target.value)} placeholder="e.g. DEEP SHOP" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100" />
                        </div>
                        <div>
                           <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Global Advance Payment (৳)</Label>
-                          <Input type="number" value={defaultAdvanceAmount} onChange={e => setDefaultAdvanceAmount(e.target.value)} placeholder="0.00" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" />
-                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 ml-1 mt-1">Default advance amount required for COD orders.</p>
+                          <Input type="number" value={defaultAdvanceAmount} onChange={e => setDefaultAdvanceAmount(e.target.value)} placeholder="0.00" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100" />
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 ml-1 mt-1">Default advance amount required for COD orders.</p>
                        </div>
                        <div>
                           <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">TikTok Username</Label>
-                          <Input value={tiktokId} onChange={e => setTiktokId(e.target.value)} placeholder="@username" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" />
+                          <Input value={tiktokId} onChange={e => setTiktokId(e.target.value)} placeholder="@username" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100" />
                        </div>
-                       {/* Multiple bKash Numbers */}
+
+                       {/* Multiple bKash Numbers with Personal / Payment / Agent Type */}
                        <div className="p-4 bg-pink-50/60 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/30 rounded-2xl space-y-3">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2">
                              <div>
                                 <Label className="text-xs font-bold text-[#E2125B] dark:text-pink-300 block">
-                                   Multiple bKash Numbers (বিকাশ নাম্বারসমূহ - রোটেশন করবে)
+                                   Multiple bKash Numbers (বিকাশ নাম্বারসমূহ — Personal / Payment / Agent)
                                 </Label>
                                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                   একাধিক নাম্বার যোগ করুন। পেমেন্ট পেজ রিফ্রেশ করলে প্রতিবার স্বয়ংক্রিয়ভাবে পরিবর্তিত হবে।
+                                   প্রতিটি বিকাশ নাম্বারের জন্য Personal, Payment অথবা Agent টাইপ সিলেক্ট করে যোগ করুন।
                                 </p>
                              </div>
                           </div>
 
-                          <div className="flex gap-2">
+                          {/* Account Type Selector Pills */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                             <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mr-1 whitespace-nowrap">
+                                Account Type:
+                             </span>
+                             {(["Personal", "Payment", "Agent"] as const).map((accType) => (
+                                <button
+                                   key={accType}
+                                   type="button"
+                                   onClick={() => setNewBkashType(accType)}
+                                   className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
+                                      newBkashType === accType
+                                         ? "bg-[#E2125B] text-white shadow-xs"
+                                         : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-pink-200 dark:border-pink-900/40"
+                                   }`}
+                                >
+                                   {accType}
+                                </button>
+                             ))}
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-2">
                              <Input
                                 value={newBkashInput}
                                 onChange={(e) => setNewBkashInput(e.target.value)}
@@ -2137,18 +2402,24 @@ const SellerDashboard: React.FC = () => {
                                          notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
                                          return;
                                       }
-                                      if (bkashNumbers.includes(val)) {
-                                         notify("এই নাম্বারটি ইতিমধ্যে তালিকায় রয়েছে", "error");
+                                      if (bkashAccounts.some((a) => a.number === val && a.type === newBkashType)) {
+                                         notify("এই নাম্বার এবং টাইপ ইতিমধ্যে তালিকায় রয়েছে", "error");
                                          return;
                                       }
-                                      const next = [...bkashNumbers, val];
-                                      setBkashNumbers(next);
-                                      setBkashNumber(next[0] || "");
+                                      const nextAccs = [...bkashAccounts, { number: val, type: newBkashType }];
+                                      const nextNums = nextAccs.map((a) => a.number);
+                                      setBkashAccounts(nextAccs);
+                                      setBkashNumbers(nextNums);
+                                      setBkashNumber(nextNums[0] || "");
                                       setNewBkashInput("");
-                                      saveStoreSettings({ bkashNumbers: next, bkashNumber: next[0] || "" });
+                                      saveStoreSettings({
+                                         bkashAccounts: nextAccs,
+                                         bkashNumbers: nextNums,
+                                         bkashNumber: nextNums[0] || "",
+                                      });
                                    }
                                 }}
-                                placeholder="নতুন বিকাশ নাম্বার লিখুন (যেমন: 017XXXXXXXX)"
+                                placeholder={`নতুন bKash (${newBkashType}) নাম্বার লিখুন (017XXXXXXXX)`}
                                 className="rounded-xl bg-white dark:bg-zinc-800 border-pink-200 dark:border-pink-800/40 h-11 text-xs text-zinc-900 dark:text-zinc-100 flex-1"
                              />
                              <Button
@@ -2160,64 +2431,122 @@ const SellerDashboard: React.FC = () => {
                                       notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
                                       return;
                                    }
-                                   if (bkashNumbers.includes(val)) {
-                                      notify("এই নাম্বারটি ইতিমধ্যে তালিকায় রয়েছে", "error");
+                                   if (bkashAccounts.some((a) => a.number === val && a.type === newBkashType)) {
+                                      notify("এই নাম্বার এবং টাইপ ইতিমধ্যে তালিকায় রয়েছে", "error");
                                       return;
                                    }
-                                   const next = [...bkashNumbers, val];
-                                   setBkashNumbers(next);
-                                   setBkashNumber(next[0] || "");
+                                   const nextAccs = [...bkashAccounts, { number: val, type: newBkashType }];
+                                   const nextNums = nextAccs.map((a) => a.number);
+                                   setBkashAccounts(nextAccs);
+                                   setBkashNumbers(nextNums);
+                                   setBkashNumber(nextNums[0] || "");
                                    setNewBkashInput("");
-                                   saveStoreSettings({ bkashNumbers: next, bkashNumber: next[0] || "" });
+                                   saveStoreSettings({
+                                      bkashAccounts: nextAccs,
+                                      bkashNumbers: nextNums,
+                                      bkashNumber: nextNums[0] || "",
+                                   });
                                 }}
-                                className="h-11 bg-[#E2125B] hover:bg-[#c20e4d] text-white rounded-xl text-xs font-bold px-4"
+                                className="h-11 bg-[#E2125B] hover:bg-[#c20e4d] text-white rounded-xl text-xs font-bold px-4 whitespace-nowrap shrink-0"
                              >
-                                + Add bKash
+                                + Add bKash ({newBkashType})
                              </Button>
                           </div>
 
-                          <div className="flex flex-wrap gap-2 pt-1">
-                             {bkashNumbers.map((num, i) => (
+                          <div className="space-y-2 pt-1">
+                             {bkashAccounts.map((acc, i) => (
                                 <div
-                                   key={i}
-                                   className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-pink-300 dark:border-pink-800 px-3 py-1.5 rounded-xl shadow-xs"
+                                   key={`${acc.number}-${acc.type}-${i}`}
+                                   className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-800 border border-pink-200 dark:border-pink-800/60 px-3 py-2 rounded-xl shadow-xs flex-wrap"
                                 >
-                                   <span className="text-[11px] font-black text-[#E2125B]">#{i + 1}</span>
-                                   <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">{num}</span>
-                                   <button
-                                      type="button"
-                                      onClick={() => {
-                                         const next = bkashNumbers.filter((_, idx) => idx !== i);
-                                         setBkashNumbers(next);
-                                         setBkashNumber(next[0] || "");
-                                         saveStoreSettings({ bkashNumbers: next, bkashNumber: next[0] || "" });
-                                      }}
-                                      className="text-zinc-400 hover:text-red-500 font-bold ml-1 text-xs"
-                                   >
-                                      ✕
-                                   </button>
+                                   <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-[11px] font-black text-[#E2125B]">#{i + 1}</span>
+                                      <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">{acc.number}</span>
+                                   </div>
+                                   <div className="flex items-center gap-1.5">
+                                      {(["Personal", "Payment", "Agent"] as const).map((t) => (
+                                         <button
+                                            key={t}
+                                            type="button"
+                                            onClick={() => {
+                                               const nextAccs = bkashAccounts.map((item, idx) =>
+                                                  idx === i ? { ...item, type: t } : item
+                                               );
+                                               setBkashAccounts(nextAccs);
+                                               saveStoreSettings({ bkashAccounts: nextAccs });
+                                            }}
+                                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition whitespace-nowrap cursor-pointer ${
+                                               acc.type === t
+                                                  ? "bg-[#E2125B] text-white"
+                                                  : "bg-pink-50 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
+                                            }`}
+                                         >
+                                            {t}
+                                         </button>
+                                      ))}
+                                      <button
+                                         type="button"
+                                         onClick={() => {
+                                            const nextAccs = bkashAccounts.filter((_, idx) => idx !== i);
+                                            const nextNums = nextAccs.map((a) => a.number);
+                                            setBkashAccounts(nextAccs);
+                                            setBkashNumbers(nextNums);
+                                            setBkashNumber(nextNums[0] || "");
+                                            saveStoreSettings({
+                                               bkashAccounts: nextAccs,
+                                               bkashNumbers: nextNums,
+                                               bkashNumber: nextNums[0] || "",
+                                            });
+                                         }}
+                                         className="text-zinc-400 hover:text-red-500 font-bold ml-1.5 text-xs px-1 cursor-pointer"
+                                         title="Remove number"
+                                      >
+                                         ✕
+                                      </button>
+                                   </div>
                                 </div>
                              ))}
-                             {bkashNumbers.length === 0 && (
+                             {bkashAccounts.length === 0 && (
                                 <p className="text-[11px] text-pink-700/70 dark:text-pink-400/70 font-medium">কোনো বিকাশ নাম্বার যোগ করা নেই</p>
                              )}
                           </div>
                        </div>
 
-                       {/* Multiple Nagad Numbers */}
+                       {/* Multiple Nagad Numbers with Personal / Payment / Agent Type */}
                        <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-2xl space-y-3">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2">
                              <div>
                                 <Label className="text-xs font-bold text-[#F57C20] dark:text-orange-300 block">
-                                   Multiple Nagad Numbers (নগদ নাম্বারসমূহ - রোটেশন করবে)
+                                   Multiple Nagad Numbers (নগদ নাম্বারসমূহ — Personal / Payment / Agent)
                                 </Label>
                                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                   একাধিক নাম্বার যোগ করুন। পেমেন্ট পেজ রিফ্রেশ করলে প্রতিবার স্বয়ংক্রিয়ভাবে পরিবর্তিত হবে।
+                                   প্রতিটি নগদ নাম্বারের জন্য Personal, Payment অথবা Agent টাইপ সিলেক্ট করে যোগ করুন।
                                 </p>
                              </div>
                           </div>
 
-                          <div className="flex gap-2">
+                          {/* Account Type Selector Pills */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                             <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mr-1 whitespace-nowrap">
+                                Account Type:
+                             </span>
+                             {(["Personal", "Payment", "Agent"] as const).map((accType) => (
+                                <button
+                                   key={accType}
+                                   type="button"
+                                   onClick={() => setNewNagadType(accType)}
+                                   className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
+                                      newNagadType === accType
+                                         ? "bg-[#F57C20] text-white shadow-xs"
+                                         : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-orange-200 dark:border-orange-900/40"
+                                   }`}
+                                >
+                                   {accType}
+                                </button>
+                             ))}
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-2">
                              <Input
                                 value={newNagadInput}
                                 onChange={(e) => setNewNagadInput(e.target.value)}
@@ -2230,18 +2559,24 @@ const SellerDashboard: React.FC = () => {
                                          notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
                                          return;
                                       }
-                                      if (nagadNumbers.includes(val)) {
-                                         notify("এই নাম্বারটি ইতিমধ্যে তালিকায় রয়েছে", "error");
+                                      if (nagadAccounts.some((a) => a.number === val && a.type === newNagadType)) {
+                                         notify("এই নাম্বার এবং টাইপ ইতিমধ্যে তালিকায় রয়েছে", "error");
                                          return;
                                       }
-                                      const next = [...nagadNumbers, val];
-                                      setNagadNumbers(next);
-                                      setNagadNumber(next[0] || "");
+                                      const nextAccs = [...nagadAccounts, { number: val, type: newNagadType }];
+                                      const nextNums = nextAccs.map((a) => a.number);
+                                      setNagadAccounts(nextAccs);
+                                      setNagadNumbers(nextNums);
+                                      setNagadNumber(nextNums[0] || "");
                                       setNewNagadInput("");
-                                      saveStoreSettings({ nagadNumbers: next, nagadNumber: next[0] || "" });
+                                      saveStoreSettings({
+                                         nagadAccounts: nextAccs,
+                                         nagadNumbers: nextNums,
+                                         nagadNumber: nextNums[0] || "",
+                                      });
                                    }
                                 }}
-                                placeholder="নতুন নগদ নাম্বার লিখুন (যেমন: 018XXXXXXXX)"
+                                placeholder={`নতুন Nagad (${newNagadType}) নাম্বার লিখুন (018XXXXXXXX)`}
                                 className="rounded-xl bg-white dark:bg-zinc-800 border-orange-200 dark:border-orange-800/40 h-11 text-xs text-zinc-900 dark:text-zinc-100 flex-1"
                              />
                              <Button
@@ -2253,45 +2588,82 @@ const SellerDashboard: React.FC = () => {
                                       notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
                                       return;
                                    }
-                                   if (nagadNumbers.includes(val)) {
-                                      notify("এই নাম্বারটি ইতিমধ্যে তালিকায় রয়েছে", "error");
+                                   if (nagadAccounts.some((a) => a.number === val && a.type === newNagadType)) {
+                                      notify("এই নাম্বার এবং টাইপ ইতিমধ্যে তালিকায় রয়েছে", "error");
                                       return;
                                    }
-                                   const next = [...nagadNumbers, val];
-                                   setNagadNumbers(next);
-                                   setNagadNumber(next[0] || "");
+                                   const nextAccs = [...nagadAccounts, { number: val, type: newNagadType }];
+                                   const nextNums = nextAccs.map((a) => a.number);
+                                   setNagadAccounts(nextAccs);
+                                   setNagadNumbers(nextNums);
+                                   setNagadNumber(nextNums[0] || "");
                                    setNewNagadInput("");
-                                   saveStoreSettings({ nagadNumbers: next, nagadNumber: next[0] || "" });
+                                   saveStoreSettings({
+                                      nagadAccounts: nextAccs,
+                                      nagadNumbers: nextNums,
+                                      nagadNumber: nextNums[0] || "",
+                                   });
                                 }}
-                                className="h-11 bg-[#F57C20] hover:bg-[#d96714] text-white rounded-xl text-xs font-bold px-4"
+                                className="h-11 bg-[#F57C20] hover:bg-[#d96714] text-white rounded-xl text-xs font-bold px-4 whitespace-nowrap shrink-0"
                              >
-                                + Add Nagad
+                                + Add Nagad ({newNagadType})
                              </Button>
                           </div>
 
-                          <div className="flex flex-wrap gap-2 pt-1">
-                             {nagadNumbers.map((num, i) => (
+                          <div className="space-y-2 pt-1">
+                             {nagadAccounts.map((acc, i) => (
                                 <div
-                                   key={i}
-                                   className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-xl shadow-xs"
+                                   key={`${acc.number}-${acc.type}-${i}`}
+                                   className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-800 border border-orange-200 dark:border-orange-800/60 px-3 py-2 rounded-xl shadow-xs flex-wrap"
                                 >
-                                   <span className="text-[11px] font-black text-[#F57C20]">#{i + 1}</span>
-                                   <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">{num}</span>
-                                   <button
-                                      type="button"
-                                      onClick={() => {
-                                         const next = nagadNumbers.filter((_, idx) => idx !== i);
-                                         setNagadNumbers(next);
-                                         setNagadNumber(next[0] || "");
-                                         saveStoreSettings({ nagadNumbers: next, nagadNumber: next[0] || "" });
-                                      }}
-                                      className="text-zinc-400 hover:text-red-500 font-bold ml-1 text-xs"
-                                   >
-                                      ✕
-                                   </button>
+                                   <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-[11px] font-black text-[#F57C20]">#{i + 1}</span>
+                                      <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">{acc.number}</span>
+                                   </div>
+                                   <div className="flex items-center gap-1.5">
+                                      {(["Personal", "Payment", "Agent"] as const).map((t) => (
+                                         <button
+                                            key={t}
+                                            type="button"
+                                            onClick={() => {
+                                               const nextAccs = nagadAccounts.map((item, idx) =>
+                                                  idx === i ? { ...item, type: t } : item
+                                               );
+                                               setNagadAccounts(nextAccs);
+                                               saveStoreSettings({ nagadAccounts: nextAccs });
+                                            }}
+                                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition whitespace-nowrap cursor-pointer ${
+                                               acc.type === t
+                                                  ? "bg-[#F57C20] text-white"
+                                                  : "bg-orange-50 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
+                                            }`}
+                                         >
+                                            {t}
+                                         </button>
+                                      ))}
+                                      <button
+                                         type="button"
+                                         onClick={() => {
+                                            const nextAccs = nagadAccounts.filter((_, idx) => idx !== i);
+                                            const nextNums = nextAccs.map((a) => a.number);
+                                            setNagadAccounts(nextAccs);
+                                            setNagadNumbers(nextNums);
+                                            setNagadNumber(nextNums[0] || "");
+                                            saveStoreSettings({
+                                               nagadAccounts: nextAccs,
+                                               nagadNumbers: nextNums,
+                                               nagadNumber: nextNums[0] || "",
+                                            });
+                                         }}
+                                         className="text-zinc-400 hover:text-red-500 font-bold ml-1.5 text-xs px-1 cursor-pointer"
+                                         title="Remove number"
+                                      >
+                                         ✕
+                                      </button>
+                                   </div>
                                 </div>
                              ))}
-                             {nagadNumbers.length === 0 && (
+                             {nagadAccounts.length === 0 && (
                                 <p className="text-[11px] text-orange-700/70 dark:text-orange-400/70 font-medium">কোনো নগদ নাম্বার যোগ করা নেই</p>
                              )}
                            </div>

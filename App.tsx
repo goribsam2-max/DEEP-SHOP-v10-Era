@@ -45,7 +45,15 @@ import BanOverlay from './components/BanOverlay';
 import { AdManager } from './components/AdManager';
 import { GlobalCallReceiver } from './components/GlobalCallReceiver';
 import { CustomContextMenu } from './components/CustomContextMenu';
+import { FeedPersonalization } from './pages/FeedPersonalization';
+import {
+  NewsPhotoViewerPage,
+  NewsSharePage,
+  NewsSavedAndSearchPage,
+  NewsStoryViewerPage,
+} from './pages/NewsHubSubPages';
 import { initGlobalHaptics } from './lib/haptics';
+import { hasImmediateAdminOrStaffRole } from './lib/admin';
 
 const SEOProvider = () => {
   useEffect(() => {
@@ -683,17 +691,25 @@ const AppContent: React.FC = () => {
   // Listen to openAccountCenter event
   useEffect(() => {
     const handleOpen = () => {
+      // Prevent opening if auth is still loading (race condition fix)
+      if (loading) return;
+
       try {
         const str = localStorage.getItem("vibe_saved_accounts");
         if (str) {
-          setSavedAccounts(JSON.parse(str));
+          const accounts = JSON.parse(str);
+          // Only open if we have saved accounts and current user is not logged in 
+          // (or specifically requested)
+          if (accounts.length > 0) {
+            setSavedAccounts(accounts);
+            setIsAccountCenterOpen(true);
+          }
         }
       } catch (e) {}
-      setIsAccountCenterOpen(true);
     };
     window.addEventListener("openAccountCenter", handleOpen);
     return () => window.removeEventListener("openAccountCenter", handleOpen);
-  }, []);
+  }, [loading]);
 
   // Update saved accounts from local storage when opened
   useEffect(() => {
@@ -933,14 +949,7 @@ const AppContent: React.FC = () => {
 
   const showNav = ['/', '/profile', '/search', '/notifications', '/orders', '/wishlist'].includes(location.pathname);
   
-  // Basic check: we allow access to admin routes if they are an admin or we assume staff will be blocked on specific routes later.
-  // Ideally, we'd fetch the document from `staff` collection to see if they are staff.
-  const isAdminOrStaff = userData?.role === 'admin' || 
-                         userData?.email?.toLowerCase().trim() === 'admin@deep.shop' || 
-                         userData?.email?.toLowerCase().trim() === 'deepshop@gmail.com' || 
-                         userData?.email?.toLowerCase().trim() === 'deepshopbysam@gmail.com' || 
-                         userData?.role === 'staff' || 
-                         ['admin', 'staff'].includes(userData?.role || '');
+  const isAdminOrStaff = hasImmediateAdminOrStaffRole(userData, auth.currentUser);
 
   return (
     <DesktopLayout>
@@ -1001,7 +1010,14 @@ const AppContent: React.FC = () => {
           <Route path="/blog/:slug" element={<PageWrapper><BlogDetails /></PageWrapper>} />
           <Route path="/news-hub" element={<PageWrapper><NewsHub /></PageWrapper>} />
           <Route path="/news-hub/create" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
+          <Route path="/news-hub/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
+          <Route path="/news-hub/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
           <Route path="/news-hub/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
+          <Route path="/news-hub/photo/:postId/:index" element={<PageWrapper><NewsPhotoViewerPage /></PageWrapper>} />
+          <Route path="/news-hub/share/:id" element={<PageWrapper><NewsSharePage /></PageWrapper>} />
+          <Route path="/news-hub/search" element={<PageWrapper><NewsSavedAndSearchPage /></PageWrapper>} />
+          <Route path="/news-hub/saved" element={<PageWrapper><NewsSavedAndSearchPage /></PageWrapper>} />
+          <Route path="/news-hub/story/:storyId" element={<PageWrapper><NewsStoryViewerPage /></PageWrapper>} />
           <Route path="/news-hub/notifications" element={<PageWrapper><NewsHubNotifications /></PageWrapper>} />
           <Route path="/creator-dashboard" element={<PageWrapper><CreatorDashboard /></PageWrapper>} />
           <Route path="/creator/subscription-setup" element={<PageWrapper><CreatorSubscriptionSetup /></PageWrapper>} />

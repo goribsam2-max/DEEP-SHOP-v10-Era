@@ -27,26 +27,7 @@ import SEO from "../components/SEO";
 import { GiftStarsModal } from "../components/GiftStarsModal";
 
 // Seed fallback data matching user's demo image IMG_4750.webp
-const DEMO_STORIES = [
-  {
-    id: "story_1",
-    title: "A quiet escape",
-    subtitle: "Sometimes you just need to get away and feel the breeze.",
-    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80"
-  },
-  {
-    id: "story_2",
-    title: "Golden Hour Vibes",
-    subtitle: "Standing together under the open skies and sharing evidence.",
-    image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&auto=format&fit=crop&q=80"
-  },
-  {
-    id: "story_3",
-    title: "Behind the Scenes",
-    subtitle: "Investigating fraudulent networks operating on social media.",
-    image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&auto=format&fit=crop&q=80"
-  }
-];
+const DEMO_STORIES: any[] = [];
 
 const INTERESTS = [
   { label: "Cooking", icon: "🍲" },
@@ -91,16 +72,16 @@ export const AuthorProfile: React.FC = () => {
             // Check local fallback
             setAuthor({
               id: id || "author_demo",
-              displayName: id.includes("jen") ? "Jenwesh" : id.includes("samir") ? "Samir K." : "Jenny Wilson",
-              username: id.includes("jen") ? "Jenwesh" : id.includes("samir") ? "samir_k" : "jenny_w",
-              photoURL: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-              coverImage: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1000&auto=format&fit=crop&q=80",
-              bio: "You're on your way!",
-              earnedStars: 136,
-              xp: 140,
-              totalXp: 500,
-              likes: 3547,
-              messages: 12
+              displayName: "User",
+              username: "user",
+              photoURL: "",
+              coverImage: "",
+              bio: "",
+              earnedStars: 0,
+              xp: 0,
+              totalXp: 100,
+              likes: 0,
+              messages: 0
             });
           }
 
@@ -112,17 +93,7 @@ export const AuthorProfile: React.FC = () => {
           if (list.length > 0) {
             setPosts(list);
           } else {
-            // Fallback sample post
-            setPosts([
-              {
-                id: "scam_demo_1",
-                title: "Fake Facebook Page 'Gadget World BD' Took ৳15,000 Advance & Blocked",
-                description: "Ordered an iPhone 14 Pro 128GB refurbished. Page asked for 50% advance via personal bKash number then blocked.",
-                votes: 3420,
-                category: "advance_payment",
-                createdAt: Date.now() - 3600 * 2000
-              }
-            ]);
+            setPosts([]);
           }
         }
       } catch (err) {
@@ -138,42 +109,41 @@ export const AuthorProfile: React.FC = () => {
   const [followerCount, setFollowerCount] = useState<number>(0);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !author) return;
     try {
       const savedFollows: string[] = JSON.parse(localStorage.getItem("followed_creators") || "[]");
       const isF = savedFollows.includes(id);
       setIsFollowing(isF);
 
-      const counts = JSON.parse(localStorage.getItem("author_follower_counts") || "{}");
-      setFollowerCount(counts[id] !== undefined ? counts[id] : (isF ? 1 : 0));
+      // Use database count if available, otherwise 0
+      setFollowerCount(author.followersCount || (author.followers ? author.followers.length : 0));
     } catch (e) {}
-  }, [id]);
+  }, [id, author]);
 
-  const handleFollowToggle = () => {
-    if (!author) return;
+  const handleFollowToggle = async () => {
+    if (!author || !currentUser) {
+      notify("Please sign in to follow creators!", "error");
+      return;
+    }
     triggerHaptic();
     const authorId = id || "author_demo";
     try {
       const savedFollows: string[] = JSON.parse(localStorage.getItem("followed_creators") || "[]");
-      const counts = JSON.parse(localStorage.getItem("author_follower_counts") || "{}");
-      const nextFollowing = !isFollowing;
-      setIsFollowing(nextFollowing);
+      const isNowFollowing = !isFollowing;
+      setIsFollowing(isNowFollowing);
 
       let updatedList: string[];
-      let updatedCount = followerCount;
-      if (nextFollowing) {
+      if (isNowFollowing) {
         updatedList = Array.from(new Set([...savedFollows, authorId]));
-        updatedCount = followerCount + 1;
+        setFollowerCount(prev => prev + 1);
         notify(`Now following @${author?.username || "creator"}!`, "success");
+        // In a real app, you'd update the Firestore followers collection/count here
       } else {
         updatedList = savedFollows.filter((i) => i !== authorId);
-        updatedCount = Math.max(0, followerCount - 1);
+        setFollowerCount(prev => Math.max(0, prev - 1));
         notify(`Unfollowed @${author?.username || "creator"}`, "info");
       }
-      setFollowerCount(updatedCount);
-      counts[authorId] = updatedCount;
       localStorage.setItem("followed_creators", JSON.stringify(updatedList));
-      localStorage.setItem("author_follower_counts", JSON.stringify(counts));
     } catch (e) {}
   };
 
@@ -221,11 +191,11 @@ export const AuthorProfile: React.FC = () => {
   }
 
   const handle = author.username || author.email?.split("@")[0] || author.displayName?.toLowerCase().replace(/\s+/g, "") || "user";
-  const xp = author.xp || 140;
-  const totalXp = author.totalXp || 500;
-  const likesCount = author.likes || (posts.reduce((acc, p) => acc + (p.votes || 0), 0) + 3547);
-  const messagesCount = author.messages || 12;
-  const giftedStars = author.earnedStars || 136;
+  const xp = author.xp || 0;
+  const totalXp = author.totalXp || 100;
+  const likesCount = author.likes || (posts.reduce((acc, p) => acc + (p.votes || 0), 0));
+  const messagesCount = author.messages || 0;
+  const giftedStars = author.earnedStars || 0;
 
   return (
     <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans pb-24 selection:bg-blue-600 selection:text-white">
@@ -398,7 +368,8 @@ export const AuthorProfile: React.FC = () => {
           </button>
         </div>
 
-        {/* RECENT STORIES CAROUSEL (Exact match to bottom cards in IMG_4750.webp) */}
+        {/* RECENT STORIES CAROUSEL */}
+        {DEMO_STORIES.length > 0 && (
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white tracking-wide">
@@ -437,6 +408,7 @@ export const AuthorProfile: React.FC = () => {
             ))}
           </div>
         </div>
+        )}
 
         {/* VERIFIED INCIDENT REPORTS & POSTS */}
         <div className="space-y-3 pt-3">

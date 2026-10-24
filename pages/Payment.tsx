@@ -23,10 +23,18 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useNotify } from "../components/Notifications";
-import { formatPrice, isForbiddenNumber } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
 import { sendOrderToTelegram } from "../services/telegram";
 import { OrderStatus } from "../types";
+import { isSuperAdminOrAdmin } from "../lib/admin";
+import {
+  ConfiguredMobileAccount,
+  extractConfiguredMobileAccounts,
+  getMobileActionLabel,
+  getNextRefreshSeed,
+  pickAccountBySeed,
+} from "../lib/dhakaTime";
 
 // High-fidelity bKash Logo SVG
 const BkashLogo: React.FC<{ className?: string }> = ({ className = "h-8" }) => (
@@ -77,6 +85,7 @@ const Payment: React.FC = () => {
   const [order, setOrder] = useState<any>(null);
   const [sellerProfile, setSellerProfile] = useState<any>(null);
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
+  const [platformSettings, setPlatformSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -86,7 +95,14 @@ const Payment: React.FC = () => {
   const [trxId, setTrxId] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  // Dynamic numbers rotated per page load/refresh
+  // Deterministic per-refresh rotation seed + single active bKash & Nagad account
+  const [refreshSeed] = useState<number>(() =>
+    getNextRefreshSeed(`payment_${orderId || "default"}`)
+  );
+  const [activeBkashAccount, setActiveBkashAccount] =
+    useState<ConfiguredMobileAccount | null>(null);
+  const [activeNagadAccount, setActiveNagadAccount] =
+    useState<ConfiguredMobileAccount | null>(null);
   const [activeBkashNumber, setActiveBkashNumber] = useState("");
   const [activeNagadNumber, setActiveNagadNumber] = useState("");
 
@@ -138,16 +154,19 @@ const Payment: React.FC = () => {
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
-  // Fetch Order & Payment Settings
+  // Fetch Order, Seller Profile & Payment Settings
   useEffect(() => {
     if (!orderId) {
       navigate("/");
       return;
     }
 
+    let unsubSeller: (() => void) | null = null;
+    let currentSubscribedSellerId: string | null = null;
+
     const unsubOrder = onSnapshot(doc(db, "orders", orderId), async (snap) => {
       if (snap.exists()) {
-        const orderData = { id: snap.id, ...snap.data() };
+        const orderData: any = { id: snap.id, ...snap.data() };
         setOrder(orderData);
 
         // Pre-fill sender number or trxId if present
@@ -158,17 +177,53 @@ const Payment: React.FC = () => {
           setTrxId(orderData.transactionId);
         }
 
-        // Fetch seller details if order belongs to a seller
-        const firstSellerId = orderData.items?.find((i: any) => i.sellerId)?.sellerId;
-        if (firstSellerId) {
-          try {
-            const sellerSnap = await getDoc(doc(db, "users", firstSellerId));
-            if (sellerSnap.exists()) {
-              setSellerProfile(sellerSnap.data());
+        // Resolve sellerId from top-level order.sellerId, order.items[].sellerId, or fallback lookup on products/{productId}
+        let resolvedSellerId: string | null =
+          orderData.sellerId ||
+          orderData.items?.find((i: any) => i?.sellerId)?.sellerId ||
+          null;
+
+        if (!resolvedSellerId && Array.isArray(orderData.items)) {
+          for (const item of orderData.items) {
+            const pid = item?.productId || item?.id;
+            if (!pid) continue;
+            try {
+              const pSnap = await getDoc(doc(db, "products", String(pid)));
+              if (pSnap.exists() && pSnap.data()?.sellerId) {
+                resolvedSellerId = String(pSnap.data().sellerId);
+                break;
+              }
+            } catch {
+              // Ignore product lookup failure
             }
-          } catch (e) {
-            console.error("Error fetching seller:", e);
           }
+        }
+
+        if (resolvedSellerId) {
+          if (currentSubscribedSellerId !== resolvedSellerId) {
+            if (unsubSeller) unsubSeller();
+            currentSubscribedSellerId = resolvedSellerId;
+            unsubSeller = onSnapshot(
+              doc(db, "users", resolvedSellerId),
+              (sellerSnap) => {
+                if (sellerSnap.exists()) {
+                  setSellerProfile({ id: sellerSnap.id, ...sellerSnap.data() });
+                } else {
+                  setSellerProfile(null);
+                }
+              },
+              (err) => {
+                console.error("Error listening to seller profile:", err);
+              }
+            );
+          }
+        } else {
+          if (unsubSeller) {
+            unsubSeller();
+            unsubSeller = null;
+            currentSubscribedSellerId = null;
+          }
+          setSellerProfile(null);
         }
       } else {
         try {
@@ -176,7 +231,9 @@ const Payment: React.FC = () => {
           if (cached) {
             setOrder(JSON.parse(cached));
           }
-        } catch (e) {}
+        } catch {
+          // Ignore cache parse error
+        }
       }
       setLoading(false);
     });
@@ -184,81 +241,68 @@ const Payment: React.FC = () => {
     const unsubPayments = onSnapshot(doc(db, "settings", "payments"), (docSnap) => {
       if (docSnap.exists()) {
         setPaymentSettings(docSnap.data());
+      } else {
+        setPaymentSettings({});
+      }
+    });
+
+    const unsubPlatform = onSnapshot(doc(db, "settings", "platform"), (docSnap) => {
+      if (docSnap.exists()) {
+        setPlatformSettings(docSnap.data());
+      } else {
+        setPlatformSettings({});
       }
     });
 
     return () => {
       unsubOrder();
       unsubPayments();
+      unsubPlatform();
+      if (unsubSeller) unsubSeller();
     };
   }, [orderId, navigate]);
 
-  // ROTATE bKash and Nagad numbers DYNAMICALLY on load / refresh
-  // Distributes different numbers to different users concurrently, and cycles through them per refresh
+  // Rotate bKash and Nagad numbers deterministically per refresh:
+  // - Non-admin seller products -> strictly use ONLY that seller's configured numbers (no Admin fallback)
+  // - Main Admin products (e.g. deepshop@gmail.com) or platform products -> use Admin Dashboard settings/payments
   useEffect(() => {
-    // Check if order belongs to a seller
-    const isSellerOrder = Boolean(sellerProfile && (sellerProfile.uid || sellerProfile.id || sellerProfile.email || sellerProfile.storeName));
+    const isNonAdminSellerOrder = Boolean(
+      sellerProfile && !isSuperAdminOrAdmin(sellerProfile)
+    );
 
-    // 1. Rotate bKash Number
-    let bPool: string[] = [];
-    if (isSellerOrder) {
-      if (Array.isArray(sellerProfile?.bkashNumbers) && sellerProfile.bkashNumbers.length > 0) {
-        bPool = sellerProfile.bkashNumbers;
-      } else if (sellerProfile?.bkashNumber) {
-        bPool = [sellerProfile.bkashNumber];
-      }
-    } else {
-      if (Array.isArray(paymentSettings?.bkashAccounts) && paymentSettings.bkashAccounts.length > 0) {
-        bPool = paymentSettings.bkashAccounts.map((a: any) => a.number).filter(Boolean);
-      } else if (Array.isArray(paymentSettings?.bkashNumbers) && paymentSettings.bkashNumbers.length > 0) {
-        bPool = paymentSettings.bkashNumbers;
-      } else if (paymentSettings?.bkashNumber) {
-        bPool = [paymentSettings.bkashNumber];
-      }
-    }
-    const cleanBkash = bPool.filter((n) => n && typeof n === "string" && !isForbiddenNumber(n) && n !== "01700000000");
+    let extracted = {
+      bkash: [] as ConfiguredMobileAccount[],
+      nagad: [] as ConfiguredMobileAccount[],
+    };
 
-    // 2. Rotate Nagad Number
-    let nPool: string[] = [];
-    if (isSellerOrder) {
-      if (Array.isArray(sellerProfile?.nagadNumbers) && sellerProfile.nagadNumbers.length > 0) {
-        nPool = sellerProfile.nagadNumbers;
-      } else if (sellerProfile?.nagadNumber) {
-        nPool = [sellerProfile.nagadNumber];
-      }
+    if (isNonAdminSellerOrder) {
+      extracted = extractConfiguredMobileAccounts(sellerProfile);
     } else {
-      if (Array.isArray(paymentSettings?.nagadAccounts) && paymentSettings.nagadAccounts.length > 0) {
-        nPool = paymentSettings.nagadAccounts.map((a: any) => a.number).filter(Boolean);
-      } else if (Array.isArray(paymentSettings?.nagadNumbers) && paymentSettings.nagadNumbers.length > 0) {
-        nPool = paymentSettings.nagadNumbers;
-      } else if (paymentSettings?.nagadNumber) {
-        nPool = [paymentSettings.nagadNumber];
+      const mergedAdminSettings = {
+        ...(platformSettings || {}),
+        ...(paymentSettings || {}),
+      };
+      extracted = extractConfiguredMobileAccounts(mergedAdminSettings);
+      if (
+        extracted.bkash.length === 0 &&
+        extracted.nagad.length === 0 &&
+        sellerProfile
+      ) {
+        extracted = extractConfiguredMobileAccounts(sellerProfile);
       }
     }
-    const cleanNagad = nPool.filter((n) => n && typeof n === "string" && !isForbiddenNumber(n) && n !== "01800000000");
 
-    // Calculate seed from orderId + session refresh salt
-    const sessionSalt = Math.floor(Math.random() * 1000);
-    const orderHash = (orderId || "").split("").reduce((acc, c, idx) => acc + c.charCodeAt(0) * (idx + 3), 0);
-    const seed = orderHash + sessionSalt;
+    const pickedBkash = pickAccountBySeed(extracted.bkash, refreshSeed);
+    const pickedNagad = pickAccountBySeed(extracted.nagad, refreshSeed + 1);
 
-    if (cleanBkash.length > 0) {
-      const picked = cleanBkash[seed % cleanBkash.length];
-      setActiveBkashNumber(picked);
-    } else {
-      setActiveBkashNumber("");
-    }
+    setActiveBkashAccount(pickedBkash);
+    setActiveBkashNumber(pickedBkash?.number || "");
+    setActiveNagadAccount(pickedNagad);
+    setActiveNagadNumber(pickedNagad?.number || "");
+  }, [sellerProfile, paymentSettings, platformSettings, refreshSeed]);
 
-    if (cleanNagad.length > 0) {
-      const picked = cleanNagad[(seed + 1) % cleanNagad.length];
-      setActiveNagadNumber(picked);
-    } else {
-      setActiveNagadNumber("");
-    }
-  }, [sellerProfile, paymentSettings, orderId]);
-
-  const hasBkashNumber = Boolean(activeBkashNumber && activeBkashNumber !== "01700000000");
-  const hasNagadNumber = Boolean(activeNagadNumber && activeNagadNumber !== "01800000000");
+  const hasBkashNumber = Boolean(activeBkashNumber);
+  const hasNagadNumber = Boolean(activeNagadNumber);
 
   // Automatically switch to available method if current one is unavailable
   useEffect(() => {
@@ -298,9 +342,15 @@ const Payment: React.FC = () => {
     };
   }, [order]);
 
-  // Current active payment number based on selected method
-  const currentReceiverNumber = selectedMethod === "bkash" ? activeBkashNumber : activeNagadNumber;
-  const storeName = sellerProfile?.shopName || "Deep Shop";
+  // Current active payment account & action label based on selected method
+  const currentActiveAccount =
+    selectedMethod === "bkash" ? activeBkashAccount : activeNagadAccount;
+  const currentReceiverNumber =
+    selectedMethod === "bkash" ? activeBkashNumber : activeNagadNumber;
+  const currentActionLabel = getMobileActionLabel(currentActiveAccount?.type);
+  const currentAccountTypeLabel = currentActiveAccount?.type || "Personal";
+  const storeName =
+    sellerProfile?.shopName || sellerProfile?.displayName || "Deep Shop";
   const displayTrxRef = `TRX-${orderId?.slice(0, 8).toUpperCase()}`;
 
   // Step 2 Submission -> validates Sender Number and proceeds to Step 3
@@ -989,17 +1039,22 @@ const Payment: React.FC = () => {
 
             {/* Instruction Card - Single Line */}
             <div className="p-3 bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl text-[11px] sm:text-xs font-medium text-zinc-700 dark:text-zinc-300 text-center whitespace-nowrap truncate">
-              {selectedMethod === "bkash" ? "bKash" : "Nagad"} অ্যাপে <strong>Send Money</strong> করে ঠিক <strong>{calculations.amountToPay} BDT</strong> পাঠান
+              {selectedMethod === "bkash" ? "bKash" : "Nagad"} অ্যাপে <strong>{currentActionLabel}</strong> ({currentAccountTypeLabel}) করে ঠিক <strong>{calculations.amountToPay} BDT</strong> পাঠান
             </div>
 
-            {/* Account Number Card (SEND MONEY করুন এই নম্বরে) */}
+            {/* Account Number Card */}
             <div className="p-3.5 bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl space-y-1">
-              <span className="text-[10px] sm:text-[11px] font-bold text-zinc-500 uppercase tracking-normal block whitespace-nowrap">
-                SEND MONEY করুন এই নম্বরে
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] sm:text-[11px] font-bold text-zinc-500 uppercase tracking-normal block whitespace-nowrap">
+                  {currentActionLabel.toUpperCase()} করুন এই নম্বরে
+                </span>
+                <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                  {currentAccountTypeLabel} নম্বর
+                </span>
+              </div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-lg sm:text-xl font-black font-mono text-zinc-900 dark:text-white tracking-wider whitespace-nowrap">
-                  {currentReceiverNumber || "01700000000"}
+                  {currentReceiverNumber}
                 </span>
                 <button
                   type="button"

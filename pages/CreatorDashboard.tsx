@@ -1,114 +1,165 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
-  MoreHorizontal,
   TrendingUp,
-  TrendingDown,
-  CheckCircle2,
-  ChevronRight,
   Star,
   Handshake,
-  Sparkles,
   DollarSign,
   Plus,
   Eye,
   Heart,
   MessageCircle,
-  ShieldCheck,
-  Share2,
-  Coins,
   Award,
-  Sliders,
-  Info,
-  X,
-  Clock,
-  Users,
-  CreditCard,
-  AlertCircle,
-  Lock,
   Save,
-  Check
+  Trash2,
+  CheckCircle2,
+  Coins,
+  BarChart3,
+  ChevronRight,
+  Wallet,
+  Lock
 } from "lucide-react";
+import { User, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  getDocs,
+  addDoc
+} from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
 import SEO from "../components/SEO";
-import GiftStarsModal from "../components/GiftStarsModal";
 import { triggerHaptic } from "../lib/haptics";
+import {
+  ConfiguredMobileAccount,
+  MobileAccountType,
+  extractConfiguredMobileAccounts,
+  formatDhakaDateTime
+} from "../lib/dhakaTime";
+import creatorAvatarFallback from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
+import postImageFallback from "../src/assets/images/feed_showcase_park_1792826817616.jpg";
 
-type TabType = "analytics" | "content" | "community" | "monetise" | "settings";
+type TabType = "analytics" | "monetise" | "content" | "settings";
+
+const ACCOUNT_TYPES: MobileAccountType[] = ["Personal", "Payment", "Agent"];
 
 export const CreatorDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const notify = useNotify();
-  const currentUser = auth.currentUser;
 
-  const [activeTab, setActiveTab] = useState<TabType>("analytics");
+  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // Creator profile state
-  const [userData, setUserData] = useState<any>(null);
+  const initialTabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    if (
+      initialTabParam === "monetise" ||
+      initialTabParam === "content" ||
+      initialTabParam === "settings" ||
+      initialTabParam === "analytics"
+    ) {
+      return initialTabParam;
+    }
+    return "analytics";
+  });
+
+  // Creator profile & posts state
+  const [userData, setUserData] = useState<Record<string, any> | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Payment number configuration
-  const [creatorBkash, setCreatorBkash] = useState("");
-  const [creatorNagad, setCreatorNagad] = useState("");
+  // Multiple bKash & Nagad accounts with Personal / Payment / Agent types
+  const [bkashAccounts, setBkashAccounts] = useState<ConfiguredMobileAccount[]>([]);
+  const [nagadAccounts, setNagadAccounts] = useState<ConfiguredMobileAccount[]>([]);
+  const [newBkashNumber, setNewBkashNumber] = useState("");
+  const [newBkashType, setNewBkashType] = useState<MobileAccountType>("Personal");
+  const [newNagadNumber, setNewNagadNumber] = useState("");
+  const [newNagadType, setNewNagadType] = useState<MobileAccountType>("Personal");
   const [isSavingNumbers, setIsSavingNumbers] = useState(false);
 
-  // Star withdrawal states
-  const [showStarWithdrawModal, setShowStarWithdrawModal] = useState(false);
-  const [withdrawPhone, setWithdrawPhone] = useState("");
-  const [withdrawMethod, setWithdrawMethod] = useState("bKash");
-  const [isSubmittingWithdraw, setIsSubmittingWithdraw] = useState(false);
-
-  // Buy stars modal
-  const [showBuyStarsModal, setShowBuyStarsModal] = useState(false);
-
-  // Monetization features state
-  const [partnershipAdsEnabled, setPartnershipAdsEnabled] = useState(() => {
+  // Content Monetization & Program toggles
+  const [contentMonetizationEnabled, setContentMonetizationEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("creator_content_monetization") !== "false";
+  });
+  const [partnershipAdsEnabled, setPartnershipAdsEnabled] = useState<boolean>(() => {
     return localStorage.getItem("creator_partnership_ads") !== "false";
   });
-  const [subscriptionEnabled, setSubscriptionEnabled] = useState(() => {
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState<boolean>(() => {
     return localStorage.getItem("creator_subscription_enabled") === "true";
   });
-  const [subscriptionFee, setSubscriptionFee] = useState(() => {
+  const [subscriptionFee] = useState<string>(() => {
     return localStorage.getItem("creator_subscription_fee") || "500";
   });
 
-  // AUTH GUARD: User must be signed in to access Creator Dashboard
+  // Inline withdrawal drawers (no popups)
+  const [showContentPayoutForm, setShowContentPayoutForm] = useState(false);
+  const [contentPayoutMethod, setContentPayoutMethod] = useState<"bKash" | "Nagad">("bKash");
+  const [contentPayoutPhone, setContentPayoutPhone] = useState("");
+  const [isSubmittingContentPayout, setIsSubmittingContentPayout] = useState(false);
+
+  const [showStarWithdrawForm, setShowStarWithdrawForm] = useState(false);
+  const [withdrawPhone, setWithdrawPhone] = useState("");
+  const [withdrawMethod, setWithdrawMethod] = useState<"bKash" | "Nagad">("bKash");
+  const [isSubmittingWithdraw, setIsSubmittingWithdraw] = useState(false);
+
+  // Reactive Firebase Auth listener
   useEffect(() => {
-    const unsubAuth = auth.onAuthStateChanged((u) => {
+    const unsubAuth = onAuthStateChanged(auth, (u) => {
+      setCurrentUser(u);
+      setAuthChecked(true);
       if (!u) {
         notify("Account required: Please sign in to access Creator Dashboard!", "error");
         navigate("/signin", { state: { returnTo: "/creator-dashboard" } });
       }
     });
     return unsubAuth;
-  }, [navigate]);
+  }, [navigate, notify]);
 
   useEffect(() => {
+    if (!authChecked || !currentUser) return;
+
     const loadCreatorData = async () => {
       setLoading(true);
       try {
-        if (currentUser) {
-          const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            setUserData(data);
-            setCreatorBkash(data.bkashNumber || "");
-            setCreatorNagad(data.nagadNumber || "");
+        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setUserData(data);
+
+          const extracted = extractConfiguredMobileAccounts(data);
+          setBkashAccounts(extracted.bkash);
+          setNagadAccounts(extracted.nagad);
+
+          if (typeof data.contentMonetizationEnabled === "boolean") {
+            setContentMonetizationEnabled(data.contentMonetizationEnabled);
+            localStorage.setItem(
+              "creator_content_monetization",
+              String(data.contentMonetizationEnabled)
+            );
+          }
+          if (typeof data.partnershipAdsEnabled === "boolean") {
+            setPartnershipAdsEnabled(data.partnershipAdsEnabled);
+          }
+          if (typeof data.subscriptionEnabled === "boolean") {
+            setSubscriptionEnabled(data.subscriptionEnabled);
           }
         }
 
-        // Load creator posts
         const postsSnap = await getDocs(collection(db, "scam_posts"));
         const allPosts: any[] = [];
         postsSnap.forEach((d) => allPosts.push({ id: d.id, ...d.data() }));
 
-        const userPosts = currentUser
-          ? allPosts.filter((p) => p.reporterId === currentUser.uid)
-          : [];
+        const userPosts = allPosts
+          .filter(
+            (p) =>
+              p.reporterId === currentUser.uid || p.authorId === currentUser.uid
+          )
+          .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+
         setPosts(userPosts);
       } catch (err) {
         console.error("Error loading creator data:", err);
@@ -118,22 +169,188 @@ export const CreatorDashboard: React.FC = () => {
     };
 
     loadCreatorData();
-  }, [currentUser]);
+  }, [authChecked, currentUser]);
+
+  const persistCreatorSettings = async (patch: Record<string, any>) => {
+    if (!currentUser) return;
+    try {
+      await setDoc(doc(db, "users", currentUser.uid), patch, { merge: true });
+      setUserData((prev) => ({ ...(prev || {}), ...patch }));
+    } catch (err) {
+      console.error("Failed to persist creator setting:", err);
+    }
+  };
+
+  const followerCount =
+    Number(userData?.followersCount || 0) ||
+    (Array.isArray(userData?.followers) ? userData.followers.length : 0);
+  const MONETIZATION_MIN_FOLLOWERS = 1000;
+  const isMonetizationUnlocked = followerCount >= MONETIZATION_MIN_FOLLOWERS;
+  const followerUnlockProgress = Math.min(
+    100,
+    Math.round((followerCount / MONETIZATION_MIN_FOLLOWERS) * 100)
+  );
+
+  const toggleContentMonetization = async () => {
+    triggerHaptic();
+    if (!isMonetizationUnlocked) {
+      notify(
+        `Content Monetization is locked until you reach 1,000 followers (${followerCount.toLocaleString()} / 1,000).`,
+        "error"
+      );
+      return;
+    }
+    const nextVal = !contentMonetizationEnabled;
+    setContentMonetizationEnabled(nextVal);
+    localStorage.setItem("creator_content_monetization", String(nextVal));
+    await persistCreatorSettings({ contentMonetizationEnabled: nextVal });
+    notify(
+      nextVal
+        ? "Content Monetization enabled! Your News Hub posts now earn feed reach & engagement revenue."
+        : "Content Monetization paused.",
+      "success"
+    );
+  };
+
+  const togglePartnershipAds = async () => {
+    triggerHaptic();
+    const nextVal = !partnershipAdsEnabled;
+    setPartnershipAdsEnabled(nextVal);
+    localStorage.setItem("creator_partnership_ads", String(nextVal));
+    await persistCreatorSettings({ partnershipAdsEnabled: nextVal });
+    notify(
+      nextVal
+        ? "Per-Post Sponsorship activated!"
+        : "Per-Post Sponsorship turned off.",
+      "success"
+    );
+  };
+
+  const toggleSubscription = async () => {
+    triggerHaptic();
+    const nextVal = !subscriptionEnabled;
+    setSubscriptionEnabled(nextVal);
+    localStorage.setItem("creator_subscription_enabled", String(nextVal));
+    await persistCreatorSettings({ subscriptionEnabled: nextVal });
+    notify(
+      nextVal
+        ? `Monthly Subscriptions activated at ৳${subscriptionFee}/month!`
+        : "Monthly Subscriptions paused.",
+      "success"
+    );
+  };
+
+  // Add / Remove / Update bKash & Nagad numbers
+  const handleAddAccount = (provider: "bKash" | "Nagad") => {
+    const rawNum = provider === "bKash" ? newBkashNumber.trim() : newNagadNumber.trim();
+    const accType = provider === "bKash" ? newBkashType : newNagadType;
+
+    if (!rawNum) {
+      notify(`Enter a valid ${provider} number first`, "error");
+      return;
+    }
+
+    const entry: ConfiguredMobileAccount = {
+      id: `${provider.toLowerCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      provider,
+      type: accType,
+      number: rawNum
+    };
+
+    if (provider === "bKash") {
+      if (bkashAccounts.some((a) => a.number === rawNum && a.type === accType)) {
+        notify("This bKash number & type is already added", "error");
+        return;
+      }
+      setBkashAccounts((prev) => [...prev, entry]);
+      setNewBkashNumber("");
+    } else {
+      if (nagadAccounts.some((a) => a.number === rawNum && a.type === accType)) {
+        notify("This Nagad number & type is already added", "error");
+        return;
+      }
+      setNagadAccounts((prev) => [...prev, entry]);
+      setNewNagadNumber("");
+    }
+    triggerHaptic();
+  };
+
+  const handleUpdateAccountType = (
+    provider: "bKash" | "Nagad",
+    id: string,
+    nextType: MobileAccountType
+  ) => {
+    if (provider === "bKash") {
+      setBkashAccounts((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, type: nextType } : a))
+      );
+    } else {
+      setNagadAccounts((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, type: nextType } : a))
+      );
+    }
+  };
+
+  const handleRemoveAccount = (provider: "bKash" | "Nagad", id: string) => {
+    if (provider === "bKash") {
+      setBkashAccounts((prev) => prev.filter((a) => a.id !== id));
+    } else {
+      setNagadAccounts((prev) => prev.filter((a) => a.id !== id));
+    }
+  };
 
   const handleSavePaymentNumbers = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
 
+    // Also include any typed-but-unadded input automatically so user never loses typed numbers
+    const finalBkash = [...bkashAccounts];
+    if (newBkashNumber.trim()) {
+      finalBkash.push({
+        id: `bkash_${Date.now()}`,
+        provider: "bKash",
+        type: newBkashType,
+        number: newBkashNumber.trim()
+      });
+      setBkashAccounts(finalBkash);
+      setNewBkashNumber("");
+    }
+
+    const finalNagad = [...nagadAccounts];
+    if (newNagadNumber.trim()) {
+      finalNagad.push({
+        id: `nagad_${Date.now()}`,
+        provider: "Nagad",
+        type: newNagadType,
+        number: newNagadNumber.trim()
+      });
+      setNagadAccounts(finalNagad);
+      setNewNagadNumber("");
+    }
+
     setIsSavingNumbers(true);
     triggerHaptic();
 
     try {
-      await updateDoc(doc(db, "users", currentUser.uid), {
-        bkashNumber: creatorBkash.trim(),
-        nagadNumber: creatorNagad.trim()
-      });
+      const payload = {
+        bkashAccounts: finalBkash,
+        nagadAccounts: finalNagad,
+        bkashNumbers: finalBkash.map((a) => a.number),
+        nagadNumbers: finalNagad.map((a) => a.number),
+        bkashNumber: finalBkash[0]?.number || "",
+        bkashAccountType: finalBkash[0]?.type || "Personal",
+        nagadNumber: finalNagad[0]?.number || "",
+        nagadAccountType: finalNagad[0]?.type || "Personal",
+        updatedAt: Date.now()
+      };
 
-      notify("Payment accounts updated! Supporters can now send funds to your accounts.", "success");
+      await setDoc(doc(db, "users", currentUser.uid), payload, { merge: true });
+      setUserData((prev) => ({ ...(prev || {}), ...payload }));
+
+      notify(
+        "Payment accounts saved! Only configured gateways will be shown on your Gift & Sponsorship pages.",
+        "success"
+      );
     } catch (err) {
       notify("Failed to save payment accounts", "error");
     } finally {
@@ -141,28 +358,109 @@ export const CreatorDashboard: React.FC = () => {
     }
   };
 
-  const togglePartnershipAds = () => {
-    const nextVal = !partnershipAdsEnabled;
-    setPartnershipAdsEnabled(nextVal);
-    localStorage.setItem("creator_partnership_ads", String(nextVal));
-    notify(
-      nextVal
-        ? "Partnership Ads activated! Deep Shop sponsor ads will display on your posts."
-        : "Partnership Ads turned off.",
-      "success"
-    );
-  };
+  // Real calculated totals across posts
+  const earnedStars = Number(userData?.earnedStars || 0);
+  const purchasedStars = Number(userData?.purchasedStars || 0);
 
-  const toggleSubscription = () => {
-    const nextVal = !subscriptionEnabled;
-    setSubscriptionEnabled(nextVal);
-    localStorage.setItem("creator_subscription_enabled", String(nextVal));
-    notify(
-      nextVal
-        ? `Creator Subscriptions activated at ৳${subscriptionFee}/month!`
-        : "Creator Subscriptions paused.",
-      "success"
-    );
+  const totalViews = posts.reduce((acc, p) => acc + Number(p.views || 0), 0);
+  const totalReactions = posts.reduce((acc, p) => {
+    const rc = p.reactionsCount;
+    if (rc && typeof rc === "object") {
+      return (
+        acc +
+        Number(rc.like || 0) +
+        Number(rc.love || 0) +
+        Number(rc.haha || 0) +
+        Number(rc.wow || 0) +
+        Number(rc.sad || 0) +
+        Number(rc.angry || 0)
+      );
+    }
+    return acc + Number(p.likesCount || 0);
+  }, 0);
+  const totalComments = posts.reduce(
+    (acc, p) => acc + Number(p.commentsCount || 0),
+    0
+  );
+  const engagementRate =
+    totalViews > 0
+      ? (((totalReactions + totalComments) / totalViews) * 100).toFixed(1)
+      : "0.0";
+
+  // Content Monetization Revenue Calculation (BDT) — only active once unlocked at 1,000 followers
+  const effectiveContentMonetization =
+    isMonetizationUnlocked && contentMonetizationEnabled;
+  const reachRevenueBDT = effectiveContentMonetization
+    ? (totalViews / 1000) * 50
+    : 0;
+  const engagementBonusBDT = effectiveContentMonetization
+    ? totalReactions * 0.25 + totalComments * 0.5
+    : 0;
+  const bonusBalanceBDT = Number(userData?.contentEarningsBDT || 0);
+  const totalContentRevenueBDT = effectiveContentMonetization
+    ? reachRevenueBDT + engagementBonusBDT + bonusBalanceBDT
+    : bonusBalanceBDT;
+
+  const creatorName =
+    userData?.displayName ||
+    currentUser?.displayName ||
+    currentUser?.email?.split("@")[0] ||
+    "Creator";
+  const creatorAvatar =
+    userData?.photoURL || currentUser?.photoURL || creatorAvatarFallback;
+
+  // Submit Content Monetization Payout Request
+  const handleContentPayoutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    if (!isMonetizationUnlocked) {
+      notify(
+        "Content Monetization unlocks once you reach 1,000 followers.",
+        "error"
+      );
+      return;
+    }
+
+    if (totalContentRevenueBDT < 500) {
+      notify(
+        `Minimum ৳500.00 BDT required for Content Monetization payout. Current: ৳${totalContentRevenueBDT.toFixed(2)}.`,
+        "error"
+      );
+      return;
+    }
+
+    if (!contentPayoutPhone.trim()) {
+      notify("Please enter your payout mobile number", "error");
+      return;
+    }
+
+    setIsSubmittingContentPayout(true);
+    try {
+      await addDoc(collection(db, "star_withdrawals"), {
+        userId: currentUser.uid,
+        userName: creatorName,
+        userEmail: currentUser.email || "",
+        payoutType: "content_monetization",
+        starsAmount: Math.round(totalContentRevenueBDT),
+        amountBDT: Number(totalContentRevenueBDT.toFixed(2)),
+        paymentMethod: contentPayoutMethod,
+        accountPhone: contentPayoutPhone.trim(),
+        status: "pending",
+        createdAt: Date.now()
+      });
+
+      notify(
+        `Content Monetization payout request of ৳${totalContentRevenueBDT.toFixed(2)} submitted!`,
+        "success"
+      );
+      setShowContentPayoutForm(false);
+      setContentPayoutPhone("");
+    } catch {
+      notify("Failed to submit content payout request", "error");
+    } finally {
+      setIsSubmittingContentPayout(false);
+    }
   };
 
   // Submit Star Earnings Withdrawal Request
@@ -170,13 +468,15 @@ export const CreatorDashboard: React.FC = () => {
     e.preventDefault();
     if (!currentUser) return;
 
-    const earnedStars = userData?.earnedStars || 0;
     if (earnedStars < 1000) {
-      notify(`Minimum 1,000 earned stars (৳1,000) required to withdraw. Current: ${earnedStars} stars.`, "error");
+      notify(
+        `Minimum 1,000 earned stars (৳1,000) required to withdraw. Current: ${earnedStars} stars.`,
+        "error"
+      );
       return;
     }
 
-    if (!withdrawPhone) {
+    if (!withdrawPhone.trim()) {
       notify("Please enter your bKash or Nagad phone number", "error");
       return;
     }
@@ -185,200 +485,351 @@ export const CreatorDashboard: React.FC = () => {
     try {
       await addDoc(collection(db, "star_withdrawals"), {
         userId: currentUser.uid,
-        userName: userData?.displayName || currentUser.displayName || currentUser.email?.split("@")[0] || "Creator",
+        userName: creatorName,
         userEmail: currentUser.email || "",
+        payoutType: "gifted_stars",
         starsAmount: earnedStars,
         amountBDT: earnedStars,
         paymentMethod: withdrawMethod,
-        accountPhone: withdrawPhone,
+        accountPhone: withdrawPhone.trim(),
         status: "pending",
         createdAt: Date.now()
       });
 
-      notify(`Star withdrawal request of ৳${earnedStars} (${earnedStars} ⭐ Stars) submitted to Admin!`, "success");
-      setShowStarWithdrawModal(false);
+      notify(
+        `Star withdrawal request of ৳${earnedStars} (${earnedStars} Stars) submitted!`,
+        "success"
+      );
+      setShowStarWithdrawForm(false);
       setWithdrawPhone("");
-    } catch (err) {
+    } catch {
       notify("Failed to submit withdrawal request", "error");
     } finally {
       setIsSubmittingWithdraw(false);
     }
   };
 
-  const creatorName = userData?.displayName || currentUser?.displayName || currentUser?.email?.split("@")[0] || "User";
-  const creatorAvatar = userData?.photoURL || currentUser?.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150";
-  const followerCount = userData?.followersCount || (userData?.followers ? userData.followers.length : 0);
-  const earnedStars = userData?.earnedStars || 0;
-  const purchasedStars = userData?.purchasedStars || 0;
-  const availableStarsBalance = userData?.starsBalance || userData?.sparks || 0;
-
-  // Real calculated totals across posts
-  const totalViews = posts.reduce((acc, p) => acc + (p.views || 0), 0);
-  const totalReactions = posts.reduce((acc, p) => {
-    const rc = p.reactionsCount;
-    if (!rc) return acc;
-    return acc + (rc.like || 0) + (rc.love || 0) + (rc.haha || 0) + (rc.wow || 0) + (rc.sad || 0) + (rc.angry || 0);
-  }, 0);
-  const totalComments = posts.reduce((acc, p) => acc + (p.commentsCount || 0), 0);
-  const engagementRate = totalViews > 0 ? (((totalReactions + totalComments) / totalViews) * 100).toFixed(1) : "0.0";
-
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans pb-24">
       <SEO
-        title="Insights • Creator Studio • DEEP SHOP"
-        description="Monitor analytics, engagement, reach, and performance on DEEP SHOP."
+        title="Creator Studio & Content Monetization • DEEP SHOP"
+        description="Track post reach, manage Content Monetization, configure bKash/Nagad payout numbers, and grow your community on DEEP SHOP."
       />
 
-      {/* TOP HEADER (EXACT MATCH TO IMG_4779_028762d7.jpeg) */}
+      {/* TOP HEADER */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-black/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
-        <div className="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate("/news-hub")}
-            className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 transition cursor-pointer"
-            title="Back to Feed"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate("/news-hub")}
+              className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition cursor-pointer shrink-0"
+              title="Back to News Hub"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-zinc-900 dark:text-white truncate">
+                Creator Dashboard
+              </h1>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                {creatorName} · {posts.length} published posts
+              </p>
+            </div>
+          </div>
 
-          <h1 className="text-xl font-black tracking-tight text-zinc-900 dark:text-white">
-            Insights
-          </h1>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab(activeTab === "settings" ? "analytics" : "settings")}
-            className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 transition cursor-pointer"
-            title="Account Settings"
-          >
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => navigate("/news-hub/create")}
+              className="px-3.5 py-1.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-extrabold whitespace-nowrap shrink-0 hover:opacity-90 transition cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create Post</span>
+            </button>
+            <img
+              src={creatorAvatar}
+              alt={creatorName}
+              className="w-9 h-9 rounded-full object-cover border border-zinc-200 dark:border-zinc-800 shrink-0 hidden sm:block"
+            />
+          </div>
         </div>
 
-        {/* TAB SWITCHER */}
-        <div className="max-w-xl mx-auto px-4 pb-2.5 overflow-x-auto no-scrollbar flex items-center gap-2">
-          {[
-            { id: "analytics", label: "Insights" },
-            { id: "content", label: "Posts" },
-            { id: "monetise", label: "Monetization" },
-            { id: "settings", label: "Payment Accounts" },
-          ].map((tab) => (
+        {/* SINGLE-LINE SLIM ROUNDED TAB SWITCHER */}
+        <div className="max-w-5xl mx-auto px-4 pb-3 overflow-x-auto no-scrollbar flex items-center gap-2">
+          {(
+            [
+              { id: "analytics", label: "Insights" },
+              { id: "monetise", label: "Content Monetization" },
+              { id: "content", label: `Posts (${posts.length})` },
+              { id: "settings", label: "Payment Accounts" }
+            ] as { id: TabType; label: string }[]
+          ).map((tab) => (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition cursor-pointer ${
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap shrink-0 transition cursor-pointer inline-flex items-center gap-1.5 ${
                 activeTab === tab.id
-                  ? "bg-black text-white dark:bg-white dark:text-black shadow-xs"
-                  : "bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-xs"
+                  : "bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
-              {tab.label}
+              {tab.id === "monetise" && !isMonetizationUnlocked && (
+                <Lock className="w-3 h-3 shrink-0 opacity-80" />
+              )}
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
       </header>
 
-      {/* MAIN BODY CONTAINER */}
-      <main className="max-w-xl mx-auto px-4 py-5 space-y-6">
+      {/* BODY CONTAINER (div instead of main to avoid global light-mode main override) */}
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+        {loading ? (
+          <div className="p-10 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-500">
+            Loading Creator Studio metrics...
+          </div>
+        ) : null}
 
-        {/* TAB 1: INSIGHTS & METRICS (MATCHING IMG_4779_028762d7.jpeg) */}
-        {activeTab === "analytics" && (
+        {/* TAB 1: INSIGHTS & CONTENT MONETIZATION SUMMARY */}
+        {!loading && activeTab === "analytics" && (
           <div className="space-y-6">
-            {/* 2X2 GRID METRIC CARDS (EXACT MATCH TO IMG_4779_028762d7.jpeg) */}
-            <div className="grid grid-cols-2 gap-3.5">
-              {/* Followers */}
-              <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-2">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Followers</span>
-                <span className="text-2xl font-black text-zinc-900 dark:text-white block">
+            {/* 4 METRIC CARDS - 2x2 on mobile, 4 columns on desktop */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-2">
+                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block whitespace-nowrap">
+                  Followers
+                </span>
+                <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white block font-mono">
                   {followerCount.toLocaleString()}
                 </span>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block">
-                  +2.4% this week
-                </span>
+                <div className="h-1 w-10 bg-blue-600 rounded-full" />
               </div>
 
-              {/* Engagement */}
-              <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-2">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Engagement</span>
-                <span className="text-2xl font-black text-zinc-900 dark:text-white block">
+              <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-2">
+                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block whitespace-nowrap">
+                  Engagement
+                </span>
+                <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white block font-mono">
                   {engagementRate}%
                 </span>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block">
-                  +0.8% this week
-                </span>
+                <div className="h-1 w-10 bg-emerald-500 rounded-full" />
               </div>
 
-              {/* Reach */}
-              <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-2">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Reach</span>
-                <span className="text-2xl font-black text-zinc-900 dark:text-white block">
-                  {(totalViews || 120).toLocaleString()}
+              <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-2">
+                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block whitespace-nowrap">
+                  Post Reach
                 </span>
-                <span className="text-[11px] font-medium text-zinc-400 block">
-                  last 7 days
+                <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white block font-mono">
+                  {totalViews.toLocaleString()}
                 </span>
+                <div className="h-1 w-10 bg-amber-500 rounded-full" />
               </div>
 
-              {/* Impressions */}
-              <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-2">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block">Impressions</span>
-                <span className="text-2xl font-black text-zinc-900 dark:text-white block">
-                  {((totalViews * 2.8) || 340).toFixed(0)}
+              <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-2">
+                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block whitespace-nowrap">
+                  Reactions
                 </span>
-                <span className="text-[11px] font-bold text-rose-500 block">
-                  -1.2% this week
+                <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white block font-mono">
+                  {totalReactions.toLocaleString()}
                 </span>
+                <div className="h-1 w-10 bg-rose-500 rounded-full" />
               </div>
             </div>
 
-            {/* TOP PERFORMING POSTS SECTION (EXACT MATCH TO IMG_4779_028762d7.jpeg) */}
-            <div className="space-y-3.5 pt-2">
-              <h3 className="text-base font-extrabold text-zinc-900 dark:text-white tracking-tight">
-                Top Performing Posts
-              </h3>
+            {/* CONTENT MONETIZATION QUICK OVERVIEW BANNER (ALWAYS VISIBLE ON INSIGHTS) */}
+            <div
+              className={`p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                isMonetizationUnlocked
+                  ? "border-emerald-500/30 dark:border-emerald-500/30"
+                  : "border-zinc-200 dark:border-zinc-800"
+              }`}
+            >
+              <div className="space-y-2 min-w-0 flex-1">
+                <div
+                  className={`flex items-center gap-2 text-xs font-bold ${
+                    isMonetizationUnlocked
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  {isMonetizationUnlocked ? (
+                    <Coins className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <Lock className="w-4 h-4 shrink-0" />
+                  )}
+                  <span>Content Monetization</span>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    {!isMonetizationUnlocked
+                      ? "Locked (1K Followers Required)"
+                      : contentMonetizationEnabled
+                      ? "Active"
+                      : "Paused"}
+                  </span>
+                </div>
+
+                {isMonetizationUnlocked ? (
+                  <>
+                    <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white">
+                      ৳{totalContentRevenueBDT.toFixed(2)} BDT Estimated Content Revenue
+                    </h2>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Earned from {totalViews.toLocaleString()} News Hub post views,{" "}
+                      {totalReactions.toLocaleString()} reactions, plus{" "}
+                      {earnedStars.toLocaleString()} gifted stars (৳{earnedStars}).
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white">
+                      Reach 1,000 Followers to Unlock Content Monetization
+                    </h2>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      You currently have{" "}
+                      <strong className="font-mono text-zinc-900 dark:text-white">
+                        {followerCount.toLocaleString()} / 1,000
+                      </strong>{" "}
+                      followers (
+                      {(MONETIZATION_MIN_FOLLOWERS - followerCount).toLocaleString()}{" "}
+                      more needed).
+                    </p>
+                    <progress
+                      value={Math.min(followerCount, MONETIZATION_MIN_FOLLOWERS)}
+                      max={MONETIZATION_MIN_FOLLOWERS}
+                      className="w-full max-w-sm h-2 rounded-full overflow-hidden [&::-webkit-progress-bar]:bg-zinc-100 dark:[&::-webkit-progress-bar]:bg-zinc-800 [&::-webkit-progress-value]:bg-amber-500 [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-amber-500"
+                    />
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("monetise")}
+                  className={`px-4 py-2 rounded-full text-white text-xs font-extrabold whitespace-nowrap shrink-0 transition cursor-pointer flex items-center gap-1.5 ${
+                    isMonetizationUnlocked
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : "bg-zinc-900 dark:bg-zinc-800 hover:opacity-90"
+                  }`}
+                >
+                  {!isMonetizationUnlocked && <Lock className="w-3.5 h-3.5" />}
+                  <span>
+                    {isMonetizationUnlocked
+                      ? "Open Content Monetization"
+                      : "View Eligibility"}
+                  </span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* TOP PERFORMING POSTS */}
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-base font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                  Top Performing Posts
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("content")}
+                  className="text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition whitespace-nowrap cursor-pointer"
+                >
+                  View all ({posts.length})
+                </button>
+              </div>
 
               {posts.length === 0 ? (
-                <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-500">
-                  No published reports yet. Post a scam alert to see performance statistics.
+                <div className="p-8 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center space-y-3">
+                  <p className="text-xs text-zinc-500">
+                    No published posts yet. Publish community updates or scam alerts in News Hub to start earning reach and monetization revenue.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/news-hub/create")}
+                    className="px-4 py-1.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-extrabold whitespace-nowrap cursor-pointer"
+                  >
+                    Create First Post
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {posts.map((post) => {
-                    const imgUrl = post.images?.[0] || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300";
-                    const postViews = post.views || 1;
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {posts.slice(0, 6).map((post) => {
+                    const imgUrl = post.images?.[0] || postImageFallback;
+                    const postViews = Number(post.views || 0);
                     const reactionsSum = post.reactionsCount
-                      ? (post.reactionsCount.like || 0) + (post.reactionsCount.love || 0) + (post.reactionsCount.angry || 0)
-                      : 0;
-                    const pEngRate = (((reactionsSum + (post.commentsCount || 0)) / postViews) * 100).toFixed(1);
+                      ? Number(post.reactionsCount.like || 0) +
+                        Number(post.reactionsCount.love || 0) +
+                        Number(post.reactionsCount.haha || 0) +
+                        Number(post.reactionsCount.wow || 0) +
+                        Number(post.reactionsCount.sad || 0) +
+                        Number(post.reactionsCount.angry || 0)
+                      : Number(post.likesCount || 0);
+                    const pEngRate =
+                      postViews > 0
+                        ? (
+                            ((reactionsSum + Number(post.commentsCount || 0)) /
+                              postViews) *
+                            100
+                          ).toFixed(1)
+                        : "0.0";
+                    const postEstBDT = (
+                      (postViews / 1000) * 50 +
+                      reactionsSum * 0.25 +
+                      Number(post.commentsCount || 0) * 0.5
+                    ).toFixed(2);
 
                     return (
                       <div
                         key={post.id}
                         onClick={() => navigate(`/news-hub/post/${post.id}`)}
-                        className="p-3 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer flex items-center justify-between gap-3"
+                        className="p-3.5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer flex items-center justify-between gap-3"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={imgUrl}
-                            alt=""
-                            className="w-16 h-16 rounded-2xl object-cover border border-zinc-200 dark:border-zinc-800 shrink-0"
-                          />
+                          {post.images?.[0] ? (
+                            <img
+                              src={imgUrl}
+                              alt=""
+                              className="w-14 h-14 rounded-2xl object-cover border border-zinc-200 dark:border-zinc-800 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 shrink-0">
+                              <BarChart3 className="w-5 h-5" />
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <h4 className="font-extrabold text-xs sm:text-sm text-zinc-900 dark:text-white line-clamp-1">
-                              {post.title}
+                              {post.title || post.description || "Community Post"}
                             </h4>
-                            <p className="text-[11px] text-zinc-400 mt-0.5">
-                              {post.category ? post.category.replace(/_/g, " ") : "Scam Report"} • {new Date(post.createdAt || Date.now()).toLocaleDateString("en-US", { day: "numeric", month: "short" })}
+                            <p className="text-[11px] text-zinc-500 mt-0.5 whitespace-nowrap truncate">
+                              {post.postType === "scam" ? "Scam Report" : "Community Post"} ·{" "}
+                              {formatDhakaDateTime(post.createdAt)}
                             </p>
+                            <div className="flex items-center gap-2.5 text-[11px] text-zinc-400 mt-1 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1">
+                                <Eye className="w-3 h-3" /> {postViews}
+                              </span>
+                              <span aria-hidden="true">·</span>
+                              <span className="inline-flex items-center gap-1">
+                                <Heart className="w-3 h-3" /> {reactionsSum}
+                              </span>
+                              <span aria-hidden="true">·</span>
+                              <span className="inline-flex items-center gap-1">
+                                <MessageCircle className="w-3 h-3" />{" "}
+                                {post.commentsCount || 0}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
                         <div className="text-right shrink-0">
-                          <span className="text-sm font-black text-zinc-900 dark:text-white block font-mono">
-                            {pEngRate}%
+                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block font-mono whitespace-nowrap">
+                            ৳{postEstBDT}
                           </span>
-                          <span className="text-[10px] text-zinc-400 block font-medium">eng. rate</span>
+                          <span className="text-[10px] text-zinc-400 block font-mono whitespace-nowrap">
+                            {pEngRate}% eng.
+                          </span>
                         </div>
                       </div>
                     );
@@ -389,290 +840,694 @@ export const CreatorDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: POSTS LIST */}
-        {activeTab === "content" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">Your Incident Reports ({posts.length})</h3>
-              <button
-                type="button"
-                onClick={() => navigate("/news-hub/create")}
-                className="px-3 py-1.5 rounded-full bg-black text-white dark:bg-white dark:text-black font-extrabold text-xs shadow-xs transition"
-              >
-                + Create Report
-              </button>
-            </div>
-
-            {posts.map((p) => (
+        {/* TAB 2: CONTENT MONETIZATION (DEDICATED FULL VIEW) */}
+        {!loading && activeTab === "monetise" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* LEFT / PRIMARY COLUMN: CONTENT MONETIZATION & GIFTED STARS */}
+            <div className="lg:col-span-7 space-y-5">
+              {/* 1. CONTENT MONETIZATION PROGRAM (LOCKED UNTIL 1,000 FOLLOWERS) */}
               <div
-                key={p.id}
-                onClick={() => navigate(`/news-hub/post/${p.id}`)}
-                className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-1.5"
+                className={`p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border shadow-xs space-y-5 ${
+                  isMonetizationUnlocked
+                    ? "border-emerald-500/30"
+                    : "border-zinc-200 dark:border-zinc-800"
+                }`}
               >
-                <h4 className="font-bold text-sm text-zinc-900 dark:text-white line-clamp-1">{p.title}</h4>
-                <p className="text-xs text-zinc-500 line-clamp-2">{p.description}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* TAB 3: MONETIZATION */}
-        {activeTab === "monetise" && (
-          <div className="space-y-5">
-            {/* STAR EARNINGS & WITHDRAWAL CARD */}
-            <div className="p-5 rounded-3xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/30 space-y-4">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" />
-                  <div>
-                    <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                      Star Earnings (Gifted Stars)
-                    </h3>
-                    <p className="text-[11px] text-zinc-500">1 Star = ৳1.00 BDT</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                        isMonetizationUnlocked
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
+                      }`}
+                    >
+                      {isMonetizationUnlocked ? (
+                        <TrendingUp className="w-5 h-5" />
+                      ) : (
+                        <Lock className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div
+                        className={`flex items-center gap-2 text-xs font-bold ${
+                          isMonetizationUnlocked
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-amber-600 dark:text-amber-400"
+                        }`}
+                      >
+                        <span>Content Monetization</span>
+                        <span aria-hidden="true">·</span>
+                        <span>
+                          {!isMonetizationUnlocked
+                            ? "Locked"
+                            : contentMonetizationEnabled
+                            ? "Enabled"
+                            : "Paused"}
+                        </span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white mt-0.5">
+                        News Hub Feed & Post Reach Revenue
+                      </h2>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        Earn automatic BDT payouts from qualified post views (৳50 RPM / 1K views), community reactions, and verified reports once you reach 1,000 followers.
+                      </p>
+                    </div>
                   </div>
+
+                  {isMonetizationUnlocked ? (
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                      <input
+                        type="checkbox"
+                        checked={contentMonetizationEnabled}
+                        onChange={toggleContentMonetization}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600" />
+                    </label>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={toggleContentMonetization}
+                      className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[11px] font-extrabold inline-flex items-center gap-1.5 shrink-0 cursor-not-allowed whitespace-nowrap"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Locked</span>
+                    </button>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => navigate("/buy-stars")}
-                  className="px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs shadow-xs transition cursor-pointer shrink-0"
+                {!isMonetizationUnlocked && (
+                  <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/50 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="font-extrabold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 shrink-0" />
+                        <span>Unlock Requirement: 1,000 Followers</span>
+                      </span>
+                      <span className="font-mono font-black text-amber-800 dark:text-amber-300 whitespace-nowrap">
+                        {followerCount.toLocaleString()} / 1,000
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400/90 leading-relaxed">
+                      Content Monetization will automatically unlock when your profile reaches 1,000 followers. You need{" "}
+                      <strong>
+                        {(MONETIZATION_MIN_FOLLOWERS - followerCount).toLocaleString()}
+                      </strong>{" "}
+                      more followers.
+                    </p>
+                  </div>
+                )}
+
+                {/* EARNINGS BREAKDOWN */}
+                <div
+                  className={`grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1 ${
+                    !isMonetizationUnlocked ? "opacity-60" : ""
+                  }`}
                 >
-                  Buy Stars ⭐
-                </button>
-              </div>
+                  <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800">
+                    <span className="text-[11px] font-medium text-zinc-500 block whitespace-nowrap">
+                      Content Balance
+                    </span>
+                    <span className="text-lg font-mono font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                      ৳{totalContentRevenueBDT.toFixed(2)}
+                    </span>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-900/40">
-                  <span className="text-[10px] font-bold text-zinc-500 block">Earned (Withdrawable)</span>
-                  <div className="text-lg font-mono font-black text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
-                    <span>{earnedStars}</span>
-                    <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 inline" />
-                    <span className="text-xs font-normal text-zinc-500">(৳{earnedStars})</span>
+                  <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800">
+                    <span className="text-[11px] font-medium text-zinc-500 block whitespace-nowrap">
+                      Reach Earnings (৳50 RPM)
+                    </span>
+                    <span className="text-lg font-mono font-black text-zinc-900 dark:text-white block mt-0.5">
+                      ৳{reachRevenueBDT.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800 col-span-2 sm:col-span-1">
+                    <span className="text-[11px] font-medium text-zinc-500 block whitespace-nowrap">
+                      Engagement Bonus
+                    </span>
+                    <span className="text-lg font-mono font-black text-zinc-900 dark:text-white block mt-0.5">
+                      ৳{engagementBonusBDT.toFixed(2)}
+                    </span>
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                  <span className="text-[10px] font-bold text-zinc-500 block">Purchased</span>
-                  <div className="text-lg font-mono font-black text-zinc-700 dark:text-zinc-300 flex items-center gap-1 mt-0.5">
-                    <span>{purchasedStars}</span>
-                    <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 inline" />
+                {/* PAYOUT ELIGIBILITY & INLINE PAYOUT REQUEST */}
+                <div className="pt-1 space-y-3 border-t border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-500 font-medium">
+                      Minimum Content Payout Threshold: ৳500.00 BDT
+                    </span>
+                    <span className="font-mono font-bold text-zinc-900 dark:text-white whitespace-nowrap">
+                      ৳{totalContentRevenueBDT.toFixed(2)} / ৳500
+                    </span>
                   </div>
+
+                  {isMonetizationUnlocked && totalContentRevenueBDT >= 500 ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowContentPayoutForm((v) => !v)}
+                      className="w-full py-2.5 px-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      <span>
+                        {showContentPayoutForm
+                          ? "Hide Payout Form"
+                          : `Withdraw Content Earnings (৳${totalContentRevenueBDT.toFixed(2)})`}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2 text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-950 px-4 py-2.5 rounded-2xl border border-zinc-200/70 dark:border-zinc-800">
+                      <span>
+                        {isMonetizationUnlocked
+                          ? "Keep publishing quality posts in News Hub to reach ৳500 payout."
+                          : "Grow to 1,000 followers in News Hub to unlock Content Monetization."}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/news-hub/create")}
+                        className="px-3 py-1 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold text-[11px] whitespace-nowrap shrink-0 cursor-pointer"
+                      >
+                        Post Now
+                      </button>
+                    </div>
+                  )}
+
+                  {showContentPayoutForm && (
+                    <form
+                      onSubmit={handleContentPayoutSubmit}
+                      className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        {(["bKash", "Nagad"] as const).map((method) => (
+                          <button
+                            key={method}
+                            type="button"
+                            onClick={() => setContentPayoutMethod(method)}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+                              contentPayoutMethod === method
+                                ? "bg-emerald-600 text-white"
+                                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"
+                            }`}
+                          >
+                            {method}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="tel"
+                        placeholder={`Enter your ${contentPayoutMethod} number`}
+                        value={contentPayoutPhone}
+                        onChange={(e) => setContentPayoutPhone(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 outline-none font-mono font-bold"
+                        required
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSubmittingContentPayout}
+                        className="w-full py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {isSubmittingContentPayout
+                          ? "Submitting Request..."
+                          : `Request Payout (৳${totalContentRevenueBDT.toFixed(2)})`}
+                      </button>
+                    </form>
+                  )}
                 </div>
               </div>
 
-              {/* Star Withdrawal Action */}
-              <div>
-                {earnedStars >= 1000 ? (
+              {/* 2. STAR EARNINGS & WITHDRAWAL CARD */}
+              <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-amber-500/30 shadow-xs space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 shrink-0">
+                      <Star className="w-5 h-5 fill-amber-500 text-amber-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white truncate">
+                        Star Earnings (Gifted Stars)
+                      </h3>
+                      <p className="text-xs text-zinc-500">1 Star = ৳1.00 BDT</p>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => setShowStarWithdrawModal(true)}
-                    className="w-full py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                    onClick={() => navigate("/buy-stars")}
+                    className="px-3.5 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs whitespace-nowrap shrink-0 transition cursor-pointer"
                   >
-                    <DollarSign className="w-3.5 h-3.5" />
-                    <span>Withdraw Earned Stars (৳{earnedStars})</span>
+                    Buy Stars
                   </button>
-                ) : (
-                  <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between">
-                    <span className="font-bold">Min 1,000 ⭐ (৳1,000) to withdraw</span>
-                    <span className="font-mono font-bold">{earnedStars}/1,000 ⭐</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800">
+                    <span className="text-[11px] font-medium text-zinc-500 block whitespace-nowrap">
+                      Earned (Withdrawable)
+                    </span>
+                    <div className="text-lg font-mono font-black text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+                      <span>{earnedStars}</span>
+                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
+                      <span className="text-xs font-normal text-zinc-500">
+                        (৳{earnedStars})
+                      </span>
+                    </div>
                   </div>
+
+                  <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800">
+                    <span className="text-[11px] font-medium text-zinc-500 block whitespace-nowrap">
+                      Purchased Balance
+                    </span>
+                    <div className="text-lg font-mono font-black text-zinc-900 dark:text-white flex items-center gap-1 mt-0.5">
+                      <span>{purchasedStars}</span>
+                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  {earnedStars >= 1000 ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowStarWithdrawForm((v) => !v)}
+                      className="w-full py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+                    >
+                      <DollarSign className="w-3.5 h-3.5" />
+                      <span>
+                        {showStarWithdrawForm
+                          ? "Hide Star Withdrawal Form"
+                          : `Withdraw Earned Stars (৳${earnedStars})`}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="px-4 py-2.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2">
+                      <span className="font-medium">Min 1,000 Stars (৳1,000) to withdraw</span>
+                      <span className="font-mono font-bold whitespace-nowrap">
+                        {earnedStars} / 1,000
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {showStarWithdrawForm && (
+                  <form
+                    onSubmit={handleStarWithdrawSubmit}
+                    className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      {(["bKash", "Nagad"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setWithdrawMethod(m)}
+                          className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+                            withdrawMethod === m
+                              ? "bg-emerald-600 text-white"
+                              : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+
+                    <input
+                      type="tel"
+                      placeholder={`Enter your ${withdrawMethod} mobile number`}
+                      value={withdrawPhone}
+                      onChange={(e) => setWithdrawPhone(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 outline-none font-mono font-bold"
+                      required
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={isSubmittingWithdraw}
+                      className="w-full py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmittingWithdraw
+                        ? "Submitting..."
+                        : `Submit Star Withdrawal (৳${earnedStars})`}
+                    </button>
+                  </form>
                 )}
               </div>
             </div>
 
-            {/* PROGRAMMES */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white uppercase tracking-wider">
-                Monetization Setup
+            {/* RIGHT COLUMN: SPONSORSHIPS, SUBSCRIPTIONS & PAYOUT GATEWAY SHORTCUT */}
+            <div className="lg:col-span-5 space-y-4">
+              <h3 className="text-xs font-extrabold text-zinc-500 uppercase tracking-wider px-1">
+                Sponsorship & Subscription Tools
               </h3>
 
-              {/* Partnership Ads */}
-              <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 min-w-0">
+              {/* Per-Post Scam Investigation Sponsorship */}
+              <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 shrink-0">
                       <Handshake className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white">Partnership Ads</h4>
-                      <p className="text-xs text-zinc-500">DEEP SHOP admin sponsored ads on your post</p>
+                      <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white">
+                        Per-Post Investigation Sponsorship
+                      </h4>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Allow supporters to sponsor dedicated scam investigations and featured reports.
+                      </p>
                     </div>
                   </div>
 
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
                     <input
                       type="checkbox"
                       checked={partnershipAdsEnabled}
                       onChange={togglePartnershipAds}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
                   </label>
                 </div>
               </div>
 
-              {/* Subscriptions */}
-              <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 min-w-0">
+              {/* Monthly Membership Subscription */}
+              <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3.5 shadow-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 shrink-0">
                       <Award className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white">Creator Subscriptions</h4>
-                      <p className="text-xs text-zinc-500">Recurring monthly support</p>
+                      <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white">
+                        Monthly Membership Subscription
+                      </h4>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Recurring monthly support from your loyal community followers.
+                      </p>
                     </div>
                   </div>
 
-                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
                     <input
                       type="checkbox"
                       checked={subscriptionEnabled}
                       onChange={toggleSubscription}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    <div className="w-11 h-6 bg-zinc-300 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600" />
                   </label>
                 </div>
 
-                <div className="pt-1 flex items-center justify-between gap-2">
-                  <span className="text-xs text-zinc-500 font-medium">Custom rates & tier perks</span>
+                <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+                  <span className="text-xs text-zinc-500 font-medium truncate">
+                    Custom per-post, monthly & yearly tiers
+                  </span>
                   <button
                     type="button"
                     onClick={() => navigate("/creator/subscription-setup")}
-                    className="px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 transition cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer whitespace-nowrap shrink-0"
                   >
-                    Setup Rates & Perks →
+                    Setup Rates →
                   </button>
                 </div>
               </div>
+
+              {/* Payment Gateway Status Card */}
+              <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white">
+                    Receiving Accounts
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("settings")}
+                    className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap cursor-pointer"
+                  >
+                    Configure →
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  bKash: {bkashAccounts.length} configured · Nagad: {nagadAccounts.length} configured
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 4: PAYMENT ACCOUNTS CONFIGURATION */}
-        {activeTab === "settings" && (
-          <form onSubmit={handleSavePaymentNumbers} className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+        {/* TAB 3: POSTS LIST */}
+        {!loading && activeTab === "content" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white">
+                Published Posts ({posts.length})
+              </h3>
+              <button
+                type="button"
+                onClick={() => navigate("/news-hub/create")}
+                className="px-4 py-1.5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-extrabold text-xs whitespace-nowrap shrink-0 transition cursor-pointer"
+              >
+                + Create Post
+              </button>
+            </div>
+
+            {posts.length === 0 ? (
+              <div className="p-8 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-500">
+                You haven't published any posts in News Hub yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {posts.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => navigate(`/news-hub/post/${p.id}`)}
+                    className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 whitespace-nowrap">
+                      <span>{p.postType === "scam" ? "Scam Report" : "Community Post"}</span>
+                      <span>{formatDhakaDateTime(p.createdAt)}</span>
+                    </div>
+                    <h4 className="font-bold text-sm text-zinc-900 dark:text-white line-clamp-1">
+                      {p.title || "Community Update"}
+                    </h4>
+                    <p className="text-xs text-zinc-500 line-clamp-2">{p.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: MULTIPLE BKASH & NAGAD PAYMENT ACCOUNTS (PERSONAL / PAYMENT / AGENT) */}
+        {!loading && activeTab === "settings" && (
+          <form
+            onSubmit={handleSavePaymentNumbers}
+            className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-6"
+          >
             <div>
-              <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">Sponsorship Payment Accounts</h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Set your personal bKash and Nagad numbers so supporters can sponsor your channel directly.
+              <h3 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white">
+                Creator Gift & Sponsorship Payment Numbers
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Add one or more bKash and Nagad numbers with Personal, Payment, or Agent type. Unconfigured gateways stay hidden on your Gift & Sponsorship pages.
               </p>
             </div>
 
-            <div className="space-y-3 pt-1">
-              <div>
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Your bKash Personal Number
-                </label>
-                <input
-                  type="tel"
-                  placeholder="017XXXXXXXX"
-                  value={creatorBkash}
-                  onChange={(e) => setCreatorBkash(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Your Nagad Personal Number
-                </label>
-                <input
-                  type="tel"
-                  placeholder="019XXXXXXXX"
-                  value={creatorNagad}
-                  onChange={(e) => setCreatorNagad(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono font-bold"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSavingNumbers}
-              className="w-full py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSavingNumbers ? "Saving..." : "Save Payment Accounts"}</span>
-            </button>
-          </form>
-        )}
-      </main>
-
-      {/* STAR WITHDRAWAL MODAL */}
-      {showStarWithdrawModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-          <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4 text-zinc-900 dark:text-zinc-100">
-            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
-              <h3 className="font-extrabold text-sm">Withdraw Earned Stars</h3>
-              <button
-                type="button"
-                onClick={() => setShowStarWithdrawModal(false)}
-                className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 space-y-1">
-              <span className="text-xs text-zinc-500 block">Total Withdrawable Stars:</span>
-              <span className="text-xl font-mono font-black text-emerald-600 dark:text-emerald-400 block">
-                {earnedStars} ⭐ = ৳{earnedStars} BDT
-              </span>
-            </div>
-
-            <form onSubmit={handleStarWithdrawSubmit} className="space-y-3">
-              <div>
-                <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                  Payout Method
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["bKash", "Nagad"].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setWithdrawMethod(m)}
-                      className={`py-2 rounded-xl text-xs font-bold transition ${
-                        withdrawMethod === m
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* BKASH ACCOUNTS SECTION */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-extrabold text-pink-600 dark:text-pink-400">
+                    bKash Numbers ({bkashAccounts.length})
+                  </label>
                 </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {ACCOUNT_TYPES.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setNewBkashType(t)}
+                        className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
+                          newBkashType === t
+                            ? "bg-pink-600 text-white"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="tel"
+                      placeholder={`Add bKash ${newBkashType} number (01XXXXXXXXX)`}
+                      value={newBkashNumber}
+                      onChange={(e) => setNewBkashNumber(e.target.value)}
+                      className="flex-1 min-w-0 px-3.5 py-2.5 text-xs rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono font-bold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddAccount("bKash")}
+                      className="px-4 py-2.5 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-xs font-extrabold whitespace-nowrap shrink-0 transition cursor-pointer"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+
+                {bkashAccounts.length === 0 ? (
+                  <p className="text-[11px] text-zinc-400">
+                    No bKash number set. bKash will stay hidden until you add one.
+                  </p>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    {bkashAccounts.map((acc) => (
+                      <div
+                        key={acc.id}
+                        className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-mono font-bold text-xs text-zinc-900 dark:text-white block truncate">
+                            {acc.number}
+                          </span>
+                          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                            {ACCOUNT_TYPES.map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => handleUpdateAccountType("bKash", acc.id, t)}
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap transition cursor-pointer ${
+                                  acc.type === t
+                                    ? "bg-pink-600 text-white"
+                                    : "bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                                }`}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAccount("bKash", acc.id)}
+                          className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center shrink-0 hover:bg-rose-100 transition cursor-pointer"
+                          title="Remove number"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                  Your Personal {withdrawMethod} Mobile Number
-                </label>
-                <input
-                  type="tel"
-                  placeholder="017XXXXXXXX"
-                  value={withdrawPhone}
-                  onChange={(e) => setWithdrawPhone(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-mono font-bold"
-                  required
-                />
-              </div>
+              {/* NAGAD ACCOUNTS SECTION */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-extrabold text-orange-600 dark:text-orange-400">
+                    Nagad Numbers ({nagadAccounts.length})
+                  </label>
+                </div>
 
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {ACCOUNT_TYPES.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setNewNagadType(t)}
+                        className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
+                          newNagadType === t
+                            ? "bg-orange-600 text-white"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="tel"
+                      placeholder={`Add Nagad ${newNagadType} number (01XXXXXXXXX)`}
+                      value={newNagadNumber}
+                      onChange={(e) => setNewNagadNumber(e.target.value)}
+                      className="flex-1 min-w-0 px-3.5 py-2.5 text-xs rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono font-bold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddAccount("Nagad")}
+                      className="px-4 py-2.5 rounded-full bg-orange-600 hover:bg-orange-700 text-white text-xs font-extrabold whitespace-nowrap shrink-0 transition cursor-pointer"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+
+                {nagadAccounts.length === 0 ? (
+                  <p className="text-[11px] text-zinc-400">
+                    No Nagad number set. Nagad will stay hidden until you add one.
+                  </p>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    {nagadAccounts.map((acc) => (
+                      <div
+                        key={acc.id}
+                        className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-mono font-bold text-xs text-zinc-900 dark:text-white block truncate">
+                            {acc.number}
+                          </span>
+                          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                            {ACCOUNT_TYPES.map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => handleUpdateAccountType("Nagad", acc.id, t)}
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap transition cursor-pointer ${
+                                  acc.type === t
+                                    ? "bg-orange-600 text-white"
+                                    : "bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                                }`}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAccount("Nagad", acc.id)}
+                          className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center shrink-0 hover:bg-rose-100 transition cursor-pointer"
+                          title="Remove number"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end">
               <button
                 type="submit"
-                disabled={isSubmittingWithdraw}
-                className="w-full py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50"
+                disabled={isSavingNumbers}
+                className="w-full sm:w-auto px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
               >
-                {isSubmittingWithdraw ? "Submitting..." : `Submit Withdrawal Request (৳${earnedStars})`}
+                <Save className="w-4 h-4" />
+                <span>{isSavingNumbers ? "Saving Accounts..." : "Save Payment Accounts"}</span>
               </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* BUY STARS MODAL */}
-      <GiftStarsModal isOpen={showBuyStarsModal} onClose={() => setShowBuyStarsModal(false)} />
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 };

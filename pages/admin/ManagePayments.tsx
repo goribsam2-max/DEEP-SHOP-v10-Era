@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../../firebase";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
 import { Button } from "../../components/ui/button";
 import { isForbiddenNumber, cn } from "@/lib/utils";
 import { uploadToImgbb } from "../../services/imgbb";
+import { isSuperAdminOrAdmin } from "../../lib/admin";
+import {
+  extractConfiguredMobileAccounts,
+  normalizeAccountType,
+  toAdminPaymentType,
+} from "../../lib/dhakaTime";
 
 const ManagePayments: React.FC = () => {
   const notify = useNotify();
@@ -38,96 +44,186 @@ const ManagePayments: React.FC = () => {
   });
 
   useEffect(() => {
-    Promise.all([
-      getDoc(doc(db, "settings", "payments")),
-      getDoc(doc(db, "settings", "platform"))
-    ]).then(([paySnap, platSnap]) => {
-      let mergedData: any = {};
-      let bkashList: string[] = [];
-      let nagadList: string[] = [];
-      let bkashAccs: { number: string; type: "personal" | "payment" | "cashout" }[] = [];
-      let nagadAccs: { number: string; type: "personal" | "payment" | "cashout" }[] = [];
+    let unsubPay: (() => void) | null = null;
+    let cancelled = false;
 
-      if (paySnap.exists()) {
-        const d = paySnap.data();
-        mergedData = { ...d };
-        if (Array.isArray(d.bkashAccounts)) bkashAccs = [...d.bkashAccounts];
-        if (Array.isArray(d.nagadAccounts)) nagadAccs = [...d.nagadAccounts];
-        if (Array.isArray(d.bkashNumbers)) bkashList = [...d.bkashNumbers];
-        if (Array.isArray(d.nagadNumbers)) nagadList = [...d.nagadNumbers];
-        if (bkashList.length === 0 && d.npsbNumber) bkashList = [d.npsbNumber];
-        if (nagadList.length === 0 && d.pathaoPayNumber) nagadList = [d.pathaoPayNumber];
+    const loadAndSubscribe = async () => {
+      let platData: any = {};
+      let adminUserDocData: any = null;
+
+      try {
+        const platSnap = await getDoc(doc(db, "settings", "platform"));
+        if (platSnap.exists()) platData = platSnap.data();
+      } catch {
+        // Ignore platform read failure
       }
 
-      if (platSnap.exists()) {
-        const pd = platSnap.data();
-        if (bkashAccs.length === 0 && Array.isArray(pd.bkashAccounts)) bkashAccs = [...pd.bkashAccounts];
-        if (nagadAccs.length === 0 && Array.isArray(pd.nagadAccounts)) nagadAccs = [...pd.nagadAccounts];
-        if (bkashList.length === 0 && Array.isArray(pd.bkashNumbers)) bkashList = [...pd.bkashNumbers];
-        if (bkashList.length === 0 && pd.bkashNumber) bkashList = [pd.bkashNumber];
-        if (nagadList.length === 0 && Array.isArray(pd.nagadNumbers)) nagadList = [...pd.nagadNumbers];
-        if (nagadList.length === 0 && pd.nagadNumber) nagadList = [pd.nagadNumber];
+      const activeUser = auth.currentUser;
+      if (activeUser && isSuperAdminOrAdmin(null, activeUser)) {
+        try {
+          const uSnap = await getDoc(doc(db, "users", activeUser.uid));
+          if (uSnap.exists()) adminUserDocData = uSnap.data();
+        } catch {
+          // Ignore user profile read failure
+        }
       }
 
-      // Sync accounts from numbers if accounts were empty
-      if (bkashAccs.length === 0 && bkashList.length > 0) {
-        bkashAccs = bkashList.map(num => ({ number: num, type: 'personal' }));
-      }
-      if (nagadAccs.length === 0 && nagadList.length > 0) {
-        nagadAccs = nagadList.map(num => ({ number: num, type: 'personal' }));
-      }
-      if (bkashList.length === 0 && bkashAccs.length > 0) {
-        bkashList = bkashAccs.map(a => a.number);
-      }
-      if (nagadList.length === 0 && nagadAccs.length > 0) {
-        nagadList = nagadAccs.map(a => a.number);
-      }
+      if (cancelled) return;
 
-      setData((prev) => ({
-        ...prev,
-        ...mergedData,
-        footerPaymentLogos: Array.isArray(mergedData.footerPaymentLogos)
-          ? mergedData.footerPaymentLogos
-          : (prev.footerPaymentLogos || []),
-        bkashAccounts: bkashAccs,
-        nagadAccounts: nagadAccs,
-        bkashNumbers: bkashList,
-        nagadNumbers: nagadList,
-        npsbNumber: bkashList[0] || prev.npsbNumber,
-        pathaoPayNumber: nagadList[0] || prev.pathaoPayNumber,
-      }));
-      setLoading(false);
-    }).catch((err) => {
-      console.error("Error loading payment settings:", err);
-      setLoading(false);
-    });
+      unsubPay = onSnapshot(
+        doc(db, "settings", "payments"),
+        (paySnap) => {
+          const payData = paySnap.exists() ? paySnap.data() : {};
+          const hasPayDocFields =
+            paySnap.exists() &&
+            (Array.isArray(payData.bkashAccounts) ||
+              Array.isArray(payData.nagadAccounts) ||
+              Array.isArray(payData.bkashNumbers) ||
+              Array.isArray(payData.nagadNumbers));
+
+          const payUpdatedAt = Number(payData?.updatedAt || 0);
+          const userUpdatedAt = Number(adminUserDocData?.updatedAt || 0);
+
+          // Choose primary account source: prefer settings/payments unless Main Admin's seller profile was updated more recently
+          let accountSource: any = payData;
+          if (
+            adminUserDocData &&
+            userUpdatedAt > payUpdatedAt &&
+            (Array.isArray(adminUserDocData.bkashAccounts) ||
+              Array.isArray(adminUserDocData.nagadAccounts))
+          ) {
+            accountSource = adminUserDocData;
+          } else if (!hasPayDocFields) {
+            if (
+              adminUserDocData &&
+              (Array.isArray(adminUserDocData.bkashAccounts) ||
+                Array.isArray(adminUserDocData.nagadAccounts) ||
+                Array.isArray(adminUserDocData.bkashNumbers) ||
+                Array.isArray(adminUserDocData.nagadNumbers))
+            ) {
+              accountSource = adminUserDocData;
+            } else {
+              accountSource = platData;
+            }
+          }
+
+          const extracted = extractConfiguredMobileAccounts(accountSource);
+          const bkashAccs = extracted.bkash.map((a) => ({
+            number: a.number,
+            type: toAdminPaymentType(a.type),
+          }));
+          const nagadAccs = extracted.nagad.map((a) => ({
+            number: a.number,
+            type: toAdminPaymentType(a.type),
+          }));
+          const bkashList = bkashAccs.map((a) => a.number);
+          const nagadList = nagadAccs.map((a) => a.number);
+
+          setData((prev) => ({
+            ...prev,
+            ...platData,
+            ...payData,
+            footerPaymentLogos: Array.isArray(payData.footerPaymentLogos)
+              ? payData.footerPaymentLogos
+              : prev.footerPaymentLogos || [],
+            bkashAccounts: bkashAccs,
+            nagadAccounts: nagadAccs,
+            bkashNumbers: bkashList,
+            nagadNumbers: nagadList,
+            npsbNumber: bkashList[0] || "",
+            pathaoPayNumber: nagadList[0] || "",
+          }));
+          setLoading(false);
+        },
+        (err) => {
+          console.error("Error loading payment settings:", err);
+          setLoading(false);
+        }
+      );
+    };
+
+    loadAndSubscribe();
+
+    return () => {
+      cancelled = true;
+      if (unsubPay) unsubPay();
+    };
   }, []);
 
   const handleSave = async (overrideData?: any) => {
     // If overrideData is a DOM/React Event, ignore it
-    const isExplicitData = overrideData && typeof overrideData === "object" && !("nativeEvent" in overrideData) && !("preventDefault" in overrideData) && ("bkashAccounts" in overrideData || "bkashNumbers" in overrideData || "instagramUrl" in overrideData);
+    const isExplicitData =
+      overrideData &&
+      typeof overrideData === "object" &&
+      !("nativeEvent" in overrideData) &&
+      !("preventDefault" in overrideData) &&
+      ("bkashAccounts" in overrideData ||
+        "nagadAccounts" in overrideData ||
+        "bkashNumbers" in overrideData ||
+        "instagramUrl" in overrideData);
     const baseData = isExplicitData ? overrideData : data;
 
-    // Auto-commit any typed number in newBkashInput if valid
-    let finalBkashAccs = Array.isArray(baseData.bkashAccounts) ? [...baseData.bkashAccounts] : [];
-    if (newBkashInput && newBkashInput.trim()) {
+    // Normalize existing accounts & auto-commit any typed number in newBkashInput if valid
+    let finalBkashAccs: {
+      number: string;
+      type: "personal" | "payment" | "cashout";
+    }[] = Array.isArray(baseData.bkashAccounts)
+      ? baseData.bkashAccounts
+          .filter(
+            (a: any) =>
+              a &&
+              typeof a.number === "string" &&
+              a.number.trim() &&
+              !isForbiddenNumber(a.number.trim())
+          )
+          .map((a: any) => ({
+            number: a.number.trim(),
+            type: toAdminPaymentType(a.type),
+          }))
+      : [];
+
+    if (!isExplicitData && newBkashInput && newBkashInput.trim()) {
       const val = newBkashInput.trim();
-      if (!isForbiddenNumber(val) && !finalBkashAccs.some((a) => a.number === val)) {
+      if (
+        !isForbiddenNumber(val) &&
+        !finalBkashAccs.some((a) => a.number === val && a.type === newBkashType)
+      ) {
         finalBkashAccs.push({ number: val, type: newBkashType });
       }
     }
 
-    // Auto-commit any typed number in newNagadInput if valid
-    let finalNagadAccs = Array.isArray(baseData.nagadAccounts) ? [...baseData.nagadAccounts] : [];
-    if (newNagadInput && newNagadInput.trim()) {
+    // Normalize existing Nagad accounts & auto-commit any typed number in newNagadInput if valid
+    let finalNagadAccs: {
+      number: string;
+      type: "personal" | "payment" | "cashout";
+    }[] = Array.isArray(baseData.nagadAccounts)
+      ? baseData.nagadAccounts
+          .filter(
+            (a: any) =>
+              a &&
+              typeof a.number === "string" &&
+              a.number.trim() &&
+              !isForbiddenNumber(a.number.trim())
+          )
+          .map((a: any) => ({
+            number: a.number.trim(),
+            type: toAdminPaymentType(a.type),
+          }))
+      : [];
+
+    if (!isExplicitData && newNagadInput && newNagadInput.trim()) {
       const val = newNagadInput.trim();
-      if (!isForbiddenNumber(val) && !finalNagadAccs.some((a) => a.number === val)) {
+      if (
+        !isForbiddenNumber(val) &&
+        !finalNagadAccs.some((a) => a.number === val && a.type === newNagadType)
+      ) {
         finalNagadAccs.push({ number: val, type: newNagadType });
       }
     }
 
     const finalBkashNumbers = finalBkashAccs.map((a) => a.number);
     const finalNagadNumbers = finalNagadAccs.map((a) => a.number);
+    const now = Date.now();
 
     const payload = {
       ...baseData,
@@ -135,9 +231,14 @@ const ManagePayments: React.FC = () => {
       nagadAccounts: finalNagadAccs,
       bkashNumbers: finalBkashNumbers,
       nagadNumbers: finalNagadNumbers,
-      npsbNumber: finalBkashNumbers[0] || baseData.npsbNumber || "",
-      pathaoPayNumber: finalNagadNumbers[0] || baseData.pathaoPayNumber || "",
-      footerPaymentLogos: Array.isArray(baseData.footerPaymentLogos) ? baseData.footerPaymentLogos : [],
+      bkashNumber: finalBkashNumbers[0] || "",
+      nagadNumber: finalNagadNumbers[0] || "",
+      npsbNumber: finalBkashNumbers[0] || "",
+      pathaoPayNumber: finalNagadNumbers[0] || "",
+      footerPaymentLogos: Array.isArray(baseData.footerPaymentLogos)
+        ? baseData.footerPaymentLogos
+        : [],
+      updatedAt: now,
     };
 
     setSaving(true);
@@ -150,12 +251,60 @@ const ManagePayments: React.FC = () => {
           nagadAccounts: payload.nagadAccounts,
           bkashNumbers: payload.bkashNumbers,
           nagadNumbers: payload.nagadNumbers,
-          bkashNumber: payload.bkashNumbers[0] || payload.npsbNumber || "",
-          nagadNumber: payload.nagadNumbers[0] || payload.pathaoPayNumber || "",
+          bkashNumber: payload.bkashNumbers[0] || "",
+          nagadNumber: payload.nagadNumbers[0] || "",
           footerLogo: payload.footerLogo || "",
+          updatedAt: now,
         },
         { merge: true }
       );
+
+      // Two-way sync with Main Admin's Seller Dashboard profile (e.g. deepshop@gmail.com)
+      const activeUser = auth.currentUser;
+      if (activeUser && isSuperAdminOrAdmin(null, activeUser)) {
+        const sellerBkashAccounts = finalBkashAccs.map((a) => ({
+          number: a.number,
+          type: normalizeAccountType(a.type),
+        }));
+        const sellerNagadAccounts = finalNagadAccs.map((a) => ({
+          number: a.number,
+          type: normalizeAccountType(a.type),
+        }));
+        try {
+          await setDoc(
+            doc(db, "users", activeUser.uid),
+            {
+              bkashAccounts: sellerBkashAccounts,
+              nagadAccounts: sellerNagadAccounts,
+              bkashNumbers: finalBkashNumbers,
+              nagadNumbers: finalNagadNumbers,
+              bkashNumber: finalBkashNumbers[0] || "",
+              nagadNumber: finalNagadNumbers[0] || "",
+              updatedAt: now,
+            },
+            { merge: true }
+          );
+          const cacheKey = `vibe_seller_settings_${activeUser.uid}`;
+          const prevCacheRaw = localStorage.getItem(cacheKey);
+          const prevCache = prevCacheRaw ? JSON.parse(prevCacheRaw) : {};
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              ...prevCache,
+              bkashAccounts: sellerBkashAccounts,
+              nagadAccounts: sellerNagadAccounts,
+              bkashNumbers: finalBkashNumbers,
+              nagadNumbers: finalNagadNumbers,
+              bkashNumber: finalBkashNumbers[0] || "",
+              nagadNumber: finalNagadNumbers[0] || "",
+              updatedAt: now,
+            })
+          );
+        } catch (syncErr) {
+          console.error("Failed to sync admin payment settings to seller profile:", syncErr);
+        }
+      }
+
       setData(payload);
       setNewBkashInput("");
       setNewNagadInput("");
@@ -412,44 +561,65 @@ const ManagePayments: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
-              {(data.bkashAccounts || []).map((acc, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-pink-300 dark:border-pink-800 px-3 py-1.5 rounded-xl shadow-xs"
-                >
-                  <span className="text-xs font-bold text-[#E2125B]">#{i + 1}</span>
-                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
-                  <span className={cn(
-                    "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                    acc?.type === "payment"
-                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                      : acc?.type === "cashout"
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
-                      : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                  )}>
-                    {acc?.type === "payment" ? "Payment" : acc?.type === "cashout" ? "Cash Out" : "Personal"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const currentAccounts = data.bkashAccounts || [];
-                      const updatedAccounts = currentAccounts.filter((_, idx) => idx !== i);
-                      const updatedNumbers = updatedAccounts.map(a => a.number);
-                      const nextData = {
-                        ...data,
-                        bkashAccounts: updatedAccounts,
-                        bkashNumbers: updatedNumbers,
-                        npsbNumber: updatedNumbers[0] || "",
-                      };
-                      setData(nextData);
-                      handleSave(nextData);
-                    }}
-                    className="text-zinc-400 hover:text-red-500 text-xs font-bold ml-1"
+              {(data.bkashAccounts || []).map((acc, i) => {
+                const normType = toAdminPaymentType(acc?.type);
+                return (
+                  <div
+                    key={`${acc?.number}-${normType}-${i}`}
+                    className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-pink-300 dark:border-pink-800 px-3 py-1.5 rounded-xl shadow-xs"
                   >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    <span className="text-xs font-bold text-[#E2125B]">#{i + 1}</span>
+                    <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
+                    <select
+                      value={normType}
+                      onChange={(e) => {
+                        const updatedType = e.target.value as "personal" | "payment" | "cashout";
+                        const currentAccounts = data.bkashAccounts || [];
+                        const updatedAccounts = currentAccounts.map((item, idx) =>
+                          idx === i ? { ...item, type: updatedType } : item
+                        );
+                        const nextData = {
+                          ...data,
+                          bkashAccounts: updatedAccounts,
+                        };
+                        setData(nextData);
+                        handleSave(nextData);
+                      }}
+                      className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase cursor-pointer border-0 outline-none",
+                        normType === "payment"
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                          : normType === "cashout"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                      )}
+                    >
+                      <option value="personal">Personal</option>
+                      <option value="payment">Payment</option>
+                      <option value="cashout">Agent / Cash Out</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentAccounts = data.bkashAccounts || [];
+                        const updatedAccounts = currentAccounts.filter((_, idx) => idx !== i);
+                        const updatedNumbers = updatedAccounts.map(a => a.number);
+                        const nextData = {
+                          ...data,
+                          bkashAccounts: updatedAccounts,
+                          bkashNumbers: updatedNumbers,
+                          npsbNumber: updatedNumbers[0] || "",
+                        };
+                        setData(nextData);
+                        handleSave(nextData);
+                      }}
+                      className="text-zinc-400 hover:text-red-500 text-xs font-bold ml-1 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
               {(!data.bkashAccounts || data.bkashAccounts.length === 0) && (
                 <p className="text-xs text-amber-600 font-medium">কোনো বিকাশ নাম্বার যোগ করা নেই (গ্রাহক বিকাশ নির্বাচন করতে পারবে না)</p>
               )}
@@ -550,44 +720,65 @@ const ManagePayments: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
-              {(data.nagadAccounts || []).map((acc, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-xl shadow-xs"
-                >
-                  <span className="text-xs font-bold text-[#F57C20]">#{i + 1}</span>
-                  <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
-                  <span className={cn(
-                    "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                    acc?.type === "payment"
-                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                      : acc?.type === "cashout"
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
-                      : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                  )}>
-                    {acc?.type === "payment" ? "Payment" : acc?.type === "cashout" ? "Cash Out" : "Personal"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const currentAccounts = data.nagadAccounts || [];
-                      const updatedAccounts = currentAccounts.filter((_, idx) => idx !== i);
-                      const updatedNumbers = updatedAccounts.map(a => a.number);
-                      const nextData = {
-                        ...data,
-                        nagadAccounts: updatedAccounts,
-                        nagadNumbers: updatedNumbers,
-                        pathaoPayNumber: updatedNumbers[0] || "",
-                      };
-                      setData(nextData);
-                      handleSave(nextData);
-                    }}
-                    className="text-zinc-400 hover:text-red-500 text-xs font-bold ml-1"
+              {(data.nagadAccounts || []).map((acc, i) => {
+                const normType = toAdminPaymentType(acc?.type);
+                return (
+                  <div
+                    key={`${acc?.number}-${normType}-${i}`}
+                    className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-xl shadow-xs"
                   >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    <span className="text-xs font-bold text-[#F57C20]">#{i + 1}</span>
+                    <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
+                    <select
+                      value={normType}
+                      onChange={(e) => {
+                        const updatedType = e.target.value as "personal" | "payment" | "cashout";
+                        const currentAccounts = data.nagadAccounts || [];
+                        const updatedAccounts = currentAccounts.map((item, idx) =>
+                          idx === i ? { ...item, type: updatedType } : item
+                        );
+                        const nextData = {
+                          ...data,
+                          nagadAccounts: updatedAccounts,
+                        };
+                        setData(nextData);
+                        handleSave(nextData);
+                      }}
+                      className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase cursor-pointer border-0 outline-none",
+                        normType === "payment"
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                          : normType === "cashout"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                      )}
+                    >
+                      <option value="personal">Personal</option>
+                      <option value="payment">Payment</option>
+                      <option value="cashout">Agent / Cash Out</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentAccounts = data.nagadAccounts || [];
+                        const updatedAccounts = currentAccounts.filter((_, idx) => idx !== i);
+                        const updatedNumbers = updatedAccounts.map(a => a.number);
+                        const nextData = {
+                          ...data,
+                          nagadAccounts: updatedAccounts,
+                          nagadNumbers: updatedNumbers,
+                          pathaoPayNumber: updatedNumbers[0] || "",
+                        };
+                        setData(nextData);
+                        handleSave(nextData);
+                      }}
+                      className="text-zinc-400 hover:text-red-500 text-xs font-bold ml-1 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
               {(!data.nagadAccounts || data.nagadAccounts.length === 0) && (
                 <p className="text-xs text-amber-600 font-medium">কোনো নগদ নাম্বার যোগ করা নেই (গ্রাহক নগদ নির্বাচন করতে পারবে না)</p>
               )}
