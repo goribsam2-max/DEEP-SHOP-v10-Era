@@ -368,22 +368,13 @@ export const Profile: React.FC<ProfileProps> = ({
       dashboardItems.push({
         id: "seller-dashboard",
         title: "Seller Dashboard",
-        subtitle: "Manage your shop products, stories & sales",
+        subtitle: "Manage your shop products & sales",
         badge: "SELLER",
         icon: <Store className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
         onClick: () => navigate("/seller/dashboard"),
         keywords: "seller shop store dashboard vendor",
       });
     }
-
-    dashboardItems.push({
-      id: "add-story",
-      title: "Add Story",
-      subtitle: "Publish a new 48h story to Shop & News Hub",
-      icon: <Plus className="w-5 h-5 text-[#1877F2]" />,
-      onClick: () => navigate("/add-story"),
-      keywords: "story highlight upload status create story",
-    });
 
     dashboardItems.push({
       id: "creator-dashboard",

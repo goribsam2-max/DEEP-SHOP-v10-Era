@@ -1893,7 +1893,7 @@ export default function AddStory() {
           : "Your story is now live!",
         "success"
       );
-      navigate(fromNewsHub ? "/news-hub" : "/");
+      navigate("/news-hub");
     } catch {
       notify("Could not publish story. Please try again.", "error");
     } finally {
@@ -2469,7 +2469,7 @@ export default function AddStory() {
             <header className="px-4 pt-3 pb-2.5 flex items-center justify-between shrink-0">
               <button
                 type="button"
-                onClick={() => navigate(fromNewsHub ? "/news-hub" : -1 as any)}
+                onClick={() => navigate("/news-hub")}
                 className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Close"
               >

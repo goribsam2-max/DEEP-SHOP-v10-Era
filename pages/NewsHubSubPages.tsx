@@ -2268,19 +2268,6 @@ export const NewsStoryViewerPage: React.FC = () => {
                 <Trash2 className="w-4 h-4 text-white" />
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  isSignedIn ? "/news-hub/create-story?from=news-hub" : "/signin"
-                )
-              }
-              className="px-3.5 py-2 rounded-full bg-[#1877F2] hover:bg-blue-600 text-xs font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Story</span>
-            </button>
           </div>
         </div>
 

@@ -47,10 +47,10 @@ interface StoryViewerProps {
 
 const StoryViewer: React.FC<StoryViewerProps> = ({
   stories,
-  canAddStory = true,
+  canAddStory = false,
 }) => {
   const navigate = useNavigate();
-  const allowedToAdd = canAddStory !== undefined ? canAddStory : true;
+  const allowedToAdd = Boolean(canAddStory);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
   const [currentSubIndex, setCurrentSubIndex] = useState(0);
   const [progress, setProgress] = useState(0);

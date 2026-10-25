@@ -139,9 +139,6 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     userData?.sellerStatus !== "pending"
   );
 
-  // Stories are open to everyone across Deep Shop
-  const canAddStory = true;
-
   const [products, setProducts] = useState<Product[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
@@ -411,16 +408,6 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       {/* Top Left Tab Switcher: [Shop] & [News Hub] */}
       <div className="flex items-center mb-4 pt-1">
         <TopNavTabSwitcher />
-      </div>
-
-      {/* Universal Stories Bar — Open to All Users */}
-      <div className="mb-6">
-        <StoryViewer
-          stories={stories}
-          isAdmin={isAdmin}
-          isSeller={isSeller}
-          canAddStory={canAddStory}
-        />
       </div>
 
 
