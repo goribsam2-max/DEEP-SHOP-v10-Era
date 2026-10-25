@@ -17,7 +17,6 @@ import {
   Send,
   Bookmark,
   ShoppingBag,
-  MapPin,
   LayoutDashboard,
   TrendingUp,
   Search,
@@ -26,7 +25,7 @@ import {
   Eye,
   UserPlus,
   UserCheck,
-  Bell,
+  X,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -35,6 +34,7 @@ import {
   orderBy,
   onSnapshot,
   doc,
+  getDocs,
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
@@ -44,6 +44,7 @@ import {
   NewsRichText,
   NewsLinkPreviewCards,
 } from "../components/NewsRichText";
+import { resolvePostVideoSource } from "../lib/videoEmbed";
 import { NewsBottomDock } from "../components/NewsBottomDock";
 import {
   loadFeedPreferences,
@@ -69,8 +70,21 @@ import {
 } from "../lib/admin";
 import { toggleFollowUser, useFollowedIds } from "../lib/follow";
 import { IosSpinner } from "../components/ui/ios-spinner";
+import { useFooterLogo } from "../lib/useFooterLogo";
+import {
+  rankFeedPostsSmart,
+  recordPostImpression,
+  recordPostClick,
+  getTotalPostReactions,
+  getDismissedProfileIds,
+  dismissSuggestedProfileId,
+  getDismissedPostIds,
+  dismissSuggestedPostId,
+  seededDiscoveryNoise,
+} from "../lib/feedAlgorithm";
 
 import defaultAvatarImg from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
+import deepShopLogoFallback from "../src/assets/images/deep_shop_logo_1783442733929.jpg";
 
 const REACTION_ITEMS: { type: ReactionType; emoji: string; label: string }[] = [
   { type: "love", emoji: "❤️", label: "Love" },
@@ -94,19 +108,75 @@ const formatFeedTimestamp = (ts: number): string => {
   return formatDhakaFeedTime(ts);
 };
 
+const PostImpressionTracker: React.FC<{
+  postId: string;
+  children: React.ReactNode;
+}> = ({ postId, children }) => {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !postId) return;
+
+    let timer: number | null = null;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          timer = window.setTimeout(() => {
+            recordPostImpression(postId);
+          }, 600);
+        } else if (timer !== null) {
+          window.clearTimeout(timer);
+          timer = null;
+        }
+      },
+      { threshold: 0.55 }
+    );
+
+    observer.observe(el);
+    return () => {
+      if (timer !== null) window.clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [postId]);
+
+  return <div ref={ref}>{children}</div>;
+};
+
+interface SuggestedCreatorProfile {
+  uid: string;
+  name: string;
+  avatar: string;
+  followersCount: number;
+  postsCount: number;
+  totalEngagement: number;
+}
+
 export const NewsHub: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const notify = useNotify();
   const confirm = useConfirm();
+  const footerLogo = useFooterLogo();
 
+  const [sessionSeed] = useState<number>(() =>
+    Math.floor(Math.random() * 1_000_000_000)
+  );
   const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isStaffDoc, setIsStaffDoc] = useState(false);
   const [firestorePosts, setFirestorePosts] = useState<ScamPost[]>([]);
+  const [communityUsers, setCommunityUsers] = useState<Record<string, any>[]>([]);
   const [stories, setStories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const followedIds = useFollowedIds(currentUser?.uid);
+  const [dismissedProfileIds, setDismissedProfileIds] = useState<string[]>(() =>
+    getDismissedProfileIds()
+  );
+  const [dismissedPostIds, setDismissedPostIds] = useState<string[]>(() =>
+    getDismissedPostIds()
+  );
 
   const [scamOnlyMode, setScamOnlyMode] = useState(() =>
     location.pathname.includes("scam-alert")
@@ -213,6 +283,22 @@ export const NewsHub: React.FC = () => {
     return () => unsub();
   }, []);
 
+  // Load real community user profiles for Suggested Profiles discovery
+  useEffect(() => {
+    let mounted = true;
+    getDocs(collection(db, "users"))
+      .then((snap) => {
+        if (!mounted) return;
+        setCommunityUsers(
+          snap.docs.map((d) => ({ uid: d.id, ...d.data() }))
+        );
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Real-time Firestore stories listener (merges `stories` + community `creator_videos` stories)
   useEffect(() => {
     let mainStories: any[] = [];
@@ -229,6 +315,7 @@ export const NewsHub: React.FC = () => {
           : 0;
       return {
         id,
+        userId: data.userId || data.sellerId || "",
         name: String(rawLabel).split(" ")[0],
         avatar:
           data.userAvatar ||
@@ -236,6 +323,10 @@ export const NewsHub: React.FC = () => {
           data.sellerAvatar ||
           data.mediaUrl ||
           defaultAvatarImg,
+        isCloseFriends: Boolean(data.isCloseFriends),
+        closeFriendIds: Array.isArray(data.closeFriendIds)
+          ? data.closeFriendIds
+          : [],
         createdAtMs,
       };
     };
@@ -256,9 +347,16 @@ export const NewsHub: React.FC = () => {
           });
         }
       } catch {}
-      const sorted = Array.from(mergedMap.values()).sort(
-        (a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0)
-      );
+      const uid = auth.currentUser?.uid || "";
+      const isAdm = hasImmediateAdminOrStaffRole(null, auth.currentUser);
+      const sorted = Array.from(mergedMap.values())
+        .filter((s) => {
+          if (s.isCloseFriends && s.closeFriendIds.length > 0) {
+            return isAdm || s.userId === uid || s.closeFriendIds.includes(uid);
+          }
+          return true;
+        })
+        .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
       setStories(sorted);
     };
 
@@ -321,8 +419,8 @@ export const NewsHub: React.FC = () => {
     );
   }, [firestorePosts, currentUser?.uid]);
 
-  // Apply Feed Personalization & Scam Shield Toggle
-  const visiblePosts = React.useMemo(() => {
+  // Apply Feed Personalization, Scam Shield Toggle & Smart Engagement + Discovery Ranking
+  const filteredPosts = React.useMemo(() => {
     const cp = prefs.contentPreferences;
     const allThemesSelected =
       prefs.selectedThemes.length >= FEED_THEMES.length ||
@@ -341,7 +439,7 @@ export const NewsHub: React.FC = () => {
 
       if (!isScam) {
         const hasAudio = Boolean(post.audioUrl);
-        const hasVideo = Boolean(post.videoUrl);
+        const hasVideo = Boolean(resolvePostVideoSource(post));
         const hasImages = Boolean(post.images && post.images.length > 0);
         const isAffirmation =
           post.contentType === "affirmation" || post.textStyle === "quote";
@@ -373,8 +471,167 @@ export const NewsHub: React.FC = () => {
     });
   }, [allPosts, prefs, scamOnlyMode]);
 
+  const visiblePosts = React.useMemo(() => {
+    return rankFeedPostsSmart(filteredPosts, {
+      currentUid: currentUser?.uid,
+      followedIds,
+      sessionSeed,
+      dismissedPostIds,
+    });
+  }, [filteredPosts, currentUser?.uid, followedIds, sessionSeed, dismissedPostIds]);
+
+  // Build real Suggested Profiles STRICTLY from real users who have published posts (zero demo/non-posting users)
+  const suggestedProfiles = React.useMemo<SuggestedCreatorProfile[]>(() => {
+    const userMap = new Map<string, any>();
+    communityUsers.forEach((u) => {
+      const uid = u.uid || u.id;
+      if (uid) userMap.set(uid, u);
+    });
+
+    const map = new Map<string, SuggestedCreatorProfile>();
+
+    allPosts.forEach((p) => {
+      const uid = p.reporterId;
+      if (
+        !uid ||
+        !p.id ||
+        String(p.id).startsWith("showcase_") ||
+        String(p.id).startsWith("demo_") ||
+        uid === currentUser?.uid ||
+        uid === "member_local" ||
+        uid === "author_demo" ||
+        uid === "system" ||
+        String(uid).startsWith("demo_") ||
+        followedIds.includes(uid) ||
+        dismissedProfileIds.includes(uid)
+      ) {
+        return;
+      }
+
+      const uDoc = userMap.get(uid);
+      if (uDoc?.isBanned || uDoc?.isDemo) return;
+
+      const resolvedName =
+        uDoc?.shopName ||
+        uDoc?.displayName ||
+        p.reporterName ||
+        "";
+      if (!resolvedName || /^community member$/i.test(resolvedName.trim())) {
+        if (!p.reporterName) return;
+      }
+
+      const followersCount = Math.max(
+        Number(uDoc?.followersCount || 0),
+        Array.isArray(uDoc?.followers) ? uDoc.followers.length : 0
+      );
+      const resolvedAvatar =
+        uDoc?.shopLogo ||
+        uDoc?.photoURL ||
+        p.reporterAvatar ||
+        defaultAvatarImg;
+
+      const postEng =
+        Number(p.views || 0) +
+        getTotalPostReactions(p) * 4 +
+        Number(p.commentsCount || 0) * 5;
+
+      const existing = map.get(uid);
+      if (existing) {
+        existing.postsCount += 1;
+        existing.totalEngagement += postEng;
+        if (existing.avatar === defaultAvatarImg && p.reporterAvatar) {
+          existing.avatar = p.reporterAvatar;
+        }
+      } else if (resolvedName) {
+        map.set(uid, {
+          uid,
+          name: resolvedName,
+          avatar: resolvedAvatar,
+          followersCount,
+          postsCount: 1,
+          totalEngagement: postEng + followersCount * 2,
+        });
+      }
+    });
+
+    return Array.from(map.values())
+      .filter((prof) => prof.postsCount >= 1)
+      .sort((a, b) => {
+        const scoreA =
+          Math.log1p(a.totalEngagement + a.postsCount * 10) +
+          seededDiscoveryNoise(a.uid, sessionSeed) * 3.5;
+        const scoreB =
+          Math.log1p(b.totalEngagement + b.postsCount * 10) +
+          seededDiscoveryNoise(b.uid, sessionSeed) * 3.5;
+        return scoreB - scoreA;
+      })
+      .slice(0, 10);
+  }, [
+    communityUsers,
+    allPosts,
+    currentUser?.uid,
+    followedIds,
+    dismissedProfileIds,
+    sessionSeed,
+  ]);
+
+  // Curated Suggested Posts shelf (high-engagement posts from unfollowed creators)
+  const suggestedDiscoveryPosts = React.useMemo<ScamPost[]>(() => {
+    return visiblePosts
+      .filter(
+        (p) =>
+          p.reporterId &&
+          p.reporterId !== currentUser?.uid &&
+          !followedIds.includes(p.reporterId) &&
+          !dismissedPostIds.includes(p.id)
+      )
+      .slice(0, 6);
+  }, [visiblePosts, currentUser?.uid, followedIds, dismissedPostIds]);
+
+  const handleFollowSuggestedProfile = async (
+    e: React.MouseEvent,
+    profile: SuggestedCreatorProfile
+  ) => {
+    e.stopPropagation();
+    triggerHaptic();
+    if (!currentUser?.uid) {
+      notify("Please sign in to follow creators!", "error");
+      navigate("/signin");
+      return;
+    }
+    const isNowFollowed = followedIds.includes(profile.uid);
+    const res = await toggleFollowUser({
+      targetUid: profile.uid,
+      targetName: profile.name,
+      currentUser,
+      currentlyFollowing: isNowFollowed,
+    });
+    if (res.ok) {
+      notify(
+        res.isFollowing
+          ? `Following ${profile.name}`
+          : `Unfollowed ${profile.name}`,
+        res.isFollowing ? "success" : "info"
+      );
+    }
+  };
+
+  const handleDismissSuggestedProfile = (e: React.MouseEvent, uid: string) => {
+    e.stopPropagation();
+    triggerHaptic();
+    setDismissedProfileIds(dismissSuggestedProfileId(uid));
+  };
+
+  const handleDismissSuggestedPost = (e: React.MouseEvent, postId: string) => {
+    e.stopPropagation();
+    triggerHaptic();
+    setDismissedPostIds(dismissSuggestedPostId(postId));
+    notify("Post hidden from suggestions", "info");
+  };
+
   const handleReaction = async (post: ScamPost, chosenType: ReactionType) => {
     triggerHaptic();
+    recordPostClick(post);
     const uid = currentUser?.uid || "guest_local";
     const prevType =
       post.reactions?.[uid] || localUserReactions[post.id] || null;
@@ -523,16 +780,16 @@ export const NewsHub: React.FC = () => {
           <aside className="hidden lg:flex lg:col-span-3 flex-col gap-4 sticky top-6">
             <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[28px] p-5 shadow-[0_6px_24px_rgba(15,23,42,0.05)] space-y-2 border border-white/80 dark:border-zinc-800">
               <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-zinc-800">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#1464D6] to-[#4DA3FF] flex items-center justify-center text-white shadow-sm shrink-0">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.4"
-                  >
-                    <path d="M3 14c3.5-4 6.5-4 10 0s6.5 4 8-1" />
-                  </svg>
+                <div className="w-9 h-9 rounded-full overflow-hidden bg-white dark:bg-zinc-800 ring-1 ring-slate-200/80 dark:ring-zinc-700 shadow-sm shrink-0 flex items-center justify-center">
+                  <img
+                    src={footerLogo}
+                    alt="DEEP SHOP"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.src = deepShopLogoFallback;
+                    }}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <span className="text-lg font-bold tracking-tight whitespace-nowrap">
                   News Hub
@@ -606,28 +863,18 @@ export const NewsHub: React.FC = () => {
                     triggerHaptic();
                     setScamOnlyMode(false);
                   }}
-                  className="w-9 h-9 rounded-full bg-gradient-to-b from-[#2A85FF] to-[#1360DA] flex items-center justify-center shadow-[0_4px_12px_rgba(19,96,218,0.35)] relative overflow-hidden cursor-pointer shrink-0"
+                  className="w-9 h-9 rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center shadow-[0_4px_12px_rgba(15,23,42,0.12)] ring-1 ring-slate-200/80 dark:ring-zinc-800 relative overflow-hidden cursor-pointer shrink-0"
                   aria-label="Feed Home"
                 >
-                  <svg
-                    viewBox="0 0 32 32"
-                    className="w-8 h-8 text-white"
-                    fill="none"
-                  >
-                    <path
-                      d="M2 19C8 19 10 11 17 11C23 11 25 7 30 7"
-                      stroke="currentColor"
-                      strokeWidth="3.8"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M2 24C9 24 12 16 19 16C25 16 27 13 30 13"
-                      stroke="white"
-                      strokeOpacity="0.55"
-                      strokeWidth="2.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  <img
+                    src={footerLogo}
+                    alt="DEEP SHOP"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.src = deepShopLogoFallback;
+                    }}
+                    className="w-full h-full object-cover rounded-full"
+                  />
                 </button>
                 <h1 className="text-[22px] sm:text-[24px] font-bold tracking-tight text-zinc-900 dark:text-white whitespace-nowrap truncate">
                   {scamOnlyMode ? "Scam Alerts" : "Feed"}
@@ -708,64 +955,68 @@ export const NewsHub: React.FC = () => {
               </div>
             </header>
 
-            {/* 2. Horizontal Circular Stories Row - Restricted to Admins only for now */}
-            {isAdmin && (
-              <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
+            {/* 2. Horizontal Circular Stories Row */}
+            <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  if (!currentUser) {
+                    notify("Please sign in to share your story!", "info");
+                    navigate("/signin");
+                    return;
+                  }
+                  navigate("/news-hub/create-story?from=news-hub");
+                }}
+                className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+              >
+                <div className="relative w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
+                  <img
+                    src={userAvatar}
+                    alt="Your Story"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
+                  />
+                  <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#1877F2] text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center">
+                    <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
+                  </span>
+                </div>
+                <span className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
+                  Your story
+                </span>
+              </button>
+
+              {/* Real Community Stories from Firestore */}
+              {stories.map((st) => (
                 <button
+                  key={st.id}
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    if (!currentUser) {
-                      notify("Please sign in to share your story!", "info");
-                      navigate("/signin");
-                      return;
-                    }
-                    navigate("/news-hub/create-story?from=news-hub");
+                    navigate(`/news-hub/story/${st.id}`);
                   }}
                   className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
                 >
-                  <div className="relative w-[68px] h-[68px] rounded-full p-[2.5px] bg-white dark:bg-zinc-900 shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
+                  <div
+                    className={`w-[68px] h-[68px] rounded-full p-[2.5px] shadow-[0_4px_12px_rgba(15,23,42,0.08)] ${
+                      st.isCloseFriends
+                        ? "bg-gradient-to-tr from-green-500 to-emerald-400"
+                        : "bg-gradient-to-tr from-[#1877F2] to-[#38BDF8]"
+                    }`}
+                  >
                     <img
-                      src={userAvatar}
-                      alt="Your Story"
+                      src={st.avatar}
+                      alt={st.name}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full rounded-full object-cover group-hover:scale-[1.03] transition-transform"
+                      className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
                     />
-                    <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-zinc-900 dark:bg-[#1877F2] text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center">
-                      <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
-                    </span>
                   </div>
-                  <span className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-100">
-                    Your Story
+                  <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
+                    {st.name}
                   </span>
                 </button>
-
-                {/* Real Community Stories from Firestore */}
-                {stories.map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      navigate(`/news-hub/story/${st.id}`);
-                    }}
-                    className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-                  >
-                    <div className="w-[68px] h-[68px] rounded-full p-[2.5px] bg-gradient-to-tr from-[#1877F2] to-[#38BDF8] shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
-                      <img
-                        src={st.avatar}
-                        alt={st.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
-                      />
-                    </div>
-                    <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
-                      {st.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
 
             {/* 3. Composer Card */}
             <section className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3.5">
@@ -948,7 +1199,71 @@ export const NewsHub: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {visiblePosts.map((post) => {
+                {/* If very few posts exist, show Suggested Profiles right away */}
+                {visiblePosts.length < 2 && suggestedProfiles.length > 0 && (
+                  <section className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3">
+                    <div className="flex items-center justify-between px-0.5">
+                      <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                        Suggested for you
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/news-hub/search")}
+                        className="text-xs font-semibold text-[#1877F2] hover:underline cursor-pointer whitespace-nowrap"
+                      >
+                        See all
+                      </button>
+                    </div>
+                    <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-1">
+                      {suggestedProfiles.map((prof) => (
+                        <div
+                          key={prof.uid}
+                          onClick={() => navigate(`/author/${prof.uid}`)}
+                          className="relative w-36 shrink-0 rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800/80 border border-slate-200/70 dark:border-zinc-700/60 p-3 flex flex-col items-center text-center justify-between gap-2 cursor-pointer"
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleDismissSuggestedProfile(e, prof.uid)
+                            }
+                            className="absolute top-2 right-2 w-6 h-6 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                            aria-label="Dismiss suggestion"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="flex flex-col items-center gap-1.5 w-full pt-1">
+                            <img
+                              src={prof.avatar}
+                              alt={prof.name}
+                              referrerPolicy="no-referrer"
+                              className="w-14 h-14 rounded-full object-cover border border-white dark:border-zinc-700"
+                            />
+                            <p className="text-xs font-bold text-zinc-900 dark:text-white truncate w-full">
+                              {prof.name}
+                            </p>
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate w-full tabular-nums">
+                              {formatCompactCount(prof.followersCount)} followers
+                              {prof.postsCount > 0
+                                ? ` · ${prof.postsCount} posts`
+                                : ""}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleFollowSuggestedProfile(e, prof)
+                            }
+                            className="w-full py-1.5 rounded-lg bg-[#1877F2] hover:bg-[#1465D8] text-white text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+                          >
+                            Follow
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {visiblePosts.map((post, postIndex) => {
                   const isScam = isScamPostRecord(post);
                   const uid = currentUser?.uid || "guest_local";
                   const myReaction =
@@ -956,12 +1271,7 @@ export const NewsHub: React.FC = () => {
                     localUserReactions[post.id] ||
                     null;
 
-                  const totalReactions = post.reactionsCount
-                    ? (Object.values(post.reactionsCount) as number[]).reduce(
-                        (sum, val) => sum + (val || 0),
-                        0
-                      )
-                    : post.votes || 0;
+                  const totalReactions = getTotalPostReactions(post);
 
                   const saved =
                     savedIds.includes(post.id) ||
@@ -982,374 +1292,605 @@ export const NewsHub: React.FC = () => {
                     (r) => r.type === myReaction
                   );
 
+                  const isSuggestedPost = Boolean(
+                    !scamOnlyMode &&
+                      post.reporterId &&
+                      post.reporterId !== currentUser?.uid &&
+                      post.reporterId !== "member_local" &&
+                      !followedIds.includes(post.reporterId)
+                  );
+
                   return (
-                    <article
-                      key={post.id}
-                      onClick={() => navigate(`/news-hub/post/${post.id}`)}
-                      className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3.5 transition hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)] cursor-pointer"
-                    >
-                      {/* Post Card Header */}
-                      <div className="flex items-center justify-between gap-3">
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            triggerHaptic();
-                            navigate(`/author/${post.reporterId}`);
+                    <React.Fragment key={post.id}>
+                      <PostImpressionTracker postId={post.id}>
+                        <article
+                          onClick={() => {
+                            recordPostClick(post);
+                            navigate(`/news-hub/post/${post.id}`);
                           }}
-                          className="flex items-center gap-3 min-w-0 cursor-pointer"
+                          className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3.5 transition hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)] cursor-pointer"
                         >
-                          <div className="w-11 h-11 rounded-full p-[2px] border border-dashed border-slate-300 dark:border-zinc-700 shrink-0">
-                            <img
-                              src={post.reporterAvatar || defaultAvatarImg}
-                              alt={post.reporterName}
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          </div>
-
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h2 className="text-[15.5px] font-bold text-zinc-900 dark:text-white truncate">
-                                {post.reporterName}
-                              </h2>
-                              {isScam && (
-                                <span className="px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 text-[10px] font-bold shrink-0">
-                                  Scam Report
+                          {/* Subtle Suggested Post Header Kicker */}
+                          {isSuggestedPost && (
+                            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-zinc-800/80 text-xs text-zinc-500 dark:text-zinc-400">
+                              <div className="flex items-center gap-1.5 min-w-0 truncate">
+                                <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                  Suggested for you
                                 </span>
-                              )}
+                                <span aria-hidden="true">·</span>
+                                <span className="truncate">
+                                  Popular in community
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) =>
+                                  handleDismissSuggestedPost(e, post.id)
+                                }
+                                className="w-6 h-6 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 shrink-0 cursor-pointer"
+                                aria-label="Hide suggested post"
+                                title="Hide suggestion"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
                             </div>
+                          )}
 
-                            <div className="flex items-center gap-1.5 text-[11.5px] text-zinc-500 dark:text-zinc-400 whitespace-nowrap overflow-hidden">
-                              <span className="truncate">{formatFeedTimestamp(post.createdAt)}</span>
-                              {(() => {
-                                const primaryTheme = getFeedThemeMeta(
-                                  post.themes?.[0] || post.category
-                                );
-                                return primaryTheme ? (
-                                  <>
-                                    <span className="shrink-0">·</span>
-                                    <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
-                                      {primaryTheme.label}
+                          {/* Post Card Header */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerHaptic();
+                                recordPostClick(post);
+                                navigate(`/author/${post.reporterId}`);
+                              }}
+                              className="flex items-center gap-3 min-w-0 cursor-pointer"
+                            >
+                              <div className="w-11 h-11 rounded-full p-[2px] border border-dashed border-slate-300 dark:border-zinc-700 shrink-0">
+                                <img
+                                  src={post.reporterAvatar || defaultAvatarImg}
+                                  alt={post.reporterName}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full rounded-full object-cover"
+                                />
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h2 className="text-[15.5px] font-bold text-zinc-900 dark:text-white truncate">
+                                    {post.reporterName}
+                                  </h2>
+                                  {isScam && (
+                                    <span className="text-rose-600 dark:text-rose-400 text-[11px] font-bold shrink-0">
+                                      · Scam Report
                                     </span>
-                                  </>
-                                ) : null;
-                              })()}
-                              {post.isEdited && (
-                                <>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1.5 text-[11.5px] text-zinc-500 dark:text-zinc-400 whitespace-nowrap overflow-hidden">
+                                  <span className="truncate">
+                                    {formatFeedTimestamp(post.createdAt)}
+                                  </span>
+                                  {(() => {
+                                    const primaryTheme = getFeedThemeMeta(
+                                      post.themes?.[0] || post.category
+                                    );
+                                    return primaryTheme ? (
+                                      <>
+                                        <span className="shrink-0">·</span>
+                                        <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
+                                          {primaryTheme.label}
+                                        </span>
+                                      </>
+                                    ) : null;
+                                  })()}
+                                  {post.isEdited && (
+                                    <>
+                                      <span className="shrink-0">·</span>
+                                      <span className="shrink-0">Edited</span>
+                                    </>
+                                  )}
                                   <span className="shrink-0">·</span>
-                                  <span className="shrink-0">Edited</span>
-                                </>
-                              )}
-                              <span className="shrink-0">·</span>
-                              <Globe className="w-3 h-3 stroke-[2] shrink-0" />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="relative shrink-0 flex items-center gap-1.5"
-                        >
-                          {post.reporterId &&
-                            post.reporterId !== "member_local" &&
-                            currentUser?.uid !== post.reporterId && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleFollowFromCard(e, post)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 ${
-                                  followedIds.includes(post.reporterId)
-                                    ? "bg-[#F4F5F7] dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200"
-                                    : "bg-[#1877F2]/10 hover:bg-[#1877F2]/20 text-[#1877F2] dark:text-[#58A6FF]"
-                                }`}
-                              >
-                                {followedIds.includes(post.reporterId) ? (
-                                  <>
-                                    <UserCheck className="w-3.5 h-3.5 shrink-0" />
-                                    <span>Following</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
-                                    <span>Follow</span>
-                                  </>
+                                  <Globe className="w-3 h-3 stroke-[2] shrink-0" />
+                                </div>
+                                {post.isAiGenerated && (
+                                  <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
+                                    <Sparkles className="w-3 h-3 text-[#1877F2] shrink-0" />
+                                    <span>AI generated</span>
+                                  </div>
                                 )}
-                              </button>
-                            )}
+                              </div>
+                            </div>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic();
-                              setOpenMenuPostId((prev) =>
-                                prev === post.id ? null : post.id
-                              );
-                            }}
-                            className="w-10 h-10 rounded-full bg-[#F6F7F9] dark:bg-zinc-800 hover:bg-[#ECEEF2] dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0 cursor-pointer"
-                            aria-label="Post options"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="relative shrink-0 flex items-center gap-1.5"
+                            >
+                              {post.reporterId &&
+                                post.reporterId !== "member_local" &&
+                                currentUser?.uid !== post.reporterId && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleFollowFromCard(e, post)
+                                    }
+                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                                      followedIds.includes(post.reporterId)
+                                        ? "bg-[#F4F5F7] dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200"
+                                        : "bg-[#1877F2]/10 hover:bg-[#1877F2]/20 text-[#1877F2] dark:text-[#58A6FF]"
+                                    }`}
+                                  >
+                                    {followedIds.includes(post.reporterId) ? (
+                                      <>
+                                        <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                                        <span>Following</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                                        <span>Follow</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
 
-                          {openMenuPostId === post.id && (
-                            <div className="absolute right-0 top-11 z-30 w-44 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-[0_12px_32px_rgba(15,23,42,0.14)] p-1.5 space-y-0.5">
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setOpenMenuPostId(null);
-                                  navigate(`/news-hub/post/${post.id}`);
+                                  triggerHaptic();
+                                  setOpenMenuPostId((prev) =>
+                                    prev === post.id ? null : post.id
+                                  );
                                 }}
-                                className="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-left cursor-pointer"
+                                className="w-10 h-10 rounded-full bg-[#F6F7F9] dark:bg-zinc-800 hover:bg-[#ECEEF2] dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0 cursor-pointer"
+                                aria-label="Post options"
                               >
-                                <Eye className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span>View Post</span>
+                                <MoreVertical className="w-4 h-4" />
                               </button>
 
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuPostId(null);
-                                  handleToggleSave(post);
-                                }}
-                                className="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-left cursor-pointer"
-                              >
-                                <Bookmark className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span>{saved ? "Remove Saved" : "Save Post"}</span>
-                              </button>
-
-                              {(isAdmin ||
-                                Boolean(
-                                  currentUser?.uid &&
-                                    currentUser.uid === post.reporterId
-                                )) && (
-                                <>
-                                  <div className="my-1 border-t border-slate-100 dark:border-zinc-800" />
+                              {openMenuPostId === post.id && (
+                                <div className="absolute right-0 top-11 z-30 w-44 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-[0_12px_32px_rgba(15,23,42,0.14)] p-1.5 space-y-0.5">
                                   <button
                                     type="button"
                                     onClick={() => {
                                       setOpenMenuPostId(null);
-                                      navigate(`/news-hub/edit/${post.id}`);
+                                      recordPostClick(post);
+                                      navigate(`/news-hub/post/${post.id}`);
                                     }}
-                                    className="w-full px-3 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-semibold text-[#1877F2] flex items-center gap-2 text-left cursor-pointer"
+                                    className="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-left cursor-pointer"
                                   >
-                                    <Edit3 className="w-3.5 h-3.5 shrink-0" />
-                                    <span>Edit Post</span>
+                                    <Eye className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                    <span>View Post</span>
                                   </button>
 
                                   <button
                                     type="button"
-                                    onClick={() => handleDeletePost(post)}
-                                    className="w-full px-3 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold text-rose-600 flex items-center gap-2 text-left cursor-pointer"
+                                    onClick={() => {
+                                      setOpenMenuPostId(null);
+                                      handleToggleSave(post);
+                                    }}
+                                    className="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-left cursor-pointer"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                                    <span>Delete Post</span>
+                                    <Bookmark className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                    <span>
+                                      {saved ? "Remove Saved" : "Save Post"}
+                                    </span>
                                   </button>
-                                </>
+
+                                  {(isAdmin ||
+                                    Boolean(
+                                      currentUser?.uid &&
+                                        currentUser.uid === post.reporterId
+                                    )) && (
+                                    <>
+                                      <div className="my-1 border-t border-slate-100 dark:border-zinc-800" />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenMenuPostId(null);
+                                          navigate(`/news-hub/edit/${post.id}`);
+                                        }}
+                                        className="w-full px-3 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 text-xs font-semibold text-[#1877F2] flex items-center gap-2 text-left cursor-pointer"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                                        <span>Edit Post</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeletePost(post)}
+                                        className="w-full px-3 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold text-rose-600 flex items-center gap-2 text-left cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                        <span>Delete Post</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      </div>
+                          </div>
 
-                      {/* Caption / Body Text with Clickable Blue #Hashtags & Stylish Inline Links */}
-                      {rawBody && (
-                        <div
-                          className={
-                            post.textStyle === "quote"
-                              ? "rounded-[22px] bg-[#F6F8FB] dark:bg-zinc-800/70 p-4 border-l-4 border-[#1877F2]"
-                              : ""
-                          }
-                        >
-                          <p
-                            className={`whitespace-pre-line break-words ${
-                              post.textStyle === "large"
-                                ? "text-[19px] font-bold leading-snug text-zinc-900 dark:text-white"
-                                : post.textStyle === "quote"
-                                ? "text-[15.5px] italic font-medium leading-relaxed text-zinc-800 dark:text-zinc-100"
-                                : "text-[14.5px] leading-[1.5] text-zinc-700 dark:text-zinc-200"
-                            }`}
+                          {/* Caption / Body Text with Clickable Blue #Hashtags & Stylish Inline Links */}
+                          {rawBody && (
+                            <div
+                              className={
+                                post.textStyle === "quote"
+                                  ? "rounded-[22px] bg-[#F6F8FB] dark:bg-zinc-800/70 p-4 border border-slate-200/70 dark:border-zinc-700/60"
+                                  : ""
+                              }
+                            >
+                              <p
+                                className={`whitespace-pre-line break-words ${
+                                  post.textStyle === "large"
+                                    ? "text-[19px] font-bold leading-snug text-zinc-900 dark:text-white"
+                                    : post.textStyle === "quote"
+                                    ? "text-[15.5px] italic font-medium leading-relaxed text-zinc-800 dark:text-zinc-100"
+                                    : "text-[14.5px] leading-[1.5] text-zinc-700 dark:text-zinc-200"
+                                }`}
+                              >
+                                <NewsRichText text={displayedBody} />
+                                {isLongText && !isExpanded && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      recordPostClick(post);
+                                      setExpandedPostIds((prev) => ({
+                                        ...prev,
+                                        [post.id]: true,
+                                      }));
+                                    }}
+                                    className="font-bold text-zinc-900 dark:text-white hover:underline cursor-pointer"
+                                  >
+                                    See More...
+                                  </button>
+                                )}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Auto Stylish Link Preview Cards when post contains URLs */}
+                          <NewsLinkPreviewCards text={rawBody} />
+
+                          {isScam &&
+                            (post.scamLocation ||
+                              post.scammerName ||
+                              post.scammerPhone) && (
+                              <div className="rounded-full bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 px-3 py-1.5 flex items-center justify-between gap-2 text-[11px] w-full overflow-hidden whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+                                  <Icon
+                                    name="shield-alert"
+                                    className="w-3.5 h-3.5 text-rose-600 shrink-0"
+                                  />
+                                  <span className="font-bold text-rose-700 dark:text-rose-300 shrink-0">
+                                    Verified Scam Report
+                                  </span>
+                                  <span className="text-rose-300 dark:text-rose-700 shrink-0">
+                                    ·
+                                  </span>
+                                  <span className="truncate font-semibold text-rose-600 dark:text-rose-400 min-w-0">
+                                    {post.scamLocation || "Online Marketplace"}
+                                  </span>
+                                </div>
+                                {post.scammedAmount ? (
+                                  <span className="font-bold text-rose-700 dark:text-rose-300 tabular-nums shrink-0 ml-1">
+                                    ৳{post.scammedAmount.toLocaleString()}
+                                  </span>
+                                ) : null}
+                              </div>
+                            )}
+
+                          {/* Post Media */}
+                          <NewsPostMedia
+                            post={post}
+                            onOpenImage={(imgIdx) => {
+                              recordPostClick(post);
+                              navigate(`/news-hub/photo/${post.id}/${imgIdx}`);
+                            }}
+                          />
+
+                          {/* Inline Reaction Bar */}
+                          {openReactionPostId === post.id && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center justify-between gap-1 px-3 py-2 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 border border-slate-200/70 dark:border-zinc-700"
+                            >
+                              {REACTION_ITEMS.map((item) => (
+                                <button
+                                  key={item.type}
+                                  type="button"
+                                  onClick={() =>
+                                    handleReaction(post, item.type)
+                                  }
+                                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm transition hover:scale-110 cursor-pointer ${
+                                    myReaction === item.type
+                                      ? "bg-white dark:bg-zinc-900 shadow-2xs font-bold"
+                                      : ""
+                                  }`}
+                                  title={item.label}
+                                >
+                                  <span className="text-lg">{item.emoji}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Bottom Engagement Row */}
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center justify-between gap-2 pt-0.5"
                           >
-                            <NewsRichText text={displayedBody} />
-                            {isLongText && !isExpanded && (
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setExpandedPostIds((prev) => ({
-                                    ...prev,
-                                    [post.id]: true,
-                                  }));
+                                onClick={() => {
+                                  if (openReactionPostId === post.id) {
+                                    setOpenReactionPostId(null);
+                                  } else if (!myReaction) {
+                                    handleReaction(post, "love");
+                                  } else {
+                                    setOpenReactionPostId(post.id);
+                                  }
                                 }}
-                                className="font-bold text-zinc-900 dark:text-white hover:underline cursor-pointer"
-                              >
-                                See More...
-                              </button>
-                            )}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Auto Stylish Link Preview Cards when post contains URLs */}
-                      <NewsLinkPreviewCards text={rawBody} />
-
-                      {isScam && (post.scamLocation || post.scammerName || post.scammerPhone) && (
-                        <div className="rounded-full bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 px-3 py-1.5 flex items-center justify-between gap-2 text-[11px] w-full overflow-hidden whitespace-nowrap">
-                          <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
-                            <Icon name="shield-alert" className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                            <span className="font-bold text-rose-700 dark:text-rose-300 shrink-0">Verified Scam Report</span>
-                            <span className="text-rose-300 dark:text-rose-700 shrink-0">·</span>
-                            <span className="truncate font-semibold text-rose-600 dark:text-rose-400 min-w-0">
-                              {post.scamLocation || "Online Marketplace"}
-                            </span>
-                          </div>
-                          {post.scammedAmount ? (
-                            <span className="font-bold text-rose-700 dark:text-rose-300 tabular-nums shrink-0 ml-1">
-                              ৳{post.scammedAmount.toLocaleString()}
-                            </span>
-                          ) : null}
-                        </div>
-                      )}
-
-                      {/* Post Media */}
-                      <NewsPostMedia
-                        post={post}
-                        onOpenImage={(imgIdx) =>
-                          navigate(`/news-hub/photo/${post.id}/${imgIdx}`)
-                        }
-                      />
-
-                      {/* Inline Reaction Bar */}
-                      {openReactionPostId === post.id && (
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center justify-between gap-1 px-3 py-2 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 border border-slate-200/70 dark:border-zinc-700"
-                        >
-                          {REACTION_ITEMS.map((item) => (
-                            <button
-                              key={item.type}
-                              type="button"
-                              onClick={() => handleReaction(post, item.type)}
-                              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm transition hover:scale-110 cursor-pointer ${
-                                myReaction === item.type
-                                  ? "bg-white dark:bg-zinc-900 shadow-2xs font-bold"
-                                  : ""
-                              }`}
-                              title={item.label}
-                            >
-                              <span className="text-lg">{item.emoji}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Bottom Engagement Row */}
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center justify-between gap-2 pt-0.5"
-                      >
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (openReactionPostId === post.id) {
-                                setOpenReactionPostId(null);
-                              } else if (!myReaction) {
-                                handleReaction(post, "love");
-                              } else {
-                                setOpenReactionPostId(post.id);
-                              }
-                            }}
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              setOpenReactionPostId((prev) =>
-                                prev === post.id ? null : post.id
-                              );
-                            }}
-                            className={`h-9 px-3.5 rounded-full flex items-center gap-1.5 text-[13px] font-semibold tabular-nums transition active:scale-95 cursor-pointer ${
-                              myReaction
-                                ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
-                                : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
-                            }`}
-                          >
-                            {activeReactionMeta && myReaction !== "love" ? (
-                              <span className="text-sm leading-none">
-                                {activeReactionMeta.emoji}
-                              </span>
-                            ) : (
-                              <Heart
-                                className={`w-4 h-4 ${
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  setOpenReactionPostId((prev) =>
+                                    prev === post.id ? null : post.id
+                                  );
+                                }}
+                                className={`h-9 px-3.5 rounded-full flex items-center gap-1.5 text-[13px] font-semibold tabular-nums transition active:scale-95 cursor-pointer ${
                                   myReaction
-                                    ? "fill-current text-rose-500"
-                                    : "stroke-[2]"
+                                    ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+                                    : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
                                 }`}
-                              />
-                            )}
-                            <span className={`whitespace-nowrap overflow-hidden ${totalReactions > 999 ? 'text-[10px]' : (totalReactions > 99 ? 'text-[11px]' : 'text-[12px]')}`}>
-                              {isScam
-                                ? `Confirm (${formatCompactCount(totalReactions)})`
-                                : formatCompactCount(totalReactions)}
-                            </span>
-                          </button>
+                              >
+                                {activeReactionMeta && myReaction !== "love" ? (
+                                  <span className="text-sm leading-none">
+                                    {activeReactionMeta.emoji}
+                                  </span>
+                                ) : (
+                                  <Heart
+                                    className={`w-4 h-4 ${
+                                      myReaction
+                                        ? "fill-current text-rose-500"
+                                        : "stroke-[2]"
+                                    }`}
+                                  />
+                                )}
+                                <span
+                                  className={`whitespace-nowrap overflow-hidden ${
+                                    totalReactions > 999
+                                      ? "text-[10px]"
+                                      : totalReactions > 99
+                                      ? "text-[11px]"
+                                      : "text-[12px]"
+                                  }`}
+                                >
+                                  {isScam
+                                    ? `Confirm (${formatCompactCount(
+                                        totalReactions
+                                      )})`
+                                    : formatCompactCount(totalReactions)}
+                                </span>
+                              </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOpenReactionPostId((prev) =>
-                                prev === post.id ? null : post.id
-                              )
-                            }
-                            className="w-8 h-9 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center justify-center text-zinc-600 dark:text-zinc-300 text-xs cursor-pointer"
-                            title="More reactions"
-                            aria-label="Choose reaction"
-                          >
-                            <Smile className="w-3.5 h-3.5" />
-                          </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setOpenReactionPostId((prev) =>
+                                    prev === post.id ? null : post.id
+                                  )
+                                }
+                                className="w-8 h-9 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center justify-center text-zinc-600 dark:text-zinc-300 text-xs cursor-pointer"
+                                title="More reactions"
+                                aria-label="Choose reaction"
+                              >
+                                <Smile className="w-3.5 h-3.5" />
+                              </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(`/news-hub/post/${post.id}#comments`)
-                            }
-                            className="h-9 px-3.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer"
-                          >
-                            <MessageCircle className="w-4 h-4 stroke-[2]" />
-                            <span>
-                              {formatCompactCount(post.commentsCount || 0)}
-                            </span>
-                          </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  recordPostClick(post);
+                                  navigate(
+                                    `/news-hub/post/${post.id}#comments`
+                                  );
+                                }}
+                                className="h-9 px-3.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer"
+                              >
+                                <MessageCircle className="w-4 h-4 stroke-[2]" />
+                                <span>
+                                  {formatCompactCount(post.commentsCount || 0)}
+                                </span>
+                              </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(`/news-hub/share/${post.id}`)
-                            }
-                            className="h-9 px-3.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer"
-                          >
-                            <Send className="w-3.5 h-3.5 stroke-[2]" />
-                            <span>
-                              {formatCompactCount(post.sharesCount || 0)}
-                            </span>
-                          </button>
-                        </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  recordPostClick(post);
+                                  navigate(`/news-hub/share/${post.id}`);
+                                }}
+                                className="h-9 px-3.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer"
+                              >
+                                <Send className="w-3.5 h-3.5 stroke-[2]" />
+                                <span>
+                                  {formatCompactCount(post.sharesCount || 0)}
+                                </span>
+                              </button>
+                            </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleToggleSave(post)}
-                          className={`w-9 h-9 rounded-full flex items-center justify-center transition active:scale-90 cursor-pointer ${
-                            saved
-                              ? "bg-[#1877F2]/12 text-[#1877F2]"
-                              : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
-                          }`}
-                          aria-label={saved ? "Unsave post" : "Save post"}
-                          title={saved ? "Saved" : "Save post"}
-                        >
-                          <Bookmark
-                            className={`w-4 h-4 ${
-                              saved ? "fill-current" : "stroke-[2]"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </article>
+                            <div className="flex items-center gap-2">
+                              {!isSuggestedPost && Number(post.views || 0) > 0 && (
+                                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-zinc-400 tabular-nums whitespace-nowrap">
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>
+                                    {formatCompactCount(Number(post.views || 0))}
+                                  </span>
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSave(post)}
+                                className={`w-9 h-9 rounded-full flex items-center justify-center transition active:scale-90 cursor-pointer ${
+                                  saved
+                                    ? "bg-[#1877F2]/12 text-[#1877F2]"
+                                    : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
+                                }`}
+                                aria-label={saved ? "Unsave post" : "Save post"}
+                                title={saved ? "Saved" : "Save post"}
+                              >
+                                <Bookmark
+                                  className={`w-4 h-4 ${
+                                    saved ? "fill-current" : "stroke-[2]"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      </PostImpressionTracker>
+
+                      {/* Injected Suggested Profiles Carousel after 2nd post */}
+                      {postIndex === 1 && suggestedProfiles.length > 0 && (
+                        <section className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3">
+                          <div className="flex items-center justify-between px-0.5">
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                              Suggested profiles
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={() => navigate("/news-hub/search")}
+                              className="text-xs font-semibold text-[#1877F2] hover:underline cursor-pointer whitespace-nowrap"
+                            >
+                              See all
+                            </button>
+                          </div>
+                          <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-1">
+                            {suggestedProfiles.map((prof) => (
+                              <div
+                                key={prof.uid}
+                                onClick={() => navigate(`/author/${prof.uid}`)}
+                                className="relative w-36 shrink-0 rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800/80 border border-slate-200/70 dark:border-zinc-700/60 p-3 flex flex-col items-center text-center justify-between gap-2 cursor-pointer"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    handleDismissSuggestedProfile(e, prof.uid)
+                                  }
+                                  className="absolute top-2 right-2 w-6 h-6 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                                  aria-label="Dismiss profile"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                                <div className="flex flex-col items-center gap-1.5 w-full pt-1">
+                                  <img
+                                    src={prof.avatar}
+                                    alt={prof.name}
+                                    referrerPolicy="no-referrer"
+                                    className="w-14 h-14 rounded-full object-cover border border-white dark:border-zinc-700"
+                                  />
+                                  <p className="text-xs font-bold text-zinc-900 dark:text-white truncate w-full">
+                                    {prof.name}
+                                  </p>
+                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate w-full tabular-nums">
+                                    {formatCompactCount(prof.followersCount)}{" "}
+                                    followers
+                                    {prof.postsCount > 0
+                                      ? ` · ${prof.postsCount} posts`
+                                      : ""}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) =>
+                                    handleFollowSuggestedProfile(e, prof)
+                                  }
+                                  className="w-full py-1.5 rounded-lg bg-[#1877F2] hover:bg-[#1465D8] text-white text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+                                >
+                                  Follow
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {/* Injected Suggested Posts Discovery Shelf after 5th post */}
+                      {postIndex === 4 && suggestedDiscoveryPosts.length >= 2 && (
+                        <section className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)] space-y-3">
+                          <div className="flex items-center justify-between px-0.5">
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                              Suggested posts
+                            </h3>
+                            <button
+                              type="button"
+                              onClick={() => navigate("/news-hub/search")}
+                              className="text-xs font-semibold text-[#1877F2] hover:underline cursor-pointer whitespace-nowrap"
+                            >
+                              Explore more
+                            </button>
+                          </div>
+                          <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-1">
+                            {suggestedDiscoveryPosts.slice(0, 5).map((sp) => (
+                              <div
+                                key={`sug_${sp.id}`}
+                                onClick={() => {
+                                  recordPostClick(sp);
+                                  navigate(`/news-hub/post/${sp.id}`);
+                                }}
+                                className="w-56 shrink-0 rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800/80 border border-slate-200/70 dark:border-zinc-700/60 overflow-hidden flex flex-col justify-between cursor-pointer hover:border-[#1877F2]/40 transition"
+                              >
+                                {sp.images?.[0] ? (
+                                  <div className="h-28 w-full bg-zinc-200 dark:bg-zinc-900 overflow-hidden">
+                                    <img
+                                      src={sp.images[0]}
+                                      alt={sp.title || sp.reporterName}
+                                      referrerPolicy="no-referrer"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="h-28 w-full p-3 bg-gradient-to-br from-[#1877F2]/10 to-sky-500/10 flex items-center">
+                                    <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200 line-clamp-3">
+                                      {sp.description || sp.title || "Community post"}
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="p-3 space-y-1.5">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <img
+                                      src={sp.reporterAvatar || defaultAvatarImg}
+                                      alt={sp.reporterName}
+                                      referrerPolicy="no-referrer"
+                                      className="w-5 h-5 rounded-full object-cover shrink-0"
+                                    />
+                                    <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                                      {sp.reporterName}
+                                    </span>
+                                  </div>
+                                  {sp.images?.[0] && (
+                                    <p className="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2">
+                                      {sp.description || sp.title || "Tap to view post"}
+                                    </p>
+                                  )}
+                                  <p className="text-[10.5px] text-zinc-400 tabular-nums">
+                                    {formatCompactCount(getTotalPostReactions(sp))}{" "}
+                                    reactions
+                                    {Number(sp.commentsCount || 0) > 0
+                                      ? ` · ${formatCompactCount(
+                                          Number(sp.commentsCount || 0)
+                                        )} comments`
+                                      : ""}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>
@@ -1384,6 +1925,54 @@ export const NewsHub: React.FC = () => {
                 <span>Open Creator Dashboard</span>
               </button>
             </div>
+
+            {suggestedProfiles.length > 0 && (
+              <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[28px] p-5 shadow-[0_6px_24px_rgba(15,23,42,0.05)] space-y-3 border border-white/80 dark:border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold">Suggested Profiles</h3>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/news-hub/search")}
+                    className="text-xs font-semibold text-[#1877F2] hover:underline cursor-pointer"
+                  >
+                    See all
+                  </button>
+                </div>
+                <div className="space-y-2.5">
+                  {suggestedProfiles.slice(0, 4).map((prof) => (
+                    <div
+                      key={`rail_${prof.uid}`}
+                      onClick={() => navigate(`/author/${prof.uid}`)}
+                      className="flex items-center justify-between gap-2.5 cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img
+                          src={prof.avatar}
+                          alt={prof.name}
+                          referrerPolicy="no-referrer"
+                          className="w-9 h-9 rounded-full object-cover shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:text-[#1877F2] transition-colors">
+                            {prof.name}
+                          </p>
+                          <p className="text-[11px] text-zinc-500 truncate tabular-nums">
+                            {formatCompactCount(prof.followersCount)} followers
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleFollowSuggestedProfile(e, prof)}
+                        className="px-3 py-1 rounded-full bg-[#1877F2]/10 hover:bg-[#1877F2] text-[#1877F2] hover:text-white text-xs font-semibold transition cursor-pointer shrink-0 whitespace-nowrap"
+                      >
+                        Follow
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[28px] p-5 shadow-[0_6px_24px_rgba(15,23,42,0.05)] space-y-3 border border-white/80 dark:border-zinc-800">
               <div className="flex items-center justify-between">

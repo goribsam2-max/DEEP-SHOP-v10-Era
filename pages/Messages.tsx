@@ -778,6 +778,51 @@ export default function Messages() {
   const [channelSubscribers, setChannelSubscribers] = useState<any[]>([]);
   const [forwardingMessage, setForwardingMessage] = useState<any | null>(null);
   const [showForwardModal, setShowForwardModal] = useState(false);
+
+  // Handle incoming ?sharePost=<postId> from News Hub Share Page
+  useEffect(() => {
+    const sharePostId = searchParams.get('sharePost');
+    if (!sharePostId || !user?.uid) return;
+
+    let active = true;
+    const loadSharedPost = async () => {
+      let postData: any = null;
+      try {
+        const pSnap = await getDoc(doc(db, 'scam_posts', sharePostId));
+        if (pSnap.exists()) {
+          postData = { id: pSnap.id, ...pSnap.data() };
+        }
+      } catch {}
+
+      if (!postData) {
+        try {
+          const localList = JSON.parse(localStorage.getItem('deep_scam_posts') || '[]');
+          if (Array.isArray(localList)) {
+            postData = localList.find((p: any) => p?.id === sharePostId) || null;
+          }
+        } catch {}
+      }
+
+      if (!active) return;
+
+      const postUrl = `${window.location.origin}/news-hub/post/${sharePostId}`;
+      const caption = postData?.description?.slice(0, 140) || postData?.title || 'Shared a post from Feed';
+      setForwardingMessage({
+        text: `${caption}\n${postUrl}`,
+        imageUrl: postData?.images?.[0] || '',
+      });
+      setShowForwardModal(true);
+
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('sharePost');
+      setSearchParams(nextParams, { replace: true });
+    };
+
+    loadSharedPost();
+    return () => {
+      active = false;
+    };
+  }, [searchParams, user?.uid, setSearchParams]);
   const [detailsSubModal, setDetailsSubModal] = useState<'subscribers' | 'admins' | 'banned' | 'settings' | null>(null);
   const [bannedUsers, setBannedUsers] = useState<any[]>([]);
   const [confirmDeleteChannel, setConfirmDeleteChannel] = useState(false);
@@ -7934,35 +7979,54 @@ const handleCreateChannel = async () => {
                   </div>
                 )}
 
-                {/* List direct messages */}
-                {chats.length > 0 && (
-                  <div className="mt-4">
-                    <h5 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Private Direct Chats</h5>
-                    <div className="space-y-1">
-                      {chats.map((c, idx) => (
-                        <button
-                          key={`fwd-chat-${c.id || idx}-${idx}`}
-                          onClick={() => handleSendForward(c, false)}
-                          className="w-full flex items-center gap-3 p-2 rounded-xl bg-zinc-50 hover:bg-emerald-50 dark:bg-zinc-200 dark:bg-zinc-800/30 dark:hover:bg-zinc-200 dark:bg-zinc-800 transition text-left"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-zinc-300 dark:border-zinc-700 text-xs font-bold text-emerald-700">
-                            {c.otherUser?.photoURL ? (
-                              <img src={c.otherUser.photoURL} alt="User img" className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              (c.otherUser?.displayName || 'U')[0].toUpperCase()
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-xs text-zinc-800 dark:text-zinc-200 truncate">
-                              {c.otherUser?.shopName || c.otherUser?.displayName || 'Chat'}
-                            </p>
-                          </div>
-                          <Forward className="w-3.5 h-3.5 text-zinc-400 mr-2 shrink-0" />
-                        </button>
-                      ))}
+                {/* List direct messages (strictly real talked-to chats, zero system/demo users) */}
+                {(() => {
+                  const realShareableChats = chats.filter((c) => {
+                    if (c.isGroup || c.type === 'group') return true;
+                    const oid = c.otherUser?.id || c.otherUser?.uid;
+                    if (!oid || oid === 'system' || oid === user?.uid || String(oid).startsWith('demo_')) {
+                      return false;
+                    }
+                    return Boolean(
+                      (typeof c.lastMessage === 'string' && c.lastMessage.trim() !== '') ||
+                      c.lastMessageTimestamp ||
+                      c.updatedAt
+                    );
+                  });
+
+                  return realShareableChats.length > 0 ? (
+                    <div className="mt-4">
+                      <h5 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Private Direct Chats</h5>
+                      <div className="space-y-1">
+                        {realShareableChats.map((c, idx) => (
+                          <button
+                            key={`fwd-chat-${c.id || idx}-${idx}`}
+                            onClick={() => handleSendForward(c, false)}
+                            className="w-full flex items-center gap-3 p-2 rounded-xl bg-zinc-50 hover:bg-emerald-50 dark:bg-zinc-200 dark:bg-zinc-800/30 dark:hover:bg-zinc-200 dark:bg-zinc-800 transition text-left"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-zinc-300 dark:border-zinc-700 text-xs font-bold text-emerald-700">
+                              {c.otherUser?.photoURL ? (
+                                <img src={c.otherUser.photoURL} alt="User img" className="w-full h-full rounded-full object-cover" />
+                              ) : (
+                                (c.otherUser?.displayName || 'U')[0].toUpperCase()
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-xs text-zinc-800 dark:text-zinc-200 truncate">
+                                {c.otherUser?.shopName || c.otherUser?.displayName || (c.isGroup ? c.name || c.groupName : 'Chat')}
+                              </p>
+                            </div>
+                            <Forward className="w-3.5 h-3.5 text-zinc-400 mr-2 shrink-0" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 py-4 text-center">
+                      No active direct chat conversations yet.
+                    </p>
+                  );
+                })()}
               </div>
             </motion.div>
           </div>

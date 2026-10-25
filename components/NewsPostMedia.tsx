@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import Icon from "./Icon";
 import { ScamPost, ImageLayoutStyle, ImageAspectMode } from "../types";
 import { triggerHaptic } from "../lib/haptics";
+import { resolvePostVideoSource } from "../lib/videoEmbed";
+import { NewsVideoPlayer } from "./NewsVideoPlayer";
 
 export const isScamPostRecord = (post?: Partial<ScamPost> | null): boolean => {
   if (!post) return false;
@@ -34,6 +36,7 @@ export const isScamPostRecord = (post?: Partial<ScamPost> | null): boolean => {
 interface NewsPostMediaProps {
   post: Partial<ScamPost>;
   onOpenImage?: (index: number) => void;
+  autoPlayVideo?: boolean;
 }
 
 const DEFAULT_WAVE_PEAKS = [
@@ -321,9 +324,11 @@ export const VoiceNoteCard: React.FC<{
 export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
   post,
   onOpenImage,
+  autoPlayVideo = true,
 }) => {
   const images = post.images || [];
   const isScam = isScamPostRecord(post);
+  const resolvedVideo = resolvePostVideoSource(post);
   const layout: ImageLayoutStyle = post.imageLayout || "collage";
   const aspectMode: ImageAspectMode = post.imageAspectRatio || "original";
 
@@ -436,7 +441,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
     return "z-0 translate-x-5 rotate-6 scale-90 opacity-90";
   };
 
-  if (!post.audioUrl && !post.videoUrl && images.length === 0) {
+  if (!post.audioUrl && !resolvedVideo && images.length === 0) {
     return null;
   }
 
@@ -452,16 +457,24 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
         />
       )}
 
-      {/* Video Player if present */}
-      {post.videoUrl && (
-        <div className="relative rounded-[22px] overflow-hidden bg-slate-950">
-          <video
-            src={post.videoUrl}
-            controls
-            playsInline
-            className="w-full max-h-[460px] object-contain"
-          />
-        </div>
+      {/* Embedded Social Video (YouTube / Facebook / TikTok) or Uploaded Video Player */}
+      {resolvedVideo && (
+        <NewsVideoPlayer
+          videoSource={resolvedVideo}
+          autoPlayInView={autoPlayVideo}
+          overlayBadge={
+            isScam && images.length === 0 ? (
+              <div className="absolute top-3 left-3 right-14 flex items-center gap-2 pointer-events-none z-10">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/95 backdrop-blur-md text-white text-[11px] font-bold shadow-md whitespace-nowrap overflow-hidden max-w-full">
+                  <Icon name="shield-alert" className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">
+                    Verified Scam Report · {getScamPlaceLabel()}
+                  </span>
+                </div>
+              </div>
+            ) : undefined
+          }
+        />
       )}
 
       {/* Single Image Attachment — Dynamically sized to match photo aspect ratio */}

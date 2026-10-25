@@ -977,3 +977,51 @@ html.dark .dark\:text-slate-400 {
 .liquid-card {
   @apply relative overflow-hidden transition-all duration-500 ease-in-out hover:scale-[1.02] active:scale-[0.98];
 }
+
+/* ==========================================================================
+   STORY STUDIO DARK IMMERSIVE PROTECTION
+   Prevents global light/dark rules (e.g. html:not(.dark) footer -> #ffffff)
+   from turning the "Your story" & "Close Friends" bar white or recoloring
+   Story Studio's native dark controls, Close Friends green star, or #1877F2 CTA.
+   ========================================================================== */
+html:not(.dark) .story-studio-shell,
+html.dark .story-studio-shell {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .story-studio-shell .story-publish-bar,
+html.dark .story-studio-shell .story-publish-bar,
+html:not(.dark) .story-studio-shell footer,
+html.dark .story-studio-shell footer {
+  background-color: transparent !important;
+}
+
+html:not(.dark) .story-studio-shell .story-pill-btn,
+html.dark .story-studio-shell .story-pill-btn {
+  background-color: #1c1c1e !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .story-studio-shell .story-pill-btn:hover,
+html.dark .story-studio-shell .story-pill-btn:hover {
+  background-color: #27272a !important;
+}
+
+html:not(.dark) .story-studio-shell .story-cf-badge,
+html.dark .story-studio-shell .story-cf-badge {
+  background-color: #22c55e !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .story-studio-shell .story-cta-blue,
+html.dark .story-studio-shell .story-cta-blue {
+  background-color: #1877F2 !important;
+  color: #ffffff !important;
+}
+
+html.dark .story-studio-shell input.bg-transparent,
+html.dark .story-studio-shell textarea.bg-transparent {
+  background-color: transparent !important;
+}
+

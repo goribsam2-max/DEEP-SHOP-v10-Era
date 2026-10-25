@@ -162,6 +162,8 @@ export const AuthorProfile: React.FC = () => {
                 type: data.type || "image",
                 title: data.songTitle || data.userName || data.sellerName || "Story",
                 subtitle: data.caption || "",
+                createdAt: data.createdAt || null,
+                aiLabel: Boolean(data.aiLabel || data.isAiGenerated),
               });
             }
           });
@@ -174,6 +176,8 @@ export const AuthorProfile: React.FC = () => {
                 type: data.type || "image",
                 title: data.songTitle || data.userName || "Story",
                 subtitle: data.caption || "",
+                createdAt: data.createdAt || null,
+                aiLabel: Boolean(data.aiLabel || data.isAiGenerated),
               });
             }
           });
@@ -667,6 +671,23 @@ export const AuthorProfile: React.FC = () => {
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
                     {p.description}
                   </p>
+                  {p.createdAt && (
+                    <div className="pt-0.5">
+                      <p className="text-[10.5px] text-zinc-400">
+                        {new Date(p.createdAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                      {p.isAiGenerated && (
+                        <div className="mt-0.5 flex items-center gap-1 text-[10.5px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
+                          <Sparkles className="w-3 h-3 text-[#1877F2] shrink-0" />
+                          <span>AI generated</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
                     <span className="uppercase font-bold text-rose-600 dark:text-rose-400">
                       {p.category ? p.category.replace(/_/g, " ") : "Scam Alert"}
@@ -714,7 +735,22 @@ export const AuthorProfile: React.FC = () => {
                   />
                   <div>
                     <span className="font-bold text-xs block">@{handle}</span>
-                    <span className="text-[10px] opacity-70 block">Story {activeStoryIndex + 1} of {authorStories.length}</span>
+                    <span className="text-[10px] opacity-70 block">
+                      {authorStories[activeStoryIndex].createdAt
+                        ? new Date(authorStories[activeStoryIndex].createdAt).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })
+                        : `Story ${activeStoryIndex + 1} of ${authorStories.length}`}
+                    </span>
+                    {authorStories[activeStoryIndex].aiLabel && (
+                      <div className="mt-0.5 flex items-center gap-1 text-[10.5px] font-medium text-sky-400 leading-tight">
+                        <Sparkles className="w-3 h-3 shrink-0" />
+                        <span>AI generated</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

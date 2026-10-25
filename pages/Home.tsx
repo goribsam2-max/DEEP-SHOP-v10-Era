@@ -139,8 +139,8 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     userData?.sellerStatus !== "pending"
   );
 
-  // Only verified sellers and admins can add stories
-  const canAddStory = Boolean(isAdmin || isSeller);
+  // Stories are open to everyone across Deep Shop
+  const canAddStory = true;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
@@ -250,8 +250,57 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       },
     );
 
+    let mainStoryDocs: Record<string, any> = {};
+    let communityStoryDocs: Record<string, any> = {};
+
+    const syncCombinedStories = () => {
+      const merged = new Map<string, any>();
+      Object.entries(mainStoryDocs).forEach(([id, data]) => {
+        merged.set(id, {
+          id,
+          ...data,
+          category: data.userName || data.sellerName || data.category || "Deep Shop",
+        });
+      });
+      Object.entries(communityStoryDocs).forEach(([id, data]) => {
+        const prev = merged.get(id) || {};
+        merged.set(id, {
+          ...prev,
+          ...data,
+          id,
+          category: data.userName || data.sellerName || data.category || "Community",
+        });
+      });
+
+      const uid = auth.currentUser?.uid || "";
+      const visible = Array.from(merged.values()).filter((s: any) => {
+        if (s.isCloseFriends && Array.isArray(s.closeFriendIds) && s.closeFriendIds.length > 0) {
+          return isAdmin || s.userId === uid || s.closeFriendIds.includes(uid);
+        }
+        return true;
+      });
+      setStories(visible);
+    };
+
     const unsubscribeStories = onSnapshot(collection(db, "stories"), (snap) => {
-      setStories(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      const next: Record<string, any> = {};
+      snap.docs.forEach((d) => {
+        next[d.id] = d.data();
+      });
+      mainStoryDocs = next;
+      syncCombinedStories();
+    });
+
+    const unsubscribeCommStories = onSnapshot(collection(db, "creator_videos"), (snap) => {
+      const next: Record<string, any> = {};
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        if (data?.kind === "news_story") {
+          next[d.id] = data;
+        }
+      });
+      communityStoryDocs = next;
+      syncCombinedStories();
     });
 
     const unsubscribeSellers = onSnapshot(collection(db, "users"), (snap) => {
@@ -264,9 +313,10 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       unsubscribeBanners();
       unsubscribeSettings();
       unsubscribeStories();
+      unsubscribeCommStories();
       unsubscribeSellers();
     };
-  }, []);
+  }, [isAdmin]);
 
   const brandLogos = useMemo(() => {
     const uniqueBrands = Array.from(
@@ -361,6 +411,16 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       {/* Top Left Tab Switcher: [Shop] & [News Hub] */}
       <div className="flex items-center mb-4 pt-1">
         <TopNavTabSwitcher />
+      </div>
+
+      {/* Universal Stories Bar — Open to All Users */}
+      <div className="mb-6">
+        <StoryViewer
+          stories={stories}
+          isAdmin={isAdmin}
+          isSeller={isSeller}
+          canAddStory={canAddStory}
+        />
       </div>
 
 

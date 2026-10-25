@@ -201,6 +201,10 @@ const ProductDetails: React.FC = () => {
   const [sellerReviews, setSellerReviews] = useState<any[]>([]);
   const [resolvedId, setResolvedId] = useState<string | null>(id || null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewFilter, setReviewFilter] = useState<
+    "all" | "photos" | "5" | "4" | "3" | "2" | "1"
+  >("all");
+  const [reviewComposerOpen, setReviewComposerOpen] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
   const [direction, setDirection] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -765,10 +769,49 @@ const ProductDetails: React.FC = () => {
       ? product.offerPrice
       : product.price;
 
-  const ratingVal = (product.rating && Number(product.rating) > 0) ? Number(product.rating) : 4.8;
-  const reviewCountVal = (product.numReviews && Number(product.numReviews) > 0) 
-    ? Number(product.numReviews) 
-    : (reviews && reviews.length > 0 ? reviews.length : 8);
+  const liveReviewCount =
+    reviews.length > 0 ? reviews.length : Number(product.numReviews || 0);
+  const liveAverageRating =
+    reviews.length > 0
+      ? Number(
+          (
+            reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) /
+            reviews.length
+          ).toFixed(1)
+        )
+      : Number(product.rating || 0);
+
+  const filteredProductReviews = reviews.filter((r) => {
+    if (reviewFilter === "photos") {
+      return Array.isArray((r as any).images) && (r as any).images.length > 0;
+    }
+    if (["5", "4", "3", "2", "1"].includes(reviewFilter)) {
+      return Math.round(Number(r.rating || 0)) === Number(reviewFilter);
+    }
+    return true;
+  });
+
+  const photoReviewsTotal = reviews.filter(
+    (r) => Array.isArray((r as any).images) && (r as any).images.length > 0
+  ).length;
+
+  const handleDeleteProductReview = (reviewId: string) => {
+    confirm({
+      title: "Delete Review?",
+      message: "Remove this customer review permanently?",
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, "reviews", reviewId));
+          notify("Review removed.", "info");
+        } catch {
+          notify("Could not delete review.", "error");
+        }
+      },
+    });
+  };
+
+  const ratingVal = liveAverageRating > 0 ? liveAverageRating : 4.8;
+  const reviewCountVal = liveReviewCount > 0 ? liveReviewCount : 8;
 
   const finalReviews = reviews && reviews.length > 0
     ? reviews.slice(0, 3).map((r) => ({
@@ -835,7 +878,7 @@ const ProductDetails: React.FC = () => {
           (product.stock === undefined || product.stock > 0)
             ? "https://schema.org/InStock"
             : "https://schema.org/OutOfStock",
-        itemCondition: "https://schema.org/NewCondition",
+        itemCondition: "https://schema.org/UsedCondition",
         hasMerchantReturnPolicy: {
           "@type": "MerchantReturnPolicy",
           applicableCountry: "BD",
@@ -1245,18 +1288,32 @@ const ProductDetails: React.FC = () => {
               </h1>
 
               <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-4 w-4 ${star <= Math.round(product.rating || 0) ? "text-yellow-400 fill-yellow-400" : "text-zinc-300 dark:text-zinc-700"}`}
-                    />
-                  ))}
-                  <span className="ml-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                    {(product.rating || 0).toFixed(1)} (
-                    {product.numReviews || 0} <Tr>reviews</Tr>)
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById("customer-reviews")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="flex items-center gap-1.5 group cursor-pointer"
+                >
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-4 w-4 ${
+                          star <= Math.round(liveAverageRating)
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-zinc-300 dark:text-zinc-700"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="ml-1 text-sm font-semibold text-zinc-700 dark:text-zinc-300 group-hover:underline tabular-nums">
+                    {liveAverageRating.toFixed(1)} ({liveReviewCount}{" "}
+                    <Tr>reviews</Tr>)
                   </span>
-                </div>
+                </button>
               </div>
 
               <div className="mt-2 mb-6">
@@ -1292,7 +1349,7 @@ const ProductDetails: React.FC = () => {
 
               {/* Tags/Badges based on product attributes */}
               <div className="flex flex-wrap gap-2 my-6">
-                <StatusBadge leftIcon="check-circle" leftLabel="Brand New" />
+                <StatusBadge leftIcon="check-circle" leftLabel="Used" />
                 {product.category && (
                   <StatusBadge leftIcon="box" leftLabel={product.category} />
                 )}
@@ -1463,107 +1520,228 @@ const ProductDetails: React.FC = () => {
             </div>
           </main>
 
-          {/* Reviews Section */}
-          <section className="mt-16 pt-8 border-t border-zinc-200 dark:border-zinc-800 pb-8">
-            <div className="flex flex-col items-center justify-center mb-10 text-center">
+          {/* Customer Reviews Section */}
+          <section
+            id="customer-reviews"
+            className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800 pb-8"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
                   <Tr>Customer Reviews</Tr>
                 </h2>
-                <p className="text-sm text-zinc-500 mt-1">
-                  <Tr>Based on</Tr> {product.numReviews || reviews.length || 0}{" "}
-                  <Tr>reviews</Tr>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 tabular-nums">
+                  {liveReviewCount > 0 ? (
+                    <>
+                      <Tr>Based on</Tr> {liveReviewCount}{" "}
+                      <Tr>{liveReviewCount === 1 ? "review" : "reviews"}</Tr>
+                    </>
+                  ) : (
+                    <Tr>Share your experience with the community</Tr>
+                  )}
                 </p>
               </div>
+              {reviews.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/product/${product.id}/reviews`)}
+                  className="text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 cursor-pointer self-start sm:self-auto whitespace-nowrap"
+                >
+                  <span>
+                    <Tr>See all</Tr> ({reviews.length})
+                  </span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
 
-              <div className="mt-6 flex flex-col md:flex-row items-center gap-6 w-full justify-center max-w-2xl mx-auto">
-                {reviews.length > 0 && (
-                  <div className="w-full sm:w-auto flex-1">
-                    <ReviewFilterGroup defaultValue="all" className="w-full">
-                      <ReviewFilterItem
-                        value="5-stars"
-                        stars={5}
-                        count={
-                          reviews.filter((r) => Math.round(r.rating) === 5)
-                            .length
-                        }
-                        total={reviews.length}
-                      />
-                      <ReviewFilterItem
-                        value="4-stars"
-                        stars={4}
-                        count={
-                          reviews.filter((r) => Math.round(r.rating) === 4)
-                            .length
-                        }
-                        total={reviews.length}
-                      />
-                      <ReviewFilterItem
-                        value="3-stars"
-                        stars={3}
-                        count={
-                          reviews.filter((r) => Math.round(r.rating) === 3)
-                            .length
-                        }
-                        total={reviews.length}
-                      />
-                      <ReviewFilterItem
-                        value="2-stars"
-                        stars={2}
-                        count={
-                          reviews.filter((r) => Math.round(r.rating) === 2)
-                            .length
-                        }
-                        total={reviews.length}
-                      />
-                      <ReviewFilterItem
-                        value="1-star"
-                        stars={1}
-                        count={
-                          reviews.filter((r) => Math.round(r.rating) === 1)
-                            .length
-                        }
-                        total={reviews.length}
-                      />
-                    </ReviewFilterGroup>
+            {/* 2-Column Editorial Summary & Rating Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
+              <div className="lg:col-span-5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800 p-6 flex flex-col justify-between gap-5">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    <Tr>Overall Rating</Tr>
+                  </span>
+                  <div className="flex items-baseline gap-2.5 mt-2">
+                    <span className="text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 tabular-nums">
+                      {liveAverageRating.toFixed(1)}
+                    </span>
+                    <span className="text-sm font-medium text-zinc-400">
+                      / 5.0
+                    </span>
                   </div>
-                )}
-                <div className="w-full sm:w-auto">
-                  <ReviewComposer productId={product.id} product={product} />
+                  <div className="flex items-center gap-1 mt-2">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        className={`w-4 h-4 ${
+                          s <= Math.round(liveAverageRating)
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-zinc-300 dark:text-zinc-700"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2.5 tabular-nums">
+                    {liveReviewCount > 0
+                      ? `${liveReviewCount} verified customer ${
+                          liveReviewCount === 1 ? "rating" : "ratings"
+                        }`
+                      : "No ratings yet — be the first to review"}
+                  </p>
                 </div>
+
+                <div>
+                  <ReviewComposer
+                    productId={product.id}
+                    product={product}
+                    isOpen={false}
+                    onOpenChange={() =>
+                      setReviewComposerOpen((prev) => !prev)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="lg:col-span-7 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800 p-5 sm:p-6 flex flex-col justify-center">
+                <ReviewFilterGroup
+                  value={
+                    ["5", "4", "3", "2", "1"].includes(reviewFilter)
+                      ? reviewFilter
+                      : ""
+                  }
+                  onValueChange={(val) =>
+                    setReviewFilter((prev) =>
+                      prev === val ? "all" : (val as any)
+                    )
+                  }
+                >
+                  {[5, 4, 3, 2, 1].map((stars) => (
+                    <ReviewFilterItem
+                      key={stars}
+                      value={String(stars)}
+                      stars={stars}
+                      count={
+                        reviews.filter(
+                          (r) => Math.round(Number(r.rating || 0)) === stars
+                        ).length
+                      }
+                      total={reviews.length}
+                    />
+                  ))}
+                </ReviewFilterGroup>
               </div>
             </div>
 
-            <div className="flex flex-col gap-4">
-              {reviews.slice(0, 3).map((review) => (
-                <ReviewCard
-                  key={review.id}
-                  name={review.userName}
-                  handle={
-                    review.userId === auth.currentUser?.uid
-                      ? "You"
-                      : "Verified Buyer"
-                  }
-                  review={review.comment}
-                  rating={review.rating}
-                  imageUrl={review.userPhoto}
-                  createdAt={review.createdAt}
-                  images={(review as any).images}
+            {/* Full-Width Expandable Review Composer */}
+            {reviewComposerOpen && (
+              <div className="mb-6">
+                <ReviewComposer
+                  productId={product.id}
+                  product={product}
+                  isOpen={true}
+                  onOpenChange={setReviewComposerOpen}
                 />
-              ))}
-              {reviews.length > 3 && (
+              </div>
+            )}
+
+            {/* Interactive Filter Tabs */}
+            {reviews.length > 0 && (
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-4">
+                {(
+                  [
+                    { key: "all", label: `All (${reviews.length})` },
+                    ...(photoReviewsTotal > 0
+                      ? [
+                          {
+                            key: "photos",
+                            label: `With Photos (${photoReviewsTotal})`,
+                          },
+                        ]
+                      : []),
+                    { key: "5", label: "5 ★" },
+                    { key: "4", label: "4 ★" },
+                    { key: "3", label: "3 ★" },
+                    { key: "2", label: "2 ★" },
+                    { key: "1", label: "1 ★" },
+                  ] as {
+                    key: "all" | "photos" | "5" | "4" | "3" | "2" | "1";
+                    label: string;
+                  }[]
+                ).map((tab) => {
+                  const active = reviewFilter === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setReviewFilter(tab.key)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer tabular-nums border ${
+                        active
+                          ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-900"
+                          : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Reviews List */}
+            <div className="flex flex-col gap-3.5">
+              {filteredProductReviews.slice(0, 6).map((review) => {
+                const isOwn =
+                  Boolean(auth.currentUser?.uid) &&
+                  review.userId === auth.currentUser?.uid;
+                return (
+                  <ReviewCard
+                    key={review.id}
+                    name={review.userName}
+                    handle={isOwn ? "Your Review" : "Verified Buyer"}
+                    review={review.comment}
+                    rating={review.rating}
+                    imageUrl={review.userPhoto}
+                    createdAt={review.createdAt}
+                    images={(review as any).images}
+                    canDelete={isOwn || isAdmin}
+                    onDelete={() => handleDeleteProductReview(review.id)}
+                  />
+                );
+              })}
+
+              {filteredProductReviews.length > 6 && (
                 <Button
                   onClick={() => navigate(`/product/${product.id}/reviews`)}
                   variant="outline"
-                  className="w-full mt-2 rounded-full py-6 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:scale-[1.02] transition-transform"
+                  className="w-full mt-2 rounded-xl py-6 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-2xs font-semibold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                   <Tr>View All Reviews</Tr> ({reviews.length})
                 </Button>
               )}
+
+              {reviews.length > 0 && filteredProductReviews.length === 0 && (
+                <div className="py-12 px-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center">
+                  <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
+                    No reviews match the selected filter.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setReviewFilter("all")}
+                    className="mt-2.5 text-xs font-bold text-[#1877F2] hover:underline cursor-pointer"
+                  >
+                    Reset filter
+                  </button>
+                </div>
+              )}
+
               {reviews.length === 0 && (
-                <div className="py-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center">
-                  <p className="text-sm font-semibold text-zinc-500">
-                    <Tr>No reviews yet. Be the first!</Tr>
+                <div className="py-12 px-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center space-y-2">
+                  <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    <Tr>No customer reviews yet</Tr>
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <Tr>Purchased this item? Click "Write a Review" above to share your feedback.</Tr>
                   </p>
                 </div>
               )}

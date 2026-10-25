@@ -1,0 +1,6 @@
+{
+  "summary":  "Implementation plan for removing direct video file uploads to protect Firebase Storage and backend performance, keeping zero-storage YouTube/Facebook/TikTok auto-embedded video playback with autoplay and seeking controls, and consolidating the News Hub Create Post category selector so it only opens when clicking the bottom toolbar icon.",
+  "updatedAt":  "2026-10-25T09:14:16.805454855Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

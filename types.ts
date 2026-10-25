@@ -116,6 +116,9 @@ export interface UserProfile {
   creatorStatus?: 'pending' | 'approved' | 'rejected' | 'none';
   creatorRejectReason?: string;
   creatorApplyDate?: number;
+  contentMonetizationEnabled?: boolean;
+  monetizationEnabledAt?: number;
+  closeFriends?: string[];
 }
 
 export interface CreatorRequest {
@@ -288,6 +291,9 @@ export interface ScamPost {
   isEdited?: boolean;
   status?: 'trending' | 'active' | 'verified' | 'resolved' | 'under_review';
   views?: number;
+  impressions?: number;
+  clicks?: number;
+  isAiGenerated?: boolean;
 }
 
 export interface AffiliateLog {

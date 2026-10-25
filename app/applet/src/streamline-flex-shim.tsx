@@ -435,6 +435,17 @@ export const Building = c(["M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z", "M6 12H4
 export const FileCheck = c(["M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", "M14 2v4a2 2 0 0 0 2 2h4", "m9 15 2 2 4-4"]);
 export const UserCheck = c(["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "m16 11 2 2 4-4"]);
 export const Reply = c(["M9 17 4 12l5-5", "M4 12h11a5 5 0 0 1 5 5v1"]);
+export const Target = c(["M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z", "M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"]);
+export const Hash = c(["M4 9h16", "M4 15h16", "M10 3L8 21", "M16 3l-2 18"]);
+export const ZapOff = c(["M12.41 6.75L13 2l-2.43 2.92", "M18.57 12.91L21 10h-5.34", "M8 8l-5 6h9l-1 8 5-6", "M1 1l22 22"]);
+export const MessageSquareOff = c(["M21 15V5a2 2 0 0 0-2-2H9", "M3 3l18 18", "M3.6 3.6A2 2 0 0 0 3 5v16l4-4h10"]);
+export const BarChart2 = BarChart3;
+export const Frame = c(["M22 6H2", "M22 18H2", "M6 2v20", "M18 2v20"]);
+export const AlignLeft = c(["M17 10H3", "M21 6H3", "M21 14H3", "M17 18H3"]);
+export const AlignCenter = c(["M18 10H6", "M21 6H3", "M21 14H3", "M18 18H6"]);
+export const AlignRight = c(["M21 10H7", "M21 6H3", "M21 14H3", "M21 18H7"]);
+export const Infinity = c(["M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z"]);
+export const Timer = c(["M10 2h4", "M12 14l3-3", "M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"]);
 
 
 

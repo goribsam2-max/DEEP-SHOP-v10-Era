@@ -23,6 +23,7 @@ import {
   UserPlus,
   UserCheck,
   X,
+  Sparkles,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -64,6 +65,7 @@ import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
 } from "../lib/admin";
+import { recordPostDetailView } from "../lib/feedAlgorithm";
 
 import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -146,6 +148,7 @@ export const NewsDetails: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
+    recordPostDetailView(id);
 
     try {
       const localReactionMap = JSON.parse(
@@ -898,6 +901,12 @@ export const NewsDetails: React.FC = () => {
                     <span className="shrink-0">·</span>
                     <Globe className="w-3 h-3 shrink-0" />
                   </p>
+                  {post.isAiGenerated && (
+                    <div className="mt-0.5 flex items-center gap-1 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
+                      <Sparkles className="w-3 h-3 text-[#1877F2] shrink-0" />
+                      <span>AI generated</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

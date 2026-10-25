@@ -22,6 +22,8 @@ import {
   Layers,
   Maximize2,
   Square,
+  Link2,
+  Sparkles,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -40,12 +42,19 @@ import {
   applyWatermarkToImage,
   processCleanImage,
 } from "../lib/watermark";
+import { detectAiGeneratedFiles } from "../lib/aiImageDetector";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
+import { NewsVideoPlayer } from "../components/NewsVideoPlayer";
 import {
   NewsRichText,
   NewsLinkPreviewCards,
   extractHashtagsFromText,
 } from "../components/NewsRichText";
+import {
+  extractFirstVideoUrlFromText,
+  parseVideoEmbed,
+  resolveShortVideoUrl,
+} from "../lib/videoEmbed";
 import { FEED_THEMES, FEED_THEME_GROUPS } from "../lib/feed-themes";
 import { resolvePostById } from "./NewsHubSubPages";
 import { useNotify } from "../components/Notifications";
@@ -208,10 +217,13 @@ export const CreateScamPost: React.FC = () => {
   const [imageAspectRatio, setImageAspectRatio] =
     useState<ImageAspectMode>("original");
   const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [isCheckingAiImage, setIsCheckingAiImage] = useState(false);
 
-  // Video Attachment
+  // Social Video Link Embed State (YouTube, Facebook, TikTok only — zero file upload)
   const [videoUrl, setVideoUrl] = useState("");
-  const [showVideoInput, setShowVideoInput] = useState(initialTab === "video");
+  const [dismissedCaptionVideoUrl, setDismissedCaptionVideoUrl] = useState("");
+  const [resolvedCaptionVideoUrl, setResolvedCaptionVideoUrl] = useState("");
 
   // Scam-Only Fields (Hidden & excluded completely on Normal posts)
   const [scamLocation, setScamLocation] = useState("Facebook Page");
@@ -222,12 +234,12 @@ export const CreateScamPost: React.FC = () => {
 
   // Inline Composer Tool Section (Zero Popups — Voice only opens when user clicks Voice / Mic)
   const [activeInlinePanel, setActiveInlinePanel] = useState<
-    "voice" | "media" | "themes" | "audience" | null
+    "voice" | "media" | "video" | "themes" | "audience" | null
   >(
     initialTab === "photo"
       ? "media"
       : initialTab === "video"
-      ? "themes"
+      ? "video"
       : initialTab === "voice"
       ? "voice"
       : null
@@ -311,6 +323,7 @@ export const CreateScamPost: React.FC = () => {
       setNaturalRatios(found.imageNaturalRatios || []);
       setImageLayout(found.imageLayout || "collage");
       setImageAspectRatio(found.imageAspectRatio || "original");
+      setIsAiGenerated(Boolean(found.isAiGenerated));
       setAudioUrl(found.audioUrl || "");
       setAudioDuration(found.audioDuration || 0);
       setRecordCentiseconds(found.audioDuration ? found.audioDuration * 100 : 0);
@@ -343,6 +356,8 @@ export const CreateScamPost: React.FC = () => {
       }
       if (found.images?.length) {
         setActiveInlinePanel("media");
+      } else if (found.videoUrl) {
+        setActiveInlinePanel("video");
       } else if (found.audioUrl) {
         setActiveInlinePanel("voice");
       }
@@ -362,6 +377,39 @@ export const CreateScamPost: React.FC = () => {
       navigate(`/news-hub/post/${editId}`, { replace: true });
     }
   }, [editId, authReady, originalPost, currentUser, isAdmin, navigate, notify]);
+
+  // Auto-detect AI-generated images on raw File objects BEFORE canvas compression strips C2PA/EXIF metadata
+  useEffect(() => {
+    if (rawFiles.length === 0) {
+      setIsCheckingAiImage(false);
+      if (existingUrls.length === 0) {
+        setIsAiGenerated(false);
+      } else {
+        setIsAiGenerated(Boolean(originalPost?.isAiGenerated));
+      }
+      return;
+    }
+
+    let cancelled = false;
+    setIsCheckingAiImage(true);
+
+    detectAiGeneratedFiles(rawFiles)
+      .then((detected) => {
+        if (cancelled) return;
+        setIsAiGenerated(
+          detected ||
+            (existingUrls.length > 0 && Boolean(originalPost?.isAiGenerated))
+        );
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsCheckingAiImage(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rawFiles, existingUrls, originalPost?.isAiGenerated]);
 
   // Re-process uploaded raw files whenever postType (Normal vs Scam) or scamLocation changes!
   useEffect(() => {
@@ -505,6 +553,89 @@ export const CreateScamPost: React.FC = () => {
     } else {
       const rawIdx = idx - existingUrls.length;
       setRawFiles((prev) => prev.filter((_, i) => i !== rawIdx));
+    }
+  };
+
+  // Detect YouTube / Facebook / TikTok / direct video link pasted inside the main caption
+  const detectedCaptionVideoUrl = React.useMemo(
+    () => extractFirstVideoUrlFromText(description),
+    [description]
+  );
+
+  // Automatically resolve short share links (vt.tiktok.com, vm.tiktok.com, fb.watch, facebook.com/share/v|r)
+  useEffect(() => {
+    let active = true;
+    if (!detectedCaptionVideoUrl) {
+      setResolvedCaptionVideoUrl("");
+      return;
+    }
+    const parsed = parseVideoEmbed(detectedCaptionVideoUrl);
+    if (!parsed?.needsResolution) {
+      setResolvedCaptionVideoUrl(detectedCaptionVideoUrl);
+      return;
+    }
+    setResolvedCaptionVideoUrl(detectedCaptionVideoUrl);
+    resolveShortVideoUrl(detectedCaptionVideoUrl).then(({ resolvedUrl }) => {
+      if (active && resolvedUrl) {
+        setResolvedCaptionVideoUrl(resolvedUrl);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [detectedCaptionVideoUrl]);
+
+  useEffect(() => {
+    let active = true;
+    const trimmed = videoUrl.trim();
+    if (!trimmed) return;
+    const parsed = parseVideoEmbed(trimmed);
+    if (!parsed?.needsResolution) return;
+
+    resolveShortVideoUrl(trimmed).then(({ resolvedUrl }) => {
+      if (active && resolvedUrl && resolvedUrl !== trimmed) {
+        setVideoUrl(resolvedUrl);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [videoUrl]);
+
+  const effectiveVideoUrl = React.useMemo(() => {
+    const trimmedInput = videoUrl.trim();
+    if (trimmedInput) {
+      return parseVideoEmbed(trimmedInput) ? trimmedInput : "";
+    }
+    if (
+      detectedCaptionVideoUrl &&
+      detectedCaptionVideoUrl !== dismissedCaptionVideoUrl
+    ) {
+      return resolvedCaptionVideoUrl || detectedCaptionVideoUrl;
+    }
+    return "";
+  }, [
+    videoUrl,
+    detectedCaptionVideoUrl,
+    dismissedCaptionVideoUrl,
+    resolvedCaptionVideoUrl,
+  ]);
+
+  const activeVideoEmbed = React.useMemo(
+    () => parseVideoEmbed(effectiveVideoUrl),
+    [effectiveVideoUrl]
+  );
+
+  const hasUnsupportedVideoInput = Boolean(
+    videoUrl.trim() && !parseVideoEmbed(videoUrl.trim())
+  );
+
+  const handleClearVideo = () => {
+    triggerHaptic();
+    if (videoUrl.trim()) {
+      setVideoUrl("");
+    } else if (detectedCaptionVideoUrl) {
+      setDismissedCaptionVideoUrl(detectedCaptionVideoUrl);
     }
   };
 
@@ -810,14 +941,22 @@ export const CreateScamPost: React.FC = () => {
       stopVoiceRecording();
     }
 
+    if (hasUnsupportedVideoInput) {
+      notify(
+        "Please paste a valid YouTube, Facebook, or TikTok video link.",
+        "error"
+      );
+      return;
+    }
+
     if (
       !description.trim() &&
       processedImages.length === 0 &&
       !audioUrl &&
-      !videoUrl.trim()
+      !effectiveVideoUrl
     ) {
       notify(
-        "Write something or add a photo first.",
+        "Write something, paste a YouTube/Facebook/TikTok link, or attach photos first.",
         "error"
       );
       return;
@@ -837,7 +976,7 @@ export const CreateScamPost: React.FC = () => {
           ? "scam"
           : audioUrl
           ? "voice"
-          : videoUrl.trim()
+          : effectiveVideoUrl
           ? "video"
           : processedImages.length > 0
           ? "image"
@@ -858,6 +997,8 @@ export const CreateScamPost: React.FC = () => {
           ? `Scam Report · ${scamLocation.trim()}`
           : audioUrl
           ? "Voice Note Update"
+          : effectiveVideoUrl
+          ? "Video Post"
           : "Community Post");
 
       const isOwnerEditing =
@@ -882,11 +1023,12 @@ export const CreateScamPost: React.FC = () => {
         imageLayout,
         imageAspectRatio,
         imageNaturalRatios: naturalRatios,
+        isAiGenerated: Boolean(processedImages.length > 0 && isAiGenerated),
         audioUrl: audioUrl || null,
         audioDuration: audioDuration || null,
         audioWaveform:
           audioUrl && audioWaveform.length > 0 ? audioWaveform : null,
-        videoUrl: videoUrl.trim() || null,
+        videoUrl: effectiveVideoUrl || null,
         privacy,
         reporterId: isOwnerEditing ? authorId : originalPost.reporterId,
         reporterName: isOwnerEditing ? authorName : originalPost.reporterName,
@@ -1006,10 +1148,11 @@ export const CreateScamPost: React.FC = () => {
     imageLayout,
     imageAspectRatio,
     imageNaturalRatios: naturalRatios,
+    isAiGenerated: Boolean(processedImages.length > 0 && isAiGenerated),
     audioUrl: audioUrl || undefined,
     audioDuration: audioDuration || undefined,
     audioWaveform: audioWaveform.length > 0 ? audioWaveform : undefined,
-    videoUrl: videoUrl.trim() || undefined,
+    videoUrl: effectiveVideoUrl || undefined,
     scamLocation: postType === "scam" ? scamLocation : undefined,
   };
 
@@ -1017,7 +1160,7 @@ export const CreateScamPost: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-8">
       <SEO
         title={editId ? "Edit Post — Feed" : "Create a post — Feed"}
-        description="Share photos, voice notes, thoughts, or verified community scam alerts."
+        description="Share photos, videos, YouTube/Facebook/TikTok embeds, voice notes, or verified community scam alerts."
       />
 
       {/* Hidden Multi-Image File Input */}
@@ -1063,6 +1206,13 @@ export const CreateScamPost: React.FC = () => {
               type="button"
               onClick={() => {
                 triggerHaptic();
+                if (hasUnsupportedVideoInput) {
+                  notify(
+                    "Please paste a valid YouTube, Facebook, or TikTok video link.",
+                    "error"
+                  );
+                  return;
+                }
                 if (isRecording) stopVoiceRecording();
                 setStep(2);
               }}
@@ -1177,7 +1327,7 @@ export const CreateScamPost: React.FC = () => {
                         ? "Describe what happened clearly so others stay safe... (#scamalert or paste links)"
                         : textStyle === "quote"
                         ? "“Write your daily affirmation or favorite quote...”"
-                        : "Hey, what's up guys? Share thoughts, paste links, or add #hashtags..."
+                        : "Write a caption, paste a YouTube / Facebook / TikTok link, or add #hashtags..."
                     }
                     className={`w-full bg-transparent border-none outline-none resize-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500 ${
                       textStyle === "large"
@@ -1203,6 +1353,38 @@ export const CreateScamPost: React.FC = () => {
                   </div>
                 )}
                 <NewsLinkPreviewCards text={description} />
+
+                {/* Instant Auto-Embedded Social Video Preview when YouTube / Facebook / TikTok Link is Pasted */}
+                {activeVideoEmbed && (
+                  <div className="rounded-[24px] bg-[#F6F8FB] dark:bg-zinc-800/70 border border-slate-200/80 dark:border-zinc-700/70 p-3 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Video className="w-4 h-4 text-[#1877F2] shrink-0" />
+                        <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                          {activeVideoEmbed.platform === "youtube"
+                            ? "YouTube Video Embedded"
+                            : activeVideoEmbed.platform === "facebook"
+                            ? "Facebook Video Embedded"
+                            : "TikTok Video Embedded"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearVideo}
+                        className="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-zinc-600 hover:text-rose-600 flex items-center justify-center transition cursor-pointer shrink-0"
+                        aria-label="Remove video"
+                        title="Remove video"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <NewsVideoPlayer
+                      videoSource={activeVideoEmbed}
+                      autoPlayInView={true}
+                    />
+                  </div>
+                )}
 
                 {/* SCAM INCIDENT DETAILS — Shown ONLY when Scam Report is selected */}
                 {postType === "scam" && (
@@ -1276,83 +1458,6 @@ export const CreateScamPost: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* VISIBLE POST CATEGORY / TOPIC SELECTOR (Synced with Online, Cyber & Tech Feed Categories) */}
-                <div className="rounded-[24px] bg-[#F6F8FB] dark:bg-zinc-800/55 border border-slate-200/70 dark:border-zinc-700/60 p-3.5 sm:p-4 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                      Category & Topics ({selectedThemes.length} selected)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowVideoInput((v) => !v)}
-                      className="text-xs font-semibold text-[#1877F2] flex items-center gap-1 cursor-pointer"
-                    >
-                      <Video className="w-3.5 h-3.5" />
-                      <span>{showVideoInput ? "Hide Video" : "Add Video URL"}</span>
-                    </button>
-                  </div>
-
-                  {showVideoInput && (
-                    <input
-                      type="url"
-                      value={videoUrl}
-                      onChange={(e) => setVideoUrl(e.target.value)}
-                      placeholder="Paste direct MP4/WebM video URL (optional)..."
-                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 text-xs outline-none border border-slate-200 dark:border-zinc-700"
-                    />
-                  )}
-
-                  {/* Category Group Tabs */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                    {["All", ...FEED_THEME_GROUPS].map((grp) => {
-                      const active = activeCategoryGroup === grp;
-                      return (
-                        <button
-                          key={grp}
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic();
-                            setActiveCategoryGroup(grp);
-                          }}
-                          className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition cursor-pointer shrink-0 ${
-                            active
-                              ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                              : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700"
-                          }`}
-                        >
-                          {grp}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Category Chips */}
-                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-0.5">
-                    {(activeCategoryGroup === "All"
-                      ? FEED_THEMES
-                      : FEED_THEMES.filter((t) => t.group === activeCategoryGroup)
-                    ).map((theme) => {
-                      const active = selectedThemes.includes(theme.id);
-                      return (
-                        <button
-                          key={theme.id}
-                          type="button"
-                          onClick={() => toggleThemeSelection(theme.id)}
-                          className={`px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
-                            active
-                              ? "bg-[#1877F2] text-white shadow-2xs"
-                              : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700 hover:border-[#1877F2]/50"
-                          }`}
-                        >
-                          <span>{theme.emoji}</span>
-                          <span>{theme.label}</span>
-                          {active && <Check className="w-3 h-3 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
 
                 {/* ATTACHED PHOTOS, ASPECT RATIO & MULTI-IMAGE LAYOUT CONTROLS */}
                 {(processedImages.length > 0 ||
@@ -1482,7 +1587,23 @@ export const CreateScamPost: React.FC = () => {
                     {/* Live Feed Card Media Preview */}
                     {processedImages.length > 0 && (
                       <div className="space-y-2.5">
-                        <NewsPostMedia post={previewPostObj} />
+                        {(isCheckingAiImage || isAiGenerated) && (
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 px-1">
+                            <Sparkles className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
+                            <span>
+                              {isCheckingAiImage
+                                ? "Checking image authenticity..."
+                                : "AI generated · Auto-detected (shown below post date)"}
+                            </span>
+                          </div>
+                        )}
+                        <NewsPostMedia
+                          post={{
+                            ...previewPostObj,
+                            videoUrl: undefined,
+                            description: "",
+                          }}
+                        />
 
                         <div className="flex items-center gap-2 overflow-x-auto pb-1">
                           {processedImages.map((img, i) => (
@@ -1773,49 +1894,117 @@ export const CreateScamPost: React.FC = () => {
                   </div>
                 )}
 
-                {/* INLINE THEMES & VIDEO PANEL (Zero Popups) */}
-                {(activeInlinePanel === "themes" || showVideoInput) && (
-                  <div className="rounded-[24px] bg-[#F5F6F8] dark:bg-zinc-800/60 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                        Post Themes & Video Link
-                      </span>
+                {/* INLINE SOCIAL VIDEO LINK EMBED PANEL (YouTube, Facebook, TikTok Only — Zero Storage) */}
+                {activeInlinePanel === "video" && (
+                  <div className="rounded-[24px] bg-[#F5F7FA] dark:bg-zinc-800/65 border border-slate-200/80 dark:border-zinc-700/70 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Video className="w-4 h-4 text-[#1877F2]" />
+                        <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                          Embed YouTube, Facebook, or TikTok Video
+                        </span>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setShowVideoInput((v) => !v)}
-                        className="text-xs font-semibold text-[#1877F2] flex items-center gap-1 cursor-pointer"
+                        onClick={() => setActiveInlinePanel(null)}
+                        className="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer"
+                        aria-label="Close video panel"
                       >
-                        <Video className="w-3.5 h-3.5" />
-                        <span>{showVideoInput ? "Hide Video" : "Add Video URL"}</span>
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    {showVideoInput && (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 flex items-center gap-1.5">
+                        <Link2 className="w-3.5 h-3.5 text-[#1877F2]" />
+                        <span>
+                          Paste YouTube, Facebook Video/Reel, or TikTok link
+                        </span>
+                      </label>
                       <input
                         type="url"
                         value={videoUrl}
                         onChange={(e) => setVideoUrl(e.target.value)}
-                        placeholder="Paste direct MP4/WebM video URL (optional)..."
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-xs outline-none border border-slate-200 dark:border-zinc-700"
+                        placeholder="https://youtube.com/... , facebook.com/... , or tiktok.com/..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-xs outline-none border border-slate-200 dark:border-zinc-700 focus:border-[#1877F2]"
                       />
-                    )}
+                      {hasUnsupportedVideoInput ? (
+                        <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                          Only YouTube, Facebook (Video / Watch / Reel), and TikTok links are supported.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                          You can also paste the link directly inside your post caption above — it embeds automatically in the feed.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {FEED_THEMES.map((theme) => {
+                {/* UNIFIED ON-DEMAND CATEGORY & TOPICS DRAWER — Opens ONLY when toolbar icon is clicked */}
+                {activeInlinePanel === "themes" && (
+                  <div className="rounded-[24px] bg-[#F6F8FB] dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/60 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                        Category & Topics ({selectedThemes.length} selected)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveInlinePanel(null)}
+                        className="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer"
+                        aria-label="Close categories"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Category Group Filter Tabs */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                      {["All", ...FEED_THEME_GROUPS].map((grp) => {
+                        const active = activeCategoryGroup === grp;
+                        return (
+                          <button
+                            key={grp}
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setActiveCategoryGroup(grp);
+                            }}
+                            className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition cursor-pointer shrink-0 ${
+                              active
+                                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700"
+                            }`}
+                          >
+                            {grp}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Category Chips */}
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-0.5">
+                      {(activeCategoryGroup === "All"
+                        ? FEED_THEMES
+                        : FEED_THEMES.filter(
+                            (t) => t.group === activeCategoryGroup
+                          )
+                      ).map((theme) => {
                         const active = selectedThemes.includes(theme.id);
                         return (
                           <button
                             key={theme.id}
                             type="button"
                             onClick={() => toggleThemeSelection(theme.id)}
-                            className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
+                            className={`px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
                               active
-                                ? "bg-[#1877F2] text-white"
-                                : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
+                                ? "bg-[#1877F2] text-white shadow-2xs"
+                                : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700 hover:border-[#1877F2]/50"
                             }`}
                           >
                             <span>{theme.emoji}</span>
                             <span>{theme.label}</span>
+                            {active && <Check className="w-3 h-3 shrink-0" />}
                           </button>
                         );
                       })}
@@ -1904,10 +2093,28 @@ export const CreateScamPost: React.FC = () => {
                     onClick={() => {
                       triggerHaptic();
                       setActiveInlinePanel((p) =>
+                        p === "video" ? null : "video"
+                      );
+                    }}
+                    title="Embed YouTube, Facebook, or TikTok Video"
+                    className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
+                      Boolean(activeVideoEmbed) || activeInlinePanel === "video"
+                        ? "bg-[#1877F2] text-white shadow-xs"
+                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
+                    }`}
+                  >
+                    <Video className="w-4 h-4 stroke-[2.1]" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setActiveInlinePanel((p) =>
                         p === "themes" ? null : "themes"
                       );
                     }}
-                    title="Themes & Video"
+                    title="Category & Topics"
                     className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
                       activeInlinePanel === "themes"
                         ? "bg-[#1877F2] text-white shadow-xs"
@@ -2006,34 +2213,6 @@ export const CreateScamPost: React.FC = () => {
                   <NewsLinkPreviewCards text={description} />
 
                   <NewsPostMedia post={previewPostObj} />
-                </div>
-
-                {/* Theme Tags Selection */}
-                <div className="space-y-2">
-                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">
-                    Feed Personalization Themes
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {FEED_THEMES.map((theme) => {
-                      const active = selectedThemes.includes(theme.id);
-                      return (
-                        <button
-                          key={theme.id}
-                          type="button"
-                          onClick={() => toggleThemeSelection(theme.id)}
-                          className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
-                            active
-                              ? "bg-[#1877F2] text-white"
-                              : "bg-[#F4F5F7] dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                          }`}
-                        >
-                          <span>{theme.emoji}</span>
-                          <span>{theme.label}</span>
-                          {active && <Check className="w-3 h-3 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
               </div>
 

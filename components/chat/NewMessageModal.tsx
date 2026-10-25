@@ -23,73 +23,6 @@ export interface SuggestedContact {
   isOnline?: boolean;
 }
 
-// Default fallback contacts matching the user screenshots
-const DEFAULT_SUGGESTED_USERS: SuggestedContact[] = [
-  {
-    id: 'user_marup',
-    displayName: 'Marup Hasan Shanto',
-    username: 'maruphshanto',
-    photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-    isOnline: true
-  },
-  {
-    id: 'user_shadat',
-    displayName: 'Shadat Ahmed',
-    username: 'shadatahmed',
-    photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-    isOnline: true
-  },
-  {
-    id: 'user_alif',
-    displayName: 'Md Alif',
-    username: 'mdalif',
-    photoURL: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-    isOnline: false
-  },
-  {
-    id: 'user_samiya',
-    displayName: 'Samiya Akter',
-    username: 'samiyaakter',
-    photoURL: '',
-    isOnline: false
-  },
-  {
-    id: 'user_ziaur',
-    displayName: 'Itz Ziaur',
-    username: 'itzziaur',
-    photoURL: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=150&q=80',
-    isOnline: false
-  },
-  {
-    id: 'user_ahsan',
-    displayName: 'Ahsanul Islam Ahsan',
-    username: 'ahsanulislam',
-    photoURL: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=150&q=80',
-    isOnline: true
-  },
-  {
-    id: 'user_rabeya',
-    displayName: 'Rabeya Boshry',
-    username: 'rabeyaboshry',
-    photoURL: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
-    isOnline: false
-  },
-  {
-    id: 'user_riyadh',
-    displayName: 'Abu Saheed Riyadh',
-    username: 'abusaheed',
-    photoURL: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
-    isOnline: true
-  },
-  {
-    id: 'user_siyam',
-    displayName: 'Siyam Ahmed',
-    username: 'siyamahmed',
-    photoURL: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
-    isOnline: false
-  }
-];
-
 interface NewMessageModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -134,8 +67,10 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    // Default exclusively to people the user has chatted with
-    const contacts = (suggestedUsers || []).filter(u => u.id !== currentUser?.uid);
+    // Default exclusively to real people the user has chatted with
+    const contacts = (suggestedUsers || []).filter(
+      u => u.id && u.id !== currentUser?.uid && u.id !== 'system' && !String(u.id).startsWith('demo_')
+    );
     setUsersList(contacts);
   }, [isOpen, currentUser?.uid, suggestedUsers]);
 
@@ -155,8 +90,9 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
         const lowerQ = activeQuery.toLowerCase();
 
         snap.forEach(d => {
-          if (d.id !== currentUser?.uid) {
+          if (d.id !== currentUser?.uid && d.id !== 'system' && !String(d.id).startsWith('demo_')) {
             const data = d.data();
+            if (data.isBanned || data.isDemo) return;
             const name = (data.displayName || data.shopName || data.name || '').toLowerCase();
             const uname = (data.username || data.customLink || '').toLowerCase();
             const email = (data.email || '').toLowerCase();

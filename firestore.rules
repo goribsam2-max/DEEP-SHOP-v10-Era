@@ -139,11 +139,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Stories Collection
+    // Stories Collection (Open to all signed-in users)
     match /stories/{storyId} {
       allow read: if true;
-      allow create: if isAdmin() || isSeller();
-      allow update, delete: if isAdmin() || (isSeller() && resource.data.sellerId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() || (isSignedIn() && (resource.data.sellerId == request.auth.uid || resource.data.userId == request.auth.uid));
     }
 
     // KYC Requests Collection

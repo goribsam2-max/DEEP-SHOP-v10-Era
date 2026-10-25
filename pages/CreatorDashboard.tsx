@@ -41,6 +41,7 @@ import {
   extractConfiguredMobileAccounts,
   formatDhakaDateTime
 } from "../lib/dhakaTime";
+import { subscribeToFollowerStats } from "../lib/follow";
 import creatorAvatarFallback from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 import postImageFallback from "../src/assets/images/feed_showcase_park_1792826817616.jpg";
 
@@ -84,10 +85,12 @@ export const CreatorDashboard: React.FC = () => {
   const [newNagadType, setNewNagadType] = useState<MobileAccountType>("Personal");
   const [isSavingNumbers, setIsSavingNumbers] = useState(false);
 
-  // Content Monetization & Program toggles
-  const [contentMonetizationEnabled, setContentMonetizationEnabled] = useState<boolean>(() => {
-    return localStorage.getItem("creator_content_monetization") !== "false";
-  });
+  // Live synced follower count
+  const [liveFollowersCount, setLiveFollowersCount] = useState<number | null>(null);
+
+  // Content Monetization & Program toggles (defaults strictly to OFF until unlocked at 1K & enabled)
+  const [contentMonetizationEnabled, setContentMonetizationEnabled] = useState<boolean>(false);
+  const [monetizationEnabledAt, setMonetizationEnabledAt] = useState<number>(0);
   const [partnershipAdsEnabled, setPartnershipAdsEnabled] = useState<boolean>(() => {
     return localStorage.getItem("creator_partnership_ads") !== "false";
   });
@@ -124,6 +127,18 @@ export const CreatorDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!authChecked || !currentUser) return;
+    const unsubFollowStats = subscribeToFollowerStats(
+      currentUser.uid,
+      currentUser.uid,
+      (stats) => {
+        setLiveFollowersCount(stats.followersCount);
+      }
+    );
+    return () => unsubFollowStats();
+  }, [authChecked, currentUser]);
+
+  useEffect(() => {
+    if (!authChecked || !currentUser) return;
 
     const loadCreatorData = async () => {
       setLoading(true);
@@ -137,13 +152,33 @@ export const CreatorDashboard: React.FC = () => {
           setBkashAccounts(extracted.bkash);
           setNagadAccounts(extracted.nagad);
 
-          if (typeof data.contentMonetizationEnabled === "boolean") {
-            setContentMonetizationEnabled(data.contentMonetizationEnabled);
-            localStorage.setItem(
-              "creator_content_monetization",
-              String(data.contentMonetizationEnabled)
-            );
+          const docFollowers =
+            Number(data.followersCount || 0) ||
+            (Array.isArray(data.followers) ? data.followers.length : 0);
+          const unlocked = docFollowers >= 1000;
+          const isEnabledInDoc = Boolean(unlocked && data.contentMonetizationEnabled === true);
+          let enabledTs = Number(data.monetizationEnabledAt || 0);
+
+          // If previously enabled in doc without an activation timestamp, stamp now so older posts never retroactively earn
+          if (isEnabledInDoc && enabledTs <= 0) {
+            enabledTs = Date.now();
+            await setDoc(
+              doc(db, "users", currentUser.uid),
+              { monetizationEnabledAt: enabledTs },
+              { merge: true }
+            ).catch(() => {});
           }
+
+          setContentMonetizationEnabled(isEnabledInDoc);
+          setMonetizationEnabledAt(enabledTs);
+          localStorage.setItem(
+            "creator_content_monetization",
+            String(isEnabledInDoc)
+          );
+          if (enabledTs > 0) {
+            localStorage.setItem("creator_monetization_enabled_at", String(enabledTs));
+          }
+
           if (typeof data.partnershipAdsEnabled === "boolean") {
             setPartnershipAdsEnabled(data.partnershipAdsEnabled);
           }
@@ -214,15 +249,15 @@ export const CreatorDashboard: React.FC = () => {
     });
   };
 
-  const followerCount =
+  const storedFollowerCount =
     Number(userData?.followersCount || 0) ||
     (Array.isArray(userData?.followers) ? userData.followers.length : 0);
+  const followerCount =
+    liveFollowersCount !== null
+      ? Math.max(liveFollowersCount, storedFollowerCount)
+      : storedFollowerCount;
   const MONETIZATION_MIN_FOLLOWERS = 1000;
   const isMonetizationUnlocked = followerCount >= MONETIZATION_MIN_FOLLOWERS;
-  const followerUnlockProgress = Math.min(
-    100,
-    Math.round((followerCount / MONETIZATION_MIN_FOLLOWERS) * 100)
-  );
 
   const toggleContentMonetization = async () => {
     triggerHaptic();
@@ -234,12 +269,26 @@ export const CreatorDashboard: React.FC = () => {
       return;
     }
     const nextVal = !contentMonetizationEnabled;
+    const nextEnabledAt = nextVal
+      ? monetizationEnabledAt > 0
+        ? monetizationEnabledAt
+        : Date.now()
+      : monetizationEnabledAt;
+
     setContentMonetizationEnabled(nextVal);
+    if (nextEnabledAt > 0) {
+      setMonetizationEnabledAt(nextEnabledAt);
+      localStorage.setItem("creator_monetization_enabled_at", String(nextEnabledAt));
+    }
     localStorage.setItem("creator_content_monetization", String(nextVal));
-    await persistCreatorSettings({ contentMonetizationEnabled: nextVal });
+
+    await persistCreatorSettings({
+      contentMonetizationEnabled: nextVal,
+      ...(nextVal ? { monetizationEnabledAt: nextEnabledAt } : {}),
+    });
     notify(
       nextVal
-        ? "Content Monetization enabled! Your News Hub posts now earn feed reach & engagement revenue."
+        ? "Content Monetization enabled! New posts published from now on will earn reach & engagement revenue."
         : "Content Monetization paused.",
       "success"
     );
@@ -395,12 +444,10 @@ export const CreatorDashboard: React.FC = () => {
   const earnedStars = Number(userData?.earnedStars || 0);
   const purchasedStars = Number(userData?.purchasedStars || 0);
 
-  const totalViews = posts.reduce((acc, p) => acc + Number(p.views || 0), 0);
-  const totalReactions = posts.reduce((acc, p) => {
+  const sumReactionsForPost = (p: any): number => {
     const rc = p.reactionsCount;
     if (rc && typeof rc === "object") {
       return (
-        acc +
         Number(rc.like || 0) +
         Number(rc.love || 0) +
         Number(rc.haha || 0) +
@@ -409,8 +456,11 @@ export const CreatorDashboard: React.FC = () => {
         Number(rc.angry || 0)
       );
     }
-    return acc + Number(p.likesCount || 0);
-  }, 0);
+    return Number(p.likesCount || p.votes || 0);
+  };
+
+  const totalViews = posts.reduce((acc, p) => acc + Number(p.views || 0), 0);
+  const totalReactions = posts.reduce((acc, p) => acc + sumReactionsForPost(p), 0);
   const totalComments = posts.reduce(
     (acc, p) => acc + Number(p.commentsCount || 0),
     0
@@ -420,14 +470,39 @@ export const CreatorDashboard: React.FC = () => {
       ? (((totalReactions + totalComments) / totalViews) * 100).toFixed(1)
       : "0.0";
 
-  // Content Monetization Revenue Calculation (BDT) — only active once unlocked at 1,000 followers
+  // Content Monetization Revenue Calculation (BDT)
+  // STRICT RULE: Earnings ONLY count from posts published AFTER Content Monetization was turned ON (`monetizationEnabledAt`) after reaching 1K followers.
+  // Any older posts published BEFORE `monetizationEnabledAt` earn ৳0.00.
   const effectiveContentMonetization =
-    isMonetizationUnlocked && contentMonetizationEnabled;
+    isMonetizationUnlocked && contentMonetizationEnabled && monetizationEnabledAt > 0;
+
+  const isPostMonetizationEligible = (p: any): boolean => {
+    if (!effectiveContentMonetization || monetizationEnabledAt <= 0) return false;
+    return Number(p.createdAt || 0) >= monetizationEnabledAt;
+  };
+
+  const eligibleMonetizedPosts = effectiveContentMonetization
+    ? posts.filter((p) => isPostMonetizationEligible(p))
+    : [];
+
+  const monetizedViews = eligibleMonetizedPosts.reduce(
+    (acc, p) => acc + Number(p.views || 0),
+    0
+  );
+  const monetizedReactions = eligibleMonetizedPosts.reduce(
+    (acc, p) => acc + sumReactionsForPost(p),
+    0
+  );
+  const monetizedComments = eligibleMonetizedPosts.reduce(
+    (acc, p) => acc + Number(p.commentsCount || 0),
+    0
+  );
+
   const reachRevenueBDT = effectiveContentMonetization
-    ? (totalViews / 1000) * 50
+    ? (monetizedViews / 1000) * 50
     : 0;
   const engagementBonusBDT = effectiveContentMonetization
-    ? totalReactions * 0.25 + totalComments * 0.5
+    ? monetizedReactions * 0.25 + monetizedComments * 0.5
     : 0;
   const bonusBalanceBDT = Number(userData?.contentEarningsBDT || 0);
   const totalContentRevenueBDT = effectiveContentMonetization
@@ -705,13 +780,22 @@ export const CreatorDashboard: React.FC = () => {
 
                 {isMonetizationUnlocked ? (
                   <>
-                    <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white">
+                    <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white tabular-nums">
                       ৳{totalContentRevenueBDT.toFixed(2)} BDT Estimated Content Revenue
                     </h2>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Earned from {totalViews.toLocaleString()} News Hub post views,{" "}
-                      {totalReactions.toLocaleString()} reactions, plus{" "}
-                      {earnedStars.toLocaleString()} gifted stars (৳{earnedStars}).
+                      {effectiveContentMonetization ? (
+                        <>
+                          Active since {formatDhakaDateTime(monetizationEnabledAt)} · Earned from{" "}
+                          {eligibleMonetizedPosts.length} post-activation posts (
+                          {monetizedViews.toLocaleString()} views,{" "}
+                          {monetizedReactions.toLocaleString()} reactions). Posts published before activation earn ৳0.00.
+                        </>
+                      ) : (
+                        <>
+                          Turn ON Content Monetization to start earning from new posts published after activation. Older posts published before activation do not generate earnings.
+                        </>
+                      )}
                     </p>
                   </>
                 ) : (
@@ -791,14 +875,7 @@ export const CreatorDashboard: React.FC = () => {
                   {posts.slice(0, 6).map((post) => {
                     const imgUrl = post.images?.[0] || postImageFallback;
                     const postViews = Number(post.views || 0);
-                    const reactionsSum = post.reactionsCount
-                      ? Number(post.reactionsCount.like || 0) +
-                        Number(post.reactionsCount.love || 0) +
-                        Number(post.reactionsCount.haha || 0) +
-                        Number(post.reactionsCount.wow || 0) +
-                        Number(post.reactionsCount.sad || 0) +
-                        Number(post.reactionsCount.angry || 0)
-                      : Number(post.likesCount || 0);
+                    const reactionsSum = sumReactionsForPost(post);
                     const pEngRate =
                       postViews > 0
                         ? (
@@ -807,11 +884,14 @@ export const CreatorDashboard: React.FC = () => {
                             100
                           ).toFixed(1)
                         : "0.0";
-                    const postEstBDT = (
-                      (postViews / 1000) * 50 +
-                      reactionsSum * 0.25 +
-                      Number(post.commentsCount || 0) * 0.5
-                    ).toFixed(2);
+                    const eligibleForEarnings = isPostMonetizationEligible(post);
+                    const postEstBDT = eligibleForEarnings
+                      ? (
+                          (postViews / 1000) * 50 +
+                          reactionsSum * 0.25 +
+                          Number(post.commentsCount || 0) * 0.5
+                        ).toFixed(2)
+                      : "0.00";
 
                     return (
                       <div
@@ -824,6 +904,7 @@ export const CreatorDashboard: React.FC = () => {
                             <img
                               src={imgUrl}
                               alt=""
+                              referrerPolicy="no-referrer"
                               className="w-14 h-14 rounded-2xl object-cover border border-zinc-200 dark:border-zinc-800 shrink-0"
                             />
                           ) : (
@@ -839,16 +920,16 @@ export const CreatorDashboard: React.FC = () => {
                               {post.postType === "scam" ? "Scam Report" : "Community Post"} ·{" "}
                               {formatDhakaDateTime(post.createdAt)}
                             </p>
-                            <div className="flex items-center gap-2.5 text-[11px] text-zinc-400 mt-1 whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1">
+                            <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-1 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 tabular-nums">
                                 <Eye className="w-3 h-3" /> {postViews}
                               </span>
                               <span aria-hidden="true">·</span>
-                              <span className="inline-flex items-center gap-1">
+                              <span className="inline-flex items-center gap-1 tabular-nums">
                                 <Heart className="w-3 h-3" /> {reactionsSum}
                               </span>
                               <span aria-hidden="true">·</span>
-                              <span className="inline-flex items-center gap-1">
+                              <span className="inline-flex items-center gap-1 tabular-nums">
                                 <MessageCircle className="w-3 h-3" />{" "}
                                 {post.commentsCount || 0}
                               </span>
@@ -858,11 +939,22 @@ export const CreatorDashboard: React.FC = () => {
 
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-right">
-                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block font-mono whitespace-nowrap">
+                            <span
+                              className={`text-xs font-black block font-mono tabular-nums whitespace-nowrap ${
+                                eligibleForEarnings
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-zinc-400 dark:text-zinc-500"
+                              }`}
+                            >
                               ৳{postEstBDT}
                             </span>
-                            <span className="text-[10px] text-zinc-400 block font-mono whitespace-nowrap">
-                              {pEngRate}% eng.
+                            <span className="text-[10px] text-zinc-400 block whitespace-nowrap">
+                              {eligibleForEarnings
+                                ? `${pEngRate}% · Monetized`
+                                : monetizationEnabledAt > 0 &&
+                                  Number(post.createdAt || 0) < monetizationEnabledAt
+                                ? "Pre-monetization"
+                                : `${pEngRate}% eng.`}
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -949,8 +1041,13 @@ export const CreatorDashboard: React.FC = () => {
                         News Hub Feed & Post Reach Revenue
                       </h2>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        Earn automatic BDT payouts from qualified post views (৳50 RPM / 1K views), community reactions, and verified reports once you reach 1,000 followers.
+                        Unlock at 1,000 followers and switch ON to start earning from new posts published after activation (৳50 RPM / 1K views + reaction & comment bonuses). Posts published before turning monetization ON earn ৳0.00.
                       </p>
+                      {effectiveContentMonetization && monetizationEnabledAt > 0 && (
+                        <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
+                          Activated {formatDhakaDateTime(monetizationEnabledAt)} · {eligibleMonetizedPosts.length} monetized posts · {Math.max(0, posts.length - eligibleMonetizedPosts.length)} pre-activation posts (৳0.00)
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1361,7 +1458,19 @@ export const CreatorDashboard: React.FC = () => {
                     className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-2.5"
                   >
                     <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 whitespace-nowrap">
-                      <span>{p.postType === "scam" ? "Scam Report" : "Community Post"}</span>
+                      <span>
+                        {p.postType === "scam" ? "Scam Report" : "Community Post"} ·{" "}
+                        {isPostMonetizationEligible(p)
+                          ? `Monetized (৳${(
+                              (Number(p.views || 0) / 1000) * 50 +
+                              sumReactionsForPost(p) * 0.25 +
+                              Number(p.commentsCount || 0) * 0.5
+                            ).toFixed(2)})`
+                          : monetizationEnabledAt > 0 &&
+                            Number(p.createdAt || 0) < monetizationEnabledAt
+                          ? "Pre-monetization · ৳0.00"
+                          : "৳0.00"}
+                      </span>
                       <span>
                         {formatDhakaDateTime(p.createdAt)}
                         {p.isEdited ? " · Edited" : ""}

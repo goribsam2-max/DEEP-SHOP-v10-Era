@@ -9,6 +9,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { triggerHaptic } from "../lib/haptics";
+import { isEmbeddableVideoUrl } from "../lib/videoEmbed";
 
 export interface ParsedSegment {
   type: "text" | "hashtag" | "link";
@@ -314,12 +315,18 @@ export const NewsRichText: React.FC<{
 /**
  * Renders stylish rich link preview cards for URLs included in a post
  */
-export const NewsLinkPreviewCards: React.FC<{ text?: string }> = ({ text }) => {
+export const NewsLinkPreviewCards: React.FC<{
+  text?: string;
+  excludeVideoEmbeds?: boolean;
+}> = ({ text, excludeVideoEmbeds = true }) => {
   const navigate = useNavigate();
-  const urls = React.useMemo(
-    () => extractLinksFromText(text).slice(0, 3),
-    [text]
-  );
+  const urls = React.useMemo(() => {
+    const extracted = extractLinksFromText(text);
+    const filtered = excludeVideoEmbeds
+      ? extracted.filter((href) => !isEmbeddableVideoUrl(href))
+      : extracted;
+    return filtered.slice(0, 3);
+  }, [text, excludeVideoEmbeds]);
 
   if (urls.length === 0) return null;
 
