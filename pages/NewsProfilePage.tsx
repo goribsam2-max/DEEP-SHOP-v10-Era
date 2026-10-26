@@ -1454,7 +1454,7 @@ export const NewsProfilePage: React.FC = () => {
           {/* Stats Bar */}
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-zinc-400">
             <span>{formatCompactNumber(followersCount)} followers</span>
-            {isOwnProfile && (
+            {profileUser?.showRecentViews !== false && (
               <>
                 <span>·</span>
                 <span>
@@ -2087,7 +2087,7 @@ export const NewsProfilePage: React.FC = () => {
                   <p className="text-xs font-bold text-slate-500">Joined & Activity</p>
                   <p className="text-sm font-extrabold text-slate-900 dark:text-white">
                     Joined {profileUser?.createdAt ? formatDhakaDateTime(profileUser.createdAt) : "September 2026"}
-                    {isOwnProfile
+                    {profileUser?.showRecentViews !== false
                       ? ` · ${(() => {
                           const totalViews =
                             Number(profileUser?.views || 0) +
