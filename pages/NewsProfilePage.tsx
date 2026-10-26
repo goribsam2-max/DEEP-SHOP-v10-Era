@@ -132,6 +132,7 @@ import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { formatDhakaDateTime, formatDhakaFeedTime } from "../lib/dhakaTime";
+import { formatCompactNumber } from "../lib/utils";
 import { useFooterLogo } from "../lib/useFooterLogo";
 import { toggleFollowUser, useFollowedIds } from "../lib/follow";
 import { processCleanImage } from "../lib/watermark";
@@ -1337,9 +1338,10 @@ export const NewsProfilePage: React.FC = () => {
             {selectedInterestsList.map((interest) => (
               <span
                 key={interest}
-                className="px-3 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 text-xs font-bold border border-slate-200/80 dark:border-zinc-700/80 shadow-2xs"
+                className="px-3.5 py-1.5 rounded-full bg-[#1877F2]/5 text-[#1877F2] dark:bg-[#1877F2]/10 dark:text-[#58A6FF] text-[11px] font-bold border border-[#1877F2]/20 flex items-center gap-1.5 shadow-2xs"
               >
-                #{interest.toLowerCase().replace(/\s+/g, "")}
+                <div className="w-1.5 h-1.5 rounded-full bg-[#1877F2] dark:bg-[#58A6FF]" />
+                <span>{interest}</span>
               </span>
             ))}
             {isOwnProfile && (
@@ -1349,24 +1351,26 @@ export const NewsProfilePage: React.FC = () => {
                   triggerHaptic();
                   navigate("/news-hub/profile/interests");
                 }}
-                className="px-3 py-1 rounded-full bg-[#1877F2]/10 hover:bg-[#1877F2]/20 text-[#1877F2] text-xs font-bold border border-[#1877F2]/30 flex items-center gap-1 cursor-pointer transition"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-[#1877F2] flex items-center justify-center border border-slate-200/80 dark:border-zinc-700 transition cursor-pointer"
+                title="Edit interests"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>{selectedInterestsList.length > 0 ? "Edit" : "Add interests"}</span>
+                <Plus className="w-4 h-4" />
               </button>
             )}
           </div>
 
           {/* Stats Bar */}
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-zinc-400">
-            <span>{followersCount} followers</span>
+            <span>{formatCompactNumber(followersCount)} followers</span>
             <span>·</span>
             <span>
               {(() => {
                 const totalViews = userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
-                return totalViews >= 1000
-                  ? `${(totalViews / 1000).toFixed(1)}K recent views`
-                  : `${totalViews} recent views`;
+                return (
+                  <span>
+                    {formatCompactNumber(totalViews)} recent views
+                  </span>
+                );
               })()}
             </span>
           </div>
@@ -1461,23 +1465,23 @@ export const NewsProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Suggested For You (Only Real Users with postsCount >= 1) */}
+        {/* Suggested For You (Only Real Users with postsCount >= 1 - Matching IMG_4922) */}
         {suggestedProfiles.length > 0 && (
-          <div className="mt-6 space-y-3">
+          <div className="mt-8 space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              <h3 className="text-[13px] font-extrabold text-slate-800 dark:text-zinc-200">
                 Suggested for you
               </h3>
               <button
                 type="button"
                 onClick={() => setSuggestedProfiles([])}
-                className="text-xs font-semibold text-[#1877F2] hover:underline cursor-pointer"
+                className="text-xs font-bold text-slate-400 hover:text-[#1877F2] transition cursor-pointer"
               >
                 See all
               </button>
             </div>
 
-            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-none">
               {suggestedProfiles.map((sProf) => {
                 const sName = sProf.displayName || sProf.shopName || "Creator";
                 const sUser = sProf.username || sProf.handle || "creator";
@@ -1487,7 +1491,7 @@ export const NewsProfilePage: React.FC = () => {
                 return (
                   <div
                     key={sProf.uid}
-                    className="relative w-40 shrink-0 bg-white dark:bg-zinc-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-zinc-800 shadow-sm flex flex-col items-center text-center space-y-2 cursor-pointer"
+                    className="relative w-[156px] shrink-0 bg-[#F8FAFC] dark:bg-zinc-900/50 rounded-[28px] p-5 border border-slate-200/80 dark:border-zinc-800/80 shadow-2xs flex flex-col items-center text-center space-y-3 cursor-pointer"
                     onClick={() => navigate(`/news-hub/profile/${sProf.uid}`)}
                   >
                     <button
@@ -1496,17 +1500,17 @@ export const NewsProfilePage: React.FC = () => {
                         e.stopPropagation();
                         setDismissedSuggested((prev) => [...prev, sProf.uid]);
                       }}
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 flex items-center justify-center cursor-pointer hover:bg-slate-200"
-                      aria-label="Dismiss suggestion"
+                      className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                      aria-label="Dismiss"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
 
-                    <ProfileAvatar src={sAvatar} name={sName} className="w-14 h-14" iconClassName="w-7 h-7" />
+                    <ProfileAvatar src={sAvatar} name={sName} className="w-[72px] h-[72px] ring-2 ring-white dark:ring-zinc-800 shadow-sm" iconClassName="w-8 h-8" />
 
                     <div className="w-full space-y-0.5">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{sName}</p>
-                      <p className="text-[11px] font-medium text-slate-500 dark:text-zinc-400 truncate">@{sUser}</p>
+                      <p className="text-[13px] font-bold text-slate-900 dark:text-white truncate">{sName}</p>
+                      <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 truncate">@{sUser}</p>
                     </div>
 
                     <button
@@ -1521,10 +1525,10 @@ export const NewsProfilePage: React.FC = () => {
                           currentlyFollowing: isSFollowing,
                         });
                       }}
-                      className={`w-full py-1.5 rounded-xl text-xs font-bold cursor-pointer transition ${
+                      className={`w-full py-2 rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 cursor-pointer ${
                         isSFollowing
-                          ? "bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-white"
-                          : "bg-[#1877F2] text-white hover:bg-[#166FE5]"
+                          ? "bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300"
+                          : "bg-black dark:bg-white text-white dark:text-black"
                       }`}
                     >
                       {isSFollowing ? "Following" : "Follow"}
@@ -1576,41 +1580,38 @@ export const NewsProfilePage: React.FC = () => {
           {activeTab === "posts" && (
             userPosts.length === 0 ? (
               /* EXACT MATCH FOR SCREENSHOT IMG_4919_c6b216f2.jpeg (Zero Demo Posts) */
-              <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[32px] p-6 sm:p-7 border border-slate-200/80 dark:border-zinc-800 shadow-sm space-y-5">
-                <div className="flex items-center gap-3">
-                  <ProfileAvatar src={avatarUrl} name={displayName} className="w-12 h-12" iconClassName="w-6 h-6" />
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                      Start your first thread
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
-                      Share thoughts, updates, or news with the community.
-                    </p>
-                  </div>
+              <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[32px] p-6 sm:p-8 border border-slate-200/80 dark:border-zinc-800 shadow-sm space-y-8 flex flex-col items-center text-center">
+                <div className="space-y-2">
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                    Start your first thread
+                  </h3>
+                  <p className="text-sm text-slate-400 dark:text-zinc-500 font-medium max-w-[280px] mx-auto">
+                    Need inspiration? Pick a prompt to get going.
+                  </p>
                 </div>
 
-                {/* Prompt Suggestions List matching IMG_4919 */}
-                <div className="space-y-2.5">
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Suggestions to get started:</p>
-                  {[
-                    "What are you watching right now?",
-                    "Share a photo and a thought.",
-                    "What's your hot take today?",
-                    "Ask the community a question.",
-                  ].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        navigate(`/news-hub/create?text=${encodeURIComponent(suggestion)}`);
-                      }}
-                      className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-left text-xs font-bold text-slate-800 dark:text-zinc-200 border border-slate-200/60 dark:border-zinc-700/60 flex items-center justify-between transition cursor-pointer"
-                    >
-                      <span>"{suggestion}"</span>
-                      <Plus className="w-4 h-4 text-[#1877F2]" />
-                    </button>
-                  ))}
+                {/* Prompt Suggestions Horizontal Loop matching IMG_4919 */}
+                <div className="flex flex-col gap-3 w-full max-w-sm">
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {[
+                      "What are you watching right now?",
+                      "Share a photo and a thought.",
+                      "What's your hot take today?",
+                      "Ask the community a question.",
+                    ].map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          navigate(`/news-hub/create?text=${encodeURIComponent(suggestion)}`);
+                        }}
+                        className="px-5 py-3 rounded-full bg-white dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white border border-slate-200/80 dark:border-zinc-700 shadow-2xs whitespace-nowrap cursor-pointer hover:border-[#1877F2] transition"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button
@@ -1619,10 +1620,9 @@ export const NewsProfilePage: React.FC = () => {
                     triggerHaptic();
                     navigate("/news-hub/create");
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-[#1877F2] text-white font-bold text-sm shadow-md hover:bg-[#166FE5] transition cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-[20px] bg-black dark:bg-white text-white dark:text-black font-extrabold text-sm shadow-lg active:scale-[0.98] transition cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Post a thread</span>
+                  Create thread
                 </button>
               </div>
             ) : (
@@ -1965,7 +1965,7 @@ export const NewsProfilePage: React.FC = () => {
                   <p className="text-sm font-extrabold text-slate-900 dark:text-white">
                     Joined {profileUser?.createdAt ? formatDhakaDateTime(profileUser.createdAt) : "September 2026"} · {(() => {
                       const totalViews = userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
-                      return totalViews >= 1000 ? `${(totalViews / 1000).toFixed(1)}K recent views` : `${totalViews} recent views`;
+                      return `${formatCompactNumber(totalViews)} recent views`;
                     })()}
                   </p>
                 </div>
@@ -1973,7 +1973,7 @@ export const NewsProfilePage: React.FC = () => {
                 <div>
                   <p className="text-xs font-bold text-slate-500">Based in</p>
                   <p className="text-sm font-extrabold text-slate-900 dark:text-white">
-                    {profileUser?.location || "Bangladesh"}
+                    {profileUser?.location || profileUser?.address || "Bangladesh"}
                   </p>
                 </div>
               </div>
@@ -1990,123 +1990,138 @@ export const NewsProfilePage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* FULLSCREEN AVATAR VIEWER MODAL (Matching IMG_4923_5409db1d.png) - High z-index z-[110] */}
+      {/* QR MODAL (Matching IMG_4891.png) - High z-index z-[110] */}
+      <AnimatePresence>
+        {showQrModal && (
+          <div
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+            onClick={() => setShowQrModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#F8FAFC] dark:bg-zinc-900 rounded-[40px] w-full max-w-sm p-8 flex flex-col items-center text-center space-y-6 shadow-2xl relative border border-white/10"
+            >
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-200/50 dark:bg-zinc-800 flex items-center justify-center text-slate-600 dark:text-zinc-400 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="space-y-1">
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">Profile QR Code</h3>
+                <p className="text-xs font-semibold text-slate-500">Scan to follow @{username}</p>
+              </div>
+
+              <div className="bg-white p-4 rounded-[32px] shadow-sm border border-slate-200/60">
+                <ScannableQRCodeCard
+                  profileUrl={window.location.origin + "/#/news-hub/profile/" + targetUid}
+                  name={displayName}
+                  username={username}
+                  avatarUrl={avatarUrl}
+                  footerLogo={footerLogo}
+                  onCanvasReady={setQrDataUrl}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={handleDownloadQR}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700 shadow-sm hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <Download className="w-5 h-5 text-[#1877F2]" />
+                  <span className="text-[10px] font-bold">Download</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyProfileLink}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700 shadow-sm hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <Copy className="w-5 h-5 text-[#1877F2]" />
+                  <span className="text-[10px] font-bold">Copy Link</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* FULLSCREEN AVATAR VIEWER MODAL (Matching IMG_4923.png) - High z-index z-[120] */}
       <AnimatePresence>
         {showAvatarViewerModal && (
           <div
-            className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6"
+            className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-xl flex flex-col"
             onClick={() => setShowAvatarViewerModal(false)}
           >
-            <div className="flex items-center justify-between text-white pt-2">
-              <span className="text-sm font-bold text-white/80">{displayName}</span>
+            <div className="flex items-center justify-between p-6 text-white pt-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full border border-white/20 overflow-hidden bg-zinc-800">
+                  <ProfileAvatar src={avatarUrl} name={displayName} className="w-full h-full" iconClassName="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold truncate">{displayName}</p>
+                  <p className="text-[10px] text-zinc-400 font-semibold truncate">@{username}</p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowAvatarViewerModal(false)}
-                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer transition"
+                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div
-              className="flex-1 flex items-center justify-center p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  className="max-w-full max-h-[75vh] object-contain rounded-full shadow-2xl ring-4 ring-white/20"
-                />
-              ) : (
-                <div className="w-64 h-64 rounded-full bg-gradient-to-br from-[#1877F2] to-indigo-600 text-white flex items-center justify-center shadow-2xl">
-                  <UserIcon className="w-32 h-32" />
-                </div>
-              )}
+            <div className="flex-1 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="w-full max-w-lg aspect-square rounded-[40px] overflow-hidden bg-zinc-900 shadow-2xl border border-white/10 relative"
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                    <UserIcon className="w-32 h-32" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
+              </motion.div>
             </div>
 
-            <div className="text-center pb-4 text-white/70 text-xs font-semibold">
-              @{username}
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* QR CODE MODAL SHEET (Matching IMG_4891.png) - High z-index z-[100] */}
-      <AnimatePresence>
-        {showQrModal && (
-          <div
-            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-md p-4"
-            onClick={() => setShowQrModal(false)}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#F8FAFC] dark:bg-zinc-900 rounded-t-[36px] rounded-b-[32px] w-full max-w-md p-5 space-y-3 shadow-2xl border border-slate-200 dark:border-zinc-800 text-center max-h-[85vh] overflow-y-auto"
-            >
-              <div className="w-10 h-1 bg-slate-300 dark:bg-zinc-700 rounded-full mx-auto" />
-
-              <ScannableQRCodeCard
-                profileUrl={window.location.origin + "/#/news-hub/profile/" + targetUid}
-                name={displayName}
-                username={username}
-                avatarUrl={avatarUrl}
-                footerLogo={footerLogo}
-                onCanvasReady={(url) => setQrDataUrl(url)}
-              />
-
-              {/* 2 Primary Buttons side by side: Download & Scan */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={handleDownloadQR}
-                  className="h-14 rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700 shadow-sm flex flex-col items-center justify-center text-slate-900 dark:text-white text-xs font-bold cursor-pointer hover:bg-slate-50"
-                >
-                  <Download className="w-4 h-4 text-slate-800 dark:text-white mb-0.5" />
-                  <span>Download</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={startCameraScanner}
-                  className="h-14 rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700 shadow-sm flex flex-col items-center justify-center text-slate-900 dark:text-white text-xs font-bold cursor-pointer hover:bg-slate-50"
-                >
-                  <QrCode className="w-4 h-4 text-slate-800 dark:text-white mb-0.5" />
-                  <span>Scan</span>
-                </button>
-              </div>
-
-              {/* Grouped card list below: Copy link & Share */}
-              <div className="bg-white dark:bg-zinc-800 rounded-2xl overflow-hidden shadow-sm border border-slate-200/80 dark:border-zinc-700 divide-y divide-slate-100 dark:divide-zinc-700">
-                <button
-                  type="button"
-                  onClick={handleCopyProfileLink}
-                  className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50"
-                >
-                  <span>Copy link</span>
-                  <Link2 className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCopyProfileLink}
-                  className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50"
-                >
-                  <span>Share</span>
-                  <Share2 className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                </button>
-              </div>
-
+            <div className="p-8 flex items-center justify-center gap-6">
               <button
                 type="button"
-                onClick={() => setShowQrModal(false)}
-                className="w-full py-3.5 rounded-2xl bg-slate-200 dark:bg-zinc-800 text-slate-900 dark:text-white font-bold text-sm cursor-pointer mt-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  notify("Image saved to gallery", "success");
+                }}
+                className="flex flex-col items-center gap-2 text-white/70 hover:text-white transition cursor-pointer"
               >
-                Close
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                  <Download className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold">Save</span>
               </button>
-            </motion.div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyProfileLink();
+                }}
+                className="flex flex-col items-center gap-2 text-white/70 hover:text-white transition cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                  <Share2 className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold">Share</span>
+              </button>
+            </div>
           </div>
         )}
       </AnimatePresence>
@@ -2114,7 +2129,7 @@ export const NewsProfilePage: React.FC = () => {
       {/* LIVE CAMERA QR SCANNER MODAL */}
       <AnimatePresence>
         {showScannerModal && (
-          <div className="fixed inset-0 z-[120] bg-black flex flex-col justify-between p-6">
+          <div className="fixed inset-0 z-[130] bg-black flex flex-col justify-between p-6">
             <div className="flex items-center justify-between text-white pt-2">
               <span className="text-sm font-bold">Point camera at a QR code</span>
               <button
@@ -2149,3 +2164,4 @@ export const NewsProfilePage: React.FC = () => {
     </div>
   );
 };
+

@@ -262,8 +262,15 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             type="button"
             onClick={() => {
               onClose();
-              if (otherUser.id || otherUser.uid) {
-                navigate(`/store/${otherUser.id || otherUser.uid}`);
+              const targetId = otherUser.id || otherUser.uid || otherUid;
+              if (targetId) {
+                // Determine destination: Seller Store or News Hub Feed Profile
+                const isSeller = realUserData?.role === 'seller';
+                if (isSeller) {
+                  navigate(`/store/${targetId}`);
+                } else {
+                  navigate(`/news-hub/profile/${targetId}`);
+                }
               }
             }}
             className="flex flex-col items-center justify-center group active:scale-95 transition cursor-pointer"

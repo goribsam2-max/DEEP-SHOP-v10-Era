@@ -433,11 +433,20 @@ const StoreProfile: React.FC = () => {
             
             <div className="relative z-10 flex justify-between items-start mb-2 gap-2">
                <h1 className="text-[20px] font-bold text-zinc-800 dark:text-zinc-100 truncate">{seller.shopName || seller.displayName}</h1>
-               {user?.uid !== seller.id && (
-                 <button onClick={handleFollowToggle} className={`${isFollowing ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'bg-[#8B5CF6] text-white'} px-5 py-1.5 rounded-full text-sm font-semibold shrink-0 cursor-pointer transition active:scale-95`}>
-                   {isFollowing ? 'Following' : 'Follow'}
+               <div className="flex flex-col items-end gap-2">
+                 {user?.uid !== seller.id && (
+                   <button onClick={handleFollowToggle} className={`${isFollowing ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'bg-[#8B5CF6] text-white'} px-5 py-1.5 rounded-full text-sm font-semibold shrink-0 cursor-pointer transition active:scale-95`}>
+                     {isFollowing ? 'Following' : 'Follow'}
+                   </button>
+                 )}
+                 <button 
+                   onClick={() => navigate(`/news-hub/profile/${seller.id}`)}
+                   className="text-[10px] font-bold text-[#8B5CF6] dark:text-[#A78BFA] hover:underline flex items-center gap-1 cursor-pointer"
+                 >
+                   <Icon name="globe" className="w-3 h-3" />
+                   Check Feed Profile
                  </button>
-               )}
+               </div>
             </div>
             
             <div className="relative z-10">

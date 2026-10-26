@@ -73,6 +73,7 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     location.pathname.startsWith('/buy-stars') ||
     location.pathname.startsWith('/gift-stars') ||
     location.pathname.startsWith('/sponsor') ||
+    location.pathname.startsWith('/store') ||
     isPageLoading;
 
   return (

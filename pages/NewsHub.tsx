@@ -22,7 +22,7 @@ import {
   Search,
   Edit3,
   Trash2,
-  Eye,
+  Eye as EyeIcon,
   UserPlus,
   UserCheck,
   X,
@@ -81,6 +81,7 @@ import {
 import { toggleFollowUser, useFollowedIds } from "../lib/follow";
 import { IosSpinner } from "../components/ui/ios-spinner";
 import { useFooterLogo } from "../lib/useFooterLogo";
+import { formatCompactNumber } from "../lib/utils";
 import {
   rankFeedPostsSmart,
   recordPostImpression,
@@ -106,12 +107,7 @@ const REACTION_ITEMS: { type: ReactionType; emoji: string; label: string }[] = [
 ];
 
 const formatCompactCount = (n: number): string => {
-  if (!n || n <= 0) return "0";
-  if (n >= 1000) {
-    const val = (n / 1000).toFixed(1);
-    return `${val.endsWith(".0") ? val.slice(0, -2) : val}K`;
-  }
-  return String(n);
+  return formatCompactNumber(n);
 };
 
 const formatFeedTimestamp = (ts: number): string => {
@@ -175,6 +171,7 @@ export const NewsHub: React.FC = () => {
   );
   const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [authInitializing, setAuthInitializing] = useState(true);
   const [isStaffDoc, setIsStaffDoc] = useState(false);
   const [firestorePosts, setFirestorePosts] = useState<ScamPost[]>([]);
   const [communityUsers, setCommunityUsers] = useState<Record<string, any>[]>([]);
@@ -218,6 +215,7 @@ export const NewsHub: React.FC = () => {
     let unsubUserDoc: (() => void) | null = null;
     const unsub = auth.onAuthStateChanged((u) => {
       setCurrentUser(u);
+      setAuthInitializing(false);
       if (unsubUserDoc) {
         unsubUserDoc();
         unsubUserDoc = null;
@@ -241,6 +239,15 @@ export const NewsHub: React.FC = () => {
       if (unsubUserDoc) unsubUserDoc();
     };
   }, []);
+
+  // Auth Protection: Wait until auth initialization completes before any redirect!
+  useEffect(() => {
+    if (authInitializing) return;
+    if (!currentUser && location.pathname.includes("/profile")) {
+      notify("Please sign in to access profile", "info");
+      navigate("/signin");
+    }
+  }, [authInitializing, currentUser, navigate, notify, location.pathname]);
 
   useEffect(() => {
     if (!openMenuPostId) return;
@@ -697,6 +704,29 @@ export const NewsHub: React.FC = () => {
         reactions: updatedReactionsMap,
         reactionsCount: baseCounts,
       });
+
+      if (!isRemoving && post.reporterId && post.reporterId !== uid) {
+        const authorName = userProfile?.displayName || currentUser?.displayName || "Someone";
+        const authorAvatar = userProfile?.photoURL || currentUser?.photoURL || "";
+        const authorUsername = userProfile?.username || userProfile?.handle || (currentUser?.email ? currentUser.email.split("@")[0] : "user");
+
+        addDoc(collection(db, "news_hub_notifications"), {
+          userId: post.reporterId,
+          fromUserId: uid,
+          fromUserName: authorName,
+          fromUserUsername: authorUsername,
+          fromUserAvatar: authorAvatar,
+          type: "like",
+          title: "New Reaction",
+          body: `reacted to your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
+          mediaThumbnail: post.images?.[0] || "",
+          targetId: post.id,
+          isRead: false,
+          read: false,
+          createdAt: Date.now(),
+          link: `/news-hub/post/${post.id}`,
+        }).catch(() => {});
+      }
     } catch {}
   };
 
@@ -1013,33 +1043,47 @@ export const NewsHub: React.FC = () => {
                 </span>
               </button>
 
-              {/* Real Community Stories from Firestore */}
-              {stories.map((st) => (
+              {/* Real Community Stories grouped by User */}
+              {Array.from(
+                stories.reduce((acc, st) => {
+                  const uid = st.userId;
+                  if (!acc.has(uid)) {
+                    acc.set(uid, {
+                      ...st,
+                      storyIds: [st.id],
+                    });
+                  } else {
+                    acc.get(uid).storyIds.push(st.id);
+                  }
+                  return acc;
+                }, new Map()).values()
+              ).map((group: any) => (
                 <button
-                  key={st.id}
+                  key={group.userId}
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    navigate(`/news-hub/story/${st.id}`);
+                    // Navigate to first story in group
+                    navigate(`/news-hub/story/${group.id}`);
                   }}
                   className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
                 >
                   <div
                     className={`w-[68px] h-[68px] rounded-full p-[2.5px] shadow-[0_4px_12px_rgba(15,23,42,0.08)] ${
-                      st.isCloseFriends
+                      group.isCloseFriends
                         ? "bg-gradient-to-tr from-green-500 to-emerald-400"
                         : "bg-gradient-to-tr from-[#1877F2] to-[#38BDF8]"
                     }`}
                   >
                     <img
-                      src={st.avatar}
-                      alt={st.name}
+                      src={group.avatar}
+                      alt={group.name}
                       referrerPolicy="no-referrer"
                       className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
                     />
                   </div>
                   <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[68px] truncate">
-                    {st.name}
+                    {group.name}
                   </span>
                 </button>
               ))}
@@ -1487,7 +1531,7 @@ export const NewsHub: React.FC = () => {
                                     }}
                                     className="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2 text-left cursor-pointer"
                                   >
-                                    <Eye className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                    <EyeIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                                     <span>View Post</span>
                                   </button>
 
@@ -1754,14 +1798,14 @@ export const NewsHub: React.FC = () => {
                                   notify(isR ? "Repost removed" : "Post reposted to your feed!", "success");
                                 } catch {}
                               }}
-                              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full flex items-center gap-1 text-xs font-semibold tabular-nums transition active:scale-95 cursor-pointer shrink-0 ${
+                              className={`h-8 sm:h-9 px-1.5 sm:px-2.5 rounded-full flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-semibold tabular-nums transition active:scale-95 cursor-pointer shrink-0 ${
                                 post.repostedByUserIds?.includes(currentUser?.uid)
                                   ? "bg-blue-50 dark:bg-blue-950/40 text-[#1877F2]"
                                   : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
                               }`}
                               title="Repost"
                             >
-                              <RepeatIcon className="w-3.5 h-3.5" />
+                              <RepeatIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                               <span>{formatCompactCount(post.repostsCount || 0)}</span>
                             </button>
 
@@ -1778,7 +1822,7 @@ export const NewsHub: React.FC = () => {
                               title={saved ? "Saved" : "Save post"}
                             >
                               <Bookmark
-                                className={`w-3.5 h-3.5 ${
+                                className={`w-3 sm:w-3.5 h-3 sm:h-3.5 ${
                                   saved ? "fill-current" : "stroke-[2]"
                                 }`}
                               />

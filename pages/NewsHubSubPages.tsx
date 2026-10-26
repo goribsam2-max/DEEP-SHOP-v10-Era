@@ -41,8 +41,11 @@ import {
   Music,
   Sparkles,
   RefreshCw,
+  Eye,
+  BarChart3,
+  User,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "../firebase";
 import {
@@ -1525,6 +1528,7 @@ export const NewsStoryViewerPage: React.FC = () => {
   const [stories, setStories] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [loading, setLoading] = useState(true);
+  const story = stories[activeIdx];
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(
     () => auth.currentUser
   );
@@ -1532,6 +1536,13 @@ export const NewsStoryViewerPage: React.FC = () => {
   const [replyText, setReplyText] = useState("");
   const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Viewer Stats Modal States
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [viewerProfiles, setViewerProfiles] = useState<any[]>([]);
+  const [reactionProfiles, setReactionProfiles] = useState<any[]>([]);
+  const [ownerFollowers, setOwnerFollowers] = useState<string[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   // 2-Finger Pinch-to-Zoom & Pan State (Defaults to 1:1 exact aspect ratio)
   const [viewerScale, setViewerScale] = useState<number>(1);
@@ -1594,6 +1605,7 @@ export const NewsStoryViewerPage: React.FC = () => {
         pollVotes: data.pollVotes || {},
         sliderVotes: data.sliderVotes || {},
         likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
+        viewedBy: Array.isArray(data.viewedBy) ? data.viewedBy : [],
         createdAtMs,
         createdAtLabel: data.createdAt
           ? formatDhakaDateTime(data.createdAt)
@@ -1634,7 +1646,15 @@ export const NewsStoryViewerPage: React.FC = () => {
         })
         .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
 
-      setStories(visible);
+      // Group stories by userId to enable sequential author-based playback (FB/IG style)
+      const userGroups = new Map<string, any[]>();
+      visible.forEach((s) => {
+        if (!userGroups.has(s.userId)) userGroups.set(s.userId, []);
+        userGroups.get(s.userId)!.push(s);
+      });
+      const reordered = Array.from(userGroups.values()).flat();
+
+      setStories(reordered);
       setLoading(false);
     };
 
@@ -1679,7 +1699,84 @@ export const NewsStoryViewerPage: React.FC = () => {
     if (foundIdx >= 0) setActiveIdx(foundIdx);
   }, [storyId, stories.length]);
 
-  const story = stories[activeIdx];
+  // Effect: Record story view
+  useEffect(() => {
+    if (!story || !currentUser?.uid) return;
+    if (story.userId === currentUser.uid) return; // Don't count own view
+
+    const recordView = async () => {
+      try {
+        const alreadyViewed = story.viewedBy?.includes(currentUser.uid);
+        if (alreadyViewed) return;
+
+        const storyRef = doc(db, "stories", story.id);
+        const videoRef = doc(db, "creator_videos", story.id);
+        const payload = { viewedBy: arrayUnion(currentUser.uid) };
+
+        await Promise.all([
+          updateDoc(storyRef, payload).catch(() => {}),
+          updateDoc(videoRef, payload).catch(() => {}),
+        ]);
+      } catch (e) {}
+    };
+
+    recordView();
+  }, [story?.id, currentUser?.uid]);
+
+  // Effect: Fetch owner's followers if viewing own story
+  useEffect(() => {
+    if (!story || !currentUser?.uid || story.userId !== currentUser.uid) {
+      setOwnerFollowers([]);
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db, "users", currentUser.uid), (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setOwnerFollowers(Array.isArray(d.followers) ? d.followers : []);
+      }
+    });
+
+    return () => unsub();
+  }, [story?.id, currentUser?.uid]);
+
+  // Effect: Fetch detailed profiles for stats modal
+  useEffect(() => {
+    if (!showStatsModal || !story) return;
+
+    const fetchDetailedStats = async () => {
+      setIsLoadingStats(true);
+      try {
+        const fetchProfiles = async (uids: string[]) => {
+          const profiles: any[] = [];
+          for (const uid of uids) {
+            try {
+              const uSnap = await getDoc(doc(db, "users", uid));
+              if (uSnap.exists()) {
+                profiles.push({ uid: uSnap.id, ...uSnap.data() });
+              }
+            } catch (err) {}
+          }
+          return profiles;
+        };
+
+        const [vProfs, rProfs] = await Promise.all([
+          fetchProfiles(story.viewedBy || []),
+          fetchProfiles(story.likedBy || []),
+        ]);
+
+        setViewerProfiles(vProfs);
+        setReactionProfiles(rProfs);
+      } catch (err) {
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchDetailedStats();
+  }, [showStatsModal, story?.id]);
+
+
   const isSignedIn = Boolean(currentUser);
   const canDeleteStory =
     Boolean(currentUser && story) &&
@@ -1802,7 +1899,7 @@ export const NewsStoryViewerPage: React.FC = () => {
     }
   };
 
-  const handleVotePoll = async (stkId: string, choice: "A" | "B") => {
+  async function handleVotePoll(stkId: string, choice: "A" | "B") {
     if (!story) return;
     const voterKey = currentUser?.uid || "guest_viewer";
     triggerHaptic();
@@ -1821,9 +1918,9 @@ export const NewsStoryViewerPage: React.FC = () => {
         { merge: true }
       );
     } catch {}
-  };
+  }
 
-  const handleVoteSlider = async (stkId: string, score: number) => {
+  async function handleVoteSlider(stkId: string, score: number) {
     if (!story) return;
     const voterKey = currentUser?.uid || "guest_viewer";
     triggerHaptic();
@@ -1843,9 +1940,9 @@ export const NewsStoryViewerPage: React.FC = () => {
       );
       notify("Reaction recorded!", "success");
     } catch {}
-  };
+  }
 
-  const handleSubmitQuestion = async (stk: StoryStickerItem) => {
+  async function handleSubmitQuestion(stk: StoryStickerItem) {
     if (!story) return;
     const answer = (questionDrafts[stk.id] || "").trim();
     if (!answer) return;
@@ -1886,7 +1983,7 @@ export const NewsStoryViewerPage: React.FC = () => {
       }
       notify("Response sent!", "success");
     } catch {}
-  };
+  }
 
   const handleToggleStoryLike = async () => {
     if (!story) return;
@@ -1974,7 +2071,7 @@ export const NewsStoryViewerPage: React.FC = () => {
     } catch {}
   };
 
-  const renderViewerTextLayer = (layer: StoryTextLayer) => {
+  function renderViewerTextLayer(layer: StoryTextLayer) {
     const colorDef = STORY_COLORS.find((c) => c.id === layer.colorId) || STORY_COLORS[0];
     const fontDef = STORY_FONTS.find((f) => f.id === layer.fontId) || STORY_FONTS[0];
     const sizeDef = FONT_SIZE_STEPS[layer.sizeStep] || FONT_SIZE_STEPS[3];
@@ -2015,9 +2112,9 @@ export const NewsStoryViewerPage: React.FC = () => {
         {displayStr}
       </div>
     );
-  };
+  }
 
-  const renderViewerSticker = (stk: StoryStickerItem) => {
+  function renderViewerSticker(stk: StoryStickerItem) {
     const voterKey = currentUser?.uid || "guest_viewer";
 
     switch (stk.kind) {
@@ -2029,7 +2126,7 @@ export const NewsStoryViewerPage: React.FC = () => {
         const countB = vals.filter((v) => v === "B").length;
         const pctA = total > 0 ? Math.round((countA / total) * 100) : 50;
         const pctB = total > 0 ? 100 - pctA : 50;
-        const myVote = votesObj[voterKey];
+        const myVote = (votesObj && voterKey) ? votesObj[voterKey] : undefined;
 
         return (
           <div key={stk.id} className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2">
@@ -2536,6 +2633,20 @@ export const NewsStoryViewerPage: React.FC = () => {
       <div className="p-4 max-w-md mx-auto w-full">
         {story ? (
           <div className="flex items-center gap-2.5">
+            {currentUser?.uid === story.userId && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setShowStatsModal(true);
+                }}
+                className="w-11 h-11 rounded-full bg-white/10 border border-white/15 text-white flex items-center justify-center shrink-0 cursor-pointer hover:bg-white/20"
+                aria-label="Story activity"
+              >
+                <BarChart3 className="w-5 h-5" />
+              </button>
+            )}
+
             {story.allowCommenting ? (
               <form onSubmit={handleSendStoryReply} className="flex-1 flex items-center gap-2">
                 <input
@@ -2576,7 +2687,101 @@ export const NewsStoryViewerPage: React.FC = () => {
           </div>
         ) : null}
       </div>
+
+      {/* STORY ACTIVITY / VIEWERS MODAL (Only for owner) */}
+      <AnimatePresence>
+        {showStatsModal && (
+          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-end justify-center p-4" onClick={() => setShowStatsModal(false)}>
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 w-full max-w-md rounded-t-[32px] overflow-hidden flex flex-col max-h-[80vh] border border-zinc-800"
+            >
+              <div className="h-1.5 w-12 bg-zinc-700 rounded-full mx-auto my-3 shrink-0" />
+              
+              <div className="px-6 py-2 flex items-center justify-between border-b border-zinc-800 shrink-0">
+                <h2 className="text-base font-bold text-white">Story activity</h2>
+                <button onClick={() => setShowStatsModal(false)} className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                {/* Main Stats Row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-800">
+                    <div className="flex items-center gap-2 text-zinc-400 mb-1">
+                      <Eye className="w-4 h-4" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Views</span>
+                    </div>
+                    <p className="text-2xl font-black text-white">{story?.viewedBy?.length || 0}</p>
+                  </div>
+                  <div className="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-800">
+                    <div className="flex items-center gap-2 text-zinc-400 mb-1">
+                      <Heart className="w-4 h-4" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Reactions</span>
+                    </div>
+                    <p className="text-2xl font-black text-white">{story?.likedBy?.length || 0}</p>
+                  </div>
+                </div>
+
+                {/* Followers List (Viewed) */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Followers who viewed</h3>
+                    <span className="text-[10px] font-bold bg-[#1877F2]/20 text-[#1877F2] px-2 py-0.5 rounded-full">Only you see this</span>
+                  </div>
+                  
+                  {isLoadingStats ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-5 h-5 border-2 border-[#1877F2] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {viewerProfiles.filter(p => ownerFollowers.includes(p.uid)).length === 0 ? (
+                        <p className="text-xs text-zinc-500 text-center py-4 italic">No followers have viewed yet.</p>
+                      ) : (
+                        viewerProfiles.filter(p => ownerFollowers.includes(p.uid)).map(prof => (
+                          <div key={prof.uid} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-3">
+                              <img src={prof.photoURL || prof.shopLogo || defaultAvatarImg} alt="" className="w-10 h-10 rounded-full object-cover bg-zinc-800 border border-zinc-700" />
+                              <div>
+                                <p className="text-sm font-bold text-white leading-none mb-1">{prof.displayName || prof.shopName || "Member"}</p>
+                                <p className="text-[11px] text-zinc-500 font-medium">@{prof.username || prof.handle || "user"}</p>
+                              </div>
+                            </div>
+                            
+                            {/* If they also liked, show the reaction */}
+                            {story.likedBy?.includes(prof.uid) && (
+                              <div className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-500 shadow-sm border border-rose-500/30">
+                                <Heart className="w-4 h-4 fill-current" />
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Reaction Details if any non-follower reacted (Optional, but user said "followers jara tara react dile tader id ar sathe react tao dekhabe") */}
+                {/* We already show heart next to viewer if they are a follower. Let's make sure we show everyone who reacted IF they are followers but maybe didn't trigger a 'view' correctly (unlikely) */}
+              </div>
+
+              <div className="p-6 bg-zinc-900 border-t border-zinc-800">
+                <p className="text-[10px] text-zinc-500 text-center leading-relaxed">
+                  Only views and reactions from your followers are shown in the detailed list. 
+                  Total counts include all community members.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+
 

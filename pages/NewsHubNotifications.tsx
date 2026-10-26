@@ -256,13 +256,16 @@ export const NewsHubNotifications: React.FC = () => {
             return (
               <section
                 key={groupTitle}
-                className="bg-white dark:bg-zinc-900 rounded-[28px] p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] border border-slate-200/70 dark:border-zinc-800 space-y-4"
+                className="space-y-3"
               >
-                <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  {groupTitle}
-                </h2>
+                <div className="px-1 flex items-center justify-between">
+                  <h2 className="text-xs font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest px-1">
+                    {groupTitle}
+                  </h2>
+                  <div className="h-px flex-1 bg-slate-100 dark:bg-zinc-800 ml-4" />
+                </div>
 
-                <div className="space-y-4">
+                <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-2 sm:p-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)] border border-slate-200/70 dark:border-zinc-800 divide-y divide-slate-50 dark:divide-zinc-800/50">
                   {items.map((item) => {
                     const username = item.fromUserUsername || item.fromUserName || "user";
                     const isFollowType = item.type === "follow";
@@ -272,39 +275,39 @@ export const NewsHubNotifications: React.FC = () => {
                       <div
                         key={item.id}
                         onClick={() => handleNotificationClick(item)}
-                        className="flex items-center justify-between gap-3 cursor-pointer group"
+                        className="flex items-center justify-between gap-3 p-3.5 cursor-pointer group active:bg-slate-50 dark:active:bg-zinc-800/50 transition-colors first:rounded-t-[28px] last:rounded-b-[28px]"
                       >
                         {/* Avatar */}
                         <ProfileAvatar
                           src={item.fromUserAvatar}
                           name={username}
-                          className="w-11 h-11 ring-2 ring-slate-100 dark:ring-zinc-800"
-                          iconClassName="w-5 h-5"
+                          className="w-12 h-12 ring-2 ring-slate-50 dark:ring-zinc-800 shadow-sm"
+                          iconClassName="w-6 h-6"
                         />
 
                         {/* Text Center */}
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs sm:text-sm text-slate-900 dark:text-zinc-100 leading-snug">
-                            <span className="font-bold text-slate-900 dark:text-white">
+                          <p className="text-[13px] sm:text-sm text-slate-900 dark:text-zinc-100 leading-snug">
+                            <span className="font-bold text-slate-900 dark:text-white hover:underline">
                               {username}
                             </span>{" "}
-                            <span className="text-slate-600 dark:text-zinc-300">
+                            <span className="text-slate-600 dark:text-zinc-300 font-medium">
                               {item.body}
                             </span>{" "}
-                            <span className="text-slate-400 dark:text-zinc-500 font-medium text-[11px] whitespace-nowrap">
+                            <span className="text-slate-400 dark:text-zinc-500 font-bold text-[10px] uppercase ml-1 opacity-80">
                               {formatCompactTimeAgo(item.createdAt)}
                             </span>
                           </p>
                         </div>
 
                         {/* Right Action Element */}
-                        <div className="shrink-0">
+                        <div className="shrink-0 ml-1">
                           {isFollowType ? (
                             isFollowingUser ? (
                               <button
                                 type="button"
                                 onClick={(e) => handleToggleFollow(e, item)}
-                                className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold transition cursor-pointer"
+                                className="px-4 py-2 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-[11px] font-extrabold transition cursor-pointer border border-slate-200/50 dark:border-zinc-700"
                               >
                                 Following
                               </button>
@@ -312,19 +315,26 @@ export const NewsHubNotifications: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={(e) => handleToggleFollow(e, item)}
-                                className="px-4.5 py-1.5 rounded-xl bg-[#1877F2] hover:bg-[#1465D8] text-white text-xs font-bold shadow-sm transition cursor-pointer"
+                                className="px-5 py-2 rounded-2xl bg-[#1877F2] hover:bg-[#1465D8] text-white text-[11px] font-extrabold shadow-md shadow-blue-500/20 transition cursor-pointer"
                               >
                                 Follow
                               </button>
                             )
                           ) : item.mediaThumbnail ? (
-                            <img
-                              src={item.mediaThumbnail}
-                              alt=""
-                              className="w-11 h-11 rounded-xl object-cover border border-slate-200/80 dark:border-zinc-700 shadow-2xs group-hover:scale-105 transition-transform"
-                            />
+                            <div className="relative">
+                              <img
+                                src={item.mediaThumbnail}
+                                alt=""
+                                className="w-12 h-12 rounded-[14px] object-cover border border-slate-200/80 dark:border-zinc-700 shadow-sm group-hover:scale-105 transition-transform"
+                              />
+                              {item.type === "story_like" && (
+                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center">
+                                  <Heart className="w-2.5 h-2.5 text-white fill-current" />
+                                </div>
+                              )}
+                            </div>
                           ) : (
-                            <div className="w-11 h-11 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700 flex items-center justify-center text-[#1877F2]">
+                            <div className="w-12 h-12 rounded-[14px] bg-slate-50 dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700 flex items-center justify-center text-[#1877F2] shadow-sm">
                               <MessageSquare className="w-5 h-5" />
                             </div>
                           )}

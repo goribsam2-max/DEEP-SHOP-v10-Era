@@ -166,23 +166,42 @@ export async function detectSingleAiImage(file: File): Promise<boolean> {
     if (!compactDataUrl) return false;
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 6500);
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
 
-    const res = await fetch("/api/detect-ai-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image: compactDataUrl,
-        mimeType: "image/jpeg",
-      }),
-      signal: controller.signal,
-    });
+    const callApi = async (retryCount = 0): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/detect-ai-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image: compactDataUrl,
+            mimeType: "image/jpeg",
+          }),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          if (res.status >= 500 && retryCount < 1) {
+            return callApi(retryCount + 1);
+          }
+          return false;
+        }
+        const data = await res.json();
+        return Boolean(data?.isAiGenerated);
+      } catch (err) {
+        if (retryCount < 1) {
+          return callApi(retryCount + 1);
+        }
+        console.warn("AI image detection request failed:", err);
+        return false;
+      }
+    };
+
+    const result = await callApi();
     window.clearTimeout(timeoutId);
-
-    if (!res.ok) return false;
-    const data = await res.json();
-    return Boolean(data?.isAiGenerated);
-  } catch {
+    return result;
+  } catch (err) {
+    console.error("AI image detection unexpected error:", err);
     return false;
   }
 }

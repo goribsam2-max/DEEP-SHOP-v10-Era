@@ -628,8 +628,22 @@ app.use(async (req, res, next) => {
         },
       });
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+      const model = ai.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              isAiGenerated: { type: Type.BOOLEAN },
+              confidence: { type: Type.NUMBER },
+            },
+            required: ["isAiGenerated", "confidence"],
+          },
+        },
+      });
+
+      const result = await model.generateContent({
         contents: [
           {
             role: "user",
@@ -646,20 +660,10 @@ app.use(async (req, res, next) => {
             ],
           },
         ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              isAiGenerated: { type: Type.BOOLEAN },
-              confidence: { type: Type.NUMBER },
-            },
-            required: ["isAiGenerated", "confidence"],
-          },
-        },
       });
 
-      const rawText = (response.text || "{}").trim();
+      const response = await result.response;
+      const rawText = (response.text() || "{}").trim();
       const parsed = JSON.parse(rawText);
       const confidence = Number(parsed?.confidence || 0);
       const isAiGenerated = Boolean(parsed?.isAiGenerated && confidence >= 0.72);

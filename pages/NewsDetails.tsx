@@ -391,14 +391,24 @@ export const NewsDetails: React.FC = () => {
         });
 
         if (!removing && post.reporterId && post.reporterId !== uid) {
+          const authorName = currentUser.displayName || "Someone";
+          const authorAvatar = currentUser.photoURL || "";
+          const authorUsername = currentUser.username || currentUser.handle || (currentUser.email ? currentUser.email.split("@")[0] : "user");
+
           addDoc(collection(db, "news_hub_notifications"), {
             userId: post.reporterId,
-            type: "reaction",
-            title: `${currentUser.displayName || "Someone"} reacted to your post`,
-            body: `Gave a ${chosen} reaction to "${post.title || post.description?.slice(0, 30)}..."`,
-            avatarText: (currentUser.displayName || "U").slice(0, 1).toUpperCase(),
-            createdAt: new Date().toISOString(),
+            fromUserId: uid,
+            fromUserName: authorName,
+            fromUserUsername: authorUsername,
+            fromUserAvatar: authorAvatar,
+            type: "like",
+            title: "New Reaction",
+            body: `reacted to your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
+            mediaThumbnail: post.images?.[0] || "",
+            targetId: post.id,
+            isRead: false,
             read: false,
+            createdAt: Date.now(),
             link: `/news-hub/post/${post.id}`,
           }).catch(() => {});
         }
@@ -632,15 +642,24 @@ export const NewsDetails: React.FC = () => {
         );
 
         if (!isRemoving && cmt.userId && cmt.userId !== uid) {
+          const authorName = currentUser.displayName || "Someone";
+          const authorAvatar = currentUser.photoURL || "";
+          const authorUsername = currentUser.username || currentUser.handle || (currentUser.email ? currentUser.email.split("@")[0] : "user");
+
           addDoc(collection(db, "news_hub_notifications"), {
             userId: cmt.userId,
-            type: "comment_reaction",
-            title: `${currentUser.displayName || "Someone"} reacted to your comment`,
-            body: `Gave a reaction to "${cmt.text.slice(0, 40)}..."`,
-            avatarText: (currentUser.displayName || "U").slice(0, 1).toUpperCase(),
-            createdAt: new Date().toISOString(),
+            fromUserId: uid,
+            fromUserName: authorName,
+            fromUserUsername: authorUsername,
+            fromUserAvatar: authorAvatar,
+            type: "like",
+            title: "New Reaction",
+            body: `reacted to your comment: "${cmt.text.slice(0, 30)}..."`,
+            targetId: post.id,
+            isRead: false,
             read: false,
-            link: `/news-hub/post/${post.id}`,
+            createdAt: Date.now(),
+            link: `/news-hub/post/${post.id}#comments`,
           }).catch(() => {});
         }
       } catch {}
