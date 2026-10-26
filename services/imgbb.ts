@@ -1,9 +1,9 @@
 // High-performance client-side image compression & optimizer
 export const compressImage = async (
   file: File,
-  maxWidth = 1080,
-  maxHeight = 1080,
-  quality = 0.78
+  maxWidth = 1280,
+  maxHeight = 1280,
+  quality = 0.8
 ): Promise<string> => {
   return new Promise((resolve) => {
     // If SVG or tiny gif, return as-is
@@ -15,14 +15,12 @@ export const compressImage = async (
       return;
     }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
 
         // Maintain aspect ratio while clamping max dimensions
         if (width > height) {
@@ -38,28 +36,46 @@ export const compressImage = async (
         }
 
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(event.target?.result as string);
+          URL.revokeObjectURL(objectUrl);
+          const fallbackReader = new FileReader();
+          fallbackReader.onload = () => resolve((fallbackReader.result as string) || '');
+          fallbackReader.onerror = () => resolve('');
+          fallbackReader.readAsDataURL(file);
           return;
+        }
+
+        // Keep small PNGs lossless; convert heavy PNG screenshots (>250KB) to crisp JPEG for fast uploads
+        const keepPng = file.type === 'image/png' && file.size <= 250 * 1024;
+        if (!keepPng) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, width, height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // Compress to high-efficiency JPEG or PNG
-        const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const mimeType = keepPng ? 'image/png' : 'image/jpeg';
         const compressedBase64 = canvas.toDataURL(mimeType, quality);
+        URL.revokeObjectURL(objectUrl);
         resolve(compressedBase64);
-      };
-      img.onerror = () => {
-        resolve(event.target?.result as string);
-      };
+      } catch {
+        URL.revokeObjectURL(objectUrl);
+        resolve('');
+      }
     };
-    reader.onerror = () => resolve('');
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      const fallbackReader = new FileReader();
+      fallbackReader.onload = () => resolve((fallbackReader.result as string) || '');
+      fallbackReader.onerror = () => resolve('');
+      fallbackReader.readAsDataURL(file);
+    };
+    img.src = objectUrl;
   });
 };
 
@@ -68,33 +84,66 @@ export const generateMicroThumb = async (file: File): Promise<string> => {
   return compressImage(file, 48, 48, 0.35);
 };
 
-export const uploadToImgbb = async (file: File): Promise<string> => {
-  try {
-    // 1. Ultra-fast canvas compression (reduces 10MB phone photo to ~150KB in ~20ms)
-    const compressedBase64 = await compressImage(file);
-    
-    // 2. Upload through secure server-side proxy endpoint
-    const response = await fetch('/api/upload-image', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        image: compressedBase64,
-        name: file.name
-      }),
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success && result.url) {
-        return result.url.replace(/^http:\/\//i, 'https://');
-      }
+// Uploads a processed base64 dataUrl (or passes through an existing https:// URL) via backend proxy
+export const uploadDataUrlToImgbb = async (
+  dataUrl: string,
+  name = `photo-${Date.now()}.jpg`,
+  options?: { requireRemote?: boolean }
+): Promise<string> => {
+  if (!dataUrl) {
+    if (options?.requireRemote) {
+      throw new Error('Missing image data');
     }
-
-    return compressedBase64;
-  } catch (error) {
-    console.warn('Backend proxy upload fallback to local base64:', error);
-    return await compressImage(file);
+    return '';
   }
+
+  if (/^https?:\/\//i.test(dataUrl)) {
+    return dataUrl.replace(/^http:\/\//i, 'https://');
+  }
+
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    try {
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: dataUrl,
+          name,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.url) {
+          return String(result.url).replace(/^http:\/\//i, 'https://');
+        }
+      } else {
+        lastErr = new Error(`Upload status ${response.status}`);
+      }
+    } catch (err) {
+      clearTimeout(timeoutId);
+      lastErr = err;
+    }
+  }
+
+  if (options?.requireRemote) {
+    throw lastErr instanceof Error ? lastErr : new Error('Failed to upload photo');
+  }
+
+  return dataUrl;
+};
+
+export const uploadToImgbb = async (
+  file: File,
+  options?: { requireRemote?: boolean }
+): Promise<string> => {
+  const compressedBase64 = await compressImage(file);
+  return uploadDataUrlToImgbb(compressedBase64, file.name, options);
 };

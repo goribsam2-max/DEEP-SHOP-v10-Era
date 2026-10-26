@@ -57,6 +57,7 @@ import {
   applyWatermarkToImage,
   processCleanImage,
 } from "../lib/watermark";
+import { uploadDataUrlToImgbb } from "../services/imgbb";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
@@ -456,7 +457,12 @@ export const NewsDetails: React.FC = () => {
             scamLocation: post.scamLocation || "Comment Evidence",
           })
         : await processCleanImage(file);
-      setCommentImage(res.dataUrl);
+      const hostedUrl = await uploadDataUrlToImgbb(
+        res.dataUrl,
+        `comment-${Date.now()}.jpg`,
+        { requireRemote: true }
+      );
+      setCommentImage(hostedUrl);
     } catch {
       notify("Failed to attach image", "error");
     } finally {
@@ -1168,9 +1174,6 @@ export const NewsDetails: React.FC = () => {
                 <MessageCircle className="w-4 h-4 text-[#1877F2]" />
                 <span>Comments ({comments.length})</span>
               </h2>
-              <span className="text-[10.5px] font-medium text-zinc-400 whitespace-nowrap">
-                Dhaka Time (12h)
-              </span>
             </div>
 
             {/* Comments List (Scrollable on Desktop Right Panel) */}
@@ -1277,12 +1280,33 @@ export const NewsDetails: React.FC = () => {
                           )}
 
                           {cmt.imageUrl && (
-                            <img
-                              src={cmt.imageUrl}
-                              alt="Comment media"
-                              referrerPolicy="no-referrer"
-                              className="rounded-xl max-h-48 w-auto object-cover mt-1"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic();
+                                navigate(
+                                  `/news-hub/photo/${post.id}/0?commentId=${encodeURIComponent(
+                                    cmt.id
+                                  )}`,
+                                  {
+                                    state: {
+                                      commentImageUrl: cmt.imageUrl,
+                                      commentAuthorName: cmt.userName,
+                                      commentText: cmt.text || "",
+                                    },
+                                  }
+                                );
+                              }}
+                              className="group relative block mt-1.5 rounded-xl overflow-hidden cursor-zoom-in focus:outline-none"
+                              aria-label="View comment photo in full screen"
+                            >
+                              <img
+                                src={cmt.imageUrl}
+                                alt="Comment media"
+                                referrerPolicy="no-referrer"
+                                className="rounded-xl max-h-52 w-auto object-cover transition-transform duration-200 group-hover:scale-[1.015]"
+                              />
+                            </button>
                           )}
                         </div>
 

@@ -185,40 +185,145 @@ export const toggleSavePostHelper = async (
 export const NewsPhotoViewerPage: React.FC = () => {
   const { postId, index } = useParams<{ postId: string; index: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const notify = useNotify();
 
+  const commentId = searchParams.get("commentId");
+  const navCommentState = (location.state || null) as {
+    commentImageUrl?: string;
+    commentAuthorName?: string;
+    commentText?: string;
+  } | null;
+
   const [post, setPost] = useState<ScamPost | null>(null);
+  const [commentMedia, setCommentMedia] = useState<{
+    imageUrl: string;
+    authorName: string;
+    text: string;
+  } | null>(() =>
+    navCommentState?.commentImageUrl
+      ? {
+          imageUrl: navCommentState.commentImageUrl,
+          authorName: navCommentState.commentAuthorName || "Comment Photo",
+          text: navCommentState.commentText || "",
+        }
+      : null
+  );
   const [activeIndex, setActiveIndex] = useState<number>(
     Math.max(0, Number(index) || 0)
   );
   const [zoomed, setZoomed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    !Boolean(navCommentState?.commentImageUrl)
+  );
 
   useEffect(() => {
     setActiveIndex(Math.max(0, Number(index) || 0));
   }, [index]);
 
   useEffect(() => {
+    if (navCommentState?.commentImageUrl) {
+      setCommentMedia({
+        imageUrl: navCommentState.commentImageUrl,
+        authorName: navCommentState.commentAuthorName || "Comment Photo",
+        text: navCommentState.commentText || "",
+      });
+    }
+  }, [
+    navCommentState?.commentImageUrl,
+    navCommentState?.commentAuthorName,
+    navCommentState?.commentText,
+  ]);
+
+  useEffect(() => {
     let mounted = true;
-    resolvePostById(postId || "").then((found) => {
+
+    const loadViewerData = async () => {
+      const found = await resolvePostById(postId || "");
       if (mounted) {
         setPost(found);
+      }
+
+      if (commentId && !navCommentState?.commentImageUrl && postId) {
+        let resolvedComment: {
+          imageUrl: string;
+          authorName: string;
+          text: string;
+        } | null = null;
+
+        try {
+          const snap = await getDoc(
+            doc(db, "scam_posts", postId, "comments", commentId)
+          );
+          if (snap.exists()) {
+            const d = snap.data();
+            if (d?.imageUrl) {
+              resolvedComment = {
+                imageUrl: String(d.imageUrl),
+                authorName: String(d.userName || "Comment Photo"),
+                text: String(d.text || ""),
+              };
+            }
+          }
+        } catch {}
+
+        if (!resolvedComment) {
+          try {
+            const allLocal = JSON.parse(
+              localStorage.getItem("deep_post_comments") || "{}"
+            );
+            const list = Array.isArray(allLocal[postId])
+              ? allLocal[postId]
+              : [];
+            const match = list.find((c: any) => c?.id === commentId);
+            if (match?.imageUrl) {
+              resolvedComment = {
+                imageUrl: String(match.imageUrl),
+                authorName: String(match.userName || "Comment Photo"),
+                text: String(match.text || ""),
+              };
+            }
+          } catch {}
+        }
+
+        if (mounted && resolvedComment) {
+          setCommentMedia(resolvedComment);
+        }
+      }
+
+      if (mounted) {
         setLoading(false);
       }
-    });
+    };
+
+    loadViewerData();
     return () => {
       mounted = false;
     };
-  }, [postId]);
+  }, [postId, commentId, navCommentState?.commentImageUrl]);
 
-  const images = post?.images || [];
+  const isCommentPhotoMode = Boolean(commentId || commentMedia?.imageUrl);
+  const images = isCommentPhotoMode
+    ? commentMedia?.imageUrl
+      ? [commentMedia.imageUrl]
+      : []
+    : post?.images || [];
   const isScam = isScamPostRecord(post);
   const currentImg = images[activeIndex] || images[0] || "";
+  const headerTitle = isCommentPhotoMode
+    ? commentMedia?.authorName || "Comment Photo"
+    : post?.reporterName || "Feed Photo";
+  const bottomCaption = isCommentPhotoMode
+    ? commentMedia?.text || ""
+    : post?.description || "";
 
   const handleDownload = () => {
     if (!currentImg) return;
     triggerHaptic();
-    const filename = isScam
+    const filename = isCommentPhotoMode
+      ? `comment-photo-${commentId || "media"}.jpg`
+      : isScam
       ? `scam-report-${post?.id || "photo"}-${activeIndex + 1}.jpg`
       : `feed-photo-${post?.id || "photo"}-${activeIndex + 1}.jpg`;
     downloadWatermarkedImage(currentImg, filename);
@@ -228,7 +333,13 @@ export const NewsPhotoViewerPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between select-none">
       <SEO
-        title={post?.title ? `${post.title} — Photo` : "Fullscreen Photo"}
+        title={
+          isCommentPhotoMode
+            ? `${headerTitle} — Comment Photo`
+            : post?.title
+            ? `${post.title} — Photo`
+            : "Fullscreen Photo"
+        }
         description="Fullscreen media viewer"
       />
 
@@ -248,10 +359,12 @@ export const NewsPhotoViewerPage: React.FC = () => {
           </button>
           <div className="min-w-0">
             <p className="text-sm font-bold text-white truncate">
-              {post?.reporterName || "Feed Photo"}
+              {headerTitle}
             </p>
             <p className="text-xs text-zinc-400 tabular-nums">
-              {images.length > 0
+              {isCommentPhotoMode
+                ? "Comment Photo"
+                : images.length > 0
                 ? `Photo ${activeIndex + 1} of ${images.length}`
                 : "Photo Viewer"}
             </p>
@@ -296,17 +409,17 @@ export const NewsPhotoViewerPage: React.FC = () => {
             <p className="text-sm text-zinc-400">Photo not found.</p>
             <button
               type="button"
-              onClick={() => navigate("/news-hub")}
+              onClick={() => navigate(-1)}
               className="px-5 py-2.5 rounded-full bg-white text-zinc-900 text-xs font-bold cursor-pointer"
             >
-              Back to Feed
+              Go Back
             </button>
           </div>
         ) : (
           <div className="relative max-w-5xl w-full flex flex-col items-center justify-center">
             <img
               src={currentImg}
-              alt={post?.title || "Fullscreen photo"}
+              alt={headerTitle}
               referrerPolicy="no-referrer"
               onClick={() => setZoomed((z) => !z)}
               className={`rounded-2xl transition-transform duration-300 cursor-zoom-in ${
@@ -393,9 +506,9 @@ export const NewsPhotoViewerPage: React.FC = () => {
             ))}
           </div>
         )}
-        {post?.description && (
+        {bottomCaption && (
           <p className="max-w-xl mx-auto text-center text-xs text-zinc-300 line-clamp-2">
-            {post.description}
+            {bottomCaption}
           </p>
         )}
       </div>

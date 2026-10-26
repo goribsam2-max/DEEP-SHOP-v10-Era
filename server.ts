@@ -587,10 +587,10 @@ app.use(async (req, res, next) => {
         });
       }
 
-      return res.status(500).json({ error: result.error?.message || "ImgBB proxy upload failed" });
+      return res.status(500).json({ error: result.error?.message || "Image upload failed" });
     } catch (err: any) {
       console.error("Backend image upload proxy error:", err);
-      return res.status(500).json({ error: err.message || "Internal upload proxy failure" });
+      return res.status(500).json({ error: err.message || "Internal upload failure" });
     }
   });
 

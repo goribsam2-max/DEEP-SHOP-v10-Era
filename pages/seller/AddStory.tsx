@@ -16,7 +16,7 @@ import {
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { db, auth } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
-import { uploadToImgbb } from "../../services/imgbb";
+import { uploadToImgbb, uploadDataUrlToImgbb } from "../../services/imgbb";
 import { canAccessSellerDashboard } from "../../lib/admin";
 import { useFooterLogo } from "../../lib/useFooterLogo";
 import { triggerHaptic } from "../../lib/haptics";
@@ -1216,21 +1216,24 @@ export default function AddStory() {
     try {
       const batchSlice = imageFiles.slice(0, 4);
       const aiCheckPromise = detectAiGeneratedFiles(batchSlice).catch(() => false);
-      const uploadedBatch: GalleryMediaItem[] = [];
-      for (const file of batchSlice) {
-        const url = await uploadToImgbb(file);
-        if (url) {
+      const uploadedResults = await Promise.all(
+        batchSlice.map(async (file, idx) => {
+          const url = await uploadToImgbb(file, { requireRemote: true });
+          if (!url) return null;
           const item: GalleryMediaItem = {
-            id: `up_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            id: `up_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
             url,
             type: "image",
             source: "upload",
             label: file.name,
           };
           persistUploadedItem(item);
-          uploadedBatch.push(item);
-        }
-      }
+          return item;
+        })
+      );
+      const uploadedBatch = uploadedResults.filter(
+        (x): x is GalleryMediaItem => x !== null
+      );
       const detectedAi = await aiCheckPromise;
       if (detectedAi) {
         setAiLabel(true);
@@ -1753,15 +1756,18 @@ export default function AddStory() {
 
       if (needsBaseBake) {
         const bakedCanvas = await renderCompositeCanvas(false);
-        const blob = await new Promise<Blob | null>((res) =>
-          bakedCanvas.toBlob((b) => res(b), "image/jpeg", 0.88)
+        const bakedDataUrl = bakedCanvas.toDataURL("image/jpeg", 0.85);
+        finalMediaUrl = await uploadDataUrlToImgbb(
+          bakedDataUrl,
+          `story-${Date.now()}.jpg`,
+          { requireRemote: true }
         );
-        if (blob) {
-          const file = new File([blob], `story-${Date.now()}.jpg`, { type: "image/jpeg" });
-          finalMediaUrl = await uploadToImgbb(file);
-        } else {
-          finalMediaUrl = bakedCanvas.toDataURL("image/jpeg", 0.85);
-        }
+      } else if (finalMediaUrl && !/^https?:\/\//i.test(finalMediaUrl)) {
+        finalMediaUrl = await uploadDataUrlToImgbb(
+          finalMediaUrl,
+          `story-${Date.now()}.jpg`,
+          { requireRemote: true }
+        );
       }
 
       const storyId = `st_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;

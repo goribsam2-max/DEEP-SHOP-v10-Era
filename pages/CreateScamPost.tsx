@@ -42,6 +42,7 @@ import {
   applyWatermarkToImage,
   processCleanImage,
 } from "../lib/watermark";
+import { uploadDataUrlToImgbb } from "../services/imgbb";
 import { detectAiGeneratedFiles } from "../lib/aiImageDetector";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
 import { NewsVideoPlayer } from "../components/NewsVideoPlayer";
@@ -411,7 +412,31 @@ export const CreateScamPost: React.FC = () => {
     };
   }, [rawFiles, existingUrls, originalPost?.isAiGenerated]);
 
-  // Re-process uploaded raw files whenever postType (Normal vs Scam) or scamLocation changes!
+  const uploadCacheRef = useRef<Map<string, Promise<string>>>(new Map());
+
+  const ensureHostedPostImage = (src: string, idx: number): Promise<string> => {
+    if (!src) return Promise.resolve("");
+    if (/^https?:\/\//i.test(src)) {
+      return Promise.resolve(src.replace(/^http:\/\//i, "https://"));
+    }
+    const cached = uploadCacheRef.current.get(src);
+    if (cached) return cached;
+
+    const uploadPromise = uploadDataUrlToImgbb(
+      src,
+      `feed-post-${Date.now()}-${idx + 1}.jpg`,
+      { requireRemote: true }
+    ).catch((err) => {
+      uploadCacheRef.current.delete(src);
+      throw err;
+    });
+
+    uploadCacheRef.current.set(src, uploadPromise);
+    return uploadPromise;
+  };
+
+  // Re-process uploaded raw files in parallel whenever postType (Normal vs Scam) or scamLocation changes,
+  // and immediately warm background uploads so publishing multi-photo posts is near-instant!
   useEffect(() => {
     if (rawFiles.length === 0) {
       setProcessedImages(existingUrls);
@@ -423,24 +448,28 @@ export const CreateScamPost: React.FC = () => {
 
     const run = async () => {
       try {
-        const urls: string[] = [...existingUrls];
-        const ratios: number[] = [];
+        const processedBatch = await Promise.all(
+          rawFiles.map((file) =>
+            postType === "scam"
+              ? applyWatermarkToImage(file, {
+                  watermarkText: "SCAM ALERT • DEEP SHOP",
+                  scamLocation: scamLocation || "Online Platform",
+                  includeBottomBanner: true,
+                })
+              : processCleanImage(file)
+          )
+        );
 
-        for (const file of rawFiles) {
-          if (postType === "scam") {
-            const res = await applyWatermarkToImage(file, {
-              watermarkText: "SCAM ALERT • DEEP SHOP",
-              scamLocation: scamLocation || "Online Platform",
-              includeBottomBanner: true,
-            });
-            urls.push(res.dataUrl);
-            ratios.push(res.aspectRatio);
-          } else {
-            const res = await processCleanImage(file);
-            urls.push(res.dataUrl);
-            ratios.push(res.aspectRatio);
-          }
-        }
+        const urls: string[] = [
+          ...existingUrls,
+          ...processedBatch.map((r) => r.dataUrl),
+        ];
+        const ratios: number[] = processedBatch.map((r) => r.aspectRatio);
+
+        // Pre-upload processed photos in parallel in the background while user composes
+        processedBatch.forEach((r, idx) => {
+          ensureHostedPostImage(r.dataUrl, idx).catch(() => {});
+        });
 
         if (!cancelled) {
           setProcessedImages(urls);
@@ -460,7 +489,7 @@ export const CreateScamPost: React.FC = () => {
       }
     };
 
-    const debounce = window.setTimeout(run, 180);
+    const debounce = window.setTimeout(run, 80);
     return () => {
       cancelled = true;
       window.clearTimeout(debounce);
@@ -971,6 +1000,18 @@ export const CreateScamPost: React.FC = () => {
     triggerHaptic();
 
     try {
+      // Upload all attached photos in parallel (resolves immediately if background pre-upload already finished)
+      const hostedImages =
+        processedImages.length > 0
+          ? (
+              await Promise.all(
+                processedImages.map((imgSrc, idx) =>
+                  ensureHostedPostImage(imgSrc, idx)
+                )
+              )
+            ).filter(Boolean)
+          : [];
+
       const resolvedContentType: ScamPost["contentType"] =
         postType === "scam"
           ? "scam"
@@ -978,7 +1019,7 @@ export const CreateScamPost: React.FC = () => {
           ? "voice"
           : effectiveVideoUrl
           ? "video"
-          : processedImages.length > 0
+          : hostedImages.length > 0
           ? "image"
           : textStyle === "quote"
           ? "affirmation"
@@ -1019,11 +1060,11 @@ export const CreateScamPost: React.FC = () => {
         category: effectiveThemes[0] || (postType === "scam" ? "scam_watch" : "tech_news"),
         themes: effectiveThemes,
         contentType: resolvedContentType,
-        images: processedImages,
+        images: hostedImages,
         imageLayout,
         imageAspectRatio,
         imageNaturalRatios: naturalRatios,
-        isAiGenerated: Boolean(processedImages.length > 0 && isAiGenerated),
+        isAiGenerated: Boolean(hostedImages.length > 0 && isAiGenerated),
         audioUrl: audioUrl || null,
         audioDuration: audioDuration || null,
         audioWaveform:
@@ -1060,11 +1101,9 @@ export const CreateScamPost: React.FC = () => {
           updatedAt: Date.now(),
         };
 
-        try {
-          if (!editId.startsWith("showcase_")) {
-            await updateDoc(doc(db, "scam_posts", editId), editUpdatePayload);
-          }
-        } catch {}
+        if (!editId.startsWith("showcase_") && !editId.startsWith("post_")) {
+          await updateDoc(doc(db, "scam_posts", editId), editUpdatePayload);
+        }
 
         try {
           const existing = JSON.parse(
@@ -1101,11 +1140,8 @@ export const CreateScamPost: React.FC = () => {
         views: 1,
       };
 
-      let createdId = `post_${Date.now()}`;
-      try {
-        const ref = await addDoc(collection(db, "scam_posts"), fullNewDoc);
-        createdId = ref.id;
-      } catch {}
+      const ref = await addDoc(collection(db, "scam_posts"), fullNewDoc);
+      const createdId = ref.id;
 
       try {
         const existing = JSON.parse(
@@ -1127,7 +1163,7 @@ export const CreateScamPost: React.FC = () => {
       navigate("/news-hub");
     } catch (err) {
       console.error("Publish error:", err);
-      notify("Could not publish post. Please try again.", "error");
+      notify("Could not publish post. Please check your connection and try again.", "error");
     } finally {
       setIsSubmitting(false);
     }

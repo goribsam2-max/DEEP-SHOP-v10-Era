@@ -189,5 +189,29 @@ service cloud.firestore {
     match /withdrawals/{withdrawalId} {
       allow read, write: if true;
     }
+
+    // News Hub Feed Posts & Comments
+    match /scam_posts/{postId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() || isAdmin();
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.reporterId == request.auth.uid);
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create, update: if isSignedIn() || isAdmin();
+        allow delete: if isAdmin() || isSignedIn();
+      }
+    }
+
+    // News Hub Notifications
+    match /news_hub_notifications/{notifId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+
+    // Story Songs Library
+    match /story_songs/{songId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
