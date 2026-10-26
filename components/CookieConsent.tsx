@@ -1,20 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+const BOT_USER_AGENT_REGEX =
+  /bot|crawl|spider|slurp|facebookexternalhit|facebot|whatsapp|telegram|twitterbot|discordbot|linkedinbot|slackbot|pinterest|skype|vkshare|embedly|quora|outbrain|W3C_Validator|Lighthouse|HeadlessChrome|Preview/i;
 
 export const CookieConsent: React.FC = () => {
   const [showConsent, setShowConsent] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (BOT_USER_AGENT_REGEX.test(navigator.userAgent || '')) {
+      setShowConsent(false);
+      return;
+    }
+    const p = location.pathname || '';
+    if (
+      p.startsWith('/news-hub/post/') ||
+      p.startsWith('/news-hub/share/') ||
+      p.startsWith('/news/') ||
+      p.startsWith('/scam/') ||
+      p.startsWith('/product/')
+    ) {
+      setShowConsent(false);
+      return;
+    }
+
     const isAccepted = localStorage.getItem('vibe_cookie_consent_accepted');
     if (!isAccepted) {
       // Show consent banner after a tiny delay
       const timer = setTimeout(() => {
         setShowConsent(true);
-      }, 1000);
+      }, 1500);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [location.pathname]);
 
   const handleAccept = () => {
     localStorage.setItem('vibe_cookie_consent_accepted', 'true');
@@ -176,7 +197,7 @@ export const CookieConsent: React.FC = () => {
       `}</style>
 
       {/* Cookies Consent HTML exact structure from XML */}
-      <div className="ckW" id="ckWrap">
+      <div className="ckW" id="ckWrap" data-nosnippet="true" role="region" aria-label="Site preferences">
         <div className="ckA">
           <div className="ckH">Cookie Consent</div>
           <div className="ckD">

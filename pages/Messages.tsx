@@ -12,7 +12,7 @@ import { useNotify } from '../components/Notifications';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, addDoc, getDoc, query, where, orderBy, serverTimestamp, getDocs, limit, deleteDoc, writeBatch } from 'firebase/firestore';
-import { cn, formatDisplayEmail } from '../lib/utils';
+import { cn, formatDisplayEmail, getPublicShareOrigin } from '../lib/utils';
 import { checkContainsBannedWord } from '../lib/wordFilter';
 import VoiceMessageBubble from '../components/ui/voice-message-bubble';
 import Icon from '../components/Icon';
@@ -805,7 +805,7 @@ export default function Messages() {
 
       if (!active) return;
 
-      const postUrl = `${window.location.origin}/news-hub/post/${sharePostId}`;
+      const postUrl = `${getPublicShareOrigin()}/news-hub/post/${sharePostId}`;
       const caption = postData?.description?.slice(0, 140) || postData?.title || 'Shared a post from Feed';
       setForwardingMessage({
         text: `${caption}\n${postUrl}`,

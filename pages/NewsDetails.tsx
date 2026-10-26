@@ -24,6 +24,7 @@ import {
   UserCheck,
   X,
   Sparkles,
+  Eye,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -93,8 +94,24 @@ export const NewsDetails: React.FC = () => {
   const commentFileRef = useRef<HTMLInputElement | null>(null);
   const submittingCommentRef = useRef(false);
 
-  const [post, setPost] = useState<ScamPost | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [post, setPost] = useState<ScamPost | null>(() => {
+    if (typeof window !== "undefined") {
+      const initial = (window as any).__INITIAL_POST_DATA__;
+      if (initial && (!id || initial.id === id)) {
+        return initial as ScamPost;
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      const initial = (window as any).__INITIAL_POST_DATA__;
+      if (initial && (!id || initial.id === id)) {
+        return false;
+      }
+    }
+    return true;
+  });
   const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -150,7 +167,11 @@ export const NewsDetails: React.FC = () => {
   // Load Post (Real-time Firestore + Fallback to local/showcase)
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
+    setPost((prev) => {
+      if (prev && prev.id === id) return prev;
+      setLoading(true);
+      return null;
+    });
     recordPostDetailView(id);
 
     try {
@@ -379,9 +400,19 @@ export const NewsDetails: React.FC = () => {
     if (removing) delete updatedReactions[uid];
     else updatedReactions[uid] = chosen;
 
+    const nextTotalVotes = Object.values(counts).reduce(
+      (a, b) => a + (Number(b) || 0),
+      0
+    );
+
     setPost((prev) =>
       prev
-        ? { ...prev, reactions: updatedReactions, reactionsCount: counts }
+        ? {
+            ...prev,
+            reactions: updatedReactions,
+            reactionsCount: counts,
+            votes: nextTotalVotes,
+          }
         : null
     );
 
@@ -390,30 +421,62 @@ export const NewsDetails: React.FC = () => {
         await updateDoc(doc(db, "scam_posts", post.id), {
           reactions: updatedReactions,
           reactionsCount: counts,
+          votes: nextTotalVotes,
         });
 
         if (!removing && post.reporterId && post.reporterId !== uid) {
-          const authorName = getSafeDisplayName(currentUser, "Someone");
-          const authorAvatar = currentUser.photoURL || "";
-          const authorUsername =
-            getSafePublicUsername(currentUser) || authorName;
+          const actorIsAdmin =
+            isAdmin || hasImmediateAdminOrStaffRole(null, currentUser);
 
-          addDoc(collection(db, "news_hub_notifications"), {
-            userId: post.reporterId,
-            fromUserId: uid,
-            fromUserName: authorName,
-            fromUserUsername: authorUsername,
-            fromUserAvatar: authorAvatar,
-            type: "like",
-            title: "New Reaction",
-            body: `reacted to your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
-            mediaThumbnail: post.images?.[0] || "",
-            targetId: post.id,
-            isRead: false,
-            read: false,
-            createdAt: Date.now(),
-            link: `/news-hub/post/${post.id}`,
-          }).catch(() => {});
+          if (actorIsAdmin) {
+            setDoc(
+              doc(
+                db,
+                "news_hub_notifications",
+                `milestone_reactions_${post.id}`
+              ),
+              {
+                userId: post.reporterId,
+                fromUserId: "system_milestone",
+                fromUserName: "News Hub",
+                fromUserUsername: "",
+                fromUserAvatar: "",
+                type: "milestone",
+                milestoneKind: "reactions",
+                totalCount: nextTotalVotes,
+                title: "Congratulations! 🎉",
+                body: `Congratulations! Your post now has ${nextTotalVotes.toLocaleString()} total reactions.`,
+                mediaThumbnail: post.images?.[0] || "",
+                targetId: post.id,
+                isRead: false,
+                read: false,
+                createdAt: Date.now(),
+                link: `/news-hub/post/${post.id}`,
+              },
+              { merge: true }
+            ).catch(() => {});
+          } else {
+            const authorName = getSafeDisplayName(currentUser, "Someone");
+            const authorAvatar = currentUser?.photoURL || "";
+            const authorUsername = getSafePublicUsername(currentUser);
+
+            addDoc(collection(db, "news_hub_notifications"), {
+              userId: post.reporterId,
+              fromUserId: uid,
+              fromUserName: authorName,
+              fromUserUsername: authorUsername,
+              fromUserAvatar: authorAvatar,
+              type: "like",
+              title: "New Reaction",
+              body: `reacted to your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
+              mediaThumbnail: post.images?.[0] || "",
+              targetId: post.id,
+              isRead: false,
+              read: false,
+              createdAt: Date.now(),
+              link: `/news-hub/post/${post.id}`,
+            }).catch(() => {});
+          }
         }
       } catch {}
     }
@@ -801,6 +864,11 @@ export const NewsDetails: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:to-transparent flex items-center justify-center p-6">
+        <SEO
+          title="Post — News Hub"
+          description="Read this community post on News Hub."
+          exactTitle
+        />
         <div className="bg-white dark:bg-zinc-900 rounded-[28px] px-8 py-6 text-sm font-semibold text-zinc-500 shadow-xs">
           Loading post...
         </div>
@@ -811,6 +879,11 @@ export const NewsDetails: React.FC = () => {
   if (!post) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:to-transparent flex items-center justify-center p-6">
+        <SEO
+          title="Post Not Found — News Hub"
+          description="This post is no longer available on News Hub."
+          exactTitle
+        />
         <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-8 max-w-md w-full text-center space-y-4 shadow-md">
           <p className="text-base font-bold text-zinc-900 dark:text-white">
             Post not found
@@ -835,10 +908,10 @@ export const NewsDetails: React.FC = () => {
   );
   const totalReactions = post.reactionsCount
     ? (Object.values(post.reactionsCount) as number[]).reduce(
-        (a, b) => a + (b || 0),
+        (a, b) => a + (Number(b) || 0),
         0
       )
-    : post.votes || 0;
+    : Number(post.votes || 0);
   const saved =
     savedIds.includes(post.id) ||
     Boolean(currentUser?.uid && post.savedByUserIds?.includes(currentUser.uid));
@@ -849,12 +922,15 @@ export const NewsDetails: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-32">
       <SEO
         title={
-          post.title?.trim() ||
+          (post.title && post.title !== "Feed Post" ? post.title.trim() : "") ||
           post.description?.trim().split(/\r?\n/)[0]?.slice(0, 80) ||
-          post.reporterName ||
-          "Post"
+          `${post.reporterName || "Community"}'s Post`
         }
-        description={post.description?.trim() || post.title?.trim() || ""}
+        description={
+          post.description?.trim() ||
+          (post.title && post.title !== "Feed Post" ? post.title.trim() : "") ||
+          `Post shared by ${post.reporterName || "Community Member"} on News Hub.`
+        }
         image={post.images?.[0] || post.reporterAvatar || undefined}
         type="article"
         exactTitle
@@ -1042,8 +1118,8 @@ export const NewsDetails: React.FC = () => {
                   }`}
                 >
                   <ThumbsUp className="w-3.5 h-3.5" />
-                  <span className={`whitespace-nowrap overflow-hidden ${(post.votes || 0) > 999 ? 'text-[10px]' : ((post.votes || 0) > 99 ? 'text-[11px]' : 'text-[12px]')}`}>
-                    Confirm ({post.votes || 0})
+                  <span className={`whitespace-nowrap overflow-hidden ${totalReactions > 999 ? 'text-[10px]' : (totalReactions > 99 ? 'text-[11px]' : 'text-[12px]')}`}>
+                    Confirm ({totalReactions})
                   </span>
                 </button>
               </div>
@@ -1181,6 +1257,20 @@ export const NewsDetails: React.FC = () => {
                 <Send className="w-3.5 h-3.5 stroke-[2] shrink-0" />
                 <span>Share</span>
               </button>
+
+              {Boolean(
+                currentUser?.uid &&
+                  (post.reporterId === currentUser.uid ||
+                    (post as any).authorId === currentUser.uid)
+              ) && (
+                <span
+                  className="h-9 sm:h-10 px-3 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 flex items-center gap-1.5 text-xs font-semibold tabular-nums text-zinc-600 dark:text-zinc-300 whitespace-nowrap shrink-0"
+                  title="Views (only visible to you)"
+                >
+                  <Eye className="w-4 h-4 shrink-0" />
+                  <span>{formatCompactNumber(post.views || 0)}</span>
+                </span>
+              )}
             </div>
 
             <button

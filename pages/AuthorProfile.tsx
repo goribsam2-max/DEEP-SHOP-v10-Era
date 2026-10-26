@@ -22,6 +22,7 @@ import {
   Trash2,
   UserPlus,
   UserCheck,
+  Eye,
 } from "lucide-react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { doc, getDoc, deleteDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
@@ -37,7 +38,11 @@ import {
 import { subscribeToFollowerStats, toggleFollowUser } from "../lib/follow";
 import UserAvatar from "../components/UserAvatar";
 import { getFeedThemeMeta } from "../lib/feed-themes";
-import { getSafeDisplayName, getSafePublicUsername } from "../lib/utils";
+import {
+  getSafeDisplayName,
+  getSafePublicUsername,
+  formatCompactNumber,
+} from "../lib/utils";
 
 const DEFAULT_ONLINE_INTERESTS = [
   { label: "Cyber News", icon: "🛡️" },
@@ -691,11 +696,33 @@ export const AuthorProfile: React.FC = () => {
                   )}
                   <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
                     <span className="uppercase font-bold text-rose-600 dark:text-rose-400">
-                      {p.category ? p.category.replace(/_/g, " ") : "Scam Alert"}
+                      {p.category ? p.category.replace(/_/g, " ") : "Post"}
                     </span>
-                    <span className="font-mono font-bold text-zinc-600 dark:text-zinc-300">
-                      {(p.votes || 0).toLocaleString()} votes
-                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-mono font-bold text-zinc-600 dark:text-zinc-300">
+                        {(p.reactionsCount
+                          ? (Object.values(p.reactionsCount) as number[]).reduce(
+                              (a, b) => a + (Number(b) || 0),
+                              0
+                            )
+                          : Number(p.votes || 0)
+                        ).toLocaleString()}{" "}
+                        reactions
+                      </span>
+                      {Boolean(
+                        currentUser?.uid &&
+                          (p.reporterId === currentUser.uid ||
+                            p.authorId === currentUser.uid)
+                      ) && (
+                        <span
+                          className="inline-flex items-center gap-1 font-mono font-bold text-zinc-500 dark:text-zinc-400"
+                          title="Views (only visible to you)"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>{formatCompactNumber(p.views || 0)}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

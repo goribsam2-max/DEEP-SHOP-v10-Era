@@ -4,9 +4,11 @@ import {
   getDocs,
   doc,
   setDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
+import { getEffectiveFollowersCount } from "../../lib/follow";
 import {
   Search,
   Heart,
@@ -75,10 +77,36 @@ export const ManageEngagement: React.FC = () => {
             toTimestampMs(b.createdAt) - toTimestampMs(a.createdAt)
         );
 
+      const realFollowersMap = new Map<string, Set<string>>();
+      usersSnap.docs.forEach((uDoc) => {
+        const uData = uDoc.data() || {};
+        const uId = uDoc.id;
+        if (!realFollowersMap.has(uId)) {
+          realFollowersMap.set(uId, new Set<string>());
+        }
+        if (Array.isArray(uData.followers)) {
+          uData.followers.forEach((fId: string) => {
+            if (fId && fId !== uId) {
+              realFollowersMap.get(uId)!.add(fId);
+            }
+          });
+        }
+        if (Array.isArray(uData.following)) {
+          uData.following.forEach((targetId: string) => {
+            if (!targetId || targetId === uId) return;
+            if (!realFollowersMap.has(targetId)) {
+              realFollowersMap.set(targetId, new Set<string>());
+            }
+            realFollowersMap.get(targetId)!.add(uId);
+          });
+        }
+      });
+
       const usersList = usersSnap.docs
         .map((d) => ({
           id: d.id,
           ...d.data(),
+          _realFollowersCount: realFollowersMap.get(d.id)?.size ?? 0,
           type: "user" as const,
         }))
         .sort(
@@ -183,6 +211,48 @@ export const ManageEngagement: React.FC = () => {
           { merge: true }
         );
 
+        const postOwnerId = target.reporterId || target.authorId || "";
+        if (postOwnerId) {
+          const rawLabel =
+            target.title && target.title !== "Feed Post"
+              ? target.title
+              : target.description || "your post";
+          const postSnippet = String(rawLabel)
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 42);
+          const notifRef = doc(
+            db,
+            "news_hub_notifications",
+            `milestone_reactions_${postId}`
+          );
+          if (nextVotes > 0) {
+            await setDoc(
+              notifRef,
+              {
+                userId: postOwnerId,
+                fromUserId: "system_milestone",
+                fromUserName: "Congratulations! 🎉",
+                fromUserUsername: "",
+                fromUserAvatar: "",
+                type: "milestone",
+                title: "Congratulations! 🎉",
+                body: `Your post "${postSnippet}" now has ${nextVotes.toLocaleString()} total reactions! Keep sharing great updates.`,
+                mediaThumbnail:
+                  (Array.isArray(target.images) && target.images[0]) || "",
+                targetId: postId,
+                isRead: delta > 0 ? false : true,
+                read: delta > 0 ? false : true,
+                createdAt: Date.now(),
+                link: `/news-hub/post/${postId}`,
+              },
+              { merge: true }
+            ).catch(() => {});
+          } else {
+            await deleteDoc(notifRef).catch(() => {});
+          }
+        }
+
         const applyUpdate = (item: any) =>
           item.id === postId
             ? {
@@ -206,6 +276,50 @@ export const ManageEngagement: React.FC = () => {
           },
           { merge: true }
         );
+
+        if (field === "repostsCount") {
+          const postOwnerId = target.reporterId || target.authorId || "";
+          if (postOwnerId) {
+            const rawLabel =
+              target.title && target.title !== "Feed Post"
+                ? target.title
+                : target.description || "your post";
+            const postSnippet = String(rawLabel)
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 42);
+            const notifRef = doc(
+              db,
+              "news_hub_notifications",
+              `milestone_reposts_${postId}`
+            );
+            if (nextVal > 0) {
+              await setDoc(
+                notifRef,
+                {
+                  userId: postOwnerId,
+                  fromUserId: "system_milestone",
+                  fromUserName: "Congratulations! 🎉",
+                  fromUserUsername: "",
+                  fromUserAvatar: "",
+                  type: "milestone",
+                  title: "Congratulations! 🎉",
+                  body: `Your post "${postSnippet}" now has ${nextVal.toLocaleString()} total reposts! Keep up the great work.`,
+                  mediaThumbnail:
+                    (Array.isArray(target.images) && target.images[0]) || "",
+                  targetId: postId,
+                  isRead: delta > 0 ? false : true,
+                  read: delta > 0 ? false : true,
+                  createdAt: Date.now(),
+                  link: `/news-hub/post/${postId}`,
+                },
+                { merge: true }
+              ).catch(() => {});
+            } else {
+              await deleteDoc(notifRef).catch(() => {});
+            }
+          }
+        }
 
         const applyUpdate = (item: any) =>
           item.id === postId ? { ...item, [field]: nextVal } : item;
@@ -234,28 +348,68 @@ export const ManageEngagement: React.FC = () => {
       allUsers.find((u) => u.id === userId);
     if (!target) return;
 
+    const realCount =
+      typeof target._realFollowersCount === "number"
+        ? target._realFollowersCount
+        : Array.isArray(target.followers)
+        ? target.followers.filter(Boolean).length
+        : 0;
+
     const currentBase =
       field === "followersCount"
-        ? Math.max(
-            Number(target.followersCount || 0),
-            Array.isArray(target.followers) ? target.followers.length : 0
-          )
+        ? getEffectiveFollowersCount(target, realCount)
         : Number(target.views || 0);
 
     const nextVal = Math.max(0, currentBase + delta);
     const ref = doc(db, "users", userId);
 
     try {
-      await setDoc(
-        ref,
-        {
-          [field]: nextVal,
-        },
-        { merge: true }
-      );
+      const updatePayload: Record<string, any> =
+        field === "followersCount"
+          ? {
+              followersCount: nextVal,
+              customFollowersCount: nextVal,
+              followersOffset: nextVal - realCount,
+            }
+          : {
+              views: nextVal,
+            };
+
+      await setDoc(ref, updatePayload, { merge: true });
+
+      if (field === "followersCount") {
+        const notifRef = doc(
+          db,
+          "news_hub_notifications",
+          `milestone_followers_${userId}`
+        );
+        if (nextVal > 0) {
+          await setDoc(
+            notifRef,
+            {
+              userId,
+              fromUserId: "system_milestone",
+              fromUserName: "Congratulations! 🎉",
+              fromUserUsername: "",
+              fromUserAvatar: "",
+              type: "milestone",
+              title: "Congratulations! 🎉",
+              body: `You now have ${nextVal.toLocaleString()} total followers! Keep growing your community.`,
+              targetId: userId,
+              isRead: delta > 0 ? false : true,
+              read: delta > 0 ? false : true,
+              createdAt: Date.now(),
+              link: `/news-hub/profile/${userId}`,
+            },
+            { merge: true }
+          ).catch(() => {});
+        } else {
+          await deleteDoc(notifRef).catch(() => {});
+        }
+      }
 
       const applyUpdate = (item: any) =>
-        item.id === userId ? { ...item, [field]: nextVal } : item;
+        item.id === userId ? { ...item, ...updatePayload } : item;
 
       setAllUsers((prev) => prev.map(applyUpdate));
       setSelectedItem((prev: any) => (prev ? applyUpdate(prev) : null));
@@ -443,9 +597,9 @@ export const ManageEngagement: React.FC = () => {
                 const safeUsername = getSafePublicUsername(item);
                 const userAvatar =
                   item.photoURL || item.shopLogo || item.avatar || "";
-                const userFollowers = Math.max(
-                  Number(item.followersCount || 0),
-                  Array.isArray(item.followers) ? item.followers.length : 0
+                const userFollowers = getEffectiveFollowersCount(
+                  item,
+                  item._realFollowersCount
                 );
 
                 return (
@@ -701,11 +855,9 @@ export const ManageEngagement: React.FC = () => {
                 />
                 <MetricCard
                   title="Followers"
-                  value={Math.max(
-                    Number(selectedItem.followersCount || 0),
-                    Array.isArray(selectedItem.followers)
-                      ? selectedItem.followers.length
-                      : 0
+                  value={getEffectiveFollowersCount(
+                    selectedItem,
+                    selectedItem._realFollowersCount
                   )}
                   icon={<User className="w-5 h-5 text-emerald-500" />}
                   onAdjust={(delta) =>

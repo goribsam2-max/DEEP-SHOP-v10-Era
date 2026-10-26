@@ -41,13 +41,25 @@ import {
   extractConfiguredMobileAccounts,
   formatDhakaDateTime
 } from "../lib/dhakaTime";
-import { subscribeToFollowerStats } from "../lib/follow";
+import {
+  subscribeToFollowerStats,
+  getEffectiveFollowersCount,
+} from "../lib/follow";
 import creatorAvatarFallback from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 import postImageFallback from "../src/assets/images/feed_showcase_park_1792826817616.jpg";
 
 type TabType = "analytics" | "monetise" | "content" | "settings";
 
 const ACCOUNT_TYPES: MobileAccountType[] = ["Personal", "Payment", "Agent"];
+
+const REACTION_BREAKDOWN_ITEMS = [
+  { key: "love", emoji: "❤️", label: "Love" },
+  { key: "like", emoji: "👍", label: "Like" },
+  { key: "haha", emoji: "😆", label: "Haha" },
+  { key: "wow", emoji: "😮", label: "Wow" },
+  { key: "sad", emoji: "😢", label: "Sad" },
+  { key: "angry", emoji: "😡", label: "Angry" },
+] as const;
 
 export const CreatorDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -152,9 +164,7 @@ export const CreatorDashboard: React.FC = () => {
           setBkashAccounts(extracted.bkash);
           setNagadAccounts(extracted.nagad);
 
-          const docFollowers =
-            Number(data.followersCount || 0) ||
-            (Array.isArray(data.followers) ? data.followers.length : 0);
+          const docFollowers = getEffectiveFollowersCount(data);
           const unlocked = docFollowers >= 1000;
           const isEnabledInDoc = Boolean(unlocked && data.contentMonetizationEnabled === true);
           let enabledTs = Number(data.monetizationEnabledAt || 0);
@@ -249,13 +259,9 @@ export const CreatorDashboard: React.FC = () => {
     });
   };
 
-  const storedFollowerCount =
-    Number(userData?.followersCount || 0) ||
-    (Array.isArray(userData?.followers) ? userData.followers.length : 0);
+  const storedFollowerCount = getEffectiveFollowersCount(userData);
   const followerCount =
-    liveFollowersCount !== null
-      ? Math.max(liveFollowersCount, storedFollowerCount)
-      : storedFollowerCount;
+    liveFollowersCount !== null ? liveFollowersCount : storedFollowerCount;
   const MONETIZATION_MIN_FOLLOWERS = 1000;
   const isMonetizationUnlocked = followerCount >= MONETIZATION_MIN_FOLLOWERS;
 
@@ -444,20 +450,47 @@ export const CreatorDashboard: React.FC = () => {
   const earnedStars = Number(userData?.earnedStars || 0);
   const purchasedStars = Number(userData?.purchasedStars || 0);
 
-  const sumReactionsForPost = (p: any): number => {
-    const rc = p.reactionsCount;
-    if (rc && typeof rc === "object") {
-      return (
-        Number(rc.like || 0) +
-        Number(rc.love || 0) +
-        Number(rc.haha || 0) +
-        Number(rc.wow || 0) +
-        Number(rc.sad || 0) +
-        Number(rc.angry || 0)
-      );
+  const getPostReactionBreakdown = (p: any) => {
+    const rc = p?.reactionsCount;
+    if (rc && typeof rc === "object" && Object.keys(rc).length > 0) {
+      return {
+        love: Number(rc.love || 0),
+        like: Number(rc.like || 0),
+        haha: Number(rc.haha || 0),
+        wow: Number(rc.wow || 0),
+        sad: Number(rc.sad || 0),
+        angry: Number(rc.angry || 0),
+      };
     }
-    return Number(p.likesCount || p.votes || 0);
+    const fallbackVotes = Number(p?.likesCount || p?.votes || 0);
+    return {
+      love: fallbackVotes,
+      like: 0,
+      haha: 0,
+      wow: 0,
+      sad: 0,
+      angry: 0,
+    };
   };
+
+  const sumReactionsForPost = (p: any): number => {
+    const b = getPostReactionBreakdown(p);
+    return b.love + b.like + b.haha + b.wow + b.sad + b.angry;
+  };
+
+  const overallReactionBreakdown = posts.reduce(
+    (acc, p) => {
+      const b = getPostReactionBreakdown(p);
+      acc.love += b.love;
+      acc.like += b.like;
+      acc.haha += b.haha;
+      acc.wow += b.wow;
+      acc.sad += b.sad;
+      acc.angry += b.angry;
+      return acc;
+    },
+    { love: 0, like: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+  );
 
   const totalViews = posts.reduce((acc, p) => acc + Number(p.views || 0), 0);
   const totalReactions = posts.reduce((acc, p) => acc + sumReactionsForPost(p), 0);
@@ -746,6 +779,34 @@ export const CreatorDashboard: React.FC = () => {
               </div>
             </div>
 
+            {/* SEPARATE REACTION BREAKDOWN CARD (ONLY IN AUTHOR'S DASHBOARD) */}
+            <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white">
+                  Reactions Breakdown (Across Your Posts)
+                </h3>
+                <span className="text-[11px] font-bold text-zinc-500 tabular-nums">
+                  Total: {totalReactions.toLocaleString()}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+                {REACTION_BREAKDOWN_ITEMS.map((item) => (
+                  <div
+                    key={item.key}
+                    className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/70 border border-zinc-200/60 dark:border-zinc-700/60 flex flex-col items-center text-center space-y-1"
+                  >
+                    <span className="text-lg leading-none">{item.emoji}</span>
+                    <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                      {item.label}
+                    </span>
+                    <span className="text-sm font-black text-zinc-900 dark:text-white font-mono tabular-nums">
+                      {overallReactionBreakdown[item.key].toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* CONTENT MONETIZATION QUICK OVERVIEW BANNER (ALWAYS VISIBLE ON INSIGHTS) */}
             <div
               className={`p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
@@ -933,6 +994,21 @@ export const CreatorDashboard: React.FC = () => {
                                 <MessageCircle className="w-3 h-3" />{" "}
                                 {post.commentsCount || 0}
                               </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                              {REACTION_BREAKDOWN_ITEMS.map((rx) => {
+                                const rxBreakdown = getPostReactionBreakdown(post);
+                                return (
+                                  <span
+                                    key={rx.key}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 tabular-nums"
+                                    title={`${rx.label}: ${rxBreakdown[rx.key]}`}
+                                  >
+                                    <span>{rx.emoji}</span>
+                                    <span>{rxBreakdown[rx.key]}</span>
+                                  </span>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
@@ -1451,59 +1527,97 @@ export const CreatorDashboard: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {posts.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => navigate(`/news-hub/post/${p.id}`)}
-                    className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 whitespace-nowrap">
-                      <span>
-                        {p.postType === "scam" ? "Scam Report" : "Community Post"} ·{" "}
-                        {isPostMonetizationEligible(p)
-                          ? `Monetized (৳${(
-                              (Number(p.views || 0) / 1000) * 50 +
-                              sumReactionsForPost(p) * 0.25 +
-                              Number(p.commentsCount || 0) * 0.5
-                            ).toFixed(2)})`
-                          : monetizationEnabledAt > 0 &&
-                            Number(p.createdAt || 0) < monetizationEnabledAt
-                          ? "Pre-monetization · ৳0.00"
-                          : "৳0.00"}
-                      </span>
-                      <span>
-                        {formatDhakaDateTime(p.createdAt)}
-                        {p.isEdited ? " · Edited" : ""}
-                      </span>
+                {posts.map((p) => {
+                  const pBreakdown = getPostReactionBreakdown(p);
+                  const pTotalReacts = sumReactionsForPost(p);
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => navigate(`/news-hub/post/${p.id}`)}
+                      className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 whitespace-nowrap">
+                        <span>
+                          {p.postType === "scam" ? "Scam Report" : "Community Post"} ·{" "}
+                          {isPostMonetizationEligible(p)
+                            ? `Monetized (৳${(
+                                (Number(p.views || 0) / 1000) * 50 +
+                                pTotalReacts * 0.25 +
+                                Number(p.commentsCount || 0) * 0.5
+                              ).toFixed(2)})`
+                            : monetizationEnabledAt > 0 &&
+                              Number(p.createdAt || 0) < monetizationEnabledAt
+                            ? "Pre-monetization · ৳0.00"
+                            : "৳0.00"}
+                        </span>
+                        <span>
+                          {formatDhakaDateTime(p.createdAt)}
+                          {p.isEdited ? " · Edited" : ""}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-sm text-zinc-900 dark:text-white line-clamp-1">
+                        {p.title || "Community Update"}
+                      </h4>
+                      <p className="text-xs text-zinc-500 line-clamp-2">{p.description}</p>
+
+                      {/* Post Stats & Per-Reaction Breakdown */}
+                      <div className="pt-1 space-y-2">
+                        <div className="flex items-center gap-3 text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                          <span className="inline-flex items-center gap-1 tabular-nums">
+                            <Eye className="w-3.5 h-3.5 text-[#1877F2]" />
+                            {Number(p.views || 0).toLocaleString()} views
+                          </span>
+                          <span className="inline-flex items-center gap-1 tabular-nums">
+                            <Heart className="w-3.5 h-3.5 text-rose-500" />
+                            {pTotalReacts.toLocaleString()} total
+                          </span>
+                          <span className="inline-flex items-center gap-1 tabular-nums">
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            {Number(p.commentsCount || 0).toLocaleString()} comments
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-6 gap-1.5">
+                          {REACTION_BREAKDOWN_ITEMS.map((rx) => (
+                            <div
+                              key={rx.key}
+                              className="py-1.5 px-1 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700/60 flex flex-col items-center text-center"
+                              title={rx.label}
+                            >
+                              <span className="text-sm leading-none">{rx.emoji}</span>
+                              <span className="text-[11px] font-extrabold text-zinc-800 dark:text-zinc-200 font-mono tabular-nums mt-0.5">
+                                {pBreakdown[rx.key].toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic();
+                            navigate(`/news-hub/create?edit=${p.id}`);
+                          }}
+                          className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-200 inline-flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteCreatorPost(e, p.id)}
+                          className="px-3 py-1.5 rounded-full bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-xs font-bold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
-                    <h4 className="font-bold text-sm text-zinc-900 dark:text-white line-clamp-1">
-                      {p.title || "Community Update"}
-                    </h4>
-                    <p className="text-xs text-zinc-500 line-clamp-2">{p.description}</p>
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          triggerHaptic();
-                          navigate(`/news-hub/create?edit=${p.id}`);
-                        }}
-                        className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-200 inline-flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteCreatorPost(e, p.id)}
-                        className="px-3 py-1.5 rounded-full bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-xs font-bold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1.5 transition cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

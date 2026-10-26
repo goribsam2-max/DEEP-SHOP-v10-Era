@@ -14,6 +14,7 @@ import {
   addDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { hasImmediateAdminOrStaffRole } from "./admin";
 import { getSafeDisplayName, getSafePublicUsername } from "./utils";
 
 const LOCAL_FOLLOW_KEY = "followed_creators";
@@ -51,6 +52,31 @@ export interface FollowerStatsSnapshot {
   followingCount: number;
   isFollowing: boolean;
   followerIds: string[];
+}
+
+export function getEffectiveFollowersCount(
+  userData: Record<string, any> | null | undefined,
+  realFollowerCount?: number
+): number {
+  const rawStoredLen = Array.isArray(userData?.followers)
+    ? userData!.followers.filter(Boolean).length
+    : 0;
+  const realCount =
+    typeof realFollowerCount === "number" ? realFollowerCount : rawStoredLen;
+
+  if (
+    typeof userData?.followersOffset === "number" &&
+    !Number.isNaN(userData.followersOffset)
+  ) {
+    return Math.max(0, realCount + Math.trunc(userData.followersOffset));
+  }
+
+  const storedMaxCount = Math.max(
+    Number(userData?.followersCount || 0),
+    Number(userData?.customFollowersCount || 0)
+  );
+  const legacyOffset = Math.max(0, storedMaxCount - rawStoredLen);
+  return Math.max(0, legacyOffset + realCount);
 }
 
 function computeStats(
@@ -94,13 +120,7 @@ function computeStats(
     mergedSet.add(currentUid);
   }
 
-  // Preserve any admin-configured custom base follower offset while adding real followers accurately
-  const storedMaxCount = Math.max(
-    Number(targetData?.followersCount || 0),
-    Number(targetData?.customFollowersCount || 0)
-  );
-  const adminBaseOffset = Math.max(0, storedMaxCount - rawStoredFollowers.length);
-  const followersCount = Math.max(0, adminBaseOffset + mergedSet.size);
+  const followersCount = getEffectiveFollowersCount(targetData, mergedSet.size);
 
   const followingArr: string[] = Array.isArray(targetData?.following)
     ? targetData.following.filter((id: string) => Boolean(id) && id !== targetUid)
@@ -332,27 +352,51 @@ export async function toggleFollowUser({
     }
 
     if (nextFollowing) {
-      const followerLabel = getSafeDisplayName(currentUser, "Someone");
-      const followerUsername = getSafePublicUsername(currentUser);
+      const isActorAdmin = hasImmediateAdminOrStaffRole(null, currentUser as any);
+      if (isActorAdmin) {
+        const totalNow = Math.max(1, computedCount || 1);
+        setDoc(
+          doc(db, "news_hub_notifications", `milestone_followers_${targetUid}`),
+          {
+            userId: targetUid,
+            fromUserId: "system_milestone",
+            fromUserName: "Congratulations! 🎉",
+            fromUserUsername: "",
+            fromUserAvatar: "",
+            type: "milestone",
+            title: "Congratulations! 🎉",
+            body: `You now have ${totalNow.toLocaleString()} total followers! Keep growing your community.`,
+            targetId: targetUid,
+            isRead: false,
+            read: false,
+            createdAt: Date.now(),
+            link: `/news-hub/profile/${targetUid}`,
+          },
+          { merge: true }
+        ).catch(() => {});
+      } else {
+        const followerLabel = getSafeDisplayName(currentUser, "Someone");
+        const followerUsername = getSafePublicUsername(currentUser);
 
-      const notifPayload = {
-        userId: targetUid,
-        fromUserId: myUid,
-        fromUserName: followerLabel,
-        fromUserUsername: followerUsername,
-        fromUserAvatar: currentUser.photoURL || "",
-        type: "follow",
-        title: "New Follower",
-        body: "started following you.",
-        targetId: myUid,
-        isRead: false,
-        read: false,
-        createdAt: Date.now(),
-        link: `/news-hub/profile/${myUid}`,
-      };
+        const notifPayload = {
+          userId: targetUid,
+          fromUserId: myUid,
+          fromUserName: followerLabel,
+          fromUserUsername: followerUsername,
+          fromUserAvatar: currentUser.photoURL || "",
+          type: "follow",
+          title: "New Follower",
+          body: "started following you.",
+          targetId: myUid,
+          isRead: false,
+          read: false,
+          createdAt: Date.now(),
+          link: `/news-hub/profile/${myUid}`,
+        };
 
-      addDoc(collection(db, "news_hub_notifications"), notifPayload).catch(() => {});
-      addDoc(collection(db, "notifications"), notifPayload).catch(() => {});
+        addDoc(collection(db, "news_hub_notifications"), notifPayload).catch(() => {});
+        addDoc(collection(db, "notifications"), notifPayload).catch(() => {});
+      }
     }
   } catch {}
 

@@ -44,6 +44,7 @@ import {
   orderBy,
   onSnapshot,
   doc,
+  setDoc,
   getDocs,
   addDoc,
   updateDoc,
@@ -79,7 +80,11 @@ import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
 } from "../lib/admin";
-import { toggleFollowUser, useFollowedIds } from "../lib/follow";
+import {
+  toggleFollowUser,
+  useFollowedIds,
+  getEffectiveFollowersCount,
+} from "../lib/follow";
 import { IosSpinner } from "../components/ui/ios-spinner";
 import { useFooterLogo } from "../lib/useFooterLogo";
 import {
@@ -542,10 +547,7 @@ export const NewsHub: React.FC = () => {
         if (!p.reporterName) return;
       }
 
-      const followersCount = Math.max(
-        Number(uDoc?.followersCount || 0),
-        Array.isArray(uDoc?.followers) ? uDoc.followers.length : 0
-      );
+      const followersCount = getEffectiveFollowersCount(uDoc);
       const resolvedAvatar =
         uDoc?.shopLogo ||
         uDoc?.photoURL ||
@@ -692,6 +694,11 @@ export const NewsHub: React.FC = () => {
       updatedReactionsMap[uid] = chosenType;
     }
 
+    const nextTotalVotes = Object.values(baseCounts).reduce(
+      (a, b) => a + (Number(b) || 0),
+      0
+    );
+
     setFirestorePosts((prev) =>
       prev.map((p) =>
         p.id === post.id
@@ -699,6 +706,7 @@ export const NewsHub: React.FC = () => {
               ...p,
               reactions: updatedReactionsMap,
               reactionsCount: baseCounts,
+              votes: nextTotalVotes,
             }
           : p
       )
@@ -708,32 +716,64 @@ export const NewsHub: React.FC = () => {
       await updateDoc(doc(db, "scam_posts", post.id), {
         reactions: updatedReactionsMap,
         reactionsCount: baseCounts,
+        votes: nextTotalVotes,
       });
 
       if (!isRemoving && post.reporterId && post.reporterId !== uid) {
-        const authorName = getSafeDisplayName(
-          userProfile || currentUser,
-          "Someone"
-        );
-        const authorAvatar = userProfile?.photoURL || currentUser?.photoURL || "";
-        const authorUsername = getSafePublicUsername(userProfile || currentUser);
+        const actorIsAdmin =
+          hasImmediateAdminOrStaffRole(userProfile, currentUser) || isStaffDoc;
 
-        addDoc(collection(db, "news_hub_notifications"), {
-          userId: post.reporterId,
-          fromUserId: uid,
-          fromUserName: authorName,
-          fromUserUsername: authorUsername,
-          fromUserAvatar: authorAvatar,
-          type: "like",
-          title: "New Reaction",
-          body: `reacted to your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
-          mediaThumbnail: post.images?.[0] || "",
-          targetId: post.id,
-          isRead: false,
-          read: false,
-          createdAt: Date.now(),
-          link: `/news-hub/post/${post.id}`,
-        }).catch(() => {});
+        if (actorIsAdmin) {
+          setDoc(
+            doc(db, "news_hub_notifications", `milestone_reactions_${post.id}`),
+            {
+              userId: post.reporterId,
+              fromUserId: "system_milestone",
+              fromUserName: "News Hub",
+              fromUserUsername: "",
+              fromUserAvatar: "",
+              type: "milestone",
+              milestoneKind: "reactions",
+              totalCount: nextTotalVotes,
+              title: "Congratulations! 🎉",
+              body: `Congratulations! Your post now has ${nextTotalVotes.toLocaleString()} total reactions.`,
+              mediaThumbnail: post.images?.[0] || "",
+              targetId: post.id,
+              isRead: false,
+              read: false,
+              createdAt: Date.now(),
+              link: `/news-hub/post/${post.id}`,
+            },
+            { merge: true }
+          ).catch(() => {});
+        } else {
+          const authorName = getSafeDisplayName(
+            userProfile || currentUser,
+            "Someone"
+          );
+          const authorAvatar =
+            userProfile?.photoURL || currentUser?.photoURL || "";
+          const authorUsername = getSafePublicUsername(
+            userProfile || currentUser
+          );
+
+          addDoc(collection(db, "news_hub_notifications"), {
+            userId: post.reporterId,
+            fromUserId: uid,
+            fromUserName: authorName,
+            fromUserUsername: authorUsername,
+            fromUserAvatar: authorAvatar,
+            type: "like",
+            title: "New Reaction",
+            body: `reacted to your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
+            mediaThumbnail: post.images?.[0] || "",
+            targetId: post.id,
+            isRead: false,
+            read: false,
+            createdAt: Date.now(),
+            link: `/news-hub/post/${post.id}`,
+          }).catch(() => {});
+        }
       }
     } catch {}
   };
@@ -1808,6 +1848,51 @@ export const NewsHub: React.FC = () => {
                                     repostedByUserIds: updated,
                                     repostsCount: nextCount,
                                   });
+                                  if (!isR && post.reporterId && post.reporterId !== currentUser.uid) {
+                                    const actorIsAdmin =
+                                      hasImmediateAdminOrStaffRole(userProfile, currentUser) || isStaffDoc;
+                                    if (actorIsAdmin) {
+                                      setDoc(
+                                        doc(db, "news_hub_notifications", `milestone_reposts_${post.id}`),
+                                        {
+                                          userId: post.reporterId,
+                                          fromUserId: "system_milestone",
+                                          fromUserName: "News Hub",
+                                          fromUserUsername: "",
+                                          fromUserAvatar: "",
+                                          type: "milestone",
+                                          milestoneKind: "reposts",
+                                          totalCount: nextCount,
+                                          title: "Congratulations! 🎉",
+                                          body: `Congratulations! Your post now has ${nextCount.toLocaleString()} total reposts.`,
+                                          mediaThumbnail: post.images?.[0] || "",
+                                          targetId: post.id,
+                                          isRead: false,
+                                          read: false,
+                                          createdAt: Date.now(),
+                                          link: `/news-hub/post/${post.id}`,
+                                        },
+                                        { merge: true }
+                                      ).catch(() => {});
+                                    } else {
+                                      addDoc(collection(db, "news_hub_notifications"), {
+                                        userId: post.reporterId,
+                                        fromUserId: currentUser.uid,
+                                        fromUserName: getSafeDisplayName(userProfile || currentUser, "Someone"),
+                                        fromUserUsername: getSafePublicUsername(userProfile || currentUser),
+                                        fromUserAvatar: userProfile?.photoURL || currentUser.photoURL || "",
+                                        type: "repost",
+                                        title: "New Repost",
+                                        body: `reposted your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
+                                        mediaThumbnail: post.images?.[0] || "",
+                                        targetId: post.id,
+                                        isRead: false,
+                                        read: false,
+                                        createdAt: Date.now(),
+                                        link: `/news-hub/post/${post.id}`,
+                                      }).catch(() => {});
+                                    }
+                                  }
                                   notify(isR ? "Repost removed" : "Post reposted to your feed!", "success");
                                 } catch {}
                               }}
@@ -1821,6 +1906,21 @@ export const NewsHub: React.FC = () => {
                               <RepeatIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                               <span>{formatCompactCount(post.repostsCount || 0)}</span>
                             </button>
+
+                            {/* Author-Only Views Count */}
+                            {Boolean(
+                              currentUser?.uid &&
+                                (post.reporterId === currentUser.uid ||
+                                  (post as any).authorId === currentUser.uid)
+                            ) && (
+                              <span
+                                className="h-8 sm:h-9 px-2 sm:px-2.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 flex items-center gap-1 text-[10px] sm:text-xs font-semibold tabular-nums text-zinc-600 dark:text-zinc-300 shrink-0"
+                                title="Views (only visible to you)"
+                              >
+                                <EyeIcon className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                                <span>{formatCompactCount(post.views || 0)}</span>
+                              </span>
+                            )}
 
                             {/* 5. Save Bookmark */}
                             <button

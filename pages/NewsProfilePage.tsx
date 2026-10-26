@@ -117,6 +117,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  addDoc,
   updateDoc,
   collection,
   query,
@@ -133,13 +134,21 @@ import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { formatDhakaDateTime, formatDhakaFeedTime } from "../lib/dhakaTime";
+import { hasImmediateAdminOrStaffRole } from "../lib/admin";
 import {
   formatCompactNumber,
   getSafePublicUsername,
+  getSafeDisplayName,
+  getPublicShareOrigin,
   isPhoneLikeUsername,
 } from "../lib/utils";
 import { useFooterLogo } from "../lib/useFooterLogo";
-import { toggleFollowUser, useFollowedIds } from "../lib/follow";
+import {
+  toggleFollowUser,
+  useFollowedIds,
+  subscribeToFollowerStats,
+  getEffectiveFollowersCount,
+} from "../lib/follow";
 import { processCleanImage } from "../lib/watermark";
 import defaultAvatarImg from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 import deepShopLogoFallback from "../src/assets/images/deep_shop_logo_1783442733929.jpg";
@@ -367,8 +376,25 @@ export const NewsProfilePage: React.FC = () => {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [liveFollowersCount, setLiveFollowersCount] = useState<number | null>(null);
+
   const targetUid = id || currentUser?.uid;
   const isOwnProfile = Boolean(currentUser?.uid && targetUid === currentUser.uid);
+
+  useEffect(() => {
+    if (!targetUid) {
+      setLiveFollowersCount(null);
+      return;
+    }
+    const unsub = subscribeToFollowerStats(
+      targetUid,
+      currentUser?.uid,
+      (stats) => {
+        setLiveFollowersCount(stats.followersCount);
+      }
+    );
+    return () => unsub();
+  }, [targetUid, currentUser?.uid]);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => {
@@ -684,6 +710,51 @@ export const NewsProfilePage: React.FC = () => {
         repostsCount: nextCount,
       });
 
+      if (!isReposted && post.reporterId && post.reporterId !== currentUser.uid) {
+        const actorIsAdmin = hasImmediateAdminOrStaffRole(null, currentUser);
+        if (actorIsAdmin) {
+          setDoc(
+            doc(db, "news_hub_notifications", `milestone_reposts_${post.id}`),
+            {
+              userId: post.reporterId,
+              fromUserId: "system_milestone",
+              fromUserName: "News Hub",
+              fromUserUsername: "",
+              fromUserAvatar: "",
+              type: "milestone",
+              milestoneKind: "reposts",
+              totalCount: nextCount,
+              title: "Congratulations! 🎉",
+              body: `Congratulations! Your post now has ${nextCount.toLocaleString()} total reposts.`,
+              mediaThumbnail: post.images?.[0] || "",
+              targetId: post.id,
+              isRead: false,
+              read: false,
+              createdAt: Date.now(),
+              link: `/news-hub/post/${post.id}`,
+            },
+            { merge: true }
+          ).catch(() => {});
+        } else {
+          addDoc(collection(db, "news_hub_notifications"), {
+            userId: post.reporterId,
+            fromUserId: currentUser.uid,
+            fromUserName: getSafeDisplayName(currentUser, "Someone"),
+            fromUserUsername: getSafePublicUsername(currentUser),
+            fromUserAvatar: currentUser.photoURL || "",
+            type: "repost",
+            title: "New Repost",
+            body: `reposted your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
+            mediaThumbnail: post.images?.[0] || "",
+            targetId: post.id,
+            isRead: false,
+            read: false,
+            createdAt: Date.now(),
+            link: `/news-hub/post/${post.id}`,
+          }).catch(() => {});
+        }
+      }
+
       notify(isReposted ? "Repost removed" : "Post reposted to your profile!", "success");
     } catch {}
   };
@@ -727,7 +798,7 @@ export const NewsProfilePage: React.FC = () => {
 
   const handleCopyProfileLink = () => {
     triggerHaptic();
-    const url = window.location.origin + "/news-hub/profile/" + targetUid;
+    const url = getPublicShareOrigin() + "/news-hub/profile/" + targetUid;
     navigator.clipboard.writeText(url);
     notify("Profile link copied to clipboard!", "success");
   };
@@ -741,10 +812,10 @@ export const NewsProfilePage: React.FC = () => {
 
   const bio = profileUser?.bio || "No bio added yet.";
   const avatarUrl = profileUser?.photoURL || profileUser?.shopLogo || "";
-  const followersCount = Math.max(
-    Number(profileUser?.followersCount || 0),
-    Array.isArray(profileUser?.followers) ? profileUser.followers.length : 0
-  );
+  const followersCount =
+    liveFollowersCount !== null
+      ? liveFollowersCount
+      : getEffectiveFollowersCount(profileUser);
 
   // Loading indicator for auth initializing or target profile load
   if (authInitializing || (loading && !profileUser)) {
@@ -1383,19 +1454,23 @@ export const NewsProfilePage: React.FC = () => {
           {/* Stats Bar */}
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-zinc-400">
             <span>{formatCompactNumber(followersCount)} followers</span>
-            <span>·</span>
-            <span>
-              {(() => {
-                const totalViews =
-                  Number(profileUser?.views || 0) +
-                  userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
-                return (
-                  <span>
-                    {formatCompactNumber(totalViews)} recent views
-                  </span>
-                );
-              })()}
-            </span>
+            {isOwnProfile && (
+              <>
+                <span>·</span>
+                <span>
+                  {(() => {
+                    const totalViews =
+                      Number(profileUser?.views || 0) +
+                      userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
+                    return (
+                      <span>
+                        {formatCompactNumber(totalViews)} recent views
+                      </span>
+                    );
+                  })()}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Action Buttons Row */}
@@ -1705,10 +1780,16 @@ export const NewsProfilePage: React.FC = () => {
                         <RepeatIcon className="w-4 h-4" />
                         <span>{formatCompactNumber(post.repostsCount || 0)}</span>
                       </button>
-                      <span className="flex items-center gap-1 ml-auto">
-                        <Eye className="w-4 h-4" />
-                        <span>{formatCompactNumber(post.views || 0)}</span>
-                      </span>
+                      {Boolean(
+                        currentUser?.uid &&
+                          (post.reporterId === currentUser.uid ||
+                            (post as any).authorId === currentUser.uid)
+                      ) && (
+                        <span className="flex items-center gap-1 ml-auto" title="Only visible to you">
+                          <Eye className="w-4 h-4" />
+                          <span>{formatCompactNumber(post.views || 0)}</span>
+                        </span>
+                      )}
                     </div>
                   </article>
                 );
@@ -2005,12 +2086,15 @@ export const NewsProfilePage: React.FC = () => {
                 <div className="pb-3 border-b border-slate-200/60 dark:border-zinc-700/60">
                   <p className="text-xs font-bold text-slate-500">Joined & Activity</p>
                   <p className="text-sm font-extrabold text-slate-900 dark:text-white">
-                    Joined {profileUser?.createdAt ? formatDhakaDateTime(profileUser.createdAt) : "September 2026"} · {(() => {
-                      const totalViews =
-                        Number(profileUser?.views || 0) +
-                        userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
-                      return `${formatCompactNumber(totalViews)} recent views`;
-                    })()}
+                    Joined {profileUser?.createdAt ? formatDhakaDateTime(profileUser.createdAt) : "September 2026"}
+                    {isOwnProfile
+                      ? ` · ${(() => {
+                          const totalViews =
+                            Number(profileUser?.views || 0) +
+                            userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
+                          return `${formatCompactNumber(totalViews)} recent views`;
+                        })()}`
+                      : ""}
                   </p>
                 </div>
 
@@ -2064,7 +2148,7 @@ export const NewsProfilePage: React.FC = () => {
 
               <div className="bg-white p-4 rounded-[32px] shadow-sm border border-slate-200/60">
                 <ScannableQRCodeCard
-                  profileUrl={window.location.origin + "/news-hub/profile/" + targetUid}
+                  profileUrl={getPublicShareOrigin() + "/news-hub/profile/" + targetUid}
                   name={displayName}
                   username={username}
                   avatarUrl={avatarUrl}

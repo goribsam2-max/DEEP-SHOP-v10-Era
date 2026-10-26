@@ -1640,9 +1640,28 @@ export async function initializeAppAsync() {
 
   app.get("*all", async (req, res) => {
     try {
+      const rawQueryPath =
+        typeof req.query.__pathname === "string" ? req.query.__pathname.trim() : "";
+      const forwardedUri = String(
+        req.headers["x-forwarded-uri"] ||
+          req.headers["x-original-url"] ||
+          req.headers["x-rewrite-url"] ||
+          ""
+      )
+        .split("?")[0]
+        .trim();
+      const candidatePath =
+        rawQueryPath ||
+        (forwardedUri && forwardedUri !== "/api/index" ? forwardedUri : "") ||
+        (req.path !== "/api/index" ? req.path : "") ||
+        "/";
+      const reqPath = candidatePath.startsWith("/")
+        ? candidatePath
+        : `/${candidatePath}`;
+
       // Do not serve HTML fallback for missing static assets
       const isStaticAssetExt = /\.(?:js|mjs|cjs|ts|tsx|jsx|css|map|json|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|mp4|webm|mp3|wav)$/i.test(
-        req.path,
+        reqPath,
       );
       if (isStaticAssetExt) {
         return res.status(404).end();
@@ -1652,7 +1671,7 @@ export async function initializeAppAsync() {
 
       if (!isProd && vite) {
         template = fs.readFileSync(path.resolve("index.html"), "utf-8");
-        template = await vite.transformIndexHtml(req.originalUrl, template);
+        template = await vite.transformIndexHtml(reqPath, template);
       } else {
         const candidatePaths = [
           path.join(distPath, "index.html"),
@@ -1668,6 +1687,18 @@ export async function initializeAppAsync() {
         }
       }
 
+      const injectDynamicHeadMeta = (html: string, dynamicMeta: string): string => {
+        const placeholderRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
+        if (placeholderRegex.test(html)) {
+          return html.replace(placeholderRegex, dynamicMeta);
+        }
+        const cleaned = html
+          .replace(/<title>[\s\S]*?<\/title>/gi, "")
+          .replace(/<meta\s+[^>]*?(?:name=["'](?:description|keywords|twitter:[^"']+)["']|property=["'](?:og:[^"']+|product:[^"']+)["'])[^>]*?>/gi, "")
+          .replace(/<link\s+[^>]*?rel=["']canonical["'][^>]*?>/gi, "");
+        return cleaned.replace("</head>", `${dynamicMeta}\n</head>`);
+      };
+
       const knownAppRoutes = [
         "/", "/all-products", "/cart", "/checkout", "/admin", "/seller", "/courier",
         "/messages", "/profile", "/orders", "/my-orders", "/login", "/signin", "/register", "/signup",
@@ -1678,35 +1709,41 @@ export async function initializeAppAsync() {
         "/search", "/notifications", "/onboarding", "/auth-selector", "/verify", "/complete-profile",
         "/manifest.webmanifest", "/custom-sw.js", "/favicon.ico", "/favicon.png", "/sitemap.xml", "/robots.txt"
       ];
-      const isKnownRoute = knownAppRoutes.some(r => req.path === r || req.path.startsWith(r + "/"));
-      const hasExtension = req.path.includes(".");
+      const isKnownRoute = knownAppRoutes.some(r => reqPath === r || reqPath.startsWith(r + "/"));
+      const hasExtension = reqPath.includes(".");
 
-      const newsPostMatch = req.path.match(/^\/(?:news-hub\/(?:post|share)|news|scam)\/([^/?#]+)/);
-      const productMatch = req.path.match(/^\/product\/(.+)/);
-      const blogMatch = req.path.match(/^\/blog\/(.+)/);
-      const isSlugMatch = !isKnownRoute && !hasExtension && !req.path.startsWith("/api");
+      const newsPostMatch = reqPath.match(/^\/(?:news-hub\/(?:post|share)|news|scam)\/([^/?#]+)/);
+      const productMatch = reqPath.match(/^\/product\/(.+)/);
+      const blogMatch = reqPath.match(/^\/blog\/(.+)/);
+      const isSlugMatch = !isKnownRoute && !hasExtension && !reqPath.startsWith("/api");
 
-      const requestOrigin = `${req.protocol}://${req.get("host") || "www.deepshop.top"}`;
+      const protoHeader = String(req.headers["x-forwarded-proto"] || req.protocol || "https").split(",")[0].trim();
+      const hostHeader = String(req.headers["x-forwarded-host"] || req.get("host") || "www.deepshop.top").split(",")[0].trim();
+      const requestOrigin = `${protoHeader}://${hostHeader}`;
 
       let newsPost: any = null;
       let product: any = null;
       let blog: any = null;
 
       if (newsPostMatch && newsPostMatch[1]) {
-        newsPost = await fetchNewsPostData(newsPostMatch[1]);
+        const decodedPostId = decodeURIComponent(newsPostMatch[1]);
+        newsPost = await fetchNewsPostData(decodedPostId);
+        if (newsPost && !newsPost.id) {
+          newsPost = { id: decodedPostId, ...newsPost };
+        }
       } else if (productMatch && productMatch[1]) {
         const segments = productMatch[1].split("/").filter(Boolean);
-        const lastPart = segments[segments.length - 1];
-        const firstPart = segments[0];
+        const lastPart = decodeURIComponent(segments[segments.length - 1]);
+        const firstPart = decodeURIComponent(segments[0]);
         product = await fetchProductData(lastPart);
         if (!product && lastPart !== firstPart) {
           product = await fetchProductData(firstPart);
         }
       } else if (blogMatch && blogMatch[1]) {
-        const blogSlug = blogMatch[1].split("/")[0];
+        const blogSlug = decodeURIComponent(blogMatch[1].split("/")[0]);
         blog = await fetchBlogData(blogSlug);
       } else if (isSlugMatch) {
-        const cleanSlug = req.path.replace(/^\//, "");
+        const cleanSlug = decodeURIComponent(reqPath.replace(/^\//, ""));
         product = await fetchProductData(cleanSlug);
         if (!product) {
           blog = await fetchBlogData(cleanSlug);
@@ -1719,11 +1756,16 @@ export async function initializeAppAsync() {
         const rawDesc = String(newsPost.description || "").trim();
         const cleanDesc = rawDesc.replace(/\s+/g, " ").trim();
         const firstLine = rawDesc
-          ? rawDesc.split(/\r?\n/)[0].trim().slice(0, 80)
+          ? rawDesc.split(/\r?\n/)[0].trim().slice(0, 90)
           : "";
+        const authorFallback = String(newsPost.reporterName || "News Hub").trim();
         const postTitle =
-          rawTitle || firstLine || String(newsPost.reporterName || "Post").trim();
-        const postDescription = (cleanDesc || rawTitle || postTitle).slice(0, 300);
+          rawTitle || firstLine || `${authorFallback}'s Post`;
+        const postDescription = (
+          cleanDesc ||
+          rawTitle ||
+          `Post shared by ${authorFallback} on News Hub.`
+        ).slice(0, 300);
 
         let imageUrl =
           (Array.isArray(newsPost.images) && newsPost.images[0]) ||
@@ -1738,7 +1780,8 @@ export async function initializeAppAsync() {
         const safeTitle = escapeHtmlAttr(postTitle);
         const safeDesc = escapeHtmlAttr(postDescription);
         const safeImg = escapeHtmlAttr(imageUrl);
-        const safeUrl = escapeHtmlAttr(`${requestOrigin}${req.path}`);
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${reqPath}`);
+        const serializedInitialPost = JSON.stringify(newsPost).replace(/</g, "\\u003c");
 
         const metaTags = `
           <title>${safeTitle}</title>
@@ -1754,14 +1797,24 @@ export async function initializeAppAsync() {
           <meta name="twitter:title" content="${safeTitle}" />
           <meta name="twitter:description" content="${safeDesc}" />
           <meta name="twitter:image" content="${safeImg}" />
+          <script>window.__INITIAL_POST_DATA__ = ${serializedInitialPost};</script>
+          <script type="application/ld+json">
+          {
+            "@context": "https://schema.org",
+            "@type": "SocialMediaPosting",
+            "headline": ${JSON.stringify(postTitle)},
+            "articleBody": ${JSON.stringify(postDescription)},
+            "image": [${JSON.stringify(imageUrl)}],
+            "url": ${JSON.stringify(`${requestOrigin}${reqPath}`)},
+            "author": {
+              "@type": "Person",
+              "name": ${JSON.stringify(authorFallback)}
+            }
+          }
+          </script>
         `;
 
-        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
-        if (metaRegex.test(template)) {
-          template = template.replace(metaRegex, metaTags);
-        } else {
-          template = template.replace("</head>", `${metaTags}\n</head>`);
-        }
+        template = injectDynamicHeadMeta(template, metaTags);
       } else if (product) {
         const rawTitle = String(product.name || product.title || "Product").trim();
         const rawDesc =
@@ -1783,7 +1836,7 @@ export async function initializeAppAsync() {
         const safeTitle = escapeHtmlAttr(rawTitle);
         const safeDesc = escapeHtmlAttr(rawDesc);
         const safeImg = escapeHtmlAttr(imageUrl);
-        const safeUrl = escapeHtmlAttr(`${requestOrigin}${req.path}`);
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${reqPath}`);
 
         const metaTags = `
           <title>${safeTitle}</title>
@@ -1812,7 +1865,7 @@ export async function initializeAppAsync() {
             "sku": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
             "offers": {
               "@type": "Offer",
-              "url": ${JSON.stringify(`${requestOrigin}${req.path}`)},
+              "url": ${JSON.stringify(`${requestOrigin}${reqPath}`)},
               "priceCurrency": "BDT",
               "price": ${price || 0},
               "priceValidUntil": "2027-12-31",
@@ -1823,12 +1876,7 @@ export async function initializeAppAsync() {
           </script>
         `;
 
-        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
-        if (metaRegex.test(template)) {
-          template = template.replace(metaRegex, metaTags);
-        } else {
-          template = template.replace("</head>", `${metaTags}\n</head>`);
-        }
+        template = injectDynamicHeadMeta(template, metaTags);
       } else if (blog) {
         const rawTitle = String(blog.title || "Blog Post").trim();
         const rawContent = String(blog.content || "");
@@ -1846,7 +1894,7 @@ export async function initializeAppAsync() {
         const safeTitle = escapeHtmlAttr(rawTitle);
         const safeDesc = escapeHtmlAttr(rawDesc);
         const safeImg = escapeHtmlAttr(imageUrl);
-        const safeUrl = escapeHtmlAttr(`${requestOrigin}${req.path}`);
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${reqPath}`);
 
         const metaTags = `
           <title>${safeTitle}</title>
@@ -1863,13 +1911,8 @@ export async function initializeAppAsync() {
           <meta name="twitter:image" content="${safeImg}" />
         `;
 
-        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
-        if (metaRegex.test(template)) {
-          template = template.replace(metaRegex, metaTags);
-        } else {
-          template = template.replace("</head>", `${metaTags}\n</head>`);
-        }
-      } else if (req.path === "/all-products") {
+        template = injectDynamicHeadMeta(template, metaTags);
+      } else if (reqPath === "/all-products") {
         const category = req.query.category ? String(req.query.category) : "All";
         const canonicalUrl = category !== "All" ? `${requestOrigin}/all-products?category=${encodeURIComponent(category)}` : `${requestOrigin}/all-products`;
         const safeTitle = escapeHtmlAttr(`${category === "All" ? "All Products" : `${category} Products`} | DEEP SHOP`);
@@ -1886,12 +1929,7 @@ export async function initializeAppAsync() {
           <meta property="og:url" content="${safeUrl}" />
         `;
 
-        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
-        if (metaRegex.test(template)) {
-          template = template.replace(metaRegex, metaTags);
-        } else {
-          template = template.replace("</head>", `${metaTags}\n</head>`);
-        }
+        template = injectDynamicHeadMeta(template, metaTags);
       } else {
         // Website link ("/" or general pages without specific item metadata)
         let title = "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site";
@@ -1914,7 +1952,7 @@ export async function initializeAppAsync() {
         const safeTitle = escapeHtmlAttr(title);
         const safeDesc = escapeHtmlAttr(description);
         const safeImg = escapeHtmlAttr(imageUrl);
-        const safeUrl = escapeHtmlAttr(`${requestOrigin}${req.path || "/"}`);
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${reqPath || "/"}`);
 
         const metaTags = `
           <title>${safeTitle}</title>
@@ -1930,12 +1968,7 @@ export async function initializeAppAsync() {
           <meta name="twitter:description" content="${safeDesc}" />
           <meta name="twitter:image" content="${safeImg}" />
         `;
-        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
-        if (metaRegex.test(template)) {
-          template = template.replace(metaRegex, metaTags);
-        } else {
-          template = template.replace("</head>", `${metaTags}\n</head>`);
-        }
+        template = injectDynamicHeadMeta(template, metaTags);
       }
 
       res.status(200).set({ "Content-Type": "text/html" }).end(template);

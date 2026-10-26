@@ -24,7 +24,7 @@ import {
 } from "framer-motion";
 import Icon from "../components/Icon";
 import { triggerHaptic } from "../lib/haptics";
-import { getSafeDisplayName } from "../lib/utils";
+import { getSafeDisplayName, getPublicShareOrigin } from "../lib/utils";
 import SEO from "../components/SEO";
 import { PixelImage } from "../components/ui/PixelImage";
 import { getProductDisplayImage } from "../src/lib/phonePartsArt";
@@ -1114,16 +1114,17 @@ const ProductDetails: React.FC = () => {
             <div className="flex items-center gap-2 relative z-20">
               <Button
                 onClick={() => {
+                  const shareUrl = `${getPublicShareOrigin()}${window.location.pathname}${window.location.search}`;
                   if (navigator.share) {
                     navigator
                       .share({
                         title: product.name,
                         text: product.description || product.name,
-                        url: window.location.href,
+                        url: shareUrl,
                       })
                       .catch(() => {});
                   } else {
-                    navigator.clipboard.writeText(window.location.href);
+                    navigator.clipboard.writeText(shareUrl);
                     notify("Link copied!", "success");
                   }
                 }}

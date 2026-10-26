@@ -90,6 +90,7 @@ import {
   formatCompactNumber,
   getSafeDisplayName,
   getSafePublicUsername,
+  getPublicShareOrigin,
 } from "../lib/utils";
 import {
   canAccessSellerDashboard,
@@ -532,7 +533,15 @@ export const NewsSharePage: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
 
-  const [post, setPost] = useState<ScamPost | null>(null);
+  const [post, setPost] = useState<ScamPost | null>(() => {
+    if (typeof window !== "undefined") {
+      const initial = (window as any).__INITIAL_POST_DATA__;
+      if (initial && (!id || initial.id === id)) {
+        return initial as ScamPost;
+      }
+    }
+    return null;
+  });
   const [copied, setCopied] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(() => auth.currentUser);
@@ -550,7 +559,9 @@ export const NewsSharePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    resolvePostById(id || "").then((found) => setPost(found));
+    resolvePostById(id || "").then((found) => {
+      if (found) setPost(found);
+    });
   }, [id]);
 
   // Load ONLY real users with whom the current user has actually had a chat conversation (zero demo/random users)
@@ -696,7 +707,7 @@ export const NewsSharePage: React.FC = () => {
   const isScam = isScamPostRecord(post);
   const postUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/news-hub/post/${post?.id || id}`
+      ? `${getPublicShareOrigin()}/news-hub/post/${post?.id || id}`
       : "";
 
   const cleanPostDesc = (post?.description || "")
@@ -821,7 +832,7 @@ export const NewsSharePage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 pb-24">
       <SEO
         title={exactShareTitle}
-        description={exactShareDescription}
+        description={exactShareDescription || exactShareTitle}
         image={post?.images?.[0]}
         exactTitle
       />
@@ -1384,10 +1395,10 @@ export const NewsSavedAndSearchPage: React.FC = () => {
               const saved = isSaved(post);
               const totalReactions = post.reactionsCount
                 ? (Object.values(post.reactionsCount) as number[]).reduce(
-                    (a, b) => a + b,
+                    (a, b) => a + (Number(b) || 0),
                     0
                   )
-                : post.votes || 0;
+                : Number(post.votes || 0);
 
               const canManage = Boolean(
                 (uid &&
@@ -1519,6 +1530,19 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                         <Send className="w-3.5 h-3.5 shrink-0" />
                         <span>{post.sharesCount || 0}</span>
                       </button>
+                      {Boolean(
+                        uid &&
+                          (post.reporterId === uid ||
+                            (post as any).authorId === uid)
+                      ) && (
+                        <span
+                          className="px-3 py-1.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 text-xs font-semibold flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 whitespace-nowrap"
+                          title="Views (only visible to you)"
+                        >
+                          <Eye className="w-3.5 h-3.5 shrink-0" />
+                          <span>{formatCompactNumber(post.views || 0)}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                 </article>
@@ -1964,10 +1988,134 @@ export const NewsStoryViewerPage: React.FC = () => {
     } catch {}
   }
 
+  const deliverStoryMessageToInbox = async (
+    messageText: string,
+    storyContextLabel: string
+  ) => {
+    if (!currentUser?.uid || !story) return;
+
+    let recipientUid = String(story.userId || "").trim();
+    if (!recipientUid) {
+      try {
+        const adminSnap = await getDocs(
+          query(
+            collection(db, "users"),
+            where("role", "in", ["admin", "super_admin"])
+          )
+        );
+        const firstAdmin = adminSnap.docs.find(
+          (d) => d.id !== currentUser.uid
+        );
+        if (firstAdmin) recipientUid = firstAdmin.id;
+      } catch {}
+    }
+
+    if (!recipientUid || recipientUid === currentUser.uid) return;
+
+    const senderDisplayName = getSafeDisplayName(currentUser, "Member");
+    const senderAvatar = currentUser.photoURL || "";
+    let recipientName = story.authorName || "Creator";
+    let recipientAvatar = story.avatar || "";
+
+    try {
+      const recSnap = await getDoc(doc(db, "users", recipientUid));
+      if (recSnap.exists()) {
+        const rData = recSnap.data() || {};
+        recipientName =
+          rData.shopName ||
+          getSafeDisplayName(rData, recipientName) ||
+          recipientName;
+        recipientAvatar = rData.shopLogo || rData.photoURL || recipientAvatar;
+      }
+    } catch {}
+
+    const qChats = query(
+      collection(db, "p2p_chats"),
+      where("participants", "array-contains", currentUser.uid)
+    );
+    const chatsSnap = await getDocs(qChats);
+    let targetChatId: string | null = null;
+
+    chatsSnap.docs.forEach((d) => {
+      const data = d.data() || {};
+      if (data.isGroup || data.type === "group") return;
+      const parts: string[] = Array.isArray(data.participants)
+        ? data.participants
+        : [];
+      if (parts.includes(recipientUid)) {
+        targetChatId = d.id;
+      }
+    });
+
+    const summaryPreview = `Story reply: ${messageText.slice(0, 60)}`;
+
+    if (!targetChatId) {
+      const createdChat = await addDoc(collection(db, "p2p_chats"), {
+        participants: [currentUser.uid, recipientUid],
+        participantDetails: {
+          [currentUser.uid]: {
+            displayName: senderDisplayName,
+            photoURL: senderAvatar,
+          },
+          [recipientUid]: {
+            displayName: recipientName,
+            photoURL: recipientAvatar,
+          },
+        },
+        lastMessage: summaryPreview,
+        lastSenderId: currentUser.uid,
+        seenBy: [currentUser.uid],
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        unreadCount: {
+          [recipientUid]: 1,
+        },
+      });
+      targetChatId = createdChat.id;
+    } else {
+      await updateDoc(doc(db, "p2p_chats", targetChatId), {
+        lastMessage: summaryPreview,
+        lastSenderId: currentUser.uid,
+        seenBy: [currentUser.uid],
+        updatedAt: serverTimestamp(),
+        [`unreadCount.${recipientUid}`]: increment(1),
+      });
+    }
+
+    const previewThumb =
+      (story.mediaType === "image" && story.mediaUrl
+        ? story.mediaUrl
+        : story.avatar) || null;
+
+    await addDoc(collection(db, "p2p_chats", targetChatId, "messages"), {
+      text: messageText,
+      images: [],
+      imageUrl: null,
+      senderId: currentUser.uid,
+      senderName: senderDisplayName,
+      senderPhoto: senderAvatar,
+      createdAt: Date.now(),
+      timestamp: serverTimestamp(),
+      seenBy: [currentUser.uid],
+      readBy: [currentUser.uid],
+      replyTo: {
+        id: story.id,
+        text: storyContextLabel,
+        senderId: recipientUid,
+        senderName: story.authorName || recipientName,
+        imageUrl: previewThumb,
+      },
+    });
+  };
+
   async function handleSubmitQuestion(stk: StoryStickerItem) {
     if (!story) return;
     const answer = (questionDrafts[stk.id] || "").trim();
     if (!answer) return;
+    if (!currentUser) {
+      navigate("/signin");
+      return;
+    }
     triggerHaptic();
     setQuestionDrafts((prev) => ({ ...prev, [stk.id]: "" }));
     try {
@@ -1979,20 +2127,26 @@ export const NewsStoryViewerPage: React.FC = () => {
             stickerId: stk.id,
             prompt: stk.title,
             answer,
-            uid: currentUser?.uid || "guest",
-            name: currentUser?.displayName || "Viewer",
+            uid: currentUser.uid,
+            name: getSafeDisplayName(currentUser, "Viewer"),
             createdAt: Date.now(),
           }),
         },
         { merge: true }
       );
-      if (story.userId && story.userId !== currentUser?.uid) {
+      await deliverStoryMessageToInbox(
+        answer,
+        `Story Q&A (${stk.title || "Question"})`
+      ).catch(() => {});
+
+      const actorIsAdmin = hasImmediateAdminOrStaffRole(null, currentUser);
+      if (story.userId && story.userId !== currentUser.uid && !actorIsAdmin) {
         await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
-          fromUserId: currentUser?.uid || "guest",
+          fromUserId: currentUser.uid,
           fromUserName: getSafeDisplayName(currentUser, "Someone"),
           fromUserUsername: getSafePublicUsername(currentUser),
-          fromUserAvatar: currentUser?.photoURL || "",
+          fromUserAvatar: currentUser.photoURL || "",
           title: `New story response`,
           body: `responded to your story: "${answer}"`,
           mediaThumbnail: story.avatar || story.mediaUrl || "",
@@ -2003,8 +2157,10 @@ export const NewsStoryViewerPage: React.FC = () => {
           createdAt: Date.now(),
         }).catch(() => {});
       }
-      notify("Response sent!", "success");
-    } catch {}
+      notify("Response sent to inbox!", "success");
+    } catch {
+      notify("Could not send response.", "error");
+    }
   }
 
   const handleToggleStoryLike = async () => {
@@ -2014,20 +2170,38 @@ export const NewsStoryViewerPage: React.FC = () => {
       return;
     }
     triggerHaptic();
-    const alreadyLiked = story.likedBy?.includes(currentUser.uid);
+    const alreadyLiked = Boolean(story.likedBy?.includes(currentUser.uid));
+    const nextLikedBy = alreadyLiked
+      ? (story.likedBy || []).filter((id: string) => id !== currentUser.uid)
+      : Array.from(new Set([...(story.likedBy || []), currentUser.uid]));
+
+    setStories((prev) =>
+      prev.map((s) =>
+        s.id === story.id ? { ...s, likedBy: nextLikedBy } : s
+      )
+    );
+
     try {
-      await setDoc(
-        doc(db, "creator_videos", story.id),
-        {
-          kind: story.userId ? "news_story" : "story_engagement",
+      await Promise.all([
+        setDoc(
+          doc(db, "creator_videos", story.id),
+          {
+            kind: story.userId ? "news_story" : "story_engagement",
+            likedBy: alreadyLiked
+              ? arrayRemove(currentUser.uid)
+              : arrayUnion(currentUser.uid),
+          },
+          { merge: true }
+        ),
+        updateDoc(doc(db, "stories", story.id), {
           likedBy: alreadyLiked
             ? arrayRemove(currentUser.uid)
             : arrayUnion(currentUser.uid),
-        },
-        { merge: true }
-      );
+        }).catch(() => {}),
+      ]);
 
-      if (!alreadyLiked && story.userId && story.userId !== currentUser.uid) {
+      const actorIsAdmin = hasImmediateAdminOrStaffRole(null, currentUser);
+      if (!alreadyLiked && story.userId && story.userId !== currentUser.uid && !actorIsAdmin) {
         await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
           fromUserId: currentUser.uid,
@@ -2059,20 +2233,30 @@ export const NewsStoryViewerPage: React.FC = () => {
     setReplyText("");
     triggerHaptic();
     try {
-      await setDoc(
-        doc(db, "creator_videos", story.id),
-        {
-          kind: story.userId ? "news_story" : "story_engagement",
-          storyReplies: arrayUnion({
-            uid: currentUser.uid,
-            name: currentUser.displayName || "Member",
-            text: cleanReply,
-            createdAt: Date.now(),
-          }),
-        },
-        { merge: true }
-      );
-      if (story.userId && story.userId !== currentUser.uid) {
+      await Promise.all([
+        setDoc(
+          doc(db, "creator_videos", story.id),
+          {
+            kind: story.userId ? "news_story" : "story_engagement",
+            storyReplies: arrayUnion({
+              uid: currentUser.uid,
+              name: getSafeDisplayName(currentUser, "Member"),
+              text: cleanReply,
+              createdAt: Date.now(),
+            }),
+          },
+          { merge: true }
+        ).catch(() => {}),
+        deliverStoryMessageToInbox(
+          cleanReply,
+          story.caption
+            ? `Replied to story: "${String(story.caption).slice(0, 50)}"`
+            : `Replied to ${story.authorName || "your"} story`
+        ),
+      ]);
+
+      const actorIsAdmin = hasImmediateAdminOrStaffRole(null, currentUser);
+      if (story.userId && story.userId !== currentUser.uid && !actorIsAdmin) {
         await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
           fromUserId: currentUser.uid,
@@ -2089,8 +2273,10 @@ export const NewsStoryViewerPage: React.FC = () => {
           createdAt: Date.now(),
         }).catch(() => {});
       }
-      notify("Reply sent to creator!", "success");
-    } catch {}
+      notify("Reply sent to inbox!", "success");
+    } catch {
+      notify("Could not send reply to inbox.", "error");
+    }
   };
 
   function renderViewerTextLayer(layer: StoryTextLayer) {
@@ -2420,14 +2606,14 @@ export const NewsStoryViewerPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-zinc-950 text-white flex flex-col justify-between">
       <SEO
         title={`${story?.authorName || "Story"} — Feed`}
         description="Story viewer"
       />
 
       {/* Progress & Header */}
-      <header className="p-4 space-y-3 z-20">
+      <header className="px-4 pt-3 pb-2 space-y-2 z-20 shrink-0">
         {stories.length > 0 && (
           <div className="flex items-center gap-1.5 max-w-md mx-auto">
             {stories.map((s, idx) => (
@@ -2544,7 +2730,7 @@ export const NewsStoryViewerPage: React.FC = () => {
       </header>
 
       {/* Story Media Stage */}
-      <div className="flex-1 flex items-center justify-center px-4 py-1 bg-transparent">
+      <div className="flex-1 min-h-0 flex items-center justify-center px-4 py-1 bg-transparent overflow-hidden">
         {loading ? (
           <p className="text-sm text-zinc-400">Loading story...</p>
         ) : !story ? (
@@ -2565,7 +2751,7 @@ export const NewsStoryViewerPage: React.FC = () => {
             onTouchEnd={handleViewerTouchEnd}
             onTouchCancel={handleViewerTouchEnd}
             onWheel={handleViewerWheel}
-            className="relative w-full max-w-md aspect-[9/15] max-h-[73vh] rounded-[32px] overflow-hidden bg-black shadow-2xl touch-none"
+            className="relative w-full max-w-md h-full max-h-[64dvh] sm:max-h-[68dvh] aspect-[9/15] rounded-[28px] overflow-hidden bg-black shadow-2xl touch-none"
           >
             {story.mediaType === "video" ? (
               <video
@@ -2651,8 +2837,8 @@ export const NewsStoryViewerPage: React.FC = () => {
         )}
       </div>
 
-      {/* Bottom Reply / Heart Reaction Bar (Respects allowCommenting) */}
-      <div className="p-4 max-w-md mx-auto w-full">
+      {/* Bottom Reply / Heart Reaction Bar (Lifted above mobile bottom bar) */}
+      <div className="px-4 pt-2 pb-7 sm:pb-8 mb-2 max-w-md mx-auto w-full shrink-0 z-30">
         {story ? (
           <div className="flex items-center gap-2.5">
             {currentUser?.uid === story.userId && (
@@ -2770,8 +2956,10 @@ export const NewsStoryViewerPage: React.FC = () => {
                             <div className="flex items-center gap-3">
                               <img src={prof.photoURL || prof.shopLogo || defaultAvatarImg} alt="" className="w-10 h-10 rounded-full object-cover bg-zinc-800 border border-zinc-700" />
                               <div>
-                                <p className="text-sm font-bold text-white leading-none mb-1">{prof.displayName || prof.shopName || "Member"}</p>
-                                <p className="text-[11px] text-zinc-500 font-medium">@{prof.username || prof.handle || "user"}</p>
+                                <p className="text-sm font-bold text-white leading-none mb-1">{getSafeDisplayName(prof, "Member")}</p>
+                                {getSafePublicUsername(prof) ? (
+                                  <p className="text-[11px] text-zinc-500 font-medium">@{getSafePublicUsername(prof)}</p>
+                                ) : null}
                               </div>
                             </div>
                             

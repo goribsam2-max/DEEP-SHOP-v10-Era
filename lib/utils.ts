@@ -241,3 +241,13 @@ export function formatCompactNumber(number: number | string | undefined | null):
   }
   return num.toString();
 }
+
+export function getPublicShareOrigin(): string {
+  if (typeof window === "undefined") return "https://www.deepshop.top";
+  const origin = window.location.origin;
+  if (origin.includes(".run.app") && origin.includes("://ais-dev-")) {
+    return origin.replace("://ais-dev-", "://ais-pre-");
+  }
+  return origin;
+}
+

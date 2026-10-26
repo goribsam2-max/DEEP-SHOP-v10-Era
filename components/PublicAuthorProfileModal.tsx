@@ -277,20 +277,28 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                 </div>
               ) : (
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                  {authorPosts.slice(0, 3).map((p) => (
-                    <div
-                      key={p.id}
-                      className="p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-xs space-y-1 hover:border-zinc-300 dark:hover:border-zinc-700 transition"
-                    >
-                      <h5 className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                        {p.title}
-                      </h5>
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
-                        <span>{p.category ? p.category.replace(/_/g, ' ') : 'Scam Report'}</span>
-                        <span className="font-mono text-rose-500 font-bold">{p.votes || 0} votes</span>
-                      </p>
-                    </div>
-                  ))}
+                  {authorPosts.slice(0, 3).map((p) => {
+                    const combinedReactions = p.reactionsCount
+                      ? (Object.values(p.reactionsCount) as number[]).reduce(
+                          (a, b) => a + (Number(b) || 0),
+                          0
+                        )
+                      : Number(p.votes || 0);
+                    return (
+                      <div
+                        key={p.id}
+                        className="p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-xs space-y-1 hover:border-zinc-300 dark:hover:border-zinc-700 transition"
+                      >
+                        <h5 className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                          {p.title || p.description || "Post"}
+                        </h5>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
+                          <span>{p.category ? p.category.replace(/_/g, ' ') : 'Post'}</span>
+                          <span className="font-mono text-rose-500 font-bold">{combinedReactions.toLocaleString()} reactions</span>
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1,9 +1,38 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Settings, X, MessageSquare, Star, UserPlus, ShieldAlert, Check } from "lucide-react";
+import {
+  ChevronLeft,
+  Settings,
+  X,
+  MessageSquare,
+  Star,
+  UserPlus,
+  ShieldAlert,
+  Check,
+  Heart,
+  Award,
+  Sparkles,
+} from "lucide-react";
+
+const RepeatIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+  </svg>
+);
 import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { toggleFollowUser, useFollowedIds } from "../lib/follow";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
@@ -18,7 +47,15 @@ interface NewsNotificationItem {
   fromUserName?: string;
   fromUserUsername?: string;
   fromUserAvatar?: string;
-  type: "follow" | "like" | "story_like" | "comment" | "repost" | "story" | "system";
+  type:
+    | "follow"
+    | "like"
+    | "story_like"
+    | "comment"
+    | "repost"
+    | "story"
+    | "milestone"
+    | "system";
   title?: string;
   body: string;
   mediaThumbnail?: string;
@@ -86,8 +123,7 @@ export const NewsHubNotifications: React.FC = () => {
     setLoading(true);
     const qNews = query(
       collection(db, "news_hub_notifications"),
-      where("userId", "==", currentUser.uid),
-      orderBy("createdAt", "desc")
+      where("userId", "==", currentUser.uid)
     );
 
     const unsubNews = onSnapshot(
@@ -96,21 +132,38 @@ export const NewsHubNotifications: React.FC = () => {
         const list: NewsNotificationItem[] = snap.docs.map((d) => {
           const data = d.data();
           const rawDate = data.createdAt;
-          const ts = typeof rawDate === "number" ? rawDate : new Date(rawDate).getTime() || Date.now();
+          const ts =
+            typeof rawDate === "number"
+              ? rawDate
+              : typeof rawDate?.toMillis === "function"
+              ? rawDate.toMillis()
+              : typeof rawDate?.seconds === "number"
+              ? rawDate.seconds * 1000
+              : new Date(rawDate).getTime() || Date.now();
+          const isMilestoneDoc =
+            data.type === "milestone" || data.fromUserId === "system_milestone";
           const rawName = String(data.fromUserName || data.title || "").trim();
-          const safeName =
-            rawName && !isPhoneLikeUsername(rawName) ? rawName : "Member";
+          const safeName = isMilestoneDoc
+            ? "Congratulations! 🎉"
+            : rawName && !isPhoneLikeUsername(rawName)
+            ? rawName
+            : "Member";
           const rawHandle = String(data.fromUserUsername || "").trim();
-          const safeHandle =
-            rawHandle && !isPhoneLikeUsername(rawHandle) ? rawHandle : "";
+          const safeHandle = isMilestoneDoc
+            ? ""
+            : rawHandle && !isPhoneLikeUsername(rawHandle)
+            ? rawHandle
+            : "";
           return {
             id: d.id,
             userId: data.userId || currentUser.uid,
-            fromUserId: data.fromUserId || "",
+            fromUserId: isMilestoneDoc
+              ? "system_milestone"
+              : data.fromUserId || "",
             fromUserName: safeName,
             fromUserUsername: safeHandle,
-            fromUserAvatar: data.fromUserAvatar || "",
-            type: data.type || "system",
+            fromUserAvatar: isMilestoneDoc ? "" : data.fromUserAvatar || "",
+            type: isMilestoneDoc ? "milestone" : data.type || "system",
             title: data.title || "",
             body: data.body || data.message || "interacted with your post.",
             mediaThumbnail: data.mediaThumbnail || "",
@@ -121,6 +174,7 @@ export const NewsHubNotifications: React.FC = () => {
           };
         });
 
+        list.sort((a, b) => b.createdAt - a.createdAt);
         setNotifications(list);
         setLoading(false);
       },
@@ -205,10 +259,14 @@ export const NewsHubNotifications: React.FC = () => {
     triggerHaptic();
     if (item.link) {
       navigate(item.link);
-    } else if (item.fromUserId && item.fromUserId !== "system_newshub") {
+    } else if (
+      item.fromUserId &&
+      item.fromUserId !== "system_newshub" &&
+      item.fromUserId !== "system_milestone"
+    ) {
       navigate(`/news-hub/profile/${item.fromUserId}`);
     } else {
-      navigate("/news-hub/profile/edit");
+      navigate("/news-hub/profile");
     }
   };
 
@@ -280,9 +338,12 @@ export const NewsHubNotifications: React.FC = () => {
 
                 <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-2 sm:p-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)] border border-slate-200/70 dark:border-zinc-800 divide-y divide-slate-50 dark:divide-zinc-800/50">
                   {items.map((item) => {
+                    const isMilestone =
+                      item.type === "milestone" ||
+                      item.fromUserId === "system_milestone";
                     const username =
                       item.fromUserUsername || item.fromUserName || "Member";
-                    const isFollowType = item.type === "follow";
+                    const isFollowType = item.type === "follow" && !isMilestone;
                     const isFollowingUser = followedIds.includes(item.fromUserId);
 
                     return (
@@ -291,27 +352,47 @@ export const NewsHubNotifications: React.FC = () => {
                         onClick={() => handleNotificationClick(item)}
                         className="flex items-center justify-between gap-3 p-3.5 cursor-pointer group active:bg-slate-50 dark:active:bg-zinc-800/50 transition-colors first:rounded-t-[28px] last:rounded-b-[28px]"
                       >
-                        {/* Avatar */}
-                        <ProfileAvatar
-                          src={item.fromUserAvatar}
-                          name={username}
-                          className="w-12 h-12 ring-2 ring-slate-50 dark:ring-zinc-800 shadow-sm"
-                          iconClassName="w-6 h-6"
-                        />
+                        {/* Avatar or Celebration Badge */}
+                        {isMilestone ? (
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white flex items-center justify-center shrink-0 ring-2 ring-amber-100 dark:ring-amber-900/40 shadow-sm">
+                            <Award className="w-6 h-6" />
+                          </div>
+                        ) : (
+                          <ProfileAvatar
+                            src={item.fromUserAvatar}
+                            name={username}
+                            className="w-12 h-12 ring-2 ring-slate-50 dark:ring-zinc-800 shadow-sm"
+                            iconClassName="w-6 h-6"
+                          />
+                        )}
 
                         {/* Text Center */}
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] sm:text-sm text-slate-900 dark:text-zinc-100 leading-snug">
-                            <span className="font-bold text-slate-900 dark:text-white hover:underline">
-                              {username}
-                            </span>{" "}
-                            <span className="text-slate-600 dark:text-zinc-300 font-medium">
-                              {item.body}
-                            </span>{" "}
-                            <span className="text-slate-400 dark:text-zinc-500 font-bold text-[10px] uppercase ml-1 opacity-80">
-                              {formatCompactTimeAgo(item.createdAt)}
-                            </span>
-                          </p>
+                          {isMilestone ? (
+                            <p className="text-[13px] sm:text-sm text-slate-900 dark:text-zinc-100 leading-snug">
+                              <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                                {item.title || "Congratulations! 🎉"}
+                              </span>{" "}
+                              <span className="text-slate-700 dark:text-zinc-200 font-medium">
+                                {item.body}
+                              </span>{" "}
+                              <span className="text-slate-400 dark:text-zinc-500 font-bold text-[10px] uppercase ml-1 opacity-80">
+                                {formatCompactTimeAgo(item.createdAt)}
+                              </span>
+                            </p>
+                          ) : (
+                            <p className="text-[13px] sm:text-sm text-slate-900 dark:text-zinc-100 leading-snug">
+                              <span className="font-bold text-slate-900 dark:text-white hover:underline">
+                                {username}
+                              </span>{" "}
+                              <span className="text-slate-600 dark:text-zinc-300 font-medium">
+                                {item.body}
+                              </span>{" "}
+                              <span className="text-slate-400 dark:text-zinc-500 font-bold text-[10px] uppercase ml-1 opacity-80">
+                                {formatCompactTimeAgo(item.createdAt)}
+                              </span>
+                            </p>
+                          )}
                         </div>
 
                         {/* Right Action Element */}
@@ -341,11 +422,28 @@ export const NewsHubNotifications: React.FC = () => {
                                 alt=""
                                 className="w-12 h-12 rounded-[14px] object-cover border border-slate-200/80 dark:border-zinc-700 shadow-sm group-hover:scale-105 transition-transform"
                               />
-                              {item.type === "story_like" && (
+                              {(item.type === "story_like" || item.type === "like") && (
                                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center">
                                   <Heart className="w-2.5 h-2.5 text-white fill-current" />
                                 </div>
                               )}
+                              {isMilestone && (
+                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center">
+                                  <Sparkles className="w-2.5 h-2.5 text-white" />
+                                </div>
+                              )}
+                            </div>
+                          ) : isMilestone ? (
+                            <div className="w-12 h-12 rounded-[14px] bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/50 flex items-center justify-center text-amber-500 shadow-sm">
+                              <Sparkles className="w-5 h-5" />
+                            </div>
+                          ) : item.type === "repost" ? (
+                            <div className="w-12 h-12 rounded-[14px] bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/50 flex items-center justify-center text-emerald-600 shadow-sm">
+                              <RepeatIcon className="w-5 h-5" />
+                            </div>
+                          ) : item.type === "like" || item.type === "story_like" ? (
+                            <div className="w-12 h-12 rounded-[14px] bg-rose-50 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-800/50 flex items-center justify-center text-rose-500 shadow-sm">
+                              <Heart className="w-5 h-5 fill-current" />
                             </div>
                           ) : (
                             <div className="w-12 h-12 rounded-[14px] bg-slate-50 dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700 flex items-center justify-center text-[#1877F2] shadow-sm">
