@@ -135,11 +135,94 @@ export function validateInput(val: string, type: 'email' | 'phone' | 'name' | 'p
 
 export function formatDisplayEmail(email: string | null | undefined): string {
   if (!email) return "";
-  if (email.endsWith("@phone.deepshop.top")) {
-    const phone = email.replace("@phone.deepshop.top", "");
+  if (email.endsWith("@phone.deepshop.top") || email.endsWith("@phone.vibegadget.com")) {
+    const phone = email
+      .replace("@phone.deepshop.top", "")
+      .replace("@phone.vibegadget.com", "");
     return phone.startsWith("+") ? phone : "+" + phone;
   }
   return email;
+}
+
+export function isPhoneAuthEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const lower = String(email).trim().toLowerCase();
+  return (
+    lower.endsWith("@phone.deepshop.top") ||
+    lower.endsWith("@phone.vibegadget.com")
+  );
+}
+
+export function isPhoneLikeUsername(val: string | null | undefined): boolean {
+  if (!val) return true;
+  const trimmed = String(val).trim();
+  if (!trimmed) return true;
+  if (isPhoneAuthEmail(trimmed)) return true;
+
+  const withoutAt = trimmed.replace(/^@+/, "").trim();
+  if (!withoutAt) return true;
+
+  // Strip common phone formatting characters
+  const stripped = withoutAt.replace(/[\s\-().+]/g, "");
+  // Pure digits of length 7..16 -> phone number (e.g. 017..., 88017...)
+  if (/^\d{7,16}$/.test(stripped)) return true;
+  // Starts with BD/international phone prefix followed mostly by digits
+  if (/^(?:\+?880|880|01)\d{6,}$/.test(stripped)) return true;
+
+  return false;
+}
+
+/**
+ * Returns a user's public @username ONLY if they explicitly set a valid non-phone username.
+ * Never falls back to email prefix, phone number, UID, or displayName.
+ */
+export function getSafePublicUsername(userObj: any): string {
+  if (!userObj || typeof userObj !== "object") return "";
+  const raw = String(
+    userObj.username || userObj.handle || userObj.customLink || ""
+  )
+    .trim()
+    .replace(/^@+/, "");
+
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  if (
+    lower === "user" ||
+    lower === "member" ||
+    lower === "username" ||
+    lower === "creator" ||
+    lower === "unknown" ||
+    lower === "guest" ||
+    lower === "anonymous"
+  ) {
+    return "";
+  }
+  if (isPhoneLikeUsername(raw)) return "";
+  return raw;
+}
+
+/**
+ * Returns a safe human-readable display name without ever exposing a phone-auth email prefix.
+ */
+export function getSafeDisplayName(
+  userObj: any,
+  fallback: string = "Member"
+): string {
+  if (!userObj || typeof userObj !== "object") return fallback;
+  const candidate = String(
+    userObj.displayName || userObj.shopName || userObj.name || ""
+  ).trim();
+  if (candidate && !isPhoneLikeUsername(candidate)) {
+    return candidate;
+  }
+  const email = String(userObj.email || "").trim();
+  if (email && !isPhoneAuthEmail(email)) {
+    const prefix = email.split("@")[0]?.trim() || "";
+    if (prefix && !isPhoneLikeUsername(prefix)) {
+      return prefix;
+    }
+  }
+  return fallback;
 }
 
 export function formatCompactNumber(number: number | string | undefined | null): string {

@@ -14,6 +14,7 @@ import {
   addDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { getSafeDisplayName, getSafePublicUsername } from "./utils";
 
 const LOCAL_FOLLOW_KEY = "followed_creators";
 
@@ -243,6 +244,8 @@ export interface ToggleFollowOptions {
     displayName?: string | null;
     email?: string | null;
     photoURL?: string | null;
+    username?: string | null;
+    handle?: string | null;
   } | null;
   currentlyFollowing?: boolean;
 }
@@ -329,14 +332,8 @@ export async function toggleFollowUser({
     }
 
     if (nextFollowing) {
-      const followerLabel =
-        currentUser.displayName ||
-        currentUser.email?.split("@")[0] ||
-        "Someone";
-      const followerUsername =
-        currentUser.username ||
-        currentUser.handle ||
-        (currentUser.email ? currentUser.email.split("@")[0] : "user");
+      const followerLabel = getSafeDisplayName(currentUser, "Someone");
+      const followerUsername = getSafePublicUsername(currentUser);
 
       const notifPayload = {
         userId: targetUid,

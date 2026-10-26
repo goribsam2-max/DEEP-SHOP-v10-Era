@@ -142,7 +142,15 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
+  const [seoConfig, setSeoConfig] = useState<any>({});
   const [activeBanner, setActiveBanner] = useState(0);
+
+  useEffect(() => {
+    const unsubSeo = onSnapshot(doc(db, "settings", "seo"), (snap) => {
+      if (snap.exists()) setSeoConfig(snap.data() || {});
+    });
+    return () => unsubSeo();
+  }, []);
   const [activeCategoryBanner, setActiveCategoryBanner] = useState(0);
   const [activeBottomBanner, setActiveBottomBanner] = useState(0);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -398,9 +406,17 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     <div className="relative pt-2 sm:pt-3 bg-transparent dark:bg-[#121212] w-full min-h-screen font-sans pb-0">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-5 md:px-12">
       <SEO
-        title="DEEP SHOP | Border Cross Products & Genuine Mobiles Bangladesh"
-        description="DEEP SHOP is Bangladesh's trusted platform for Border Cross Products & genuine mobiles. Find 100% authentic and trusted global tech products."
+        title={
+          seoConfig.metaTitle ||
+          "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site"
+        }
+        description={
+          seoConfig.metaDescription ||
+          "DEEP SHOP is Bangladesh's trusted platform for Border Cross Products & genuine mobiles. Find 100% authentic and trusted global tech products."
+        }
+        image={seoConfig.metaImage || seoConfig.appIconUrl || "/favicon.png"}
         canonical="/"
+        exactTitle
       />
       
       <CustomSectionEmbed location="home_top" />

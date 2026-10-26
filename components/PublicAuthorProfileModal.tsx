@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   ChevronRight,
   ExternalLink,
-  ThunbsUp,
   CreditCard,
   Building2
 } from 'lucide-react';
@@ -23,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { useNotify } from './Notifications';
 import { triggerHaptic } from '../lib/haptics';
+import { getSafeDisplayName, getSafePublicUsername } from '../lib/utils';
 
 interface PublicAuthorProfileModalProps {
   userId: string | null;
@@ -84,9 +84,10 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
     fetchAuthorInfo();
   }, [isOpen, userId]);
 
-  const displayName = profileData?.displayName || authorName || "Community Member";
+  const displayName = getSafeDisplayName(profileData, authorName || "Community Member");
   const avatar = profileData?.photoURL || authorAvatar;
-  const username = profileData?.username || profileData?.email?.split('@')[0] || displayName.toLowerCase().replace(/\s+/g, '_');
+  const username = getSafePublicUsername(profileData);
+  const bio = profileData?.bio || "";
   const starsReceived = profileData?.earnedStars || profileData?.purchasedStars || profileData?.stars || 0;
   const likesReceived = profileData?.totalLikes || authorPosts.reduce((acc, p) => acc + (p.votes || 0), 0);
   const postsCount = authorPosts.length;
@@ -105,7 +106,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
     try {
       await addDoc(collection(db, "sponsor_requests"), {
         sponsorUserId: currentUser.uid,
-        sponsorName: currentUser.displayName || currentUser.email?.split('@')[0] || "Supporter",
+        sponsorName: getSafeDisplayName(currentUser, "Supporter"),
         creatorUserId: userId,
         creatorName: displayName,
         amountBDT: Number(sponsorAmount),
@@ -172,12 +173,16 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                 <span>{displayName}</span>
                 <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500 text-white inline" />
               </h2>
-              <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
-                @{username}
-              </p>
-              <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed px-2 pt-1">
-                {bio}
-              </p>
+              {username && (
+                <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                  @{username}
+                </p>
+              )}
+              {bio && (
+                <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed px-2 pt-1">
+                  {bio}
+                </p>
+              )}
             </div>
 
             {/* XP / Stars Level Badge Pill */}

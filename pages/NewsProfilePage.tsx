@@ -37,6 +37,7 @@ import {
   MapPin,
   Coins,
   BookOpen,
+  Eye,
 } from "lucide-react";
 
 /** Inline Topic Icons for Interest Categories */
@@ -132,7 +133,11 @@ import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { formatDhakaDateTime, formatDhakaFeedTime } from "../lib/dhakaTime";
-import { formatCompactNumber } from "../lib/utils";
+import {
+  formatCompactNumber,
+  getSafePublicUsername,
+  isPhoneLikeUsername,
+} from "../lib/utils";
 import { useFooterLogo } from "../lib/useFooterLogo";
 import { toggleFollowUser, useFollowedIds } from "../lib/follow";
 import { processCleanImage } from "../lib/watermark";
@@ -263,7 +268,13 @@ const ScannableQRCodeCard: React.FC<{
       <div className="bg-white rounded-[24px] p-3.5 border border-slate-200/80 shadow-sm flex flex-col items-center text-center space-y-2 max-w-[220px] w-full">
         <canvas ref={canvasRef} className="w-44 h-44 rounded-xl" />
         <div className="space-y-0.5">
-          <p className="text-xs font-bold text-slate-900 truncate">{username.startsWith("@") ? username : `@${username}`}</p>
+          <p className="text-xs font-bold text-slate-900 truncate">
+            {username
+              ? username.startsWith("@")
+                ? username
+                : `@${username}`
+              : name}
+          </p>
         </div>
       </div>
     </div>
@@ -272,9 +283,9 @@ const ScannableQRCodeCard: React.FC<{
 
 // Preset Interest Categories matching Screenshots IMG_4920 and IMG_4921
 const POPULAR_INTEREST_TOPICS = [
-  { id: "music_threads", label: "Music Threads", category: "Entertainment", icon: Music },
-  { id: "art_threads", label: "Art Threads", category: "Creative", icon: Palette },
-  { id: "food_threads", label: "Food Threads", category: "Lifestyle", icon: UtensilsIcon },
+  { id: "music_posts", label: "Music Posts", category: "Entertainment", icon: Music },
+  { id: "art_posts", label: "Art Posts", category: "Creative", icon: Palette },
+  { id: "food_posts", label: "Food Posts", category: "Lifestyle", icon: UtensilsIcon },
   { id: "dallas", label: "Dallas", category: "City & Travel", icon: MapPin },
   { id: "tiktok", label: "TikTok", category: "Social Media", icon: VideoIcon },
   { id: "gaming", label: "Gaming", category: "Entertainment", icon: GamepadIcon },
@@ -391,7 +402,7 @@ export const NewsProfilePage: React.FC = () => {
           const d = snap.data();
           setProfileUser({ uid: snap.id, ...d });
           setEditName(d.displayName || d.shopName || "");
-          setEditUsername(d.username || d.handle || (d.email ? d.email.split("@")[0] : "user"));
+          setEditUsername(getSafePublicUsername(d));
           setEditBio(d.bio || "");
           setEditLocation(d.location || "");
 
@@ -426,7 +437,7 @@ export const NewsProfilePage: React.FC = () => {
           };
           setProfileUser(fallbackObj);
           setEditName(fallbackObj.displayName);
-          setEditUsername(currentUser.email ? currentUser.email.split("@")[0] : "member");
+          setEditUsername("");
           setEditAvatarUrl(fallbackObj.photoURL || "");
         }
         setLoading(false);
@@ -584,6 +595,13 @@ export const NewsProfilePage: React.FC = () => {
     triggerHaptic();
     setSavingEdit(true);
 
+    const cleanedUsername = editUsername.trim().replace(/^@+/, "");
+    if (cleanedUsername && isPhoneLikeUsername(cleanedUsername)) {
+      setSavingEdit(false);
+      notify("Phone numbers cannot be used as a public username. Please choose a custom username.", "error");
+      return;
+    }
+
     const cleanInterests = editInterests
       .split(",")
       .map((s) => s.trim())
@@ -591,7 +609,7 @@ export const NewsProfilePage: React.FC = () => {
 
     const updatePayload = {
       displayName: editName.trim() || "Community Member",
-      username: editUsername.trim().replace(/^@/, ""),
+      username: cleanedUsername,
       bio: editBio.trim(),
       location: editLocation.trim(),
       interests: cleanInterests.length > 0 ? cleanInterests : selectedInterestsList,
@@ -702,14 +720,14 @@ export const NewsProfilePage: React.FC = () => {
     triggerHaptic();
     const a = document.createElement("a");
     a.href = qrDataUrl;
-    a.download = `QR_${username}_DEEPSHOP.png`;
+    a.download = `QR_${username || displayName || "PROFILE"}_DEEPSHOP.png`;
     a.click();
     notify("QR code downloaded!", "success");
   };
 
   const handleCopyProfileLink = () => {
     triggerHaptic();
-    const url = window.location.origin + "/#/news-hub/profile/" + targetUid;
+    const url = window.location.origin + "/news-hub/profile/" + targetUid;
     navigator.clipboard.writeText(url);
     notify("Profile link copied to clipboard!", "success");
   };
@@ -719,10 +737,7 @@ export const NewsProfilePage: React.FC = () => {
     profileUser?.shopName ||
     (isOwnProfile ? currentUser?.displayName || "Community Member" : "User");
 
-  const username =
-    profileUser?.username ||
-    profileUser?.handle ||
-    (profileUser?.email ? profileUser.email.split("@")[0] : "member");
+  const username = getSafePublicUsername(profileUser);
 
   const bio = profileUser?.bio || "No bio added yet.";
   const avatarUrl = profileUser?.photoURL || profileUser?.shopLogo || "";
@@ -1052,7 +1067,7 @@ export const NewsProfilePage: React.FC = () => {
                   type="text"
                   value={editUsername}
                   onChange={(e) => setEditUsername(e.target.value)}
-                  placeholder="username"
+                  placeholder="Set a username"
                   className="w-full text-sm font-semibold text-slate-900 dark:text-white bg-transparent outline-none"
                 />
               </div>
@@ -1212,7 +1227,11 @@ export const NewsProfilePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/70 via-[#E8F3FF]/35 to-transparent dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans pb-32">
       <SEO
-        title={`${displayName} (@${username}) — News Hub`}
+        title={
+          username
+            ? `${displayName} (@${username}) — News Hub`
+            : `${displayName} — News Hub`
+        }
         description={bio.slice(0, 160)}
       />
 
@@ -1283,9 +1302,11 @@ export const NewsProfilePage: React.FC = () => {
                 {displayName}
               </h1>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
-                  @{username}
-                </span>
+                {username && (
+                  <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
+                    @{username}
+                  </span>
+                )}
 
                 {/* Social Badges / Pills */}
                 {profileUser?.socialLinks?.instagram && (
@@ -1365,7 +1386,9 @@ export const NewsProfilePage: React.FC = () => {
             <span>·</span>
             <span>
               {(() => {
-                const totalViews = userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
+                const totalViews =
+                  Number(profileUser?.views || 0) +
+                  userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
                 return (
                   <span>
                     {formatCompactNumber(totalViews)} recent views
@@ -1484,7 +1507,7 @@ export const NewsProfilePage: React.FC = () => {
             <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-none">
               {suggestedProfiles.map((sProf) => {
                 const sName = sProf.displayName || sProf.shopName || "Creator";
-                const sUser = sProf.username || sProf.handle || "creator";
+                const sUser = getSafePublicUsername(sProf);
                 const sAvatar = sProf.photoURL || sProf.shopLogo || "";
                 const isSFollowing = followedIds.includes(sProf.uid);
 
@@ -1510,7 +1533,9 @@ export const NewsProfilePage: React.FC = () => {
 
                     <div className="w-full space-y-0.5">
                       <p className="text-[13px] font-bold text-slate-900 dark:text-white truncate">{sName}</p>
-                      <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 truncate">@{sUser}</p>
+                      {sUser && (
+                        <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 truncate">@{sUser}</p>
+                      )}
                     </div>
 
                     <button
@@ -1579,98 +1604,115 @@ export const NewsProfilePage: React.FC = () => {
         <div className="mt-6 space-y-4">
           {activeTab === "posts" && (
             userPosts.length === 0 ? (
-              /* EXACT MATCH FOR SCREENSHOT IMG_4919_c6b216f2.jpeg (Zero Demo Posts) */
-              <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[32px] p-6 sm:p-8 border border-slate-200/80 dark:border-zinc-800 shadow-sm space-y-8 flex flex-col items-center text-center">
-                <div className="space-y-2">
-                  <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-                    Start your first thread
-                  </h3>
-                  <p className="text-sm text-slate-400 dark:text-zinc-500 font-medium max-w-[280px] mx-auto">
-                    Need inspiration? Pick a prompt to get going.
-                  </p>
-                </div>
-
-                {/* Prompt Suggestions Horizontal Loop matching IMG_4919 */}
-                <div className="flex flex-col gap-3 w-full max-w-sm">
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                    {[
-                      "What are you watching right now?",
-                      "Share a photo and a thought.",
-                      "What's your hot take today?",
-                      "Ask the community a question.",
-                    ].map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic();
-                          navigate(`/news-hub/create?text=${encodeURIComponent(suggestion)}`);
-                        }}
-                        className="px-5 py-3 rounded-full bg-white dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white border border-slate-200/80 dark:border-zinc-700 shadow-2xs whitespace-nowrap cursor-pointer hover:border-[#1877F2] transition"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
+              isOwnProfile ? (
+                <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[32px] p-6 sm:p-8 border border-slate-200/80 dark:border-zinc-800 shadow-sm space-y-8 flex flex-col items-center text-center">
+                  <div className="space-y-2">
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                      Start your first post
+                    </h3>
+                    <p className="text-sm text-slate-400 dark:text-zinc-500 font-medium max-w-[280px] mx-auto">
+                      Need inspiration? Pick a prompt to get going.
+                    </p>
                   </div>
-                </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    navigate("/news-hub/create");
-                  }}
-                  className="w-full py-4 rounded-[20px] bg-black dark:bg-white text-white dark:text-black font-extrabold text-sm shadow-lg active:scale-[0.98] transition cursor-pointer"
-                >
-                  Create thread
-                </button>
-              </div>
-            ) : (
-              userPosts.map((post) => (
-                <article
-                  key={post.id}
-                  onClick={() => navigate(`/news-hub/post/${post.id}`)}
-                  className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[28px] p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-zinc-800 space-y-3 cursor-pointer hover:border-slate-300 transition"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <ProfileAvatar src={avatarUrl} name={displayName} className="w-10 h-10" iconClassName="w-5 h-5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate text-slate-900 dark:text-white">{displayName}</p>
-                      <p className="text-[11px] font-medium text-slate-500">{formatDhakaFeedTime(post.createdAt)}</p>
+                  {/* Prompt Suggestions Horizontal Loop */}
+                  <div className="flex flex-col gap-3 w-full max-w-sm">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                      {[
+                        "What are you watching right now?",
+                        "Share a photo and a thought.",
+                        "What's your hot take today?",
+                        "Ask the community a question.",
+                      ].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            navigate(`/news-hub/create?text=${encodeURIComponent(suggestion)}`);
+                          }}
+                          className="px-5 py-3 rounded-full bg-white dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white border border-slate-200/80 dark:border-zinc-700 shadow-2xs whitespace-nowrap cursor-pointer hover:border-[#1877F2] transition"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {post.description && (
-                    <p className="text-sm text-slate-800 dark:text-zinc-200 leading-relaxed">
-                      <NewsRichText text={post.description} />
-                    </p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      navigate("/news-hub/create");
+                    }}
+                    className="w-full py-4 rounded-[20px] bg-black dark:bg-white text-white dark:text-black font-extrabold text-sm shadow-lg active:scale-[0.98] transition cursor-pointer"
+                  >
+                    Create post
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-xs font-semibold text-slate-500 dark:text-zinc-400 bg-white/60 dark:bg-zinc-900/60 rounded-3xl p-6 border border-slate-200/60 dark:border-zinc-800">
+                  No post available
+                </div>
+              )
+            ) : (
+              userPosts.map((post) => {
+                const postReactionsTotal = post.reactionsCount
+                  ? (Object.values(post.reactionsCount) as number[]).reduce(
+                      (a, b) => a + (Number(b) || 0),
+                      0
+                    )
+                  : Number(post.votes || 0);
+                return (
+                  <article
+                    key={post.id}
+                    onClick={() => navigate(`/news-hub/post/${post.id}`)}
+                    className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[28px] p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-zinc-800 space-y-3 cursor-pointer hover:border-slate-300 transition"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <ProfileAvatar src={avatarUrl} name={displayName} className="w-10 h-10" iconClassName="w-5 h-5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold truncate text-slate-900 dark:text-white">{displayName}</p>
+                        <p className="text-[11px] font-medium text-slate-500">{formatDhakaFeedTime(post.createdAt)}</p>
+                      </div>
+                    </div>
 
-                  <NewsPostMedia post={post} onOpenImage={(idx) => navigate(`/news-hub/photo/${post.id}/${idx}`)} />
+                    {post.description && (
+                      <p className="text-sm text-slate-800 dark:text-zinc-200 leading-relaxed">
+                        <NewsRichText text={post.description} />
+                      </p>
+                    )}
 
-                  <div className="flex items-center gap-5 text-xs font-semibold text-slate-500 pt-1">
-                    <span className="flex items-center gap-1">
-                      <Heart className="w-4 h-4" />
-                      <span>{post.votes || 0}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageCircle className="w-4 h-4" />
-                      <span>{post.commentsCount || 0}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleRepost(post);
-                      }}
-                      className="flex items-center gap-1 hover:text-[#1877F2] cursor-pointer"
-                    >
-                      <RepeatIcon className="w-4 h-4" />
-                      <span>{post.repostsCount || 0}</span>
-                    </button>
-                  </div>
-                </article>
-              ))
+                    <NewsPostMedia post={post} onOpenImage={(idx) => navigate(`/news-hub/photo/${post.id}/${idx}`)} />
+
+                    <div className="flex items-center gap-5 text-xs font-semibold text-slate-500 pt-1">
+                      <span className="flex items-center gap-1">
+                        <Heart className="w-4 h-4" />
+                        <span>{formatCompactNumber(postReactionsTotal)}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MessageCircle className="w-4 h-4" />
+                        <span>{formatCompactNumber(post.commentsCount || 0)}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleRepost(post);
+                        }}
+                        className="flex items-center gap-1 hover:text-[#1877F2] cursor-pointer"
+                      >
+                        <RepeatIcon className="w-4 h-4" />
+                        <span>{formatCompactNumber(post.repostsCount || 0)}</span>
+                      </button>
+                      <span className="flex items-center gap-1 ml-auto">
+                        <Eye className="w-4 h-4" />
+                        <span>{formatCompactNumber(post.views || 0)}</span>
+                      </span>
+                    </div>
+                  </article>
+                );
+              })
             )
           )}
 
@@ -1954,7 +1996,7 @@ export const NewsProfilePage: React.FC = () => {
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold text-slate-500">Name</p>
                     <p className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                      {displayName} (@{username})
+                      {displayName}{username ? ` (@${username})` : ""}
                     </p>
                   </div>
                   <ProfileAvatar src={avatarUrl} name={displayName} className="w-12 h-12" iconClassName="w-6 h-6" />
@@ -1964,7 +2006,9 @@ export const NewsProfilePage: React.FC = () => {
                   <p className="text-xs font-bold text-slate-500">Joined & Activity</p>
                   <p className="text-sm font-extrabold text-slate-900 dark:text-white">
                     Joined {profileUser?.createdAt ? formatDhakaDateTime(profileUser.createdAt) : "September 2026"} · {(() => {
-                      const totalViews = userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
+                      const totalViews =
+                        Number(profileUser?.views || 0) +
+                        userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
                       return `${formatCompactNumber(totalViews)} recent views`;
                     })()}
                   </p>
@@ -2013,12 +2057,14 @@ export const NewsProfilePage: React.FC = () => {
 
               <div className="space-y-1">
                 <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">Profile QR Code</h3>
-                <p className="text-xs font-semibold text-slate-500">Scan to follow @{username}</p>
+                <p className="text-xs font-semibold text-slate-500">
+                  {username ? `Scan to follow @${username}` : `Scan to follow ${displayName}`}
+                </p>
               </div>
 
               <div className="bg-white p-4 rounded-[32px] shadow-sm border border-slate-200/60">
                 <ScannableQRCodeCard
-                  profileUrl={window.location.origin + "/#/news-hub/profile/" + targetUid}
+                  profileUrl={window.location.origin + "/news-hub/profile/" + targetUid}
                   name={displayName}
                   username={username}
                   avatarUrl={avatarUrl}
@@ -2064,7 +2110,9 @@ export const NewsProfilePage: React.FC = () => {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate">{displayName}</p>
-                  <p className="text-[10px] text-zinc-400 font-semibold truncate">@{username}</p>
+                  {username && (
+                    <p className="text-[10px] text-zinc-400 font-semibold truncate">@{username}</p>
+                  )}
                 </div>
               </div>
               <button

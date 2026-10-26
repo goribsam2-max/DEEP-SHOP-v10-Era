@@ -1357,21 +1357,65 @@ const toSlug = (text?: string) => {
     .replace(/(^-|-$)+/g, "");
 };
 
+const escapeHtmlAttr = (val: any): string => {
+  return String(val ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\r?\n/g, " ")
+    .trim();
+};
+
+const unwrapFirestoreValue = (v: any): any => {
+  if (v === null || v === undefined) return v;
+  if (typeof v !== "object") return v;
+  if ("stringValue" in v) return v.stringValue;
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("doubleValue" in v) return Number(v.doubleValue);
+  if ("numberValue" in v) return Number(v.numberValue);
+  if ("booleanValue" in v) return Boolean(v.booleanValue);
+  if ("nullValue" in v) return null;
+  if ("timestampValue" in v) return v.timestampValue;
+  if ("arrayValue" in v) {
+    return Array.isArray(v.arrayValue?.values)
+      ? v.arrayValue.values.map(unwrapFirestoreValue)
+      : [];
+  }
+  if ("mapValue" in v) {
+    const out: Record<string, any> = {};
+    const fields = v.mapValue?.fields || {};
+    for (const k of Object.keys(fields)) {
+      out[k] = unwrapFirestoreValue(fields[k]);
+    }
+    return out;
+  }
+  return v;
+};
+
+const normalizeDocData = (raw: any): Record<string, any> | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const out: Record<string, any> = {};
+  for (const k of Object.keys(raw)) {
+    out[k] = unwrapFirestoreValue(raw[k]);
+  }
+  return out;
+};
+
 const fetchProductData = async (productIdOrSlug: string) => {
+  if (!productIdOrSlug) return null;
   if (hasValidFirebaseAdmin) {
     try {
-      // 1. Try direct ID lookup
       const docSnap = await admin.firestore().collection("products").doc(productIdOrSlug).get();
       if (docSnap.exists) {
-        return docSnap.data();
+        return normalizeDocData(docSnap.data());
       }
-      // 2. Try slug matching
       const allProds = await admin.firestore().collection("products").get();
       for (const d of allProds.docs) {
         const data = d.data();
         const slug = toSlug(data.title || data.name || "");
         if (slug === productIdOrSlug || d.id === productIdOrSlug) {
-          return data;
+          return normalizeDocData(data);
         }
       }
     } catch (e) {
@@ -1381,29 +1425,96 @@ const fetchProductData = async (productIdOrSlug: string) => {
 
   try {
     const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/products/${productIdOrSlug}`,
+      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/products/${encodeURIComponent(productIdOrSlug)}`,
     );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.fields;
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.fields) return normalizeDocData(data.fields);
+    }
+
+    // Fallback slug lookup via Firestore REST list
+    const listRes = await fetch(
+      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/products?pageSize=250`,
+    );
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      const docs = Array.isArray(listData?.documents) ? listData.documents : [];
+      for (const docItem of docs) {
+        const parsed = normalizeDocData(docItem.fields);
+        if (!parsed) continue;
+        const docId = String(docItem.name || "").split("/").pop() || "";
+        const slug = toSlug(parsed.title || parsed.name || "");
+        if (docId === productIdOrSlug || slug === productIdOrSlug) {
+          return parsed;
+        }
+      }
+    }
   } catch (e) {
     console.error(e);
-    return null;
   }
+  return null;
+};
+
+const fetchNewsPostData = async (postId: string) => {
+  if (!postId) return null;
+  if (hasValidFirebaseAdmin) {
+    try {
+      const docSnap = await admin.firestore().collection("scam_posts").doc(postId).get();
+      if (docSnap.exists) {
+        return normalizeDocData(docSnap.data());
+      }
+    } catch (e) {
+      console.error("Firebase Admin news post fetch error:", e);
+    }
+  }
+
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/scam_posts/${encodeURIComponent(postId)}`,
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.fields) return normalizeDocData(data.fields);
+    }
+  } catch (e) {}
+
+  return null;
+};
+
+const fetchSeoSettingsData = async () => {
+  if (hasValidFirebaseAdmin) {
+    try {
+      const seoSnap = await getFirestore().collection("settings").doc("seo").get();
+      if (seoSnap.exists) {
+        return normalizeDocData(seoSnap.data());
+      }
+    } catch (e) {}
+  }
+
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/settings/seo`,
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.fields) return normalizeDocData(data.fields);
+    }
+  } catch (e) {}
+
+  return null;
 };
 
 const fetchBlogData = async (slugOrId: string) => {
+  if (!slugOrId) return null;
   if (hasValidFirebaseAdmin) {
     try {
-      // 1. Try slug query
       const querySnap = await admin.firestore().collection("blogs").where("slug", "==", slugOrId).limit(1).get();
       if (!querySnap.empty) {
-        return querySnap.docs[0].data();
+        return normalizeDocData(querySnap.docs[0].data());
       }
-      // 2. Try doc ID
       const docSnap = await admin.firestore().collection("blogs").doc(slugOrId).get();
       if (docSnap.exists) {
-        return docSnap.data();
+        return normalizeDocData(docSnap.data());
       }
     } catch (e) {
       console.error("Firebase Admin blog fetch error:", e);
@@ -1412,18 +1523,17 @@ const fetchBlogData = async (slugOrId: string) => {
 
   try {
     const res = await fetch(
-      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/blogs/${slugOrId}`,
+      `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/blogs/${encodeURIComponent(slugOrId)}`,
     );
     if (res.ok) {
       const data = await res.json();
-      return data.fields;
+      if (data?.fields) return normalizeDocData(data.fields);
     }
   } catch (e) {}
 
   return null;
 };
 
-  
 let appInitialized = false;
 
 export async function initializeAppAsync() {
@@ -1431,11 +1541,14 @@ export async function initializeAppAsync() {
   appInitialized = true;
 
   const isExplicitDev = process.env.NODE_ENV === "development";
-  const distExists = fs.existsSync(path.join(process.cwd(), "dist", "index.html"));
-  const isCloudRun = !!process.env.K_SERVICE || !!process.env.K_REVISION;
-  const isProd = !isExplicitDev && (process.env.NODE_ENV === "production" || !!process.env.VERCEL || isCloudRun || distExists);
-  let vite: any;
   const distPath = path.join(process.cwd(), "dist");
+  const distExists = fs.existsSync(path.join(distPath, "index.html"));
+  const isCloudRun = !!process.env.K_SERVICE || !!process.env.K_REVISION;
+  const isProd =
+    !isExplicitDev &&
+    (!!process.env.VERCEL ||
+      ((process.env.NODE_ENV === "production" || isCloudRun) && distExists));
+  let vite: any;
 
   // Only use static serving locally in production, NOT on Vercel
   // because on Vercel, static files are handled by vercel static routing if present.
@@ -1450,7 +1563,7 @@ export async function initializeAppAsync() {
       const { createServer: createViteServer } = await import("vite");
       vite = await createViteServer({
         server: { middlewareMode: true, hmr: false },
-        appType: "spa",
+        appType: "custom",
       });
       app.use(vite.middlewares);
     } catch (viteErr) {
@@ -1527,6 +1640,14 @@ export async function initializeAppAsync() {
 
   app.get("*all", async (req, res) => {
     try {
+      // Do not serve HTML fallback for missing static assets
+      const isStaticAssetExt = /\.(?:js|mjs|cjs|ts|tsx|jsx|css|map|json|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|mp4|webm|mp3|wav)$/i.test(
+        req.path,
+      );
+      if (isStaticAssetExt) {
+        return res.status(404).end();
+      }
+
       let template: string = "";
 
       if (!isProd && vite) {
@@ -1548,23 +1669,32 @@ export async function initializeAppAsync() {
       }
 
       const knownAppRoutes = [
-        '/', '/all-products', '/cart', '/checkout', '/admin', '/seller', '/courier', 
-        '/messages', '/profile', '/orders', '/login', '/register', '/signup', '/settings', 
-        '/favorites', '/track-order', '/privacy', '/terms', '/helpline', '/ads',
-        '/categories', '/blog', '/contact', '/about', '/manifest.webmanifest', '/custom-sw.js',
-        '/favicon.ico', '/favicon.png', '/sitemap.xml', '/robots.txt'
+        "/", "/all-products", "/cart", "/checkout", "/admin", "/seller", "/courier",
+        "/messages", "/profile", "/orders", "/my-orders", "/login", "/signin", "/register", "/signup",
+        "/settings", "/favorites", "/wishlist", "/track-order", "/privacy", "/terms", "/helpline", "/ads",
+        "/categories", "/blog", "/contact", "/about", "/news-hub", "/news", "/scam", "/scam-alert",
+        "/author", "/creator", "/store", "/flash-sale", "/bundles", "/build-box", "/bonus", "/credits",
+        "/deposit", "/withdraw", "/my-coins", "/my-coupons", "/coupon", "/subscription", "/affiliate",
+        "/search", "/notifications", "/onboarding", "/auth-selector", "/verify", "/complete-profile",
+        "/manifest.webmanifest", "/custom-sw.js", "/favicon.ico", "/favicon.png", "/sitemap.xml", "/robots.txt"
       ];
-      const isKnownRoute = knownAppRoutes.some(r => req.path === r || req.path.startsWith(r + '/'));
-      const hasExtension = req.path.includes('.');
+      const isKnownRoute = knownAppRoutes.some(r => req.path === r || req.path.startsWith(r + "/"));
+      const hasExtension = req.path.includes(".");
 
+      const newsPostMatch = req.path.match(/^\/(?:news-hub\/(?:post|share)|news|scam)\/([^/?#]+)/);
       const productMatch = req.path.match(/^\/product\/(.+)/);
       const blogMatch = req.path.match(/^\/blog\/(.+)/);
       const isSlugMatch = !isKnownRoute && !hasExtension && !req.path.startsWith("/api");
 
+      const requestOrigin = `${req.protocol}://${req.get("host") || "www.deepshop.top"}`;
+
+      let newsPost: any = null;
       let product: any = null;
       let blog: any = null;
 
-      if (productMatch && productMatch[1]) {
+      if (newsPostMatch && newsPostMatch[1]) {
+        newsPost = await fetchNewsPostData(newsPostMatch[1]);
+      } else if (productMatch && productMatch[1]) {
         const segments = productMatch[1].split("/").filter(Boolean);
         const lastPart = segments[segments.length - 1];
         const firstPart = segments[0];
@@ -1583,58 +1713,106 @@ export async function initializeAppAsync() {
         }
       }
 
-      if (product) {
-        const title = product.title?.stringValue || product.title || product.name?.stringValue || product.name || "Product";
-        const description = product.description?.stringValue || product.description || `Buy ${title} at DEEP SHOP - 100% authentic border cross devices with fast delivery in Bangladesh.`;
+      if (newsPost) {
+        const storedTitle = String(newsPost.title || "").trim();
+        const rawTitle = storedTitle === "Feed Post" ? "" : storedTitle;
+        const rawDesc = String(newsPost.description || "").trim();
+        const cleanDesc = rawDesc.replace(/\s+/g, " ").trim();
+        const firstLine = rawDesc
+          ? rawDesc.split(/\r?\n/)[0].trim().slice(0, 80)
+          : "";
+        const postTitle =
+          rawTitle || firstLine || String(newsPost.reporterName || "Post").trim();
+        const postDescription = (cleanDesc || rawTitle || postTitle).slice(0, 300);
+
         let imageUrl =
-          product.image?.stringValue ||
+          (Array.isArray(newsPost.images) && newsPost.images[0]) ||
+          newsPost.image ||
+          newsPost.reporterAvatar ||
+          `${requestOrigin}/favicon.png`;
+
+        if (typeof imageUrl === "string" && imageUrl.startsWith("/")) {
+          imageUrl = `${requestOrigin}${imageUrl}`;
+        }
+
+        const safeTitle = escapeHtmlAttr(postTitle);
+        const safeDesc = escapeHtmlAttr(postDescription);
+        const safeImg = escapeHtmlAttr(imageUrl);
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${req.path}`);
+
+        const metaTags = `
+          <title>${safeTitle}</title>
+          <meta name="description" content="${safeDesc}" />
+          <meta property="og:title" content="${safeTitle}" />
+          <meta property="og:description" content="${safeDesc}" />
+          <meta property="og:image" content="${safeImg}" />
+          <meta property="og:image:alt" content="${safeTitle}" />
+          <meta property="og:type" content="article" />
+          <meta property="og:url" content="${safeUrl}" />
+          <link rel="canonical" href="${safeUrl}" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content="${safeTitle}" />
+          <meta name="twitter:description" content="${safeDesc}" />
+          <meta name="twitter:image" content="${safeImg}" />
+        `;
+
+        const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
+        if (metaRegex.test(template)) {
+          template = template.replace(metaRegex, metaTags);
+        } else {
+          template = template.replace("</head>", `${metaTags}\n</head>`);
+        }
+      } else if (product) {
+        const rawTitle = String(product.name || product.title || "Product").trim();
+        const rawDesc =
+          String(product.description || "")
+            .replace(/<[^>]*>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 300) || rawTitle;
+        let imageUrl =
           product.image ||
           (Array.isArray(product.images) ? product.images[0] : null) ||
-          product.images?.arrayValue?.values?.[0]?.stringValue ||
-          "https://www.deepshop.top/favicon.png";
-        
-        if (imageUrl.startsWith("/")) {
-          imageUrl = `https://www.deepshop.top${imageUrl}`;
-        }
-        const price =
-          product.price?.numberValue ||
-          product.price?.integerValue ||
-          product.price?.doubleValue ||
-          (typeof product.price === "number" ? product.price : 0);
+          `${requestOrigin}/favicon.png`;
 
-        let metaTags = `
-          <title>${title} | DEEP SHOP</title>
-          <meta name="description" content="${description}" />
-          <meta property="og:title" content="${title} | DEEP SHOP" />
-          <meta property="og:description" content="${description}" />
-          <meta property="og:image" content="${imageUrl}" />
-          <meta property="og:image:alt" content="${title}" />
+        if (typeof imageUrl === "string" && imageUrl.startsWith("/")) {
+          imageUrl = `${requestOrigin}${imageUrl}`;
+        }
+        const price = typeof product.price === "number" ? product.price : Number(product.price || 0);
+
+        const safeTitle = escapeHtmlAttr(rawTitle);
+        const safeDesc = escapeHtmlAttr(rawDesc);
+        const safeImg = escapeHtmlAttr(imageUrl);
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${req.path}`);
+
+        const metaTags = `
+          <title>${safeTitle}</title>
+          <meta name="description" content="${safeDesc}" />
+          <meta property="og:title" content="${safeTitle}" />
+          <meta property="og:description" content="${safeDesc}" />
+          <meta property="og:image" content="${safeImg}" />
+          <meta property="og:image:alt" content="${safeTitle}" />
           <meta property="og:type" content="product" />
-          <meta property="og:url" content="https://www.deepshop.top${req.path}" />
-          <link rel="canonical" href="https://www.deepshop.top${req.path}" />
-          <meta property="product:brand" content="DEEP SHOP" />
+          <meta property="og:url" content="${safeUrl}" />
+          <link rel="canonical" href="${safeUrl}" />
           <meta property="product:price:amount" content="${price}" />
           <meta property="product:price:currency" content="BDT" />
           <meta property="product:availability" content="instock" />
           <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content="${title}" />
-          <meta name="twitter:description" content="${description}" />
-          <meta name="twitter:image" content="${imageUrl}" />
+          <meta name="twitter:title" content="${safeTitle}" />
+          <meta name="twitter:description" content="${safeDesc}" />
+          <meta name="twitter:image" content="${safeImg}" />
           <script type="application/ld+json">
           {
             "@context": "https://schema.org/",
             "@type": "Product",
-            "name": ${JSON.stringify(title)},
+            "name": ${JSON.stringify(rawTitle)},
             "image": [${JSON.stringify(imageUrl)}],
-            "description": ${JSON.stringify(description)},
+            "description": ${JSON.stringify(rawDesc)},
             "sku": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
-            "brand": {
-              "@type": "Brand",
-              "name": "DEEP SHOP"
-            },
             "offers": {
               "@type": "Offer",
-              "url": "https://www.deepshop.top${req.path}",
+              "url": ${JSON.stringify(`${requestOrigin}${req.path}`)},
               "priceCurrency": "BDT",
               "price": ${price || 0},
               "priceValidUntil": "2027-12-31",
@@ -1652,55 +1830,37 @@ export async function initializeAppAsync() {
           template = template.replace("</head>", `${metaTags}\n</head>`);
         }
       } else if (blog) {
-        const title = blog.title?.stringValue || blog.title || "Blog Post";
-        let rawContent = blog.content?.stringValue || blog.content || "";
+        const rawTitle = String(blog.title || "Blog Post").trim();
+        const rawContent = String(blog.content || "");
         const cleanContent = rawContent.replace(/\[\[.*?\]\]/g, "").replace(/[#*`_]/g, "").slice(0, 160);
-        const description = blog.excerpt?.stringValue || blog.excerpt || cleanContent || "Read the latest update on DEEP SHOP.";
+        const rawDesc = String(blog.excerpt || cleanContent || rawTitle).trim();
         let imageUrl =
-          blog.image?.stringValue ||
           blog.image ||
-          blog.coverImage?.stringValue ||
           blog.coverImage ||
-          "https://www.deepshop.top/favicon.png";
+          `${requestOrigin}/favicon.png`;
 
-        if (imageUrl.startsWith("/")) {
-          imageUrl = `https://www.deepshop.top${imageUrl}`;
+        if (typeof imageUrl === "string" && imageUrl.startsWith("/")) {
+          imageUrl = `${requestOrigin}${imageUrl}`;
         }
 
-        let metaTags = `
-          <title>${title} | DEEP SHOP Blog</title>
-          <meta name="description" content="${description}" />
-          <meta property="og:title" content="${title} | DEEP SHOP" />
-          <meta property="og:description" content="${description}" />
-          <meta property="og:image" content="${imageUrl}" />
+        const safeTitle = escapeHtmlAttr(rawTitle);
+        const safeDesc = escapeHtmlAttr(rawDesc);
+        const safeImg = escapeHtmlAttr(imageUrl);
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${req.path}`);
+
+        const metaTags = `
+          <title>${safeTitle}</title>
+          <meta name="description" content="${safeDesc}" />
+          <meta property="og:title" content="${safeTitle}" />
+          <meta property="og:description" content="${safeDesc}" />
+          <meta property="og:image" content="${safeImg}" />
           <meta property="og:type" content="article" />
-          <meta property="og:url" content="https://www.deepshop.top${req.path}" />
-          <link rel="canonical" href="https://www.deepshop.top${req.path}" />
+          <meta property="og:url" content="${safeUrl}" />
+          <link rel="canonical" href="${safeUrl}" />
           <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content="${title}" />
-          <meta name="twitter:description" content="${description}" />
-          <meta name="twitter:image" content="${imageUrl}" />
-          <script type="application/ld+json">
-          {
-            "@context": "https://schema.org",
-            "@type": "BlogPosting",
-            "headline": ${JSON.stringify(title)},
-            "image": [${JSON.stringify(imageUrl)}],
-            "description": ${JSON.stringify(description)},
-            "publisher": {
-              "@type": "Organization",
-              "name": "DEEP SHOP",
-              "logo": {
-                "@type": "ImageObject",
-                "url": "https://www.deepshop.top/favicon.png"
-              }
-            },
-            "mainEntityOfPage": {
-              "@type": "WebPage",
-              "@id": "https://www.deepshop.top${req.path}"
-            }
-          }
-          </script>
+          <meta name="twitter:title" content="${safeTitle}" />
+          <meta name="twitter:description" content="${safeDesc}" />
+          <meta name="twitter:image" content="${safeImg}" />
         `;
 
         const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
@@ -1711,61 +1871,65 @@ export async function initializeAppAsync() {
         }
       } else if (req.path === "/all-products") {
         const category = req.query.category ? String(req.query.category) : "All";
-        const canonicalUrl = category !== "All" ? `https://www.deepshop.top/all-products?category=${encodeURIComponent(category)}` : `https://www.deepshop.top/all-products`;
-        
-        let metaTags = `
-          <title>${category === "All" ? "All Products" : `${category} Products`} | DEEP SHOP</title>
+        const canonicalUrl = category !== "All" ? `${requestOrigin}/all-products?category=${encodeURIComponent(category)}` : `${requestOrigin}/all-products`;
+        const safeTitle = escapeHtmlAttr(`${category === "All" ? "All Products" : `${category} Products`} | DEEP SHOP`);
+        const safeUrl = escapeHtmlAttr(canonicalUrl);
+
+        const metaTags = `
+          <title>${safeTitle}</title>
           <meta name="description" content="Browse our collection of authentic border cross devices and tech products at DEEP SHOP." />
-          <meta property="og:title" content="${category === "All" ? "All Products" : `${category} Products`} | DEEP SHOP" />
+          <meta property="og:title" content="${safeTitle}" />
           <meta property="og:description" content="Browse our collection of authentic border cross devices and tech products at DEEP SHOP." />
-          <meta property="og:image" content="https://www.deepshop.top/favicon.png" />
-          <meta name="twitter:image" content="https://www.deepshop.top/favicon.png" />
-          <link rel="canonical" href="${canonicalUrl}" />
-          <meta property="og:url" content="${canonicalUrl}" />
+          <meta property="og:image" content="${escapeHtmlAttr(`${requestOrigin}/favicon.png`)}" />
+          <meta name="twitter:image" content="${escapeHtmlAttr(`${requestOrigin}/favicon.png`)}" />
+          <link rel="canonical" href="${safeUrl}" />
+          <meta property="og:url" content="${safeUrl}" />
         `;
-        
+
         const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
         if (metaRegex.test(template)) {
           template = template.replace(metaRegex, metaTags);
         } else {
           template = template.replace("</head>", `${metaTags}\n</head>`);
         }
-      } else if (req.path === "/" || req.path === "") {
-        // Fetch home SEO
+      } else {
+        // Website link ("/" or general pages without specific item metadata)
         let title = "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site";
-        let description = "border cross devices, border cross products, illegal products buy sell site";
-        let imageUrl = "https://www.deepshop.top/favicon.png";
+        let description = "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site. Get authentic border cross devices and products.";
+        let imageUrl = `${requestOrigin}/favicon.png`;
 
-        if (hasValidFirebaseAdmin) {
-          try {
-            const seoSnap = await getFirestore().collection("settings").doc("seo").get();
-            if (seoSnap.exists) {
-              const data = seoSnap.data() as any;
-              if (data.metaTitle) title = data.metaTitle;
-              if (data.metaDescription) description = data.metaDescription;
-              if (data.metaImage) {
-                imageUrl = data.metaImage.startsWith("http") ? data.metaImage : `https://www.deepshop.top${data.metaImage}`;
-              } else if (data.appIconUrl) {
-                imageUrl = data.appIconUrl.startsWith("http") ? data.appIconUrl : `https://www.deepshop.top${data.appIconUrl}`;
-              }
-            }
-          } catch (e) {}
+        const seoData = await fetchSeoSettingsData();
+        if (seoData) {
+          if (seoData.metaTitle) title = String(seoData.metaTitle).trim();
+          if (seoData.metaDescription) description = String(seoData.metaDescription).trim();
+          if (seoData.metaImage) {
+            const rawImg = String(seoData.metaImage).trim();
+            imageUrl = rawImg.startsWith("http") ? rawImg : `${requestOrigin}${rawImg.startsWith("/") ? "" : "/"}${rawImg}`;
+          } else if (seoData.appIconUrl) {
+            const rawIcon = String(seoData.appIconUrl).trim();
+            imageUrl = rawIcon.startsWith("http") ? rawIcon : `${requestOrigin}${rawIcon.startsWith("/") ? "" : "/"}${rawIcon}`;
+          }
         }
 
-        let metaTags = `
-            <title>${title}</title>
-            <meta name="description" content="${description}" />
-            <meta property="og:title" content="${title}" />
-            <meta property="og:description" content="${description}" />
-            <meta property="og:image" content="${imageUrl}" />
-            <meta property="og:type" content="website" />
-            <meta property="og:url" content="https://www.deepshop.top/" />
-            <link rel="canonical" href="https://www.deepshop.top/" />
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:title" content="${title}" />
-            <meta name="twitter:description" content="${description}" />
-            <meta name="twitter:image" content="${imageUrl}" />
-         `;
+        const safeTitle = escapeHtmlAttr(title);
+        const safeDesc = escapeHtmlAttr(description);
+        const safeImg = escapeHtmlAttr(imageUrl);
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${req.path || "/"}`);
+
+        const metaTags = `
+          <title>${safeTitle}</title>
+          <meta name="description" content="${safeDesc}" />
+          <meta property="og:title" content="${safeTitle}" />
+          <meta property="og:description" content="${safeDesc}" />
+          <meta property="og:image" content="${safeImg}" />
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content="${safeUrl}" />
+          <link rel="canonical" href="${safeUrl}" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content="${safeTitle}" />
+          <meta name="twitter:description" content="${safeDesc}" />
+          <meta name="twitter:image" content="${safeImg}" />
+        `;
         const metaRegex = /<!-- META_TAGS_PLACEHOLDER -->[\s\S]*?<!-- END_META_TAGS_PLACEHOLDER -->/;
         if (metaRegex.test(template)) {
           template = template.replace(metaRegex, metaTags);

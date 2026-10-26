@@ -48,6 +48,8 @@ export interface Product {
   advanceAmount?: number;
   advancePercentage?: number;
   resellerPrice?: number;
+  reviews?: any[];
+  salesCount?: number;
 }
 
 export interface UserProfile {

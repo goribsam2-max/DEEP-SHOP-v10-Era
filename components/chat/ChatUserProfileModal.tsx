@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { getSafeDisplayName, getSafePublicUsername } from '../../lib/utils';
 
 interface ChatUserProfileModalProps {
   isOpen: boolean;
@@ -137,12 +138,11 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
 
   // Real account name is the primary name in user details modal
   const realName =
-    realUserData?.displayName ||
-    realUserData?.shopName ||
-    otherUser.displayName ||
-    otherUser.shopName ||
-    otherUser.name ||
+    getSafeDisplayName(realUserData, '') ||
+    getSafeDisplayName(otherUser, '') ||
     'User';
+  const publicUsername =
+    getSafePublicUsername(realUserData) || getSafePublicUsername(otherUser);
 
   const avatarUrl = otherUser.photoURL || otherUser.avatar || otherUser.image;
 
@@ -249,11 +249,11 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               Edit
             </button>
           </div>
-        ) : (
+        ) : publicUsername ? (
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-            @{otherUser.displayName?.toLowerCase().replace(/\s+/g, '') || otherUid?.slice(0, 8) || 'username'}
+            @{publicUsername}
           </p>
-        )}
+        ) : null}
 
         {/* 4 Action Buttons Row: Profile, Search, Mute, Options (Image 1) */}
         <div className="grid grid-cols-4 gap-4 mt-6 w-full max-w-sm relative">

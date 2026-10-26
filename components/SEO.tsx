@@ -14,6 +14,7 @@ interface SEOProps {
   availability?: string; // 'in stock' | 'out of stock'
   canonical?: string;
   noindex?: boolean;
+  exactTitle?: boolean;
 }
 
 const SEO: React.FC<SEOProps> = ({ 
@@ -28,9 +29,10 @@ const SEO: React.FC<SEOProps> = ({
   currency = "BDT",
   availability,
   canonical,
-  noindex = false
+  noindex = false,
+  exactTitle = false
 }) => {
-  const fullTitle = `${title} | DEEP SHOP`;
+  const fullTitle = exactTitle ? title : `${title} | DEEP SHOP`;
   return (
     <Helmet>
       <title>{fullTitle}</title>
@@ -49,7 +51,7 @@ const SEO: React.FC<SEOProps> = ({
       <meta property="og:image" content={image} />
       <meta property="og:url" content={url} />
       <meta property="og:type" content={type} />
-      <meta property="og:site_name" content="DEEP SHOP" />
+      {!exactTitle && <meta property="og:site_name" content="DEEP SHOP" />}
 
       {price !== undefined && <meta property="product:price:amount" content={price.toString()} />}
       {price !== undefined && <meta property="product:price:currency" content={currency} />}

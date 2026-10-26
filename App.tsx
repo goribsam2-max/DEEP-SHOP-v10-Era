@@ -57,191 +57,175 @@ import { initGlobalHaptics } from './lib/haptics';
 import { hasImmediateAdminOrStaffRole } from './lib/admin';
 
 const SEOProvider = () => {
+  const location = useLocation();
+  const [seoData, setSeoData] = useState<any>(null);
+
   useEffect(() => {
     initGlobalHaptics();
 
     const unsub = onSnapshot(doc(db, 'settings', 'seo'), (snap) => {
       if (snap.exists()) {
-        const data = snap.data();
-        if (data.metaTitle) document.title = data.metaTitle;
-        
-        let metaDesc = document.querySelector('meta[name="description"]');
-        if (!metaDesc) {
-          metaDesc = document.createElement('meta');
-          metaDesc.setAttribute('name', 'description');
-          document.head.appendChild(metaDesc);
-        }
-        if (data.metaDescription) metaDesc.setAttribute('content', data.metaDescription);
-
-        let metaKeywords = document.querySelector('meta[name="keywords"]');
-        if (!metaKeywords) {
-          metaKeywords = document.createElement('meta');
-          metaKeywords.setAttribute('name', 'keywords');
-          document.head.appendChild(metaKeywords);
-        }
-        if (data.metaKeywords) metaKeywords.setAttribute('content', data.metaKeywords);
-
-        let metaRobots = document.querySelector('meta[name="robots"]');
-        if (!metaRobots) {
-          metaRobots = document.createElement('meta');
-          metaRobots.setAttribute('name', 'robots');
-          document.head.appendChild(metaRobots);
-        }
-        metaRobots.setAttribute('content', data.robots || 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1');
-        
-        let publisherMeta = document.querySelector('meta[name="publisher"]');
-        if (!publisherMeta) {
-           publisherMeta = document.createElement('meta');
-           publisherMeta.setAttribute('name', 'publisher');
-           document.head.appendChild(publisherMeta);
-        }
-        if(data.organizationName) publisherMeta.setAttribute('content', data.organizationName);
-
-        // --- NEW SEO & BRANDING FIELDS ---
-        
-        if (data.siteLanguage) document.documentElement.lang = data.siteLanguage;
-        
-        let metaAuthor = document.querySelector('meta[name="author"]');
-        if (!metaAuthor) {
-          metaAuthor = document.createElement('meta');
-          metaAuthor.setAttribute('name', 'author');
-          document.head.appendChild(metaAuthor);
-        }
-        if (data.siteAuthor) metaAuthor.setAttribute('content', data.siteAuthor);
-
-        let favicon = document.querySelector('link[rel="icon"]');
-        if (!favicon) {
-          favicon = document.createElement('link');
-          favicon.setAttribute('rel', 'icon');
-          document.head.appendChild(favicon);
-        }
-        if (data.faviconUrl) favicon.setAttribute('href', data.faviconUrl);
-
-        let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-        if (!appleIcon) {
-          appleIcon = document.createElement('link');
-          appleIcon.setAttribute('rel', 'apple-touch-icon');
-          document.head.appendChild(appleIcon);
-        }
-        if (data.appIconUrl) appleIcon.setAttribute('href', data.appIconUrl);
-        
-        let metaImage = document.querySelector('meta[property="og:image"]');
-        if (!metaImage) {
-          metaImage = document.createElement('meta');
-          metaImage.setAttribute('property', 'og:image');
-          document.head.appendChild(metaImage);
-        }
-        if (data.metaImage) metaImage.setAttribute('content', data.metaImage);
-        
-        let twitterImage = document.querySelector('meta[name="twitter:image"]');
-        if (!twitterImage) {
-          twitterImage = document.createElement('meta');
-          twitterImage.setAttribute('name', 'twitter:image');
-          document.head.appendChild(twitterImage);
-        }
-        if (data.metaImage) twitterImage.setAttribute('content', data.metaImage);
-
-        let jsonLdScript = document.querySelector('script[type="application/ld+json"]');
-        if (!jsonLdScript) {
-          jsonLdScript = document.createElement('script');
-          jsonLdScript.setAttribute('type', 'application/ld+json');
-          document.head.appendChild(jsonLdScript);
-        }
-        if (data.jsonLd) {
-           jsonLdScript.textContent = data.jsonLd;
-        } else {
-           jsonLdScript.textContent = JSON.stringify([
-             {
-               "@context": "https://schema.org",
-               "@type": "WebSite",
-               "name": data.organizationName || "DEEP SHOP",
-               "url": "https://www.deepshop.top",
-               "description": data.metaDescription || "The best premium store for AI Gadgets, smart tech, and mobile accessories in Bangladesh.",
-               "potentialAction": {
-                 "@type": "SearchAction",
-                 "target": "https://www.deepshop.top/#/search?q={search_term_string}",
-                 "query-input": "required name=search_term_string"
-               }
-             },
-             {
-               "@context": "https://schema.org",
-               "@type": "ElectronicsStore",
-               "name": "DEEP SHOP",
-               "url": "https://www.deepshop.top",
-               "logo": data.appIconUrl || "https://www.deepshop.top/favicon.png",
-               "image": data.appIconUrl || "https://www.deepshop.top/favicon.png",
-               "description": data.metaDescription || "DEEP SHOP is the top-rated provider of Border Cross Phones, Original Mobiles, and high-quality tech accessories in Bangladesh.",
-               "telephone": "+1 (724) 764-8185",
-               "priceRange": "$$",
-               "address": {
-                 "@type": "PostalAddress",
-                 "streetAddress": "Dr. ishak Shopping Center (FTC), Room Number: 54, Ground Floor",
-                 "addressLocality": "Dhaka",
-                 "postalCode": "3920",
-                 "addressCountry": "BD"
-               },
-               "openingHoursSpecification": {
-                 "@type": "OpeningHoursSpecification",
-                 "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                 "opens": "09:00",
-                 "closes": "22:00"
-               },
-               "sameAs": [
-                 "https://facebook.com/deepshop.top",
-                 "https://www.instagram.com/deepshop.top",
-                 "https://www.youtube.com/@deepshopbd"
-               ],
-               "knowsAbout": ["Border Cross Products", "Border Cross Devices", "Illegal Products Buy Sell Site", "Genuine Mobiles"]
-             }
-           ]);
-        }
-        
-        // Inject Dynamic Manifest for PWA (Add to Home Screen)
-        const manifest = {
-          short_name: data.metaTitle || "DEEP SHOP",
-          name: data.metaTitle || "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site",
-          description: data.metaDescription || "border cross devices, border cross products, illegal products buy sell site",
-          icons: data.appIconUrl ? [
-             { src: data.appIconUrl, type: "image/png", sizes: "192x192", purpose: "any maskable" },
-             { src: data.appIconUrl, type: "image/png", sizes: "512x512", purpose: "any maskable" }
-          ] : [],
-          start_url: "/",
-          display: "standalone",
-          theme_color: "#06331e",
-          background_color: "#ffffff"
-        };
-        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(blob);
-        let manifestLink = document.querySelector('link[rel="manifest"]');
-        if (!manifestLink) {
-          manifestLink = document.createElement('link');
-          manifestLink.setAttribute('rel', 'manifest');
-          document.head.appendChild(manifestLink);
-        }
-        manifestLink.setAttribute('href', manifestURL);
-        
-        // --- END ---
-
-        if (data.fbPixelId) {
-          if (!(window as any).fbq) {
-            // @ts-ignore
-            !function(f,b,e,v,n,t,s)
-            {if((f as any).fbq)return;n=(f as any).fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!(f as any)._fbq)(f as any)._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode?.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            (window as any).fbq('init', data.fbPixelId);
-            (window as any).fbq('track', 'PageView');
-          }
-        }
+        setSeoData(snap.data());
       }
     });
+
     return () => unsub();
   }, []);
-  
+
+  useEffect(() => {
+    if (!seoData) return;
+    const data = seoData;
+    const isHomeRoute = location.pathname === '/' || location.pathname === '';
+
+    if (isHomeRoute) {
+      if (data.metaTitle) document.title = data.metaTitle;
+
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      if (data.metaDescription) metaDesc.setAttribute('content', data.metaDescription);
+
+      let metaImage = document.querySelector('meta[property="og:image"]');
+      if (!metaImage) {
+        metaImage = document.createElement('meta');
+        metaImage.setAttribute('property', 'og:image');
+        document.head.appendChild(metaImage);
+      }
+      if (data.metaImage) metaImage.setAttribute('content', data.metaImage);
+
+      let twitterImage = document.querySelector('meta[name="twitter:image"]');
+      if (!twitterImage) {
+        twitterImage = document.createElement('meta');
+        twitterImage.setAttribute('name', 'twitter:image');
+        document.head.appendChild(twitterImage);
+      }
+      if (data.metaImage) twitterImage.setAttribute('content', data.metaImage);
+    }
+
+    let metaKeywords = document.querySelector('meta[name="keywords"]');
+    if (!metaKeywords) {
+      metaKeywords = document.createElement('meta');
+      metaKeywords.setAttribute('name', 'keywords');
+      document.head.appendChild(metaKeywords);
+    }
+    if (data.metaKeywords && isHomeRoute) metaKeywords.setAttribute('content', data.metaKeywords);
+
+    let metaRobots = document.querySelector('meta[name="robots"]');
+    if (!metaRobots) {
+      metaRobots = document.createElement('meta');
+      metaRobots.setAttribute('name', 'robots');
+      document.head.appendChild(metaRobots);
+    }
+    metaRobots.setAttribute('content', data.robots || 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1');
+
+    let publisherMeta = document.querySelector('meta[name="publisher"]');
+    if (!publisherMeta) {
+      publisherMeta = document.createElement('meta');
+      publisherMeta.setAttribute('name', 'publisher');
+      document.head.appendChild(publisherMeta);
+    }
+    if (data.organizationName) publisherMeta.setAttribute('content', data.organizationName);
+
+    if (data.siteLanguage) document.documentElement.lang = data.siteLanguage;
+
+    let metaAuthor = document.querySelector('meta[name="author"]');
+    if (!metaAuthor) {
+      metaAuthor = document.createElement('meta');
+      metaAuthor.setAttribute('name', 'author');
+      document.head.appendChild(metaAuthor);
+    }
+    if (data.siteAuthor) metaAuthor.setAttribute('content', data.siteAuthor);
+
+    let favicon = document.querySelector('link[rel="icon"]');
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.setAttribute('rel', 'icon');
+      document.head.appendChild(favicon);
+    }
+    if (data.faviconUrl) favicon.setAttribute('href', data.faviconUrl);
+
+    let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+    if (!appleIcon) {
+      appleIcon = document.createElement('link');
+      appleIcon.setAttribute('rel', 'apple-touch-icon');
+      document.head.appendChild(appleIcon);
+    }
+    if (data.appIconUrl) appleIcon.setAttribute('href', data.appIconUrl);
+
+    if (isHomeRoute) {
+      let jsonLdScript = document.querySelector('script[type="application/ld+json"]');
+      if (!jsonLdScript) {
+        jsonLdScript = document.createElement('script');
+        jsonLdScript.setAttribute('type', 'application/ld+json');
+        document.head.appendChild(jsonLdScript);
+      }
+      if (data.jsonLd) {
+        jsonLdScript.textContent = data.jsonLd;
+      } else {
+        jsonLdScript.textContent = JSON.stringify([
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": data.organizationName || "DEEP SHOP",
+            "url": "https://www.deepshop.top",
+            "description": data.metaDescription || "The best premium store for AI Gadgets, smart tech, and mobile accessories in Bangladesh.",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://www.deepshop.top/search?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          }
+        ]);
+      }
+    }
+
+    // Inject Dynamic Manifest for PWA (Add to Home Screen)
+    const manifest = {
+      short_name: data.metaTitle || "DEEP SHOP",
+      name: data.metaTitle || "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site",
+      description: data.metaDescription || "border cross devices, border cross products, illegal products buy sell site",
+      icons: data.appIconUrl ? [
+         { src: data.appIconUrl, type: "image/png", sizes: "192x192", purpose: "any maskable" },
+         { src: data.appIconUrl, type: "image/png", sizes: "512x512", purpose: "any maskable" }
+      ] : [],
+      start_url: "/",
+      display: "standalone",
+      theme_color: "#06331e",
+      background_color: "#ffffff"
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    let manifestLink = document.querySelector('link[rel="manifest"]');
+    if (!manifestLink) {
+      manifestLink = document.createElement('link');
+      manifestLink.setAttribute('rel', 'manifest');
+      document.head.appendChild(manifestLink);
+    }
+    manifestLink.setAttribute('href', manifestURL);
+    if (data.fbPixelId) {
+      if (!(window as any).fbq) {
+        // @ts-ignore
+        !function(f,b,e,v,n,t,s)
+        {if((f as any).fbq)return;n=(f as any).fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!(f as any)._fbq)(f as any)._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode?.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        (window as any).fbq('init', data.fbPixelId);
+        (window as any).fbq('track', 'PageView');
+      }
+    }
+
+    return () => {
+      URL.revokeObjectURL(manifestURL);
+    };
+  }, [seoData, location.pathname]);
+
   return null;
 };
 
@@ -338,6 +322,7 @@ import ManageIcons from './pages/admin/ManageIcons';
 import ManageIllustrations from './pages/admin/ManageIllustrations';
 import AdminNotifications from './pages/admin/AdminNotifications';
 import ManageUsersMobile from './pages/admin/ManageUsersMobile';
+import ManageEngagement from './pages/admin/ManageEngagement';
 
 // Components
 import BottomMenu from './components/ui/BottomMenu';
@@ -1098,6 +1083,7 @@ const AppContent: React.FC = () => {
                   <Route path="users-mobile" element={<PageWrapper><ManageUsersMobile /></PageWrapper>} />
                   <Route path="password-resets" element={<PageWrapper><ManagePasswordResets /></PageWrapper>} />
                   <Route path="push-notifications" element={<PageWrapper><ManagePushNotifications /></PageWrapper>} />
+                  <Route path="engagement" element={<PageWrapper><ManageEngagement /></PageWrapper>} />
                   <Route path="orders" element={<PageWrapper><ManageOrders /></PageWrapper>} />
                   <Route path="subscriptions" element={<PageWrapper><ManageSubscriptions /></PageWrapper>} />
                   <Route path="reviews" element={<PageWrapper><ManageReviews /></PageWrapper>} />

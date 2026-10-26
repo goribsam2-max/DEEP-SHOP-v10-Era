@@ -37,6 +37,7 @@ import {
 import { subscribeToFollowerStats, toggleFollowUser } from "../lib/follow";
 import UserAvatar from "../components/UserAvatar";
 import { getFeedThemeMeta } from "../lib/feed-themes";
+import { getSafeDisplayName, getSafePublicUsername } from "../lib/utils";
 
 const DEFAULT_ONLINE_INTERESTS = [
   { label: "Cyber News", icon: "🛡️" },
@@ -199,11 +200,8 @@ export const AuthorProfile: React.FC = () => {
           } else {
             setAuthor({
               id: id || "author_demo",
-              displayName: fallbackPost?.reporterName || "User",
-              username:
-                fallbackPost?.reporterName
-                  ?.toLowerCase()
-                  .replace(/\s+/g, "") || "user",
+              displayName: fallbackPost?.reporterName || "Creator",
+              username: "",
               photoURL: fallbackPost?.reporterAvatar || "",
               coverImage: "",
               bio: "",
@@ -257,10 +255,13 @@ export const AuthorProfile: React.FC = () => {
       if (typeof res.followersCount === "number") {
         setFollowerCount(res.followersCount);
       }
+      const label = getSafePublicUsername(author)
+        ? `@${getSafePublicUsername(author)}`
+        : getSafeDisplayName(author, "creator");
       notify(
         res.isFollowing
-          ? `Now following @${author?.username || author?.displayName || "creator"}!`
-          : `Unfollowed @${author?.username || author?.displayName || "creator"}`,
+          ? `Now following ${label}!`
+          : `Unfollowed ${label}`,
         res.isFollowing ? "success" : "info"
       );
     }
@@ -280,9 +281,9 @@ export const AuthorProfile: React.FC = () => {
     try {
       await addDoc(collection(db, "sponsor_requests"), {
         sponsorUserId: currentUser.uid,
-        sponsorName: currentUser.displayName || currentUser.email?.split("@")[0] || "Supporter",
+        sponsorName: getSafeDisplayName(currentUser, "Supporter"),
         creatorUserId: id,
-        creatorName: author?.displayName || "Creator",
+        creatorName: getSafeDisplayName(author, "Creator"),
         amountBDT: Number(sponsorAmount),
         phone: sponsorPhone,
         txId: sponsorTxId,
@@ -309,7 +310,8 @@ export const AuthorProfile: React.FC = () => {
     );
   }
 
-  const handle = author.username || author.email?.split("@")[0] || author.displayName?.toLowerCase().replace(/\s+/g, "") || "user";
+  const handle = getSafePublicUsername(author);
+  const safeAuthorName = getSafeDisplayName(author, "Creator");
   const xp = author.xp || 0;
   const totalXp = author.totalXp || 100;
   const likesCount = posts.reduce((acc, p) => {
@@ -325,8 +327,8 @@ export const AuthorProfile: React.FC = () => {
   return (
     <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans pb-24 selection:bg-blue-600 selection:text-white">
       <SEO
-        title={`@${handle} • Creator Profile • DEEP SHOP`}
-        description={author.bio || `Profile of @${handle} on DEEP SHOP.`}
+        title={`${handle ? `@${handle}` : safeAuthorName} • Creator Profile`}
+        description={author.bio || `Profile of ${safeAuthorName}.`}
       />
 
       {/* TOP FLOATING NAVIGATION BAR (Exact match to IMG_4750.webp) */}
@@ -403,12 +405,11 @@ export const AuthorProfile: React.FC = () => {
         <div className="flex items-center justify-between gap-3 pt-1">
           <div className="space-y-0.5 min-w-0">
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-white truncate">
-              {author.displayName && author.displayName !== "User"
-                ? author.displayName
-                : `@${handle}`}
+              {safeAuthorName}
             </h1>
             <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-              @{handle} · {followerCount.toLocaleString()} Followers ·{" "}
+              {handle ? `@${handle} · ` : ""}
+              {followerCount.toLocaleString()} Followers ·{" "}
               {followingCount.toLocaleString()} Following
             </p>
             {author.bio && (

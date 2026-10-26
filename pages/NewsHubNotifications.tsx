@@ -9,6 +9,7 @@ import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { ProfileAvatar } from "./NewsProfilePage";
+import { isPhoneLikeUsername } from "../lib/utils";
 
 interface NewsNotificationItem {
   id: string;
@@ -96,12 +97,18 @@ export const NewsHubNotifications: React.FC = () => {
           const data = d.data();
           const rawDate = data.createdAt;
           const ts = typeof rawDate === "number" ? rawDate : new Date(rawDate).getTime() || Date.now();
+          const rawName = String(data.fromUserName || data.title || "").trim();
+          const safeName =
+            rawName && !isPhoneLikeUsername(rawName) ? rawName : "Member";
+          const rawHandle = String(data.fromUserUsername || "").trim();
+          const safeHandle =
+            rawHandle && !isPhoneLikeUsername(rawHandle) ? rawHandle : "";
           return {
             id: d.id,
             userId: data.userId || currentUser.uid,
             fromUserId: data.fromUserId || "",
-            fromUserName: data.fromUserName || data.title || "User",
-            fromUserUsername: data.fromUserUsername || data.fromUserName || "member",
+            fromUserName: safeName,
+            fromUserUsername: safeHandle,
             fromUserAvatar: data.fromUserAvatar || "",
             type: data.type || "system",
             title: data.title || "",
@@ -184,7 +191,13 @@ export const NewsHubNotifications: React.FC = () => {
     });
 
     if (res.ok) {
-      notify(res.isFollowing ? `Following @${item.fromUserUsername}` : `Unfollowed @${item.fromUserUsername}`, res.isFollowing ? "success" : "info");
+      const label = item.fromUserUsername
+        ? `@${item.fromUserUsername}`
+        : item.fromUserName || "Creator";
+      notify(
+        res.isFollowing ? `Following ${label}` : `Unfollowed ${label}`,
+        res.isFollowing ? "success" : "info"
+      );
     }
   };
 
@@ -267,7 +280,8 @@ export const NewsHubNotifications: React.FC = () => {
 
                 <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-2 sm:p-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)] border border-slate-200/70 dark:border-zinc-800 divide-y divide-slate-50 dark:divide-zinc-800/50">
                   {items.map((item) => {
-                    const username = item.fromUserUsername || item.fromUserName || "user";
+                    const username =
+                      item.fromUserUsername || item.fromUserName || "Member";
                     const isFollowType = item.type === "follow";
                     const isFollowingUser = followedIds.includes(item.fromUserId);
 

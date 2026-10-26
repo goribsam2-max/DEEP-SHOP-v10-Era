@@ -62,11 +62,13 @@ import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { formatDhakaDateTime, formatDhakaFeedTime } from "../lib/dhakaTime";
-import {
-  hasImmediateAdminOrStaffRole,
-  checkStaffRecord,
-} from "../lib/admin";
+import { hasImmediateAdminOrStaffRole, checkStaffRecord } from "../lib/admin";
 import { recordPostDetailView } from "../lib/feedAlgorithm";
+import {
+  formatCompactNumber,
+  getSafePublicUsername,
+  getSafeDisplayName,
+} from "../lib/utils";
 
 import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -391,9 +393,10 @@ export const NewsDetails: React.FC = () => {
         });
 
         if (!removing && post.reporterId && post.reporterId !== uid) {
-          const authorName = currentUser.displayName || "Someone";
+          const authorName = getSafeDisplayName(currentUser, "Someone");
           const authorAvatar = currentUser.photoURL || "";
-          const authorUsername = currentUser.username || currentUser.handle || (currentUser.email ? currentUser.email.split("@")[0] : "user");
+          const authorUsername =
+            getSafePublicUsername(currentUser) || authorName;
 
           addDoc(collection(db, "news_hub_notifications"), {
             userId: post.reporterId,
@@ -495,10 +498,7 @@ export const NewsDetails: React.FC = () => {
     setIsSubmittingComment(true);
     triggerHaptic();
 
-    const authorName =
-      currentUser?.displayName ||
-      currentUser?.email?.split("@")[0] ||
-      "Community Member";
+    const authorName = getSafeDisplayName(currentUser, "Community Member");
     const authorAvatar = currentUser?.photoURL || creatorAvatar1;
     const isLocalOnlyPost =
       post.id.startsWith("showcase_") || post.id.startsWith("post_");
@@ -549,7 +549,8 @@ export const NewsDetails: React.FC = () => {
             userId: post.reporterId,
             fromUserId: currentUser?.uid || "guest",
             fromUserName: authorName,
-            fromUserUsername: currentUser?.username || currentUser?.handle || authorName,
+            fromUserUsername:
+              getSafePublicUsername(currentUser) || authorName,
             fromUserAvatar: authorAvatar,
             type: "comment",
             title: `${authorName} commented on your post`,
@@ -642,9 +643,10 @@ export const NewsDetails: React.FC = () => {
         );
 
         if (!isRemoving && cmt.userId && cmt.userId !== uid) {
-          const authorName = currentUser.displayName || "Someone";
+          const authorName = getSafeDisplayName(currentUser, "Someone");
           const authorAvatar = currentUser.photoURL || "";
-          const authorUsername = currentUser.username || currentUser.handle || (currentUser.email ? currentUser.email.split("@")[0] : "user");
+          const authorUsername =
+            getSafePublicUsername(currentUser) || authorName;
 
           addDoc(collection(db, "news_hub_notifications"), {
             userId: cmt.userId,
@@ -846,8 +848,16 @@ export const NewsDetails: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-32">
       <SEO
-        title={`${post.reporterName} on Feed`}
-        description={post.description?.slice(0, 150) || post.title}
+        title={
+          post.title?.trim() ||
+          post.description?.trim().split(/\r?\n/)[0]?.slice(0, 80) ||
+          post.reporterName ||
+          "Post"
+        }
+        description={post.description?.trim() || post.title?.trim() || ""}
+        image={post.images?.[0] || post.reporterAvatar || undefined}
+        type="article"
+        exactTitle
       />
 
       <div className="max-w-xl lg:max-w-6xl mx-auto pt-4 sm:pt-7 px-3 sm:px-6 space-y-4 sm:space-y-5">
@@ -1142,7 +1152,7 @@ export const NewsDetails: React.FC = () => {
                     }`}
                   />
                 )}
-                <span>{totalReactions}</span>
+                <span>{formatCompactNumber(totalReactions)}</span>
               </button>
 
               <button
@@ -1160,7 +1170,7 @@ export const NewsDetails: React.FC = () => {
                 className="h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 flex items-center gap-1.5 text-xs font-semibold tabular-nums cursor-pointer whitespace-nowrap shrink-0"
               >
                 <MessageCircle className="w-4 h-4 stroke-[2] shrink-0" />
-                <span>{comments.length || post.commentsCount || 0}</span>
+                <span>{formatCompactNumber(comments.length || post.commentsCount || 0)}</span>
               </button>
 
               <button
@@ -1196,7 +1206,7 @@ export const NewsDetails: React.FC = () => {
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-zinc-800">
               <h2 className="text-[16px] font-bold flex items-center gap-2 whitespace-nowrap">
                 <MessageCircle className="w-4 h-4 text-[#1877F2]" />
-                <span>Comments ({comments.length})</span>
+                <span>Comments ({formatCompactNumber(comments.length)})</span>
               </h2>
             </div>
 

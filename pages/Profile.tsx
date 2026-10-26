@@ -21,6 +21,11 @@ import { useNotify } from "../components/Notifications";
 import { uploadToImgbb } from "../services/imgbb";
 import { AvatarUploader } from "../components/ui/avatar-uploader";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import {
+  getSafeDisplayName,
+  getSafePublicUsername,
+  isPhoneAuthEmail,
+} from "../lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
@@ -319,17 +324,11 @@ export const Profile: React.FC<ProfileProps> = ({
   };
 
   const displayName =
-    effectiveProfile?.displayName ||
-    authUser?.displayName ||
-    effectiveProfile?.email?.split("@")[0] ||
-    authUser?.email?.split("@")[0] ||
+    getSafeDisplayName(effectiveProfile, "") ||
+    getSafeDisplayName(authUser, "") ||
     "Member";
 
-  const handle =
-    effectiveProfile?.username ||
-    effectiveProfile?.email?.split("@")[0] ||
-    authUser?.email?.split("@")[0] ||
-    "member";
+  const handle = getSafePublicUsername(effectiveProfile);
 
   const walletBalance = Number(effectiveProfile?.walletBalance || 0);
   const coins = Number(effectiveProfile?.points || 0);
@@ -991,10 +990,12 @@ export const Profile: React.FC<ProfileProps> = ({
                     </span>
                   )}
                 </div>
-                <p className="text-xs sm:text-sm font-semibold text-zinc-500 dark:text-zinc-400 truncate">
-                  @{handle}
-                </p>
-                {effectiveProfile.email && (
+                {handle && (
+                  <p className="text-xs sm:text-sm font-semibold text-zinc-500 dark:text-zinc-400 truncate">
+                    @{handle}
+                  </p>
+                )}
+                {effectiveProfile.email && !isPhoneAuthEmail(effectiveProfile.email) && (
                   <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">
                     {effectiveProfile.email}
                   </p>

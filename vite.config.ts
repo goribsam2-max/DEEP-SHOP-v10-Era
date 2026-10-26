@@ -1,4 +1,5 @@
 import path from "path";
+import { fileURLToPath } from "url";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
@@ -82,8 +83,10 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "."),
-        "lucide-react": path.resolve(__dirname, "./src/streamline-flex-shim.tsx"),
+        "@": fileURLToPath(new URL(".", import.meta.url)),
+        "lucide-react": fileURLToPath(
+          new URL("./src/streamline-flex-shim.tsx", import.meta.url)
+        ),
       },
     },
   };

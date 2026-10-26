@@ -45,6 +45,7 @@ import {
   onSnapshot,
   doc,
   getDocs,
+  addDoc,
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
@@ -81,7 +82,11 @@ import {
 import { toggleFollowUser, useFollowedIds } from "../lib/follow";
 import { IosSpinner } from "../components/ui/ios-spinner";
 import { useFooterLogo } from "../lib/useFooterLogo";
-import { formatCompactNumber } from "../lib/utils";
+import {
+  formatCompactNumber,
+  getSafeDisplayName,
+  getSafePublicUsername,
+} from "../lib/utils";
 import {
   rankFeedPostsSmart,
   recordPostImpression,
@@ -706,9 +711,12 @@ export const NewsHub: React.FC = () => {
       });
 
       if (!isRemoving && post.reporterId && post.reporterId !== uid) {
-        const authorName = userProfile?.displayName || currentUser?.displayName || "Someone";
+        const authorName = getSafeDisplayName(
+          userProfile || currentUser,
+          "Someone"
+        );
         const authorAvatar = userProfile?.photoURL || currentUser?.photoURL || "";
-        const authorUsername = userProfile?.username || userProfile?.handle || (currentUser?.email ? currentUser.email.split("@")[0] : "user");
+        const authorUsername = getSafePublicUsername(userProfile || currentUser);
 
         addDoc(collection(db, "news_hub_notifications"), {
           userId: post.reporterId,
@@ -1053,7 +1061,12 @@ export const NewsHub: React.FC = () => {
                       storyIds: [st.id],
                     });
                   } else {
-                    acc.get(uid).storyIds.push(st.id);
+                    const existing = acc.get(uid);
+                    existing.storyIds.push(st.id);
+                    // Keep the oldest story as the representative for initial navigation
+                    if ((st.createdAtMs || 0) < (existing.createdAtMs || 0)) {
+                       acc.set(uid, { ...st, storyIds: existing.storyIds });
+                    }
                   }
                   return acc;
                 }, new Map()).values()

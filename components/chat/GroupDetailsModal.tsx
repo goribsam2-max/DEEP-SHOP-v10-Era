@@ -48,7 +48,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { uploadToImgbb } from '../../services/imgbb';
-import { cn } from '../../lib/utils';
+import { cn, getSafeDisplayName, getSafePublicUsername } from '../../lib/utils';
 import { ProgressiveImage } from './ProgressiveImage';
 
 export interface GroupMember {
@@ -257,8 +257,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         if (uid === currentUser?.uid) {
           fetched.push({
             id: currentUser.uid,
-            displayName: (currentUser.displayName || 'You') + (currentUser.uid === creatorId ? ' (You)' : ' (You)'),
-            username: currentUser.email?.split('@')[0] || '',
+            displayName: getSafeDisplayName(currentUser, 'You') + ' (You)',
+            username: getSafePublicUsername(currentUser),
             photoURL: currentUser.photoURL || '',
             isOnline: true,
             role: currentUser.uid === creatorId ? 'owner' : (adminsList.includes(currentUser.uid) ? 'admin' : 'member')
@@ -272,8 +272,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
             const data = userDoc.data();
             fetched.push({
               id: uid,
-              displayName: data.displayName || data.shopName || data.name || 'Member',
-              username: data.username || data.customLink || data.email?.split('@')[0] || '',
+              displayName: getSafeDisplayName(data, 'Member'),
+              username: getSafePublicUsername(data),
               email: data.email || '',
               photoURL: data.photoURL || '',
               isOnline: Boolean(data.isOnline),
@@ -329,8 +329,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
           const data = d.data();
           available.push({
             id: d.id,
-            displayName: data.displayName || data.shopName || data.name || 'User',
-            username: data.username || data.customLink || '',
+            displayName: getSafeDisplayName(data, 'User'),
+            username: getSafePublicUsername(data),
             photoURL: data.photoURL || '',
             isOnline: !!data.isOnline
           });

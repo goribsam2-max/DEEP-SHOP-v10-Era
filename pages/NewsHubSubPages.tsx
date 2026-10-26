@@ -87,12 +87,17 @@ import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { formatDhakaDateTime } from "../lib/dhakaTime";
 import {
+  formatCompactNumber,
+  getSafeDisplayName,
+  getSafePublicUsername,
+} from "../lib/utils";
+import {
   canAccessSellerDashboard,
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
 } from "../lib/admin";
 
-import defaultAvatarImg from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
+import defaultAvatarImg from "@/src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
 export const resolvePostById = async (
   postId: string
@@ -637,10 +642,9 @@ export const NewsSharePage: React.FC = () => {
                 const uData = uSnap.data() || {};
                 if (uData.isBanned || uData.isDemo) return;
                 const name =
-                  uData.shopName ||
-                  uData.displayName ||
+                  getSafeDisplayName(uData, "") ||
                   item.fallbackName ||
-                  (uData.email ? String(uData.email).split("@")[0] : "");
+                  "";
                 if (!name) return;
                 resolved.push({
                   chatId: item.chatId,
@@ -695,13 +699,26 @@ export const NewsSharePage: React.FC = () => {
       ? `${window.location.origin}/news-hub/post/${post?.id || id}`
       : "";
 
-  const shareText = isScam
-    ? `⚠️ Scam Report${
-        post?.scamLocation ? ` (${post.scamLocation})` : ""
-      }: ${post?.description?.slice(0, 140) || post?.title || ""}`
-    : `${post?.reporterName || "Community"}: ${
-        post?.description?.slice(0, 160) || post?.title || "Check out this post"
-      }`;
+  const cleanPostDesc = (post?.description || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const cleanPostTitle =
+    post?.title && post.title !== "Feed Post" ? post.title.trim() : "";
+
+  const exactShareTitle = post
+    ? cleanPostTitle ||
+      (cleanPostDesc
+        ? cleanPostDesc.slice(0, 80) + (cleanPostDesc.length > 80 ? "..." : "")
+        : `${post.reporterName || "Community"} Post`)
+    : "Post";
+
+  const exactShareDescription = post
+    ? cleanPostDesc
+      ? cleanPostDesc.slice(0, 200)
+      : cleanPostTitle
+    : "";
+
+  const shareText = exactShareDescription || exactShareTitle;
 
   const recordShareCount = async () => {
     if (!post) return;
@@ -743,10 +760,8 @@ export const NewsSharePage: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: isScam
-            ? `Scam Alert · ${post?.scamLocation || "Community"}`
-            : `${post?.reporterName || "Feed"}'s Post`,
-          text: shareText,
+          title: exactShareTitle,
+          text: exactShareDescription,
           url: postUrl,
         });
         await recordShareCount();
@@ -770,10 +785,7 @@ export const NewsSharePage: React.FC = () => {
       const msgText = `${shareText}\n${postUrl}`;
       await addDoc(collection(db, "p2p_chats", recipient.chatId, "messages"), {
         senderId: currentUser.uid,
-        senderName:
-          currentUser.displayName ||
-          currentUser.email?.split("@")[0] ||
-          "Member",
+        senderName: getSafeDisplayName(currentUser, "Member"),
         text: msgText,
         imageUrl: post.images?.[0] || "",
         sharedPostId: post.id,
@@ -807,7 +819,12 @@ export const NewsSharePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 pb-24">
-      <SEO title="Share Post — Feed" description="Share this post" />
+      <SEO
+        title={exactShareTitle}
+        description={exactShareDescription}
+        image={post?.images?.[0]}
+        exactTitle
+      />
 
       <div className="max-w-xl mx-auto pt-4 sm:pt-7 px-3 sm:px-4">
         <header className="flex items-center justify-between pb-5 px-1">
@@ -1646,12 +1663,18 @@ export const NewsStoryViewerPage: React.FC = () => {
         })
         .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
 
-      // Group stories by userId to enable sequential author-based playback (FB/IG style)
+      // Group stories by userId and sort stories within each group chronologically (FB/IG style)
       const userGroups = new Map<string, any[]>();
       visible.forEach((s) => {
         if (!userGroups.has(s.userId)) userGroups.set(s.userId, []);
         userGroups.get(s.userId)!.push(s);
       });
+
+      // Sort stories within each group by time (oldest first)
+      for (const [uid, groupStories] of userGroups.entries()) {
+        groupStories.sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
+      }
+
       const reordered = Array.from(userGroups.values()).flat();
 
       setStories(reordered);
@@ -1872,7 +1895,6 @@ export const NewsStoryViewerPage: React.FC = () => {
       title: "Delete Story",
       message: "Remove this story from the Feed?",
       confirmText: "Delete",
-      danger: true,
     });
     if (!ok) return;
     triggerHaptic();
@@ -1901,10 +1923,10 @@ export const NewsStoryViewerPage: React.FC = () => {
 
   async function handleVotePoll(stkId: string, choice: "A" | "B") {
     if (!story) return;
-    const voterKey = currentUser?.uid || "guest_viewer";
+    const currentVoter = auth.currentUser?.uid || "guest_viewer";
     triggerHaptic();
     const existingPoll = story.pollVotes?.[stkId] || {};
-    const updatedPoll = { ...existingPoll, [voterKey]: choice };
+    const updatedPoll = { ...existingPoll, [currentVoter]: choice };
     try {
       await setDoc(
         doc(db, "creator_videos", story.id),
@@ -1968,8 +1990,8 @@ export const NewsStoryViewerPage: React.FC = () => {
         await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
           fromUserId: currentUser?.uid || "guest",
-          fromUserName: currentUser?.displayName || "Someone",
-          fromUserUsername: currentUser?.username || "user",
+          fromUserName: getSafeDisplayName(currentUser, "Someone"),
+          fromUserUsername: getSafePublicUsername(currentUser),
           fromUserAvatar: currentUser?.photoURL || "",
           title: `New story response`,
           body: `responded to your story: "${answer}"`,
@@ -2009,8 +2031,8 @@ export const NewsStoryViewerPage: React.FC = () => {
         await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
           fromUserId: currentUser.uid,
-          fromUserName: currentUser.displayName || "Someone",
-          fromUserUsername: currentUser.username || currentUser.email?.split("@")[0] || "user",
+          fromUserName: getSafeDisplayName(currentUser, "Someone"),
+          fromUserUsername: getSafePublicUsername(currentUser),
           fromUserAvatar: currentUser.photoURL || "",
           type: "story_like",
           title: "New Story Like",
@@ -2054,8 +2076,8 @@ export const NewsStoryViewerPage: React.FC = () => {
         await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
           fromUserId: currentUser.uid,
-          fromUserName: currentUser.displayName || "Someone",
-          fromUserUsername: currentUser.username || "user",
+          fromUserName: getSafeDisplayName(currentUser, "Someone"),
+          fromUserUsername: getSafePublicUsername(currentUser),
           fromUserAvatar: currentUser.photoURL || "",
           title: "New Story Reply",
           body: `replied to your story: "${cleanReply}"`,
@@ -2115,7 +2137,7 @@ export const NewsStoryViewerPage: React.FC = () => {
   }
 
   function renderViewerSticker(stk: StoryStickerItem) {
-    const voterKey = currentUser?.uid || "guest_viewer";
+    const voterKey = auth.currentUser?.uid || "guest_viewer";
 
     switch (stk.kind) {
       case "poll": {
@@ -2126,7 +2148,7 @@ export const NewsStoryViewerPage: React.FC = () => {
         const countB = vals.filter((v) => v === "B").length;
         const pctA = total > 0 ? Math.round((countA / total) * 100) : 50;
         const pctB = total > 0 ? 100 - pctA : 50;
-        const myVote = (votesObj && voterKey) ? votesObj[voterKey] : undefined;
+        const myVote = voterKey ? votesObj[voterKey] : undefined;
 
         return (
           <div key={stk.id} className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2">
@@ -2571,10 +2593,10 @@ export const NewsStoryViewerPage: React.FC = () => {
             )}
 
             {/* Interactive Text & Sticker Overlays */}
-            {(story.textLayers?.length > 0 || story.stickers?.length > 0) && (
+            {(story?.textLayers?.length > 0 || story?.stickers?.length > 0) && (
               <div className="absolute inset-0 z-10 p-5 flex flex-col items-center justify-center gap-3 overflow-y-auto">
-                {story.textLayers?.map((tl: StoryTextLayer) => renderViewerTextLayer(tl))}
-                {story.stickers?.map((stk: StoryStickerItem) => renderViewerSticker(stk))}
+                {story?.textLayers?.map((tl: StoryTextLayer) => renderViewerTextLayer(tl))}
+                {story?.stickers?.map((stk: StoryStickerItem) => renderViewerSticker(stk))}
               </div>
             )}
 
@@ -2716,7 +2738,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                       <Eye className="w-4 h-4" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">Views</span>
                     </div>
-                    <p className="text-2xl font-black text-white">{story?.viewedBy?.length || 0}</p>
+                    <p className="text-2xl font-black text-white">{formatCompactNumber(story?.viewedBy?.length || 0)}</p>
                   </div>
                   <div className="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-800">
                     <div className="flex items-center gap-2 text-zinc-400 mb-1">

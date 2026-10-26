@@ -28,6 +28,11 @@ import { checkContainsBannedWord } from '../lib/wordFilter';
 import { useNotify } from '../components/Notifications';
 import { subscribeToFollowerStats, toggleFollowUser } from '../lib/follow';
 import UserAvatar from '../components/UserAvatar';
+import {
+  formatCompactNumber,
+  getSafeDisplayName,
+  getSafePublicUsername,
+} from '../lib/utils';
 
 const StoreProfile: React.FC = () => {
   const { sellerId } = useParams();
@@ -100,7 +105,7 @@ const StoreProfile: React.FC = () => {
         const urSnap = await getDocs(urQ);
         const userReviews = urSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        let allReviews = [...fetchedReviews, ...userReviews];
+        let allReviews: any[] = [...fetchedReviews, ...userReviews];
         
         // Always include product reviews
         for (const p of fetchedProducts) {
@@ -110,8 +115,12 @@ const StoreProfile: React.FC = () => {
         }
         
         // Filter safe reviews and sort by date descending
-        const safeReviews = filterSafeReviews(allReviews);
-        safeReviews.sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const safeReviews = filterSafeReviews(allReviews.map(r => ({
+           ...r,
+           comment: r.comment || r.text || "",
+           createdAt: r.createdAt || Date.now()
+        })));
+        safeReviews.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
         setReviews(safeReviews);
         
         // Calculate real data
@@ -311,6 +320,8 @@ const StoreProfile: React.FC = () => {
     return (
       <div className="bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white font-sans max-w-md mx-auto">
         {/* Top Header */}
+        {/* Top Header - Hidden as per request */}
+        {false && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-2.5 min-w-0">
             <button
@@ -362,6 +373,7 @@ const StoreProfile: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Search Bar Overlay */}
         {showSearch && (
@@ -462,7 +474,7 @@ const StoreProfile: React.FC = () => {
               
               <div className="flex items-center gap-4 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
                  <span>{positivePercent}% Positive seller ratings</span>
-                 <span>{(followersCount >= 1000 ? (followersCount / 1000).toFixed(1) + 'k' : followersCount.toLocaleString())} Followers</span>
+                 <span>{formatCompactNumber(followersCount)} Followers</span>
               </div>
             </div>
           </div>
@@ -471,7 +483,7 @@ const StoreProfile: React.FC = () => {
           <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 flex justify-between items-center text-center">
              <div className="flex-1">
                <div className="text-lg font-bold text-zinc-900 dark:text-white tabular-nums">
-                 {followersCount >= 1000 ? (followersCount / 1000).toFixed(1) + 'k' : followersCount.toLocaleString()}
+                 {formatCompactNumber(followersCount)}
                </div>
                <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Followers</div>
              </div>
@@ -482,12 +494,12 @@ const StoreProfile: React.FC = () => {
              </div>
              <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800"></div>
              <div className="flex-1">
-               <div className="text-lg font-bold text-zinc-900 dark:text-white">{totalSold >= 1000 ? (totalSold / 1000).toFixed(1) + 'k+' : totalSold}</div>
+               <div className="text-lg font-bold text-zinc-900 dark:text-white">{formatCompactNumber(totalSold)}+</div>
                <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Sold</div>
              </div>
              <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800"></div>
              <div className="flex-1">
-               <div className="text-lg font-bold text-zinc-900 dark:text-white">{regularBuyers >= 1000 ? (regularBuyers / 1000).toFixed(1) + 'k+' : regularBuyers}</div>
+               <div className="text-lg font-bold text-zinc-900 dark:text-white">{formatCompactNumber(regularBuyers)}+</div>
                <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Buyers</div>
              </div>
           </div>
@@ -694,12 +706,14 @@ const StoreProfile: React.FC = () => {
           
           <div className="mt-3">
              <h1 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-               {seller.displayName || seller.shopName || "User"}
+               {getSafeDisplayName(seller, "Store")}
                {seller.kycStatus === 'verified' && <CheckCircle2 className="w-4 h-4 text-blue-500" />}
              </h1>
-             <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-               @{seller.username || seller.email?.split('@')[0] || seller.displayName?.toLowerCase().replace(/\s+/g, '') || 'user'}
-             </p>
+             {getSafePublicUsername(seller) && (
+               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                 @{getSafePublicUsername(seller)}
+               </p>
+             )}
              {seller.bio && <p className="text-sm mt-2 text-zinc-600 dark:text-zinc-400">{seller.bio}</p>}
              
              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-zinc-500 font-medium">

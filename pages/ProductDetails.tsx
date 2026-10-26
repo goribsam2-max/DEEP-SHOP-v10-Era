@@ -24,6 +24,7 @@ import {
 } from "framer-motion";
 import Icon from "../components/Icon";
 import { triggerHaptic } from "../lib/haptics";
+import { getSafeDisplayName } from "../lib/utils";
 import SEO from "../components/SEO";
 import { PixelImage } from "../components/ui/PixelImage";
 import { getProductDisplayImage } from "../src/lib/phonePartsArt";
@@ -303,7 +304,12 @@ const ProductDetails: React.FC = () => {
         getDoc(doc(db, "users", user.uid)).then((d) => {
           if (d.exists()) {
             const data = d.data();
-            setUserName(data.displayName || data.shopName || data.name || user.displayName || user.email?.split("@")[0] || "User");
+            setUserName(
+              getSafeDisplayName(
+                { ...data, displayName: data.displayName || user.displayName, email: data.email || user.email },
+                "User"
+              )
+            );
             if (data.isAffiliate && data.affiliateCode) {
               setAffiliateCode(data.affiliateCode);
             }
@@ -318,7 +324,7 @@ const ProductDetails: React.FC = () => {
               setIsAdmin(true);
             }
           } else {
-            setUserName(user.displayName || user.email?.split("@")[0] || "User");
+            setUserName(getSafeDisplayName(user, "User"));
           }
         });
       } else {
@@ -1020,12 +1026,13 @@ const ProductDetails: React.FC = () => {
     <div className="w-full mx-auto min-h-screen bg-background text-foreground pb-32 overflow-x-hidden">
       <SEO
         title={product.name}
-        description={product.description || `Buy ${product.name}`}
-        image={product.image}
+        description={product.description || product.name}
+        image={images[0] || product.image}
         jsonLd={jsonLd}
         price={basePrice}
         availability={product.stock > 0 ? "in stock" : "out of stock"}
         canonical={`/product/${product.id}`}
+        exactTitle
       />
       <div className="w-full max-w-7xl mx-auto p-4 md:p-8 animate-fade-in flex flex-col xl:flex-row gap-8 items-start">
         <article className="flex-1 min-w-0 flex flex-col w-full">
@@ -1109,7 +1116,11 @@ const ProductDetails: React.FC = () => {
                 onClick={() => {
                   if (navigator.share) {
                     navigator
-                      .share({ title: product.name, url: window.location.href })
+                      .share({
+                        title: product.name,
+                        text: product.description || product.name,
+                        url: window.location.href,
+                      })
                       .catch(() => {});
                   } else {
                     navigator.clipboard.writeText(window.location.href);

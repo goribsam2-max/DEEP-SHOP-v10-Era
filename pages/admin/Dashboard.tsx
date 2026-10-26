@@ -31,7 +31,8 @@ import {
   ShieldCheck,
   ArrowRight,
   Activity,
-  Crown
+  Crown,
+  TrendingUp
 } from "lucide-react";
 import {
   AreaChart,
@@ -61,6 +62,14 @@ const ADMIN_PIN_ITEMS: PinListItem[] = [
     icon: ShieldCheck,
     pinned: true,
     href: 'security'
+  },
+  {
+    id: 'manage-engagement',
+    name: 'Manage Engagement',
+    info: 'Manually adjust post reactions, reposts, and views',
+    icon: TrendingUp,
+    pinned: true,
+    href: 'engagement'
   },
   {
     id: 'manage-products',
@@ -335,6 +344,7 @@ const AdminDashboard: React.FC = () => {
                 'manage-affiliate-videos': 'banners',
         'manage-riders': 'users',
         'manage-staff': 'config',
+        'manage-engagement': 'config',
         'manage-icons': 'config',
         'illustrations': 'config'
       };
