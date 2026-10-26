@@ -1868,14 +1868,20 @@ export const NewsStoryViewerPage: React.FC = () => {
         { merge: true }
       );
       if (story.userId && story.userId !== currentUser?.uid) {
-        await addDoc(collection(db, "notifications"), {
+        await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
-          title: `New story Q&A response`,
-          message: `"${answer}"`,
-          type: "social",
+          fromUserId: currentUser?.uid || "guest",
+          fromUserName: currentUser?.displayName || "Someone",
+          fromUserUsername: currentUser?.username || "user",
+          fromUserAvatar: currentUser?.photoURL || "",
+          title: `New story response`,
+          body: `responded to your story: "${answer}"`,
+          mediaThumbnail: story.avatar || story.mediaUrl || "",
+          type: "story",
           link: `/news-hub/story/${story.id}`,
           read: false,
-          createdAt: new Date().toISOString(),
+          isRead: false,
+          createdAt: Date.now(),
         }).catch(() => {});
       }
       notify("Response sent!", "success");
@@ -1901,6 +1907,25 @@ export const NewsStoryViewerPage: React.FC = () => {
         },
         { merge: true }
       );
+
+      if (!alreadyLiked && story.userId && story.userId !== currentUser.uid) {
+        await addDoc(collection(db, "news_hub_notifications"), {
+          userId: story.userId,
+          fromUserId: currentUser.uid,
+          fromUserName: currentUser.displayName || "Someone",
+          fromUserUsername: currentUser.username || currentUser.email?.split("@")[0] || "user",
+          fromUserAvatar: currentUser.photoURL || "",
+          type: "story_like",
+          title: "New Story Like",
+          body: "liked your story.",
+          mediaThumbnail: story.avatar || story.mediaUrl || "",
+          targetId: story.id,
+          createdAt: Date.now(),
+          read: false,
+          isRead: false,
+          link: `/news-hub/story/${story.id}`,
+        }).catch(() => {});
+      }
     } catch {}
   };
 
@@ -1929,14 +1954,20 @@ export const NewsStoryViewerPage: React.FC = () => {
         { merge: true }
       );
       if (story.userId && story.userId !== currentUser.uid) {
-        await addDoc(collection(db, "notifications"), {
+        await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
-          title: `${currentUser.displayName || "Someone"} replied to your story`,
-          message: cleanReply,
-          type: "social",
+          fromUserId: currentUser.uid,
+          fromUserName: currentUser.displayName || "Someone",
+          fromUserUsername: currentUser.username || "user",
+          fromUserAvatar: currentUser.photoURL || "",
+          title: "New Story Reply",
+          body: `replied to your story: "${cleanReply}"`,
+          mediaThumbnail: story.avatar || story.mediaUrl || "",
+          type: "story",
           link: `/news-hub/story/${story.id}`,
           read: false,
-          createdAt: new Date().toISOString(),
+          isRead: false,
+          createdAt: Date.now(),
         }).catch(() => {});
       }
       notify("Reply sent to creator!", "success");

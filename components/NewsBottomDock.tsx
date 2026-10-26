@@ -45,9 +45,13 @@ export const NewsBottomDock: React.FC = () => {
     {
       id: "profile",
       label: "Profile",
-      path: "/profile",
+      path: "/news-hub/profile",
       icon: "user",
-      isActive: path === "/profile" || path.startsWith("/author"),
+      isActive:
+        path === "/news-hub/profile" ||
+        path.startsWith("/news-hub/profile") ||
+        path === "/profile" ||
+        path.startsWith("/author"),
     },
   ];
 

@@ -26,7 +26,17 @@ import {
   UserPlus,
   UserCheck,
   X,
+  User as UserIcon,
 } from "lucide-react";
+
+const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 2l4 4-4 4"></path>
+    <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
+    <path d="M7 22l-4-4 4-4"></path>
+    <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
+  </svg>
+);
 import { auth, db } from "../firebase";
 import {
   collection,
@@ -952,6 +962,23 @@ export const NewsHub: React.FC = () => {
                     <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#1877F2]" />
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate("/news-hub/profile");
+                  }}
+                  title="My Profile"
+                  aria-label="My Profile"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 transition cursor-pointer overflow-hidden ring-2 ring-blue-500/30"
+                >
+                  <img
+                    src={userAvatar}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </button>
               </div>
             </header>
 
@@ -1620,134 +1647,142 @@ export const NewsHub: React.FC = () => {
                           {/* Bottom Engagement Row */}
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center justify-between gap-2 pt-0.5"
+                            className="flex items-center justify-between gap-1 sm:gap-2 pt-1 border-t border-slate-100 dark:border-zinc-800/80"
                           >
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (openReactionPostId === post.id) {
-                                    setOpenReactionPostId(null);
-                                  } else if (!myReaction) {
-                                    handleReaction(post, "love");
-                                  } else {
-                                    setOpenReactionPostId(post.id);
-                                  }
-                                }}
-                                onContextMenu={(e) => {
-                                  e.preventDefault();
-                                  setOpenReactionPostId((prev) =>
-                                    prev === post.id ? null : post.id
-                                  );
-                                }}
-                                className={`h-9 px-3.5 rounded-full flex items-center gap-1.5 text-[13px] font-semibold tabular-nums transition active:scale-95 cursor-pointer ${
-                                  myReaction
-                                    ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
-                                    : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
-                                }`}
-                              >
-                                {activeReactionMeta && myReaction !== "love" ? (
-                                  <span className="text-sm leading-none">
-                                    {activeReactionMeta.emoji}
-                                  </span>
-                                ) : (
-                                  <Heart
-                                    className={`w-4 h-4 ${
-                                      myReaction
-                                        ? "fill-current text-rose-500"
-                                        : "stroke-[2]"
-                                    }`}
-                                  />
-                                )}
-                                <span
-                                  className={`whitespace-nowrap overflow-hidden ${
-                                    totalReactions > 999
-                                      ? "text-[10px]"
-                                      : totalReactions > 99
-                                      ? "text-[11px]"
-                                      : "text-[12px]"
-                                  }`}
-                                >
-                                  {isScam
-                                    ? `Confirm (${formatCompactCount(
-                                        totalReactions
-                                      )})`
-                                    : formatCompactCount(totalReactions)}
-                                </span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setOpenReactionPostId((prev) =>
-                                    prev === post.id ? null : post.id
-                                  )
+                            {/* 1. Love / Reaction */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (openReactionPostId === post.id) {
+                                  setOpenReactionPostId(null);
+                                } else if (!myReaction) {
+                                  handleReaction(post, "love");
+                                } else {
+                                  setOpenReactionPostId(post.id);
                                 }
-                                className="w-8 h-9 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center justify-center text-zinc-600 dark:text-zinc-300 text-xs cursor-pointer"
-                                title="More reactions"
-                                aria-label="Choose reaction"
-                              >
-                                <Smile className="w-3.5 h-3.5" />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  recordPostClick(post);
-                                  navigate(
-                                    `/news-hub/post/${post.id}#comments`
-                                  );
-                                }}
-                                className="h-9 px-3.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer"
-                              >
-                                <MessageCircle className="w-4 h-4 stroke-[2]" />
-                                <span>
-                                  {formatCompactCount(post.commentsCount || 0)}
+                              }}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setOpenReactionPostId((prev) =>
+                                  prev === post.id ? null : post.id
+                                );
+                              }}
+                              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full flex items-center gap-1 text-xs font-semibold tabular-nums transition active:scale-95 cursor-pointer shrink-0 ${
+                                myReaction
+                                  ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+                                  : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
+                              }`}
+                            >
+                              {activeReactionMeta && myReaction !== "love" ? (
+                                <span className="text-xs sm:text-sm leading-none">
+                                  {activeReactionMeta.emoji}
                                 </span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  recordPostClick(post);
-                                  navigate(`/news-hub/share/${post.id}`);
-                                }}
-                                className="h-9 px-3.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer"
-                              >
-                                <Send className="w-3.5 h-3.5 stroke-[2]" />
-                                <span>
-                                  {formatCompactCount(post.sharesCount || 0)}
-                                </span>
-                              </button>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {!isSuggestedPost && Number(post.views || 0) > 0 && (
-                                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-zinc-400 tabular-nums whitespace-nowrap">
-                                  <Eye className="w-3.5 h-3.5" />
-                                  <span>
-                                    {formatCompactCount(Number(post.views || 0))}
-                                  </span>
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleToggleSave(post)}
-                                className={`w-9 h-9 rounded-full flex items-center justify-center transition active:scale-90 cursor-pointer ${
-                                  saved
-                                    ? "bg-[#1877F2]/12 text-[#1877F2]"
-                                    : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
-                                }`}
-                                aria-label={saved ? "Unsave post" : "Save post"}
-                                title={saved ? "Saved" : "Save post"}
-                              >
-                                <Bookmark
-                                  className={`w-4 h-4 ${
-                                    saved ? "fill-current" : "stroke-[2]"
+                              ) : (
+                                <Heart
+                                  className={`w-3.5 h-3.5 ${
+                                    myReaction
+                                      ? "fill-current text-rose-500"
+                                      : "stroke-[2]"
                                   }`}
                                 />
-                              </button>
-                            </div>
+                              )}
+                              <span>
+                                {isScam
+                                  ? `Confirm (${formatCompactCount(totalReactions)})`
+                                  : formatCompactCount(totalReactions)}
+                              </span>
+                            </button>
+
+                            {/* 2. Comment */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                recordPostClick(post);
+                                navigate(
+                                  `/news-hub/post/${post.id}#comments`
+                                );
+                              }}
+                              className="h-8 sm:h-9 px-2 sm:px-3 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1 text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer shrink-0"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5 stroke-[2]" />
+                              <span>
+                                {formatCompactCount(post.commentsCount || 0)}
+                              </span>
+                            </button>
+
+                            {/* 3. Share */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                recordPostClick(post);
+                                navigate(`/news-hub/share/${post.id}`);
+                              }}
+                              className="h-8 sm:h-9 px-2 sm:px-3 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1 text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer shrink-0"
+                            >
+                              <Send className="w-3.5 h-3.5 stroke-[2]" />
+                              <span>
+                                {formatCompactCount(post.sharesCount || 0)}
+                              </span>
+                            </button>
+
+                            {/* 4. Repost */}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!currentUser) {
+                                  notify("Please sign in to repost!", "error");
+                                  navigate("/signin");
+                                  return;
+                                }
+                                if (post.reporterId === currentUser.uid) {
+                                  notify("You cannot repost your own post!", "info");
+                                  return;
+                                }
+                                triggerHaptic();
+                                const isR = post.repostedByUserIds?.includes(currentUser.uid);
+                                const updated = isR
+                                  ? (post.repostedByUserIds || []).filter((u: string) => u !== currentUser.uid)
+                                  : Array.from(new Set([...(post.repostedByUserIds || []), currentUser.uid]));
+                                const nextCount = isR
+                                  ? Math.max(0, (post.repostsCount || 1) - 1)
+                                  : (post.repostsCount || 0) + 1;
+                                try {
+                                  await updateDoc(doc(db, "scam_posts", post.id), {
+                                    repostedByUserIds: updated,
+                                    repostsCount: nextCount,
+                                  });
+                                  notify(isR ? "Repost removed" : "Post reposted to your feed!", "success");
+                                } catch {}
+                              }}
+                              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full flex items-center gap-1 text-xs font-semibold tabular-nums transition active:scale-95 cursor-pointer shrink-0 ${
+                                post.repostedByUserIds?.includes(currentUser?.uid)
+                                  ? "bg-blue-50 dark:bg-blue-950/40 text-[#1877F2]"
+                                  : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
+                              }`}
+                              title="Repost"
+                            >
+                              <RepeatIcon className="w-3.5 h-3.5" />
+                              <span>{formatCompactCount(post.repostsCount || 0)}</span>
+                            </button>
+
+                            {/* 5. Save Bookmark */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSave(post)}
+                              className={`w-8 sm:w-9 h-8 sm:h-9 rounded-full flex items-center justify-center transition active:scale-90 cursor-pointer shrink-0 ${
+                                saved
+                                  ? "bg-[#1877F2]/12 text-[#1877F2]"
+                                  : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-[#EBEEF2]"
+                              }`}
+                              aria-label={saved ? "Unsave post" : "Save post"}
+                              title={saved ? "Saved" : "Save post"}
+                            >
+                              <Bookmark
+                                className={`w-3.5 h-3.5 ${
+                                  saved ? "fill-current" : "stroke-[2]"
+                                }`}
+                              />
+                            </button>
                           </div>
                         </article>
                       </PostImpressionTracker>

@@ -367,7 +367,7 @@ export default function Messages() {
   }, [currentUserProfile]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const chatIdParam = searchParams.get('chatId');
+  const chatIdParam = searchParams.get('chatId') || searchParams.get('uid') || searchParams.get('sellerId');
   const activeMessagesTab = searchParams.get('tab') === 'settings' ? 'settings' : 'chats';
   const setActiveMessagesTab = (tab: 'chats' | 'settings') => {
     const newParams = new URLSearchParams(searchParams);

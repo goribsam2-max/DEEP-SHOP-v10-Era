@@ -333,15 +333,29 @@ export async function toggleFollowUser({
         currentUser.displayName ||
         currentUser.email?.split("@")[0] ||
         "Someone";
-      addDoc(collection(db, "notifications"), {
+      const followerUsername =
+        currentUser.username ||
+        currentUser.handle ||
+        (currentUser.email ? currentUser.email.split("@")[0] : "user");
+
+      const notifPayload = {
         userId: targetUid,
-        title: "New Follower",
-        message: `${followerLabel} started following ${targetName ? "you" : "your profile"}.`,
-        type: "follow",
         fromUserId: myUid,
+        fromUserName: followerLabel,
+        fromUserUsername: followerUsername,
+        fromUserAvatar: currentUser.photoURL || "",
+        type: "follow",
+        title: "New Follower",
+        body: "started following you.",
+        targetId: myUid,
         isRead: false,
+        read: false,
         createdAt: Date.now(),
-      }).catch(() => {});
+        link: `/news-hub/profile/${myUid}`,
+      };
+
+      addDoc(collection(db, "news_hub_notifications"), notifPayload).catch(() => {});
+      addDoc(collection(db, "notifications"), notifPayload).catch(() => {});
     }
   } catch {}
 

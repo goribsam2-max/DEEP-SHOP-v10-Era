@@ -537,13 +537,18 @@ export const NewsDetails: React.FC = () => {
         if (post.reporterId && post.reporterId !== currentUser?.uid) {
           addDoc(collection(db, "news_hub_notifications"), {
             userId: post.reporterId,
+            fromUserId: currentUser?.uid || "guest",
+            fromUserName: authorName,
+            fromUserUsername: currentUser?.username || currentUser?.handle || authorName,
+            fromUserAvatar: authorAvatar,
             type: "comment",
             title: `${authorName} commented on your post`,
-            body: `"${newCommentObj.text.slice(0, 50)}"`,
-            avatarText: authorName.slice(0, 1).toUpperCase(),
-            createdAt: new Date().toISOString(),
+            body: `commented on your post: "${newCommentObj.text.slice(0, 40)}"`,
+            mediaThumbnail: post.images?.[0] || "",
+            createdAt: Date.now(),
             read: false,
-            link: `/news-hub/post/${post.id}`,
+            isRead: false,
+            link: `/news-hub/post/${post.id}#comments`,
           }).catch(() => {});
         }
       } else {

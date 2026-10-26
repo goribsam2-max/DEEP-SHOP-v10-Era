@@ -1,37 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Icon from '../components/Icon';
-import { auth, db } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { subscribeToWebPush } from '../lib/push';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ChevronLeft, Settings, X, MessageSquare, Star, UserPlus, ShieldAlert, Check } from "lucide-react";
+import { auth, db } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { toggleFollowUser, useFollowedIds } from "../lib/follow";
+import { useNotify } from "../components/Notifications";
+import { triggerHaptic } from "../lib/haptics";
+import SEO from "../components/SEO";
+import { ProfileAvatar } from "./NewsProfilePage";
 
-interface NewsNotification {
+interface NewsNotificationItem {
   id: string;
-  type: 'follow' | 'star' | 'sponsor' | 'comment' | 'evidence' | 'system';
-  title: string;
+  userId: string;
+  fromUserId: string;
+  fromUserName?: string;
+  fromUserUsername?: string;
+  fromUserAvatar?: string;
+  type: "follow" | "like" | "story_like" | "comment" | "repost" | "story" | "system";
+  title?: string;
   body: string;
-  avatarText?: string;
-  avatarBg?: string;
-  date: string;
-  read: boolean;
+  mediaThumbnail?: string;
+  targetId?: string;
+  createdAt: number;
+  read?: boolean;
   link?: string;
+}
+
+function formatCompactTimeAgo(ts: number | string): string {
+  const ms = typeof ts === "number" ? ts : new Date(ts).getTime();
+  if (!ms || isNaN(ms)) return "Just now";
+  const sec = Math.floor((Date.now() - ms) / 1000);
+  if (sec < 60) return `${Math.max(1, sec)}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d`;
+}
+
+function getTimeGroup(ts: number | string): "New" | "Yesterday" | "Last 7 days" | "Earlier" {
+  const ms = typeof ts === "number" ? ts : new Date(ts).getTime();
+  if (!ms || isNaN(ms)) return "New";
+  const hoursAgo = (Date.now() - ms) / (1000 * 60 * 60);
+  if (hoursAgo < 24) return "New";
+  if (hoursAgo < 48) return "Yesterday";
+  if (hoursAgo < 24 * 7) return "Last 7 days";
+  return "Earlier";
 }
 
 export const NewsHubNotifications: React.FC = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(auth.currentUser);
+  const notify = useNotify();
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, u => setUser(u));
-    return () => unsub();
-  }, []);
-  const [notifications, setNotifications] = useState<NewsNotification[]>([]);
-  const [showSettingsTooltip, setShowSettingsTooltip] = useState(true);
-  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
+  const [notifications, setNotifications] = useState<NewsNotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
 
-  // Preference toggles
+  const followedIds = useFollowedIds(currentUser?.uid);
+
+  // Preferences toggles
   const [prefs, setPrefs] = useState({
     comments: true,
     follows: true,
@@ -39,357 +69,375 @@ export const NewsHubNotifications: React.FC = () => {
     scamAlerts: true,
   });
 
-  const requestPushPermission = async () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      try {
-        const res = await window.Notification.requestPermission();
-        if (res === 'granted' && user?.uid) {
-          subscribeToWebPush(user.uid);
-        }
-      } catch (e) {
-        console.warn('Push permission error:', e);
-      }
-    }
-  };
-
   useEffect(() => {
-    // Dismiss tooltip after 6 seconds automatically or on interaction
-    const timer = setTimeout(() => setShowSettingsTooltip(false), 6000);
-    return () => clearTimeout(timer);
+    const unsub = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+    return () => unsub();
   }, []);
 
+  // Real-time listener for News Hub notifications in Firestore
   useEffect(() => {
-    const fetchNotifications = async () => {
-      setLoading(true);
-      try {
-        if (user) {
-          const q = query(
-            collection(db, 'news_hub_notifications'),
-            where('userId', '==', user.uid),
-            orderBy('createdAt', 'desc')
-          );
-          const snap = await getDocs(q);
-          const loaded: NewsNotification[] = snap.docs.map(d => ({
-            id: d.id,
-            ...(d.data() as any),
-            date: d.data().createdAt ? new Date(d.data().createdAt.toDate?.() || d.data().createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'
-          }));
-
-          setNotifications(loaded);
-        } else {
-          setNotifications([]);
-        }
-      } catch (err) {
-        console.error('Error fetching notifications:', err);
-        setNotifications([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNotifications();
-  }, [user]);
-
-  const markAllAsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const handleNotificationClick = (notif: NewsNotification) => {
-    // If permission is not granted, trigger the prompt logic
-    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission !== 'granted') {
-       window.dispatchEvent(new CustomEvent('showNotificationPrompt'));
+    if (!currentUser?.uid) {
+      setNotifications([]);
+      setLoading(false);
+      return;
     }
 
-    setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-    if (notif.link) {
-      navigate(notif.link);
+    setLoading(true);
+    const qNews = query(
+      collection(db, "news_hub_notifications"),
+      where("userId", "==", currentUser.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubNews = onSnapshot(
+      qNews,
+      (snap) => {
+        const list: NewsNotificationItem[] = snap.docs.map((d) => {
+          const data = d.data();
+          const rawDate = data.createdAt;
+          const ts = typeof rawDate === "number" ? rawDate : new Date(rawDate).getTime() || Date.now();
+          return {
+            id: d.id,
+            userId: data.userId || currentUser.uid,
+            fromUserId: data.fromUserId || "",
+            fromUserName: data.fromUserName || data.title || "User",
+            fromUserUsername: data.fromUserUsername || data.fromUserName || "member",
+            fromUserAvatar: data.fromUserAvatar || "",
+            type: data.type || "system",
+            title: data.title || "",
+            body: data.body || data.message || "interacted with your post.",
+            mediaThumbnail: data.mediaThumbnail || "",
+            targetId: data.targetId || "",
+            createdAt: ts,
+            read: Boolean(data.read || data.isRead),
+            link: data.link || "",
+          };
+        });
+
+        setNotifications(list);
+        setLoading(false);
+      },
+      () => setLoading(false)
+    );
+
+    return () => unsubNews();
+  }, [currentUser?.uid]);
+
+  // If no real notifications yet, show account setup notification for logged-in user!
+  const setupNotificationItem: NewsNotificationItem = {
+    id: "setup_account_notif",
+    userId: currentUser?.uid || "me",
+    fromUserId: "system_newshub",
+    fromUserName: "News Hub Team",
+    fromUserUsername: "News Hub",
+    fromUserAvatar: "",
+    type: "system",
+    title: "Account Setup",
+    body: "setup your account profile to customize your bio, avatar, and social links.",
+    link: "/news-hub/profile/edit",
+    createdAt: Date.now(),
+  };
+
+  const displayedNotifications =
+    notifications.length > 0
+      ? notifications
+      : currentUser
+      ? [setupNotificationItem]
+      : [];
+
+  // Group notifications into New, Yesterday, Last 7 days, Earlier
+  const groupedNotifications = React.useMemo(() => {
+    const map = new Map<string, NewsNotificationItem[]>();
+    map.set("New", []);
+    map.set("Yesterday", []);
+    map.set("Last 7 days", []);
+    map.set("Earlier", []);
+
+    displayedNotifications.forEach((item) => {
+      const g = getTimeGroup(item.createdAt);
+      const arr = map.get(g) || [];
+      arr.push(item);
+      map.set(g, arr);
+    });
+
+    return map;
+  }, [displayedNotifications]);
+
+  const handleToggleFollow = async (e: React.MouseEvent, item: NewsNotificationItem) => {
+    e.stopPropagation();
+    triggerHaptic();
+
+    if (!currentUser?.uid) {
+      notify("Please sign in to follow creators!", "error");
+      navigate("/signin");
+      return;
+    }
+
+    const isF = followedIds.includes(item.fromUserId);
+    const targetName = item.fromUserName || item.fromUserUsername || "Creator";
+
+    const res = await toggleFollowUser({
+      targetUid: item.fromUserId,
+      targetName,
+      currentUser,
+      currentlyFollowing: isF,
+    });
+
+    if (res.ok) {
+      notify(res.isFollowing ? `Following @${item.fromUserUsername}` : `Unfollowed @${item.fromUserUsername}`, res.isFollowing ? "success" : "info");
+    }
+  };
+
+  const handleNotificationClick = (item: NewsNotificationItem) => {
+    triggerHaptic();
+    if (item.link) {
+      navigate(item.link);
+    } else if (item.fromUserId && item.fromUserId !== "system_newshub") {
+      navigate(`/news-hub/profile/${item.fromUserId}`);
+    } else {
+      navigate("/news-hub/profile/edit");
     }
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-slate-900 dark:text-slate-100 relative">
-      {/* Top subtle blue fade gradient glow per user specification */}
-      <div className="absolute top-0 left-0 right-0 h-64 pointer-events-none bg-gradient-to-b from-blue-500/10 via-blue-500/5 to-transparent dark:from-blue-600/15 dark:via-blue-600/5 dark:to-transparent" />
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans pb-28">
+      <SEO title="Notifications — News Hub" description="Stay updated on new followers, likes, comments, and story replies." />
 
-      {/* Top Header bar spanning full width */}
-      <header className="sticky top-0 z-20 w-full bg-white dark:bg-black border-b border-slate-100 dark:border-zinc-900 shadow-sm">
-        <div className="w-full px-4 py-3 flex items-center justify-between">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-30 w-full bg-[#F8FAFC]/90 dark:bg-zinc-950/90 backdrop-blur-md px-4 py-3 border-b border-slate-200/60 dark:border-zinc-800">
+        <div className="max-w-md mx-auto flex items-center justify-between">
           <button
-            onClick={() => navigate(-1)}
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              navigate("/news-hub");
+            }}
+            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-slate-200/70 dark:border-zinc-800 shadow-2xs flex items-center justify-center text-slate-800 dark:text-zinc-200 cursor-pointer active:scale-95 transition"
             aria-label="Back"
-            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-slate-700 dark:text-zinc-200 cursor-pointer"
           >
-            <Icon name="arrow-left" className="w-5 h-5" />
+            <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
           </button>
 
-          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
             Notifications
           </h1>
 
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowSettingsTooltip(false);
-                setShowPreferencesModal(true);
-              }}
-              aria-label="Customize notifications"
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors text-slate-700 dark:text-zinc-200 cursor-pointer"
-            >
-              <Icon name="cog" className="w-5 h-5" />
-            </button>
-
-            {/* Mockup Tooltip: Customize your notifications! */}
-            {showSettingsTooltip && (
-              <div 
-                onClick={() => {
-                  setShowSettingsTooltip(false);
-                  setShowPreferencesModal(true);
-                }}
-                className="absolute right-0 top-12 z-30 cursor-pointer animate-in fade-in slide-in-from-top-2 duration-200"
-              >
-                <div className="relative bg-slate-950 dark:bg-zinc-900 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-xl whitespace-nowrap border border-slate-800">
-                  <div className="absolute -top-1.5 right-3 w-3 h-3 bg-slate-950 dark:bg-zinc-900 rotate-45 border-l border-t border-slate-800" />
-                  Customize your notifications!
-                </div>
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              setShowPreferencesModal(true);
+            }}
+            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-slate-200/70 dark:border-zinc-800 shadow-2xs flex items-center justify-center text-slate-800 dark:text-zinc-200 cursor-pointer active:scale-95 transition"
+            aria-label="Settings"
+            title="Notification settings"
+          >
+            <Settings className="w-4.5 h-4.5 stroke-[2]" />
+          </button>
         </div>
       </header>
 
       {/* Main Container */}
-      <div className="w-full flex flex-col relative px-4 pb-12">
+      <main className="max-w-md mx-auto px-4 pt-4 space-y-5">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-3">
+            <div className="w-8 h-8 border-2 border-[#1877F2] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-semibold text-slate-400">Loading notifications...</p>
+          </div>
+        ) : displayedNotifications.length === 0 ? (
+          <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-slate-200/70 dark:border-zinc-800">
+            <p className="text-sm font-bold text-slate-800 dark:text-zinc-200">No notifications yet</p>
+            <p className="text-xs text-slate-400 mt-1">Interactions with your posts and followers will appear here.</p>
+          </div>
+        ) : (
+          Array.from(groupedNotifications.entries()).map(([groupTitle, items]) => {
+            if (items.length === 0) return null;
 
-        {/* Content Area */}
-        <main className="flex-1 pt-4">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 space-y-3">
-              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs text-slate-400">Loading notifications...</p>
-            </div>
-          ) : notifications.length === 0 ? (
-            /* Empty State matching Mockup */
-            <div className="flex flex-col items-center justify-center text-center py-20 px-6">
-              {/* Cute Mailbox SVG illustration matching mockup */}
-              <div className="relative w-28 h-28 mb-6 flex items-center justify-center">
-                <svg viewBox="0 0 120 120" className="w-28 h-28 drop-shadow-md" fill="none">
-                  {/* Stand */}
-                  <rect x="56" y="70" width="8" height="40" rx="4" fill="#6366F1" />
-                  {/* Mailbox Body with blue-indigo gradient */}
-                  <defs>
-                    <linearGradient id="mailGrad" x1="20" y1="20" x2="100" y2="80" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#3B82F6" />
-                      <stop offset="1" stopColor="#6366F1" />
-                    </linearGradient>
-                  </defs>
-                  <path 
-                    d="M30 40C30 26.7452 40.7452 16 54 16H80C86.6274 16 92 21.3726 92 28V70H30V40Z" 
-                    fill="url(#mailGrad)" 
-                  />
-                  {/* Flag post & Red Flag */}
-                  <path d="M78 28V12H88V20H78" fill="#EF4444" />
-                  <rect x="76" y="10" width="4" height="24" rx="2" fill="#DC2626" />
-                  {/* Front door shadow */}
-                  <path d="M30 40C30 26.7452 40.7452 16 54 16V70H30V40Z" fill="#2563EB" opacity="0.4" />
-                  {/* Checkmark inside white circle on door */}
-                  <circle cx="48" cy="46" r="12" fill="white" fillOpacity="0.25" />
-                  <path d="M43 46L47 50L54 42" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
+            return (
+              <section
+                key={groupTitle}
+                className="bg-white dark:bg-zinc-900 rounded-[28px] p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] border border-slate-200/70 dark:border-zinc-800 space-y-4"
+              >
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                  {groupTitle}
+                </h2>
 
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                No notifications yet
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-zinc-400 max-w-xs mb-8">
-                Your notification will appear here once you've received them.
-              </p>
+                <div className="space-y-4">
+                  {items.map((item) => {
+                    const username = item.fromUserUsername || item.fromUserName || "user";
+                    const isFollowType = item.type === "follow";
+                    const isFollowingUser = followedIds.includes(item.fromUserId);
 
-              <div className="text-xs text-slate-400">
-                <span>Missing notifications? </span>
-                <button 
-                  onClick={() => setShowPreferencesModal(true)}
-                  className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
-                >
-                  Go to notification settings.
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Notification Cards matching Mockup */
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                  Previously
-                </span>
-                {notifications.some(n => !n.read) && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline"
-                  >
-                    Mark all read
-                  </button>
-                )}
-              </div>
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleNotificationClick(item)}
+                        className="flex items-center justify-between gap-3 cursor-pointer group"
+                      >
+                        {/* Avatar */}
+                        <ProfileAvatar
+                          src={item.fromUserAvatar}
+                          name={username}
+                          className="w-11 h-11 ring-2 ring-slate-100 dark:ring-zinc-800"
+                          iconClassName="w-5 h-5"
+                        />
 
-              <div className="space-y-2.5">
-                {notifications.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => handleNotificationClick(item)}
-                    className={`relative p-4 rounded-2xl cursor-pointer transition-all border ${
-                      !item.read
-                        ? 'bg-slate-50 dark:bg-zinc-900/90 border-blue-200 dark:border-blue-900/50 shadow-sm'
-                        : 'bg-white dark:bg-zinc-900/40 border-slate-100 dark:border-zinc-800/80 hover:bg-slate-50/70 dark:hover:bg-zinc-800/50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Avatar initial/icon */}
-                      <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm ${item.avatarBg || 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400'}`}>
-                        {item.avatarText || 'N'}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 pr-4">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <h3 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">
-                            {item.title}
-                          </h3>
-                          <span className="text-xs text-slate-400 dark:text-zinc-500 whitespace-nowrap">
-                            {item.date}
-                          </span>
+                        {/* Text Center */}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs sm:text-sm text-slate-900 dark:text-zinc-100 leading-snug">
+                            <span className="font-bold text-slate-900 dark:text-white">
+                              {username}
+                            </span>{" "}
+                            <span className="text-slate-600 dark:text-zinc-300">
+                              {item.body}
+                            </span>{" "}
+                            <span className="text-slate-400 dark:text-zinc-500 font-medium text-[11px] whitespace-nowrap">
+                              {formatCompactTimeAgo(item.createdAt)}
+                            </span>
+                          </p>
                         </div>
-                        <p className="text-xs text-slate-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
-                          {item.body}
-                        </p>
+
+                        {/* Right Action Element */}
+                        <div className="shrink-0">
+                          {isFollowType ? (
+                            isFollowingUser ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleFollow(e, item)}
+                                className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-xs font-bold transition cursor-pointer"
+                              >
+                                Following
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleFollow(e, item)}
+                                className="px-4.5 py-1.5 rounded-xl bg-[#1877F2] hover:bg-[#1465D8] text-white text-xs font-bold shadow-sm transition cursor-pointer"
+                              >
+                                Follow
+                              </button>
+                            )
+                          ) : item.mediaThumbnail ? (
+                            <img
+                              src={item.mediaThumbnail}
+                              alt=""
+                              className="w-11 h-11 rounded-xl object-cover border border-slate-200/80 dark:border-zinc-700 shadow-2xs group-hover:scale-105 transition-transform"
+                            />
+                          ) : (
+                            <div className="w-11 h-11 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700 flex items-center justify-center text-[#1877F2]">
+                              <MessageSquare className="w-5 h-5" />
+                            </div>
+                          )}
+                        </div>
                       </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })
+        )}
+      </main>
 
-                      {/* Blue unread indicator dot matching mockup */}
-                      {!item.read && (
-                        <div className="w-2.5 h-2.5 rounded-full bg-blue-600 dark:bg-blue-500 flex-shrink-0 mt-1" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Bottom footer link */}
-              <div className="text-center pt-8 pb-4">
-                <span className="text-xs text-slate-400">Missing notifications? </span>
-                <button
-                  onClick={() => setShowPreferencesModal(true)}
-                  className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline block mx-auto mt-1"
-                >
-                  Go to notification settings.
-                </button>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Preferences Modal (Matches Mockup Screen 1: "Get notified about important stuff") */}
+      {/* Preferences Modal */}
       {showPreferencesModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-zinc-800 animate-in slide-in-from-bottom duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl border border-slate-200 dark:border-zinc-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
                 Get notified about important stuff
               </h2>
               <button
+                type="button"
                 onClick={() => setShowPreferencesModal(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
               >
-                <Icon name="close" className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">
+            <p className="text-xs font-bold text-slate-700 dark:text-zinc-300">
               We'll notify you when
             </p>
 
-            {/* Checklist Box matching mockup card */}
             <div className="bg-slate-50 dark:bg-zinc-800/60 rounded-2xl p-4 border border-slate-100 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-700/50 space-y-3">
               <label className="flex items-center justify-between pt-1 cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <Icon name="message-square" className="w-5 h-5 text-slate-500" />
-                  <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-zinc-200">
+                  <MessageSquare className="w-4.5 h-4.5 text-slate-500" />
+                  <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
                     Your comments or evidence get replied to
                   </span>
                 </div>
                 <input
                   type="checkbox"
                   checked={prefs.comments}
-                  onChange={e => setPrefs({ ...prefs, comments: e.target.checked })}
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                  onChange={(e) => setPrefs({ ...prefs, comments: e.target.checked })}
+                  className="w-4 h-4 rounded text-[#1877F2] focus:ring-[#1877F2]"
                 />
               </label>
 
               <label className="flex items-center justify-between pt-3 cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <Icon name="star" className="w-5 h-5 text-amber-500 fill-amber-500" />
-                  <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-zinc-200">
+                  <Star className="w-4.5 h-4.5 text-amber-500 fill-amber-500" />
+                  <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
                     You receive Stars or creator sponsorship
                   </span>
                 </div>
                 <input
                   type="checkbox"
                   checked={prefs.stars}
-                  onChange={e => setPrefs({ ...prefs, stars: e.target.checked })}
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                  onChange={(e) => setPrefs({ ...prefs, stars: e.target.checked })}
+                  className="w-4 h-4 rounded text-[#1877F2] focus:ring-[#1877F2]"
                 />
               </label>
 
               <label className="flex items-center justify-between pt-3 cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <Icon name="user-plus" className="w-5 h-5 text-blue-500" />
-                  <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-zinc-200">
-                    Someone follows your scam alerts
+                  <UserPlus className="w-4.5 h-4.5 text-blue-500" />
+                  <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                    Someone follows your profile or posts
                   </span>
                 </div>
                 <input
                   type="checkbox"
                   checked={prefs.follows}
-                  onChange={e => setPrefs({ ...prefs, follows: e.target.checked })}
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                  onChange={(e) => setPrefs({ ...prefs, follows: e.target.checked })}
+                  className="w-4 h-4 rounded text-[#1877F2] focus:ring-[#1877F2]"
                 />
               </label>
 
               <label className="flex items-center justify-between pt-3 cursor-pointer">
                 <div className="flex items-center gap-3">
-                  <Icon name="shield-alert" className="w-5 h-5 text-rose-500" />
-                  <span className="text-xs sm:text-sm font-medium text-slate-800 dark:text-zinc-200">
+                  <ShieldAlert className="w-4.5 h-4.5 text-rose-500" />
+                  <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
                     Critical scam alerts in your tagged category
                   </span>
                 </div>
                 <input
                   type="checkbox"
                   checked={prefs.scamAlerts}
-                  onChange={e => setPrefs({ ...prefs, scamAlerts: e.target.checked })}
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                  onChange={(e) => setPrefs({ ...prefs, scamAlerts: e.target.checked })}
+                  className="w-4 h-4 rounded text-[#1877F2] focus:ring-[#1877F2]"
                 />
               </label>
             </div>
 
-            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-4 mb-6">
-              You can adjust these settings later.
-            </p>
-
-            {/* Action buttons */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setShowPreferencesModal(false)}
-                className="py-3 px-4 rounded-xl text-sm font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 transition-colors"
+                className="py-3 px-4 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 transition cursor-pointer"
               >
                 Later
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  requestPushPermission();
+                  triggerHaptic();
                   setShowPreferencesModal(false);
+                  notify("Notification preferences updated!", "success");
                 }}
-                className="py-3 px-4 rounded-xl text-sm font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-slate-900 transition-colors cursor-pointer"
+                className="py-3 px-4 rounded-xl text-xs font-bold bg-[#1877F2] hover:bg-[#1465D8] text-white transition cursor-pointer shadow-sm"
               >
                 Get notified
               </button>
@@ -400,4 +448,5 @@ export const NewsHubNotifications: React.FC = () => {
     </div>
   );
 };
+
 export default NewsHubNotifications;

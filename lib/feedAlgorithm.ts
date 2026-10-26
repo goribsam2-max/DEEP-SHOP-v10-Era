@@ -237,25 +237,24 @@ export function rankFeedPostsSmart(
         ? -Math.min(5, seenTimes * 0.9)
         : 0;
 
-    // 4. Per-session randomized discovery mix (allows older & newer posts to mix organically on every load)
-    const discoveryJitter = seededDiscoveryNoise(post.id, sessionSeed) * 18.5;
+    // 4. Per-session randomized discovery mix (stable during session)
+    const discoveryJitter = seededDiscoveryNoise(post.id, sessionSeed) * 5.0;
+    const timeWeight = Math.min(25, (Number(post.createdAt || 0) / 100000000000));
 
     const totalScore =
-      viewScore +
-      impressionScore +
-      clickScore +
-      ctrBonus +
-      reactionScore +
-      (isFollowed ? 3.2 : 1.6) +
-      authorAffinity +
-      themeAffinity +
-      noveltyAdjustment +
+      timeWeight +
+      (isFollowed ? 2.0 : 0) +
       discoveryJitter;
 
     return { post, score: totalScore };
   });
 
-  scored.sort((a, b) => b.score - a.score);
+  scored.sort((a, b) => {
+    if (Math.abs(b.score - a.score) > 0.001) {
+      return b.score - a.score;
+    }
+    return Number(b.post.createdAt || 0) - Number(a.post.createdAt || 0);
+  });
 
   // Author diversity pass: avoid consecutive posts by the exact same author when variety exists
   const diversified: ScamPost[] = [];

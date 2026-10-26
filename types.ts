@@ -286,6 +286,10 @@ export interface ScamPost {
   commentsCount: number;
   sharesCount?: number;
   savedByUserIds?: string[];
+  repostedByUserIds?: string[];
+  repostsCount?: number;
+  repostedByUserName?: string;
+  originalPostId?: string;
   createdAt: number;
   updatedAt?: number;
   isEdited?: boolean;

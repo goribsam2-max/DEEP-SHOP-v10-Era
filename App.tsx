@@ -46,6 +46,7 @@ import { AdManager } from './components/AdManager';
 import { GlobalCallReceiver } from './components/GlobalCallReceiver';
 import { CustomContextMenu } from './components/CustomContextMenu';
 import { FeedPersonalization } from './pages/FeedPersonalization';
+import { NewsProfilePage } from './pages/NewsProfilePage';
 import {
   NewsPhotoViewerPage,
   NewsSharePage,
@@ -1044,8 +1045,13 @@ const AppContent: React.FC = () => {
           <Route path="/buy-stars" element={<PageWrapper><BuyStars /></PageWrapper>} />
           <Route path="/sponsor/:creatorId" element={<PageWrapper><SponsorCreator /></PageWrapper>} />
           <Route path="/gift-stars/:creatorId" element={<PageWrapper><GiftStarsPage /></PageWrapper>} />
-          <Route path="/author/:id" element={<PageWrapper><AuthorProfile /></PageWrapper>} />
-          <Route path="/creator/:id" element={<PageWrapper><AuthorProfile /></PageWrapper>} />
+          <Route path="/news-hub/profile" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/news-hub/profile/edit" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/news-hub/profile/links" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/news-hub/profile/interests" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/news-hub/profile/:id" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/author/:id" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/creator/:id" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
           <Route path="/news/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/scam/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/scam-alert" element={<PageWrapper><NewsHub /></PageWrapper>} />
