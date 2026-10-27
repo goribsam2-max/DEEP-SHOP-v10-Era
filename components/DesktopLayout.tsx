@@ -55,14 +55,29 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.removeItem('f_cart');
-    navigate('/');
-    window.dispatchEvent(new CustomEvent('openAccountCenter'));
+    navigate('/accounts');
   };
   void handleLogout;
 
   const isHomePage = location.pathname === '/';
 
+  const isAuthPage =
+    location.pathname === '/auth-selector' ||
+    location.pathname === '/accounts' ||
+    location.pathname === '/saved-accounts' ||
+    location.pathname === '/signin' ||
+    location.pathname === '/signup' ||
+    location.pathname.startsWith('/signup/') ||
+    location.pathname === '/find-account' ||
+    location.pathname === '/choose-account' ||
+    location.pathname === '/review-account' ||
+    location.pathname === '/forgot-password' ||
+    location.pathname === '/new-password' ||
+    location.pathname === '/__/auth/action' ||
+    location.pathname === '/auth/action';
+
   const isNoHeaderPage =
+    isAuthPage ||
     location.pathname === '/help-center' ||
     location.pathname === '/messages' ||
     location.pathname.startsWith('/news-hub') ||

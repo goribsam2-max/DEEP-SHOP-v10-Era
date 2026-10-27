@@ -24,6 +24,7 @@ import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
 } from "../../lib/admin";
+import { syncCurrentUserToSavedAccounts } from "../../lib/savedAccounts";
 
 export default function AccountMenu({
   scrolled,
@@ -101,10 +102,10 @@ export default function AccountMenu({
   }, [user]);
 
   const handleLogout = async () => {
+    syncCurrentUserToSavedAccounts(auth.currentUser, userProfile);
     await signOut(auth);
     localStorage.removeItem("f_cart");
-    navigate("/");
-    window.dispatchEvent(new CustomEvent("openAccountCenter"));
+    navigate("/accounts");
   };
 
   const displayName =
@@ -308,6 +309,20 @@ export default function AccountMenu({
             </DropdownMenuItem>
 
             <DropdownMenuSeparator className="my-1 border-zinc-100 dark:border-zinc-800" />
+
+            <DropdownMenuItem
+              onClick={() => {
+                triggerHaptic();
+                navigate("/accounts");
+              }}
+              className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+            >
+              <Icon
+                name="user"
+                className="w-4 h-4 text-zinc-500 dark:text-zinc-400"
+              />
+              <span className="flex-1 font-medium">Switch Account</span>
+            </DropdownMenuItem>
 
             <DropdownMenuItem
               onClick={() => {

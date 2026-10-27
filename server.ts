@@ -2,7 +2,6 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -147,6 +146,78 @@ app.use(async (req, res, next) => {
 
   app.get("/api/web-push/public-key", (req, res) => {
     res.json({ publicKey: vapidPublicKey });
+  });
+
+  app.get("/api/gifs", async (req, res) => {
+    const q = String(req.query.q || "").trim();
+    const limit = Math.min(36, Math.max(8, Number(req.query.limit) || 24));
+    const giphyKey = process.env.GIPHY_API_KEY || "";
+
+    try {
+      if (giphyKey) {
+        const endpoint = q
+          ? `https://api.giphy.com/v1/gifs/search?api_key=${encodeURIComponent(giphyKey)}&q=${encodeURIComponent(q)}&limit=${limit}&rating=pg-13`
+          : `https://api.giphy.com/v1/gifs/trending?api_key=${encodeURIComponent(giphyKey)}&limit=${limit}&rating=pg-13`;
+        const gRes = await fetch(endpoint);
+        if (gRes.ok) {
+          const gJson: any = await gRes.json();
+          if (Array.isArray(gJson?.data) && gJson.data.length > 0) {
+            const items = gJson.data
+              .map((item: any) => {
+                const img =
+                  item?.images?.fixed_width ||
+                  item?.images?.downsized_medium ||
+                  item?.images?.original;
+                if (!img?.url) return null;
+                return {
+                  id: String(item.id),
+                  title: String(item.title || "GIF"),
+                  url: String(img.url),
+                  width: Number(img.width) || 200,
+                  height: Number(img.height) || 200,
+                };
+              })
+              .filter(Boolean);
+            if (items.length > 0) {
+              return res.json({ items });
+            }
+          }
+        }
+      }
+
+      // Public live GIF search & trending via Tenor v1 public index
+      const tenorEndpoint = q
+        ? `https://g.tenor.com/v1/search?q=${encodeURIComponent(q)}&key=LIVDSRZULELA&limit=${limit}&media_filter=minimal`
+        : `https://g.tenor.com/v1/trending?key=LIVDSRZULELA&limit=${limit}&media_filter=minimal`;
+      const tRes = await fetch(tenorEndpoint);
+      if (tRes.ok) {
+        const tJson: any = await tRes.json();
+        if (Array.isArray(tJson?.results) && tJson.results.length > 0) {
+          const items = tJson.results
+            .map((item: any) => {
+              const mediaObj = Array.isArray(item.media) ? item.media[0] : null;
+              const gif = mediaObj?.tinygif || mediaObj?.gif || mediaObj?.mediumgif;
+              if (!gif?.url) return null;
+              const dims = Array.isArray(gif.dims) ? gif.dims : [220, 200];
+              return {
+                id: String(item.id),
+                title: String(item.content_description || item.title || "GIF"),
+                url: String(gif.url),
+                width: Number(dims[0]) || 220,
+                height: Number(dims[1]) || 200,
+              };
+            })
+            .filter(Boolean);
+          if (items.length > 0) {
+            return res.json({ items });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Live GIF fetch fallback:", err);
+    }
+
+    return res.json({ items: [] });
   });
 
   
@@ -628,22 +699,8 @@ app.use(async (req, res, next) => {
         },
       });
 
-      const model = ai.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              isAiGenerated: { type: Type.BOOLEAN },
-              confidence: { type: Type.NUMBER },
-            },
-            required: ["isAiGenerated", "confidence"],
-          },
-        },
-      });
-
-      const result = await model.generateContent({
+      const response = await ai.models.generateContent({
+        model: "gemini-3.8-flash",
         contents: [
           {
             role: "user",
@@ -660,10 +717,20 @@ app.use(async (req, res, next) => {
             ],
           },
         ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              isAiGenerated: { type: Type.BOOLEAN },
+              confidence: { type: Type.NUMBER },
+            },
+            required: ["isAiGenerated", "confidence"],
+          },
+        },
       });
 
-      const response = await result.response;
-      const rawText = (response.text() || "{}").trim();
+      const rawText = (response.text || "{}").trim();
       const parsed = JSON.parse(rawText);
       const confidence = Number(parsed?.confidence || 0);
       const isAiGenerated = Boolean(parsed?.isAiGenerated && confidence >= 0.72);
@@ -1560,7 +1627,10 @@ export async function initializeAppAsync() {
 
   if (!isProd) {
     try {
-      const { createServer: createViteServer } = await import("vite");
+      const vitePkg = "vite";
+      const { createServer: createViteServer } = await import(
+        /* @vite-ignore */ vitePkg
+      );
       vite = await createViteServer({
         server: { middlewareMode: true, hmr: false },
         appType: "custom",
@@ -1702,6 +1772,7 @@ export async function initializeAppAsync() {
       const knownAppRoutes = [
         "/", "/all-products", "/cart", "/checkout", "/admin", "/seller", "/courier",
         "/messages", "/profile", "/orders", "/my-orders", "/login", "/signin", "/register", "/signup",
+        "/accounts", "/saved-accounts", "/find-account", "/choose-account", "/review-account", "/forgot-password", "/new-password",
         "/settings", "/favorites", "/wishlist", "/track-order", "/privacy", "/terms", "/helpline", "/ads",
         "/categories", "/blog", "/contact", "/about", "/news-hub", "/news", "/scam", "/scam-alert",
         "/author", "/creator", "/store", "/flash-sale", "/bundles", "/build-box", "/bonus", "/credits",

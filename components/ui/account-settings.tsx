@@ -8,6 +8,7 @@ import { useNotify, useConfirm } from '@/components/Notifications';
 import Icon from '../Icon';
 import { useTheme } from '@/components/ThemeContext';
 import { canAccessSellerDashboard } from '@/lib/admin';
+import { syncCurrentUserToSavedAccounts } from '@/lib/savedAccounts';
 
 export function AccountSettings() {
   const navigate = useNavigate();
@@ -255,10 +256,14 @@ export function AccountSettings() {
   };
 
   const handleLogout = async () => {
+    syncCurrentUserToSavedAccounts(auth.currentUser, {
+      displayName: name || undefined,
+      email: email || undefined,
+      phoneNumber: phoneNumber || undefined,
+    });
     await signOut(auth);
     localStorage.removeItem("f_cart");
-    navigate("/");
-    window.dispatchEvent(new CustomEvent('openAccountCenter'));
+    navigate("/accounts");
   };
 
   const handleDeleteAccount = () => {

@@ -28,6 +28,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../../firebase';
 import { signOut } from 'firebase/auth';
 import Icon from '../Icon';
+import { syncCurrentUserToSavedAccounts } from '../../lib/savedAccounts';
 
 import { StaffContext } from '../AdminLayout';
 export interface NavigationItem {
@@ -98,7 +99,8 @@ export function Sidebar({ className = "", children, userData }: SidebarProps) {
 
   const handleItemClick = (href: string) => {
     if (href === 'logout') {
-      signOut(auth).then(() => navigate('/'));
+      syncCurrentUserToSavedAccounts(auth.currentUser);
+      signOut(auth).then(() => navigate('/accounts'));
       return;
     }
     navigate(href);

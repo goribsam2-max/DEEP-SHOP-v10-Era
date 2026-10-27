@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
         },
         includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png"],
         workbox: {
-          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MB limit
+          maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15 MB limit
           importScripts: ["/custom-sw.js"]
         },
         manifest: {
@@ -68,9 +68,30 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: false,
       minify: "esbuild",
+      chunkSizeWarningLimit: 3000,
       rollupOptions: {
+        onwarn(warning, warn) {
+          if (warning.code === "INVALID_ANNOTATION") return;
+          warn(warning);
+        },
         output: {
-          manualChunks: undefined,
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            if (id.includes("firebase")) return "vendor-firebase";
+            if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
+            if (id.includes("jspdf") || id.includes("html2canvas")) return "vendor-pdf";
+            if (
+              id.includes("@hugeicons") ||
+              id.includes("@phosphor-icons") ||
+              id.includes("@remixicon")
+            ) {
+              return "vendor-icons";
+            }
+            if (id.includes("framer-motion") || id.includes("/motion/")) {
+              return "vendor-motion";
+            }
+            return undefined;
+          },
         },
       },
     },
@@ -83,9 +104,10 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        "@": fileURLToPath(new URL(".", import.meta.url)),
-        "lucide-react": fileURLToPath(
-          new URL("./src/streamline-flex-shim.tsx", import.meta.url)
+        "@": path.resolve(process.cwd()),
+        "lucide-react": path.resolve(
+          process.cwd(),
+          "src/streamline-flex-shim.tsx"
         ),
       },
     },

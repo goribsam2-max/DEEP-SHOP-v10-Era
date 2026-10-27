@@ -275,7 +275,6 @@ export const XIcon = X;
 export const Zap = c(["M13 2L3 14h9l-1 8 10-12h-9z"]);
 export const ZoomIn = c(["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.35-4.35", "M11 8v6", "M8 11h6"]);
 export const ZoomOut = c(["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.35-4.35", "M8 11h6"]);
-export const Repeat = c(["M17 2l4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "M7 22l-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3"]);
 export const Repeat2 = Repeat;
 
 // Add fallbacks and aliases for all possible package naming variants
@@ -462,3 +461,15 @@ export const Angry = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 1
 export const Laugh = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z", "M9 9h.01", "M15 9h.01"]);
 export const Meh = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M8 15h8", "M9 9h.01", "M15 9h.01"]);
 export const Building2 = Building;
+export const BellRing = c(["M18 8a6 6 0 0 0-12 0v6l-2 3h16l-2-3V8z", "M9 19a3 3 0 0 0 6 0", "M4 2C2.8 3.7 2 5.7 2 8", "M22 8c0-2.3-.8-4.3-2-6"]);
+export const PartyPopper = c(["M5.8 11.3L2 22l10.7-3.8", "M4 3h.01", "M22 8h.01", "M15 2h.01", "M22 20h.01", "M22 2l-2.24.75a2.9 2.9 0 0 0-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10", "M22 13l-.82-.33c-.86-.34-1.82.2-1.98 1.11v0c-.11.7-.72 1.22-1.43 1.22H17", "M11 2l.33.82c.34.86-.2 1.82-1.11 1.98v0C9.52 4.9 9 5.52 9 6.23V7", "M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"]);
+export const Navigation = c(["M3 11l19-9-9 19-2-8-8-2z"]);
+export const Compass = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"]);
+
+export type LucideProps = React.SVGProps<SVGSVGElement> & {
+  size?: number | string;
+  strokeWidth?: number | string;
+};
+export type LucideIcon = React.ForwardRefExoticComponent<
+  LucideProps & React.RefAttributes<SVGSVGElement>
+>;

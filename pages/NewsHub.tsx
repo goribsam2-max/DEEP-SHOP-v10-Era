@@ -27,7 +27,15 @@ import {
   UserCheck,
   X,
   User as UserIcon,
+  Clock,
+  MapPin,
+  ChevronRight,
 } from "lucide-react";
+import { DottedGhostCatIcon } from "../components/ComposerLiquidGlassSheets";
+import {
+  LiquidGlassShareModal,
+  LiquidGlassActivityModal,
+} from "../components/LiquidGlassPostInteractions";
 
 const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -211,6 +219,8 @@ export const NewsHub: React.FC = () => {
     null
   );
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
+  const [shareModalPost, setShareModalPost] = useState<Partial<ScamPost> | null>(null);
+  const [activityModalPost, setActivityModalPost] = useState<Partial<ScamPost> | null>(null);
   const [localUserReactions, setLocalUserReactions] = useState<
     Record<string, ReactionType>
   >(() => {
@@ -453,7 +463,23 @@ export const NewsHub: React.FC = () => {
       prefs.selectedThemes.length >= FEED_THEMES.length ||
       prefs.selectedThemes.length === 0;
 
+    const nowMs = Date.now();
+
     return allPosts.filter((post) => {
+      // Hide expired 24-hour Ghost posts automatically
+      if (post.expiresAt && post.expiresAt <= nowMs) {
+        return false;
+      }
+
+      // Hide future scheduled posts from everyone except the author
+      if (
+        post.scheduledAt &&
+        post.scheduledAt > nowMs &&
+        post.reporterId !== currentUser?.uid
+      ) {
+        return false;
+      }
+
       const isScam = isScamPostRecord(post);
 
       if (scamOnlyMode) {
@@ -467,15 +493,35 @@ export const NewsHub: React.FC = () => {
       if (!isScam) {
         const hasAudio = Boolean(post.audioUrl);
         const hasVideo = Boolean(resolvePostVideoSource(post));
-        const hasImages = Boolean(post.images && post.images.length > 0);
+        const hasImages = Boolean(
+          (post.images && post.images.length > 0) ||
+            post.gifUrl ||
+            (post.stickers && post.stickers.length > 0)
+        );
+        const hasInteractiveExtra = Boolean(
+          post.poll ||
+            post.snippet ||
+            post.quoteBlock ||
+            post.music ||
+            (post.threadItems && post.threadItems.length > 0)
+        );
         const isAffirmation =
-          post.contentType === "affirmation" || post.textStyle === "quote";
+          post.contentType === "affirmation" ||
+          post.textStyle === "quote" ||
+          Boolean(post.quoteBlock);
 
         if (hasAudio && !cp.voiceNotes) return false;
         if (hasVideo && !cp.videos) return false;
         if (hasImages && !cp.images) return false;
         if (isAffirmation && !cp.affirmations) return false;
-        if (!hasAudio && !hasVideo && !hasImages && !isAffirmation && !cp.texts)
+        if (
+          !hasAudio &&
+          !hasVideo &&
+          !hasImages &&
+          !hasInteractiveExtra &&
+          !isAffirmation &&
+          !cp.texts
+        )
           return false;
       }
 
@@ -496,7 +542,7 @@ export const NewsHub: React.FC = () => {
 
       return true;
     });
-  }, [allPosts, prefs, scamOnlyMode]);
+  }, [allPosts, prefs, scamOnlyMode, currentUser?.uid]);
 
   const visiblePosts = React.useMemo(() => {
     return rankFeedPostsSmart(filteredPosts, {
@@ -1481,10 +1527,28 @@ export const NewsHub: React.FC = () => {
                               </div>
 
                               <div className="min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   <h2 className="text-[15.5px] font-bold text-zinc-900 dark:text-white truncate">
                                     {post.reporterName}
                                   </h2>
+                                  {post.postTag && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        triggerHaptic();
+                                        navigate(
+                                          `/news-hub/search?q=${encodeURIComponent(
+                                            post.postTag || ""
+                                          )}`
+                                        );
+                                      }}
+                                      className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-[#1877F2] dark:text-[#58A6FF] hover:underline cursor-pointer shrink-0"
+                                    >
+                                      <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+                                      <span>{post.postTag}</span>
+                                    </button>
+                                  )}
                                   {isScam && (
                                     <span className="text-rose-600 dark:text-rose-400 text-[11px] font-bold shrink-0">
                                       · Scam Report
@@ -1518,10 +1582,42 @@ export const NewsHub: React.FC = () => {
                                   <span className="shrink-0">·</span>
                                   <Globe className="w-3 h-3 stroke-[2] shrink-0" />
                                 </div>
-                                {post.isAiGenerated && (
-                                  <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
-                                    <Sparkles className="w-3 h-3 text-[#1877F2] shrink-0" />
-                                    <span>AI generated</span>
+
+                                {(post.isAiGenerated ||
+                                  post.locationTag ||
+                                  post.isGhostPost ||
+                                  Boolean(
+                                    post.scheduledAt &&
+                                      post.scheduledAt > Date.now()
+                                  )) && (
+                                  <div className="mt-0.5 flex items-center gap-2 flex-wrap text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
+                                    {post.isAiGenerated && (
+                                      <span className="inline-flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3 text-[#1877F2] shrink-0" />
+                                        <span>AI generated</span>
+                                      </span>
+                                    )}
+                                    {post.locationTag && (
+                                      <span className="inline-flex items-center gap-0.5 text-zinc-600 dark:text-zinc-300">
+                                        <MapPin className="w-3 h-3 text-emerald-500 shrink-0" />
+                                        <span className="truncate max-w-[140px]">
+                                          {post.locationTag}
+                                        </span>
+                                      </span>
+                                    )}
+                                    {post.isGhostPost && (
+                                      <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                                        <DottedGhostCatIcon className="w-3 h-3 shrink-0" />
+                                        <span>Ghost · 24h</span>
+                                      </span>
+                                    )}
+                                    {post.scheduledAt &&
+                                      post.scheduledAt > Date.now() && (
+                                        <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
+                                          <Clock className="w-3 h-3 shrink-0" />
+                                          <span>Scheduled</span>
+                                        </span>
+                                      )}
                                   </div>
                                 )}
                               </div>
@@ -1810,9 +1906,11 @@ export const NewsHub: React.FC = () => {
                             {/* 3. Share */}
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 recordPostClick(post);
-                                navigate(`/news-hub/share/${post.id}`);
+                                triggerHaptic();
+                                setShareModalPost(post);
                               }}
                               className="h-8 sm:h-9 px-2 sm:px-3 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-[#EBEEF2] flex items-center gap-1 text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 transition active:scale-95 cursor-pointer shrink-0"
                             >
@@ -2215,6 +2313,27 @@ export const NewsHub: React.FC = () => {
       </div>
 
       <NewsBottomDock />
+
+      {/* Share and Activity Modals */}
+      <LiquidGlassShareModal
+        isOpen={Boolean(shareModalPost)}
+        post={shareModalPost || {}}
+        onClose={() => setShareModalPost(null)}
+        onRepost={() => {
+          notify("Reposted to News Hub!", "success");
+        }}
+        onQuotePost={() => {
+          if (shareModalPost?.id) {
+            navigate(`/news-hub/create?quotePostId=${shareModalPost.id}`);
+          }
+        }}
+      />
+
+      <LiquidGlassActivityModal
+        isOpen={Boolean(activityModalPost)}
+        post={activityModalPost || {}}
+        onClose={() => setActivityModalPost(null)}
+      />
     </div>
   );
 };

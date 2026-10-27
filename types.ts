@@ -243,10 +243,41 @@ export interface ScamComment {
   isEdited?: boolean;
   reactions?: Record<string, ReactionType>;
   reactionsCount?: Record<string, number>;
+  status?: 'approved' | 'pending_approval';
 }
 
 export type ImageLayoutStyle = 'collage' | 'carousel' | 'grid' | 'stack';
 export type ImageAspectMode = 'original' | 'square' | 'portrait' | 'landscape';
+export type ReplyPermissionMode = 'anyone' | 'followers' | 'following' | 'mentioned';
+
+export interface PostPollOption {
+  id: string;
+  text: string;
+  votes: number;
+  voterIds?: string[];
+}
+
+export interface PostPoll {
+  question?: string;
+  options: PostPollOption[];
+  endsAt?: number;
+  durationHours?: number;
+}
+
+export interface PostSnippet {
+  title?: string;
+  content: string;
+}
+
+export interface PostQuoteBlock {
+  text: string;
+  author?: string;
+}
+
+export interface PostThreadItem {
+  id: string;
+  text: string;
+}
 
 export interface ScamPost {
   id: string;
@@ -268,14 +299,29 @@ export interface ScamPost {
   audioDuration?: number;
   audioWaveform?: number[];
   videoUrl?: string;
+  gifUrl?: string;
+  stickers?: string[];
+  poll?: PostPoll | null;
+  snippet?: PostSnippet | null;
+  quoteBlock?: PostQuoteBlock | null;
+  locationTag?: string | null;
+  postTag?: string | null;
+  threadItems?: PostThreadItem[];
+  scheduledAt?: number | null;
+  isGhostPost?: boolean;
+  expiresAt?: number | null;
+  replyPermission?: ReplyPermissionMode;
+  reviewApproveReplies?: boolean;
+  alsoShareOn?: string[];
+  privacy?: 'public' | 'followers' | 'only_me';
   music?: {
     audioUrl: string;
     title: string;
     artist: string;
     cover: string;
-  };
+  } | null;
   themes?: string[];
-  contentType?: 'text' | 'image' | 'voice' | 'video' | 'affirmation' | 'scam';
+  contentType?: 'text' | 'image' | 'voice' | 'video' | 'affirmation' | 'scam' | 'poll' | 'gif';
   textStyle?: 'normal' | 'large' | 'quote';
   reporterId: string;
   reporterName: string;
@@ -295,7 +341,7 @@ export interface ScamPost {
   createdAt: number;
   updatedAt?: number;
   isEdited?: boolean;
-  status?: 'trending' | 'active' | 'verified' | 'resolved' | 'under_review';
+  status?: 'trending' | 'active' | 'verified' | 'resolved' | 'under_review' | 'scheduled';
   views?: number;
   impressions?: number;
   clicks?: number;

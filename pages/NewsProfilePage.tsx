@@ -38,7 +38,17 @@ import {
   Coins,
   BookOpen,
   Eye,
+  Bell,
 } from "lucide-react";
+
+const BellRingIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8a6 6 0 0 0-12 0v6l-2 3h16l-2-3V8z" />
+    <path d="M9 19a3 3 0 0 0 6 0" />
+    <path d="M4 2C2.8 3.7 2 5.7 2 8" />
+    <path d="M22 8c0-2.3-.8-4.3-2-6" />
+  </svg>
+);
 
 /** Inline Topic Icons for Interest Categories */
 const UtensilsIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -342,6 +352,16 @@ export const NewsProfilePage: React.FC = () => {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
   const [showAvatarViewerModal, setShowAvatarViewerModal] = useState(false);
+  const [showNotifBellSheet, setShowNotifBellSheet] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<{
+    threads: boolean;
+    replies: boolean;
+    push: boolean;
+  }>({
+    threads: true,
+    replies: false,
+    push: false,
+  });
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   // Edit Profile Form State
@@ -380,6 +400,75 @@ export const NewsProfilePage: React.FC = () => {
 
   const targetUid = id || currentUser?.uid;
   const isOwnProfile = Boolean(currentUser?.uid && targetUid === currentUser.uid);
+
+  // Load saved creator activity notification preferences (Threads, Replies, Push)
+  useEffect(() => {
+    if (!targetUid || isOwnProfile) return;
+    const storageKey = `deep_profile_notif_prefs_${currentUser?.uid || "guest"}`;
+    try {
+      const map = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      if (map[targetUid]) {
+        setNotifPrefs({
+          threads: Boolean(map[targetUid].threads ?? true),
+          replies: Boolean(map[targetUid].replies ?? false),
+          push: Boolean(map[targetUid].push ?? false),
+        });
+      } else {
+        setNotifPrefs({ threads: true, replies: false, push: false });
+      }
+    } catch {}
+
+    if (currentUser?.uid) {
+      getDoc(doc(db, "users", currentUser.uid))
+        .then((snap) => {
+          if (!snap.exists()) return;
+          const remotePrefs = snap.data()?.profileNotificationPrefs?.[targetUid];
+          if (remotePrefs) {
+            setNotifPrefs({
+              threads: Boolean(remotePrefs.threads ?? true),
+              replies: Boolean(remotePrefs.replies ?? false),
+              push: Boolean(remotePrefs.push ?? false),
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [targetUid, isOwnProfile, currentUser?.uid]);
+
+  const updateProfileNotifPrefs = (
+    partial: Partial<{ threads: boolean; replies: boolean; push: boolean }>
+  ) => {
+    if (!targetUid) return;
+    triggerHaptic();
+    const next = { ...notifPrefs, ...partial };
+    setNotifPrefs(next);
+
+    if (partial.push && typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+
+    const storageKey = `deep_profile_notif_prefs_${currentUser?.uid || "guest"}`;
+    try {
+      const map = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      map[targetUid] = next;
+      localStorage.setItem(storageKey, JSON.stringify(map));
+    } catch {}
+
+    if (currentUser?.uid) {
+      setDoc(
+        doc(db, "users", currentUser.uid),
+        {
+          profileNotificationPrefs: {
+            [targetUid]: {
+              ...next,
+              updatedAt: Date.now(),
+            },
+          },
+        },
+        { merge: true }
+      ).catch(() => {});
+    }
+  };
 
   useEffect(() => {
     if (!targetUid) {
@@ -1338,6 +1427,33 @@ export const NewsProfilePage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {!isOwnProfile && targetUid && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  if (!currentUser) {
+                    notify("Please sign in to manage profile notifications", "info");
+                    navigate("/signin");
+                    return;
+                  }
+                  setShowNotifBellSheet(true);
+                }}
+                className={`w-10 h-10 rounded-full shadow-sm flex items-center justify-center cursor-pointer active:scale-95 transition ${
+                  notifPrefs.push || notifPrefs.replies
+                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                    : "bg-white/90 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200"
+                }`}
+                aria-label="Activity notifications"
+                title="Activity notifications"
+              >
+                {notifPrefs.push ? (
+                  <BellRingIcon className="w-4 h-4" />
+                ) : (
+                  <Bell className="w-4 h-4" />
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -2288,6 +2404,115 @@ export const NewsProfilePage: React.FC = () => {
                 Close Camera
               </button>
             </div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ACTIVITY NOTIFICATIONS BELL BOTTOM SHEET (Matching IMG_4968) */}
+      <AnimatePresence>
+        {showNotifBellSheet && (
+          <div
+            className="fixed inset-0 z-[125] bg-black/45 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
+            onClick={() => setShowNotifBellSheet(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 370, damping: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-[#F3F4F6] dark:bg-zinc-950 rounded-t-[34px] sm:rounded-[34px] p-5 pb-8 space-y-4 shadow-2xl border border-white/80 dark:border-zinc-800"
+            >
+              {/* Grab Handle */}
+              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto" />
+
+              {/* Threads & Replies Checkmark Group */}
+              <div className="rounded-[24px] bg-white dark:bg-zinc-900 divide-y divide-slate-100 dark:divide-zinc-800/80 overflow-hidden shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateProfileNotifPrefs({ threads: !notifPrefs.threads })
+                  }
+                  className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+                >
+                  <span className="text-[15.5px] font-semibold text-zinc-900 dark:text-white">
+                    Threads
+                  </span>
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center transition ${
+                      notifPrefs.threads
+                        ? "bg-black dark:bg-white text-white dark:text-black"
+                        : "border-2 border-zinc-300 dark:border-zinc-600"
+                    }`}
+                  >
+                    {notifPrefs.threads && (
+                      <Check className="w-3.5 h-3.5 stroke-[2.8]" />
+                    )}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateProfileNotifPrefs({ replies: !notifPrefs.replies })
+                  }
+                  className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
+                >
+                  <span className="text-[15.5px] font-semibold text-zinc-900 dark:text-white">
+                    Replies
+                  </span>
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center transition ${
+                      notifPrefs.replies
+                        ? "bg-black dark:bg-white text-white dark:text-black"
+                        : "border-2 border-zinc-300 dark:border-zinc-600"
+                    }`}
+                  >
+                    {notifPrefs.replies && (
+                      <Check className="w-3.5 h-3.5 stroke-[2.8]" />
+                    )}
+                  </span>
+                </button>
+              </div>
+
+              {/* Push Notifications Toggle Card */}
+              <div className="space-y-2">
+                <div className="rounded-[24px] bg-white dark:bg-zinc-900 px-5 py-4 flex items-center justify-between gap-3 shadow-2xs">
+                  <span className="text-[15.5px] font-semibold text-zinc-900 dark:text-white">
+                    Push notifications
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notifPrefs.push}
+                    onClick={() =>
+                      updateProfileNotifPrefs({ push: !notifPrefs.push })
+                    }
+                    className={`relative w-13 h-7.5 rounded-full transition-colors cursor-pointer shrink-0 ${
+                      notifPrefs.push
+                        ? "bg-zinc-900 dark:bg-white"
+                        : "bg-zinc-300 dark:bg-zinc-700"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-5.5 h-5.5 rounded-full transition-all shadow-xs ${
+                        notifPrefs.push
+                          ? "left-6.5 bg-white dark:bg-zinc-900"
+                          : "left-1 bg-white"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <p className="px-2 text-[13px] text-zinc-500 dark:text-zinc-400">
+                  You&apos;ll get activity notifications for{" "}
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                    {username || displayName}
+                  </span>
+                  .
+                </p>
+              </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

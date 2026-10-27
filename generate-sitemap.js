@@ -25,7 +25,15 @@ async function generateSitemap() {
   try {
     console.log("Generating sitemap...");
     const productsRef = collection(db, "products");
-    const snapshot = await getDocs(productsRef);
+    const snapshot = await Promise.race([
+      getDocs(productsRef),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Sitemap Firestore fetch timed out after 8s")), 8000)
+      ),
+    ]).catch((timeoutErr) => {
+      console.warn(timeoutErr.message || timeoutErr);
+      return null;
+    });
     let urls = "";
     
     const today = new Date().toISOString().split('T')[0];
@@ -41,12 +49,13 @@ async function generateSitemap() {
       return null;
     };
 
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.name) {
-        const slug = toSlug(data.name);
-        const lastMod = getSitemapDate(data.updatedAt) || getSitemapDate(data.createdAt) || today;
-        urls += `
+    if (snapshot) {
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.name) {
+          const slug = toSlug(data.name);
+          const lastMod = getSitemapDate(data.updatedAt) || getSitemapDate(data.createdAt) || today;
+          urls += `
   <url>
     <loc>https://www.deepshop.top/${slug}</loc>
     <lastmod>${lastMod}</lastmod>
@@ -59,8 +68,9 @@ async function generateSitemap() {
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`;
-      }
-    });
+        }
+      });
+    }
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

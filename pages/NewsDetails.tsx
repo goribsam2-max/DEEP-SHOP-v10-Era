@@ -25,7 +25,17 @@ import {
   X,
   Sparkles,
   Eye,
+  Clock,
+  ChevronRight,
+  Lock,
+  BarChart2,
 } from "lucide-react";
+import { DottedGhostCatIcon } from "../components/ComposerLiquidGlassSheets";
+import {
+  LiquidGlassShareModal,
+  LiquidGlassActivityModal,
+  CommentItemWithActions,
+} from "../components/LiquidGlassPostInteractions";
 import { auth, db } from "../firebase";
 import {
   doc,
@@ -134,7 +144,10 @@ export const NewsDetails: React.FC = () => {
   );
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [authorFollowsViewer, setAuthorFollowsViewer] = useState(false);
   const [localReaction, setLocalReaction] = useState<ReactionType | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showActivityModal, setShowActivityModal] = useState(false);
 
   // Auth & Admin check
   useEffect(() => {
@@ -312,7 +325,7 @@ export const NewsDetails: React.FC = () => {
     }
   }, [loading, location.hash]);
 
-  // Follow state
+  // Follow state & author-follows-viewer check for reply permissions
   useEffect(() => {
     if (!post?.reporterId) return;
     try {
@@ -321,7 +334,17 @@ export const NewsDetails: React.FC = () => {
       );
       setIsFollowing(list.includes(post.reporterId));
     } catch {}
-  }, [post?.reporterId]);
+
+    if (currentUser?.uid && post.reporterId !== currentUser.uid) {
+      getDoc(doc(db, "users", currentUser.uid, "followers", post.reporterId))
+        .then((snap) => {
+          setAuthorFollowsViewer(snap.exists());
+        })
+        .catch(() => setAuthorFollowsViewer(false));
+    } else {
+      setAuthorFollowsViewer(false);
+    }
+  }, [post?.reporterId, currentUser?.uid]);
 
   const handleToggleFollow = () => {
     if (!post) return;
@@ -572,6 +595,12 @@ export const NewsDetails: React.FC = () => {
       : null;
     const commentId = commentRef ? commentRef.id : `cmt_${Date.now()}`;
 
+    const isPostOwnerOrAdmin =
+      isAdmin || Boolean(currentUser?.uid && currentUser.uid === post.reporterId);
+    const requiresModeration = Boolean(
+      post.reviewApproveReplies && !isPostOwnerOrAdmin
+    );
+
     const newCommentObj: Omit<ScamComment, "id"> = {
       postId: post.id,
       userId: currentUser?.uid || "guest_local",
@@ -585,6 +614,7 @@ export const NewsDetails: React.FC = () => {
             replyToUserName: replyingTo.userName,
           }
         : {}),
+      status: requiresModeration ? "pending_approval" : "active",
       createdAt: Date.now(),
     };
 
@@ -593,9 +623,13 @@ export const NewsDetails: React.FC = () => {
     setComments((prev) =>
       prev.some((c) => c.id === commentId) ? prev : [...prev, fullComment]
     );
-    setPost((prev) =>
-      prev ? { ...prev, commentsCount: (prev.commentsCount || 0) + 1 } : null
-    );
+    if (!requiresModeration) {
+      setPost((prev) =>
+        prev ? { ...prev, commentsCount: (prev.commentsCount || 0) + 1 } : null
+      );
+    } else {
+      notify("Reply submitted for author review & approval.", "info");
+    }
     setCommentText("");
     setCommentImage(null);
     setReplyingTo(null);
@@ -603,9 +637,11 @@ export const NewsDetails: React.FC = () => {
     try {
       if (commentRef) {
         await setDoc(commentRef, newCommentObj);
-        await updateDoc(doc(db, "scam_posts", post.id), {
-          commentsCount: increment(1),
-        });
+        if (!requiresModeration) {
+          await updateDoc(doc(db, "scam_posts", post.id), {
+            commentsCount: increment(1),
+          });
+        }
         // Trigger notification for post author
         if (post.reporterId && post.reporterId !== currentUser?.uid) {
           addDoc(collection(db, "news_hub_notifications"), {
@@ -832,6 +868,31 @@ export const NewsDetails: React.FC = () => {
     notify("Comment deleted", "info");
   };
 
+  const handleApproveComment = async (cmt: ScamComment) => {
+    if (!post) return;
+    triggerHaptic();
+    setComments((prev) =>
+      prev.map((item) =>
+        item.id === cmt.id ? { ...item, status: "active" } : item
+      )
+    );
+    setPost((prev) =>
+      prev ? { ...prev, commentsCount: (prev.commentsCount || 0) + 1 } : null
+    );
+
+    if (!post.id.startsWith("showcase_") && !String(cmt.id).startsWith("cmt_")) {
+      try {
+        await updateDoc(doc(db, "scam_posts", post.id, "comments", cmt.id), {
+          status: "active",
+        });
+        await updateDoc(doc(db, "scam_posts", post.id), {
+          commentsCount: increment(1),
+        });
+      } catch {}
+    }
+    notify("Reply approved and published!", "success");
+  };
+
   const handleDeletePost = async () => {
     if (!post) return;
     triggerHaptic();
@@ -918,6 +979,40 @@ export const NewsDetails: React.FC = () => {
   const canManage =
     isAdmin || Boolean(currentUser?.uid && currentUser.uid === post.reporterId);
 
+  const replyMode = post.replyPermission || "anyone";
+  const viewerUsername = getSafePublicUsername(currentUser).toLowerCase();
+  const viewerDisplayName = getSafeDisplayName(currentUser, "").toLowerCase();
+  const captionLower = (post.description || "").toLowerCase();
+  const isViewerMentioned = Boolean(
+    (viewerUsername && captionLower.includes(`@${viewerUsername}`)) ||
+      (viewerDisplayName && captionLower.includes(`@${viewerDisplayName}`))
+  );
+
+  const canCurrentUserReply =
+    canManage ||
+    replyMode === "anyone" ||
+    (replyMode === "followers" && isFollowing) ||
+    (replyMode === "following" && authorFollowsViewer) ||
+    (replyMode === "mentioned" && isViewerMentioned);
+
+  const replyRestrictionText =
+    replyMode === "followers"
+      ? `Only followers of ${post.reporterName} can reply and quote.`
+      : replyMode === "following"
+      ? `Only profiles ${post.reporterName} follows can reply and quote.`
+      : replyMode === "mentioned"
+      ? "Only profiles mentioned in this post can reply and quote."
+      : "";
+
+  const visibleComments = comments.filter((cmt) => {
+    if (cmt.status === "pending_approval") {
+      return (
+        canManage || Boolean(currentUser?.uid && cmt.userId === currentUser.uid)
+      );
+    }
+    return cmt.status !== "hidden";
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-32">
       <SEO
@@ -1001,9 +1096,29 @@ export const NewsDetails: React.FC = () => {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] sm:text-[16px] font-bold text-zinc-900 dark:text-white truncate">
-                    {post.reporterName}
-                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-[15px] sm:text-[16px] font-bold text-zinc-900 dark:text-white truncate">
+                      {post.reporterName}
+                    </p>
+                    {post.postTag && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic();
+                          navigate(
+                            `/news-hub/search?q=${encodeURIComponent(
+                              post.postTag || ""
+                            )}`
+                          );
+                        }}
+                        className="inline-flex items-center gap-0.5 text-xs font-semibold text-[#1877F2] dark:text-[#58A6FF] hover:underline cursor-pointer shrink-0"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>{post.postTag}</span>
+                      </button>
+                    )}
+                  </div>
                   <p className="text-[10.5px] sm:text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 whitespace-nowrap overflow-hidden">
                     <span className="truncate">
                       {formatDhakaDateTime(post.createdAt)}
@@ -1017,10 +1132,37 @@ export const NewsDetails: React.FC = () => {
                     <span className="shrink-0">·</span>
                     <Globe className="w-3 h-3 shrink-0" />
                   </p>
-                  {post.isAiGenerated && (
-                    <div className="mt-0.5 flex items-center gap-1 text-[10.5px] sm:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
-                      <Sparkles className="w-3 h-3 text-[#1877F2] shrink-0" />
-                      <span>AI generated</span>
+                  {(post.isAiGenerated ||
+                    post.locationTag ||
+                    post.isGhostPost ||
+                    Boolean(
+                      post.scheduledAt && post.scheduledAt > Date.now()
+                    )) && (
+                    <div className="mt-0.5 flex items-center gap-2 flex-wrap text-[10.5px] sm:text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
+                      {post.isAiGenerated && (
+                        <span className="inline-flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-[#1877F2] shrink-0" />
+                          <span>AI generated</span>
+                        </span>
+                      )}
+                      {post.locationTag && (
+                        <span className="inline-flex items-center gap-0.5 text-zinc-600 dark:text-zinc-300">
+                          <MapPin className="w-3 h-3 text-emerald-500 shrink-0" />
+                          <span>{post.locationTag}</span>
+                        </span>
+                      )}
+                      {post.isGhostPost && (
+                        <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                          <DottedGhostCatIcon className="w-3 h-3 shrink-0" />
+                          <span>Ghost · 24h</span>
+                        </span>
+                      )}
+                      {post.scheduledAt && post.scheduledAt > Date.now() && (
+                        <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          <span>Scheduled</span>
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1251,26 +1393,28 @@ export const NewsDetails: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => navigate(`/news-hub/share/${post.id}`)}
-                className="h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 flex items-center gap-1.5 text-xs font-semibold tabular-nums cursor-pointer whitespace-nowrap shrink-0"
+                onClick={() => {
+                  triggerHaptic();
+                  setShowShareModal(true);
+                }}
+                className="h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 flex items-center gap-1.5 text-xs font-semibold tabular-nums cursor-pointer whitespace-nowrap shrink-0 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
               >
                 <Send className="w-3.5 h-3.5 stroke-[2] shrink-0" />
                 <span>Share</span>
               </button>
 
-              {Boolean(
-                currentUser?.uid &&
-                  (post.reporterId === currentUser.uid ||
-                    (post as any).authorId === currentUser.uid)
-              ) && (
-                <span
-                  className="h-9 sm:h-10 px-3 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 flex items-center gap-1.5 text-xs font-semibold tabular-nums text-zinc-600 dark:text-zinc-300 whitespace-nowrap shrink-0"
-                  title="Views (only visible to you)"
-                >
-                  <Eye className="w-4 h-4 shrink-0" />
-                  <span>{formatCompactNumber(post.views || 0)}</span>
-                </span>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setShowActivityModal(true);
+                }}
+                className="h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 flex items-center gap-1.5 text-xs font-semibold tabular-nums text-zinc-600 dark:text-zinc-300 cursor-pointer whitespace-nowrap shrink-0 hover:bg-slate-200 dark:hover:bg-zinc-700 transition"
+                title="View Post Activity & Analytics"
+              >
+                <BarChart2 className="w-4 h-4 shrink-0 text-[#1877F2]" />
+                <span>{formatCompactNumber(post.views || 0)}</span>
+              </button>
             </div>
 
             <button
@@ -1296,13 +1440,13 @@ export const NewsDetails: React.FC = () => {
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-zinc-800">
               <h2 className="text-[16px] font-bold flex items-center gap-2 whitespace-nowrap">
                 <MessageCircle className="w-4 h-4 text-[#1877F2]" />
-                <span>Comments ({formatCompactNumber(comments.length)})</span>
+                <span>Comments ({formatCompactNumber(visibleComments.length)})</span>
               </h2>
             </div>
 
             {/* Comments List (Scrollable on Desktop Right Panel) */}
             <div className="lg:flex-1 lg:overflow-y-auto lg:pr-1 space-y-3">
-              {comments.length === 0 ? (
+              {visibleComments.length === 0 ? (
                 <div className="py-8 text-center space-y-1.5">
                   <MessageCircle className="w-7 h-7 text-zinc-300 dark:text-zinc-600 mx-auto" />
                   <p className="text-xs text-zinc-500">
@@ -1310,7 +1454,7 @@ export const NewsDetails: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                comments.map((cmt) => {
+                visibleComments.map((cmt) => {
                   const isCommentOwner = Boolean(
                     currentUser?.uid && currentUser.uid === cmt.userId
                   );
@@ -1323,268 +1467,142 @@ export const NewsDetails: React.FC = () => {
                   const isEditingThis = editingCommentId === cmt.id;
 
                   return (
-                    <div
+                    <CommentItemWithActions
                       key={cmt.id}
-                      className={`flex items-start gap-2.5 sm:gap-3 ${
-                        cmt.replyToCommentId ? "pl-7 sm:pl-8" : ""
-                      }`}
-                    >
-                      <img
-                        src={cmt.userAvatar || creatorAvatar1}
-                        alt={cmt.userName}
-                        referrerPolicy="no-referrer"
-                        onClick={() => navigate(`/author/${cmt.userId}`)}
-                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shrink-0 cursor-pointer"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800 px-3.5 py-2.5 space-y-1.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                              {cmt.userName}
-                            </span>
-                            <span className="text-[10px] text-zinc-400 whitespace-nowrap shrink-0">
-                              {formatDhakaFeedTime(cmt.createdAt)}
-                              {cmt.isEdited ? " · Edited" : ""}
-                            </span>
-                          </div>
-
-                          {cmt.replyToUserName && (
-                            <span className="text-[11px] font-semibold text-[#1877F2] block">
-                              @{cmt.replyToUserName}
-                            </span>
-                          )}
-
-                          {isEditingThis ? (
-                            <div className="space-y-2 pt-0.5">
-                              <input
-                                type="text"
-                                value={editingCommentText}
-                                onChange={(e) =>
-                                  setEditingCommentText(e.target.value)
-                                }
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    handleSaveCommentEdit(cmt);
-                                  } else if (e.key === "Escape") {
-                                    setEditingCommentId(null);
-                                    setEditingCommentText("");
-                                  }
-                                }}
-                                className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-white outline-none focus:border-[#1877F2]"
-                              />
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingCommentId(null);
-                                    setEditingCommentText("");
-                                  }}
-                                  className="px-2.5 py-1 rounded-full bg-zinc-200/80 dark:bg-zinc-700 text-[10.5px] font-semibold text-zinc-700 dark:text-zinc-200 cursor-pointer"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={savingCommentEdit}
-                                  onClick={() => handleSaveCommentEdit(cmt)}
-                                  className="px-3 py-1 rounded-full bg-[#1877F2] text-white text-[10.5px] font-bold disabled:opacity-50 cursor-pointer"
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            cmt.text && (
-                              <p className="text-xs text-zinc-700 dark:text-zinc-200 leading-relaxed break-words">
-                                <NewsRichText text={cmt.text} />
-                              </p>
-                            )
-                          )}
-
-                          {cmt.imageUrl && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                triggerHaptic();
-                                navigate(
-                                  `/news-hub/photo/${post.id}/0?commentId=${encodeURIComponent(
-                                    cmt.id
-                                  )}`,
-                                  {
-                                    state: {
-                                      commentImageUrl: cmt.imageUrl,
-                                      commentAuthorName: cmt.userName,
-                                      commentText: cmt.text || "",
-                                    },
-                                  }
-                                );
-                              }}
-                              className="group relative block mt-1.5 rounded-xl overflow-hidden cursor-zoom-in focus:outline-none"
-                              aria-label="View comment photo in full screen"
-                            >
-                              <img
-                                src={cmt.imageUrl}
-                                alt="Comment media"
-                                referrerPolicy="no-referrer"
-                                className="rounded-xl max-h-52 w-auto object-cover transition-transform duration-200 group-hover:scale-[1.015]"
-                              />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 pl-2 pt-1">
-                          {/* Comment Reaction Quick Picker */}
-                          <div className="flex items-center gap-1.5">
-                            {[
-                              { type: "love", emoji: "❤️" },
-                              { type: "like", emoji: "👍" },
-                              { type: "haha", emoji: "😆" },
-                            ].map((re) => {
-                              const count = cmt.reactionsCount?.[re.type] || 0;
-                              const isMine = cmt.reactions?.[currentUser?.uid || ""] === re.type;
-                              return (
-                                <button
-                                  key={re.type}
-                                  type="button"
-                                  onClick={() => handleCommentReaction(cmt, re.type as ReactionType)}
-                                  className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium flex items-center gap-1 transition cursor-pointer ${
-                                    isMine
-                                      ? "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-bold"
-                                      : "hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500"
-                                  }`}
-                                >
-                                  <span>{re.emoji}</span>
-                                  {count > 0 && <span className="text-[10px]">{count}</span>}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReplyingTo({
-                                commentId: cmt.id,
-                                userName: cmt.userName,
-                              });
-                              commentInputRef.current?.focus();
-                            }}
-                            className="text-[11px] font-semibold text-zinc-500 hover:text-[#1877F2] flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                          >
-                            <Reply className="w-3 h-3" />
-                            <span>Reply</span>
-                          </button>
-
-                          {isCommentOwner && !isEditingThis && (
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditComment(cmt)}
-                              className="text-[11px] font-semibold text-zinc-500 hover:text-[#1877F2] flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
-                          )}
-
-                          {canDeleteComment && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteComment(cmt)}
-                              className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Delete</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                      comment={cmt}
+                      postAuthorId={post.reporterId}
+                      onReact={handleCommentReaction}
+                      onReply={(targetCmt) => {
+                        setReplyingTo({
+                          commentId: targetCmt.id,
+                          userName: targetCmt.userName,
+                        });
+                        commentInputRef.current?.focus();
+                      }}
+                      onEdit={handleStartEditComment}
+                      onDelete={handleDeleteComment}
+                    />
                   );
                 })
               )}
             </div>
 
-            {/* Pinned Comment Composer */}
-            <form
-              onSubmit={handleSubmitComment}
-              className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800"
-            >
-              {replyingTo && (
-                <div className="flex items-center justify-between px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-xs text-[#1877F2]">
-                  <span className="truncate">Replying to @{replyingTo.userName}</span>
-                  <button
-                    type="button"
-                    onClick={() => setReplyingTo(null)}
-                    className="cursor-pointer shrink-0 ml-2"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
+            {/* Pinned Comment Composer (Respects replyPermission) */}
+            {canCurrentUserReply ? (
+              <form
+                onSubmit={handleSubmitComment}
+                className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800"
+              >
+                {post.reviewApproveReplies && !canManage && (
+                  <p className="text-[11px] text-zinc-400 px-2">
+                    Replies on this post are reviewed by {post.reporterName} before appearing publicly.
+                  </p>
+                )}
 
-              {commentImage && (
-                <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700">
-                  <img
-                    src={commentImage}
-                    alt="Attachment"
-                    className="w-full h-full object-cover"
+                {replyingTo && (
+                  <div className="flex items-center justify-between px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-xs text-[#1877F2]">
+                    <span className="truncate">
+                      Replying to @{replyingTo.userName}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setReplyingTo(null)}
+                      className="cursor-pointer shrink-0 ml-2"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {commentImage && (
+                  <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700">
+                    <img
+                      src={commentImage}
+                      alt="Attachment"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCommentImage(null)}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={commentFileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCommentPhotoPick}
+                    className="hidden"
                   />
                   <button
                     type="button"
-                    onClick={() => setCommentImage(null)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center cursor-pointer"
+                    onClick={() => commentFileRef.current?.click()}
+                    disabled={processingCommentImg}
+                    className="w-10 h-10 rounded-full bg-[#F4F5F7] dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0 cursor-pointer"
+                    aria-label="Attach photo to comment"
                   >
-                    <X className="w-3 h-3" />
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+
+                  <input
+                    ref={commentInputRef}
+                    type="text"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Write a comment..."
+                    className="flex-1 h-10 sm:h-11 px-4 rounded-full bg-[#F4F5F7] dark:bg-zinc-800 text-sm outline-none min-w-0"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={
+                      isSubmittingComment ||
+                      (!commentText.trim() && !commentImage)
+                    }
+                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#1877F2] text-white flex items-center justify-center disabled:opacity-45 shrink-0 cursor-pointer"
+                    aria-label="Send comment"
+                  >
+                    <Send className="w-4 h-4" />
                   </button>
                 </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <input
-                  ref={commentFileRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCommentPhotoPick}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => commentFileRef.current?.click()}
-                  disabled={processingCommentImg}
-                  className="w-10 h-10 rounded-full bg-[#F4F5F7] dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0 cursor-pointer"
-                  aria-label="Attach photo to comment"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                </button>
-
-                <input
-                  ref={commentInputRef}
-                  type="text"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Write a comment..."
-                  className="flex-1 h-10 sm:h-11 px-4 rounded-full bg-[#F4F5F7] dark:bg-zinc-800 text-sm outline-none min-w-0"
-                />
-
-                <button
-                  type="submit"
-                  disabled={
-                    isSubmittingComment || (!commentText.trim() && !commentImage)
-                  }
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#1877F2] text-white flex items-center justify-center disabled:opacity-45 shrink-0 cursor-pointer"
-                  aria-label="Send comment"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+              </form>
+            ) : (
+              <div className="pt-3 border-t border-slate-100 dark:border-zinc-800">
+                <div className="px-4 py-3 rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800/80 flex items-center gap-2.5 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  <Lock className="w-4 h-4 shrink-0 text-zinc-400" />
+                  <span>{replyRestrictionText}</span>
+                </div>
               </div>
-            </form>
+            )}
           </section>
         </div>
       </div>
 
       <NewsBottomDock />
+
+      {/* Share and Activity Modals */}
+      <LiquidGlassShareModal
+        isOpen={showShareModal}
+        post={post}
+        onClose={() => setShowShareModal(false)}
+        onRepost={() => {
+          notify("Reposted to News Hub!", "success");
+        }}
+        onQuotePost={() => {
+          navigate(`/news-hub/create?quotePostId=${post.id}`);
+        }}
+      />
+
+      <LiquidGlassActivityModal
+        isOpen={showActivityModal}
+        post={post}
+        onClose={() => setShowActivityModal(false)}
+      />
     </div>
   );
 };

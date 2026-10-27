@@ -24,6 +24,10 @@ import {
   Square,
   Link2,
   Sparkles,
+  Clock,
+  ChevronRight,
+  Music,
+  Volume2,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -37,6 +41,11 @@ import {
   ImageLayoutStyle,
   ImageAspectMode,
   ScamPost,
+  ReplyPermissionMode,
+  PostPoll,
+  PostSnippet,
+  PostQuoteBlock,
+  PostThreadItem,
 } from "../types";
 import {
   applyWatermarkToImage,
@@ -65,6 +74,32 @@ import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
 } from "../lib/admin";
+import {
+  DeezerMusicPickerModal,
+  AttachedMusic,
+} from "../components/DeezerMusicPickerModal";
+import {
+  ComposerDraftItem,
+  loadComposerDrafts,
+  saveComposerDraftItem,
+  removeComposerDraftItem,
+  StickerPeelSmileIcon,
+  GifBadgeOutlineIcon,
+  MusicNotesOutlineIcon,
+  MoreCircleDotsIcon,
+  SlidersSquareIcon,
+  DottedGhostCatIcon,
+  LiquidGlassHeaderCapsule,
+  LiquidGlassGhostToggle,
+  AttachmentMorePopover,
+  DraftsBottomSheet,
+  ScheduleDrumWheelModal,
+  StickersBottomSheet,
+  GiphyBottomSheet,
+  PostOptionsBottomSheet,
+  LiveCameraCaptureModal,
+  LocationPickerModal,
+} from "../components/ComposerLiquidGlassSheets";
 
 import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
@@ -187,6 +222,8 @@ export const CreateScamPost: React.FC = () => {
 
   const initialTab = searchParams.get("tab") || "";
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraFallbackInputRef = useRef<HTMLInputElement | null>(null);
+  const musicPreviewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
   const [step, setStep] = useState<1 | 2>(1);
@@ -219,7 +256,52 @@ export const CreateScamPost: React.FC = () => {
     useState<ImageAspectMode>("original");
   const [isProcessingImages, setIsProcessingImages] = useState(false);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [manualAiLabel, setManualAiLabel] = useState(false);
   const [isCheckingAiImage, setIsCheckingAiImage] = useState(false);
+
+  // Liquid Glass Composer Additions (Tags, Stickers, GIF, Music, Poll, Snippet, Quote, Thread, Schedule, Ghost, Reply Options)
+  const [postTag, setPostTag] = useState("");
+  const [tagInput, setTagInput] = useState("");
+  const [showTagPopover, setShowTagPopover] = useState(false);
+  const [locationTag, setLocationTag] = useState("");
+  const [gifUrl, setGifUrl] = useState("");
+  const [stickers, setStickers] = useState<string[]>([]);
+  const [attachedMusic, setAttachedMusic] = useState<AttachedMusic | null>(null);
+  const [playingAttachedMusic, setPlayingAttachedMusic] = useState(false);
+  const [pollDraft, setPollDraft] = useState<{
+    question: string;
+    options: string[];
+    durationHours: number;
+  } | null>(null);
+  const [snippetDraft, setSnippetDraft] = useState<{
+    title: string;
+    content: string;
+  } | null>(null);
+  const [quoteDraft, setQuoteDraft] = useState<{
+    text: string;
+    author: string;
+  } | null>(null);
+  const [threadItems, setThreadItems] = useState<PostThreadItem[]>([]);
+  const [scheduledAt, setScheduledAt] = useState<number | null>(null);
+  const [isGhostPost, setIsGhostPost] = useState(false);
+  const [replyPermission, setReplyPermission] =
+    useState<ReplyPermissionMode>("anyone");
+  const [reviewApproveReplies, setReviewApproveReplies] = useState(false);
+  const [alsoShareOn, setAlsoShareOn] = useState<string[]>([]);
+  const [drafts, setDrafts] = useState<ComposerDraftItem[]>(() =>
+    loadComposerDrafts(auth.currentUser?.uid)
+  );
+
+  // Liquid Glass Bottom Sheets & Popover States
+  const [showDraftsSheet, setShowDraftsSheet] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showStickersSheet, setShowStickersSheet] = useState(false);
+  const [showGiphySheet, setShowGiphySheet] = useState(false);
+  const [showMoreAttachPopover, setShowMoreAttachPopover] = useState(false);
+  const [showPostOptionsSheet, setShowPostOptionsSheet] = useState(false);
+  const [showMusicModal, setShowMusicModal] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   // Social Video Link Embed State (YouTube, Facebook, TikTok only — zero file upload)
   const [videoUrl, setVideoUrl] = useState("");
@@ -325,6 +407,38 @@ export const CreateScamPost: React.FC = () => {
       setImageLayout(found.imageLayout || "collage");
       setImageAspectRatio(found.imageAspectRatio || "original");
       setIsAiGenerated(Boolean(found.isAiGenerated));
+      setManualAiLabel(Boolean(found.isAiGenerated));
+      setPrivacy(found.privacy || "public");
+      setPostTag(found.postTag || "");
+      setLocationTag(found.locationTag || "");
+      setGifUrl(found.gifUrl || "");
+      setStickers(found.stickers || []);
+      setAttachedMusic(found.music || null);
+      if (found.poll) {
+        setPollDraft({
+          question: found.poll.question || "",
+          options: found.poll.options.map((o) => o.text),
+          durationHours: 24,
+        });
+      }
+      if (found.snippet) {
+        setSnippetDraft({
+          title: found.snippet.title || "",
+          content: found.snippet.content || "",
+        });
+      }
+      if (found.quoteBlock) {
+        setQuoteDraft({
+          text: found.quoteBlock.text || "",
+          author: found.quoteBlock.author || "",
+        });
+      }
+      setThreadItems(found.threadItems || []);
+      setScheduledAt(found.scheduledAt || null);
+      setIsGhostPost(Boolean(found.isGhostPost));
+      setReplyPermission(found.replyPermission || "anyone");
+      setReviewApproveReplies(Boolean(found.reviewApproveReplies));
+      setAlsoShareOn(found.alsoShareOn || []);
       setAudioUrl(found.audioUrl || "");
       setAudioDuration(found.audioDuration || 0);
       setRecordCentiseconds(found.audioDuration ? found.audioDuration * 100 : 0);
@@ -364,6 +478,21 @@ export const CreateScamPost: React.FC = () => {
       }
     });
   }, [editId, navigate, notify]);
+
+  // Reload drafts when auth user changes
+  useEffect(() => {
+    setDrafts(loadComposerDrafts(currentUser?.uid));
+  }, [currentUser?.uid]);
+
+  // Cleanup music preview audio on unmount
+  useEffect(() => {
+    return () => {
+      if (musicPreviewAudioRef.current) {
+        musicPreviewAudioRef.current.pause();
+        musicPreviewAudioRef.current = null;
+      }
+    };
+  }, []);
 
   // Verify edit permission once both auth and originalPost are ready
   useEffect(() => {
@@ -959,6 +1088,185 @@ export const CreateScamPost: React.FC = () => {
     );
   };
 
+  const effectiveAiLabel = Boolean(manualAiLabel || isAiGenerated);
+
+  const hasDraftableContent = Boolean(
+    description.trim() ||
+      gifUrl ||
+      stickers.length > 0 ||
+      pollDraft ||
+      snippetDraft ||
+      quoteDraft ||
+      threadItems.some((t) => t.text.trim())
+  );
+
+  const buildCurrentPollObject = (): PostPoll | null => {
+    if (!pollDraft) return null;
+    const validOptions = pollDraft.options
+      .map((o) => o.trim())
+      .filter(Boolean);
+    if (validOptions.length < 2) return null;
+    return {
+      id: originalPost?.poll?.id || `poll_${Date.now()}`,
+      question:
+        pollDraft.question.trim() ||
+        description.trim().slice(0, 120) ||
+        "Community Poll",
+      options: validOptions.map((optText, idx) => {
+        const existingOpt = originalPost?.poll?.options?.[idx];
+        return {
+          id: existingOpt?.id || `opt_${idx + 1}`,
+          text: optText,
+          voterIds:
+            existingOpt && existingOpt.text === optText
+              ? existingOpt.voterIds || []
+              : [],
+        };
+      }),
+      endsAt:
+        originalPost?.poll?.endsAt ||
+        Date.now() + (pollDraft.durationHours || 24) * 3600 * 1000,
+    };
+  };
+
+  const buildCurrentSnippetObject = (): PostSnippet | null => {
+    if (!snippetDraft || !snippetDraft.content.trim()) return null;
+    return {
+      title: snippetDraft.title.trim() || undefined,
+      content: snippetDraft.content.trim(),
+    };
+  };
+
+  const buildCurrentQuoteObject = (): PostQuoteBlock | null => {
+    if (!quoteDraft || !quoteDraft.text.trim()) return null;
+    return {
+      text: quoteDraft.text.trim(),
+      author: quoteDraft.author.trim() || undefined,
+    };
+  };
+
+  const handleSaveCurrentDraft = () => {
+    const draftObj: ComposerDraftItem = {
+      id: `draft_${Date.now()}`,
+      description,
+      postType,
+      textStyle,
+      postTag: postTag || undefined,
+      locationTag: locationTag || undefined,
+      gifUrl: gifUrl || undefined,
+      stickers: stickers.length > 0 ? stickers : undefined,
+      poll: buildCurrentPollObject(),
+      snippet: buildCurrentSnippetObject(),
+      quoteBlock: buildCurrentQuoteObject(),
+      threadItems: threadItems.filter((t) => t.text.trim() || t.imageUrl),
+      scheduledAt,
+      isGhostPost,
+      isAiGenerated: effectiveAiLabel,
+      replyPermission,
+      reviewApproveReplies,
+      updatedAt: Date.now(),
+    };
+    const next = saveComposerDraftItem(currentUser?.uid, draftObj);
+    setDrafts(next);
+    notify("Saved to drafts!", "success");
+  };
+
+  const handleLoadDraft = (draft: ComposerDraftItem) => {
+    setDescription(draft.description || "");
+    setPostType(draft.postType || "normal");
+    setTextStyle(draft.textStyle || "normal");
+    setPostTag(draft.postTag || "");
+    setLocationTag(draft.locationTag || "");
+    setGifUrl(draft.gifUrl || "");
+    setStickers(draft.stickers || []);
+    setPollDraft(
+      draft.poll
+        ? {
+            question: draft.poll.question,
+            options: draft.poll.options.map((o) => o.text),
+            durationHours: 24,
+          }
+        : null
+    );
+    setSnippetDraft(
+      draft.snippet
+        ? {
+            title: draft.snippet.title || "",
+            content: draft.snippet.content,
+          }
+        : null
+    );
+    setQuoteDraft(
+      draft.quoteBlock
+        ? {
+            text: draft.quoteBlock.text,
+            author: draft.quoteBlock.author || "",
+          }
+        : null
+    );
+    setThreadItems(draft.threadItems || []);
+    setScheduledAt(draft.scheduledAt || null);
+    setIsGhostPost(Boolean(draft.isGhostPost));
+    setManualAiLabel(Boolean(draft.isAiGenerated));
+    setReplyPermission(draft.replyPermission || "anyone");
+    setReviewApproveReplies(Boolean(draft.reviewApproveReplies));
+    notify("Draft restored to composer", "info");
+  };
+
+  const handleDeleteDraft = (draftId: string) => {
+    const next = removeComposerDraftItem(currentUser?.uid, draftId);
+    setDrafts(next);
+  };
+
+  const toggleAttachedMusicPreview = () => {
+    if (!attachedMusic?.audioUrl) return;
+    triggerHaptic();
+    if (playingAttachedMusic && musicPreviewAudioRef.current) {
+      musicPreviewAudioRef.current.pause();
+      setPlayingAttachedMusic(false);
+      return;
+    }
+    if (musicPreviewAudioRef.current) {
+      musicPreviewAudioRef.current.pause();
+    }
+    const audio = new Audio(attachedMusic.audioUrl);
+    audio.onended = () => setPlayingAttachedMusic(false);
+    audio
+      .play()
+      .then(() => setPlayingAttachedMusic(true))
+      .catch(() => setPlayingAttachedMusic(false));
+    musicPreviewAudioRef.current = audio;
+  };
+
+  const handleAddThreadItem = () => {
+    triggerHaptic();
+    setThreadItems((prev) => [
+      ...prev,
+      { id: `thread_${Date.now()}_${prev.length + 1}`, text: "" },
+    ]);
+  };
+
+  const handleThreadPhotoSelected = async (
+    threadId: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    triggerHaptic();
+    try {
+      const processed = await processCleanImage(file);
+      setThreadItems((prev) =>
+        prev.map((item) =>
+          item.id === threadId ? { ...item, imageUrl: processed.dataUrl } : item
+        )
+      );
+    } catch {
+      notify("Could not attach thread image", "error");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
   const handlePublish = async () => {
     if (!currentUser) {
       notify("Please sign in or sign up to create a post.", "error");
@@ -978,14 +1286,38 @@ export const CreateScamPost: React.FC = () => {
       return;
     }
 
+    if (pollDraft) {
+      const validPollOpts = pollDraft.options
+        .map((o) => o.trim())
+        .filter(Boolean);
+      if (validPollOpts.length < 2) {
+        notify("Please enter at least 2 poll options.", "error");
+        return;
+      }
+    }
+
+    const builtPoll = buildCurrentPollObject();
+    const builtSnippet = buildCurrentSnippetObject();
+    const builtQuote = buildCurrentQuoteObject();
+    const validThreadItems = threadItems.filter(
+      (t) => t.text.trim() || t.imageUrl
+    );
+
     if (
       !description.trim() &&
       processedImages.length === 0 &&
       !audioUrl &&
-      !effectiveVideoUrl
+      !effectiveVideoUrl &&
+      !gifUrl &&
+      stickers.length === 0 &&
+      !attachedMusic &&
+      !builtPoll &&
+      !builtSnippet &&
+      !builtQuote &&
+      validThreadItems.length === 0
     ) {
       notify(
-        "Write something, paste a YouTube/Facebook/TikTok link, or attach photos first.",
+        "Write something, add a poll/GIF/sticker/music, or attach photos first.",
         "error"
       );
       return;
@@ -1012,6 +1344,25 @@ export const CreateScamPost: React.FC = () => {
             ).filter(Boolean)
           : [];
 
+      // Upload any thread item photos in parallel
+      const hostedThreadItems: PostThreadItem[] =
+        validThreadItems.length > 0
+          ? await Promise.all(
+              validThreadItems.map(async (item, idx) => ({
+                id: item.id,
+                text: item.text.trim(),
+                ...(item.imageUrl
+                  ? {
+                      imageUrl: await ensureHostedPostImage(
+                        item.imageUrl,
+                        100 + idx
+                      ),
+                    }
+                  : {}),
+              }))
+            )
+          : [];
+
       const resolvedContentType: ScamPost["contentType"] =
         postType === "scam"
           ? "scam"
@@ -1021,7 +1372,7 @@ export const CreateScamPost: React.FC = () => {
           ? "video"
           : hostedImages.length > 0
           ? "image"
-          : textStyle === "quote"
+          : textStyle === "quote" || builtQuote
           ? "affirmation"
           : "text";
 
@@ -1034,12 +1385,19 @@ export const CreateScamPost: React.FC = () => {
 
       const autoTitle =
         description.trim().slice(0, 72) ||
+        builtPoll?.question.slice(0, 72) ||
+        builtQuote?.text.slice(0, 72) ||
+        builtSnippet?.title?.slice(0, 72) ||
         (postType === "scam"
           ? `Scam Report · ${scamLocation.trim()}`
           : audioUrl
           ? "Voice Note Update"
           : effectiveVideoUrl
           ? "Video Post"
+          : attachedMusic
+          ? `Listening to ${attachedMusic.title}`
+          : gifUrl
+          ? "GIF Update"
           : "Community Post");
 
       const isOwnerEditing =
@@ -1052,24 +1410,48 @@ export const CreateScamPost: React.FC = () => {
           ? selectedThemes
           : ["tech_news"];
 
+      const publishTimestamp = scheduledAt || Date.now();
+      const ghostExpiry = isGhostPost
+        ? publishTimestamp + 24 * 3600 * 1000
+        : null;
+
       const postPayload: Record<string, any> = {
         postType,
         title: autoTitle,
         description: description.trim(),
         textStyle,
-        category: effectiveThemes[0] || (postType === "scam" ? "scam_watch" : "tech_news"),
+        category:
+          effectiveThemes[0] ||
+          (postType === "scam" ? "scam_watch" : "tech_news"),
         themes: effectiveThemes,
         contentType: resolvedContentType,
         images: hostedImages,
         imageLayout,
         imageAspectRatio,
         imageNaturalRatios: naturalRatios,
-        isAiGenerated: Boolean(hostedImages.length > 0 && isAiGenerated),
+        isAiGenerated: Boolean(
+          manualAiLabel || (hostedImages.length > 0 && isAiGenerated)
+        ),
         audioUrl: audioUrl || null,
         audioDuration: audioDuration || null,
         audioWaveform:
           audioUrl && audioWaveform.length > 0 ? audioWaveform : null,
         videoUrl: effectiveVideoUrl || null,
+        gifUrl: gifUrl || null,
+        stickers: stickers.length > 0 ? stickers : null,
+        music: attachedMusic || null,
+        poll: builtPoll || null,
+        snippet: builtSnippet || null,
+        quoteBlock: builtQuote || null,
+        locationTag: locationTag.trim() || null,
+        postTag: postTag.trim().replace(/^#+/, "") || null,
+        threadItems: hostedThreadItems.length > 0 ? hostedThreadItems : null,
+        scheduledAt: scheduledAt || null,
+        isGhostPost: Boolean(isGhostPost),
+        expiresAt: ghostExpiry,
+        replyPermission,
+        reviewApproveReplies: Boolean(reviewApproveReplies),
+        alsoShareOn: alsoShareOn.length > 0 ? alsoShareOn : null,
         privacy,
         reporterId: isOwnerEditing ? authorId : originalPost.reporterId,
         reporterName: isOwnerEditing ? authorName : originalPost.reporterName,
@@ -1136,12 +1518,35 @@ export const CreateScamPost: React.FC = () => {
         commentsCount: 0,
         sharesCount: 0,
         savedByUserIds: [],
-        createdAt: Date.now(),
+        createdAt: publishTimestamp,
         views: 1,
       };
 
       const ref = await addDoc(collection(db, "scam_posts"), fullNewDoc);
       const createdId = ref.id;
+
+      // Handle "Also share on..." options from PostOptionsBottomSheet
+      if (alsoShareOn.includes("copy_link")) {
+        try {
+          await navigator.clipboard?.writeText(
+            `${window.location.origin}/news-hub/post/${createdId}`
+          );
+        } catch {}
+      }
+      if (alsoShareOn.includes("story") && currentUser?.uid) {
+        addDoc(collection(db, "stories"), {
+          authorId: authorId,
+          authorName,
+          authorAvatar,
+          mediaUrl: hostedImages[0] || gifUrl || authorAvatar,
+          mediaType: "image",
+          caption: (description.trim() || autoTitle).slice(0, 140),
+          createdAt: Date.now(),
+          expiresAt: Date.now() + 24 * 3600 * 1000,
+          viewerIds: [],
+          likedBy: [],
+        }).catch(() => {});
+      }
 
       try {
         const existing = JSON.parse(
@@ -1155,7 +1560,16 @@ export const CreateScamPost: React.FC = () => {
       } catch {}
 
       notify(
-        postType === "scam"
+        scheduledAt && scheduledAt > Date.now()
+          ? `Post scheduled for ${new Date(scheduledAt).toLocaleString([], {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}!`
+          : isGhostPost
+          ? "24-hour Ghost post shared to Feed!"
+          : postType === "scam"
           ? "Scam report published with verified location stamp!"
           : "Post shared to Feed!",
         "success"
@@ -1163,7 +1577,10 @@ export const CreateScamPost: React.FC = () => {
       navigate("/news-hub");
     } catch (err) {
       console.error("Publish error:", err);
-      notify("Could not publish post. Please check your connection and try again.", "error");
+      notify(
+        "Could not publish post. Please check your connection and try again.",
+        "error"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -1184,11 +1601,20 @@ export const CreateScamPost: React.FC = () => {
     imageLayout,
     imageAspectRatio,
     imageNaturalRatios: naturalRatios,
-    isAiGenerated: Boolean(processedImages.length > 0 && isAiGenerated),
+    isAiGenerated: effectiveAiLabel,
     audioUrl: audioUrl || undefined,
     audioDuration: audioDuration || undefined,
     audioWaveform: audioWaveform.length > 0 ? audioWaveform : undefined,
     videoUrl: effectiveVideoUrl || undefined,
+    gifUrl: gifUrl || undefined,
+    stickers: stickers.length > 0 ? stickers : undefined,
+    music: attachedMusic || undefined,
+    poll: buildCurrentPollObject() || undefined,
+    snippet: buildCurrentSnippetObject() || undefined,
+    quoteBlock: buildCurrentQuoteObject() || undefined,
+    threadItems: threadItems.filter((t) => t.text.trim() || t.imageUrl),
+    reporterName: userNameDisplay,
+    reporterAvatar: userAvatarDisplay,
     scamLocation: postType === "scam" ? scamLocation : undefined,
   };
 
@@ -1196,7 +1622,7 @@ export const CreateScamPost: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-8">
       <SEO
         title={editId ? "Edit Post — Feed" : "Create a post — Feed"}
-        description="Share photos, videos, YouTube/Facebook/TikTok embeds, voice notes, or verified community scam alerts."
+        description="Share photos, videos, YouTube/Facebook/TikTok embeds, voice notes, polls, GIFs, or verified community scam alerts."
       />
 
       {/* Hidden Multi-Image File Input */}
@@ -1205,6 +1631,14 @@ export const CreateScamPost: React.FC = () => {
         type="file"
         accept="image/*"
         multiple
+        onChange={handleFilesSelected}
+        className="hidden"
+      />
+      <input
+        ref={cameraFallbackInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handleFilesSelected}
         className="hidden"
       />
@@ -1238,24 +1672,41 @@ export const CreateScamPost: React.FC = () => {
           </div>
 
           {step === 1 ? (
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                if (hasUnsupportedVideoInput) {
+            <div className="flex items-center gap-2 shrink-0">
+              <LiquidGlassHeaderCapsule
+                draftsCount={drafts.length}
+                isAiGenerated={effectiveAiLabel}
+                scheduledAt={scheduledAt}
+                onOpenDrafts={() => setShowDraftsSheet(true)}
+                onToggleAiLabel={() => {
+                  const next = !effectiveAiLabel;
+                  setManualAiLabel(next);
                   notify(
-                    "Please paste a valid YouTube, Facebook, or TikTok video link.",
-                    "error"
+                    next ? "AI label added to post" : "AI label removed",
+                    "info"
                   );
-                  return;
-                }
-                if (isRecording) stopVoiceRecording();
-                setStep(2);
-              }}
-              className="px-4.5 py-2 rounded-full bg-white dark:bg-zinc-100 text-zinc-900 font-semibold text-[13px] shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:bg-slate-50 active:scale-95 transition cursor-pointer shrink-0 whitespace-nowrap"
-            >
-              Next
-            </button>
+                }}
+                onOpenSchedule={() => setShowScheduleModal(true)}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  if (hasUnsupportedVideoInput) {
+                    notify(
+                      "Please paste a valid YouTube, Facebook, or TikTok video link.",
+                      "error"
+                    );
+                    return;
+                  }
+                  if (isRecording) stopVoiceRecording();
+                  setStep(2);
+                }}
+                className="px-4.5 py-2 rounded-full bg-white dark:bg-zinc-100 text-zinc-900 font-semibold text-[13px] shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:bg-slate-50 active:scale-95 transition cursor-pointer shrink-0 whitespace-nowrap"
+              >
+                Next
+              </button>
+            </div>
           ) : (
             <button
               type="button"
@@ -1276,7 +1727,7 @@ export const CreateScamPost: React.FC = () => {
           {step === 1 ? (
             <>
               <div className="space-y-4 sm:space-y-5">
-                {/* User Avatar with Dashed Ring + Post Mode Toggle */}
+                {/* User Avatar with Dashed Ring + Add Tag + Post Mode Toggle */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                     <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full p-[2.5px] border-[1.5px] border-dashed border-[#1877F2] shrink-0">
@@ -1287,28 +1738,185 @@ export const CreateScamPost: React.FC = () => {
                         className="w-full h-full rounded-full object-cover"
                       />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[15px] sm:text-[16px] font-bold text-zinc-900 dark:text-white truncate">
-                        {userNameDisplay}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic();
-                          setActiveInlinePanel((p) =>
-                            p === "audience" ? null : "audience"
-                          );
-                        }}
-                        className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1 whitespace-nowrap cursor-pointer hover:text-[#1877F2] transition"
-                      >
-                        <Globe className="w-3 h-3 shrink-0" />
-                        <span className="capitalize">
-                          {privacy === "only_me" ? "Only Me" : privacy}
-                        </span>
-                        {textStyle !== "normal" && (
-                          <span>· {textStyle}</span>
+                    <div className="min-w-0 relative">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <p className="text-[15px] sm:text-[16px] font-bold text-zinc-900 dark:text-white truncate max-w-[140px] sm:max-w-[200px]">
+                          {userNameDisplay}
+                        </p>
+                        <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                        {postTag ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1877F2]/10 text-[#1877F2] dark:text-[#58A6FF] text-xs font-semibold">
+                            <span>{postTag}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic();
+                                setPostTag("");
+                              }}
+                              className="hover:opacity-75 cursor-pointer"
+                              aria-label="Remove tag"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setTagInput("");
+                              setShowTagPopover((p) => !p);
+                            }}
+                            className="text-[13.5px] font-medium text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition cursor-pointer whitespace-nowrap"
+                          >
+                            Add tag
+                          </button>
                         )}
-                      </button>
+                      </div>
+
+                      {/* Liquid Glass Add Tag Popover */}
+                      {showTagPopover && (
+                        <div className="absolute left-0 top-7 z-50 w-64 rounded-[24px] bg-white/90 dark:bg-zinc-900/92 backdrop-blur-2xl border border-white/95 dark:border-white/15 shadow-[0_18px_48px_rgba(15,23,42,0.16)] p-3 space-y-2.5">
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F2F3F5] dark:bg-zinc-800">
+                            <span className="text-xs font-bold text-zinc-400">
+                              #
+                            </span>
+                            <input
+                              type="text"
+                              value={tagInput}
+                              onChange={(e) => setTagInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && tagInput.trim()) {
+                                  e.preventDefault();
+                                  setPostTag(
+                                    tagInput.trim().replace(/^#+/, "")
+                                  );
+                                  setShowTagPopover(false);
+                                }
+                              }}
+                              placeholder="Topic tag..."
+                              autoFocus
+                              className="w-full bg-transparent text-xs font-medium text-zinc-900 dark:text-white outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (tagInput.trim()) {
+                                  setPostTag(
+                                    tagInput.trim().replace(/^#+/, "")
+                                  );
+                                }
+                                setShowTagPopover(false);
+                              }}
+                              className="text-xs font-bold text-[#1877F2] cursor-pointer"
+                            >
+                              Add
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {[
+                              "community",
+                              "tech",
+                              "dhaka",
+                              "scamalert",
+                              "update",
+                              "deals",
+                            ].map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => {
+                                  triggerHaptic();
+                                  setPostTag(t);
+                                  setShowTagPopover(false);
+                                }}
+                                className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 hover:bg-[#1877F2]/12 hover:text-[#1877F2] text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer transition"
+                              >
+                                #{t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setActiveInlinePanel((p) =>
+                              p === "audience" ? null : "audience"
+                            );
+                          }}
+                          className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1 whitespace-nowrap cursor-pointer hover:text-[#1877F2] transition"
+                        >
+                          <Globe className="w-3 h-3 shrink-0" />
+                          <span className="capitalize">
+                            {privacy === "only_me" ? "Only Me" : privacy}
+                          </span>
+                          {textStyle !== "normal" && (
+                            <span>· {textStyle}</span>
+                          )}
+                        </button>
+
+                        {effectiveAiLabel && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] text-[10.5px] font-semibold">
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span>AI label</span>
+                            <button
+                              type="button"
+                              onClick={() => setManualAiLabel(false)}
+                              className="cursor-pointer"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </span>
+                        )}
+
+                        {scheduledAt && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10.5px] font-semibold">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>
+                              {new Date(scheduledAt).toLocaleString([], {
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setScheduledAt(null)}
+                              className="cursor-pointer"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </span>
+                        )}
+
+                        {locationTag && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[10.5px] font-semibold">
+                            <MapPin className="w-2.5 h-2.5" />
+                            <span className="max-w-[120px] truncate">
+                              {locationTag}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setLocationTag("")}
+                              className="cursor-pointer"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </span>
+                        )}
+
+                        {isGhostPost && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 text-[10.5px] font-semibold">
+                            <DottedGhostCatIcon className="w-3 h-3" />
+                            <span>Ghost · 24h</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1375,6 +1983,122 @@ export const CreateScamPost: React.FC = () => {
                   />
                 </div>
 
+                {/* Quick Attachment Row (Photo, Video, Stickers, GIF, More -> Snippet/Quote/Camera/Poll/Location) */}
+                <div className="relative flex items-center gap-4 pt-0.5 px-0.5 text-zinc-400 dark:text-zinc-500">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setActiveInlinePanel("media");
+                      fileInputRef.current?.click();
+                    }}
+                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
+                      processedImages.length > 0 ? "text-[#1877F2] dark:text-[#58A6FF]" : ""
+                    }`}
+                    title="Attach photos"
+                    aria-label="Attach photos"
+                  >
+                    <ImageIcon className="w-[21px] h-[21px] stroke-[1.85]" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setActiveInlinePanel((p) => (p === "video" ? null : "video"));
+                    }}
+                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
+                      Boolean(activeVideoEmbed) || activeInlinePanel === "video"
+                        ? "text-[#1877F2] dark:text-[#58A6FF]"
+                        : ""
+                    }`}
+                    title="Embed YouTube, Facebook, or TikTok Video"
+                    aria-label="Video Link"
+                  >
+                    <Video className="w-[21px] h-[21px] stroke-[1.85]" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowStickersSheet(true);
+                    }}
+                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
+                      stickers.length > 0
+                        ? "text-[#1877F2] dark:text-[#58A6FF]"
+                        : ""
+                    }`}
+                    title="Stickers & Kaomoji"
+                    aria-label="Stickers"
+                  >
+                    <StickerPeelSmileIcon className="w-[21px] h-[21px]" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowGiphySheet(true);
+                    }}
+                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
+                      gifUrl ? "text-[#1877F2] dark:text-[#58A6FF]" : ""
+                    }`}
+                    title="Attach GIF"
+                    aria-label="GIF"
+                  >
+                    <GifBadgeOutlineIcon className="w-[21px] h-[21px]" />
+                  </button>
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setShowMoreAttachPopover((prev) => !prev);
+                      }}
+                      className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer flex items-center justify-center ${
+                        showMoreAttachPopover
+                          ? "text-zinc-900 dark:text-white"
+                          : ""
+                      }`}
+                      title="Snippet, Quote, Camera, Poll, Location"
+                      aria-label="More attachments"
+                    >
+                      <MoreCircleDotsIcon className="w-[21px] h-[21px]" />
+                    </button>
+
+                    <AttachmentMorePopover
+                      open={showMoreAttachPopover}
+                      onClose={() => setShowMoreAttachPopover(false)}
+                      onSelectAction={(action) => {
+                        if (action === "snippet") {
+                          setSnippetDraft(
+                            (prev) => prev || { title: "", content: "" }
+                          );
+                        } else if (action === "quote") {
+                          setQuoteDraft(
+                            (prev) => prev || { text: "", author: "" }
+                          );
+                        } else if (action === "camera") {
+                          setShowCameraModal(true);
+                        } else if (action === "poll") {
+                          setPollDraft(
+                            (prev) =>
+                              prev || {
+                                question: "",
+                                options: ["", ""],
+                                durationHours: 24,
+                              }
+                          );
+                        } else if (action === "location") {
+                          setShowLocationModal(true);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
                 {/* Live Detected Blue #Hashtags & Stylish Link Preview while composing */}
                 {extractHashtagsFromText(description).length > 0 && (
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -1389,6 +2113,417 @@ export const CreateScamPost: React.FC = () => {
                   </div>
                 )}
                 <NewsLinkPreviewCards text={description} />
+
+                {/* ATTACHED STICKERS PREVIEW ROW */}
+                {stickers.length > 0 && (
+                  <div className="flex items-center gap-2.5 flex-wrap pt-1">
+                    {stickers.map((sUrl, sIdx) => (
+                      <div
+                        key={`${sUrl}-${sIdx}`}
+                        className="relative w-20 h-20 rounded-2xl bg-[#F6F8FB] dark:bg-zinc-800/70 p-2 flex items-center justify-center border border-slate-200/70 dark:border-zinc-700"
+                      >
+                        <img
+                          src={sUrl}
+                          alt="Sticker"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-contain"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setStickers((prev) =>
+                              prev.filter((_, idx) => idx !== sIdx)
+                            );
+                          }}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-xs cursor-pointer"
+                          aria-label="Remove sticker"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* ATTACHED GIPHY PREVIEW CARD */}
+                {gifUrl && (
+                  <div className="relative rounded-[24px] overflow-hidden border border-slate-200/80 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 max-w-sm">
+                    <img
+                      src={gifUrl}
+                      alt="Attached GIF"
+                      referrerPolicy="no-referrer"
+                      className="w-full max-h-72 object-cover block"
+                    />
+                    <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-extrabold tracking-wider">
+                      GIF
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setGifUrl("");
+                      }}
+                      className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/75 text-white flex items-center justify-center hover:bg-black cursor-pointer"
+                      aria-label="Remove GIF"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* ATTACHED DEEZER MUSIC TRACK PREVIEW */}
+                {attachedMusic && (
+                  <div className="rounded-[24px] bg-gradient-to-r from-indigo-50/90 via-sky-50/80 to-purple-50/90 dark:from-zinc-800 dark:via-zinc-800/90 dark:to-zinc-800 border border-indigo-200/60 dark:border-zinc-700 p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-xs">
+                        <img
+                          src={attachedMusic.cover}
+                          alt={attachedMusic.title}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={toggleAttachedMusicPreview}
+                          className="absolute inset-0 bg-black/35 text-white flex items-center justify-center cursor-pointer"
+                          aria-label="Play music preview"
+                        >
+                          {playingAttachedMusic ? (
+                            <Pause className="w-4 h-4 fill-current" />
+                          ) : (
+                            <Play className="w-4 h-4 fill-current ml-0.5" />
+                          )}
+                        </button>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#1877F2]">
+                          <Music className="w-3 h-3" />
+                          <span>Attached Music</span>
+                          {playingAttachedMusic && (
+                            <Volume2 className="w-3 h-3 animate-pulse" />
+                          )}
+                        </div>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                          {attachedMusic.title}
+                        </p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                          {attachedMusic.artist}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        if (musicPreviewAudioRef.current) {
+                          musicPreviewAudioRef.current.pause();
+                        }
+                        setPlayingAttachedMusic(false);
+                        setAttachedMusic(null);
+                      }}
+                      className="w-7 h-7 rounded-full bg-white/80 dark:bg-zinc-900 text-zinc-500 hover:text-rose-600 flex items-center justify-center shrink-0 cursor-pointer"
+                      aria-label="Remove music"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* INLINE INTERACTIVE POLL BUILDER */}
+                {pollDraft && (
+                  <div className="rounded-[24px] bg-[#F6F8FB] dark:bg-zinc-800/70 border border-slate-200/80 dark:border-zinc-700 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                        Interactive Poll
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setPollDraft(null);
+                        }}
+                        className="w-6 h-6 rounded-full bg-white dark:bg-zinc-900 text-zinc-500 hover:text-rose-600 flex items-center justify-center cursor-pointer"
+                        aria-label="Remove poll"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={pollDraft.question}
+                      onChange={(e) =>
+                        setPollDraft((prev) =>
+                          prev ? { ...prev, question: e.target.value } : null
+                        )
+                      }
+                      placeholder="Ask a question (optional if written above)..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-700 text-xs font-semibold outline-none focus:border-[#1877F2]"
+                    />
+
+                    <div className="space-y-2">
+                      {pollDraft.options.map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setPollDraft((prev) => {
+                                if (!prev) return null;
+                                const nextOpts = [...prev.options];
+                                nextOpts[idx] = val;
+                                return { ...prev, options: nextOpts };
+                              });
+                            }}
+                            placeholder={`Choice ${idx + 1}`}
+                            className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-700 text-xs outline-none focus:border-[#1877F2]"
+                          />
+                          {pollDraft.options.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPollDraft((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        options: prev.options.filter(
+                                          (_, i) => i !== idx
+                                        ),
+                                      }
+                                    : null
+                                )
+                              }
+                              className="w-7 h-7 rounded-full text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      {pollDraft.options.length < 4 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPollDraft((prev) =>
+                              prev
+                                ? { ...prev, options: [...prev.options, ""] }
+                                : null
+                            )
+                          }
+                          className="text-xs font-bold text-[#1877F2] flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add option</span>
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-zinc-400">
+                          Max 4 choices
+                        </span>
+                      )}
+
+                      <div className="flex items-center gap-1">
+                        {[
+                          { h: 24, label: "24h" },
+                          { h: 72, label: "3d" },
+                          { h: 168, label: "7d" },
+                        ].map((dur) => (
+                          <button
+                            key={dur.h}
+                            type="button"
+                            onClick={() =>
+                              setPollDraft((prev) =>
+                                prev ? { ...prev, durationHours: dur.h } : null
+                              )
+                            }
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer ${
+                              pollDraft.durationHours === dur.h
+                                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                                : "bg-white dark:bg-zinc-900 text-zinc-500"
+                            }`}
+                          >
+                            {dur.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* INLINE SNIPPET CARD EDITOR */}
+                {snippetDraft && (
+                  <div className="rounded-[24px] bg-zinc-950 text-zinc-100 p-4 space-y-2.5 border border-zinc-800">
+                    <div className="flex items-center justify-between">
+                      <input
+                        type="text"
+                        value={snippetDraft.title}
+                        onChange={(e) =>
+                          setSnippetDraft((prev) =>
+                            prev ? { ...prev, title: e.target.value } : null
+                          )
+                        }
+                        placeholder="Snippet title (optional)..."
+                        className="bg-transparent text-xs font-bold text-zinc-200 placeholder:text-zinc-500 outline-none flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSnippetDraft(null)}
+                        className="w-6 h-6 rounded-full bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={snippetDraft.content}
+                      onChange={(e) =>
+                        setSnippetDraft((prev) =>
+                          prev ? { ...prev, content: e.target.value } : null
+                        )
+                      }
+                      placeholder="Paste or write a formatted note, excerpt, or code snippet..."
+                      className="w-full bg-zinc-900/90 rounded-2xl p-3 font-mono text-xs text-zinc-100 placeholder:text-zinc-500 outline-none resize-none border border-zinc-800"
+                    />
+                  </div>
+                )}
+
+                {/* INLINE QUOTE BLOCK EDITOR */}
+                {quoteDraft && (
+                  <div className="rounded-[24px] bg-[#F5F7FA] dark:bg-zinc-800/80 border-l-4 border-[#1877F2] p-4 space-y-2 relative">
+                    <button
+                      type="button"
+                      onClick={() => setQuoteDraft(null)}
+                      className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white dark:bg-zinc-900 text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <textarea
+                      rows={2}
+                      value={quoteDraft.text}
+                      onChange={(e) =>
+                        setQuoteDraft((prev) =>
+                          prev ? { ...prev, text: e.target.value } : null
+                        )
+                      }
+                      placeholder="“Write a quote or highlight...”"
+                      className="w-full bg-transparent text-sm italic font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none resize-none pr-6"
+                    />
+                    <input
+                      type="text"
+                      value={quoteDraft.author}
+                      onChange={(e) =>
+                        setQuoteDraft((prev) =>
+                          prev ? { ...prev, author: e.target.value } : null
+                        )
+                      }
+                      placeholder="— Source or author (optional)"
+                      className="w-full bg-transparent text-xs font-semibold text-zinc-500 dark:text-zinc-400 outline-none"
+                    />
+                  </div>
+                )}
+
+                {/* CONNECTED "ADD TO THREAD" ITEMS + TRIGGER (Matching IMG_4957) */}
+                <div className="pt-1 space-y-3">
+                  {threadItems.map((item, idx) => (
+                    <div
+                      key={item.id}
+                      className="relative pl-9 pt-1 space-y-2 border-l-2 border-slate-200 dark:border-zinc-800 ml-4"
+                    >
+                      <img
+                        src={userAvatarDisplay}
+                        alt={userNameDisplay}
+                        referrerPolicy="no-referrer"
+                        className="absolute -left-[15px] top-1 w-7 h-7 rounded-full object-cover ring-2 ring-white dark:ring-zinc-900"
+                      />
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                          Thread #{idx + 2}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setThreadItems((prev) =>
+                              prev.filter((t) => t.id !== item.id)
+                            )
+                          }
+                          className="text-zinc-400 hover:text-rose-500 cursor-pointer"
+                          aria-label="Remove thread item"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <textarea
+                        rows={2}
+                        value={item.text}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setThreadItems((prev) =>
+                            prev.map((t) =>
+                              t.id === item.id ? { ...t, text: val } : t
+                            )
+                          );
+                        }}
+                        placeholder="Add another thought to this thread..."
+                        className="w-full bg-[#F6F8FB] dark:bg-zinc-800/70 rounded-2xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none resize-none"
+                      />
+                      {item.imageUrl ? (
+                        <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700">
+                          <img
+                            src={item.imageUrl}
+                            alt="Thread attachment"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setThreadItems((prev) =>
+                                prev.map((t) =>
+                                  t.id === item.id
+                                    ? { ...t, imageUrl: undefined }
+                                    : t
+                                )
+                              )
+                            }
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500 hover:text-[#1877F2] cursor-pointer">
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>Attach photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) =>
+                              handleThreadPhotoSelected(item.id, e)
+                            }
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={handleAddThreadItem}
+                    className="flex items-center gap-2.5 pl-1.5 py-1 text-[13.5px] font-medium text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition cursor-pointer"
+                  >
+                    <img
+                      src={userAvatarDisplay}
+                      alt={userNameDisplay}
+                      referrerPolicy="no-referrer"
+                      className="w-5 h-5 rounded-full object-cover opacity-65"
+                    />
+                    <span>Add to thread</span>
+                  </button>
+                </div>
 
                 {/* Instant Auto-Embedded Social Video Preview when YouTube / Facebook / TikTok Link is Pasted */}
                 {activeVideoEmbed && (
@@ -2048,138 +3183,10 @@ export const CreateScamPost: React.FC = () => {
                   </div>
                 )}
 
-                {/* INLINE AUDIENCE SELECTOR (Single-Line Slimmer Full-Radius Pills) */}
-                {activeInlinePanel === "audience" && (
-                  <div className="rounded-[24px] bg-[#F5F6F8] dark:bg-zinc-800/60 p-3.5 sm:p-4 space-y-2.5">
-                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
-                      Who can view this post?
-                    </span>
-                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                      {[
-                        { id: "public", label: "Public", icon: Globe },
-                        {
-                          id: "followers",
-                          label: "Followers",
-                          icon: UserCheck,
-                        },
-                        { id: "only_me", label: "Only Me", icon: Lock },
-                      ].map((item) => {
-                        const IconC = item.icon;
-                        const active = privacy === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic();
-                              setPrivacy(item.id as any);
-                            }}
-                            className={`py-1.5 px-2.5 sm:px-3.5 rounded-full text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
-                              active
-                                ? "bg-[#1877F2] text-white shadow-xs"
-                                : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700"
-                            }`}
-                          >
-                            <IconC className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                            <span className="whitespace-nowrap">{item.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Bottom Floating Toolbar + Glowing Blue Mic Button matching Screenshot 3 */}
-              <div className="pt-6 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-[#F4F5F7] dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700">
-                  <button
-                    type="button"
-                    onClick={cycleTextStyle}
-                    title="Change text style"
-                    className={`w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold transition cursor-pointer ${
-                      textStyle !== "normal"
-                        ? "bg-[#1877F2] text-white shadow-xs"
-                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                    }`}
-                  >
-                    Aa
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setActiveInlinePanel("media");
-                      fileInputRef.current?.click();
-                    }}
-                    title="Attach photos"
-                    className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
-                      processedImages.length > 0 ||
-                      activeInlinePanel === "media"
-                        ? "bg-[#1877F2] text-white shadow-xs"
-                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                    }`}
-                  >
-                    <ImageIcon className="w-4 h-4 stroke-[2.1]" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setActiveInlinePanel((p) =>
-                        p === "video" ? null : "video"
-                      );
-                    }}
-                    title="Embed YouTube, Facebook, or TikTok Video"
-                    className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
-                      Boolean(activeVideoEmbed) || activeInlinePanel === "video"
-                        ? "bg-[#1877F2] text-white shadow-xs"
-                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                    }`}
-                  >
-                    <Video className="w-4 h-4 stroke-[2.1]" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setActiveInlinePanel((p) =>
-                        p === "themes" ? null : "themes"
-                      );
-                    }}
-                    title="Category & Topics"
-                    className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
-                      activeInlinePanel === "themes"
-                        ? "bg-[#1877F2] text-white shadow-xs"
-                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                    }`}
-                  >
-                    <BarChart3 className="w-4 h-4 stroke-[2.1]" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setActiveInlinePanel((p) =>
-                        p === "audience" ? null : "audience"
-                      );
-                    }}
-                    title="Post visibility"
-                    className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer ${
-                      activeInlinePanel === "audience"
-                        ? "bg-[#1877F2] text-white shadow-xs"
-                        : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                    }`}
-                  >
-                    <QrCode className="w-4 h-4 stroke-[2.1]" />
-                  </button>
-                </div>
-
-                {/* Right Glowing Blue Mic Sphere */}
+              {/* Glowing Blue Mic Sphere for Voice Note Studio */}
+              <div className="pt-4 flex items-center justify-end">
                 <button
                   type="button"
                   onClick={() => {
@@ -2198,6 +3205,56 @@ export const CreateScamPost: React.FC = () => {
                 >
                   <Mic className="w-5 h-5 stroke-[2.2]" />
                 </button>
+              </div>
+
+              {/* Liquid Glass Footer Row: Post options + Prismatic Ghost Switch + Direct Post CTA (IMG_4957 & Video 00:08-00:11) */}
+              <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShowPostOptionsSheet(true);
+                  }}
+                  className="flex items-center gap-2 text-[14px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition cursor-pointer"
+                >
+                  <SlidersSquareIcon className="w-[19px] h-[19px]" />
+                  <span>Post options</span>
+                  {(replyPermission !== "anyone" ||
+                    reviewApproveReplies ||
+                    alsoShareOn.length > 0) && (
+                    <span className="w-2 h-2 rounded-full bg-[#1877F2]" />
+                  )}
+                </button>
+
+                <div className="flex items-center gap-2.5">
+                  <LiquidGlassGhostToggle
+                    active={isGhostPost}
+                    onChange={(next) => {
+                      setIsGhostPost(next);
+                      notify(
+                        next
+                          ? "Ghost post on — disappears after 24 hours"
+                          : "Ghost post off",
+                        "info"
+                      );
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handlePublish}
+                    disabled={isSubmitting || isProcessingImages}
+                    className="h-[40px] px-5 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white font-bold text-[14px] shadow-[0_6px_18px_rgba(24,119,242,0.32)] active:scale-95 transition disabled:opacity-50 cursor-pointer whitespace-nowrap"
+                  >
+                    {isSubmitting
+                      ? "Posting..."
+                      : editId
+                      ? "Save"
+                      : scheduledAt
+                      ? "Schedule"
+                      : "Post"}
+                  </button>
+                </div>
               </div>
             </>
           ) : (
@@ -2225,10 +3282,32 @@ export const CreateScamPost: React.FC = () => {
                       className="w-10 h-10 rounded-full object-cover"
                     />
                     <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">
-                        {userNameDisplay}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                          {userNameDisplay}
+                        </p>
+                        {postTag && (
+                          <span className="text-xs font-semibold text-[#1877F2]">
+                            › {postTag}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-500">
+                        {scheduledAt
+                          ? `Scheduled · ${new Date(
+                              scheduledAt
+                            ).toLocaleString()}`
+                          : "Just now"}{" "}
+                        · {privacy === "only_me" ? "Only Me" : privacy}
+                        {locationTag ? ` · 📍 ${locationTag}` : ""}
+                        {isGhostPost ? " · 👻 24h Ghost" : ""}
                       </p>
-                      <p className="text-xs text-zinc-500">Just now · Public</p>
+                      {effectiveAiLabel && (
+                        <p className="text-[11px] text-[#1877F2] font-medium flex items-center gap-1 mt-0.5">
+                          <Sparkles className="w-3 h-3" />
+                          <span>AI generated</span>
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -2270,6 +3349,8 @@ export const CreateScamPost: React.FC = () => {
                     ? "Publishing..."
                     : editId
                     ? "Save Changes"
+                    : scheduledAt
+                    ? "Schedule Post"
                     : "Publish to Feed"}
                 </button>
               </div>
@@ -2277,6 +3358,101 @@ export const CreateScamPost: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* ====================================================================
+       * LIQUID GLASS MODALS & BOTTOM SHEETS
+       * ================================================================== */}
+      <DraftsBottomSheet
+        isOpen={showDraftsSheet}
+        drafts={drafts}
+        canSaveCurrent={hasDraftableContent}
+        onClose={() => setShowDraftsSheet(false)}
+        onSaveCurrentDraft={handleSaveCurrentDraft}
+        onLoadDraft={handleLoadDraft}
+        onDeleteDraft={handleDeleteDraft}
+      />
+
+      <ScheduleDrumWheelModal
+        isOpen={showScheduleModal}
+        scheduledAt={scheduledAt}
+        onClose={() => setShowScheduleModal(false)}
+        onConfirmSchedule={(ts) => {
+          setScheduledAt(ts);
+          if (ts) {
+            notify(
+              `Scheduled for ${new Date(ts).toLocaleString([], {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}`,
+              "success"
+            );
+          } else {
+            notify("Schedule cleared", "info");
+          }
+        }}
+      />
+
+      <StickersBottomSheet
+        isOpen={showStickersSheet}
+        onClose={() => setShowStickersSheet(false)}
+        onInsertText={(kaomoji) => {
+          setDescription((prev) =>
+            prev ? `${prev} ${kaomoji}` : kaomoji
+          );
+        }}
+        onAttachSticker={(stickerUrl) => {
+          setStickers((prev) =>
+            prev.includes(stickerUrl) ? prev : [...prev, stickerUrl].slice(0, 6)
+          );
+        }}
+      />
+
+      <GiphyBottomSheet
+        isOpen={showGiphySheet}
+        onClose={() => setShowGiphySheet(false)}
+        onSelectGif={(url) => setGifUrl(url)}
+      />
+
+      <PostOptionsBottomSheet
+        isOpen={showPostOptionsSheet}
+        replyPermission={replyPermission}
+        reviewApproveReplies={reviewApproveReplies}
+        alsoShareOn={alsoShareOn}
+        onChangeReplyPermission={setReplyPermission}
+        onChangeReviewApprove={setReviewApproveReplies}
+        onChangeAlsoShareOn={setAlsoShareOn}
+        onClose={() => setShowPostOptionsSheet(false)}
+      />
+
+      <DeezerMusicPickerModal
+        isOpen={showMusicModal}
+        onClose={() => setShowMusicModal(false)}
+        selectedTrack={attachedMusic}
+        onSelectTrack={(track) => {
+          setAttachedMusic(track);
+          setShowMusicModal(false);
+        }}
+      />
+
+      <LiveCameraCaptureModal
+        isOpen={showCameraModal}
+        onClose={() => setShowCameraModal(false)}
+        onCaptureFile={(file) => {
+          setRawFiles((prev) => [...prev, file]);
+          setActiveInlinePanel("media");
+        }}
+        onFallbackInput={() => cameraFallbackInputRef.current?.click()}
+      />
+
+      <LocationPickerModal
+        isOpen={showLocationModal}
+        currentLocation={locationTag}
+        onSelectLocation={(loc) => setLocationTag(loc)}
+        onClose={() => setShowLocationModal(false)}
+      />
     </div>
   );
 };

@@ -231,8 +231,15 @@ const SEOProvider = () => {
 
 // Page Imports
 import AuthSelector from './pages/AuthSelector';
+import SavedAccountsPage from './pages/SavedAccountsPage';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
+import {
+  FindAccountPage,
+  ChooseAccountPage,
+  ReviewAccountPage,
+} from './pages/FindAccountFlow';
+import { syncCurrentUserToSavedAccounts } from './lib/savedAccounts';
 import Home from './pages/Home';
 import ProductDetails from './pages/ProductDetails';
 import StoreProfile from './pages/StoreProfile';
@@ -363,7 +370,6 @@ import SystemHealthDiagnostics from './pages/admin/SystemHealthDiagnostics';
 import ManageRiders from './pages/admin/ManageRiders';
 
 import ErrorBoundary from './components/ErrorBoundary';
-import { AccountCenterPopup, SavedAccount } from './components/ui/AccountCenterPopup';
 
 const MigrationHelper = () => {
   useEffect(() => {
@@ -673,47 +679,15 @@ const AppContent: React.FC = () => {
     }
   }, [location.pathname, navigate]);
 
-  const [isAccountCenterOpen, setIsAccountCenterOpen] = useState(false);
-  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
-
-  // Close account center on route change
-  useEffect(() => {
-    setIsAccountCenterOpen(false);
-  }, [location.pathname]);
-
-  // Listen to openAccountCenter event
+  // Redirect any legacy openAccountCenter event directly to the dedicated /accounts page
   useEffect(() => {
     const handleOpen = () => {
-      // Prevent opening if auth is still loading (race condition fix)
       if (loading) return;
-
-      try {
-        const str = localStorage.getItem("vibe_saved_accounts");
-        if (str) {
-          const accounts = JSON.parse(str);
-          // Only open if we have saved accounts and current user is not logged in 
-          // (or specifically requested)
-          if (accounts.length > 0) {
-            setSavedAccounts(accounts);
-            setIsAccountCenterOpen(true);
-          }
-        }
-      } catch (e) {}
+      navigate('/accounts');
     };
     window.addEventListener("openAccountCenter", handleOpen);
     return () => window.removeEventListener("openAccountCenter", handleOpen);
-  }, [loading]);
-
-  // Update saved accounts from local storage when opened
-  useEffect(() => {
-    try {
-      const str = localStorage.getItem("vibe_saved_accounts");
-      if (str) {
-        const accounts = JSON.parse(str);
-        setSavedAccounts(accounts);
-      }
-    } catch (e) {}
-  }, [location.pathname]);
+  }, [loading, navigate]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search || location.search);
@@ -738,6 +712,7 @@ const AppContent: React.FC = () => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
             setUserData(data);
+            syncCurrentUserToSavedAccounts(currentUser, data);
 
             // Instant Real-time Session Revocation Check
             const currentSessionId = localStorage.getItem('session_id');
@@ -756,7 +731,7 @@ const AppContent: React.FC = () => {
                   }
                 } catch (err) {}
                 notify("This device has been logged out from another device.", "error");
-                navigate('/auth-selector');
+                navigate('/accounts');
                 return;
               }
             }
@@ -947,12 +922,6 @@ const AppContent: React.FC = () => {
   return (
     <DesktopLayout>
       <SEOProvider />
-      <AccountCenterPopup 
-        isOpen={isAccountCenterOpen} 
-        onClose={() => setIsAccountCenterOpen(false)} 
-        savedAccounts={savedAccounts} 
-        currentUid={auth.currentUser?.uid}
-      />
       <AnimatePresence>
         {isPageLoading && (
           <motion.div
@@ -970,8 +939,14 @@ const AppContent: React.FC = () => {
             <Route path="/" element={<PageWrapper><Home userData={userData} /></PageWrapper>} />
           <Route path="/onboarding" element={<PageWrapper><Onboarding onFinish={() => {}} /></PageWrapper>} />
           <Route path="/auth-selector" element={<PageWrapper><AuthSelector /></PageWrapper>} />
+          <Route path="/accounts" element={<PageWrapper><SavedAccountsPage /></PageWrapper>} />
+          <Route path="/saved-accounts" element={<Navigate to="/accounts" replace />} />
           <Route path="/signin" element={<PageWrapper><SignIn /></PageWrapper>} />
           <Route path="/signup" element={<PageWrapper><SignUp /></PageWrapper>} />
+          <Route path="/signup/:step" element={<PageWrapper><SignUp /></PageWrapper>} />
+          <Route path="/find-account" element={<PageWrapper><FindAccountPage /></PageWrapper>} />
+          <Route path="/choose-account" element={<PageWrapper><ChooseAccountPage /></PageWrapper>} />
+          <Route path="/review-account" element={<PageWrapper><ReviewAccountPage /></PageWrapper>} />
           <Route path="/verify" element={<PageWrapper><VerifyCode /></PageWrapper>} />
           <Route path="/complete-profile" element={<PageWrapper><CompleteProfile /></PageWrapper>} />
           <Route path="/location" element={<PageWrapper><LocationAccess /></PageWrapper>} />
@@ -1265,6 +1240,45 @@ import { PullToRefresh } from './components/PullToRefresh';
 import { IosSpinner } from './components/ui/ios-spinner';
 import { CookieConsent } from './components/CookieConsent';
 
+const AUTH_MODAL_EXCLUDED_PREFIXES = [
+  '/auth-selector',
+  '/accounts',
+  '/saved-accounts',
+  '/signin',
+  '/signup',
+  '/find-account',
+  '/choose-account',
+  '/review-account',
+  '/forgot-password',
+  '/new-password',
+  '/verify',
+  '/__/auth/action',
+  '/auth/action',
+];
+
+const GlobalRouteAwareOverlays: React.FC = () => {
+  const location = useLocation();
+  const isAuthScreen = AUTH_MODAL_EXCLUDED_PREFIXES.some(
+    (prefix) =>
+      location.pathname === prefix || location.pathname.startsWith(`${prefix}/`)
+  );
+
+  if (isAuthScreen) {
+    return <NetworkStatus />;
+  }
+
+  return (
+    <>
+      <NetworkStatus />
+      <OnboardingOffersModal />
+      <CartAbandonmentPopup />
+      <NotificationPermissionModal />
+      <AdManager />
+      <CookieConsent />
+    </>
+  );
+};
+
 const App: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -1297,16 +1311,7 @@ const App: React.FC = () => {
                 <AppContent />
               </PullToRefresh>
               <GlobalCallReceiver />
-              {!isPageLoading && (
-                <>
-                  <NetworkStatus />
-                  <OnboardingOffersModal />
-                  <CartAbandonmentPopup />
-                  <NotificationPermissionModal />
-                  <AdManager />
-                  <CookieConsent />
-                </>
-              )}
+              {!isPageLoading && <GlobalRouteAwareOverlays />}
             </Router>
           </ToastProvider>
         </PageLoadingContext.Provider>

@@ -1,9 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Check, Copy, Music, Pause, Play } from "lucide-react";
+import { doc, updateDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 import Icon from "./Icon";
-import { ScamPost, ImageLayoutStyle, ImageAspectMode } from "../types";
+import { ScamPost, ImageLayoutStyle, ImageAspectMode, PostPoll } from "../types";
 import { triggerHaptic } from "../lib/haptics";
 import { resolvePostVideoSource } from "../lib/videoEmbed";
 import { NewsVideoPlayer } from "./NewsVideoPlayer";
+import { NewsRichText } from "./NewsRichText";
 
 export const isScamPostRecord = (post?: Partial<ScamPost> | null): boolean => {
   if (!post) return false;
@@ -321,6 +325,304 @@ export const VoiceNoteCard: React.FC<{
   );
 };
 
+const MusicPostCard: React.FC<{
+  music: NonNullable<ScamPost["music"]>;
+}> = ({ music }) => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+
+  const toggleMusic = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic();
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) {
+      el.pause();
+      setPlaying(false);
+    } else {
+      el.play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false));
+    }
+  };
+
+  if (!music?.audioUrl) return null;
+
+  return (
+    <div
+      onClick={toggleMusic}
+      className="w-full rounded-[22px] bg-white/85 dark:bg-zinc-800/85 backdrop-blur-xl border border-slate-200/80 dark:border-zinc-700/70 p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition shadow-2xs"
+    >
+      <audio
+        ref={audioRef}
+        src={music.audioUrl}
+        preload="none"
+        onEnded={() => setPlaying(false)}
+        onPause={() => setPlaying(false)}
+        onPlay={() => setPlaying(true)}
+      />
+      <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-200 dark:bg-zinc-700 shrink-0">
+        {music.cover ? (
+          <img
+            src={music.cover}
+            alt={music.title}
+            referrerPolicy="no-referrer"
+            className={`w-full h-full object-cover ${
+              playing ? "animate-spin [animation-duration:8s]" : ""
+            }`}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[#1877F2]">
+            <Music className="w-5 h-5" />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
+          <Music className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
+          <span className="truncate">{music.title}</span>
+        </p>
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+          {music.artist}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={toggleMusic}
+        className="w-9 h-9 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center shrink-0 active:scale-90 transition cursor-pointer"
+        aria-label={playing ? "Pause track" : "Play track"}
+      >
+        {playing ? (
+          <Pause className="w-4 h-4 fill-current" />
+        ) : (
+          <Play className="w-4 h-4 fill-current ml-0.5" />
+        )}
+      </button>
+    </div>
+  );
+};
+
+const InteractivePollCard: React.FC<{
+  postId?: string;
+  poll: PostPoll;
+}> = ({ postId, poll }) => {
+  const [localPoll, setLocalPoll] = useState<PostPoll>(poll);
+  const [guestVoteMap, setGuestVoteMap] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("deep_poll_votes") || "{}");
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    setLocalPoll(poll);
+  }, [poll]);
+
+  const uid = auth.currentUser?.uid || "guest_local";
+  const isPreview = !postId || postId === "composer_preview";
+  const isExpired = Boolean(localPoll.endsAt && localPoll.endsAt <= Date.now());
+
+  const votedOptionId =
+    localPoll.options.find((o) => o.voterIds?.includes(uid))?.id ||
+    (postId ? guestVoteMap[postId] : undefined) ||
+    null;
+
+  const totalVotes = localPoll.options.reduce(
+    (sum, opt) => sum + (Number(opt.votes) || 0),
+    0
+  );
+
+  const handleVote = async (e: React.MouseEvent, optionId: string) => {
+    e.stopPropagation();
+    if (isPreview || isExpired) return;
+    triggerHaptic();
+
+    const updatedOptions = localPoll.options.map((opt) => {
+      const existingVoters = (opt.voterIds || []).filter((id) => id !== uid);
+      const wasVotedByMe =
+        (opt.voterIds || []).includes(uid) || votedOptionId === opt.id;
+      const baseVotes = Math.max(
+        0,
+        (Number(opt.votes) || 0) - (wasVotedByMe ? 1 : 0)
+      );
+
+      if (opt.id === optionId) {
+        if (votedOptionId === optionId) {
+          // Toggle off vote
+          return { ...opt, votes: baseVotes, voterIds: existingVoters };
+        }
+        return {
+          ...opt,
+          votes: baseVotes + 1,
+          voterIds: [...existingVoters, uid],
+        };
+      }
+      return { ...opt, votes: baseVotes, voterIds: existingVoters };
+    });
+
+    const nextPoll: PostPoll = { ...localPoll, options: updatedOptions };
+    setLocalPoll(nextPoll);
+
+    if (postId) {
+      const nextMap = { ...guestVoteMap };
+      if (votedOptionId === optionId) delete nextMap[postId];
+      else nextMap[postId] = optionId;
+      setGuestVoteMap(nextMap);
+      try {
+        localStorage.setItem("deep_poll_votes", JSON.stringify(nextMap));
+      } catch {}
+
+      if (!postId.startsWith("showcase_") && !postId.startsWith("post_")) {
+        try {
+          await updateDoc(doc(db, "scam_posts", postId), { poll: nextPoll });
+        } catch {}
+      }
+    }
+  };
+
+  const getRemainingLabel = () => {
+    if (!localPoll.endsAt) return "Open poll";
+    const diffMs = localPoll.endsAt - Date.now();
+    if (diffMs <= 0) return "Final results";
+    const hrs = Math.ceil(diffMs / 3600000);
+    if (hrs < 24) return `${hrs}h left`;
+    const days = Math.ceil(hrs / 24);
+    return `${days}d left`;
+  };
+
+  const barWidthBucket = (pct: number) => {
+    if (pct <= 0) return "w-0";
+    if (pct < 10) return "w-[8%]";
+    if (pct < 20) return "w-[18%]";
+    if (pct < 30) return "w-[28%]";
+    if (pct < 40) return "w-[38%]";
+    if (pct < 50) return "w-[48%]";
+    if (pct < 60) return "w-[58%]";
+    if (pct < 70) return "w-[68%]";
+    if (pct < 80) return "w-[78%]";
+    if (pct < 90) return "w-[88%]";
+    if (pct < 100) return "w-[95%]";
+    return "w-full";
+  };
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="rounded-[22px] bg-[#F8FAFC] dark:bg-zinc-800/75 border border-slate-200/80 dark:border-zinc-700/70 p-4 space-y-2.5"
+    >
+      {localPoll.question && (
+        <p className="text-sm font-bold text-zinc-900 dark:text-white">
+          {localPoll.question}
+        </p>
+      )}
+
+      <div className="space-y-2">
+        {localPoll.options.map((opt) => {
+          const count = Number(opt.votes) || 0;
+          const pct =
+            totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+          const isChosen = votedOptionId === opt.id;
+          const showBars = Boolean(votedOptionId) || isExpired || isPreview;
+
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={(e) => handleVote(e, opt.id)}
+              className={`relative w-full min-h-[44px] rounded-2xl overflow-hidden border text-left px-3.5 py-2.5 flex items-center justify-between gap-2 transition cursor-pointer ${
+                isChosen
+                  ? "border-zinc-900 dark:border-white bg-white dark:bg-zinc-900"
+                  : "border-slate-200/90 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/70 hover:border-zinc-400"
+              }`}
+            >
+              {showBars && (
+                <span
+                  className={`pointer-events-none absolute inset-y-0 left-0 transition-all duration-500 ${barWidthBucket(
+                    pct
+                  )} ${
+                    isChosen
+                      ? "bg-[#1877F2]/16 dark:bg-[#1877F2]/28"
+                      : "bg-slate-200/65 dark:bg-zinc-700/50"
+                  }`}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2 text-[13.5px] font-semibold text-zinc-900 dark:text-white min-w-0">
+                <span className="truncate">{opt.text}</span>
+                {isChosen && (
+                  <span className="w-4 h-4 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  </span>
+                )}
+              </span>
+
+              {showBars && (
+                <span className="relative z-10 text-xs font-bold tabular-nums text-zinc-600 dark:text-zinc-300 shrink-0">
+                  {pct}%
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between text-[11.5px] text-zinc-500 dark:text-zinc-400 pt-0.5">
+        <span>
+          {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+        </span>
+        <span>{getRemainingLabel()}</span>
+      </div>
+    </div>
+  );
+};
+
+const SnippetPostCard: React.FC<{
+  snippet: NonNullable<ScamPost["snippet"]>;
+}> = ({ snippet }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic();
+    navigator.clipboard?.writeText(snippet.content || "").catch(() => {});
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="rounded-[22px] bg-[#F5F7FA] dark:bg-zinc-900/95 border border-slate-200/85 dark:border-zinc-700/80 overflow-hidden"
+    >
+      <div className="px-4 py-2.5 border-b border-slate-200/70 dark:border-zinc-800 flex items-center justify-between gap-2 bg-white/70 dark:bg-zinc-800/50">
+        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200 truncate">
+          {snippet.title || "Snippet"}
+        </span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-zinc-800 text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1 hover:bg-slate-200 transition cursor-pointer"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3 h-3 text-emerald-500" />
+              <span>Copied</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3 h-3" />
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+      <pre className="p-4 text-[12.5px] leading-relaxed font-mono text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
+        {snippet.content}
+      </pre>
+    </div>
+  );
+};
+
 export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
   post,
   onOpenImage,
@@ -441,12 +743,79 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
     return "z-0 translate-x-5 rotate-6 scale-90 opacity-90";
   };
 
-  if (!post.audioUrl && !resolvedVideo && images.length === 0) {
+  const hasRichExtra = Boolean(
+    post.gifUrl ||
+      (post.stickers && post.stickers.length > 0) ||
+      post.music?.audioUrl ||
+      post.poll?.options?.length ||
+      post.snippet?.content ||
+      post.quoteBlock?.text ||
+      (post.threadItems && post.threadItems.length > 0)
+  );
+
+  if (!post.audioUrl && !resolvedVideo && images.length === 0 && !hasRichExtra) {
     return null;
   }
 
   return (
     <div className="space-y-3">
+      {/* Stickers Row if attached */}
+      {post.stickers && post.stickers.length > 0 && (
+        <div className="flex items-center gap-2.5 flex-wrap pt-0.5">
+          {post.stickers.map((stk, sIdx) => (
+            <img
+              key={`${stk}-${sIdx}`}
+              src={stk}
+              alt="Sticker"
+              referrerPolicy="no-referrer"
+              className="w-20 h-20 object-contain drop-shadow-sm hover:scale-105 transition-transform"
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Quote Block Card if attached */}
+      {post.quoteBlock?.text && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-[22px] bg-[#F7F9FC] dark:bg-zinc-800/75 border border-slate-200/85 dark:border-zinc-700/70 p-4 space-y-1.5"
+        >
+          <p className="text-[15px] italic font-medium text-zinc-900 dark:text-zinc-100 leading-relaxed">
+            “{post.quoteBlock.text}”
+          </p>
+          {post.quoteBlock.author && (
+            <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+              — {post.quoteBlock.author}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Snippet Card if attached */}
+      {post.snippet?.content && <SnippetPostCard snippet={post.snippet} />}
+
+      {/* Interactive Poll Card if attached */}
+      {post.poll && post.poll.options?.length >= 2 && (
+        <InteractivePollCard postId={post.id} poll={post.poll} />
+      )}
+
+      {/* Attached Music Preview if present */}
+      {post.music?.audioUrl && <MusicPostCard music={post.music} />}
+
+      {/* Attached Animated GIF if present */}
+      {post.gifUrl && (
+        <div className="relative w-full rounded-[22px] overflow-hidden bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700/60">
+          <img
+            src={post.gifUrl}
+            alt="Attached GIF"
+            referrerPolicy="no-referrer"
+            className="w-full max-h-[420px] object-cover block"
+          />
+          <span className="absolute bottom-3 left-3 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-white text-[10px] font-extrabold tracking-wider">
+            GIF
+          </span>
+        </div>
+      )}
 
       {/* Voice Note Player if present */}
       {post.audioUrl && (
@@ -769,6 +1138,22 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
             </div>
           )}
           {renderScamOverlay()}
+        </div>
+      )}
+
+      {/* Chained Thread Continuation Items ("Add to thread") */}
+      {post.threadItems && post.threadItems.length > 0 && (
+        <div className="space-y-2.5 pt-1">
+          {post.threadItems.map((item, tIdx) => (
+            <div
+              key={item.id || tIdx}
+              className="relative pl-4 border-l-2 border-slate-200 dark:border-zinc-700 py-0.5"
+            >
+              <p className="text-[14px] leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-line break-words">
+                <NewsRichText text={item.text} />
+              </p>
+            </div>
+          ))}
         </div>
       )}
     </div>

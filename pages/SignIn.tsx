@@ -1,245 +1,373 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  GoogleAuthProvider,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from "firebase/auth";
+import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
+import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
+import { Loader2 } from "lucide-react";
 import { auth, db } from "../firebase";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
 import { getFriendlyErrorMessage } from "../lib/firebaseErrorMapper";
-import { AuthLayout, AuthSeparator } from "../components/AuthLayout";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
-import { AuthInputs } from "../components/AuthInputs";
-import { VibeMascot, MascotState } from "../components/ui/VibeMascot";
 import SEO from "../components/SEO";
-import { validateInput } from "../lib/utils";
+import { GoogleIcon } from "../components/ui/BrandIcons";
+import {
+  DeepShopAuthShell,
+  DeepShopBottomBrand,
+  DeepShopCircleLogo,
+  DeepShopFloatingInput,
+} from "../components/DeepShopAuthShell";
+import {
+  formatAccountContact,
+  getSavedAccounts,
+  isLikelyPhoneNumber,
+  linkPendingGuestOrderAndResolveDestination,
+  normalizeBdPhoneVariants,
+  resolveIdentifierToAuthEmail,
+  upsertSavedAccount,
+} from "../lib/savedAccounts";
+
+const GOOGLE_CLIENT_ID =
+  (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
+  "50155075863-uj02i6n96ipeqaurkf7au0jnpnse84pd.apps.googleusercontent.com";
+
+const GoogleLoginPill: React.FC<{
+  onAccessToken: (token: string) => void;
+  disabled?: boolean;
+}> = ({ onAccessToken, disabled }) => {
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => onAccessToken(tokenResponse.access_token),
+    onError: () => {},
+  });
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => login()}
+      className="w-full h-[46px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[15px] flex items-center justify-center gap-2.5 transition cursor-pointer disabled:opacity-50"
+    >
+      <GoogleIcon className="w-4 h-4 shrink-0" />
+      <span>Continue with Google</span>
+    </button>
+  );
+};
 
 const SignIn: React.FC = () => {
-  const [authType, setAuthType] = useState<"email" | "phone">("email");
-  const [email, setEmail] = useState("");
-  const [countryCode, setCountryCode] = useState("+880");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [mascotFocus, setMascotFocus] = useState<'idle' | 'email' | 'password' | 'success' | 'error'>('idle');
   const navigate = useNavigate();
-
-  let mascotState: MascotState = 'idle';
-  if (mascotFocus === 'email') mascotState = 'email';
-  else if (mascotFocus === 'password') mascotState = 'password';
-  else if (mascotFocus === 'success') mascotState = 'success';
-  else if (mascotFocus === 'error') mascotState = 'error';
+  const location = useLocation();
   const notify = useNotify();
 
-  React.useEffect(() => {
-    // Removed auto redirect
-  }, [navigate]);
+  const searchParams = new URLSearchParams(location.search);
+  const initialHint =
+    (location.state as any)?.identifier ||
+    searchParams.get("login_hint") ||
+    "";
 
-  const getAuthEmail = () => {
-    if (authType === "phone") {
-      const cleanPhone = phoneNumber.startsWith("0") ? phoneNumber.substring(1) : phoneNumber;
-      return `${countryCode.replace('+', '')}${cleanPhone}@phone.deepshop.top`;
+  const [identifier, setIdentifier] = useState(initialHint);
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [fieldError, setFieldError] = useState("");
+  const [platformConfig, setPlatformConfig] = useState<any>(null);
+
+  const savedAccounts = getSavedAccounts();
+  const redirectParam = searchParams.get("redirect") || "";
+  const guestOrderId =
+    searchParams.get("guestOrder") ||
+    localStorage.getItem("pending_guest_order_id") ||
+    "";
+  const hasPendingOrder = Boolean(guestOrderId) || redirectParam === "/my-orders";
+  const querySuffix = location.search || "";
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "platform"), (snap) => {
+      setPlatformConfig(snap.exists() ? snap.data() : {});
+    });
+    return () => unsub();
+  }, []);
+
+  const completeUserSession = async (
+    firebaseUser: any,
+    loginEmail: string,
+    savedPwd: string,
+    providerName = "password"
+  ) => {
+    let profileName = firebaseUser.displayName || "DEEP SHOP Member";
+    let profilePhoto = firebaseUser.photoURL || "";
+    let phoneNumber = "";
+
+    try {
+      const userRef = doc(db, "users", firebaseUser.uid);
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        const d = snap.data();
+        profileName = d.displayName || profileName;
+        profilePhoto = d.photoURL || profilePhoto;
+        phoneNumber = d.phoneNumber || "";
+        await setDoc(userRef, { lastActive: Date.now() }, { merge: true });
+      } else {
+        await setDoc(
+          userRef,
+          {
+            uid: firebaseUser.uid,
+            email: loginEmail || firebaseUser.email || "",
+            displayName: profileName,
+            photoURL: profilePhoto,
+            role: "user",
+            isBanned: false,
+            createdAt: Date.now(),
+            registrationDate: Date.now(),
+            lastActive: Date.now(),
+          },
+          { merge: true }
+        );
+      }
+    } catch (e) {
+      console.error("Profile sync error:", e);
     }
-    return email;
+
+    upsertSavedAccount({
+      uid: firebaseUser.uid,
+      email: loginEmail || firebaseUser.email || "",
+      contactDisplay: formatAccountContact(
+        loginEmail || firebaseUser.email || "",
+        phoneNumber
+      ),
+      password: savedPwd,
+      rememberLogin: Boolean(savedPwd),
+      displayName: profileName,
+      photoURL: profilePhoto,
+      provider: providerName,
+      lastActive: Date.now(),
+    });
+
+    notify(`Welcome back, ${profileName}!`, "success");
+    const dest = await linkPendingGuestOrderAndResolveDestination(
+      firebaseUser.uid,
+      firebaseUser.email || loginEmail,
+      location.search,
+      "/"
+    );
+    navigate(dest);
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (authType === "email" && 
-        email !== "admin@deep.shop" && 
-        email !== "admin@deepshop.top" && 
-        email !== "deepshop@gmail.com" && 
-        email !== "deepshopbysam@gmail.com") {
-      const error = validateInput(email, 'email');
-      if (error) return notify(error, "error");
-    } else if (authType === "phone") {
-      const error = validateInput(phoneNumber, 'phone');
-      if (error) return notify(error, "error");
+    setFieldError("");
+
+    const trimmedId = identifier.trim();
+    if (!trimmedId) {
+      setFieldError("Enter your mobile number or email address.");
+      return;
     }
-    
-    // Also validate password to catch generic bots trying dictionary attacks
-    const passError = validateInput(password, 'password');
-    if (passError) return notify(passError, "error");
+    if (!password) {
+      notify("Please enter your password.", "error");
+      return;
+    }
 
     setLoading(true);
-    let authEmail = getAuthEmail();
     try {
+      const resolvedEmail = await resolveIdentifierToAuthEmail(trimmedId);
+
       try {
-         const userCred = await signInWithEmailAndPassword(auth, authEmail, password);
-         await finalizeLogin(userCred.user, authEmail);
-         return;
-      } catch (err: any) {
-         if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
-            // Try lookup the underlying auth email
-            const identifier = authType === 'phone' ? (countryCode + phoneNumber.replace(/^0+/, '')) : email;
-            const res = await fetch('/api/lookup-auth-email', {
-               method: 'POST',
-               headers: {'Content-Type': 'application/json'},
-               body: JSON.stringify({ identifier })
-            });
-            const data = await res.json();
-             
-            if (data && data.authEmail && data.authEmail !== authEmail) {
-                authEmail = data.authEmail; // Override carefully
-                const retryCred = await signInWithEmailAndPassword(auth, authEmail, password);
-                await finalizeLogin(retryCred.user, authEmail);
-                return;
+        const cred = await signInWithEmailAndPassword(
+          auth,
+          resolvedEmail,
+          password
+        );
+        await completeUserSession(cred.user, resolvedEmail, password, "password");
+        return;
+      } catch (primaryErr: any) {
+        // Fallback for legacy phone accounts if user typed a phone number
+        if (isLikelyPhoneNumber(trimmedId)) {
+          const variants = normalizeBdPhoneVariants(trimmedId);
+          const fallbacks = [
+            variants.phoneAuthEmail,
+            variants.legacyPhoneAuthEmail,
+          ].filter((em) => em !== resolvedEmail);
+
+          for (const fbEmail of fallbacks) {
+            try {
+              const retryCred = await signInWithEmailAndPassword(
+                auth,
+                fbEmail,
+                password
+              );
+              await completeUserSession(
+                retryCred.user,
+                fbEmail,
+                password,
+                "password"
+              );
+              return;
+            } catch {
+              // Continue
             }
-         }
-         throw err;
+          }
+        }
+        throw primaryErr;
       }
     } catch (err: any) {
-      setMascotFocus("error");
       notify(getFriendlyErrorMessage(err), "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const finalizeLogin = async (user: any, loginEmail: string) => {
-      // Save to Account Center
-      try {
-          const accountsStr = localStorage.getItem("vibe_saved_accounts");
-          let accounts = accountsStr ? JSON.parse(accountsStr) : [];
-          accounts = accounts.filter((a: any) => a.uid !== user.uid);
-          accounts.push({
-              uid: user.uid,
-              email: loginEmail,
-              password: password,
-              displayName: user.displayName || "User",
-              photoURL: user.photoURL || "",
-              lastPasswordChange: null,
-          });
-          localStorage.setItem("vibe_saved_accounts", JSON.stringify(accounts));
-      } catch (e) {
-          console.error(e);
-      }
-
-      await setDoc(
-        doc(db, "users", user.uid),
-        { lastActive: Date.now() },
-        { merge: true },
+  const handleGoogleAccessToken = async (accessToken: string) => {
+    setLoading(true);
+    try {
+      const credential = GoogleAuthProvider.credential(null, accessToken);
+      const res = await signInWithCredential(auth, credential);
+      await completeUserSession(
+        res.user,
+        res.user.email || "",
+        "",
+        "google"
       );
+    } catch (err: any) {
+      notify(getFriendlyErrorMessage(err), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setMascotFocus("success");
-      notify("Welcome back!", "success");
-
-      // Auto-link pending guest order if exists
-      const searchParams = new URLSearchParams(window.location.search);
-      const redirectParam = searchParams.get("redirect");
-      const pendingGuestOrder = searchParams.get("guestOrder") || localStorage.getItem("pending_guest_order_id");
-      if (pendingGuestOrder && user?.uid) {
-        try {
-          await updateDoc(doc(db, "orders", pendingGuestOrder), {
-            userId: user.uid,
-            customerEmail: user.email || ""
-          });
-          localStorage.removeItem("pending_guest_order_id");
-          localStorage.removeItem("pending_guest_order_phone");
-        } catch (e) {
-          console.error("Order linking error:", e);
-        }
+  const handleFallbackGooglePopup = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+      await completeUserSession(res.user, res.user.email || "", "", "google");
+    } catch (err: any) {
+      if (err.code !== "auth/popup-closed-by-user") {
+        notify(getFriendlyErrorMessage(err), "error");
       }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setTimeout(() => {
-        if (redirectParam) {
-          navigate(redirectParam);
-        } else if (pendingGuestOrder) {
-          navigate("/my-orders");
-        } else {
-          navigate("/");
-        }
-      }, 1000);
-  }
+  const finalGoogleClientId =
+    platformConfig?.googleClientId || GOOGLE_CLIENT_ID;
+  const googleEnabled = platformConfig?.googleLogin !== false;
+
+  const handleBack = () => {
+    if (savedAccounts.length > 0) {
+      navigate(`/accounts${querySuffix}`);
+    } else {
+      navigate("/");
+    }
+  };
 
   return (
-    <AuthLayout
-      title="Welcome Back"
-      subtitle="Sign in to your account to continue."
-    >
-      <SEO 
-        title="Sign In" 
-        description="Sign in to your DEEP SHOP account to track orders, earn rewards, and shop premium border cross mobiles in Bangladesh." 
+    <GoogleOAuthProvider clientId={finalGoogleClientId || "dummy_id"}>
+      <SEO
+        title="Log in to DEEP SHOP"
+        description="Log in to your DEEP SHOP account using your mobile number or email address."
         canonical="/signin"
       />
-      <VibeMascot state={mascotState} showPassword={showPassword} />
-      <form onSubmit={handleSignIn} className="space-y-4 relative z-20">
-        <div className="space-y-4">
-        
-          <div onFocus={() => setMascotFocus('email')} onBlur={() => setMascotFocus('idle')} tabIndex={-1} className="outline-none">
-            <AuthInputs 
-              authType={authType}
-              setAuthType={setAuthType}
-              email={email}
-              setEmail={setEmail}
-              countryCode={countryCode}
-              setCountryCode={setCountryCode}
-              phoneNumber={phoneNumber}
-              setPhoneNumber={setPhoneNumber}
-            />
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                Password
-              </label>
-              <Link
-                to="/forgot-password"
-                className="text-xs font-semibold text-zinc-800 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                onFocus={() => setMascotFocus('idle')}
-              >
-                Forgot Password?
-              </Link>
-            </div>
-            <div className="relative h-max">
-              <Input
-                placeholder="••••••••"
-                className="peer ps-10 pe-10 h-12 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 rounded-xl"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setMascotFocus('password')}
-                onBlur={() => setMascotFocus('idle')}
-                required
-              />
-              <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3.5 peer-disabled:opacity-50">
-                <Lock className="size-4" aria-hidden="true" />
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-                onFocus={() => setMascotFocus('password')}
-              >
-                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
+      <DeepShopAuthShell
+        onBack={handleBack}
+        savedCountBadge={savedAccounts.length}
+        desktopHeadline="Log in to DEEP SHOP."
+        desktopSubtext="Enter your mobile number or email address and password to access your orders, messages, and creator hub."
+        footer={
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => navigate(`/signup${querySuffix}`)}
+              className="w-full h-[48px] rounded-full border border-[#0064e0] dark:border-[#4599ff] hover:bg-[#0064e0]/5 active:scale-[0.99] text-[#0064e0] dark:text-[#4599ff] font-semibold text-[16px] transition cursor-pointer"
+            >
+              Create new account
+            </button>
+            <DeepShopBottomBrand />
           </div>
+        }
+      >
+        <div className="flex flex-col items-center pt-5 pb-9">
+          <DeepShopCircleLogo />
         </div>
 
-        <Button
-          disabled={loading}
-          className="w-full h-12 mt-6 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-xl font-semibold shadow-lg shadow-black/20 dark:shadow-white/10"
-        >
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {loading ? "Signing in..." : "Sign In"}
-        </Button>
-      </form>
+        {hasPendingOrder && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 text-xs text-blue-900 dark:text-blue-200">
+            <p className="font-bold">
+              অর্ডারটি দেখতে লগইন করুন অথবা নতুন অ্যাকাউন্ট খুলুন
+            </p>
+            <p className="mt-0.5 text-[11px] opacity-85">
+              লগইন করার সাথে সাথেই আপনার অর্ডারটি স্বয়ংক্রিয়ভাবে যুক্ত হয়ে যাবে।
+            </p>
+          </div>
+        )}
 
-      <AuthSeparator text="NEW HERE?" />
-      
-      <Button 
-        type="button" 
-        variant="outline"
-        className="w-full h-12 font-semibold border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md rounded-xl"
-        onClick={() => navigate("/signup")}
-      >
-        Create an Account
-      </Button>
-    </AuthLayout>
+        <form onSubmit={handleLoginSubmit} className="space-y-3.5 w-full">
+          <DeepShopFloatingInput
+            label="Mobile number or email address"
+            value={identifier}
+            onChange={(v) => {
+              setIdentifier(v);
+              if (fieldError) setFieldError("");
+            }}
+            errorText={fieldError}
+            autoComplete="username"
+          />
+
+          <DeepShopFloatingInput
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            isPassword
+            autoComplete="current-password"
+          />
+
+          <div className="pt-1">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+            >
+              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+              <span>{loading ? "Logging in..." : "Log in"}</span>
+            </button>
+          </div>
+
+          <div className="pt-2 flex justify-center">
+            <button
+              type="button"
+              onClick={() => navigate(`/find-account${querySuffix}`)}
+              className="min-h-[44px] px-3 text-[15px] font-semibold text-[#0a1317] dark:text-zinc-200 hover:underline cursor-pointer"
+            >
+              Forgotten password?
+            </button>
+          </div>
+
+          {googleEnabled && (
+            <div className="pt-2">
+              {finalGoogleClientId &&
+              finalGoogleClientId !== "YOUR_GOOGLE_CLIENT_ID_HERE" ? (
+                <GoogleLoginPill
+                  onAccessToken={handleGoogleAccessToken}
+                  disabled={loading}
+                />
+              ) : (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleFallbackGooglePopup}
+                  className="w-full h-[46px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[15px] flex items-center justify-center gap-2.5 transition cursor-pointer"
+                >
+                  <GoogleIcon className="w-4 h-4 shrink-0" />
+                  <span>Continue with Google</span>
+                </button>
+              )}
+            </div>
+          )}
+        </form>
+      </DeepShopAuthShell>
+    </GoogleOAuthProvider>
   );
 };
 

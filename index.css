@@ -605,10 +605,10 @@ html:not(.dark) .bg-gray-100,
 html:not(.dark) .bg-slate-100,
 html:not(.dark) .bg-zinc-200\/80,
 html:not(.dark) .bg-zinc-100\/90,
-html:not(.dark) .bg-[#f4f4f5],
-html:not(.dark) .bg-[#f8fafc],
-html:not(.dark) .bg-[#f1f5f9],
-html:not(.dark) .bg-[#F0F2F5] {
+html:not(.dark) .bg-\[\#f4f4f5\],
+html:not(.dark) .bg-\[\#f8fafc\],
+html:not(.dark) .bg-\[\#f1f5f9\],
+html:not(.dark) .bg-\[\#F0F2F5\] {
   background-color: #f2faff !important;
 }
 
@@ -694,9 +694,9 @@ html:not(.dark) .text-\[\#ea580c\] {
 html:not(.dark) .fill-emerald-500,
 html:not(.dark) .fill-emerald-600,
 html:not(.dark) .fill-green-500,
-html:not(.dark) .fill-[#1cdb5e],
-html:not(.dark) .fill-[#22c55e],
-html:not(.dark) .fill-[#25D366] {
+html:not(.dark) .fill-\[\#1cdb5e\],
+html:not(.dark) .fill-\[\#22c55e\],
+html:not(.dark) .fill-\[\#25D366\] {
   fill: #5F2CFF !important;
 }
 
@@ -709,9 +709,9 @@ html:not(.dark) .border-indigo-600,
 html:not(.dark) .border-indigo-500,
 html:not(.dark) .border-violet-600,
 html:not(.dark) .border-violet-500,
-html:not(.dark) .border-[#5B51D8],
-html:not(.dark) .border-[#482dff],
-html:not(.dark) .border-[#204ecf],
+html:not(.dark) .border-\[\#5B51D8\],
+html:not(.dark) .border-\[\#482dff\],
+html:not(.dark) .border-\[\#204ecf\],
 html:not(.dark) .border-\[\#1cdb5e\] {
   border-color: #5F2CFF !important;
 }

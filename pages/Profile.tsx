@@ -26,6 +26,7 @@ import {
   getSafePublicUsername,
   isPhoneAuthEmail,
 } from "../lib/utils";
+import { syncCurrentUserToSavedAccounts } from "../lib/savedAccounts";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
@@ -295,9 +296,11 @@ export const Profile: React.FC<ProfileProps> = ({
   const handleLogout = async () => {
     setShowLogoutModal(false);
     try {
+      syncCurrentUserToSavedAccounts(auth.currentUser, effectiveProfile);
       await signOut(auth);
+      localStorage.removeItem("f_cart");
       notify("Logged out successfully", "success");
-      navigate("/");
+      navigate("/accounts");
     } catch {
       notify("Failed to log out", "error");
     }
@@ -756,12 +759,11 @@ export const Profile: React.FC<ProfileProps> = ({
           },
           {
             id: "switch-account",
-            title: "Account Center & Switch Account",
-            subtitle: "Add or switch between saved accounts",
+            title: "Saved Accounts & Switch Profile",
+            subtitle: "View saved accounts on this device or add another profile",
             icon: <User className="w-5 h-5 text-blue-500" />,
-            onClick: () =>
-              window.dispatchEvent(new CustomEvent("openAccountCenter")),
-            keywords: "switch account multi login",
+            onClick: () => navigate("/accounts"),
+            keywords: "switch account multi login saved accounts",
           },
         ],
       },
