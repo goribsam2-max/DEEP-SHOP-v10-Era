@@ -44,6 +44,7 @@ import { CartAbandonmentPopup } from './components/CartAbandonmentPopup';
 import { NotificationPermissionModal } from './components/ui/NotificationPermissionModal';
 import BanOverlay from './components/BanOverlay';
 import { AdManager } from './components/AdManager';
+import { AdPlacementSlot } from './components/AdPlacementSlot';
 import { GlobalCallReceiver } from './components/GlobalCallReceiver';
 import { CustomContextMenu } from './components/CustomContextMenu';
 import { FeedPersonalization } from './pages/FeedPersonalization';
@@ -1195,6 +1196,10 @@ const GlobalRouteAwareOverlays: React.FC = () => {
       <CartAbandonmentPopup />
       <NotificationPermissionModal />
       <AdManager />
+      <AdPlacementSlot
+        slot="bottom_fixed"
+        className="fixed bottom-0 inset-x-0 z-[90] bg-white/95 dark:bg-zinc-950/95 border-t border-slate-200/80 dark:border-zinc-800 p-2 shadow-2xl"
+      />
       <CookieConsent />
     </>
   );

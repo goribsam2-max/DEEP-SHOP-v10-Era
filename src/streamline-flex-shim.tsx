@@ -28,6 +28,7 @@ const c = (d: string[]) => React.forwardRef<SVGSVGElement, any>(({ size, strokeW
 export const Activity = c(["M22 12h-4l-3 9L9 3 6 12H2"]);
 export const Archive = c(["M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8", "M23 3H1v5h22V3z", "M10 12h4"]);
 export const Terminal = c(["M4 17l6-6-6-6", "M12 19h8"]);
+export const Code = c(["M16 18l6-6-6-6", "M8 6l-6 6 6 6"]);
 export const Server = c(["M2 6h20v4H2z", "M2 14h20v4H2z", "M6 8h.01", "M6 16h.01"]);
 export const Database = c(["M3 5c0 2.21 4.03 4 9 4s9-1.79 9-4-4.03-4-9-4-9 1.79-9 4z", "M3 5v14c0 2.21 4.03 4 9 4s9-1.79 9-4V5", "M3 12c0 2.21 4.03 4 9 4s9-1.79 9-4"]);
 export const AlertCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 8v4", "M12 16h.01"]);

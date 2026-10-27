@@ -36,6 +36,7 @@ import {
   LiquidGlassShareModal,
   LiquidGlassActivityModal,
 } from "../components/LiquidGlassPostInteractions";
+import { AdPlacementSlot } from "../components/AdPlacementSlot";
 
 const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1040,21 +1041,8 @@ export const NewsHub: React.FC = () => {
                 </h1>
               </div>
 
-              {/* Right Circular Buttons: Notifications + Creator Dashboard + Unfilled Outline Shield + Unfilled Outline Palette */}
+              {/* Right Circular Buttons: Creator Dashboard + Scam Shield + Feed Personalization + News Notifications + Profile */}
               <div className="flex items-center gap-2 shrink-0">
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    navigate("/news-hub/notifications");
-                  }}
-                  title="Notifications"
-                  aria-label="Notifications"
-                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 transition cursor-pointer relative"
-                >
-                  <Icon name="bell" className="w-5 h-5 stroke-[2.2]" />
-                </button>
 
                 <button
                   type="button"
@@ -1148,6 +1136,9 @@ export const NewsHub: React.FC = () => {
                 </button>
               </div>
             </header>
+
+            {/* Top Banner Ad Placement Slot */}
+            <AdPlacementSlot slot="header_top" />
 
             {/* 2. Horizontal Circular Stories Row */}
             <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-0.5 bg-transparent">
@@ -1523,6 +1514,9 @@ export const NewsHub: React.FC = () => {
 
                   return (
                     <React.Fragment key={post.id}>
+                      {postIndex > 0 && postIndex % 3 === 0 && (
+                        <AdPlacementSlot slot="feed_in_feed" postIndex={postIndex} />
+                      )}
                       <PostImpressionTracker postId={post.id}>
                         <article
                           onClick={() => {
@@ -2236,12 +2230,14 @@ export const NewsHub: React.FC = () => {
                     </React.Fragment>
                   );
                 })}
+                <AdPlacementSlot slot="multiplex_grid" />
               </div>
             )}
           </div>
 
           {/* Desktop Right Studio & Personalization Rail */}
           <aside className="hidden lg:flex lg:col-span-3 flex-col gap-4 sticky top-6">
+            <AdPlacementSlot slot="sidebar_right" />
             {/* Creator Dashboard & Content Monetization Card */}
             <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[28px] p-5 shadow-[0_6px_24px_rgba(15,23,42,0.05)] space-y-3 border border-white/80 dark:border-zinc-800">
               <div className="flex items-center justify-between gap-2">

@@ -2,9 +2,118 @@ import React, { useState, useEffect } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
-import { Save, Plus, Trash2, Image as ImageIcon, Film, BarChart3, TrendingUp, Users, Clock, Percent, MapPin, Tag } from "lucide-react";
+import { Save, Plus, Trash2, Image as ImageIcon, Film, BarChart3, TrendingUp, Users, Clock, Percent, MapPin, Tag, Terminal, Globe, LayoutGrid, CheckCircle2 } from "lucide-react";
 import { uploadToImgbb } from "../../services/imgbb";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+
+export interface PlacementConfig {
+  id: string;
+  slot: "header_top" | "feed_in_feed" | "post_in_article" | "sidebar_right" | "bottom_fixed" | "multiplex_grid";
+  slotLabel: string;
+  active: boolean;
+  type: "script" | "custom";
+  scriptCode: string;
+  title: string;
+  text: string;
+  imageUrl: string;
+  buttonText: string;
+  buttonLink: string;
+  deviceTarget: "all" | "mobile" | "desktop";
+  format: "in_feed" | "display" | "multiplex" | "in_article";
+}
+
+const DEFAULT_PLACEMENTS: PlacementConfig[] = [
+  {
+    id: "slot_header_top",
+    slot: "header_top",
+    slotLabel: "Top Header Banner (AdX / Monetag / AdSense)",
+    active: false,
+    type: "script",
+    scriptCode: "",
+    title: "",
+    text: "",
+    imageUrl: "",
+    buttonText: "",
+    buttonLink: "",
+    deviceTarget: "all",
+    format: "display",
+  },
+  {
+    id: "slot_feed_in_feed",
+    slot: "feed_in_feed",
+    slotLabel: "News Hub In-Feed Placement (Between Feed Posts)",
+    active: false,
+    type: "custom",
+    scriptCode: "",
+    title: "Special Member Offer",
+    text: "Get exclusive discounts and early access to new collections on Deep Shop!",
+    imageUrl: "",
+    buttonText: "Shop Now",
+    buttonLink: "/",
+    deviceTarget: "all",
+    format: "in_feed",
+  },
+  {
+    id: "slot_post_in_article",
+    slot: "post_in_article",
+    slotLabel: "In-Article / Inside Post Content Ad",
+    active: false,
+    type: "script",
+    scriptCode: "",
+    title: "",
+    text: "",
+    imageUrl: "",
+    buttonText: "",
+    buttonLink: "",
+    deviceTarget: "all",
+    format: "in_article",
+  },
+  {
+    id: "slot_sidebar_right",
+    slot: "sidebar_right",
+    slotLabel: "Desktop Right Sidebar Sticky Ad",
+    active: false,
+    type: "script",
+    scriptCode: "",
+    title: "",
+    text: "",
+    imageUrl: "",
+    buttonText: "",
+    buttonLink: "",
+    deviceTarget: "desktop",
+    format: "display",
+  },
+  {
+    id: "slot_bottom_fixed",
+    slot: "bottom_fixed",
+    slotLabel: "Floating Bottom Banner Ad (Sticky Mobile & Desktop)",
+    active: false,
+    type: "script",
+    scriptCode: "",
+    title: "",
+    text: "",
+    imageUrl: "",
+    buttonText: "",
+    buttonLink: "",
+    deviceTarget: "all",
+    format: "display",
+  },
+  {
+    id: "slot_multiplex_grid",
+    slot: "multiplex_grid",
+    slotLabel: "Multiplex Native Recommendation Grid Widget",
+    active: false,
+    type: "custom",
+    scriptCode: "",
+    title: "Recommended for You",
+    text: "Check out trending items from top Bangladesh sellers.",
+    imageUrl: "",
+    buttonText: "Explore",
+    buttonLink: "/all-products",
+    deviceTarget: "all",
+    format: "multiplex",
+  },
+];
 
 interface AdMedia {
   url: string;
@@ -56,8 +165,9 @@ const RATIO_OPTIONS = [
 const ManageAds: React.FC = () => {
   const [videoAds, setVideoAds] = useState<VideoAdConfig[]>([]);
   const [photoAds, setPhotoAds] = useState<PhotoAdConfig[]>([]);
+  const [placements, setPlacements] = useState<PlacementConfig[]>(DEFAULT_PLACEMENTS);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'analytics'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'placements' | 'analytics'>('placements');
   const [analyticsData, setAnalyticsData] = useState<Record<string, any>>({});
   const [selectedAdId, setSelectedAdId] = useState<string>('');
   const notify = useNotify();
@@ -105,9 +215,34 @@ const ManageAds: React.FC = () => {
           setPhotoAds(migrated);
         }
       }
+
+      try {
+        const pSnap = await getDoc(doc(db, "settings", "ad_placements"));
+        if (pSnap.exists()) {
+          const pData = pSnap.data();
+          if (Array.isArray(pData.placements) && pData.placements.length > 0) {
+            setPlacements(pData.placements);
+          }
+        }
+      } catch (e) {}
     };
     fetchAds();
   }, []);
+
+  const savePlacements = async () => {
+    setLoading(true);
+    try {
+      await setDoc(doc(db, "settings", "ad_placements"), {
+        placements,
+        updatedAt: Date.now(),
+      });
+      notify("Ad placement codes saved successfully!", "success");
+    } catch (err) {
+      notify("Failed to save ad placements", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const saveAds = async () => {
     setLoading(true);
@@ -247,10 +382,26 @@ const ManageAds: React.FC = () => {
             {loading ? "Saving..." : <><Save className="w-4 h-4" /> Save All Configs</>}
           </button>
         )}
+        {activeTab === 'placements' && (
+          <button
+            onClick={savePlacements}
+            disabled={loading}
+            className="w-full md:w-auto bg-[#1877F2] hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 text-sm shadow-sm transition cursor-pointer"
+          >
+            {loading ? "Saving..." : <><Save className="w-4 h-4" /> Save Placement Codes</>}
+          </button>
+        )}
       </div>
 
       {/* Tabs - Horizontally scrollable on small viewports to prevent overflow */}
       <div className="flex border-b border-zinc-200 dark:border-zinc-800 gap-1 overflow-x-auto whitespace-nowrap scrollbar-none pb-px">
+        <button
+          onClick={() => setActiveTab('placements')}
+          className={"flex-shrink-0 px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 " + (activeTab === 'placements' ? 'border-[#1877F2] text-[#1877F2]' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200')}
+        >
+          <Terminal className="w-4 h-4" />
+          AdX & Monetag Placement Codes
+        </button>
         <button
           onClick={() => setActiveTab('campaigns')}
           className={"flex-shrink-0 px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 " + (activeTab === 'campaigns' ? 'border-[#1cdb5e] text-[#1cdb5e]' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200')}
@@ -273,6 +424,225 @@ const ManageAds: React.FC = () => {
           Advanced Analytics Dashboard
         </button>
       </div>
+
+      {activeTab === 'placements' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-2">
+            <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-white">
+              <Terminal className="w-5 h-5 text-[#1877F2]" /> Ad Network Placement & Script Manager
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Embed Monetag, Google AdSense, AdX, Ezoic, or custom Javascript code snippet scripts across every section of the website. Or create responsive custom text/image ads with liquid glass design.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            {placements.map((plc, idx) => (
+              <div
+                key={plc.id || idx}
+                className="p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-4 shadow-sm"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={plc.active}
+                        onChange={(e) => {
+                          const next = [...placements];
+                          next[idx].active = e.target.checked;
+                          setPlacements(next);
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-[#1877F2]"></div>
+                    </label>
+                    <div>
+                      <h4 className="text-base font-bold text-zinc-900 dark:text-white">
+                        {plc.slotLabel}
+                      </h4>
+                      <p className="text-xs text-zinc-500">
+                        Slot ID: <code className="font-mono text-blue-600 dark:text-blue-400">{plc.slot}</code>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${plc.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'}`}>
+                      {plc.active ? 'Active' : 'Disabled'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      Placement Type
+                    </label>
+                    <select
+                      value={plc.type}
+                      onChange={(e) => {
+                        const next = [...placements];
+                        next[idx].type = e.target.value as any;
+                        setPlacements(next);
+                      }}
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none cursor-pointer"
+                    >
+                      <option value="script">JS Script / Ad Code Tag (Monetag/AdSense/AdX)</option>
+                      <option value="custom">Custom Graphic Banner (Text + Image + Link)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      Target Device
+                    </label>
+                    <select
+                      value={plc.deviceTarget || "all"}
+                      onChange={(e) => {
+                        const next = [...placements];
+                        next[idx].deviceTarget = e.target.value as any;
+                        setPlacements(next);
+                      }}
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none cursor-pointer"
+                    >
+                      <option value="all">All Devices (Mobile & Desktop)</option>
+                      <option value="mobile">Mobile View Only</option>
+                      <option value="desktop">Desktop View Only</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      Ad Format
+                    </label>
+                    <select
+                      value={plc.format || "in_feed"}
+                      onChange={(e) => {
+                        const next = [...placements];
+                        next[idx].format = e.target.value as any;
+                        setPlacements(next);
+                      }}
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none cursor-pointer"
+                    >
+                      <option value="in_feed">In-Feed Responsive</option>
+                      <option value="display">Display Banner</option>
+                      <option value="in_article">In-Article Content</option>
+                      <option value="multiplex">Multiplex Recommendation Grid</option>
+                    </select>
+                  </div>
+                </div>
+
+                {plc.type === "script" ? (
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      Paste Ad Network Script / HTML Tag Code (Monetag, Google AdSense, AdX, etc.)
+                    </label>
+                    <textarea
+                      value={plc.scriptCode || ""}
+                      onChange={(e) => {
+                        const next = [...placements];
+                        next[idx].scriptCode = e.target.value;
+                        setPlacements(next);
+                      }}
+                      rows={4}
+                      placeholder={`<script src="//monetag.com/..."></script> or <ins class="adsbygoogle" ...></ins>`}
+                      className="w-full font-mono text-xs p-3 rounded-2xl bg-zinc-950 text-emerald-400 border border-zinc-800 outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                        Ad Title
+                      </label>
+                      <input
+                        type="text"
+                        value={plc.title || ""}
+                        onChange={(e) => {
+                          const next = [...placements];
+                          next[idx].title = e.target.value;
+                          setPlacements(next);
+                        }}
+                        placeholder="e.g. Special Discount Offer"
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                        Image URL
+                      </label>
+                      <input
+                        type="text"
+                        value={plc.imageUrl || ""}
+                        onChange={(e) => {
+                          const next = [...placements];
+                          next[idx].imageUrl = e.target.value;
+                          setPlacements(next);
+                        }}
+                        placeholder="https://..."
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                        Ad Description Body Text
+                      </label>
+                      <textarea
+                        value={plc.text || ""}
+                        onChange={(e) => {
+                          const next = [...placements];
+                          next[idx].text = e.target.value;
+                          setPlacements(next);
+                        }}
+                        rows={2}
+                        placeholder="Promotional details..."
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                        Button Text
+                      </label>
+                      <input
+                        type="text"
+                        value={plc.buttonText || ""}
+                        onChange={(e) => {
+                          const next = [...placements];
+                          next[idx].buttonText = e.target.value;
+                          setPlacements(next);
+                        }}
+                        placeholder="e.g. Shop Now"
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                        Button Destination Link
+                      </label>
+                      <input
+                        type="text"
+                        value={plc.buttonLink || ""}
+                        onChange={(e) => {
+                          const next = [...placements];
+                          next[idx].buttonLink = e.target.value;
+                          setPlacements(next);
+                        }}
+                        placeholder="e.g. /products or https://..."
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {activeTab === 'campaigns' && (
         <div className="space-y-6">
