@@ -19,6 +19,10 @@ export interface LiquidGlassPopupProps {
   children?: React.ReactNode;
   primaryAction?: LiquidGlassAction;
   secondaryAction?: LiquidGlassAction;
+  primaryText?: React.ReactNode;
+  onPrimary?: (e?: any) => void;
+  secondaryText?: React.ReactNode;
+  onSecondary?: (e?: any) => void;
   maxWidthClass?: string;
   className?: string;
   showCloseButton?: boolean;
@@ -34,6 +38,10 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
   children,
   primaryAction,
   secondaryAction,
+  primaryText,
+  onPrimary,
+  secondaryText,
+  onSecondary,
   maxWidthClass = 'max-w-[360px] sm:max-w-[390px]',
   className = '',
   showCloseButton = false,
@@ -50,6 +58,18 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
+
+  const effectivePrimary: LiquidGlassAction | undefined =
+    primaryAction ||
+    (primaryText && onPrimary
+      ? { label: primaryText, onClick: onPrimary }
+      : undefined);
+
+  const effectiveSecondary: LiquidGlassAction | undefined =
+    secondaryAction ||
+    (secondaryText && onSecondary
+      ? { label: secondaryText, onClick: onSecondary }
+      : undefined);
 
   if (typeof document === 'undefined') return null;
 
@@ -110,31 +130,31 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
               </div>
             )}
 
-            {(primaryAction || secondaryAction) && (
+            {(effectivePrimary || effectiveSecondary) && (
               <div className="mt-6 flex flex-col gap-2.5">
-                {primaryAction && (
+                {effectivePrimary && (
                   <button
-                    type={primaryAction.type || 'button'}
-                    onClick={primaryAction.onClick}
-                    disabled={primaryAction.disabled || primaryAction.loading}
+                    type={effectivePrimary.type || 'button'}
+                    onClick={effectivePrimary.onClick}
+                    disabled={effectivePrimary.disabled || effectivePrimary.loading}
                     className="w-full px-6 py-3 ds-liquid-btn-primary flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap"
                   >
-                    {primaryAction.loading ? (
+                    {effectivePrimary.loading ? (
                       <span className="w-24 h-4 rounded-full ds-skeleton inline-block" />
                     ) : (
-                      primaryAction.label
+                      effectivePrimary.label
                     )}
                   </button>
                 )}
 
-                {secondaryAction && (
+                {effectiveSecondary && (
                   <button
-                    type={secondaryAction.type || 'button'}
-                    onClick={secondaryAction.onClick}
-                    disabled={secondaryAction.disabled}
+                    type={effectiveSecondary.type || 'button'}
+                    onClick={effectiveSecondary.onClick}
+                    disabled={effectiveSecondary.disabled}
                     className="w-full px-6 py-3 ds-liquid-btn-secondary flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap"
                   >
-                    {secondaryAction.label}
+                    {effectiveSecondary.label}
                   </button>
                 )}
               </div>

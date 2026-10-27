@@ -77,6 +77,30 @@ body {
   color: #f4f4f5;
 }
 
+/* Dark mode placeholders & autofill fixes */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #71717a;
+  opacity: 1;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: inherit !important;
+  transition: background-color 5000s ease-in-out 0s;
+  border-radius: inherit !important;
+}
+
 /* User's custom premium SVG & Plus UI XML variables */
 :root {
   --themeC: #ffffff;

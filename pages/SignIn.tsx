@@ -173,10 +173,10 @@ const SignIn: React.FC = () => {
     }
 
     const badContent = validateInappropriateContent(trimmedId, "ইমেইল বা ফোন নম্বরে");
-    if (badContent) {
-      setFieldError(badContent);
-      notify(badContent, "error");
-      playAuthVoice(badContent);
+    if (!badContent.isValid) {
+      setFieldError(badContent.errorMsg);
+      notify(badContent.errorMsg, "error");
+      playAuthVoice(badContent.errorMsg);
       return;
     }
 
@@ -198,9 +198,9 @@ const SignIn: React.FC = () => {
     }
 
     const badPwd = validateInappropriateContent(password, "পাসওয়ার্ডে");
-    if (badPwd) {
-      notify(badPwd, "error");
-      playAuthVoice(badPwd);
+    if (!badPwd.isValid) {
+      notify(badPwd.errorMsg, "error");
+      playAuthVoice(badPwd.errorMsg);
       return;
     }
 

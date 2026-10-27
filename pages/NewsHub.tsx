@@ -57,6 +57,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  where,
 } from "firebase/firestore";
 import { ScamPost, ReactionType } from "../types";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
@@ -221,6 +222,7 @@ export const NewsHub: React.FC = () => {
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [shareModalPost, setShareModalPost] = useState<Partial<ScamPost> | null>(null);
   const [activityModalPost, setActivityModalPost] = useState<Partial<ScamPost> | null>(null);
+  const [unreadNewsNotifications, setUnreadNewsNotifications] = useState<number>(0);
   const [localUserReactions, setLocalUserReactions] = useState<
     Record<string, ReactionType>
   >(() => {
@@ -230,6 +232,29 @@ export const NewsHub: React.FC = () => {
       return {};
     }
   });
+
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setUnreadNewsNotifications(0);
+      return;
+    }
+    const q = query(
+      collection(db, "news_hub_notifications"),
+      where("userId", "==", currentUser.uid)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const count = snap.docs.filter((d) => {
+          const data = d.data();
+          return !data.isRead && !data.read;
+        }).length;
+        setUnreadNewsNotifications(count);
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, [currentUser?.uid]);
 
   useEffect(() => {
     let unsubUserDoc: (() => void) | null = null;
@@ -1084,6 +1109,24 @@ export const NewsHub: React.FC = () => {
                   <Icon name="palette" className="w-5 h-5 stroke-[2.2]" />
                   {isPersonalizedActive && (
                     <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#1877F2]" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate("/news-hub/notifications");
+                  }}
+                  title="News Notifications"
+                  aria-label="News Notifications"
+                  className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 transition cursor-pointer"
+                >
+                  <Icon name="bell" className="w-5 h-5 stroke-[2.2]" />
+                  {unreadNewsNotifications > 0 && (
+                    <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-extrabold min-w-[18px] text-center border-2 border-white dark:border-zinc-900 shadow-sm leading-none">
+                      {unreadNewsNotifications > 99 ? "99+" : unreadNewsNotifications}
+                    </span>
                   )}
                 </button>
 

@@ -70,9 +70,9 @@ export const FindAccountPage: React.FC = () => {
     }
 
     const badCheck = validateInappropriateContent(trimmed, "অনুসন্ধান তথ্যে");
-    if (badCheck) {
-      setErrorText(badCheck);
-      playAuthVoice(badCheck);
+    if (!badCheck.isValid) {
+      setErrorText(badCheck.errorMsg);
+      playAuthVoice(badCheck.errorMsg);
       return;
     }
 
