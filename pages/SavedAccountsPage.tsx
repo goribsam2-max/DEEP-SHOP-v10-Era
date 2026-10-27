@@ -30,6 +30,7 @@ import {
   syncCurrentUserToSavedAccounts,
   upsertSavedAccount,
 } from "../lib/savedAccounts";
+import { playAuthVoice } from "../lib/authVoiceAndValidation";
 
 const SavedAccountsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,6 +50,7 @@ const SavedAccountsPage: React.FC = () => {
   const querySuffix = location.search || "";
 
   useEffect(() => {
+    playAuthVoice("আপনার অ্যাকাউন্ট নির্বাচন করুন, অথবা অন্য কোনো অ্যাকাউন্টে লগইন করতে পারবেন।");
     const unsub = onAuthStateChanged(auth, (u) => {
       setCurrentUid(u?.uid || null);
       if (u) {

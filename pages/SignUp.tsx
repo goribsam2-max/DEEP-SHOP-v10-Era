@@ -22,6 +22,13 @@ import {
   normalizeBdPhoneVariants,
   upsertSavedAccount,
 } from "../lib/savedAccounts";
+import AuthVoiceToggle from "../components/AuthVoiceToggle";
+import {
+  playAuthVoice,
+  validateRealEmail,
+  validateInappropriateContent,
+  checkPasswordRules,
+} from "../lib/authVoiceAndValidation";
 
 const DRAFT_STORAGE_KEY = "deepshop_signup_wizard_draft_v1";
 
@@ -230,31 +237,58 @@ const SignUp: React.FC = () => {
   const handleNextFromName = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.firstName.trim()) {
-      setFieldError("Please enter your first name.");
+      const err = "Please enter your first name.";
+      setFieldError(err);
+      playAuthVoice("আপনার প্রথম নাম লিখুন।");
+      return;
+    }
+    const fnCheck = validateInappropriateContent(draft.firstName, "ফার্স্ট নেমে");
+    if (!fnCheck.isValid) {
+      setFieldError(fnCheck.errorMsg);
+      playAuthVoice(fnCheck.errorMsg);
       return;
     }
     if (!draft.surname.trim()) {
-      setFieldError("Please enter your surname.");
+      const err = "Please enter your surname.";
+      setFieldError(err);
+      playAuthVoice("আপনার সারনেম বা পদবী লিখুন।");
       return;
     }
+    const snCheck = validateInappropriateContent(draft.surname, "সারনেমে");
+    if (!snCheck.isValid) {
+      setFieldError(snCheck.errorMsg);
+      playAuthVoice(snCheck.errorMsg);
+      return;
+    }
+    playAuthVoice("আপনার জন্ম তারিখ নির্বাচন করুন।");
     navigate(`/signup/birthday${querySuffix}`);
   };
 
   const handleNextFromBirthday = (e: React.FormEvent) => {
     e.preventDefault();
     if (age < 13) {
+      const err = "অ্যাকাউন্ট তৈরি করতে বয়স কমপক্ষে ১৩ বছর হতে হবে।";
       setFieldError("You must be at least 13 years old to create an account.");
+      playAuthVoice(err);
       return;
     }
+    playAuthVoice("আপনার লিঙ্গ নির্বাচন করুন।");
     navigate(`/signup/gender${querySuffix}`);
   };
 
   const handleNextFromGender = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.gender) {
+      const err = "অনুগ্রহ করে আপনার লিঙ্গ নির্বাচন করুন।";
       setFieldError("Please select your gender to continue.");
+      playAuthVoice(err);
       return;
     }
+    playAuthVoice(
+      draft.contactMode === "email"
+        ? "আপনার ইমেইল ঠিকানা প্রদান করুন।"
+        : "আপনার মোবাইল নম্বর প্রদান করুন।"
+    );
     navigate(
       `/signup/${
         draft.contactMode === "email" ? "email" : "mobile"
@@ -266,22 +300,33 @@ const SignUp: React.FC = () => {
     e.preventDefault();
     const cleaned = draft.mobileNumber.trim().replace(/[\s\-().]/g, "");
     if (!/^\+?[0-9]{8,15}$/.test(cleaned)) {
+      const err = "সঠিক মোবাইল নম্বর প্রদান করুন।";
       setFieldError("Please enter a valid mobile number.");
+      playAuthVoice(err);
       return;
     }
     updateDraft({ contactMode: "mobile" });
-    // Directly proceed to password step — NO SMS OTP is sent!
+    playAuthVoice("একটি সুরক্ষিত পাসওয়ার্ড তৈরি করুন।");
     navigate(`/signup/password${querySuffix}`);
   };
 
   const handleNextFromEmail = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = draft.email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setFieldError("Please enter a valid email address.");
+    const emailCheck = validateRealEmail(trimmed);
+    if (!emailCheck.isValid) {
+      setFieldError(emailCheck.errorMsg);
+      playAuthVoice(emailCheck.errorMsg);
+      return;
+    }
+    const profCheck = validateInappropriateContent(trimmed, "ইমেইলে");
+    if (!profCheck.isValid) {
+      setFieldError(profCheck.errorMsg);
+      playAuthVoice(profCheck.errorMsg);
       return;
     }
     updateDraft({ contactMode: "email" });
+    playAuthVoice("একটি সুরক্ষিত পাসওয়ার্ড তৈরি করুন।");
     navigate(`/signup/password${querySuffix}`);
   };
 
@@ -309,10 +354,20 @@ const SignUp: React.FC = () => {
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      setFieldError(
-        "Create a password with at least 6 letters or numbers."
-      );
+
+    const pwdState = checkPasswordRules(password);
+    if (!pwdState.isAllValid) {
+      const err =
+        "পাসওয়ার্ডের সবকটি শর্ত পূরণ করুন: কমপক্ষে ৮+ অক্ষর, সংখ্যা (0-9), ছোট অক্ষর (a-z), বড় অক্ষর (A-Z) এবং স্পেশাল চিহ্ন (!@#$)।";
+      setFieldError(err);
+      playAuthVoice("পাসওয়ার্ডের সকল শর্তসমূহ পূরণ করুন।");
+      return;
+    }
+
+    const pwdCheck = validateInappropriateContent(password, "পাসওয়ার্ডে");
+    if (!pwdCheck.isValid) {
+      setFieldError(pwdCheck.errorMsg);
+      playAuthVoice(pwdCheck.errorMsg);
       return;
     }
 
@@ -1205,7 +1260,7 @@ const SignUp: React.FC = () => {
             </p>
           </div>
 
-          <div className="pt-1">
+          <div className="pt-1 space-y-3">
             <DeepShopFloatingInput
               label="Password"
               value={password}
@@ -1217,6 +1272,114 @@ const SignUp: React.FC = () => {
               errorText={fieldError}
               autoComplete="new-password"
             />
+
+            {/* Live Password Rules Checklist */}
+            {(() => {
+              const pwdRules = checkPasswordRules(password);
+              return (
+                <div className="p-3.5 rounded-2xl bg-[#f0f2f5] dark:bg-zinc-800/80 border border-[#dce1e7] dark:border-zinc-700/80 space-y-2">
+                  <p className="text-[12px] font-bold text-[#5e6c77] dark:text-zinc-400">
+                    পাসওয়ার্ডের প্রয়োজনীয় শর্তাবলী (Password Rules):
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-[12px] font-semibold">
+                    <div
+                      className={`flex items-center gap-1.5 transition ${
+                        pwdRules.hasMinLen
+                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      }`}
+                    >
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          pwdRules.hasMinLen
+                            ? "bg-emerald-500 text-white"
+                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        {pwdRules.hasMinLen ? "✓" : "○"}
+                      </span>
+                      <span>৮+ অক্ষর</span>
+                    </div>
+
+                    <div
+                      className={`flex items-center gap-1.5 transition ${
+                        pwdRules.hasNumber
+                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      }`}
+                    >
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          pwdRules.hasNumber
+                            ? "bg-emerald-500 text-white"
+                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        {pwdRules.hasNumber ? "✓" : "○"}
+                      </span>
+                      <span>সংখ্যা (0-9)</span>
+                    </div>
+
+                    <div
+                      className={`flex items-center gap-1.5 transition ${
+                        pwdRules.hasLower
+                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      }`}
+                    >
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          pwdRules.hasLower
+                            ? "bg-emerald-500 text-white"
+                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        {pwdRules.hasLower ? "✓" : "○"}
+                      </span>
+                      <span>ছোট অক্ষর (a-z)</span>
+                    </div>
+
+                    <div
+                      className={`flex items-center gap-1.5 transition ${
+                        pwdRules.hasUpper
+                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      }`}
+                    >
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          pwdRules.hasUpper
+                            ? "bg-emerald-500 text-white"
+                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        {pwdRules.hasUpper ? "✓" : "○"}
+                      </span>
+                      <span>বড় অক্ষর (A-Z)</span>
+                    </div>
+
+                    <div
+                      className={`flex items-center gap-1.5 col-span-2 transition ${
+                        pwdRules.hasSpecial
+                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      }`}
+                    >
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          pwdRules.hasSpecial
+                            ? "bg-emerald-500 text-white"
+                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        {pwdRules.hasSpecial ? "✓" : "○"}
+                      </span>
+                      <span>স্পেশাল চিহ্ন (!@#$%^&*)</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Remember login info checkbox row matching IMG_5028 */}

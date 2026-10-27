@@ -24,6 +24,11 @@ import {
   searchMatchingAccounts,
   upsertSavedAccount,
 } from "../lib/savedAccounts";
+import {
+  playAuthVoice,
+  validateInappropriateContent,
+  validateRealEmail,
+} from "../lib/authVoiceAndValidation";
 
 const FOUND_ACCOUNTS_KEY = "deepshop_found_accounts_v1";
 const SELECTED_ACCOUNT_KEY = "deepshop_selected_account_v1";
@@ -45,27 +50,49 @@ export const FindAccountPage: React.FC = () => {
 
   const querySuffix = location.search || "";
 
+  useEffect(() => {
+    playAuthVoice("আপনার একাউন্ট খুঁজে পেতে ইমেইল বা ফোন নম্বরটি লিখুন।");
+  }, []);
+
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorText("");
 
     const trimmed = queryValue.trim();
     if (!trimmed) {
-      setErrorText(
+      const msg =
         mode === "mobile"
-          ? "Please enter your mobile number."
-          : "Please enter your email address."
-      );
+          ? "অনুগ্রহ করে আপনার ফোন নম্বর লিখুন।"
+          : "অনুগ্রহ করে আপনার ইমেইল ঠিকানা লিখুন।";
+      setErrorText(msg);
+      playAuthVoice(msg);
       return;
+    }
+
+    const badCheck = validateInappropriateContent(trimmed, "অনুসন্ধান তথ্যে");
+    if (badCheck) {
+      setErrorText(badCheck);
+      playAuthVoice(badCheck);
+      return;
+    }
+
+    if (mode === "email" || trimmed.includes("@")) {
+      const emailRes = validateRealEmail(trimmed);
+      if (!emailRes.isValid) {
+        setErrorText(emailRes.errorMsg);
+        playAuthVoice(emailRes.errorMsg);
+        return;
+      }
     }
 
     setSearching(true);
     try {
       const matches = await searchMatchingAccounts(trimmed);
       if (matches.length === 0) {
-        setErrorText(
-          "No DEEP SHOP account matched that information. Check your details or switch search method below."
-        );
+        const notFound =
+          "কোনো অ্যাকাউন্ট খুঁজে পাওয়া যায়নি। আপনার দেওয়া তথ্য যাচাই করুন।";
+        setErrorText(notFound);
+        playAuthVoice(notFound);
         return;
       }
 
@@ -75,11 +102,14 @@ export const FindAccountPage: React.FC = () => {
         // Ignore storage error
       }
 
+      playAuthVoice(`${matches.length} টি মানানসই অ্যাকাউন্ট পাওয়া গেছে।`);
       navigate(`/choose-account${querySuffix}`, {
         state: { matches, searchedQuery: trimmed },
       });
     } catch {
-      setErrorText("Unable to search right now. Please try again.");
+      const err = "অনুসন্ধান করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।";
+      setErrorText(err);
+      playAuthVoice(err);
     } finally {
       setSearching(false);
     }
@@ -88,7 +118,13 @@ export const FindAccountPage: React.FC = () => {
   const toggleSearchMode = () => {
     setErrorText("");
     setQueryValue("");
-    setMode((prev) => (prev === "mobile" ? "email" : "mobile"));
+    const newMode = mode === "mobile" ? "email" : "mobile";
+    setMode(newMode);
+    playAuthVoice(
+      newMode === "mobile"
+        ? "ফোন নম্বর দিয়ে খুঁজুন"
+        : "ইমেইল ঠিকানা দিয়ে খুঁজুন"
+    );
   };
 
   return (
@@ -118,7 +154,16 @@ export const FindAccountPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="pt-1">
+          <div
+            className="pt-1"
+            onFocus={() =>
+              playAuthVoice(
+                mode === "mobile"
+                  ? "আপনার ফোন নম্বরটি লিখুন"
+                  : "আপনার ইমেইল ঠিকানাটি লিখুন"
+              )
+            }
+          >
             <DeepShopFloatingInput
               label={mode === "mobile" ? "Mobile number" : "Email address"}
               type={mode === "mobile" ? "tel" : "email"}

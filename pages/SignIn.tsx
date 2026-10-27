@@ -29,6 +29,11 @@ import {
   resolveIdentifierToAuthEmail,
   upsertSavedAccount,
 } from "../lib/savedAccounts";
+import {
+  playAuthVoice,
+  validateInappropriateContent,
+  validateRealEmail,
+} from "../lib/authVoiceAndValidation";
 
 const GOOGLE_CLIENT_ID =
   (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
@@ -83,6 +88,7 @@ const SignIn: React.FC = () => {
   const querySuffix = location.search || "";
 
   useEffect(() => {
+    playAuthVoice("আপনার অ্যাকাউন্ট বা ইমেইল এবং পাসওয়ার্ড প্রদান করে সাইন ইন করুন।");
     const unsub = onSnapshot(doc(db, "settings", "platform"), (snap) => {
       setPlatformConfig(snap.exists() ? snap.data() : {});
     });
@@ -160,11 +166,41 @@ const SignIn: React.FC = () => {
 
     const trimmedId = identifier.trim();
     if (!trimmedId) {
-      setFieldError("Enter your mobile number or email address.");
+      const err = "আপনার ইমেইল বা ফোন নম্বর প্রদান করুন।";
+      setFieldError(err);
+      playAuthVoice(err);
       return;
     }
+
+    const badContent = validateInappropriateContent(trimmedId, "ইমেইল বা ফোন নম্বরে");
+    if (badContent) {
+      setFieldError(badContent);
+      notify(badContent, "error");
+      playAuthVoice(badContent);
+      return;
+    }
+
+    if (trimmedId.includes("@")) {
+      const emailCheck = validateRealEmail(trimmedId);
+      if (!emailCheck.isValid) {
+        setFieldError(emailCheck.errorMsg);
+        notify(emailCheck.errorMsg, "error");
+        playAuthVoice(emailCheck.errorMsg);
+        return;
+      }
+    }
+
     if (!password) {
-      notify("Please enter your password.", "error");
+      const err = "অনুগ্রহ করে আপনার পাসওয়ার্ড লিখুন।";
+      notify(err, "error");
+      playAuthVoice(err);
+      return;
+    }
+
+    const badPwd = validateInappropriateContent(password, "পাসওয়ার্ডে");
+    if (badPwd) {
+      notify(badPwd, "error");
+      playAuthVoice(badPwd);
       return;
     }
 
@@ -211,7 +247,9 @@ const SignIn: React.FC = () => {
         throw primaryErr;
       }
     } catch (err: any) {
-      notify(getFriendlyErrorMessage(err), "error");
+      const friendly = getFriendlyErrorMessage(err);
+      notify(friendly, "error");
+      playAuthVoice(friendly);
     } finally {
       setLoading(false);
     }
@@ -304,24 +342,28 @@ const SignIn: React.FC = () => {
         )}
 
         <form onSubmit={handleLoginSubmit} className="space-y-3.5 w-full">
-          <DeepShopFloatingInput
-            label="Mobile number or email address"
-            value={identifier}
-            onChange={(v) => {
-              setIdentifier(v);
-              if (fieldError) setFieldError("");
-            }}
-            errorText={fieldError}
-            autoComplete="username"
-          />
+          <div onFocus={() => playAuthVoice("আপনার নিবন্ধিত ইমেইল বা ফোন নম্বর লিখুন")}>
+            <DeepShopFloatingInput
+              label="Mobile number or email address"
+              value={identifier}
+              onChange={(v) => {
+                setIdentifier(v);
+                if (fieldError) setFieldError("");
+              }}
+              errorText={fieldError}
+              autoComplete="username"
+            />
+          </div>
 
-          <DeepShopFloatingInput
-            label="Password"
-            value={password}
-            onChange={setPassword}
-            isPassword
-            autoComplete="current-password"
-          />
+          <div onFocus={() => playAuthVoice("আপনার পাসওয়ার্ড প্রদান করুন")}>
+            <DeepShopFloatingInput
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              isPassword
+              autoComplete="current-password"
+            />
+          </div>
 
           <div className="pt-1">
             <button

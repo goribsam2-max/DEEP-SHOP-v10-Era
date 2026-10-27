@@ -499,35 +499,57 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         </div>
       )}
 
-      {/* Reseller VIP & Masterclass Teacher Banner */}
-      <div className="mb-8 w-full animate-fade-in px-0 md:px-4">
+      {/* Reseller VIP & Masterclass Teacher Banner (News Hub Post Card Styled - Responsive Layout) */}
+      <div className="mb-8 w-full animate-fade-in px-0 md:px-0">
         <div
           onClick={() => navigate("/subscription")}
-          className="relative overflow-hidden rounded-2xl bg-zinc-900 dark:bg-zinc-900 border border-zinc-800 text-white p-4 sm:p-5 shadow-xs cursor-pointer active:scale-[0.99] transition-all hover:border-zinc-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="group relative overflow-hidden rounded-3xl bg-white dark:bg-[#141a22] border border-zinc-200/90 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer active:scale-[0.995]"
         >
-          <div className="flex items-start sm:items-center gap-3.5 z-10 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
-              <Crown className="w-5 h-5 text-amber-400" />
-            </div>
-            <div className="space-y-0.5 min-w-0">
-              <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-amber-400 tracking-wide whitespace-nowrap">
-                <GraduationCap className="w-3.5 h-3.5 shrink-0" />
-                <span>রিসেলার মাস্টারক্লাস ও ভিআইপি গাইড</span>
+          {/* Card Container Layout: Mobile (Vertical) / Desktop (Horizontal Grid) */}
+          <div className="grid grid-cols-1 md:grid-cols-12 items-center p-5 sm:p-6 lg:p-7 gap-5 sm:gap-6">
+            {/* Main Text Content Column */}
+            <div className="md:col-span-8 flex flex-col justify-between space-y-3 z-10">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[11px] font-extrabold tracking-wide uppercase flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  <span>VIP Masterclass</span>
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                  Reseller Guide
+                </span>
               </div>
-              <h3 className="text-xs sm:text-sm font-bold text-white tracking-tight leading-tight truncate">
+
+              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 dark:text-white tracking-tight leading-snug group-hover:text-[#0064e0] dark:group-hover:text-[#4599ff] transition-colors">
                 রিসেলারদের জন্য ০৳ অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারি
               </h3>
-              <p className="text-[10px] sm:text-xs text-zinc-400 font-normal leading-tight truncate">
-                কোনো অগ্রিম চার্জ ছাড়া সরাসরি কাস্টমারকে পার্সেল পাঠান। বিস্তারিত গাইড দেখুন।
+
+              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal leading-relaxed line-clamp-2">
+                কোনো অগ্রিম চার্জ ছাড়া সরাসরি কাস্টমারকে পার্সেল পাঠান। রিসেলার মাস্টারক্লাসের স্টেপ-বাই-স্টেপ গাইড ও ভিআইপি প্ল্যান দেখুন।
+              </p>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-[#0064e0] hover:bg-[#0056c1] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
+                >
+                  <span>গাইড ও প্ল্যান দেখুন</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Desktop Visual Card Column */}
+            <div className="md:col-span-4 relative h-36 sm:h-40 md:h-full min-h-[120px] rounded-2xl overflow-hidden bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-blue-600/15 border border-amber-500/20 flex flex-col items-center justify-center p-4 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 shadow-xs">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                DEEP SHOP Reseller Hub
+              </p>
+              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Official Certification &amp; VIP Support
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-center shrink-0 z-10">
-            <span className="px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-colors">
-              <span>গাইড ও প্ল্যান দেখুন</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </span>
           </div>
         </div>
       </div>
@@ -672,7 +694,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         </div>
         )}
 
-        {/* Border Cross / Phones Section - Elegant Horizontal Scroll Carousel style */}
+        {/* Border Cross / Phones Section */}
         {products.filter((p) =>
           ["phone", "mobile", "cross", "border"].some((word) =>
             p.category?.toLowerCase().includes(word),
@@ -681,7 +703,6 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           <div className="mb-10 w-full animate-fade-in group">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></span>
                 <h2
                   className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"
                   style={{
@@ -700,7 +721,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
               </button>
             </div>
             
-            {/* Horizontal Scroll Layout with beautiful scaling snap cards */}
+            {/* Horizontal Scroll Layout */}
             <div className="flex gap-4 overflow-x-auto pb-4 pt-1 px-1 scrollbar-hide snap-x">
               {products
                 .filter((p) =>
@@ -718,81 +739,26 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           </div>
         )}
 
-        {/* Dedicated Phone & Device Replacement Parts Section (Display, Battery, Camera, Logic) */}
+        {/* Dedicated Phone & Device Replacement Parts Section */}
         <div className="mb-8 w-full animate-fade-in group">
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0"></span>
-              <div className="flex items-baseline gap-2 min-w-0">
-                <h2
-                  className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-1.5 whitespace-nowrap"
-                  style={{
-                    fontFamily: "'Comfortaa', cursive",
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  <Wrench className="w-4 h-4 text-blue-500 shrink-0" />
-                  <span>ফোন পার্টস (Parts)</span>
-                </h2>
-                <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate hidden sm:inline-block">
-                  iPhone &amp; Android অরিজিনাল ডিসপ্লে, ব্যাটারি, ক্যামেরা ও লজিক বোর্ড
-                </p>
-              </div>
+              <h2
+                className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center whitespace-nowrap"
+                style={{
+                  fontFamily: "'Comfortaa', cursive",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                Phone Parts
+              </h2>
             </div>
             <button
-              onClick={() => navigate("/all-products?category=Phone+Parts+(%E0%A6%AA%E0%A6%BE%E0%A6%B0%E0%A7%8D%E0%A6%9F%E0%A6%B8)")}
+              onClick={() => navigate("/all-products?category=Phone+Parts")}
               className="text-[11px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0 whitespace-nowrap ml-2"
             >
               See All
             </button>
-          </div>
-
-          {/* Quick Sub-Categories Pills with Vibrant Lucide UI SVG Icons */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2.5 pt-0.5 scrollbar-hide">
-            {[
-              {
-                label: "অল পার্টস",
-                cat: "Phone Parts",
-                icon: <Smartphone className="w-3.5 h-3.5 text-blue-500 shrink-0" />,
-                badgeClass: "bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/20",
-              },
-              {
-                label: "ডিসপ্লে",
-                cat: "Display",
-                icon: <Smartphone className="w-3.5 h-3.5 text-cyan-500 shrink-0" />,
-                badgeClass: "bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/20",
-              },
-              {
-                label: "ব্যাটারি",
-                cat: "Battery",
-                icon: <Battery className="w-3.5 h-3.5 text-emerald-500 shrink-0" />,
-                badgeClass: "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
-              },
-              {
-                label: "ক্যামেরা",
-                cat: "Camera",
-                icon: <Camera className="w-3.5 h-3.5 text-purple-500 shrink-0" />,
-                badgeClass: "bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/20",
-              },
-              {
-                label: "লজিক বোর্ড",
-                cat: "Logic",
-                icon: <Cpu className="w-3.5 h-3.5 text-amber-500 shrink-0" />,
-                badgeClass: "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/20",
-              },
-            ].map((sub, sIdx) => (
-              <button
-                key={sIdx}
-                onClick={() => {
-                  setActiveCategory(sub.cat);
-                  document.getElementById("popular-products")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold shrink-0 border transition-all active:scale-95 whitespace-nowrap cursor-pointer shadow-2xs ${sub.badgeClass}`}
-              >
-                {sub.icon}
-                <span>{sub.label}</span>
-              </button>
-            ))}
           </div>
 
           {/* Parts Product Cards Horizontal Grid */}

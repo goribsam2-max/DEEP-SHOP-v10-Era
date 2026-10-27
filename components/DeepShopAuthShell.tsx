@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { db } from "../firebase";
+import AuthVoiceToggle from "./AuthVoiceToggle";
 
 const LOGO_CACHE_KEY = "deepshop_footer_logo_cache";
 
@@ -531,7 +532,7 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
   }, [logoUrl]);
 
   return (
-    <div className="min-h-[100dvh] w-full bg-white dark:bg-[#0f1419] lg:bg-[#f0f2f5] lg:dark:bg-[#090d11] text-[#0a1317] dark:text-zinc-100 flex flex-col justify-center">
+    <div className="min-h-[100dvh] w-full bg-white dark:bg-[#0f1419] lg:bg-[#f0f2f5] lg:dark:bg-[#090d11] text-[#0a1317] dark:text-zinc-100 flex flex-col justify-center relative">
       <div className="w-full max-w-6xl mx-auto flex-1 lg:flex-initial lg:grid lg:grid-cols-12 lg:items-center lg:gap-12 lg:px-8 xl:px-12 lg:py-10">
         {/* Desktop Brand Showcase Column (Responsive Desktop Layout) */}
         <div className="hidden lg:flex lg:col-span-6 flex-col justify-center pr-4 space-y-7">
@@ -617,18 +618,19 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
               <div className="w-[44px] h-[44px]" />
             )}
 
-            {onMoreClick ? (
-              <button
-                type="button"
-                onClick={onMoreClick}
-                aria-label="More account options"
-                className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-[#0a1317] dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer"
-              >
-                <MoreHorizontal className="w-6 h-6 stroke-[2]" />
-              </button>
-            ) : (
-              <div className="w-[44px] h-[44px]" />
-            )}
+            <div className="flex items-center gap-2">
+              <AuthVoiceToggle isInline />
+              {onMoreClick && (
+                <button
+                  type="button"
+                  onClick={onMoreClick}
+                  aria-label="More account options"
+                  className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-[#0a1317] dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer"
+                >
+                  <MoreHorizontal className="w-6 h-6 stroke-[2]" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Main Content Body */}
