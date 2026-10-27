@@ -1525,37 +1525,49 @@ export const NewsHub: React.FC = () => {
                               }}
                               className="flex items-center gap-3 min-w-0 cursor-pointer"
                             >
-                              <div className="w-11 h-11 rounded-full p-[2px] border border-dashed border-slate-300 dark:border-zinc-700 shrink-0">
-                                <img
-                                  src={post.reporterAvatar || defaultAvatarImg}
-                                  alt={post.reporterName}
-                                  referrerPolicy="no-referrer"
-                                  className="w-full h-full rounded-full object-cover"
-                                />
+                              <div className="w-11 h-11 rounded-full p-[2px] border border-dashed border-slate-300 dark:border-zinc-700 shrink-0 bg-zinc-900 flex items-center justify-center overflow-hidden">
+                                {post.isGhostPost ? (
+                                  <div className="w-full h-full bg-zinc-900 dark:bg-black text-white flex items-center justify-center font-bold text-xs">
+                                    👻
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={post.reporterAvatar || defaultAvatarImg}
+                                    alt={post.reporterName}
+                                    referrerPolicy="no-referrer"
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                )}
                               </div>
 
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <h2 className="text-[15.5px] font-bold text-zinc-900 dark:text-white truncate">
-                                    {post.reporterName}
+                                    {post.isGhostPost ? "Ghost post" : post.reporterName}
                                   </h2>
-                                  {post.postTag && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        triggerHaptic();
-                                        navigate(
-                                          `/news-hub/search?q=${encodeURIComponent(
-                                            post.postTag || ""
-                                          )}`
-                                        );
-                                      }}
-                                      className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-[#1877F2] dark:text-[#58A6FF] hover:underline cursor-pointer shrink-0"
-                                    >
-                                      <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
-                                      <span>{post.postTag}</span>
-                                    </button>
+                                  {post.isGhostPost ? (
+                                    <span className="text-[12px] font-serif italic text-zinc-500 dark:text-zinc-400 font-medium shrink-0">
+                                      @ghost
+                                    </span>
+                                  ) : (
+                                    post.postTag && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          triggerHaptic();
+                                          navigate(
+                                            `/news-hub/search?q=${encodeURIComponent(
+                                              post.postTag || ""
+                                            )}`
+                                          );
+                                        }}
+                                        className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-[#1877F2] dark:text-[#58A6FF] hover:underline cursor-pointer shrink-0"
+                                      >
+                                        <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{post.postTag}</span>
+                                      </button>
+                                    )
                                   )}
                                   {isScam && (
                                     <span className="text-rose-600 dark:text-rose-400 text-[11px] font-bold shrink-0">
@@ -1565,26 +1577,13 @@ export const NewsHub: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center gap-1.5 text-[11.5px] text-zinc-500 dark:text-zinc-400 whitespace-nowrap overflow-hidden">
-                                  <span className="truncate">
+                                  <span className="shrink-0">
                                     {formatFeedTimestamp(post.createdAt)}
                                   </span>
-                                  {(() => {
-                                    const primaryTheme = getFeedThemeMeta(
-                                      post.themes?.[0] || post.category
-                                    );
-                                    return primaryTheme ? (
-                                      <>
-                                        <span className="shrink-0">·</span>
-                                        <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
-                                          {primaryTheme.label}
-                                        </span>
-                                      </>
-                                    ) : null;
-                                  })()}
                                   {post.isEdited && (
                                     <>
                                       <span className="shrink-0">·</span>
-                                      <span className="shrink-0">Edited</span>
+                                      <span className="shrink-0 font-medium">Edited</span>
                                     </>
                                   )}
                                   <span className="shrink-0">·</span>
@@ -1614,9 +1613,9 @@ export const NewsHub: React.FC = () => {
                                       </span>
                                     )}
                                     {post.isGhostPost && (
-                                      <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                                      <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 font-semibold">
                                         <DottedGhostCatIcon className="w-3 h-3 shrink-0" />
-                                        <span>Ghost · 24h</span>
+                                        <span>Ghost Post · 24h</span>
                                       </span>
                                     )}
                                     {post.scheduledAt &&
@@ -1635,7 +1634,8 @@ export const NewsHub: React.FC = () => {
                               onClick={(e) => e.stopPropagation()}
                               className="relative shrink-0 flex items-center gap-1.5"
                             >
-                              {post.reporterId &&
+                              {!post.isGhostPost &&
+                                post.reporterId &&
                                 post.reporterId !== "member_local" &&
                                 currentUser?.uid !== post.reporterId && (
                                   <button
@@ -1740,11 +1740,13 @@ export const NewsHub: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Caption / Body Text with Clickable Blue #Hashtags & Stylish Inline Links */}
+                          {/* Caption / Body Text with Clickable Blue #Hashtags & Ghost Post Dashed Bubble */}
                           {rawBody && (
                             <div
                               className={
-                                post.textStyle === "quote"
+                                post.isGhostPost
+                                  ? "relative rounded-[22px] border border-dashed border-zinc-400/90 dark:border-zinc-700/90 bg-[#f8f9fa] dark:bg-zinc-800/80 p-4 text-[15px] leading-relaxed text-zinc-900 dark:text-zinc-100 shadow-2xs"
+                                  : post.textStyle === "quote"
                                   ? "rounded-[22px] bg-[#F6F8FB] dark:bg-zinc-800/70 p-4 border border-slate-200/70 dark:border-zinc-700/60"
                                   : ""
                               }
