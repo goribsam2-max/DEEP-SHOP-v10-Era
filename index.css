@@ -593,9 +593,9 @@ html:not(.dark) .bg-white\/70,
 html:not(.dark) .bg-zinc-50\/90,
 html:not(.dark) .bg-zinc-50\/80,
 html:not(.dark) footer,
-html:not(.dark) [role="dialog"],
-html:not(.dark) .popup,
-html:not(.dark) .card {
+html:not(.dark) [role="dialog"]:not(.ds-liquid-glass-popup),
+html:not(.dark) .popup:not(.ds-liquid-glass-popup),
+html:not(.dark) .card:not(.ds-liquid-glass-popup) {
   background-color: #ffffff !important;
 }
 
@@ -789,9 +789,9 @@ html.dark .dark\:bg-\[\#2d2d30\],
 html.dark .dark\:bg-gray-900,
 html.dark .dark\:bg-slate-900,
 html.dark footer,
-html.dark [role="dialog"],
-html.dark .popup,
-html.dark .card {
+html.dark [role="dialog"]:not(.ds-liquid-glass-popup),
+html.dark .popup:not(.ds-liquid-glass-popup),
+html.dark .card:not(.ds-liquid-glass-popup) {
   background-color: #181822 !important;
   color: #ffffff !important;
 }
@@ -803,9 +803,9 @@ html.dark .dark\:bg-zinc-700,
 html.dark .dark\:bg-zinc-750,
 html.dark .dark\:bg-gray-800,
 html.dark .dark\:bg-slate-800,
-html.dark input,
-html.dark textarea,
-html.dark select {
+html.dark input:not(.ds-liquid-input),
+html.dark textarea:not(.ds-liquid-input),
+html.dark select:not(.ds-liquid-input) {
   background-color: #242032 !important;
   color: #ffffff !important;
 }
@@ -1024,4 +1024,243 @@ html.dark .story-studio-shell input.bg-transparent,
 html.dark .story-studio-shell textarea.bg-transparent {
   background-color: transparent !important;
 }
+
+/* ==========================================================================
+   SITE-WIDE DIRECTIONAL WAVE SKELETON SHIMMER (.ds-skeleton)
+   Protected from global light/dark background overrides
+   ========================================================================== */
+@keyframes dsSkeletonWave {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+html:not(.dark) .ds-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: #e4eaf3 !important;
+  border-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+html.dark .ds-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: #1e1c2b !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.ds-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.65) 48%,
+    rgba(255, 255, 255, 0.85) 52%,
+    transparent 100%
+  );
+  animation: dsSkeletonWave 1.55s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+html.dark .ds-skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 48%,
+    rgba(192, 132, 252, 0.14) 52%,
+    transparent 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-skeleton::after {
+    animation-duration: 3s;
+  }
+}
+
+/* ==========================================================================
+   LIQUID GLASS LENS POPUP SYSTEM (MATCHING IMG_5029.png)
+   Frosted refractive glass card + soft dimmed backdrop + stacked pill buttons
+   ========================================================================== */
+.ds-liquid-backdrop {
+  background-color: rgba(15, 20, 28, 0.28) !important;
+  backdrop-filter: blur(4px) saturate(120%);
+  -webkit-backdrop-filter: blur(4px) saturate(120%);
+}
+
+html.dark .ds-liquid-backdrop {
+  background-color: rgba(0, 0, 0, 0.54) !important;
+}
+
+html:not(.dark) .ds-liquid-glass-popup {
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.84) 0%,
+    rgba(247, 249, 253, 0.76) 52%,
+    rgba(240, 244, 250, 0.82) 100%
+  ) !important;
+  backdrop-filter: blur(30px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(195%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.92) !important;
+  border-radius: 32px !important;
+  box-shadow:
+    0 24px 64px -12px rgba(15, 23, 42, 0.22),
+    0 6px 20px -4px rgba(15, 23, 42, 0.08),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.96),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.45) !important;
+  color: #0a0a0c !important;
+}
+
+html.dark .ds-liquid-glass-popup {
+  background: linear-gradient(
+    155deg,
+    rgba(36, 36, 46, 0.82) 0%,
+    rgba(24, 24, 34, 0.76) 52%,
+    rgba(20, 20, 28, 0.84) 100%
+  ) !important;
+  backdrop-filter: blur(30px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(195%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 32px !important;
+  box-shadow:
+    0 28px 70px -12px rgba(0, 0, 0, 0.68),
+    0 8px 24px -4px rgba(0, 0, 0, 0.42),
+    inset 0 1px 1px rgba(255, 255, 255, 0.22),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.06) !important;
+  color: #f8fafc !important;
+}
+
+html:not(.dark) .ds-liquid-popup-title {
+  color: #090a0f !important;
+  font-size: 1.25rem;
+  line-height: 1.32;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+html.dark .ds-liquid-popup-title {
+  color: #ffffff !important;
+  font-size: 1.25rem;
+  line-height: 1.32;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+html:not(.dark) .ds-liquid-popup-desc {
+  color: #5c626e !important;
+  font-size: 0.96875rem;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+html.dark .ds-liquid-popup-desc {
+  color: rgba(226, 232, 240, 0.76) !important;
+  font-size: 0.96875rem;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+/* Primary vibrant solid blue pill button matching IMG_5029.png */
+html:not(.dark) .ds-liquid-btn-primary,
+html.dark .ds-liquid-btn-primary {
+  background: linear-gradient(180deg, #0d82ff 0%, #006be6 100%) !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 6px 18px -4px rgba(0, 107, 230, 0.42) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), filter 0.16s ease;
+}
+
+html:not(.dark) .ds-liquid-btn-primary *,
+html.dark .ds-liquid-btn-primary * {
+  color: #ffffff !important;
+}
+
+.ds-liquid-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.ds-liquid-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Secondary frosted gray pill button matching IMG_5029.png */
+html:not(.dark) .ds-liquid-btn-secondary {
+  background-color: rgba(15, 23, 42, 0.085) !important;
+  color: #0b0c10 !important;
+  border-radius: 9999px !important;
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+}
+
+html:not(.dark) .ds-liquid-btn-secondary * {
+  color: #0b0c10 !important;
+}
+
+html:not(.dark) .ds-liquid-btn-secondary:hover:not(:disabled) {
+  background-color: rgba(15, 23, 42, 0.13) !important;
+}
+
+html.dark .ds-liquid-btn-secondary {
+  background-color: rgba(255, 255, 255, 0.11) !important;
+  color: #f8fafc !important;
+  border-radius: 9999px !important;
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+}
+
+html.dark .ds-liquid-btn-secondary * {
+  color: #f8fafc !important;
+}
+
+html.dark .ds-liquid-btn-secondary:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.ds-liquid-btn-secondary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Refractive inner section & input inside Liquid Glass Popups */
+html:not(.dark) .ds-liquid-section {
+  background-color: rgba(255, 255, 255, 0.58) !important;
+  border: 1px solid rgba(255, 255, 255, 0.78) !important;
+  border-radius: 20px;
+}
+
+html.dark .ds-liquid-section {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px;
+}
+
+html:not(.dark) .ds-liquid-input {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  color: #0b0c10 !important;
+  border-radius: 16px;
+}
+
+html.dark .ds-liquid-input {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+  border-radius: 16px;
+}
+
 

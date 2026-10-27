@@ -460,35 +460,37 @@ export const StopCreatingAccountModal: React.FC<{
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onContinue}
-            className="fixed inset-0 bg-black/30 backdrop-blur-[3px]"
+            className="fixed inset-0 ds-liquid-backdrop"
           />
           <motion.div
-            initial={{ scale: 0.92, opacity: 0, y: 8 }}
+            role="dialog"
+            aria-modal="true"
+            initial={{ scale: 0.91, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 8 }}
-            transition={{ type: "spring", stiffness: 360, damping: 28 }}
-            className="relative z-10 w-full max-w-[348px] rounded-[28px] bg-white/82 dark:bg-zinc-900/85 backdrop-blur-2xl border border-white/80 dark:border-zinc-700/80 shadow-[0_24px_60px_rgba(15,23,42,0.22)] p-6"
+            transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
+            className="ds-liquid-glass-popup relative z-10 w-full max-w-[356px] px-6 pt-7 pb-6 text-left"
           >
-            <h3 className="text-[19px] font-bold leading-[1.3] text-[#0a1317] dark:text-white">
+            <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">
               Do you want to stop creating your account?
             </h3>
-            <p className="mt-2.5 text-[15px] leading-[1.4] text-[#46545e] dark:text-zinc-300">
+            <p className="ds-liquid-popup-desc mt-2.5 text-[15.5px] leading-[1.44]">
               If you stop now, you&apos;ll lose any progress that you&apos;ve
               made.
             </p>
 
-            <div className="mt-6 space-y-2.5">
+            <div className="mt-6 flex flex-col gap-3">
               <button
                 type="button"
                 onClick={onStop}
-                className="w-full h-[46px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[16px] tracking-[-0.01em] transition-transform active:scale-[0.985] cursor-pointer"
               >
                 Stop creating account
               </button>
               <button
                 type="button"
                 onClick={onContinue}
-                className="w-full h-[46px] rounded-full bg-[#dfe3e8]/85 hover:bg-[#d2d7de] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full font-semibold text-[16px] tracking-[-0.01em] transition-transform active:scale-[0.985] cursor-pointer"
               >
                 Continue creating account
               </button>

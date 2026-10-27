@@ -90,8 +90,18 @@ const BlogList: React.FC = () => {
           </h2>
         </div>
         {loading ? (
-          <div className="flex justify-center p-20">
-            <div className="w-10 h-10 border-4 border-zinc-900 dark:border-zinc-100 border-t-transparent rounded-full animate-spin"></div>
+          <div className="flex flex-col gap-8">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 p-4 sm:p-6 space-y-4">
+                <div className="w-full h-52 sm:h-64 rounded-2xl ds-skeleton" />
+                <div className="h-3.5 w-32 rounded-lg ds-skeleton" />
+                <div className="h-6 w-4/5 rounded-xl ds-skeleton" />
+                <div className="space-y-2">
+                  <div className="h-3.5 w-full rounded-lg ds-skeleton" />
+                  <div className="h-3.5 w-2/3 rounded-lg ds-skeleton" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="flex flex-col gap-8">

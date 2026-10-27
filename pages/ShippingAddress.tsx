@@ -10,6 +10,7 @@ import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { BangladeshAddressSelector } from "../components/BangladeshAddressSelector";
 import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
+import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
 
 const ShippingAddress: React.FC = () => {
   const navigate = useNavigate();
@@ -163,7 +164,7 @@ const ShippingAddress: React.FC = () => {
     }
   };
 
-  if (loading) return null;
+  if (loading) return <ProfileSettingsPageSkeleton />;
 
   return (
     <div className="p-6 animate-fade-in min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-800 max-w-lg mx-auto">

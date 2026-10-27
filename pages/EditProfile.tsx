@@ -11,7 +11,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import { Check, ImagePlus, X, ChevronLeft, Loader2 } from "lucide-react";
+import { Check, ImagePlus, X, ChevronLeft } from "lucide-react";
+import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -151,11 +152,7 @@ export default function EditProfile() {
   const currentAvatarImage = avatarPreview || defaultAvatar || `https://ui-avatars.com/api/?name=${firstName}+${lastName}&background=000&color=fff`;
 
   if (loading) {
-      return (
-          <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-              <Loader2 className="w-8 h-8 animate-spin" />
-          </div>
-      );
+      return <ProfileSettingsPageSkeleton />;
   }
 
   return (
@@ -363,8 +360,7 @@ export default function EditProfile() {
                             Cancel
                         </Button>
                         <Button type="submit" disabled={updating}>
-                            {updating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                            {updating ? "Saving..." : "Save changes"}
+                            {updating ? <span className="w-24 h-4 rounded-full ds-skeleton inline-block" /> : "Save changes"}
                         </Button>
                     </div>
                 </form>

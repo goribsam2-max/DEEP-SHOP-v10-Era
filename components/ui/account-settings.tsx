@@ -301,99 +301,109 @@ export function AccountSettings() {
 		<div className="min-h-screen bg-[#F0F2F5] dark:bg-zinc-950 font-sans pb-10 text-zinc-900 dark:text-zinc-100 relative">
       {/* Edit Name Modal */}
       {showEditName && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[28px] p-6 shadow-2xl relative">
-              <button onClick={() => setShowEditName(false)} className="absolute top-4 right-4 p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full">
-                 <Icon name="close" className="w-5 h-5 text-zinc-500" />
-              </button>
-              <h3 className="text-xl font-bold mb-4">Edit Username</h3>
-              <input 
-                 autoFocus
-                 type="text"
-                 className="w-full bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl p-4 text-zinc-900 dark:text-zinc-100 font-medium focus:ring-2 focus:ring-[#109E92] outline-none transition-all placeholder:text-zinc-400 mb-6"
-                 value={editNameValue}
-                 placeholder="Enter new username"
-                 onChange={e => setEditNameValue(e.target.value)}
-              />
+        <div className="fixed inset-0 ds-liquid-backdrop z-[100] flex items-center justify-center p-5" onClick={() => setShowEditName(false)}>
+          <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 relative text-left">
+            <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Edit username</h3>
+            <p className="ds-liquid-popup-desc text-[15px] mt-1.5 mb-4">Choose how your display name appears across DEEP SHOP.</p>
+            <input 
+              autoFocus
+              type="text"
+              className="ds-liquid-input w-full rounded-2xl px-4 py-3.5 text-[15.5px] font-medium focus:ring-2 focus:ring-[#0074f8]/50 outline-none transition-all placeholder:text-zinc-400"
+              value={editNameValue}
+              placeholder="Enter new username"
+              onChange={e => setEditNameValue(e.target.value)}
+            />
+            <div className="mt-6 flex flex-col gap-3">
               <button 
-                 onClick={handleUpdateName}
-                 disabled={!editNameValue.trim() || editNameValue.trim() === name}
-                 className="w-full bg-gradient-to-r from-[#109E92] to-[#0D8A7D] text-white py-4 rounded-xl font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
+                type="button"
+                onClick={handleUpdateName}
+                disabled={!editNameValue.trim() || editNameValue.trim() === name}
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
               >
-                 Save Changes
+                Save changes
               </button>
-           </div>
+              <button
+                type="button"
+                onClick={() => setShowEditName(false)}
+                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {showAddContact && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[28px] p-6 shadow-2xl relative">
-              <button onClick={() => setShowAddContact(false)} className="absolute top-4 right-4 p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full">
-                 <Icon name="close" className="w-5 h-5 text-zinc-500" />
-              </button>
-              <h3 className="text-xl font-bold mb-4">Add {contactTypeToAdd === 'email' ? 'Email' : 'Phone'}</h3>
-              <input 
-                 autoFocus
-                 type={contactTypeToAdd === 'email' ? "email" : "tel"}
-                 className="w-full bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl p-4 text-zinc-900 dark:text-zinc-100 font-medium focus:ring-2 focus:ring-[#109E92] outline-none transition-all placeholder:text-zinc-400 mb-6"
-                 value={contactInputValue}
-                 placeholder={contactTypeToAdd === 'email' ? "Enter your email" : "+8801..."}
-                 onChange={e => setContactInputValue(e.target.value)}
-              />
+        <div className="fixed inset-0 ds-liquid-backdrop z-[100] flex items-center justify-center p-5" onClick={() => setShowAddContact(false)}>
+          <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 relative text-left">
+            <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Add {contactTypeToAdd === 'email' ? 'email address' : 'phone number'}</h3>
+            <p className="ds-liquid-popup-desc text-[15px] mt-1.5 mb-4">Link your {contactTypeToAdd === 'email' ? 'email' : 'phone'} to keep your account up to date.</p>
+            <input 
+              autoFocus
+              type={contactTypeToAdd === 'email' ? "email" : "tel"}
+              className="ds-liquid-input w-full rounded-2xl px-4 py-3.5 text-[15.5px] font-medium focus:ring-2 focus:ring-[#0074f8]/50 outline-none transition-all placeholder:text-zinc-400"
+              value={contactInputValue}
+              placeholder={contactTypeToAdd === 'email' ? "Enter your email" : "+8801..."}
+              onChange={e => setContactInputValue(e.target.value)}
+            />
+            <div className="mt-6 flex flex-col gap-3">
               <button 
-                 onClick={handleUpdateContact}
-                 disabled={!contactInputValue.trim()}
-                 className="w-full bg-gradient-to-r from-[#109E92] to-[#0D8A7D] text-white py-4 rounded-xl font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
+                type="button"
+                onClick={handleUpdateContact}
+                disabled={!contactInputValue.trim()}
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
               >
-                 Add {contactTypeToAdd === 'email' ? 'Email' : 'Phone'}
+                Save {contactTypeToAdd === 'email' ? 'email' : 'phone'}
               </button>
-           </div>
+              <button
+                type="button"
+                onClick={() => setShowAddContact(false)}
+                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Pause Orders Modal */}
       {showPauseModal && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-[28px] p-6 shadow-2xl relative border border-zinc-200 dark:border-zinc-800">
-            <button 
-              onClick={() => setShowPauseModal(false)} 
-              className="absolute top-4 right-4 p-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-full transition"
-            >
-              <Icon name="close" className="w-5 h-5 text-zinc-500" />
-            </button>
-            <h3 className="text-xl font-bold mb-1 text-zinc-900 dark:text-white">অর্ডার গ্রহণ বন্ধ রাখুন (Pause Orders)</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
-              এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে "Buy Now" ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।
+        <div className="fixed inset-0 ds-liquid-backdrop z-[100] flex items-center justify-center p-5" onClick={() => setShowPauseModal(false)}>
+          <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} className="ds-liquid-glass-popup w-full max-w-[390px] px-6 pt-7 pb-6 relative text-left">
+            <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">অর্ডার গ্রহণ বন্ধ রাখুন (Pause Orders)</h3>
+            <p className="ds-liquid-popup-desc text-[14.5px] mt-2 mb-4 leading-[1.44]">
+              এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে &quot;Buy Now&quot; ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।
             </p>
             
-            <label className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1.5">
+            <label className="ds-liquid-popup-title text-xs font-bold uppercase tracking-wider block mb-1.5">
               অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
             </label>
             <textarea
               rows={3}
               autoFocus
-              className="w-full bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl p-3 text-zinc-900 dark:text-zinc-100 font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all placeholder:text-zinc-400 mb-5 resize-none text-sm"
+              className="ds-liquid-input w-full rounded-2xl p-3.5 font-medium focus:ring-2 focus:ring-[#0074f8]/50 outline-none transition-all placeholder:text-zinc-400 resize-none text-sm"
               value={tempPauseReason}
               placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
               onChange={(e) => setTempPauseReason(e.target.value)}
             />
 
-            <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => setShowPauseModal(false)}
-                className="flex-1 py-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 font-bold text-zinc-700 dark:text-zinc-300"
-              >
-                বাতিল
-              </button>
+            <div className="mt-6 flex flex-col gap-3">
               <button 
                 type="button"
                 onClick={handleSavePauseReason}
                 disabled={!tempPauseReason.trim()}
-                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 active:scale-[0.98] transition-all shadow-md"
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
               >
                 বন্ধ রাখুন (Pause)
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPauseModal(false)}
+                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                বাতিল (Cancel)
               </button>
             </div>
           </div>

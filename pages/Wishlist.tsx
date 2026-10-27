@@ -18,6 +18,7 @@ import { useTheme } from "../components/ThemeContext";
 import { useLanguage } from "../components/LanguageContext";
 import { useIllustrations } from "../lib/useIllustrations";
 import { PixelImage } from "../components/ui/PixelImage";
+import { CatalogPageSkeleton } from "../components/PageSkeletons";
 
 const Wishlist: React.FC = () => {
   const navigate = useNavigate();
@@ -59,12 +60,7 @@ const Wishlist: React.FC = () => {
     }
   };
 
-  if (loading)
-    return (
-      <div className="h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-800">
-        <div className="w-10 h-10 border-4 border-zinc-900 dark:border-white border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  if (loading) return <CatalogPageSkeleton />;
 
   return (
     <div className="w-full bg-zinc-50 dark:bg-[#000000] min-h-screen pb-[120px] md:pb-10">

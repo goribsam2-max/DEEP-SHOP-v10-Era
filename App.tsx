@@ -38,6 +38,7 @@ const FingerprintIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   </svg>
 );
 import { LumaSpin } from './components/ui/luma-spin';
+import { RoutePageSkeleton } from './components/PageSkeletons';
 import OnboardingOffersModal from './components/OnboardingOffersModal';
 import { CartAbandonmentPopup } from './components/CartAbandonmentPopup';
 import { NotificationPermissionModal } from './components/ui/NotificationPermissionModal';
@@ -395,96 +396,15 @@ const MigrationHelper = () => {
   return null;
 }
 
-const PageSkeleton = ({ pathname }: { pathname: string }) => {
-  const isHome = pathname === '/';
-  const isProduct = pathname.startsWith('/product/');
-  const isCart = pathname === '/cart';
-  const isOrders = pathname.startsWith('/orders');
-  const isProfile = pathname.startsWith('/profile');
-
-  return (
-  <div className="w-full min-h-screen bg-zinc-50 dark:bg-zinc-900 p-4 md:p-8 pt-6 animate-pulse overflow-hidden fixed inset-0 z-[99999]">
-      <div className="max-w-4xl mx-auto mt-4 pb-24 space-y-6">
-        {isProduct ? (
-            <>
-               <div className="w-full aspect-square md:h-96 bg-zinc-200 dark:bg-zinc-800 rounded-2xl mb-8"></div>
-               <div className="w-3/4 h-8 bg-zinc-200 dark:bg-zinc-800 rounded-full mb-4"></div>
-               <div className="w-1/4 h-6 bg-zinc-200 dark:bg-zinc-800 rounded-full mb-8"></div>
-               <div className="space-y-3">
-                 <div className="w-full h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-                 <div className="w-full h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-                 <div className="w-2/3 h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-               </div>
-            </>
-        ) : isOrders ? (
-            <>
-               <div className="flex justify-between items-center mb-6">
-                  <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-                  <div className="w-32 h-6 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-                  <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-               </div>
-               <div className="w-full h-12 bg-zinc-200 dark:bg-zinc-800 rounded-full mb-8"></div>
-               <div className="space-y-4">
-                  <div className="w-full h-[200px] bg-zinc-200 dark:bg-zinc-800 rounded-3xl"></div>
-                  <div className="w-full h-[200px] bg-zinc-200 dark:bg-zinc-800 rounded-3xl"></div>
-               </div>
-            </>
-        ) : isCart ? (
-             <>
-               <div className="flex justify-between items-center mb-6">
-                  <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-                  <div className="w-32 h-6 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-                  <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-               </div>
-               <div className="space-y-4 mb-8">
-                  <div className="w-full h-32 bg-zinc-200 dark:bg-zinc-800 rounded-3xl"></div>
-                  <div className="w-full h-32 bg-zinc-200 dark:bg-zinc-800 rounded-3xl"></div>
-               </div>
-               <div className="w-full h-48 bg-zinc-200 dark:bg-zinc-800 rounded-3xl"></div>
-             </>
-        ) : isProfile ? (
-             <>
-               <div className="flex flex-col items-center justify-center mb-8">
-                  <div className="w-24 h-24 bg-zinc-200 dark:bg-zinc-800 rounded-full mb-4"></div>
-                  <div className="w-32 h-6 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-               </div>
-               <div className="space-y-4">
-                  <div className="w-full h-16 bg-zinc-200 dark:bg-zinc-800 rounded-2xl"></div>
-                  <div className="w-full h-16 bg-zinc-200 dark:bg-zinc-800 rounded-2xl"></div>
-                  <div className="w-full h-16 bg-zinc-200 dark:bg-zinc-800 rounded-2xl"></div>
-               </div>
-             </>
-        ) : ( // Default / Home
-            <>
-                <div className="w-full h-40 md:h-64 bg-zinc-200 dark:bg-zinc-800 rounded-[24px] mb-8"></div>
-                <div className="flex justify-between gap-4 overflow-hidden mb-8">
-                    <div className="w-20 h-20 md:w-32 md:h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl flex-shrink-0"></div>
-                    <div className="w-20 h-20 md:w-32 md:h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl flex-shrink-0"></div>
-                    <div className="w-20 h-20 md:w-32 md:h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl flex-shrink-0"></div>
-                    <div className="w-20 h-20 md:w-32 md:h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl flex-shrink-0"></div>
-                </div>
-                <div className="space-y-4">
-                    <div className="w-full h-24 md:h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl"></div>
-                    <div className="w-full h-24 md:h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl"></div>
-                    <div className="w-full h-24 md:h-32 bg-zinc-200 dark:bg-zinc-800 rounded-2xl"></div>
-                </div>
-            </>
-        )}
-      </div>
-  </div>
-  );
-};
-
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const { setIsPageLoading } = useContext(PageLoadingContext);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    // Ensure the loading animation is visible for a moment even on fast loads
     const timer = setTimeout(() => {
       setIsPageLoading(false);
-    }, 400);
+    }, 320);
     return () => {
       clearTimeout(timer);
       setIsPageLoading(true);
@@ -925,12 +845,13 @@ const AppContent: React.FC = () => {
       <AnimatePresence>
         {isPageLoading && (
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={{ opacity: 0.96 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-white/60 dark:bg-zinc-950/60 backdrop-blur-md flex items-center justify-center"
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="fixed inset-0 z-[9999] bg-white dark:bg-black overflow-hidden"
           >
-            <IosSpinner className="text-[#1877F2]" size={32} />
+            <RoutePageSkeleton pathname={location.pathname} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1111,8 +1032,8 @@ const AppContent: React.FC = () => {
             {isScanning ? (
               <div className="flex flex-col items-center justify-center space-y-6">
                 <div className="relative w-32 h-32 flex items-center justify-center">
-                  {/* Outer spinning green glowing circle */}
-                  <div className="absolute inset-0 rounded-full border-4 border-[#1cdb5e]/20 border-t-[#1cdb5e] animate-spin" />
+                  {/* Pulsing biometric ring */}
+                  <div className="absolute inset-0 rounded-full border-4 border-[#1cdb5e]/35 animate-pulse" />
                   {/* Glowing fingerprint scan icon */}
                   <div className="text-[#1cdb5e] animate-pulse">
                     <FingerprintIcon className="w-16 h-16" />

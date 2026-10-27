@@ -69,6 +69,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { StatusBadge } from "../components/ui/status-badge";
 import { Tr } from "../components/Tr";
 import { ProductCard } from "../components/ui/ProductCard";
+import { ProductDetailsPageSkeleton } from "../components/PageSkeletons";
 
 const FlashSaleTimer = ({
   productId,
@@ -755,12 +756,7 @@ const ProductDetails: React.FC = () => {
 
   if (isNotFound) return <NotFound />;
 
-  if (!product)
-    return (
-      <div className="h-screen flex items-center justify-center bg-zinc-50 dark:bg-[#121212]">
-        <div className="w-8 h-8 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)] bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 animate-pulse mix-blend-screen" />
-      </div>
-    );
+  if (!product) return <ProductDetailsPageSkeleton />;
 
   const images =
     product.images && product.images.length > 0 && product.images[0]
@@ -2011,11 +2007,13 @@ const ProductDetails: React.FC = () => {
                 className="flex-1 gap-2 rounded-2xl py-6 text-[15px] font-bold border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm transition-all active:scale-[0.98]"
               >
                 {addingToCart ? (
-                  <div className="w-5 h-5 border-2 border-zinc-900 dark:border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="w-20 h-4 rounded-full ds-skeleton inline-block" />
                 ) : (
-                  <Icon name="shopping-cart" className="h-5 w-5" />
+                  <>
+                    <Icon name="shopping-cart" className="h-5 w-5" />
+                    <span>Add to Cart</span>
+                  </>
                 )}
-                Add to Cart
               </Button>
               <Button
                 onClick={() => addToCart(true)}

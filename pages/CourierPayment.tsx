@@ -5,8 +5,9 @@ import { db } from "../firebase";
 import { Order } from "../types";
 import { useNotify } from "../components/Notifications";
 import Icon from "../components/Icon";
-import { ArrowLeft, Loader2, CreditCard, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CreditCard, ShieldCheck, Clock } from "lucide-react";
 import { formatPrice } from "../lib/utils";
+import { CartCheckoutPageSkeleton } from "../components/PageSkeletons";
 
 export default function CourierPayment() {
   const { orderId } = useParams();
@@ -42,11 +43,7 @@ export default function CourierPayment() {
   }, [orderId]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F5F5F7] dark:bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#EF8020]" />
-      </div>
-    );
+    return <CartCheckoutPageSkeleton />;
   }
 
   if (!order) return null;
@@ -126,7 +123,7 @@ export default function CourierPayment() {
         ) : order.courierPaymentStatus === 'checking' ? (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-6 text-center animate-in fade-in zoom-in-95 duration-500">
             <div className="w-16 h-16 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white">
-              <Loader2 className="w-8 h-8 animate-spin" />
+              <Clock className="w-8 h-8" />
             </div>
             <h2 className="text-xl font-bold text-amber-600 dark:text-amber-400 mb-2">Payment Checking</h2>
             <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
@@ -196,7 +193,7 @@ export default function CourierPayment() {
                 disabled={submitting || !senderNumber.trim() || !trxId.trim()}
                 className="w-full h-14 bg-[#EF8020] hover:bg-[#d97017] disabled:opacity-50 text-white rounded-2xl font-bold text-[15px] shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2"
               >
-                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CreditCard className="w-5 h-5" /> Submit Payment</>}
+                {submitting ? <span className="w-28 h-4 rounded-full ds-skeleton inline-block" /> : <><CreditCard className="w-5 h-5" /> Submit Payment</>}
               </button>
             </form>
           </div>

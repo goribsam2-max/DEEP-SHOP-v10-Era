@@ -31,6 +31,8 @@ import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { GiftStarsModal } from "../components/GiftStarsModal";
+import { NewsProfilePageSkeleton } from "../components/PageSkeletons";
+import { LiquidGlassPopup } from "../components/ui/liquid-glass-popup";
 import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
@@ -307,12 +309,7 @@ export const AuthorProfile: React.FC = () => {
   };
 
   if (loading || !author) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-black flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3" />
-        <p className="text-xs font-semibold text-zinc-500">Loading creator profile...</p>
-      </div>
-    );
+    return <NewsProfilePageSkeleton />;
   }
 
   const handle = getSafePublicUsername(author);
@@ -842,105 +839,90 @@ export const AuthorProfile: React.FC = () => {
       />
 
       {/* SPONSOR MODAL */}
-      <AnimatePresence>
-        {showSponsorModal && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 w-full max-w-sm shadow-2xl space-y-4 text-zinc-900 dark:text-zinc-100"
-            >
-              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <Handshake className="w-5 h-5 text-emerald-500" />
-                  <span className="font-extrabold text-sm">Sponsor @{handle}</span>
-                </div>
+      <LiquidGlassPopup
+        open={showSponsorModal}
+        onClose={() => setShowSponsorModal(false)}
+        title={`Sponsor ${handle ? `@${handle}` : safeAuthorName}`}
+        description="Support this creator monthly via bKash or Nagad. Provide your payment details below to request badge activation."
+      >
+        <form onSubmit={handleSponsorSubmit} className="space-y-3.5">
+          <div>
+            <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300 block mb-1.5">
+              Monthly Sponsorship Tier (BDT)
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {["200", "500", "1000"].map((tier) => (
                 <button
+                  key={tier}
                   type="button"
-                  onClick={() => setShowSponsorModal(false)}
-                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400"
+                  onClick={() => setSponsorAmount(tier)}
+                  className={`py-2 rounded-full text-xs font-bold transition cursor-pointer ${
+                    sponsorAmount === tier
+                      ? "bg-[#0d82ff] text-white shadow-sm"
+                      : "ds-liquid-section text-zinc-700 dark:text-zinc-200"
+                  }`}
                 >
-                  <X className="w-4 h-4" />
+                  ৳{tier}/mo
                 </button>
-              </div>
-
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                Support this creator monthly via bKash or Nagad. Provide payment details below to request badge activation.
-              </p>
-
-              <form onSubmit={handleSponsorSubmit} className="space-y-3">
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                    Monthly Sponsorship Tier (BDT)
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["200", "500", "1000"].map((tier) => (
-                      <button
-                        key={tier}
-                        type="button"
-                        onClick={() => setSponsorAmount(tier)}
-                        className={`py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                          sponsorAmount === tier
-                            ? "bg-emerald-600 text-white shadow-xs"
-                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        ৳{tier}/mo
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-xs space-y-1 font-mono">
-                  <span className="text-[10px] font-sans font-bold text-emerald-800 dark:text-emerald-300 block">
-                    bKash / Nagad Personal Number:
-                  </span>
-                  <strong className="text-emerald-600 dark:text-emerald-400 text-sm block">01812345678</strong>
-                  <span className="text-[10px] font-sans text-zinc-500 block">
-                    Send Money ৳{sponsorAmount} then enter details:
-                  </span>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                    Your Mobile Number
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="017XXXXXXXX"
-                    value={sponsorPhone}
-                    onChange={(e) => setSponsorPhone(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-medium"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                    Transaction ID (TrxID)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 9J283HX10"
-                    value={sponsorTxId}
-                    onChange={(e) => setSponsorTxId(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-medium font-mono"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 cursor-pointer"
-                >
-                  Confirm Sponsorship Request
-                </button>
-              </form>
-            </motion.div>
+              ))}
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+
+          <div className="p-3.5 ds-liquid-section text-xs space-y-1 font-mono">
+            <span className="text-[11px] font-sans font-bold text-zinc-700 dark:text-zinc-200 block">
+              bKash / Nagad Personal Number:
+            </span>
+            <strong className="text-[#0d82ff] text-sm block">01812345678</strong>
+            <span className="text-[11px] font-sans text-zinc-500 dark:text-zinc-400 block">
+              Send Money ৳{sponsorAmount} then enter details:
+            </span>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300 block mb-1">
+              Your Mobile Number
+            </label>
+            <input
+              type="tel"
+              placeholder="017XXXXXXXX"
+              value={sponsorPhone}
+              onChange={(e) => setSponsorPhone(e.target.value)}
+              className="w-full px-4 py-2.5 text-xs ds-liquid-input font-medium"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300 block mb-1">
+              Transaction ID (TrxID)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. 9J283HX10"
+              value={sponsorTxId}
+              onChange={(e) => setSponsorTxId(e.target.value)}
+              className="w-full px-4 py-2.5 text-xs ds-liquid-input font-medium font-mono"
+              required
+            />
+          </div>
+
+          <div className="pt-2 flex flex-col gap-2.5">
+            <button
+              type="submit"
+              className="w-full px-6 py-3 ds-liquid-btn-primary cursor-pointer"
+            >
+              Confirm Sponsorship Request
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSponsorModal(false)}
+              className="w-full px-6 py-3 ds-liquid-btn-secondary cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </LiquidGlassPopup>
     </div>
   );
 };

@@ -900,49 +900,54 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
       </AnimatePresence>
 
       {/* ========================================================================= */}
-      {/* SHEET 4: MAP PREVIEW SHEET (Map Item in IMG_4006) */}
+      {/* SHEET 4: MAP PREVIEW POPUP */}
       {/* ========================================================================= */}
       <AnimatePresence>
         {showMapSheet && (
-          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col text-white font-inter">
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          <div
+            className="fixed inset-0 z-[160] flex items-center justify-center p-5 ds-liquid-backdrop"
+            onClick={() => setShowMapSheet(false)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              onClick={(e) => e.stopPropagation()}
+              className="ds-liquid-glass-popup w-full max-w-[380px] overflow-hidden p-5 flex flex-col gap-4 text-left"
+            >
+              <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-sky-400" />
-                  <h3 className="font-bold text-base">Friends Map</h3>
+                  <Globe className="w-5 h-5 text-[#0074f8]" />
+                  <h3 className="ds-liquid-popup-title font-bold text-[19px] tracking-[-0.02em]">Friends Map</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowMapSheet(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center"
+                  className="ds-liquid-btn-secondary w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Map Preview Graphic */}
-              <div className="h-64 relative bg-[#0B192C] flex items-center justify-center overflow-hidden">
+              <div className="h-56 relative rounded-[22px] bg-[#0B192C] flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 opacity-40 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]" />
                 <div className="relative text-center p-6 space-y-2">
-                  <div className="w-16 h-16 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center mx-auto border border-sky-500/30 animate-pulse">
-                    <MapPin className="w-8 h-8" />
+                  <div className="w-14 h-14 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center mx-auto border border-sky-500/30 animate-pulse">
+                    <MapPin className="w-7 h-7" />
                   </div>
-                  <h4 className="font-bold text-lg text-white">Live Location Sharing</h4>
-                  <p className="text-xs text-zinc-400 max-w-xs leading-relaxed">
+                  <h4 className="font-bold text-base text-white">Live Location Sharing</h4>
+                  <p className="text-xs text-zinc-300 max-w-xs leading-relaxed">
                     See where your friends are sharing thoughts around Dhaka and across Bangladesh.
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 bg-zinc-950 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowMapSheet(false)}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs"
-                >
-                  Done
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowMapSheet(false)}
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[16px] active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                Done
+              </button>
             </div>
           </div>
         )}
@@ -954,47 +959,46 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
       <AnimatePresence>
         {selectedFriendNote && (
           <div
-            className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+            className="fixed inset-0 z-[160] flex items-center justify-center p-5 ds-liquid-backdrop"
             onClick={() => setSelectedFriendNote(null)}
           >
             <div
+              role="dialog"
+              aria-modal="true"
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-xs bg-zinc-900 border border-white/10 rounded-3xl p-5 text-white flex flex-col items-center shadow-2xl animate-scaleUp text-center"
+              className="ds-liquid-glass-popup w-full max-w-[340px] px-6 pt-7 pb-6 flex flex-col items-center text-center"
             >
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-indigo-500 mb-3 bg-zinc-800">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#0074f8] mb-3 bg-zinc-200 dark:bg-zinc-800">
                 {selectedFriendNote.photoURL ? (
                   <img src={selectedFriendNote.photoURL} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center font-bold text-xl">
+                  <div className="w-full h-full flex items-center justify-center font-bold text-xl ds-liquid-popup-title">
                     {selectedFriendNote.displayName[0]?.toUpperCase()}
                   </div>
                 )}
               </div>
 
-              <h4 className="font-bold text-base">{selectedFriendNote.displayName}</h4>
+              <h4 className="ds-liquid-popup-title font-bold text-[19px] tracking-[-0.02em]">{selectedFriendNote.displayName}</h4>
 
-              <div
-                style={{ backgroundColor: selectedFriendNote.bubbleColor || '#2C2D31' }}
-                className="mt-3 p-3.5 rounded-2xl border border-white/15 text-sm font-semibold max-w-full"
-              >
+              <div className="mt-3 px-4 py-3 rounded-2xl bg-white/70 dark:bg-white/10 border border-white/60 dark:border-white/15 text-[15px] font-semibold ds-liquid-popup-title max-w-full">
                 {selectedFriendNote.bubbleEmoji && (
                   <span className="mr-1.5">{selectedFriendNote.bubbleEmoji}</span>
                 )}
-                <span>"{selectedFriendNote.text}"</span>
+                <span>&ldquo;{selectedFriendNote.text}&rdquo;</span>
               </div>
 
               {selectedFriendNote.gifUrl && (
                 <img
                   src={selectedFriendNote.gifUrl}
                   alt=""
-                  className="mt-3 w-32 h-32 rounded-xl object-cover border border-white/15"
+                  className="mt-3 w-32 h-32 rounded-2xl object-cover border border-white/30"
                 />
               )}
 
               <button
                 type="button"
                 onClick={() => setSelectedFriendNote(null)}
-                className="mt-4 px-5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold transition"
+                className="ds-liquid-btn-primary mt-6 w-full min-h-[46px] px-5 rounded-full text-[15.5px] font-semibold transition-transform active:scale-[0.985] cursor-pointer"
               >
                 Close
               </button>

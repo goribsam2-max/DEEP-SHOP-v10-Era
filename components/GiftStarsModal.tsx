@@ -277,18 +277,25 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[220] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+      <div
+        className="fixed inset-0 z-[220] flex items-center justify-center p-5 ds-liquid-backdrop"
+        onClick={onClose}
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 sm:p-6 w-full max-w-sm shadow-2xl space-y-4 text-zinc-900 dark:text-zinc-100"
+          role="dialog"
+          aria-modal="true"
+          initial={{ opacity: 0, scale: 0.91, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.94, y: 8 }}
+          transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
+          onClick={(e) => e.stopPropagation()}
+          className="ds-liquid-glass-popup px-6 pt-7 pb-6 w-full max-w-[380px] space-y-4 text-left max-h-[88dvh] overflow-y-auto"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+          <div className="flex items-center justify-between pb-1">
             <div className="flex items-center gap-2">
               <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-              <span className="font-extrabold text-sm">
+              <span className="ds-liquid-popup-title font-bold text-[19px] tracking-[-0.02em]">
                 {mode === "gift"
                   ? `Gift Stars to ${targetUserName}`
                   : "Buy Stars"}
@@ -297,7 +304,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-600 cursor-pointer"
+              className="ds-liquid-btn-secondary w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -388,16 +395,25 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                 (৳1,000).
               </p>
 
-              <button
-                type="button"
-                onClick={handleGiftSubmit}
-                disabled={isSubmitting}
-                className="w-full py-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting
-                  ? "Processing..."
-                  : `Send ${giftStarsAmount} Stars to ${targetUserName}`}
-              </button>
+              <div className="pt-2 flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleGiftSubmit}
+                  disabled={isSubmitting}
+                  className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting
+                    ? "Processing..."
+                    : `Send ${giftStarsAmount} Stars to ${targetUserName}`}
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="ds-liquid-btn-secondary w-full min-h-[46px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
 
@@ -549,15 +565,24 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !activeAccount}
-                    className="w-full py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmitting
-                      ? "Submitting..."
-                      : `Submit Order for ${buyStarsAmount} Stars (৳${buyStarsAmount})`}
-                  </button>
+                  <div className="pt-2 flex flex-col gap-2.5">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !activeAccount}
+                      className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmitting
+                        ? "Submitting..."
+                        : `Submit order (${buyStarsAmount} Stars · ৳${buyStarsAmount})`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="ds-liquid-btn-secondary w-full min-h-[46px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </>
               )}
             </form>

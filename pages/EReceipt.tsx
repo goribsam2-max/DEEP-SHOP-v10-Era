@@ -6,6 +6,7 @@ import { db } from "../firebase";
 import { Order } from "../types";
 import Icon from "../components/Icon";
 import { Button } from "@/components/ui/button";
+import { OrderDetailPageSkeleton } from "../components/PageSkeletons";
 
 const EReceipt: React.FC = () => {
   const navigate = useNavigate();
@@ -37,12 +38,7 @@ const EReceipt: React.FC = () => {
     window.print();
   };
 
-  if (loading)
-    return (
-      <div className="h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-800">
-        
-      </div>
-    );
+  if (loading) return <OrderDetailPageSkeleton />;
 
   if (!order)
     return (

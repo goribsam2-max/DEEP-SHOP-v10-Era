@@ -6,6 +6,7 @@ import { Order, OrderStatus } from "../types";
 import { motion } from "framer-motion";
 import Icon from "../components/Icon";
 import { Button } from "@/components/ui/button";
+import { OrderDetailPageSkeleton } from "../components/PageSkeletons";
 
 const StatusIcon = ({ status }: { status: OrderStatus }) => {
   const base =
@@ -26,7 +27,7 @@ const StatusIcon = ({ status }: { status: OrderStatus }) => {
     case OrderStatus.PROCESSING:
       return (
         <div className={base + "bg-blue-100 text-blue-600"}>
-          <Icon name="sync-alt" className="text-xl animate-spin" />
+          <Icon name="sync-alt" className="text-xl" />
         </div>
       );
     case OrderStatus.COMPLETE_PACKAGING:
@@ -84,22 +85,7 @@ const TrackOrder: React.FC = () => {
     return unsubscribe;
   }, [id]);
 
-  if (loading)
-    return (
-      <div className="max-w-[1440px] mx-auto px-6 py-12 md:p-12 animate-fade-in min-h-screen bg-zinc-50 dark:bg-zinc-800 flex justify-center">
-        <div className="w-full max-w-2xl bg-white dark:bg-zinc-800 rounded-2xl p-8 border border-zinc-100 dark:border-zinc-800">
-          <div className="flex justify-between items-center mb-8">
-            <div className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse"></div>
-            <div className="w-24 h-6 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse"></div>
-          </div>
-          <div className="space-y-4 mb-12">
-            <div className="w-full h-16 rounded-2xl bg-zinc-200 dark:bg-zinc-700 animate-pulse"></div>
-            <div className="w-full h-16 rounded-2xl bg-zinc-200 dark:bg-zinc-700 animate-pulse"></div>
-            <div className="w-full h-16 rounded-2xl bg-zinc-200 dark:bg-zinc-700 animate-pulse"></div>
-          </div>
-        </div>
-      </div>
-    );
+  if (loading) return <OrderDetailPageSkeleton />;
 
   if (!order)
     return (

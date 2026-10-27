@@ -93,7 +93,7 @@ import {
   useFollowedIds,
   getEffectiveFollowersCount,
 } from "../lib/follow";
-import { IosSpinner } from "../components/ui/ios-spinner";
+import { NewsPostCardSkeleton } from "../components/PageSkeletons";
 import { useFooterLogo } from "../lib/useFooterLogo";
 import {
   formatCompactNumber,
@@ -1138,6 +1138,16 @@ export const NewsHub: React.FC = () => {
               </button>
 
               {/* Real Community Stories grouped by User */}
+              {loading && stories.length === 0 &&
+                Array.from({ length: 4 }).map((_, sIdx) => (
+                  <div
+                    key={`story_skel_${sIdx}`}
+                    className="flex flex-col items-center gap-1.5 shrink-0"
+                  >
+                    <div className="w-[68px] h-[68px] rounded-full ds-skeleton" />
+                    <div className="h-3 w-12 rounded-md ds-skeleton" />
+                  </div>
+                ))}
               {Array.from(
                 stories.reduce((acc, st) => {
                   const uid = st.userId;
@@ -1333,9 +1343,7 @@ export const NewsHub: React.FC = () => {
 
             {/* 4. Feed Stream */}
             {loading && visiblePosts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-700">
-                <IosSpinner className="text-[#1877F2]" size={32} />
-              </div>
+              <NewsPostCardSkeleton count={4} />
             ) : visiblePosts.length === 0 ? (
               <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-10 text-center space-y-3 shadow-xs">
                 <p className="text-base font-bold">

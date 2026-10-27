@@ -7,6 +7,7 @@ import {
   checkStaffRecord,
   normalizeEmail,
 } from "../lib/admin";
+import { AdminTableSkeleton } from "./PageSkeletons";
 
 interface AdminLayoutProps {
   userData: any;
@@ -106,11 +107,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ userData }) => {
   }, [authResolved, authUser, userData, navigate]);
 
   if (loading) {
-    return (
-      <div className="p-8 text-center text-zinc-500 font-medium">
-        Checking permissions...
-      </div>
-    );
+    return <AdminTableSkeleton rows={6} showStats />;
   }
 
   return (

@@ -23,6 +23,8 @@ import {
 import { ProductCard } from '../components/ui/ProductCard';
 import Icon from '../components/Icon';
 import { Product } from '../types';
+import { StoreProfilePageSkeleton } from '../components/PageSkeletons';
+import { LiquidGlassPopup } from '../components/ui/liquid-glass-popup';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { checkContainsBannedWord } from '../lib/wordFilter';
 import { useNotify } from '../components/Notifications';
@@ -305,7 +307,7 @@ const StoreProfile: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-zinc-500">Loading...</div>;
+    return <StoreProfilePageSkeleton />;
   }
 
   if (!seller) {
@@ -653,6 +655,37 @@ const StoreProfile: React.FC = () => {
             </div>
           )}
         </div>
+
+        <LiquidGlassPopup
+          open={showPauseModal}
+          onClose={() => setShowPauseModal(false)}
+          title="স্টোরের অর্ডার গ্রহণ বন্ধ রাখুন"
+          description='এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে "Buy Now" ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।'
+          primaryAction={{
+            label: "বন্ধ রাখুন (Pause)",
+            onClick: handleSavePauseOrders,
+            disabled: !tempPauseReason.trim() || savingPause,
+            loading: savingPause,
+          }}
+          secondaryAction={{
+            label: "বাতিল",
+            onClick: () => setShowPauseModal(false),
+          }}
+        >
+          <div>
+            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+              অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
+            </label>
+            <textarea
+              rows={3}
+              autoFocus
+              className="w-full ds-liquid-input p-3 font-medium outline-none transition-all placeholder:text-zinc-400 resize-none text-sm"
+              value={tempPauseReason}
+              placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
+              onChange={(e) => setTempPauseReason(e.target.value)}
+            />
+          </div>
+        </LiquidGlassPopup>
       </div>
     );
   }
@@ -761,53 +794,36 @@ const StoreProfile: React.FC = () => {
           </div>
        </div>
 
-       {/* Pause Orders Modal */}
-       {showPauseModal && (
-         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-[28px] p-6 shadow-2xl relative border border-zinc-200 dark:border-zinc-800">
-             <button 
-               onClick={() => setShowPauseModal(false)} 
-               className="absolute top-4 right-4 p-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-full transition"
-             >
-               <X className="w-5 h-5 text-zinc-500" />
-             </button>
-             <h3 className="text-xl font-bold mb-1 text-zinc-900 dark:text-white">স্টোরের অর্ডার গ্রহণ বন্ধ রাখুন</h3>
-             <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
-               এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে "Buy Now" ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।
-             </p>
-             
-             <label className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1.5">
-               অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
-             </label>
-             <textarea
-               rows={3}
-               autoFocus
-               className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 text-zinc-900 dark:text-zinc-100 font-medium focus:ring-2 focus:ring-amber-500 outline-none transition-all placeholder:text-zinc-400 mb-5 resize-none text-sm"
-               value={tempPauseReason}
-               placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
-               onChange={(e) => setTempPauseReason(e.target.value)}
-             />
-
-             <div className="flex gap-2.5">
-               <button
-                 type="button"
-                 onClick={() => setShowPauseModal(false)}
-                 className="flex-1 py-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 font-bold text-zinc-700 dark:text-zinc-300"
-               >
-                 বাতিল
-               </button>
-               <button 
-                 type="button"
-                 onClick={handleSavePauseOrders}
-                 disabled={!tempPauseReason.trim() || savingPause}
-                 className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-3.5 rounded-xl font-bold disabled:opacity-50 active:scale-[0.98] transition-all shadow-md"
-               >
-                 {savingPause ? "সেভ হচ্ছে..." : "বন্ধ রাখুন (Pause)"}
-               </button>
-             </div>
-           </div>
+       <LiquidGlassPopup
+         open={showPauseModal}
+         onClose={() => setShowPauseModal(false)}
+         title="স্টোরের অর্ডার গ্রহণ বন্ধ রাখুন"
+         description='এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে "Buy Now" ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।'
+         primaryAction={{
+           label: "বন্ধ রাখুন (Pause)",
+           onClick: handleSavePauseOrders,
+           disabled: !tempPauseReason.trim() || savingPause,
+           loading: savingPause,
+         }}
+         secondaryAction={{
+           label: "বাতিল",
+           onClick: () => setShowPauseModal(false),
+         }}
+       >
+         <div>
+           <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+             অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
+           </label>
+           <textarea
+             rows={3}
+             autoFocus
+             className="w-full ds-liquid-input p-3 font-medium outline-none transition-all placeholder:text-zinc-400 resize-none text-sm"
+             value={tempPauseReason}
+             placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
+             onChange={(e) => setTempPauseReason(e.target.value)}
+           />
          </div>
-       )}
+       </LiquidGlassPopup>
     </div>
   );
 };

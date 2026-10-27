@@ -5,6 +5,7 @@ import { db, auth } from "../firebase";
 import { HelpTicket } from "../types";
 import { useNotify } from "../components/Notifications";
 import Icon from "../components/Icon";
+import { OrderDetailPageSkeleton } from "../components/PageSkeletons";
 
 const TicketDetails: React.FC = () => {
   const { id } = useParams();
@@ -54,14 +55,7 @@ const TicketDetails: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-800/30">
-        <Icon
-          name="spinner"
-          className="animate-spin text-zinc-900 dark:text-zinc-100 text-xl"
-        />
-      </div>
-    );
+    return <OrderDetailPageSkeleton />;
   }
 
   if (!ticket) return null;

@@ -72,6 +72,10 @@ import { uploadDataUrlToImgbb } from "../services/imgbb";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
+import {
+  NewsPostDetailPageSkeleton,
+  CommentListSkeleton,
+} from "../components/PageSkeletons";
 import { formatDhakaDateTime, formatDhakaFeedTime } from "../lib/dhakaTime";
 import { hasImmediateAdminOrStaffRole, checkStaffRecord } from "../lib/admin";
 import { recordPostDetailView } from "../lib/feedAlgorithm";
@@ -126,6 +130,7 @@ export const NewsDetails: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const [comments, setComments] = useState<ScamComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [commentImage, setCommentImage] = useState<string | null>(null);
   const [processingCommentImg, setProcessingCommentImg] = useState(false);
@@ -230,6 +235,7 @@ export const NewsDetails: React.FC = () => {
   // Load Comments (Firestore subcollection + local comments fallback)
   useEffect(() => {
     if (!id) return;
+    setCommentsLoading(true);
 
     const loadLocalComments = (): ScamComment[] => {
       try {
@@ -307,9 +313,11 @@ export const NewsDetails: React.FC = () => {
         setComments(
           Array.from(map.values()).sort((a, b) => a.createdAt - b.createdAt)
         );
+        setCommentsLoading(false);
       },
       () => {
         setComments(loadLocalComments());
+        setCommentsLoading(false);
       }
     );
 
@@ -924,16 +932,14 @@ export const NewsDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:to-transparent flex items-center justify-center p-6">
+      <>
         <SEO
           title="Post — News Hub"
           description="Read this community post on News Hub."
           exactTitle
         />
-        <div className="bg-white dark:bg-zinc-900 rounded-[28px] px-8 py-6 text-sm font-semibold text-zinc-500 shadow-xs">
-          Loading post...
-        </div>
-      </div>
+        <NewsPostDetailPageSkeleton />
+      </>
     );
   }
 
@@ -1446,7 +1452,9 @@ export const NewsDetails: React.FC = () => {
 
             {/* Comments List (Scrollable on Desktop Right Panel) */}
             <div className="lg:flex-1 lg:overflow-y-auto lg:pr-1 space-y-3">
-              {visibleComments.length === 0 ? (
+              {commentsLoading && visibleComments.length === 0 ? (
+                <CommentListSkeleton count={4} />
+              ) : visibleComments.length === 0 ? (
                 <div className="py-8 text-center space-y-1.5">
                   <MessageCircle className="w-7 h-7 text-zinc-300 dark:text-zinc-600 mx-auto" />
                   <p className="text-xs text-zinc-500">

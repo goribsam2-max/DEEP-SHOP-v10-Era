@@ -23,6 +23,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useNotify } from "../components/Notifications";
+import { CartCheckoutPageSkeleton } from "../components/PageSkeletons";
 import { formatPrice } from "@/lib/utils";
 import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
 import { sendOrderToTelegram } from "../services/telegram";
@@ -530,14 +531,7 @@ const Payment: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8F9FA] dark:bg-black flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold text-zinc-500">সুরক্ষিত পেমেন্ট গেটওয়ে লোড হচ্ছে...</p>
-        </div>
-      </div>
-    );
+    return <CartCheckoutPageSkeleton />;
   }
 
   if (!order) {
@@ -567,7 +561,7 @@ const Payment: React.FC = () => {
           <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
             <span className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
             <div className="w-14 h-14 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner relative z-10">
-              <Clock className="w-7 h-7 animate-spin" style={{ animationDuration: "8s" }} />
+              <Clock className="w-7 h-7" />
             </div>
           </div>
 

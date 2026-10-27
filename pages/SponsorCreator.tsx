@@ -22,6 +22,7 @@ import {
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
+import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
 import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 import {
   extractConfiguredMobileAccounts,
@@ -306,14 +307,7 @@ export const SponsorCreator: React.FC = () => {
   };
 
   if (loading || !creator) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-black flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mb-3" />
-        <p className="text-xs font-semibold text-zinc-500">
-          Loading creator details...
-        </p>
-      </div>
-    );
+    return <ProfileSettingsPageSkeleton />;
   }
 
   return (
@@ -654,12 +648,14 @@ export const SponsorCreator: React.FC = () => {
                 disabled={isSubmitting || activeAmount < 50 || !activeAccount}
                 className="w-full py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xl transition active:scale-98 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
-                <Handshake className="w-4 h-4 shrink-0" />
-                <span>
-                  {isSubmitting
-                    ? "Submitting Sponsorship..."
-                    : `Confirm Sponsorship (৳${activeAmount})`}
-                </span>
+                {isSubmitting ? (
+                  <span className="h-4 w-36 rounded-full ds-skeleton inline-block" />
+                ) : (
+                  <>
+                    <Handshake className="w-4 h-4 shrink-0" />
+                    <span>Confirm Sponsorship (৳{activeAmount})</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

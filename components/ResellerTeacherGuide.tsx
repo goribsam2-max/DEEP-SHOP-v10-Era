@@ -243,53 +243,63 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
 
       {/* Alert Details Modal */}
       {selectedAlertModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase">
-                  {selectedAlertModal.badge}
-                </span>
-                <span className="text-xs text-zinc-400">{selectedAlertModal.time}</span>
-              </div>
-              <button
-                onClick={() => setSelectedAlertModal(null)}
-                className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-bold p-1"
-              >
-                বন্ধ করুন ✕
-              </button>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5 ds-liquid-backdrop"
+          onClick={() => setSelectedAlertModal(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="ds-liquid-glass-popup w-full max-w-[380px] px-6 pt-7 pb-6 space-y-4 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#0074f8]/15 text-[#0074f8] text-xs font-bold uppercase">
+                {selectedAlertModal.badge}
+              </span>
+              <span className="ds-liquid-popup-desc text-xs">{selectedAlertModal.time}</span>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-sm font-bold text-zinc-900 dark:text-white leading-snug">
+              <h4 className="ds-liquid-popup-title text-[19px] font-bold leading-[1.28] tracking-[-0.02em]">
                 {selectedAlertModal.title}
               </h4>
-              <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              <p className="ds-liquid-popup-desc text-[15px] leading-[1.44]">
                 {selectedAlertModal.desc}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-              <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
-                <span className="text-[10px] text-zinc-400 block">কুরিয়ার মেথড</span>
-                <span className="font-bold text-zinc-900 dark:text-white">{selectedAlertModal.courier}</span>
+            <div className="grid grid-cols-2 gap-2.5 text-xs pt-1">
+              <div className="p-3 rounded-2xl bg-white/60 dark:bg-white/10 border border-white/60 dark:border-white/10">
+                <span className="text-[10px] ds-liquid-popup-desc block">কুরিয়ার মেথড</span>
+                <span className="font-bold ds-liquid-popup-title">{selectedAlertModal.courier}</span>
               </div>
-              <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
-                <span className="text-[10px] text-zinc-400 block">স্ট্যাটাস / ভ্যালু</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">{selectedAlertModal.amount}</span>
+              <div className="p-3 rounded-2xl bg-white/60 dark:bg-white/10 border border-white/60 dark:border-white/10">
+                <span className="text-[10px] ds-liquid-popup-desc block">স্ট্যাটাস / ভ্যালু</span>
+                <span className="font-bold text-[#0074f8]">{selectedAlertModal.amount}</span>
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                setSelectedAlertModal(null);
-                if (onScrollToPlans) onScrollToPlans();
-              }}
-              className="w-full py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center justify-center gap-2"
-            >
-              <span>ভিআইপি সাবস্ক্রিপশন দেখুন</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="pt-2 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedAlertModal(null);
+                  if (onScrollToPlans) onScrollToPlans();
+                }}
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold flex items-center justify-center gap-2 active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                <span>ভিআইপি সাবস্ক্রিপশন দেখুন</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedAlertModal(null)}
+                className="ds-liquid-btn-secondary w-full min-h-[46px] px-5 rounded-full text-[15.5px] font-semibold flex items-center justify-center active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
           </div>
         </div>
       )}

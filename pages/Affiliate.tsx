@@ -32,6 +32,8 @@ import { Wallet, TrendingUp, Eye, RefreshCw, ArrowDown, ArrowUp, ArrowLeftRight,
 
 import { DiscreteTabs, TabItem } from "../components/ui/discrete-tab";
 import { TourProvider, TourAlertDialog, useTour } from "@/components/ui/tour";
+import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
+import { LiquidGlassPopup } from "../components/ui/liquid-glass-popup";
 
 // GIF Generator
 import { generateStickerGif } from "../components/GifGenerator";
@@ -364,8 +366,7 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
                   </div>
                   <Button type="submit" disabled={submitting} className="w-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 h-12 rounded-xl mt-2 relative overflow-hidden group">
                     <span className="relative z-10 flex items-center justify-center font-bold">
-                      {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                      {submitting ? "Submitting Request..." : "Send Request For Review"}
+                      {submitting ? <span className="w-28 h-4 rounded-full ds-skeleton inline-block" /> : "Send Request For Review"}
                     </span>
                   </Button>
                </form>
@@ -376,66 +377,65 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
       </div>
 
       {/* Generation Modal overlay */}
-      {(generatingGif || generatedUrl) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl scale-in-center overflow-hidden relative">
-            {generatingGif ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="w-16 h-16 mb-6 relative">
-                  <div className="absolute inset-0 border-4 border-pink-100 dark:border-pink-900/30 rounded-full"></div>
-                  <div className="absolute inset-0 border-4 border-pink-500 rounded-full border-t-transparent animate-spin"></div>
-                </div>
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Rendering Premium GIF...</h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-[200px] mb-4">
-                  Please wait, rendering frame by frame for max quality.
-                </p>
-                <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-pink-500 rounded-full transition-all duration-200" style={{ width: `${gifProgress}%` }}></div>
-                </div>
-                <p className="text-xs font-bold mt-2 text-zinc-400">{gifProgress}%</p>
-              </div>
-            ) : generatedUrl ? (
-              <div className="flex flex-col items-center text-center">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mb-4">
-                  <Icon name="check" className="text-2xl" />
-                </div>
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Your GIF is Ready!</h3>
-                <div className="w-48 h-48 bg-zinc-100 dark:bg-zinc-800 rounded-2xl overflow-hidden mb-4 relative drop-shadow-md select-auto">
-                   <img src={generatedUrl} className="w-full h-full object-contain select-auto pointer-events-auto" style={{ WebkitTouchCallout: 'default' }} alt="Generated Sticker" />
-                </div>
-                
-                <div className="flex flex-col gap-3 w-full">
-                  <Button 
-                    onClick={handleShareOrDownload}
-                    className="w-full rounded-xl h-11 text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 inline-flex items-center justify-center font-medium shadow-sm transition-colors text-sm"
-                  >
-                    <Icon name="share" className="mr-2" /> Share GIF
-                  </Button>
-                  <div className="flex gap-3 w-full">
-                    <Button 
-                      onClick={() => {
-                        setGeneratedUrl(null);
-                        setGeneratedName("");
-                      }}
-                      variant="outline"
-                      className="flex-1 rounded-xl h-11"
-                    >
-                      Close
-                    </Button>
-                    <a 
-                      href={generatedUrl}
-                      download={generatedName}
-                      className="flex-1 rounded-xl h-11 text-zinc-900 border border-zinc-200 hover:bg-zinc-100 dark:text-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800 inline-flex items-center justify-center font-medium shadow-sm transition-colors text-sm bg-white dark:bg-zinc-900"
-                    >
-                      <Icon name="download" className="mr-2" /> Download
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ) : null}
+      <LiquidGlassPopup
+        open={Boolean(generatingGif || generatedUrl)}
+        closeOnBackdrop={!generatingGif}
+        onClose={() => {
+          if (!generatingGif) {
+            setGeneratedUrl(null);
+            setGeneratedName("");
+          }
+        }}
+        title={generatingGif ? "Rendering Premium GIF..." : "Your GIF is Ready!"}
+        description={
+          generatingGif
+            ? `Please wait, rendering frame by frame for max quality (${gifProgress}%).`
+            : "Share your custom partner sticker directly or save it to your device."
+        }
+        primaryAction={
+          !generatingGif && generatedUrl
+            ? {
+                label: "Share GIF",
+                onClick: handleShareOrDownload,
+              }
+            : undefined
+        }
+        secondaryAction={
+          !generatingGif && generatedUrl
+            ? {
+                label: "Close",
+                onClick: () => {
+                  setGeneratedUrl(null);
+                  setGeneratedName("");
+                },
+              }
+            : undefined
+        }
+      >
+        {generatingGif ? (
+          <div className="py-4 space-y-3">
+            <div className="w-full h-32 rounded-2xl ds-skeleton" />
+            <div className="w-full h-3 rounded-full ds-skeleton" />
           </div>
-        </div>
-      )}
+        ) : generatedUrl ? (
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-48 h-48 ds-liquid-section p-3 flex items-center justify-center overflow-hidden">
+              <img
+                src={generatedUrl}
+                className="w-full h-full object-contain select-auto pointer-events-auto"
+                alt="Generated Sticker"
+              />
+            </div>
+            <a
+              href={generatedUrl}
+              download={generatedName}
+              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Download file directly
+            </a>
+          </div>
+        ) : null}
+      </LiquidGlassPopup>
     </div>
   );
 };
@@ -799,20 +799,8 @@ const AffiliatePage: React.FC = () => {
     setSubmitting(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex bg-zinc-50 dark:bg-zinc-950 items-center justify-center min-h-screen">
-        <div className="w-6 h-6 border-[3px] border-zinc-200 dark:border-zinc-800 border-t-zinc-800 dark:border-t-zinc-200 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!userData?.uid) {
-    return (
-      <div className="flex bg-background items-center justify-center min-h-screen text-foreground">
-        <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
-      </div>
-    );
+  if (loading || !userData?.uid) {
+    return <ProfileSettingsPageSkeleton />;
   }
 
   if (userData.affiliateStatus === "pending") {

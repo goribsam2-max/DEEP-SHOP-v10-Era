@@ -18,8 +18,9 @@ import { useNotify } from "../components/Notifications";
 import { sendWithdrawalRequestToTelegram } from "../services/telegram";
 import { formatPrice } from "../lib/utils";
 
-import { Wallet, CheckCircle2, History, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Wallet, CheckCircle2, History } from "lucide-react";
+import { CartCheckoutPageSkeleton } from "../components/PageSkeletons";
+import { LiquidGlassPopup } from "../components/ui/liquid-glass-popup";
 
 const WithdrawPage: React.FC<{ userData: UserProfile | null }> = ({
   userData,
@@ -153,12 +154,7 @@ const WithdrawPage: React.FC<{ userData: UserProfile | null }> = ({
     setSubmittingWithdraw(false);
   };
 
-  if (!userData)
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Icon name="spinner-third" className="animate-spin text-xl" />
-      </div>
-    );
+  if (!userData) return <CartCheckoutPageSkeleton />;
 
   const totalWithdrawn = withdrawals.filter(w => w.status === 'Completed').reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -379,7 +375,7 @@ const WithdrawPage: React.FC<{ userData: UserProfile | null }> = ({
               className="w-full bg-[#1cdb5e] hover:bg-[#18c454] text-white py-4 rounded-xl font-bold tracking-wide transition-colors disabled:opacity-50 flex items-center justify-center mt-2 shadow-sm shadow-[#1cdb5e]/20"
             >
               {submittingWithdraw ? (
-                <Icon name="spinner-third" className="animate-spin text-xl" />
+                <span className="w-24 h-4 rounded-full ds-skeleton inline-block" />
               ) : (
                 "Withdraw"
               )}
@@ -428,57 +424,23 @@ const WithdrawPage: React.FC<{ userData: UserProfile | null }> = ({
         </div>
       </div>
 
-      <AnimatePresence>
-        {showSuccessPopup && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-white dark:bg-zinc-900 rounded-[2rem] p-8 max-w-sm w-full text-center relative shadow-2xl"
-            >
-              <button 
-                onClick={() => setShowSuccessPopup(false)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              
-              <div className="w-20 h-20 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                 <Icon name="check-circle" className="text-5xl text-[#1cdb5e]" />
-              </div>
-              
-              <h2 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">Payout Request Sent!</h2>
-              <p className="text-zinc-600 dark:text-zinc-400 font-medium text-sm mb-8 leading-relaxed">
-                Your request has been placed successfully and will be processed shortly. Allow up to 24-48 hours.
-              </p>
-              
-              <div className="flex gap-3">
-                 <button 
-                   onClick={() => setShowSuccessPopup(false)}
-                   className="flex-1 py-3.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white font-bold rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                 >
-                   Close
-                 </button>
-                 <button 
-                   onClick={() => {
-                     setShowSuccessPopup(false);
-                     navigate('/affiliate');
-                   }}
-                   className="flex-1 py-3.5 bg-[#1cdb5e] text-white font-bold rounded-xl shadow-sm hover:bg-[#18c454] transition-colors"
-                 >
-                   Dashboard
-                 </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <LiquidGlassPopup
+        open={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+        title="Payout Request Sent!"
+        description="Your request has been placed successfully and will be processed shortly. Allow up to 24–48 hours."
+        primaryAction={{
+          label: "Go to Dashboard",
+          onClick: () => {
+            setShowSuccessPopup(false);
+            navigate('/affiliate');
+          },
+        }}
+        secondaryAction={{
+          label: "Close",
+          onClick: () => setShowSuccessPopup(false),
+        }}
+      />
     </div>
   );
 };

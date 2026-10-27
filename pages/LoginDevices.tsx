@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
-import { Shield, Smartphone, Monitor, Globe, LogOut, Trash2, ArrowLeft, Loader2, Calendar, AlertTriangle } from "lucide-react";
+import { Shield, Smartphone, Monitor, Globe, LogOut, Trash2, Calendar } from "lucide-react";
 import SEO from "../components/SEO";
+import { LiquidGlassPopup } from "../components/ui/liquid-glass-popup";
 
 interface UserSession {
   id: string;
@@ -173,9 +174,20 @@ export const LoginDevices: React.FC<{ userData: any }> = ({ userData }) => {
           </div>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-10 space-y-3">
-              <Loader2 className="w-8 h-8 text-[#1cdb5e] animate-spin" />
-              <p className="text-xs text-zinc-400 font-bold">Retrieving active sessions...</p>
+            <div className="space-y-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="w-12 h-12 rounded-2xl ds-skeleton shrink-0" />
+                    <div className="space-y-2 flex-1 pt-0.5">
+                      <div className="h-4 w-40 rounded-lg ds-skeleton" />
+                      <div className="h-3 w-48 rounded-lg ds-skeleton" />
+                      <div className="h-2.5 w-32 rounded-lg ds-skeleton" />
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-full ds-skeleton shrink-0" />
+                </div>
+              ))}
             </div>
           ) : sessions.length === 0 ? (
             <div className="text-center py-10">
@@ -242,76 +254,51 @@ export const LoginDevices: React.FC<{ userData: any }> = ({ userData }) => {
 
       </div>
 
-      {/* Confirmation Logout Modal (Single Device) */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-zinc-100 dark:border-zinc-800 text-center animate-scale-up">
-            <div className="w-16 h-16 bg-red-50 dark:bg-red-950/20 rounded-full flex items-center justify-center text-red-500 mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8" />
-            </div>
-            
-            <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight mb-2">Logout Device Session?</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-6 leading-relaxed">
-              Are you sure you want to log out of this device? The account will be disconnected from that phone/browser immediately.
-            </p>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button 
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  setTargetSessionId(null);
-                }}
-                disabled={actionLoading}
-                className="w-full py-3.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold rounded-2xl text-sm transition hover:bg-zinc-200"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleRevokeSession}
-                disabled={actionLoading}
-                className="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-red-500/20"
-              >
-                {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Logout Device
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LiquidGlassPopup
+        open={showConfirmModal}
+        onClose={() => {
+          if (!actionLoading) {
+            setShowConfirmModal(false);
+            setTargetSessionId(null);
+          }
+        }}
+        title="Logout device session?"
+        description="Are you sure you want to log out of this device? Your account will be disconnected from that phone or browser immediately."
+        primaryAction={{
+          label: "Logout device",
+          onClick: handleRevokeSession,
+          loading: actionLoading,
+          disabled: actionLoading,
+        }}
+        secondaryAction={{
+          label: "Cancel",
+          onClick: () => {
+            setShowConfirmModal(false);
+            setTargetSessionId(null);
+          },
+          disabled: actionLoading,
+        }}
+      />
 
-      {/* Confirmation Logout Modal (All Other Devices) */}
-      {showConfirmAllModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl border border-zinc-100 dark:border-zinc-800 text-center animate-scale-up">
-            <div className="w-16 h-16 bg-red-50 dark:bg-red-950/20 rounded-full flex items-center justify-center text-red-500 mx-auto mb-4">
-              <LogOut className="w-8 h-8" />
-            </div>
-            
-            <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight mb-2">Logout All Other Devices?</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-6 leading-relaxed">
-              Are you sure you want to log out of ALL other sessions? Every other phone or web browser will require logging in again.
-            </p>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button 
-                onClick={() => setShowConfirmAllModal(false)}
-                disabled={actionLoading}
-                className="w-full py-3.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold rounded-2xl text-sm transition hover:bg-zinc-200"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleRevokeAllOtherSessions}
-                disabled={actionLoading}
-                className="w-full py-3.5 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-red-500/20"
-              >
-                {actionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Logout All
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LiquidGlassPopup
+        open={showConfirmAllModal}
+        onClose={() => {
+          if (!actionLoading) setShowConfirmAllModal(false);
+        }}
+        title="Logout all other devices?"
+        description="Are you sure you want to log out of all other sessions? Every other phone or browser will require logging in again."
+        primaryAction={{
+          label: "Logout all other devices",
+          onClick: handleRevokeAllOtherSessions,
+          loading: actionLoading,
+          disabled: actionLoading,
+        }}
+        secondaryAction={{
+          label: "Cancel",
+          onClick: () => setShowConfirmAllModal(false),
+          disabled: actionLoading,
+        }}
+      />
     </div>
   );
 };

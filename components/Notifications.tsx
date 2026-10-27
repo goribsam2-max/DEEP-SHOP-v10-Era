@@ -1,8 +1,7 @@
-
 import React, { useState, createContext, useContext } from 'react';
 import { gooeyToast, GooeyToaster } from 'goey-toast';
 import 'goey-toast/styles.css';
-import { Modal } from './ui/modal';
+import { LiquidGlassPopup } from './ui/liquid-glass-popup';
 import { showIsland } from './ui/dynamic-island';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -81,15 +80,12 @@ const cleanErrorMessage = (msg: string | any): { title: string; description?: st
     return { title: "Authentication Required", description: "For your security, please log out and log back in to perform this action." };
   }
   
-  // Generic fallback to strip technical jargon
   if (m.includes("firebase") || m.includes("firestore") || m.includes("internal error")) {
     return { title: "System Error", description: "We encountered an internal issue. Our team has been notified." };
   }
   
-  // Clean up any remaining FirebaseError prefix
   const cleanedText = msgStr.replace(/FirebaseError:\s*/gi, '').trim();
   
-  // If it's a short string, use it as title. Otherwise, default title and use it as description.
   if (cleanedText.length < 40) {
     return { title: cleanedText };
   }
@@ -120,7 +116,6 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       description: finalDesc || undefined
     };
 
-    // Use Dynamic Island for success and simple info messages for an Apple-like feel
     if (type === 'success') {
       if (finalTitle.toLowerCase().includes('cart')) {
          showIsland({ state: 'cart_add', title: finalTitle, subtitle: finalDesc });
@@ -133,7 +128,6 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    // Fallback to gooey toast for errors
     if (type === 'error') gooeyToast.error(finalTitle, config);
     else gooeyToast.info(finalTitle, config);
   };
@@ -153,111 +147,113 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
   const fullScreenInfo = (options: FullScreenInfoOptions) => setFullScreenModal(options);
 
+  const handleCancelConfirm = () => {
+    confirmModal?.onCancel?.();
+    confirmModal?._resolve?.(false);
+    setConfirmModal(null);
+  };
+
+  const handleAcceptConfirm = () => {
+    if (typeof confirmModal?.onConfirm === 'function') {
+      try {
+        confirmModal.onConfirm();
+      } catch (err) {
+        console.error("Error in onConfirm:", err);
+      }
+    }
+    confirmModal?._resolve?.(true);
+    setConfirmModal(null);
+  };
+
   return (
     <ToastContext.Provider value={{ notify, confirm, alert, prompt, fullScreenInfo }}>
       {children}
       <GooeyToaster position="top-right" showProgress closeButton="top-right" />
       
-      <Modal.Modal zIndex={200000} active={!!confirmModal} onClickOutside={() => {
-        confirmModal?.onCancel?.();
-        confirmModal?._resolve?.(false);
-        setConfirmModal(null);
-      }}>
-        <Modal.Body className="bg-white dark:bg-zinc-900 border-none">
-          <Modal.Title className="text-zinc-900 dark:text-zinc-100">{confirmModal?.title}</Modal.Title>
-          <Modal.Subtitle className="text-zinc-500 dark:text-zinc-400">{confirmModal?.message}</Modal.Subtitle>
-        </Modal.Body>
-        <Modal.Actions className="bg-white dark:bg-zinc-900 border-none">
-          <Modal.Action variant="unstyled" onClick={() => {
-            confirmModal?.onCancel?.();
-            confirmModal?._resolve?.(false);
-            setConfirmModal(null);
-          }}>
-            {confirmModal?.cancelText || 'Cancel'}
-          </Modal.Action>
-          <Modal.Action className="bg-black dark:bg-white text-white dark:text-black" onClick={() => {
-            if (typeof confirmModal?.onConfirm === 'function') {
-              try {
-                confirmModal.onConfirm();
-              } catch (err) {
-                console.error("Error in onConfirm:", err);
-              }
-            }
-            confirmModal?._resolve?.(true);
-            setConfirmModal(null);
-          }}>
-            {confirmModal?.confirmText || 'Confirm'}
-          </Modal.Action>
-        </Modal.Actions>
-      </Modal.Modal>
+      <LiquidGlassPopup
+        open={!!confirmModal}
+        zIndexClass="z-[200000]"
+        title={confirmModal?.title}
+        description={confirmModal?.message}
+        primaryText={confirmModal?.confirmText || 'Confirm'}
+        onPrimary={handleAcceptConfirm}
+        secondaryText={confirmModal?.cancelText || 'Cancel'}
+        onSecondary={handleCancelConfirm}
+        onClose={handleCancelConfirm}
+      />
 
-      <Modal.Modal zIndex={200000} active={!!alertModal} onClickOutside={() => { alertModal?.onClose?.(); setAlertModal(null); }}>
-        <Modal.Body className="bg-white dark:bg-zinc-900 border-none">
-          <Modal.Title className="text-zinc-900 dark:text-zinc-100">{alertModal?.title}</Modal.Title>
-          <Modal.Subtitle className="text-zinc-500 dark:text-zinc-400">{alertModal?.message}</Modal.Subtitle>
-        </Modal.Body>
-        <Modal.Actions className="bg-white dark:bg-zinc-900 border-none">
-          <Modal.Action className="bg-black dark:bg-white text-white dark:text-black" onClick={() => { alertModal?.onClose?.(); setAlertModal(null); }}>
-            {alertModal?.buttonText || 'OK'}
-          </Modal.Action>
-        </Modal.Actions>
-      </Modal.Modal>
+      <LiquidGlassPopup
+        open={!!alertModal}
+        zIndexClass="z-[200000]"
+        title={alertModal?.title}
+        description={alertModal?.message}
+        primaryText={alertModal?.buttonText || 'OK'}
+        onPrimary={() => {
+          alertModal?.onClose?.();
+          setAlertModal(null);
+        }}
+        onClose={() => {
+          alertModal?.onClose?.();
+          setAlertModal(null);
+        }}
+      />
 
-      <Modal.Modal zIndex={200000} active={!!promptModal} onClickOutside={() => { promptModal?.onCancel?.(); setPromptModal(null); setPromptVal(""); }}>
-        <Modal.Body className="bg-white dark:bg-zinc-900 border-none">
-          <Modal.Title className="text-zinc-900 dark:text-zinc-100">{promptModal?.title}</Modal.Title>
-          <Modal.Subtitle className="text-zinc-500 dark:text-zinc-400">{promptModal?.message}</Modal.Subtitle>
-          <div className="mt-4">
-            <input
-              type="text"
-              className="w-full px-4 py-3 border rounded-xl dark:bg-zinc-800 dark:border-zinc-700 dark:text-white outline-none focus:ring-2 focus:ring-zinc-500"
-              placeholder={promptModal?.placeholder || "Enter reason..."}
-              value={promptVal}
-              onChange={(e) => setPromptVal(e.target.value)}
-            />
-          </div>
-        </Modal.Body>
-        <Modal.Actions className="bg-white dark:bg-zinc-900 border-none">
-          <Modal.Action variant="unstyled" onClick={(e) => { e?.preventDefault?.(); e?.stopPropagation?.(); promptModal?.onCancel?.(); setPromptModal(null); setPromptVal(""); }}>
-            {promptModal?.cancelText || 'Cancel'}
-          </Modal.Action>
-          <Modal.Action className="bg-black dark:bg-white text-white dark:text-black" onClick={(e) => { 
-            e?.preventDefault?.();
-            e?.stopPropagation?.();
-            if (promptModal?.required && !promptVal.trim()) return notify("Please enter a value", "error");
-            promptModal?.onConfirm(promptVal); 
-            setPromptModal(null); 
-            setPromptVal("");
-          }}>
-            {promptModal?.confirmText || 'Submit'}
-          </Modal.Action>
-        </Modal.Actions>
-      </Modal.Modal>
+      <LiquidGlassPopup
+        open={!!promptModal}
+        zIndexClass="z-[200000]"
+        title={promptModal?.title}
+        description={promptModal?.message}
+        primaryText={promptModal?.confirmText || 'Submit'}
+        onPrimary={(e) => {
+          e?.preventDefault?.();
+          e?.stopPropagation?.();
+          if (promptModal?.required && !promptVal.trim()) {
+            notify("Please enter a value", "error");
+            return;
+          }
+          promptModal?.onConfirm(promptVal);
+          setPromptModal(null);
+          setPromptVal("");
+        }}
+        secondaryText={promptModal?.cancelText || 'Cancel'}
+        onSecondary={(e) => {
+          e?.preventDefault?.();
+          e?.stopPropagation?.();
+          promptModal?.onCancel?.();
+          setPromptModal(null);
+          setPromptVal("");
+        }}
+        onClose={() => {
+          promptModal?.onCancel?.();
+          setPromptModal(null);
+          setPromptVal("");
+        }}
+      >
+        <input
+          type="text"
+          className="ds-liquid-input w-full px-4 py-3.5 rounded-2xl text-[15px] outline-none focus:ring-2 focus:ring-[#0074f8]/50 transition"
+          placeholder={promptModal?.placeholder || "Enter details..."}
+          value={promptVal}
+          onChange={(e) => setPromptVal(e.target.value)}
+        />
+      </LiquidGlassPopup>
 
-      {!!fullScreenModal && (
-        <div 
-           className="fixed inset-0 flex flex-col items-center justify-center bg-zinc-900/40 backdrop-blur-md p-6"
-           style={{ zIndex: 200000 }}
-        >
-          <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-10 w-full max-w-lg shadow-2xl text-center flex flex-col items-center animate-stagger-1 border border-zinc-100 dark:border-zinc-800">
-            {fullScreenModal.type === 'success' && (
-              <div className="w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-6">
-                <i className="fas fa-check text-4xl text-green-600 dark:text-green-400"></i>
-              </div>
-            )}
-            {fullScreenModal.type === 'error' && (
-              <div className="w-24 h-24 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-6">
-                <i className="fas fa-times text-4xl text-red-600 dark:text-red-400"></i>
-              </div>
-            )}
-            <h2 className="text-3xl font-bold mb-4 font-outfit text-zinc-900 dark:text-white">{fullScreenModal.title}</h2>
-            <p className="text-lg text-zinc-500 font-medium mb-10 leading-relaxed text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">{fullScreenModal.message}</p>
-            <button onClick={() => { fullScreenModal.onClose(); setFullScreenModal(null); }} className="w-full max-w-xs py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-full font-bold text-sm tracking-wide shadow-lg hover:opacity-90 transition-opacity">
-              {fullScreenModal.buttonText || 'Continue'}
-            </button>
-          </div>
-        </div>
-      )}
+      <LiquidGlassPopup
+        open={!!fullScreenModal}
+        zIndexClass="z-[200000]"
+        maxWidthClass="max-w-[380px]"
+        title={fullScreenModal?.title}
+        description={fullScreenModal?.message}
+        primaryText={fullScreenModal?.buttonText || 'Continue'}
+        onPrimary={() => {
+          fullScreenModal?.onClose();
+          setFullScreenModal(null);
+        }}
+        onClose={() => {
+          fullScreenModal?.onClose();
+          setFullScreenModal(null);
+        }}
+      />
     </ToastContext.Provider>
   );
 };

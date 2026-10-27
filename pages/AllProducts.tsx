@@ -150,27 +150,31 @@ const AllProducts: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-zinc-900 dark:bg-zinc-100/60 backdrop-blur-[50px] z-[1000] flex items-center justify-center p-6"
+            className="fixed inset-0 ds-liquid-backdrop z-[1000] flex items-center justify-center p-6"
             onClick={() => setQuickViewImg(null)}
           >
             <motion.div
-              initial={{ scale: 0.8, opacity: 0, y: 30 }}
+              initial={{ scale: 0.92, opacity: 0, y: 14 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: 30 }}
-              className="relative w-full max-w-2xl aspect-square bg-zinc-50 dark:bg-zinc-800 rounded-2xl shadow-sm p-12 md:p-20 flex items-center justify-center border border-white/20"
+              exit={{ scale: 0.94, opacity: 0, y: 10 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
+              className="relative w-full max-w-lg ds-liquid-glass-popup p-7 flex flex-col items-center gap-5"
               onClick={(e) => e.stopPropagation()}
             >
+              <div className="w-full aspect-square ds-liquid-section p-6 flex items-center justify-center overflow-hidden">
+                <img
+                  src={quickViewImg}
+                  className="max-w-full max-h-full object-contain rounded-xl"
+                  alt="Quick preview"
+                />
+              </div>
               <button
+                type="button"
                 onClick={() => setQuickViewImg(null)}
-                className="absolute top-8 right-8 w-12 h-12 bg-zinc-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-center hover:bg-zinc-900 dark:hover:bg-zinc-100 hover:text-white dark:hover:text-zinc-900 transition-all shadow-sm"
+                className="w-full ds-liquid-btn-secondary flex items-center justify-center"
               >
-                <Icon name="times" />
+                Close Preview
               </button>
-              <img
-                src={quickViewImg}
-                className="max-w-full max-h-full object-contain"
-                alt="Quick preview"
-              />
             </motion.div>
           </motion.div>
         )}

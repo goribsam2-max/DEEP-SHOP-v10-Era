@@ -496,33 +496,43 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
 
       {/* SUB-MODAL: Nicknames */}
       {showNicknameModal && (
-        <div className="fixed inset-0 z-[10020] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-[#1E1F24] rounded-3xl p-6 border border-zinc-200 dark:border-zinc-750 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Set Nickname</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Only you will see this nickname in your chats with this user.
-            </p>
+        <div
+          className="fixed inset-0 z-[10020] flex items-center justify-center ds-liquid-backdrop p-5"
+          onClick={() => setShowNicknameModal(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
+          >
+            <div>
+              <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Set nickname</h3>
+              <p className="ds-liquid-popup-desc text-[15px] mt-2 leading-[1.44]">
+                Only you will see this nickname in your chats with this user.
+              </p>
+            </div>
             <input
               type="text"
               value={nicknameInput}
               onChange={(e) => setNicknameInput(e.target.value)}
               placeholder="Enter nickname..."
-              className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#5B51D8]"
+              className="ds-liquid-input w-full rounded-2xl px-4 py-3.5 text-[15px] placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#0074f8]/50"
             />
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowNicknameModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-              >
-                Cancel
-              </button>
+            <div className="pt-2 flex flex-col gap-3">
               <button
                 type="button"
                 onClick={handleSaveNickname}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#5B51D8] hover:bg-[#4E44C4] text-white shadow-sm cursor-pointer"
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
               >
-                Save
+                Save nickname
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowNicknameModal(false)}
+                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -628,40 +638,48 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
 
       {/* SUB-MODAL: Privacy and Safety */}
       {showPrivacyModal && (
-        <div className="fixed inset-0 z-[10020] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-white dark:bg-[#1E1F24] rounded-3xl p-6 border border-zinc-200 dark:border-zinc-750 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-emerald-500" />
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Privacy & Safety</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPrivacyModal(false)}
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+        <div
+          className="fixed inset-0 z-[10020] flex items-center justify-center ds-liquid-backdrop p-5"
+          onClick={() => setShowPrivacyModal(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="ds-liquid-glass-popup w-full max-w-[390px] px-6 pt-7 pb-6 text-left space-y-4"
+          >
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-[#0074f8]" />
+              <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Privacy &amp; Safety</h3>
             </div>
-            <div className="space-y-3 text-xs text-zinc-650 dark:text-zinc-300">
-              <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/70 rounded-2xl border border-zinc-200/80 dark:border-zinc-700">
-                <p className="font-bold text-zinc-900 dark:text-white">🔒 End-to-End Chat Encryption</p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+            <div className="space-y-2.5 text-xs">
+              <div className="p-3.5 bg-white/60 dark:bg-white/10 rounded-2xl border border-white/60 dark:border-white/10">
+                <p className="font-bold ds-liquid-popup-title">End-to-End Chat Encryption</p>
+                <p className="text-[12px] ds-liquid-popup-desc mt-0.5">
                   Messages and calls are secured with transport encryption and private token validation.
                 </p>
               </div>
-              <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/70 rounded-2xl border border-zinc-200/80 dark:border-zinc-700">
-                <p className="font-bold text-zinc-900 dark:text-white">🛡️ Scam Prevention Guarantee</p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  DeepShop automatically scans suspicious review fraud and protects consumer transactions.
+              <div className="p-3.5 bg-white/60 dark:bg-white/10 rounded-2xl border border-white/60 dark:border-white/10">
+                <p className="font-bold ds-liquid-popup-title">Scam Prevention Guarantee</p>
+                <p className="text-[12px] ds-liquid-popup-desc mt-0.5">
+                  DEEP SHOP automatically scans suspicious review fraud and protects consumer transactions.
                 </p>
               </div>
-              <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/70 rounded-2xl border border-zinc-200/80 dark:border-zinc-700">
-                <p className="font-bold text-zinc-900 dark:text-white">🚫 Restrict & Block Control</p>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <div className="p-3.5 bg-white/60 dark:bg-white/10 rounded-2xl border border-white/60 dark:border-white/10">
+                <p className="font-bold ds-liquid-popup-title">Restrict &amp; Block Control</p>
+                <p className="text-[12px] ds-liquid-popup-desc mt-0.5">
                   You can restrict or block accounts at any time without alerting the other party.
                 </p>
               </div>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(false)}
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
@@ -669,37 +687,47 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
 
       {/* SUB-MODAL: Report */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[10025] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-[#1E1F24] rounded-3xl p-6 border border-zinc-200 dark:border-zinc-750 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-rose-600 flex items-center gap-2">
-              <MessageSquareWarning className="w-5 h-5" />
-              <span>Report User</span>
-            </h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Please tell us why you are reporting this conversation.
-            </p>
+        <div
+          className="fixed inset-0 z-[10025] flex items-center justify-center ds-liquid-backdrop p-5"
+          onClick={() => setShowReportModal(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
+          >
+            <div>
+              <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em] flex items-center gap-2">
+                <MessageSquareWarning className="w-5 h-5 text-rose-500" />
+                <span>Report user</span>
+              </h3>
+              <p className="ds-liquid-popup-desc text-[15px] mt-2 leading-[1.44]">
+                Please tell us why you are reporting this conversation.
+              </p>
+            </div>
             <textarea
               rows={3}
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
               placeholder="Describe the issue (e.g. spam, harassment, counterfeit)..."
-              className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500 resize-none"
+              className="ds-liquid-input w-full rounded-2xl p-3.5 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#0074f8]/50 resize-none"
             />
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowReportModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-              >
-                Cancel
-              </button>
+            <div className="pt-2 flex flex-col gap-3">
               <button
                 type="button"
                 onClick={handleSendReport}
                 disabled={!reportReason.trim()}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white disabled:opacity-50 cursor-pointer"
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
               >
-                Submit Report
+                Submit report
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -708,34 +736,44 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
 
       {/* SUB-MODAL: Something isn't working */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 z-[10025] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-[#1E1F24] rounded-3xl p-6 border border-zinc-200 dark:border-zinc-750 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Report a Problem</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Briefly explain what happened and what wasn&apos;t working as expected.
-            </p>
+        <div
+          className="fixed inset-0 z-[10025] flex items-center justify-center ds-liquid-backdrop p-5"
+          onClick={() => setShowFeedbackModal(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
+          >
+            <div>
+              <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Report a problem</h3>
+              <p className="ds-liquid-popup-desc text-[15px] mt-2 leading-[1.44]">
+                Briefly explain what happened and what wasn&apos;t working as expected.
+              </p>
+            </div>
             <textarea
               rows={4}
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
               placeholder="Write your feedback..."
-              className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#5B51D8] resize-none"
+              className="ds-liquid-input w-full rounded-2xl p-3.5 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#0074f8]/50 resize-none"
             />
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowFeedbackModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-              >
-                Cancel
-              </button>
+            <div className="pt-2 flex flex-col gap-3">
               <button
                 type="button"
                 onClick={handleSendFeedback}
                 disabled={!feedbackText.trim()}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#5B51D8] hover:bg-[#4E44C4] text-white disabled:opacity-50 cursor-pointer"
+                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
               >
-                Send Feedback
+                Send feedback
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFeedbackModal(false)}
+                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+              >
+                Cancel
               </button>
             </div>
           </div>

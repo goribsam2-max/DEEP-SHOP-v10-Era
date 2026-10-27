@@ -130,12 +130,19 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto">
+      <div
+        className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-5 ds-liquid-backdrop overflow-y-auto"
+        onClick={onClose}
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: 20 }}
+          role="dialog"
+          aria-modal="true"
+          initial={{ opacity: 0, scale: 0.91, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 20 }}
-          className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden relative text-zinc-900 dark:text-zinc-100 my-auto"
+          exit={{ opacity: 0, scale: 0.94, y: 10 }}
+          transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
+          onClick={(e) => e.stopPropagation()}
+          className="ds-liquid-glass-popup w-full max-w-[400px] overflow-hidden relative my-auto"
         >
           {/* Close button */}
           <button
@@ -270,7 +277,17 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
               </h4>
 
               {loading ? (
-                <p className="text-xs text-zinc-400 text-center py-4">Loading posts...</p>
+                <div className="space-y-2 py-1" aria-hidden="true">
+                  {[0, 1, 2].map((idx) => (
+                    <div key={idx} className="p-2.5 rounded-2xl bg-white/50 dark:bg-white/5 space-y-2">
+                      <div className="h-3.5 w-3/4 rounded-md ds-skeleton" />
+                      <div className="flex justify-between">
+                        <div className="h-2.5 w-20 rounded-md ds-skeleton" />
+                        <div className="h-2.5 w-16 rounded-md ds-skeleton" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : authorPosts.length === 0 ? (
                 <div className="p-3 text-center rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-500">
                   No public scam reports posted yet.
@@ -309,28 +326,35 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
       {/* SPONSOR CREATOR PAYMENT MODAL */}
       <AnimatePresence>
         {showSponsorModal && (
-          <div className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div
+            className="fixed inset-0 z-[210] flex items-center justify-center p-5 ds-liquid-backdrop"
+            onClick={() => setShowSponsorModal(false)}
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 w-full max-w-sm shadow-2xl space-y-4 text-zinc-900 dark:text-zinc-100"
+              role="dialog"
+              aria-modal="true"
+              initial={{ opacity: 0, scale: 0.91, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 8 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
+              onClick={(e) => e.stopPropagation()}
+              className="ds-liquid-glass-popup px-6 pt-7 pb-6 w-full max-w-[370px] space-y-4 text-left"
             >
-              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Handshake className="w-5 h-5 text-emerald-500" />
-                  <span className="font-extrabold text-sm">Sponsor {displayName}</span>
+                  <Handshake className="w-5 h-5 text-[#0074f8]" />
+                  <span className="ds-liquid-popup-title font-bold text-[19px] tracking-[-0.02em]">Sponsor {displayName}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowSponsorModal(false)}
-                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400"
+                  className="ds-liquid-btn-secondary w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              <p className="ds-liquid-popup-desc text-[14.5px] leading-[1.42]">
                 Support this creator monthly. Send payment via bKash / Nagad and provide your Transaction ID below.
               </p>
 
@@ -396,12 +420,21 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 cursor-pointer"
-                >
-                  Confirm Sponsorship Request
-                </button>
+                <div className="pt-2 flex flex-col gap-2.5">
+                  <button
+                    type="submit"
+                    className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer"
+                  >
+                    Confirm sponsorship request
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSponsorModal(false)}
+                    className="ds-liquid-btn-secondary w-full min-h-[46px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>

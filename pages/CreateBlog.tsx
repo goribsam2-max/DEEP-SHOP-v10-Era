@@ -11,8 +11,8 @@ import {
   collection,
   getDocs,
 } from "firebase/firestore";
-import { Loader2 } from "lucide-react";
 import { Product } from "../types";
+import { FormCardPageSkeleton } from "../components/PageSkeletons";
 import { useNotify } from "../components/Notifications";
 import { uploadToImgbb } from "../services/imgbb";
 import Icon from "../components/Icon";
@@ -221,11 +221,7 @@ const CreateBlog: React.FC = () => {
   };
 
   if (checkingAccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
-      </div>
-    );
+    return <FormCardPageSkeleton />;
   }
 
   return (
@@ -432,9 +428,15 @@ const CreateBlog: React.FC = () => {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-4 mt-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full text-xs font-bold  tracking-normal hover:bg-zinc-800 transition-colors shadow-lg active:scale-95"
+              className="w-full py-4 mt-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full text-xs font-bold tracking-normal hover:bg-zinc-800 transition-colors shadow-lg active:scale-95 flex items-center justify-center"
             >
-              {saving ? "Publishing..." : slug ? "Update Blog" : "Publish Blog"}
+              {saving ? (
+                <span className="h-4 w-28 rounded-full ds-skeleton inline-block" />
+              ) : slug ? (
+                "Update Blog"
+              ) : (
+                "Publish Blog"
+              )}
             </button>
           </div>
         </div>

@@ -1,50 +1,26 @@
 import React from "react";
 
-export const LumaSpin = () => {
+export const LumaSpin: React.FC = () => {
   return (
-    <div className="relative w-[65px] aspect-square flex items-center justify-center font-black text-xl text-[#5F2CFF] dark:text-[#8E05C2] tracking-tighter transform scale-125">
-        <span className="absolute rounded-[50px] animate-loaderAnim shadow-[inset_0_0_0_3px] shadow-[#5F2CFF] dark:shadow-[#8E05C2]" />
-        <span className="absolute rounded-[50px] animate-loaderAnim animation-delay shadow-[inset_0_0_0_3px] shadow-[#5F2CFF] dark:shadow-[#8E05C2]" />
-        
-        <span className="z-10 text-[#5F2CFF] dark:text-[#8E05C2]">DS</span>
-
-        <style dangerouslySetInnerHTML={{__html:`
-        @keyframes loaderAnim {
-          0% {
-            inset: 0 35px 35px 0;
-          }
-          12.5% {
-            inset: 0 35px 0 0;
-          }
-          25% {
-            inset: 35px 35px 0 0;
-          }
-          37.5% {
-            inset: 35px 0 0 0;
-          }
-          50% {
-            inset: 35px 0 0 35px;
-          }
-          62.5% {
-            inset: 0 0 0 35px;
-          }
-          75% {
-            inset: 0 0 35px 35px;
-          }
-          87.5% {
-            inset: 0 0 35px 0;
-          }
-          100% {
-            inset: 0 35px 35px 0;
-          }
-        }
-        .animate-loaderAnim {
-          animation: loaderAnim 2.5s infinite;
-        }
-        .animation-delay {
-          animation-delay: -1.25s;
-        }
-      `}} />
-  </div>
+    <div className="w-full max-w-2xl mx-auto px-4 py-6 space-y-4" aria-hidden="true">
+      <div className="flex items-center justify-between gap-4">
+        <div className="ds-skeleton h-7 w-44 rounded-xl" />
+        <div className="ds-skeleton h-9 w-24 rounded-full" />
+      </div>
+      <div className="rounded-3xl border border-zinc-200/70 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="ds-skeleton w-12 h-12 rounded-2xl shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="ds-skeleton h-4 w-2/3 rounded-md" />
+            <div className="ds-skeleton h-3 w-1/3 rounded-md" />
+          </div>
+        </div>
+        <div className="ds-skeleton h-32 w-full rounded-2xl" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="ds-skeleton h-10 rounded-full" />
+          <div className="ds-skeleton h-10 rounded-full" />
+        </div>
+      </div>
+    </div>
   );
 };

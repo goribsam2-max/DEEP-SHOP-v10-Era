@@ -25,6 +25,7 @@ import Icon from "../components/Icon";
 import SEO from "../components/SEO";
 import { useTheme } from "../components/ThemeContext";
 import { ProductSkeleton } from "../components/Skeletons";
+import { SectionShowcaseSkeleton, StoryRowSkeleton } from "../components/PageSkeletons";
 import { CustomSectionEmbed } from "../components/CustomSectionEmbed";
 import { FlashSaleCarousel } from "../components/ui/flash-sale-carousel";
 import { VibeMascot, MascotState } from "../components/ui/VibeMascot";
@@ -140,7 +141,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   );
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [banners, setBanners] = useState<any[]>([]);
+  const [isLoadingBanners, setIsLoadingBanners] = useState(true);
   const [settings, setSettings] = useState<any>({});
   const [seoConfig, setSeoConfig] = useState<any>({});
   const [activeBanner, setActiveBanner] = useState(0);
@@ -231,9 +234,11 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             (doc) => ({ id: doc.id, ...doc.data() }) as Product,
           ),
         );
+        setIsLoadingProducts(false);
       },
       (err) => {
         console.warn("Products fetch error:", err.message);
+        setIsLoadingProducts(false);
       },
     );
 
@@ -245,6 +250,10 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       qBanners,
       (snapshot) => {
         setBanners(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setIsLoadingBanners(false);
+      },
+      () => {
+        setIsLoadingBanners(false);
       },
     );
 
@@ -428,7 +437,12 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
 
 
       {/* Hero Slider */}
-      {heroBanners.length > 0 && (
+      {isLoadingBanners ? (
+        <div className="mb-8 w-full space-y-3">
+          <div className="ds-skeleton h-6 w-36 rounded-lg mt-4" />
+          <div className="ds-skeleton w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px]" />
+        </div>
+      ) : heroBanners.length > 0 && (
         <div className="mb-8 w-full animate-fade-in group">
           <SectionHeader title="Hot Deals" />
           <motion.div
@@ -556,7 +570,11 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       )}
 
       {/* Auto Product Slider */}
-      {products.length > 0 && (
+      {isLoadingProducts ? (
+        <div className="mb-10 w-full">
+          <SectionShowcaseSkeleton cards={4} />
+        </div>
+      ) : products.length > 0 && (
         <div id="home-products" className="mb-10 w-full animate-fade-in">
           <SectionHeader title="Trending Products" />
           <HeroSlider
@@ -593,6 +611,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       {/* Categories (Single Line Scrollable) */}
       <div className="mb-8 w-full animate-stagger-3 relative z-10 pt-2">
         <SectionHeader title="Categories" />
+        {isLoadingProducts ? (
+          <StoryRowSkeleton count={7} />
+        ) : (
         <div className="flex items-center gap-4 overflow-x-auto pt-2 pb-6 px-1 scrollbar-hide snap-x">
           {[
             "All",
@@ -649,6 +670,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             );
           })}
         </div>
+        )}
 
         {/* Border Cross / Phones Section - Elegant Horizontal Scroll Carousel style */}
         {products.filter((p) =>
@@ -910,15 +932,23 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8 mb-6">
-            {products.length === 0
-              ? Array(4)
+            {isLoadingProducts || products.length === 0
+              ? Array(8)
                   .fill(0)
                   .map((_, i) => <ProductSkeleton key={i} />)
-              : filteredProducts
-                  .slice(0, displayedCount)
-                  .map((product, index) => (
-                    <ProductCard key={product.id ? `${product.id}-${index}` : index} product={product} index={index} />
-                  ))}
+              : (
+                <>
+                  {filteredProducts
+                    .slice(0, displayedCount)
+                    .map((product, index) => (
+                      <ProductCard key={product.id ? `${product.id}-${index}` : index} product={product} index={index} />
+                    ))}
+                  {loadingMore &&
+                    Array(4)
+                      .fill(0)
+                      .map((_, idx) => <ProductSkeleton key={`more-skel-${idx}`} />)}
+                </>
+              )}
           </div>
           
           {filteredProducts.length > displayedCount && (
@@ -929,11 +959,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                   className="btn-loadmore font-bold py-3.5 px-8 rounded-full shadow-[0_7px_29px_0px_rgba(100,100,111,0.2)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.3)] bg-[#204ecf] dark:bg-[#3b82f6] text-[#fffdfc] hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center min-w-[160px]"
                >
                  {loadingMore ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                      className="w-5 h-5 border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full"
-                    />
+                    <span className="w-24 h-4 rounded-full ds-skeleton inline-block" />
                  ) : (
                     "Load More"
                  )}

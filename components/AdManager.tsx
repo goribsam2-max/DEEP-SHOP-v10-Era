@@ -541,9 +541,7 @@ export const AdManager: React.FC = () => {
                 style={getRatioStyle(activeVideoAd.videos[currentVideoMediaIndex]?.ratio)}
               >
                 {!isVideoLoaded && (
-                   <div className="absolute inset-0 bg-zinc-950 flex items-center justify-center z-20">
-                      <div className="w-10 h-10 border-4 border-zinc-800 border-t-[#1cdb5e] rounded-full animate-spin"></div>
-                   </div>
+                   <div className="absolute inset-0 z-20 ds-skeleton" />
                 )}
                 
                 <video 
@@ -693,83 +691,85 @@ export const AdManager: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Photo Ad Popup (New Design) */}
+      {/* Photo Ad Popup (Liquid Glass IMG_5029 Design) */}
       <AnimatePresence>
         {showPhoto && activePhotoAd && (
-          <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[9998] flex items-center justify-center ds-liquid-backdrop p-5">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-[320px] overflow-hidden shadow-2xl flex flex-col items-center border border-transparent dark:border-zinc-800"
+              role="dialog"
+              aria-modal="true"
+              initial={{ opacity: 0, scale: 0.91, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 8 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
+              className="ds-liquid-glass-popup w-full max-w-[356px] overflow-hidden flex flex-col"
             >
               {activePhotoAd.images && activePhotoAd.images.length > 0 && (
-                <div className="w-full relative overflow-hidden" ref={emblaRef}>
-                  <div className="flex">
-                    {activePhotoAd.images.map((img: any, idx: number) => (
-                      <div 
-                        key={idx} 
-                        className="flex-[0_0_100%] min-w-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center min-h-[200px]"
-                        style={getRatioStyle(img.ratio)}
-                      >
-                        <img src={img.url} alt={`Promo ${idx}`} className="w-full h-full object-cover" />
-                      </div>
-                    ))}
+                <div className="w-full p-3 pb-0">
+                  <div className="w-full relative overflow-hidden rounded-[22px]" ref={emblaRef}>
+                    <div className="flex">
+                      {activePhotoAd.images.map((img: any, idx: number) => (
+                        <div 
+                          key={idx} 
+                          className="flex-[0_0_100%] min-w-0 ds-skeleton flex items-center justify-center min-h-[190px]"
+                        >
+                          <img src={img.url} alt={`Promo ${idx}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
               
-              <div className="px-6 pt-6 pb-4 text-center w-full">
+              <div className="px-6 pt-5 pb-6 text-left w-full">
                 {activePhotoAd.title && (
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight" dangerouslySetInnerHTML={{__html: activePhotoAd.title}} />
+                  <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]" dangerouslySetInnerHTML={{__html: activePhotoAd.title}} />
                 )}
                 {activePhotoAd.text && (
-                  <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4 leading-relaxed" dangerouslySetInnerHTML={{__html: activePhotoAd.text}} />
+                  <p className="ds-liquid-popup-desc text-[15.5px] mt-2 leading-[1.44]" dangerouslySetInnerHTML={{__html: activePhotoAd.text}} />
                 )}
 
-                {/* Pagination Dots */}
                 {activePhotoAd.images && activePhotoAd.images.length > 1 && (
-                  <div className="flex justify-center gap-1.5 mb-6">
+                  <div className="flex justify-center gap-1.5 mt-4">
                     {activePhotoAd.images.map((_: any, index: number) => (
                       <div 
                         key={index} 
-                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-zinc-800 dark:bg-zinc-200 scale-125' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-[#0074f8] w-4' : 'bg-zinc-400/50 dark:bg-zinc-600'}`}
                       />
                     ))}
                   </div>
                 )}
                 
-                <div className="flex w-full border-t border-zinc-100 dark:border-zinc-800 pt-1 mt-2">
+                <div className="mt-6 flex flex-col gap-3 w-full">
+                  {activePhotoAd.buttonText && (
                     <button 
-                        onClick={closePhoto} 
-                        className="flex-1 py-3 text-zinc-500 dark:text-zinc-400 font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition"
+                      type="button"
+                      onClick={() => {
+                        closePhoto();
+                        if (activePhotoAd && !activePhotoAd._conversionRecorded) {
+                          recordAdAction(activePhotoAd.id, 'photo', 'conversion');
+                          activePhotoAd._conversionRecorded = true;
+                        }
+                        if (activePhotoAd.buttonLink) {
+                          if (activePhotoAd.buttonLink.startsWith('http')) {
+                            navigate(activePhotoAd.buttonLink);
+                          } else {
+                            navigate(activePhotoAd.buttonLink);
+                          }
+                        }
+                      }}
+                      className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold tracking-[-0.01em] flex items-center justify-center transition-transform active:scale-[0.985] cursor-pointer"
                     >
-                        Cancel
+                      {activePhotoAd.buttonText}
                     </button>
-                    {activePhotoAd.buttonText && (
-                      <>
-                        <div className="w-[1px] bg-zinc-100 dark:bg-zinc-800"></div>
-                        <button 
-                            onClick={() => {
-                                closePhoto();
-                                if (activePhotoAd && !activePhotoAd._conversionRecorded) {
-                                  recordAdAction(activePhotoAd.id, 'photo', 'conversion');
-                                  activePhotoAd._conversionRecorded = true;
-                                }
-                                if (activePhotoAd.buttonLink) {
-                                  if (activePhotoAd.buttonLink.startsWith('http')) {
-                                    window.open(activePhotoAd.buttonLink, '_blank');
-                                  } else {
-                                    navigate(activePhotoAd.buttonLink);
-                                  }
-                                }
-                            }}
-                            className="flex-1 py-3 text-[#1cdb5e] font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition"
-                        >
-                            {activePhotoAd.buttonText}
-                        </button>
-                      </>
-                    )}
+                  )}
+                  <button 
+                    type="button"
+                    onClick={closePhoto} 
+                    className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold tracking-[-0.01em] flex items-center justify-center transition-transform active:scale-[0.985] cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
                 </div>
               </div>
             </motion.div>

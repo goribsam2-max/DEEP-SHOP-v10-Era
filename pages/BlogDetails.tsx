@@ -13,6 +13,7 @@ import { Blog } from "../types";
 import Icon from "../components/Icon";
 import SEO from "../components/SEO";
 import { StatusBadge } from "../components/ui/status-badge";
+import { BlogDetailPageSkeleton } from "../components/PageSkeletons";
 import { useNotify, useConfirm } from "../components/Notifications";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -107,11 +108,7 @@ const BlogDetails: React.FC = () => {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-800 border-t-transparent rounded-full">
-        <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <BlogDetailPageSkeleton />;
   }
 
   if (!blog) {

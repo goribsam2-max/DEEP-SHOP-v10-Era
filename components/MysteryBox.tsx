@@ -109,69 +109,74 @@ const MysteryBox: React.FC<{ products: any[] }> = ({ products }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-zinc-900/80 flex items-center justify-center p-6"
+            className="fixed inset-0 z-[1000] ds-liquid-backdrop flex items-center justify-center p-5"
             onClick={handleClose}
           >
             <motion.div 
-              initial={{ scale: 0.5, y: 50, rotate: -10 }}
-              animate={{ scale: 1, y: 0, rotate: 0 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ type: "spring", bounce: 0.5 }}
+              role="dialog"
+              aria-modal="true"
+              initial={{ scale: 0.91, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.94, opacity: 0, y: 8 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
               onClick={e => e.stopPropagation()}
-              className="bg-zinc-50 dark:bg-zinc-800 rounded-2xl p-8 max-w-sm w-full relative overflow-hidden shadow-sm border-4 border-purple-500/30 text-center"
+              className="ds-liquid-glass-popup px-6 pt-7 pb-6 max-w-[356px] w-full relative overflow-hidden text-left"
             >
-              <div className="absolute inset-0 bg-mesh-pattern opacity-5 pointer-events-none mix-blend-overlay"></div>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-400 rounded-full blur-[60px] opacity-20"></div>
-              
-              <button onClick={handleClose} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-2xl hover:bg-zinc-200 transition-colors">
-                <Icon name="times" className="text-xs" />
-              </button>
-
               {result === 'win' && revealedProduct ? (
                 <>
-                  <div className="mb-6 flex justify-center">
+                  <div className="mb-4 flex items-center justify-between">
                     <StatusBadge leftIcon={Sparkles} leftLabel="You Unlocked a Deal!" status="success" />
                   </div>
 
-                  <div className="relative w-40 h-40 mx-auto mb-6 bg-zinc-50 dark:bg-zinc-800 rounded-2xl p-4 border border-zinc-100 dark:border-zinc-800 shadow-inner group">
-                    <img src={revealedProduct.image} alt={revealedProduct.name} className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute -bottom-3 -right-3 bg-emerald-500 text-white w-12 h-12 rounded-full flex flex-col items-center justify-center font-semibold animate-bounce shadow-lg border-2 border-white rotate-12">
-                      <span className="text-[10px] leading-none">EXTRA</span>
+                  <div className="relative w-36 h-36 mx-auto mb-5 bg-white/70 dark:bg-white/10 rounded-3xl p-4 border border-white/60 dark:border-white/15 group">
+                    <img src={revealedProduct.image} alt={revealedProduct.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                    <div className="absolute -bottom-2.5 -right-2.5 bg-[#0074f8] text-white w-12 h-12 rounded-full flex flex-col items-center justify-center font-bold shadow-lg border-2 border-white rotate-6">
+                      <span className="text-[9px] leading-none">EXTRA</span>
                       <span className="text-xs leading-none">{discount}%</span>
                     </div>
                   </div>
 
-                  <h3 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100 mb-2 leading-tight tracking-tight px-4">{revealedProduct.name}</h3>
+                  <h3 className="ds-liquid-popup-title font-bold text-[19px] leading-[1.28] tracking-[-0.02em]">{revealedProduct.name}</h3>
                   
-                  <div className="flex justify-center items-center space-x-2 mb-8">
-                    <span className="text-lg font-semibold text-purple-600">{formatPrice(Math.floor(revealedProduct.price * (1 - discount/100)))}</span>
-                    <span className="text-xs font-bold text-zinc-400 line-through">{formatPrice(revealedProduct.price)}</span>
+                  <div className="flex items-center gap-2.5 mt-2">
+                    <span className="text-lg font-bold text-[#0074f8]">{formatPrice(Math.floor(revealedProduct.price * (1 - discount/100)))}</span>
+                    <span className="text-xs font-semibold text-zinc-400 line-through">{formatPrice(revealedProduct.price)}</span>
                   </div>
+                  <p className="ds-liquid-popup-desc text-[14px] mt-1.5">Special deal reserved for the next 1 hour.</p>
 
-                  <button 
-                    onClick={() => {
-                      handleClose();
-                      navigate(`/product/${revealedProduct.id}`);
-                    }}
-                    className="w-full py-4 bg-purple-600 text-white rounded-full font-semibold  tracking-normal text-[11px] shadow-lg shadow-purple-600/30 hover:bg-purple-700 active:scale-95 transition-all"
-                  >
-                    Claim Offer Now
-                  </button>
-                  <p className="text-[8px] font-bold text-zinc-400  tracking-normal mt-4">Offer valid for 1 hour only</p>
+                  <div className="mt-6 flex flex-col gap-3">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        handleClose();
+                        navigate(`/product/${revealedProduct.id}`);
+                      }}
+                      className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[16px] tracking-[-0.01em] active:scale-[0.985] transition-transform cursor-pointer"
+                    >
+                      Claim offer now
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleClose}
+                      className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full font-semibold text-[16px] tracking-[-0.01em] active:scale-[0.985] transition-transform cursor-pointer"
+                    >
+                      Maybe later
+                    </button>
+                  </div>
                 </>
               ) : (
-                <div className="py-8">
-                  <div className="w-24 h-24 mx-auto bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-6">
-                    <Icon name="frown" className="text-lg text-zinc-400" />
+                <div>
+                  <h3 className="ds-liquid-popup-title font-bold text-[20px] leading-[1.28] tracking-[-0.02em]">Better luck next time</h3>
+                  <p className="ds-liquid-popup-desc text-[15.5px] leading-[1.44] mt-2.5">You didn&apos;t unlock an instant deal today. Check back tomorrow for another spin!</p>
+                  <div className="mt-6 flex flex-col gap-3">
+                    <button 
+                      type="button"
+                      onClick={handleClose}
+                      className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[16px] tracking-[-0.01em] active:scale-[0.985] transition-transform cursor-pointer"
+                    >
+                      Got it
+                    </button>
                   </div>
-                  <h3 className="font-semibold text-xl text-zinc-900 dark:text-zinc-100 mb-2 tracking-tight">Better Luck Next Time</h3>
-                  <p className="text-xs font-medium text-zinc-500 mb-8">You didn't win an offer today. Check back tomorrow for another chance!</p>
-                  <button 
-                    onClick={handleClose}
-                    className="w-full py-4 bg-zinc-900 text-white rounded-full font-semibold  tracking-normal text-[11px] shadow-lg hover:bg-zinc-900 active:scale-95 transition-all"
-                  >
-                    Got It
-                  </button>
                 </div>
               )}
             </motion.div>

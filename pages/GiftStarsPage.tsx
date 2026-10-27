@@ -23,6 +23,7 @@ import { auth, db } from "../firebase";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
+import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
 import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 import {
   extractConfiguredMobileAccounts,
@@ -330,14 +331,7 @@ export const GiftStarsPage: React.FC = () => {
   };
 
   if (loading || !creator) {
-    return (
-      <div className="min-h-screen bg-[#F5F9FF] dark:bg-black flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mb-3" />
-        <p className="text-xs font-semibold text-zinc-500">
-          Loading creator details...
-        </p>
-      </div>
-    );
+    return <ProfileSettingsPageSkeleton />;
   }
 
   const getInstructionAction = (type: string) => {
@@ -491,12 +485,14 @@ export const GiftStarsPage: React.FC = () => {
               disabled={isSubmitting}
               className="w-full py-3.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-lg transition active:scale-98 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
             >
-              <Star className="w-4 h-4 fill-white shrink-0" />
-              <span>
-                {isSubmitting
-                  ? "Processing..."
-                  : `Send ${giftStarsAmount} Stars`}
-              </span>
+              {isSubmitting ? (
+                <span className="h-4 w-28 rounded-full ds-skeleton inline-block" />
+              ) : (
+                <>
+                  <Star className="w-4 h-4 fill-white shrink-0" />
+                  <span>Send {giftStarsAmount} Stars</span>
+                </>
+              )}
             </button>
           </div>
         )}
@@ -712,9 +708,11 @@ export const GiftStarsPage: React.FC = () => {
                   disabled={isSubmitting || !activeAccount}
                   className="w-full py-3.5 rounded-full bg-[#1877F2] hover:bg-[#1465D6] text-white font-extrabold text-xs shadow-lg transition active:scale-98 cursor-pointer disabled:opacity-50 whitespace-nowrap"
                 >
-                  {isSubmitting
-                    ? "Submitting..."
-                    : `Confirm Order for ${buyStarsAmount} Stars (৳${buyStarsAmount})`}
+                  {isSubmitting ? (
+                    <span className="h-4 w-36 rounded-full ds-skeleton inline-block" />
+                  ) : (
+                    `Confirm Order for ${buyStarsAmount} Stars (৳${buyStarsAmount})`
+                  )}
                 </button>
               </>
             )}
