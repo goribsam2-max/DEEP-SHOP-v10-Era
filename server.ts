@@ -7,6 +7,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import webpush from "web-push";
 import { GoogleGenAI, Type } from "@google/genai";
+import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 
 // Safe filesystem helpers for read-only Vercel serverless environment
 export const safeWriteFileSync = (filePath: string, content: string) => {
@@ -183,6 +184,179 @@ app.use(async (req, res, next) => {
     } catch (err: any) {
       console.error("Chat auto-reply proxy error:", err);
       return res.status(500).json({ error: err.message || "Internal AI failure" });
+    }
+  });
+
+  // 🎙️ Professional Male Bengali Voiceover TTS Cache & Neural Engine (bn-BD-PradeepNeural)
+  interface CachedBengaliVoice {
+    buffer: Buffer;
+    mimeType: string;
+    engine: string;
+  }
+
+  const bengaliTtsCache = new Map<string, CachedBengaliVoice>();
+  const inflightBengaliTts = new Map<string, Promise<CachedBengaliVoice | null>>();
+
+  function escapeSsmlText(text: string): string {
+    return text
+      .replace(/&/g, " এবং ")
+      .replace(/</g, " ")
+      .replace(/>/g, " ")
+      .replace(/"/g, " ")
+      .replace(/'/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function splitBengaliChunks(input: string, maxLen = 175): string[] {
+    const sentences = input
+      .split(/(?<=[।.!?])\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const chunks: string[] = [];
+    for (const sentence of sentences.length ? sentences : [input]) {
+      if (sentence.length <= maxLen) {
+        chunks.push(sentence);
+      } else {
+        const words = sentence.split(/\s+/);
+        let cur = "";
+        for (const w of words) {
+          if ((cur + " " + w).trim().length > maxLen && cur) {
+            chunks.push(cur.trim());
+            cur = w;
+          } else {
+            cur = (cur + " " + w).trim();
+          }
+        }
+        if (cur.trim()) chunks.push(cur.trim());
+      }
+    }
+    return chunks.length ? chunks : [input.slice(0, maxLen)];
+  }
+
+  async function synthesizeMaleBengaliAudio(
+    cleanText: string
+  ): Promise<CachedBengaliVoice | null> {
+    // 1. Primary: Studio-grade Native Bangladeshi Male Neural Voice (bn-BD-PradeepNeural)
+    let edgeTts: MsEdgeTTS | null = null;
+    try {
+      const ssmlSafe = escapeSsmlText(cleanText);
+      if (ssmlSafe) {
+        edgeTts = new MsEdgeTTS({
+          connectionTimeoutMs: 6500,
+          synthesisTimeoutMs: 9000,
+        });
+        await edgeTts.setMetadata(
+          "bn-BD-PradeepNeural",
+          OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3
+        );
+        const { audioStream } = edgeTts.toStream(ssmlSafe, {
+          rate: 0.96,
+        });
+        const audioChunks: Buffer[] = [];
+        for await (const chunk of audioStream) {
+          audioChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        const mp3Buffer = Buffer.concat(audioChunks);
+        if (mp3Buffer.length > 128) {
+          return {
+            buffer: mp3Buffer,
+            mimeType: "audio/mpeg",
+            engine: "edge-pradeep-male",
+          };
+        }
+      }
+    } catch {
+      // Fall through silently to secondary native Bengali stream
+    } finally {
+      if (edgeTts) {
+        try {
+          edgeTts.close();
+        } catch {
+          // Ignore close error
+        }
+      }
+    }
+
+    // 2. Secondary Fallback: Native Bengali TTS stream (client shifts pitch to natural male baritone)
+    try {
+      const chunks = splitBengaliChunks(cleanText);
+      const mp3Buffers: Buffer[] = [];
+      for (const chunk of chunks) {
+        const ttsUrl = `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=tw-ob&tl=bn&q=${encodeURIComponent(
+          chunk
+        )}`;
+        const fbRes = await fetch(ttsUrl, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            Referer: "https://translate.google.com/",
+          },
+        });
+        if (!fbRes.ok) {
+          return null;
+        }
+        const arrBuf = await fbRes.arrayBuffer();
+        if (arrBuf.byteLength > 0) {
+          mp3Buffers.push(Buffer.from(arrBuf));
+        }
+      }
+
+      if (mp3Buffers.length > 0) {
+        return {
+          buffer: Buffer.concat(mp3Buffers),
+          mimeType: "audio/mpeg",
+          engine: "fallback-bn-male",
+        };
+      }
+    } catch {
+      // Return null cleanly so client falls back to browser speechSynthesis without server error spam
+    }
+
+    return null;
+  }
+
+  app.post("/api/tts/bengali", express.json(), async (req, res) => {
+    try {
+      const rawText = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+      if (!rawText) {
+        return res.status(400).json({ error: "Missing text" });
+      }
+      const cleanText = rawText.slice(0, 600);
+
+      const cached = bengaliTtsCache.get(cleanText);
+      if (cached) {
+        res.setHeader("Content-Type", cached.mimeType);
+        res.setHeader("X-Voice-Engine", cached.engine);
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        return res.send(cached.buffer);
+      }
+
+      let pending = inflightBengaliTts.get(cleanText);
+      if (!pending) {
+        pending = synthesizeMaleBengaliAudio(cleanText).finally(() => {
+          inflightBengaliTts.delete(cleanText);
+        });
+        inflightBengaliTts.set(cleanText, pending);
+      }
+
+      const result = await pending;
+      if (result) {
+        if (bengaliTtsCache.size >= 160) {
+          const oldestKey = bengaliTtsCache.keys().next().value;
+          if (oldestKey) bengaliTtsCache.delete(oldestKey);
+        }
+        bengaliTtsCache.set(cleanText, result);
+
+        res.setHeader("Content-Type", result.mimeType);
+        res.setHeader("X-Voice-Engine", result.engine);
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        return res.send(result.buffer);
+      }
+
+      return res.status(204).end();
+    } catch {
+      return res.status(204).end();
     }
   });
 

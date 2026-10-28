@@ -30,6 +30,8 @@ import {
   upsertSavedAccount,
 } from "../lib/savedAccounts";
 import {
+  getBanglaAuthErrorMessage,
+  isAuthVoiceMuted,
   playAuthVoice,
   validateInappropriateContent,
   validateRealEmail,
@@ -88,7 +90,9 @@ const SignIn: React.FC = () => {
   const querySuffix = location.search || "";
 
   useEffect(() => {
-    playAuthVoice("আপনার অ্যাকাউন্ট বা ইমেইল এবং পাসওয়ার্ড প্রদান করে সাইন ইন করুন।");
+    if (!isAuthVoiceMuted()) {
+      playAuthVoice("আপনার ডিপ শপ অ্যাকাউন্টে স্বাগতম। ইমেইল অথবা ফোন নম্বর এবং পাসওয়ার্ড দিয়ে লগইন সম্পন্ন করুন।");
+    }
     const unsub = onSnapshot(doc(db, "settings", "platform"), (snap) => {
       setPlatformConfig(snap.exists() ? snap.data() : {});
     });
@@ -151,6 +155,7 @@ const SignIn: React.FC = () => {
     });
 
     notify(`Welcome back, ${profileName}!`, "success");
+    playAuthVoice("লগইন সফল হয়েছে। ডিপ শপে আপনাকে স্বাগতম।");
     const dest = await linkPendingGuestOrderAndResolveDestination(
       firebaseUser.uid,
       firebaseUser.email || loginEmail,
@@ -249,7 +254,7 @@ const SignIn: React.FC = () => {
     } catch (err: any) {
       const friendly = getFriendlyErrorMessage(err);
       notify(friendly, "error");
-      playAuthVoice(friendly);
+      playAuthVoice(getBanglaAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -342,28 +347,28 @@ const SignIn: React.FC = () => {
         )}
 
         <form onSubmit={handleLoginSubmit} className="space-y-3.5 w-full">
-          <div onFocus={() => playAuthVoice("আপনার নিবন্ধিত ইমেইল বা ফোন নম্বর লিখুন")}>
-            <DeepShopFloatingInput
-              label="Mobile number or email address"
-              value={identifier}
-              onChange={(v) => {
-                setIdentifier(v);
-                if (fieldError) setFieldError("");
-              }}
-              errorText={fieldError}
-              autoComplete="username"
-            />
-          </div>
+          <DeepShopFloatingInput
+            label="Mobile number or email address"
+            value={identifier}
+            onFocus={() =>
+              playAuthVoice("আপনার নিবন্ধিত মোবাইল নম্বর অথবা ইমেইল ঠিকানা লিখুন।")
+            }
+            onChange={(v) => {
+              setIdentifier(v);
+              if (fieldError) setFieldError("");
+            }}
+            errorText={fieldError}
+            autoComplete="username"
+          />
 
-          <div onFocus={() => playAuthVoice("আপনার পাসওয়ার্ড প্রদান করুন")}>
-            <DeepShopFloatingInput
-              label="Password"
-              value={password}
-              onChange={setPassword}
-              isPassword
-              autoComplete="current-password"
-            />
-          </div>
+          <DeepShopFloatingInput
+            label="Password"
+            value={password}
+            onFocus={() => playAuthVoice("আপনার পাসওয়ার্ড প্রদান করুন।")}
+            onChange={setPassword}
+            isPassword
+            autoComplete="current-password"
+          />
 
           <div className="pt-1">
             <button

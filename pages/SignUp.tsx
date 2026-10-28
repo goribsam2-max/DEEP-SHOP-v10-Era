@@ -22,8 +22,9 @@ import {
   normalizeBdPhoneVariants,
   upsertSavedAccount,
 } from "../lib/savedAccounts";
-import AuthVoiceToggle from "../components/AuthVoiceToggle";
 import {
+  getBanglaAuthErrorMessage,
+  isAuthVoiceMuted,
   playAuthVoice,
   validateRealEmail,
   validateInappropriateContent,
@@ -118,6 +119,7 @@ const SignUp: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const roleParam = searchParams.get("role") || "customer";
   const querySuffix = location.search || "";
+  const currentStep = step || (roleParam === "seller" ? "seller" : "welcome");
 
   const [draft, setDraft] = useState<SignUpDraft>(getDefaultDraft);
   const [password, setPassword] = useState("");
@@ -134,7 +136,53 @@ const SignUp: React.FC = () => {
 
   useEffect(() => {
     setFieldError("");
-  }, [step]);
+    if (!isAuthVoiceMuted()) {
+      switch (currentStep) {
+        case "welcome":
+          playAuthVoice(
+            "ডিপ শপে আপনাকে স্বাগতম। নতুন অ্যাকাউন্ট তৈরি করতে গেট স্টার্টেড বাটনে ট্যাপ করুন, অথবা সেলার হতে নিচের সেলার পার্টনার অপশনে ক্লিক করুন।"
+          );
+          break;
+        case "name":
+          playAuthVoice(
+            "আপনার আসল নামটি এখানে লিখুন। প্রথমে আপনার নামের প্রথম অংশ এবং পাশে পদবি লিখুন।"
+          );
+          break;
+        case "birthday":
+          playAuthVoice(
+            "আপনার সঠিক জন্ম তারিখটি নির্বাচন করুন। অ্যাকাউন্ট তৈরি করতে বয়স কমপক্ষে তেরো বছর হতে হবে।"
+          );
+          break;
+        case "gender":
+          playAuthVoice(
+            "আপনার লিঙ্গ পরিচয়টি নির্বাচন করুন এবং নেক্সট বাটনে ট্যাপ করুন।"
+          );
+          break;
+        case "mobile":
+          playAuthVoice(
+            "আপনার সচল মোবাইল নম্বরটি এখানে দিন। এই নম্বরে আপনার অর্ডারের আপডেট পাঠানো হবে।"
+          );
+          break;
+        case "email":
+          playAuthVoice(
+            "আপনার ব্যক্তিগত আসল ইমেইল ঠিকানাটি এখানে লিখুন।"
+          );
+          break;
+        case "password":
+          playAuthVoice(
+            roleParam === "seller"
+              ? "এখন আপনার সেলার অ্যাকাউন্টের সুরক্ষার জন্য একটি শক্তিশালী পাসওয়ার্ড তৈরি করুন।"
+              : "আপনার অ্যাকাউন্টের সুরক্ষার জন্য কমপক্ষে আট অক্ষরের একটি শক্তিশালী পাসওয়ার্ড তৈরি করুন।"
+          );
+          break;
+        case "seller":
+          playAuthVoice(
+            "ডিপ শপ সেলার রেজিস্ট্রেশনে আপনাকে স্বাগতম। আপনার দোকানের নাম, এন আই ডি অনুযায়ী মালিকের পূর্ণ নাম, মোবাইল নম্বর এবং ইমেইল দিয়ে সেলার প্রোফাইল তৈরি করুন।"
+          );
+          break;
+      }
+    }
+  }, [step, currentStep, roleParam]);
 
   const updateDraft = (patch: Partial<SignUpDraft>) => {
     setDraft((prev) => {
@@ -156,7 +204,7 @@ const SignUp: React.FC = () => {
     }
   };
 
-  const currentStep = step || (roleParam === "seller" ? "seller" : "welcome");
+
 
   const age = useMemo(
     () => calculateAge(draft.birthDay, draft.birthMonth, draft.birthYear),
@@ -260,35 +308,28 @@ const SignUp: React.FC = () => {
       playAuthVoice(snCheck.errorMsg);
       return;
     }
-    playAuthVoice("আপনার জন্ম তারিখ নির্বাচন করুন।");
     navigate(`/signup/birthday${querySuffix}`);
   };
 
   const handleNextFromBirthday = (e: React.FormEvent) => {
     e.preventDefault();
     if (age < 13) {
-      const err = "অ্যাকাউন্ট তৈরি করতে বয়স কমপক্ষে ১৩ বছর হতে হবে।";
+      const err = "অ্যাকাউন্ট তৈরি করতে বয়স কমপক্ষে তেরো বছর হতে হবে।";
       setFieldError("You must be at least 13 years old to create an account.");
       playAuthVoice(err);
       return;
     }
-    playAuthVoice("আপনার লিঙ্গ নির্বাচন করুন।");
     navigate(`/signup/gender${querySuffix}`);
   };
 
   const handleNextFromGender = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.gender) {
-      const err = "অনুগ্রহ করে আপনার লিঙ্গ নির্বাচন করুন।";
+      const err = "অনুগ্রহ করে আপনার লিঙ্গ পরিচয় নির্বাচন করুন।";
       setFieldError("Please select your gender to continue.");
       playAuthVoice(err);
       return;
     }
-    playAuthVoice(
-      draft.contactMode === "email"
-        ? "আপনার ইমেইল ঠিকানা প্রদান করুন।"
-        : "আপনার মোবাইল নম্বর প্রদান করুন।"
-    );
     navigate(
       `/signup/${
         draft.contactMode === "email" ? "email" : "mobile"
@@ -300,13 +341,12 @@ const SignUp: React.FC = () => {
     e.preventDefault();
     const cleaned = draft.mobileNumber.trim().replace(/[\s\-().]/g, "");
     if (!/^\+?[0-9]{8,15}$/.test(cleaned)) {
-      const err = "সঠিক মোবাইল নম্বর প্রদান করুন।";
+      const err = "অনুগ্রহ করে একটি সঠিক মোবাইল নম্বর প্রদান করুন।";
       setFieldError("Please enter a valid mobile number.");
       playAuthVoice(err);
       return;
     }
     updateDraft({ contactMode: "mobile" });
-    playAuthVoice("একটি সুরক্ষিত পাসওয়ার্ড তৈরি করুন।");
     navigate(`/signup/password${querySuffix}`);
   };
 
@@ -326,28 +366,68 @@ const SignUp: React.FC = () => {
       return;
     }
     updateDraft({ contactMode: "email" });
-    playAuthVoice("একটি সুরক্ষিত পাসওয়ার্ড তৈরি করুন।");
     navigate(`/signup/password${querySuffix}`);
   };
 
   const handleNextFromSeller = (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldError("");
+
     if (!draft.shopName.trim()) {
-      setFieldError("Please enter your shop name.");
+      const msg = "অনুগ্রহ করে আপনার দোকানের নাম লিখুন।";
+      setFieldError(msg);
+      playAuthVoice(msg);
       return;
     }
+    const shopProf = validateInappropriateContent(draft.shopName, "দোকানের নামে");
+    if (!shopProf.isValid) {
+      setFieldError(shopProf.errorMsg);
+      playAuthVoice(shopProf.errorMsg);
+      return;
+    }
+
     if (!draft.firstName.trim()) {
-      setFieldError("Please enter owner full name.");
+      const msg = "এন আই ডি অনুযায়ী মালিকের পূর্ণ নাম লিখুন।";
+      setFieldError(msg);
+      playAuthVoice(msg);
       return;
     }
-    if (!draft.mobileNumber.trim()) {
-      setFieldError("Please enter seller mobile number.");
+    const ownerProf = validateInappropriateContent(draft.firstName, "মালিকের নামে");
+    if (!ownerProf.isValid) {
+      setFieldError(ownerProf.errorMsg);
+      playAuthVoice(ownerProf.errorMsg);
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) {
-      setFieldError("Please enter a valid seller email address.");
+
+    if (draft.storeType === "physical" && !draft.shopAddress.trim()) {
+      const msg = "অনুগ্রহ করে আপনার দোকানের নম্বর এবং মার্কেটের ঠিকানা লিখুন।";
+      setFieldError(msg);
+      playAuthVoice(msg);
       return;
     }
+
+    const cleanedPhone = draft.mobileNumber.trim().replace(/[\s\-().]/g, "");
+    if (!/^\+?[0-9]{8,15}$/.test(cleanedPhone)) {
+      const msg = "অনুগ্রহ করে সেলারের সঠিক মোবাইল নম্বর প্রদান করুন।";
+      setFieldError(msg);
+      playAuthVoice(msg);
+      return;
+    }
+
+    const trimmedEmail = draft.email.trim();
+    const emailCheck = validateRealEmail(trimmedEmail);
+    if (!emailCheck.isValid) {
+      setFieldError(emailCheck.errorMsg);
+      playAuthVoice(emailCheck.errorMsg);
+      return;
+    }
+    const emailProf = validateInappropriateContent(trimmedEmail, "ইমেইলে");
+    if (!emailProf.isValid) {
+      setFieldError(emailProf.errorMsg);
+      playAuthVoice(emailProf.errorMsg);
+      return;
+    }
+
     updateDraft({ contactMode: "email" });
     navigate(`/signup/password${querySuffix}`);
   };
@@ -467,6 +547,11 @@ const SignUp: React.FC = () => {
 
       clearDraft();
       notify("Welcome to DEEP SHOP! Account created.", "success");
+      playAuthVoice(
+        roleParam === "seller"
+          ? "অভিনন্দন! আপনার ডিপ শপ সেলার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে।"
+          : "অভিনন্দন! আপনার ডিপ শপ অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে।"
+      );
 
       const defaultDest =
         roleParam === "seller" ? "/seller/dashboard" : "/";
@@ -479,6 +564,7 @@ const SignUp: React.FC = () => {
       navigate(dest);
     } catch (err: any) {
       notify(getFriendlyErrorMessage(err), "error");
+      playAuthVoice(getBanglaAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -583,19 +669,37 @@ const SignUp: React.FC = () => {
             <DeepShopFloatingInput
               label="Shop name"
               value={draft.shopName}
-              onChange={(v) => updateDraft({ shopName: v })}
+              onFocus={() =>
+                playAuthVoice("এখানে আপনার দোকান বা প্রতিষ্ঠানের নাম লিখুন।")
+              }
+              onChange={(v) => {
+                updateDraft({ shopName: v });
+                if (fieldError) setFieldError("");
+              }}
             />
 
             <DeepShopFloatingInput
               label="Owner full name (as per NID)"
               value={draft.firstName}
-              onChange={(v) => updateDraft({ firstName: v })}
+              onFocus={() =>
+                playAuthVoice(
+                  "জাতীয় পরিচয়পত্র বা এন আই ডি কার্ড অনুযায়ী মালিকের পূর্ণ নাম লিখুন।"
+                )
+              }
+              onChange={(v) => {
+                updateDraft({ firstName: v });
+                if (fieldError) setFieldError("");
+              }}
             />
 
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
-                onClick={() => updateDraft({ storeType: "online" })}
+                onClick={() => {
+                  updateDraft({ storeType: "online" });
+                  if (fieldError) setFieldError("");
+                  playAuthVoice("অনলাইন স্টোর নির্বাচন করা হয়েছে।");
+                }}
                 className={`h-11 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   draft.storeType === "online"
                     ? "border-[#0064e0] bg-[#0064e0]/10 text-[#0064e0] dark:text-[#4599ff]"
@@ -607,7 +711,13 @@ const SignUp: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => updateDraft({ storeType: "physical" })}
+                onClick={() => {
+                  updateDraft({ storeType: "physical" });
+                  if (fieldError) setFieldError("");
+                  playAuthVoice(
+                    "ফিজিক্যাল শোরুম নির্বাচন করা হয়েছে। নিচে দোকানের ঠিকানা লিখুন।"
+                  );
+                }}
                 className={`h-11 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   draft.storeType === "physical"
                     ? "border-[#0064e0] bg-[#0064e0]/10 text-[#0064e0] dark:text-[#4599ff]"
@@ -623,23 +733,51 @@ const SignUp: React.FC = () => {
               <DeepShopFloatingInput
                 label="Shop number & market address"
                 value={draft.shopAddress}
-                onChange={(v) => updateDraft({ shopAddress: v })}
+                onFocus={() =>
+                  playAuthVoice(
+                    "আপনার দোকানের নম্বর এবং মার্কেটের পূর্ণ ঠিকানা লিখুন।"
+                  )
+                }
+                onChange={(v) => {
+                  updateDraft({ shopAddress: v });
+                  if (fieldError) setFieldError("");
+                }}
               />
             )}
 
             <DeepShopFloatingInput
               label="Seller mobile number"
+              type="tel"
               value={draft.mobileNumber}
-              onChange={(v) => updateDraft({ mobileNumber: v })}
+              onFocus={() =>
+                playAuthVoice("সেলারের সচল মোবাইল নম্বরটি লিখুন।")
+              }
+              onChange={(v) => {
+                updateDraft({ mobileNumber: v });
+                if (fieldError) setFieldError("");
+              }}
             />
 
             <DeepShopFloatingInput
               label="Email address"
               type="email"
               value={draft.email}
-              onChange={(v) => updateDraft({ email: v })}
-              errorText={fieldError}
+              onFocus={() =>
+                playAuthVoice(
+                  "আপনার ব্যবসার অথবা ব্যক্তিগত আসল ইমেইল ঠিকানাটি লিখুন।"
+                )
+              }
+              onChange={(v) => {
+                updateDraft({ email: v });
+                if (fieldError) setFieldError("");
+              }}
             />
+
+            {fieldError && (
+              <p className="px-1 text-[13px] font-medium text-red-600 dark:text-red-400">
+                {fieldError}
+              </p>
+            )}
 
             <button
               type="submit"
@@ -688,6 +826,9 @@ const SignUp: React.FC = () => {
               <DeepShopFloatingInput
                 label="First name"
                 value={draft.firstName}
+                onFocus={() =>
+                  playAuthVoice("আপনার নামের প্রথম অংশ এখানে লিখুন।")
+                }
                 onChange={(v) => {
                   updateDraft({ firstName: v });
                   if (fieldError) setFieldError("");
@@ -697,6 +838,9 @@ const SignUp: React.FC = () => {
               <DeepShopFloatingInput
                 label="Surname"
                 value={draft.surname}
+                onFocus={() =>
+                  playAuthVoice("আপনার পদবি বা নামের শেষ অংশ লিখুন।")
+                }
                 onChange={(v) => {
                   updateDraft({ surname: v });
                   if (fieldError) setFieldError("");
@@ -765,7 +909,12 @@ const SignUp: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => setShowDatePickerSheet(true)}
+              onClick={() => {
+                setShowDatePickerSheet(true);
+                playAuthVoice(
+                  "দিন, মাস এবং জন্ম সাল নির্বাচন করে সেট বাটনে ট্যাপ করুন।"
+                );
+              }}
               className="w-full h-[60px] rounded-[16px] border border-[#1c2b33] dark:border-zinc-300 bg-white dark:bg-[#121820] px-4 flex flex-col justify-center text-left transition cursor-pointer"
             >
               <span className="text-[12px] font-medium text-[#1c2b33] dark:text-zinc-400">
@@ -955,6 +1104,7 @@ const SignUp: React.FC = () => {
                 onClick={() => {
                   updateDraft({ gender: "female" });
                   setFieldError("");
+                  playAuthVoice("নারী নির্বাচন করা হয়েছে।");
                 }}
                 className="w-full min-h-[58px] px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#f7f8fa] dark:hover:bg-zinc-800/60 transition cursor-pointer"
               >
@@ -976,6 +1126,7 @@ const SignUp: React.FC = () => {
                 onClick={() => {
                   updateDraft({ gender: "male" });
                   setFieldError("");
+                  playAuthVoice("পুরুষ নির্বাচন করা হয়েছে।");
                 }}
                 className="w-full min-h-[58px] px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#f7f8fa] dark:hover:bg-zinc-800/60 transition cursor-pointer"
               >
@@ -998,6 +1149,7 @@ const SignUp: React.FC = () => {
                   onClick={() => {
                     updateDraft({ gender: "more" });
                     setFieldError("");
+                    playAuthVoice("অন্যান্য অপশন নির্বাচন করা হয়েছে।");
                   }}
                   className="w-full px-4 py-4 flex items-center justify-between gap-4 text-left hover:bg-[#f7f8fa] dark:hover:bg-zinc-800/60 transition cursor-pointer"
                 >
@@ -1100,6 +1252,9 @@ const SignUp: React.FC = () => {
                 label="Mobile number"
                 type="tel"
                 value={draft.mobileNumber}
+                onFocus={() =>
+                  playAuthVoice("আপনার এগারো সংখ্যার সচল মোবাইল নম্বরটি লিখুন।")
+                }
                 onChange={(v) => {
                   updateDraft({ mobileNumber: v });
                   if (fieldError) setFieldError("");
@@ -1183,6 +1338,11 @@ const SignUp: React.FC = () => {
                 label="Email address"
                 type="email"
                 value={draft.email}
+                onFocus={() =>
+                  playAuthVoice(
+                    "এখানে আপনার আসল ইমেইল ঠিকানা যেমন জিমেইল বা আউটলুক লিখুন।"
+                  )
+                }
                 onChange={(v) => {
                   updateDraft({ email: v });
                   if (fieldError) setFieldError("");
@@ -1264,6 +1424,11 @@ const SignUp: React.FC = () => {
             <DeepShopFloatingInput
               label="Password"
               value={password}
+              onFocus={() =>
+                playAuthVoice(
+                  "বড় অক্ষর, ছোট অক্ষর, সংখ্যা এবং স্পেশাল চিহ্ন মিলিয়ে কমপক্ষে আট অক্ষরের পাসওয়ার্ড লিখুন।"
+                )
+              }
               onChange={(v) => {
                 setPassword(v);
                 if (fieldError) setFieldError("");

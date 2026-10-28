@@ -1,4 +1,4 @@
-// Speech synthesis (Bangla voice assistance), Password Rules & Domain/Profanity Validation
+// Professional Male Bengali Voiceover Engine, Password Rules & Domain/Profanity Validation
 
 export const ALLOWED_EMAIL_DOMAINS = [
   "gmail.com",
@@ -66,7 +66,16 @@ export const INAPPROPRIATE_WORDS = [
 
 const VOICE_MUTE_KEY = "deepshop_auth_voice_muted_v1";
 
-export const isAuthVoiceMuted = (): boolean => {
+export interface AuthVoiceState {
+  muted: boolean;
+  isSpeaking: boolean;
+}
+
+type VoiceListener = (state: AuthVoiceState) => void;
+const listeners = new Set<VoiceListener>();
+
+const readInitialMuted = (): boolean => {
+  if (typeof window === "undefined") return false;
   try {
     return localStorage.getItem(VOICE_MUTE_KEY) === "true";
   } catch {
@@ -74,47 +83,478 @@ export const isAuthVoiceMuted = (): boolean => {
   }
 };
 
+let voiceState: AuthVoiceState = {
+  muted: readInitialMuted(),
+  isSpeaking: false,
+};
+
+const emitVoiceState = () => {
+  const snapshot: AuthVoiceState = { ...voiceState };
+  listeners.forEach((fn) => {
+    try {
+      fn(snapshot);
+    } catch {
+      // Ignore subscriber error
+    }
+  });
+};
+
+const setSpeaking = (speaking: boolean) => {
+  if (voiceState.isSpeaking === speaking) return;
+  voiceState = { ...voiceState, isSpeaking: speaking };
+  emitVoiceState();
+};
+
+export const getAuthVoiceState = (): AuthVoiceState => ({ ...voiceState });
+
+export const subscribeAuthVoiceState = (listener: VoiceListener): (() => void) => {
+  listeners.add(listener);
+  listener({ ...voiceState });
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
+// WebAudio + HTMLAudio playback state
+let sharedAudioCtx: AudioContext | null = null;
+let activeSourceNode: AudioBufferSourceNode | null = null;
+let activeHtmlAudio: HTMLAudioElement | null = null;
+let activePlayToken = 0;
+let pendingColdStartText: string | null = null;
+let unlockListenersInstalled = false;
+
+interface CachedVoiceClip {
+  rawBytes: ArrayBuffer;
+  mimeType: string;
+  engine: string;
+}
+
+const clientAudioCache = new Map<string, CachedVoiceClip>();
+
+function getOrCreateAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (sharedAudioCtx) return sharedAudioCtx;
+  const Ctx =
+    window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctx) return null;
+  try {
+    sharedAudioCtx = new Ctx();
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+}
+
+export const stopAuthVoice = () => {
+  activePlayToken += 1;
+  pendingColdStartText = null;
+
+  if (activeSourceNode) {
+    try {
+      activeSourceNode.onended = null;
+      activeSourceNode.stop();
+      activeSourceNode.disconnect();
+    } catch {
+      // Ignore already stopped source
+    }
+    activeSourceNode = null;
+  }
+
+  if (activeHtmlAudio) {
+    try {
+      activeHtmlAudio.onended = null;
+      activeHtmlAudio.onerror = null;
+      activeHtmlAudio.onpause = null;
+      activeHtmlAudio.pause();
+      activeHtmlAudio.currentTime = 0;
+    } catch {
+      // Ignore
+    }
+    activeHtmlAudio = null;
+  }
+
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // Ignore
+    }
+  }
+
+  setSpeaking(false);
+};
+
+export const isAuthVoiceMuted = (): boolean => {
+  const persisted = readInitialMuted();
+  if (voiceState.muted !== persisted) {
+    voiceState = { ...voiceState, muted: persisted };
+  }
+  return persisted;
+};
+
 export const setAuthVoiceMuted = (muted: boolean) => {
   try {
     localStorage.setItem(VOICE_MUTE_KEY, muted ? "true" : "false");
-    if (muted && typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
   } catch {
     // Ignore storage error
   }
+  voiceState = { ...voiceState, muted };
+  if (muted) {
+    stopAuthVoice();
+  }
+  emitVoiceState();
 };
 
 export const toggleAuthVoiceMute = (): boolean => {
-  const current = isAuthVoiceMuted();
-  const next = !current;
+  const next = !isAuthVoiceMuted();
   setAuthVoiceMuted(next);
   return next;
 };
 
-export const playAuthVoice = (text: string, force = false) => {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-  if (!force && isAuthVoiceMuted()) return;
+/**
+ * Normalizes mixed English/technical words into natural Bengali script
+ * so the male Bengali voiceover pronounces every word accurately.
+ */
+export const normalizeTextForBengaliSpeech = (text: string): string => {
+  if (!text) return "";
+  return text
+    .replace(/example@gmail\.com/gi, "এক্সাম্পল অ্যাট জিমেইল ডট কম")
+    .replace(/DEEP\s*SHOP/gi, "ডিপ শপ")
+    .replace(/\bGmail\b/gi, "জিমেইল")
+    .replace(/\bOutlook\b/gi, "আউটলুক")
+    .replace(/\bHotmail\b/gi, "হটমেইল")
+    .replace(/\bYahoo\b/gi, "ইয়াহু")
+    .replace(/\biCloud\b/gi, "আইক্লাউড")
+    .replace(/\bNID\b/g, "এন আই ডি")
+    .replace(/\bOTP\b/g, "ও টি পি")
+    .replace(/\bSMS\b/g, "এস এম এস")
+    .replace(/\(0-9\)/g, "শূন্য থেকে নয়")
+    .replace(/\(a-z\)/g, "ছোট হাতের অক্ষর")
+    .replace(/\(A-Z\)/g, "বড় হাতের অক্ষর")
+    .replace(/৮\+/g, "কমপক্ষে আটটি")
+    .replace(/8\+/g, "কমপক্ষে আটটি")
+    .replace(/\(!@#\$\)/g, "")
+    .replace(/[()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
 
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "bn-BD";
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
+/**
+ * Pure Bengali voice error messages for Firebase Authentication errors.
+ */
+export const getBanglaAuthErrorMessage = (error: any): string => {
+  const code = String(error?.code || error?.message || "").toLowerCase();
 
-    const voices = window.speechSynthesis.getVoices();
-    const bnVoice = voices.find(
-      (v) => v.lang.includes("bn") || v.lang.includes("BD")
-    );
-    if (bnVoice) {
-      utterance.voice = bnVoice;
+  if (code.includes("auth/invalid-email")) {
+    return "আপনার দেওয়া ইমেইল ঠিকানাটির ফরম্যাট সঠিক নয়। অনুগ্রহ করে সঠিক ইমেইল দিন।";
+  }
+  if (
+    code.includes("auth/user-not-found") ||
+    code.includes("auth/invalid-credential") ||
+    code.includes("auth/wrong-password")
+  ) {
+    return "আপনার ইমেইল বা ফোন নম্বর অথবা পাসওয়ার্ডটি সঠিক নয়। অনুগ্রহ করে যাচাই করে আবার চেষ্টা করুন।";
+  }
+  if (code.includes("auth/email-already-in-use")) {
+    return "এই ইমেইল বা মোবাইল নম্বর দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট খোলা আছে। অনুগ্রহ করে লগইন করুন।";
+  }
+  if (code.includes("auth/weak-password")) {
+    return "পাসওয়ার্ডটি খুবই দুর্বল। অনুগ্রহ করে আরও শক্তিশালী পাসওয়ার্ড ব্যবহার করুন।";
+  }
+  if (code.includes("auth/network-request-failed")) {
+    return "ইন্টারনেট সংযোগে সমস্যা হচ্ছে। অনুগ্রহ করে আপনার নেটওয়ার্ক যাচাই করে আবার চেষ্টা করুন।";
+  }
+  if (code.includes("auth/too-many-requests")) {
+    return "অতিরিক্ত বার ভুল চেষ্টা করা হয়েছে। কিছুক্ষণ অপেক্ষা করে আবার চেষ্টা করুন অথবা পাসওয়ার্ড রিসেট করুন।";
+  }
+  if (code.includes("auth/user-disabled")) {
+    return "এই অ্যাকাউন্টটি সাময়িকভাবে বন্ধ করা হয়েছে। অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।";
+  }
+  return "দুঃখিত, লগইন বা নিবন্ধন সম্পন্ন করতে সমস্যা হয়েছে। আপনার তথ্যগুলো যাচাই করে আবার চেষ্টা করুন।";
+};
+
+function installGestureAudioUnlock() {
+  if (unlockListenersInstalled || typeof window === "undefined") return;
+  unlockListenersInstalled = true;
+
+  const handleFirstGesture = (ev: Event) => {
+    const ctx = getOrCreateAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
     }
 
-    window.speechSynthesis.speak(utterance);
-  } catch {
-    // Ignore speech errors gracefully
+    // Do not replay cold-start greeting if user clicked the voice mute toggle itself
+    const target = ev.target as HTMLElement | null;
+    if (target?.closest?.("[data-auth-voice-toggle='true']")) {
+      pendingColdStartText = null;
+      return;
+    }
+
+    if (pendingColdStartText && !isAuthVoiceMuted()) {
+      const queued = pendingColdStartText;
+      pendingColdStartText = null;
+      // Small micro-delay so if user tapped an input with its own onFocus voice, onFocus wins cleanly
+      setTimeout(() => {
+        if (pendingColdStartText === null && !voiceState.isSpeaking && !isAuthVoiceMuted()) {
+          // Only play queued greeting if nothing else started speaking from this tap
+          if (activePlayToken === lastQueuedToken) {
+            playAuthVoice(queued);
+          }
+        }
+      }, 65);
+    }
+  };
+
+  window.addEventListener("pointerdown", handleFirstGesture, { passive: true });
+  window.addEventListener("keydown", handleFirstGesture, { passive: true });
+}
+
+let lastQueuedToken = 0;
+
+function speakBrowserFallback(spokenText: string, token: number) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    setSpeaking(false);
+    return;
   }
+
+  const runSpeak = () => {
+    if (token !== activePlayToken || isAuthVoiceMuted()) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(spokenText);
+      utterance.lang = "bn-BD";
+      utterance.rate = 0.9;
+      utterance.pitch = 0.88; // Warm male pitch register
+      utterance.volume = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const maleKeywords = ["pradeep", "bashkar", "hemant", "male", "man", "charon"];
+      const bnVoices = voices.filter((v) => {
+        const l = v.lang.toLowerCase();
+        return l.includes("bn") || l.includes("bd");
+      });
+
+      const chosen =
+        bnVoices.find((v) => maleKeywords.some((k) => v.name.toLowerCase().includes(k))) ||
+        bnVoices.find((v) => v.name.toLowerCase().includes("google")) ||
+        bnVoices[0];
+
+      if (chosen) {
+        utterance.voice = chosen;
+      }
+
+      utterance.onstart = () => {
+        if (token === activePlayToken) setSpeaking(true);
+      };
+      utterance.onend = () => {
+        if (token === activePlayToken) setSpeaking(false);
+      };
+      utterance.onerror = () => {
+        if (token === activePlayToken) setSpeaking(false);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      if (token === activePlayToken) setSpeaking(false);
+    }
+  };
+
+  const existingVoices = window.speechSynthesis.getVoices();
+  if (existingVoices.length > 0) {
+    runSpeak();
+  } else {
+    let fired = false;
+    const onVoices = () => {
+      if (fired) return;
+      fired = true;
+      window.speechSynthesis.removeEventListener("voiceschanged", onVoices);
+      runSpeak();
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", onVoices);
+    setTimeout(() => {
+      if (!fired) {
+        fired = true;
+        window.speechSynthesis.removeEventListener("voiceschanged", onVoices);
+        runSpeak();
+      }
+    }, 350);
+  }
+}
+
+async function fetchVoiceClip(spokenText: string): Promise<CachedVoiceClip | null> {
+  const existing = clientAudioCache.get(spokenText);
+  if (existing) return existing;
+
+  const res = await fetch("/api/tts/bengali", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: spokenText }),
+  });
+
+  if (!res.ok) return null;
+
+  const rawBytes = await res.arrayBuffer();
+  if (!rawBytes || rawBytes.byteLength < 64) return null;
+
+  const mimeType = res.headers.get("Content-Type") || "audio/wav";
+  const engine = res.headers.get("X-Voice-Engine") || "gemini-male";
+  const clip: CachedVoiceClip = { rawBytes, mimeType, engine };
+
+  if (clientAudioCache.size >= 80) {
+    const firstKey = clientAudioCache.keys().next().value;
+    if (firstKey) clientAudioCache.delete(firstKey);
+  }
+  clientAudioCache.set(spokenText, clip);
+  return clip;
+}
+
+async function playHtmlAudioClip(
+  clip: CachedVoiceClip,
+  token: number
+): Promise<"played" | "blocked" | "failed"> {
+  if (typeof window === "undefined") return "failed";
+  const blob = new Blob([clip.rawBytes], { type: clip.mimeType });
+  const blobUrl = URL.createObjectURL(blob);
+  const audio = new Audio(blobUrl);
+  activeHtmlAudio = audio;
+
+  if (clip.engine === "fallback-bn-male") {
+    (audio as any).preservesPitch = false;
+    (audio as any).webkitPreservesPitch = false;
+    (audio as any).mozPreservesPitch = false;
+    audio.playbackRate = 0.87;
+  } else {
+    audio.playbackRate = 1.0;
+  }
+
+  const cleanup = () => {
+    URL.revokeObjectURL(blobUrl);
+    if (activeHtmlAudio === audio) {
+      activeHtmlAudio = null;
+    }
+    if (token === activePlayToken) {
+      setSpeaking(false);
+    }
+  };
+
+  audio.onplaying = () => {
+    if (token === activePlayToken) {
+      setSpeaking(true);
+    }
+  };
+  audio.onended = cleanup;
+  audio.onerror = cleanup;
+
+  try {
+    await audio.play();
+    if (token === activePlayToken) {
+      setSpeaking(true);
+    }
+    return "played";
+  } catch (err: any) {
+    URL.revokeObjectURL(blobUrl);
+    if (activeHtmlAudio === audio) activeHtmlAudio = null;
+    setSpeaking(false);
+    const errName = String(err?.name || "");
+    if (errName === "NotAllowedError") {
+      return "blocked";
+    }
+    return "failed";
+  }
+}
+
+/**
+ * Plays accurate Professional Male Bengali Voiceover across Login, Registration & Seller Setup.
+ */
+export const playAuthVoice = (text: string, force = false) => {
+  if (typeof window === "undefined") return;
+  installGestureAudioUnlock();
+
+  if (!force && isAuthVoiceMuted()) return;
+
+  const spokenText = normalizeTextForBengaliSpeech(text);
+  if (!spokenText) return;
+
+  // Cancel any prior in-flight or playing voice immediately
+  stopAuthVoice();
+  const token = ++activePlayToken;
+
+  (async () => {
+    try {
+      const clip = await fetchVoiceClip(spokenText);
+      if (token !== activePlayToken || (!force && isAuthVoiceMuted())) return;
+
+      if (clip) {
+        // Attempt WebAudio API playback first (persists across SPA route transitions without re-blocking)
+        const ctx = getOrCreateAudioContext();
+        if (ctx) {
+          if (ctx.state === "suspended") {
+            try {
+              await Promise.race([
+                ctx.resume(),
+                new Promise((resolve) => setTimeout(resolve, 180)),
+              ]);
+            } catch {
+              // Ignore resume error
+            }
+          }
+
+          if (token !== activePlayToken || (!force && isAuthVoiceMuted())) return;
+
+          if (ctx.state === "running") {
+            try {
+              const decoded = await ctx.decodeAudioData(clip.rawBytes.slice(0));
+              if (token !== activePlayToken || (!force && isAuthVoiceMuted())) return;
+
+              const source = ctx.createBufferSource();
+              source.buffer = decoded;
+              if (clip.engine === "fallback-bn-male") {
+                // Warm natural male vocal resonance & clear pace
+                source.detune.value = -245;
+              }
+              const gain = ctx.createGain();
+              gain.gain.value = 1.05;
+              source.connect(gain);
+              gain.connect(ctx.destination);
+
+              activeSourceNode = source;
+              setSpeaking(true);
+              source.onended = () => {
+                if (activeSourceNode === source) {
+                  activeSourceNode = null;
+                }
+                if (token === activePlayToken) {
+                  setSpeaking(false);
+                }
+              };
+              source.start(0);
+              return;
+            } catch {
+              // Fall through to HTMLAudioElement if decodeAudioData fails on specific format
+            }
+          }
+        }
+
+        // Fallback to HTMLAudioElement
+        const htmlResult = await playHtmlAudioClip(clip, token);
+        if (htmlResult === "played") return;
+
+        if (htmlResult === "blocked") {
+          // Browser blocked cold-start autoplay prior to first user interaction; queue for immediate unlock
+          pendingColdStartText = spokenText;
+          lastQueuedToken = token;
+          return;
+        }
+      }
+
+      // Final offline fallback: Browser SpeechSynthesis
+      speakBrowserFallback(spokenText, token);
+    } catch {
+      if (token === activePlayToken && (force || !isAuthVoiceMuted())) {
+        speakBrowserFallback(spokenText, token);
+      }
+    }
+  })();
 };
 
 export const validateRealEmail = (

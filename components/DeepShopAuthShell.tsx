@@ -285,6 +285,8 @@ export const DeepShopFloatingInput: React.FC<DeepShopFloatingInputProps> = ({
   errorText,
   type = "text",
   className = "",
+  onFocus,
+  onBlur,
   ...rest
 }) => {
   const id = useId();
@@ -310,21 +312,21 @@ export const DeepShopFloatingInput: React.FC<DeepShopFloatingInputProps> = ({
         }`}
       >
         <input
+          {...rest}
           id={id}
           type={resolvedType}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={(e) => {
             setFocused(true);
-            rest.onFocus?.(e);
+            onFocus?.(e);
           }}
           onBlur={(e) => {
             setFocused(false);
-            rest.onBlur?.(e);
+            onBlur?.(e);
           }}
           placeholder=" "
           className="peer w-full h-full bg-transparent px-4 pt-5 pb-1.5 pr-12 text-[16px] font-normal text-[#0a1317] dark:text-zinc-100 outline-none rounded-[16px]"
-          {...rest}
         />
         <label
           htmlFor={id}

@@ -25,6 +25,7 @@ import {
   upsertSavedAccount,
 } from "../lib/savedAccounts";
 import {
+  getBanglaAuthErrorMessage,
   playAuthVoice,
   validateInappropriateContent,
   validateRealEmail,
@@ -491,6 +492,7 @@ export const ReviewAccountPage: React.FC = () => {
     }
     if (!password) {
       notify("Please enter your password.", "error");
+      playAuthVoice("অনুগ্রহ করে আপনার পাসওয়ার্ড লিখুন।");
       return;
     }
 
@@ -529,6 +531,7 @@ export const ReviewAccountPage: React.FC = () => {
       navigate(dest);
     } catch (err: any) {
       notify(getFriendlyErrorMessage(err), "error");
+      playAuthVoice(getBanglaAuthErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -703,6 +706,7 @@ export const ReviewAccountPage: React.FC = () => {
             <DeepShopFloatingInput
               label="Password"
               value={password}
+              onFocus={() => playAuthVoice("আপনার পাসওয়ার্ড প্রদান করুন।")}
               onChange={setPassword}
               isPassword
               autoComplete="current-password"
