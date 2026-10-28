@@ -1447,5 +1447,202 @@ html.dark .ds-liquid-callout-rose {
   border-radius: 22px;
 }
 
+/* Product Showcase Studio Stage & Floating Glass Controls */
+html:not(.dark) .ds-liquid-gallery-stage {
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(243, 248, 255, 0.78) 55%,
+    rgba(235, 244, 255, 0.84) 100%
+  ) !important;
+  backdrop-filter: blur(26px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(185%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.96) !important;
+  border-radius: 28px;
+  box-shadow:
+    0 22px 50px -16px rgba(15, 23, 42, 0.09),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.98) !important;
+}
+
+html.dark .ds-liquid-gallery-stage {
+  background: linear-gradient(
+    160deg,
+    rgba(34, 37, 50, 0.82) 0%,
+    rgba(20, 22, 32, 0.78) 55%,
+    rgba(16, 18, 28, 0.86) 100%
+  ) !important;
+  backdrop-filter: blur(26px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(26px) saturate(185%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 28px;
+  box-shadow:
+    0 26px 56px -16px rgba(0, 0, 0, 0.65),
+    inset 0 1px 1px rgba(255, 255, 255, 0.18) !important;
+}
+
+html:not(.dark) .ds-liquid-icon-btn {
+  background: rgba(255, 255, 255, 0.76) !important;
+  backdrop-filter: blur(18px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.92) !important;
+  box-shadow:
+    0 6px 18px -6px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+}
+
+html:not(.dark) .ds-liquid-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.94) !important;
+}
+
+html.dark .ds-liquid-icon-btn {
+  background: rgba(22, 24, 34, 0.76) !important;
+  backdrop-filter: blur(18px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    0 8px 20px -6px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+}
+
+html.dark .ds-liquid-icon-btn:hover {
+  background: rgba(36, 40, 56, 0.88) !important;
+}
+
+.ds-liquid-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* Mobile Frosted Sticky Action Bar */
+html:not(.dark) .ds-liquid-bottom-bar {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.84) 0%,
+    rgba(244, 249, 255, 0.92) 100%
+  ) !important;
+  backdrop-filter: blur(28px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(195%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow:
+    0 -12px 34px -12px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+html.dark .ds-liquid-bottom-bar {
+  background: linear-gradient(
+    180deg,
+    rgba(24, 26, 38, 0.86) 0%,
+    rgba(14, 16, 24, 0.94) 100%
+  ) !important;
+  backdrop-filter: blur(28px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(195%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    0 -14px 38px -12px rgba(0, 0, 0, 0.68),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Payment Gateway Refractive Brand Cards & Buttons */
+html:not(.dark) .ds-liquid-method-bkash {
+  background: linear-gradient(
+    145deg,
+    rgba(253, 232, 241, 0.86) 0%,
+    rgba(255, 255, 255, 0.84) 100%
+  ) !important;
+  border: 1.5px solid rgba(226, 18, 91, 0.58) !important;
+  box-shadow:
+    0 12px 26px -10px rgba(226, 18, 91, 0.24),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95) !important;
+  border-radius: 22px;
+}
+
+html.dark .ds-liquid-method-bkash {
+  background: linear-gradient(
+    145deg,
+    rgba(226, 18, 91, 0.22) 0%,
+    rgba(30, 22, 34, 0.68) 100%
+  ) !important;
+  border: 1.5px solid rgba(244, 63, 94, 0.58) !important;
+  box-shadow:
+    0 14px 28px -10px rgba(226, 18, 91, 0.34),
+    inset 0 1px 1px rgba(255, 255, 255, 0.18) !important;
+  border-radius: 22px;
+}
+
+html:not(.dark) .ds-liquid-method-nagad {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 240, 226, 0.88) 0%,
+    rgba(255, 255, 255, 0.84) 100%
+  ) !important;
+  border: 1.5px solid rgba(245, 124, 32, 0.6) !important;
+  box-shadow:
+    0 12px 26px -10px rgba(245, 124, 32, 0.24),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95) !important;
+  border-radius: 22px;
+}
+
+html.dark .ds-liquid-method-nagad {
+  background: linear-gradient(
+    145deg,
+    rgba(245, 124, 32, 0.22) 0%,
+    rgba(36, 26, 20, 0.68) 100%
+  ) !important;
+  border: 1.5px solid rgba(251, 146, 60, 0.58) !important;
+  box-shadow:
+    0 14px 28px -10px rgba(245, 124, 32, 0.34),
+    inset 0 1px 1px rgba(255, 255, 255, 0.18) !important;
+  border-radius: 22px;
+}
+
+html:not(.dark) .ds-liquid-btn-bkash,
+html.dark .ds-liquid-btn-bkash {
+  background: linear-gradient(180deg, #ec1b66 0%, #c90f51 100%) !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  min-height: 48px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.26) !important;
+  box-shadow:
+    0 8px 20px -4px rgba(226, 18, 91, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), filter 0.16s ease;
+}
+
+html:not(.dark) .ds-liquid-btn-bkash *,
+html.dark .ds-liquid-btn-bkash * {
+  color: #ffffff !important;
+}
+
+html:not(.dark) .ds-liquid-btn-nagad,
+html.dark .ds-liquid-btn-nagad {
+  background: linear-gradient(180deg, #ff8828 0%, #e06910 100%) !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  min-height: 48px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.26) !important;
+  box-shadow:
+    0 8px 20px -4px rgba(245, 124, 32, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), filter 0.16s ease;
+}
+
+html:not(.dark) .ds-liquid-btn-nagad *,
+html.dark .ds-liquid-btn-nagad * {
+  color: #ffffff !important;
+}
+
+.ds-liquid-btn-bkash:hover:not(:disabled),
+.ds-liquid-btn-nagad:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.ds-liquid-btn-bkash:active:not(:disabled),
+.ds-liquid-btn-nagad:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 
 

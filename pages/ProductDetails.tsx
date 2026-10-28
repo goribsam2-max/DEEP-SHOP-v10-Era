@@ -64,135 +64,10 @@ import {
 } from "lucide-react";
 import { ImageLightbox } from "../components/ui/image-lightbox";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { StatusBadge } from "../components/ui/status-badge";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Tr } from "../components/Tr";
 import { ProductCard } from "../components/ui/ProductCard";
-import { ProductDetailsPageSkeleton } from "../components/PageSkeletons";
 
-const FlashSaleTimer = ({
-  productId,
-  reward,
-}: {
-  productId: string;
-  reward: number;
-}) => {
-  // Generate a fixed end time for this product based on its ID for today
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
-  const [soldPercent, setSoldPercent] = useState(0);
-
-  useEffect(() => {
-    // Create a pseudo-random but consistent target end time for today based on productId
-    // that reseths every 24 hours
-    const now = new Date();
-    const startOfDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    ).getTime();
-
-    let hash = 0;
-    for (let i = 0; i < productId.length; i++) {
-      hash = (hash << 5) - hash + productId.charCodeAt(i);
-      hash |= 0;
-    }
-
-    // Random duration between 12 and 24 hours
-    const seed = Math.abs(hash) / 2147483647;
-    const durationHours = 12 + seed * 12;
-    let endTime = startOfDay + durationHours * 60 * 60 * 1000;
-
-    // If it already ended today, it ends tomorrow
-    if (endTime < now.getTime()) {
-      endTime += 24 * 60 * 60 * 1000;
-    }
-
-    // Random sold percentage between 75% and 95%
-    setSoldPercent(75 + seed * 20);
-
-    const interval = setInterval(() => {
-      const current = new Date().getTime();
-      const distance = endTime - current;
-
-      if (distance < 0) {
-        // Time's up, wait for next tick to reset to next day
-        clearInterval(interval);
-        return;
-      }
-
-      setTimeLeft({
-        hours: Math.floor(
-          (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-        ),
-        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((distance % (1000 * 60)) / 1000),
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [productId]);
-
-  const formatNumber = (num: number) => num.toString().padStart(2, "0");
-
-  return (
-    <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-1 mb-4 shadow-sm relative overflow-hidden">
-      <div className="absolute top-0 right-10 bottom-0 w-20 bg-white/10 skew-x-12 translate-x-10 pointer-events-none" />
-      <div className="border border-white/20 rounded-lg p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="bg-white text-emerald-600 font-bold px-2 py-0.5 rounded shadow-sm text-[10px] tracking-wider uppercase">
-              Coin Reward
-            </div>
-            <span className="text-white font-black text-lg md:text-xl italic tracking-tighter shadow-sm flex items-center">
-              <Icon name="bolt" className="w-4 h-4 text-amber-300 mr-1" solid={true} />{" "}
-              FLASH SALE
-            </span>
-          </div>
-          <p className="text-white text-xs md:text-sm font-medium opacity-90">
-            Purchase this now to earn{" "}
-            <span className="font-bold underline decoration-wavy decoration-amber-300">
-              +{reward} VG Coins
-            </span>{" "}
-            !
-          </p>
-        </div>
-
-        <div className="flex flex-col items-start md:items-end gap-1">
-          <span className="text-white text-[10px] font-bold uppercase tracking-wider">
-            Ends in
-          </span>
-          <div className="flex items-center gap-1.5">
-            <div className="bg-white text-emerald-600 font-black rounded shadow-md px-2 py-1 text-sm">
-              {formatNumber(timeLeft.hours)}
-            </div>
-            <span className="text-white font-black">:</span>
-            <div className="bg-white text-emerald-600 font-black rounded shadow-md px-2 py-1 text-sm">
-              {formatNumber(timeLeft.minutes)}
-            </div>
-            <span className="text-white font-black">:</span>
-            <div className="bg-white text-emerald-600 font-black rounded shadow-md px-2 py-1 text-sm bg-emerald-50 animate-pulse">
-              {formatNumber(timeLeft.seconds)}
-            </div>
-          </div>
-          <div className="w-full bg-white/30 rounded-full h-1.5 mt-2 overflow-hidden">
-            <div
-              className="bg-amber-300 h-full rounded-full transition-all duration-1000"
-              style={{ width: `${soldPercent}%` }}
-            ></div>
-          </div>
-          <div className="text-white/80 text-[9px] text-right w-full mt-0.5">
-            ALMOST SOLD OUT
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 const ProductDetails: React.FC = () => {
   const { formatPrice } = useRegion();
   const { id, slug } = useParams();
@@ -224,6 +99,9 @@ const ProductDetails: React.FC = () => {
     discountPct: number;
   } | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [activeInfoTab, setActiveInfoTab] = useState<
+    "description" | "policy" | "faq" | "video"
+  >("description");
   const [affiliateCode, setAffiliateCode] = useState<string | null>(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addingBundle, setAddingBundle] = useState(false);
@@ -350,7 +228,10 @@ const ProductDetails: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    
+    setActiveImg(0);
+    setQuantity(1);
+    setActiveInfoTab("description");
+
     let unsubscribe: () => void;
     let didIncrement = false;
     
@@ -648,15 +529,23 @@ const ProductDetails: React.FC = () => {
             ? Number(product.offerPrice)
             : Number(product.price);
 
+        const safeQty = Math.max(
+          1,
+          Math.min(
+            quantity,
+            product.stock && product.stock > 0 ? product.stock : 99
+          )
+        );
+
         if (existingIndex > -1) {
-          cart[existingIndex].quantity += 1;
-          cart[existingIndex].price = offerPrice; // Update to the correct price
+          cart[existingIndex].quantity += safeQty;
+          cart[existingIndex].price = offerPrice;
         } else {
           cart.push({
             ...product,
             price: offerPrice,
             originalPrice: Number(product.price),
-            quantity: 1,
+            quantity: safeQty,
             isMysteryOffer: !!mysteryOffer,
           });
         }
@@ -756,7 +645,34 @@ const ProductDetails: React.FC = () => {
 
   if (isNotFound) return <NotFound />;
 
-  if (!product) return <ProductDetailsPageSkeleton />;
+  if (!product) {
+    return (
+      <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell py-6 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="ds-liquid-panel p-4 flex items-center justify-between gap-4">
+            <div className="h-5 w-48 rounded-full ds-skeleton" />
+            <div className="h-9 w-36 rounded-full ds-skeleton hidden sm:block" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-7">
+            <div className="lg:col-span-7 ds-liquid-panel p-6 space-y-4">
+              <div className="aspect-square sm:aspect-[4/3] w-full rounded-3xl ds-skeleton" />
+              <div className="flex gap-3">
+                <div className="w-16 h-16 rounded-2xl ds-skeleton" />
+                <div className="w-16 h-16 rounded-2xl ds-skeleton" />
+                <div className="w-16 h-16 rounded-2xl ds-skeleton" />
+              </div>
+            </div>
+            <div className="lg:col-span-5 ds-liquid-panel p-6 space-y-4">
+              <div className="h-4 w-40 rounded-full ds-skeleton" />
+              <div className="h-8 w-4/5 rounded-2xl ds-skeleton" />
+              <div className="h-28 w-full rounded-2xl ds-skeleton" />
+              <div className="h-12 w-full rounded-full ds-skeleton" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const images =
     product.images && product.images.length > 0 && product.images[0]
@@ -995,7 +911,7 @@ const ProductDetails: React.FC = () => {
   const renderStars = (rating: number) => {
     const fullStars = Math.floor(rating);
     const filledCount = rating % 1 > 0.7 ? fullStars + 1 : fullStars;
-    
+
     return (
       <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden shrink-0">
         <div className="flex items-center gap-0.5 shrink-0">
@@ -1005,21 +921,271 @@ const ProductDetails: React.FC = () => {
               <Star
                 key={i}
                 className={`w-3.5 h-3.5 shrink-0 ${
-                  isFilled ? "text-amber-500 fill-amber-500" : "text-zinc-200 dark:text-zinc-800"
+                  isFilled
+                    ? "text-amber-500 fill-amber-500"
+                    : "text-zinc-300 dark:text-zinc-700"
                 }`}
               />
             );
           })}
         </div>
-        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 truncate shrink-0 ml-1">
-          {rating > 0 ? `${rating} Rating` : "New Store (No reviews)"}
+        <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 truncate shrink-0 tabular-nums">
+          {rating > 0 ? `${rating.toFixed(1)} রেটিং` : "নতুন স্টোর"}
         </span>
       </div>
     );
   };
 
+  // Payment & Advance Classification Info
+  const paymentTermInfo = (() => {
+    const p: any = product;
+    const isBypass =
+      p.isBypass ||
+      p.productType === "bypass" ||
+      p.category?.toLowerCase()?.includes("bypass");
+    const isOffer = p.isOffer || p.productType === "offer";
+    const isCustom =
+      p.productType === "custom" ||
+      (p.advanceType === "custom" && p.advanceAmount);
+
+    if (isBypass) {
+      return {
+        label: "ক্যাশ অন ডেলিভারি (COD)",
+        sublabel: "অগ্রিম ছাড়াই পণ্য হাতে পেয়ে মূল্য পরিশোধের সুবিধা",
+        boxClass: "ds-liquid-callout-emerald",
+        accentText: "text-emerald-700 dark:text-emerald-300",
+      };
+    }
+    if (isOffer) {
+      return {
+        label: "১০০% ফুল এডভান্স",
+        sublabel: "স্পেশাল অফার প্রাইসে অর্ডার বুকিংয়ের জন্য পূর্ণ অগ্রিম প্রযোজ্য",
+        boxClass: "ds-liquid-callout-rose",
+        accentText: "text-rose-700 dark:text-rose-300",
+      };
+    }
+    if (isCustom && p.advanceAmount) {
+      return {
+        label: `৳${p.advanceAmount} বুকিং এডভান্স`,
+        sublabel: "বাকি মূল্য ডেলিভারির সময় পরিশোধযোগ্য",
+        boxClass: "ds-liquid-callout-amber",
+        accentText: "text-amber-800 dark:text-amber-300",
+      };
+    }
+    return {
+      label: "৫০% হাফ এডভান্স",
+      sublabel: "বর্ডার ক্রস ইমপোর্ট · বাকি ৫০% ডেলিভারির সময় পরিশোধযোগ্য",
+      boxClass: "ds-liquid-subpanel-active",
+      accentText: "text-sky-700 dark:text-sky-300",
+    };
+  })();
+
+  const hasDiscount = Number(basePrice) < Number(product.price);
+  const savingsAmount = hasDiscount
+    ? Math.max(0, Number(product.price) - Number(basePrice))
+    : 0;
+  const maxStockQty =
+    product.stock && product.stock > 0 ? Math.min(product.stock, 99) : 1;
+  const hasVideo =
+    typeof product.videoUrl === "string" && product.videoUrl.trim().length > 0;
+  const totalCartQty = cartItems.reduce(
+    (acc, item) => acc + (Number(item?.quantity) || 1),
+    0
+  );
+
+  const handleShareProduct = () => {
+    const shareUrl = `${getPublicShareOrigin()}${window.location.pathname}${window.location.search}`;
+    if (navigator.share) {
+      navigator
+        .share({
+          title: product.name,
+          text: product.description || product.name,
+          url: shareUrl,
+        })
+        .catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      notify("লিংক কপি হয়েছে!", "success");
+    }
+  };
+
+  const infoTabs: {
+    key: "description" | "policy" | "faq" | "video";
+    shortLabel: string;
+    fullLabel: string;
+  }[] = [
+    { key: "description", shortLabel: "বিবরণ", fullLabel: "পণ্যের বিবরণ" },
+    { key: "policy", shortLabel: "পলিসি", fullLabel: "গ্যারান্টি ও রিটার্ন" },
+    { key: "faq", shortLabel: "প্রশ্নোত্তর", fullLabel: "সাধারণ প্রশ্ন (FAQ)" },
+    ...(hasVideo
+      ? ([
+          {
+            key: "video",
+            shortLabel: "ভিডিও",
+            fullLabel: "প্রোডাক্ট ভিডিও",
+          },
+        ] as const)
+      : []),
+  ];
+
+  // Shared Tab Content Renderer (used inside Mobile Tabs & Desktop Details Console)
+  const renderActiveTabBody = () => {
+    if (activeInfoTab === "description") {
+      return (
+        <div className="space-y-3">
+          <h2 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white tracking-tight">
+            <Tr>Product Description</Tr>
+          </h2>
+          <div className="text-zinc-600 dark:text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+            <Tr>
+              {product.description ||
+                "High-quality authentic border cross imported product curated by DEEP SHOP for reliable performance."}
+            </Tr>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeInfoTab === "policy") {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="ds-liquid-subpanel p-4 space-y-2">
+            <div className="flex items-center gap-2 text-zinc-900 dark:text-white font-bold text-sm">
+              <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+              <span>১০০% অরিজিনাল গ্যারান্টি</span>
+            </div>
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              DEEP SHOP-এর প্রতিটি বর্ডার ক্রস ডিভাইস ও গ্যাজেট সরাসরি ভেরিফাইড সোর্স থেকে সংগৃহীত এবং শতভাগ অথেনটিক।
+            </p>
+          </div>
+
+          <div className="ds-liquid-callout-amber p-4 space-y-2">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
+              <Box className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>আনবক্সিং ও রিটার্ন নীতিমালা</span>
+            </div>
+            <p className="text-xs sm:text-sm text-amber-900/85 dark:text-amber-200/85 leading-relaxed">
+              বর্ডার ক্রস পণ্যের ক্ষেত্রে পার্সেল খোলার সময় সম্পূর্ণ আনবক্সিং ভিডিও ধারণ করা আবশ্যক। ফিজিক্যাল ড্যামেজ প্রমাণে ৭ দিনের রিটার্ন সুবিধা প্রযোজ্য।
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeInfoTab === "faq") {
+      return (
+        <div className="space-y-3">
+          <article className="ds-liquid-subpanel p-4 space-y-1">
+            <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+              {product.name} কি ১০০% আসল (Authentic)?
+            </h3>
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              হ্যাঁ, আমাদের সকল বর্ডার ক্রস ফোন, ডিভাইস এবং অ্যাক্সেসরিজ ১০০% অরিজিনাল ও কোয়ালিটি চেককৃত।
+            </p>
+          </article>
+          <article className="ds-liquid-subpanel p-4 space-y-1">
+            <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+              ডেলিভারি পেতে কতদিন সময় লাগে?
+            </h3>
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+              বর্ডার ক্রস ইমপোর্ট পণ্যের স্ট্যান্ডার্ড ডেলিভারি সময় সাধারণত ১ মাস+ (আনুমানিক ৩০ থেকে ৪৫ কার্যদিবস)।
+            </p>
+          </article>
+        </div>
+      );
+    }
+
+    if (activeInfoTab === "video" && hasVideo) {
+      return (
+        <div className="rounded-2xl overflow-hidden border border-white/40 dark:border-white/10 bg-black relative aspect-video w-full">
+          <iframe
+            src={product
+              .videoUrl!.replace("watch?v=", "embed/")
+              .replace("youtu.be/", "youtube.com/embed/")}
+            title={`${product.name} video`}
+            className="absolute inset-0 w-full h-full"
+            allowFullScreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          />
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  // Shared Seller Storefront Card (rendered inside Desktop Right Console & Mobile Flow)
+  const renderSellerCard = () => (
+    <div className="ds-liquid-panel p-5 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar className="h-11 w-11 border border-white/80 dark:border-white/15 shrink-0">
+            {sellerInfo?.photoURL ? (
+              <img
+                src={sellerInfo.photoURL}
+                alt={sellerInfo.shopName || "Seller"}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover rounded-full"
+              />
+            ) : (
+              <AvatarFallback className="ds-liquid-subpanel text-zinc-900 dark:text-white font-extrabold text-xs">
+                {(sellerInfo?.shopName || sellerInfo?.displayName || "DS")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </AvatarFallback>
+            )}
+          </Avatar>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="font-extrabold text-zinc-900 dark:text-white text-sm sm:text-base truncate">
+                {sellerInfo?.shopName || sellerInfo?.displayName || "Deep Shop"}
+              </p>
+              {sellerInfo ? (
+                sellerInfo.kycStatus === "verified" ? (
+                  <VerifiedIcon className="w-4 h-4 text-emerald-500 shrink-0" />
+                ) : (
+                  <span className="text-[11px] font-semibold text-rose-500 whitespace-nowrap">
+                    · আনভেরিফাইড
+                  </span>
+                )
+              ) : (
+                <VerifiedIcon className="w-4 h-4 text-emerald-500 shrink-0" />
+              )}
+            </div>
+            <div className="mt-0.5">{renderStars(sellerRating)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2.5">
+        <button
+          type="button"
+          onClick={() => {
+            const targetChatId = product?.sellerId || "system";
+            navigate(`/messages?chatId=${targetChatId}`);
+          }}
+          className="px-3.5 py-2.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
+          <span>মেসেজ দিন</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const targetSellerId = product?.sellerId || "system";
+            navigate(`/store/${targetSellerId}`);
+          }}
+          className="px-3.5 py-2.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+        >
+          <span>স্টোর দেখুন</span>
+          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="w-full mx-auto min-h-screen bg-background text-foreground pb-32 overflow-x-hidden">
+    <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell text-foreground pb-28 lg:pb-16 overflow-x-hidden">
       <SEO
         title={product.name}
         description={product.description || product.name}
@@ -1030,272 +1196,607 @@ const ProductDetails: React.FC = () => {
         canonical={`/product/${product.id}`}
         exactTitle
       />
-      <div className="w-full max-w-7xl mx-auto p-4 md:p-8 animate-fade-in flex flex-col xl:flex-row gap-8 items-start">
-        <article className="flex-1 min-w-0 flex flex-col w-full">
-          {/* Breadcrumbs Navigation */}
+
+      <div className="w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-5 lg:space-y-7">
+        {/* =====================================================================
+            ADMIN MANAGEMENT CALLOUT (Visible only to Admins/Staff)
+           ===================================================================== */}
+        {isAdmin && (
+          <div className="ds-liquid-callout-amber px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+              Admin Product Controls
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(`/admin/products/edit/${resolvedId}`)}
+                className="px-3.5 py-1.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              >
+                <Pen className="w-3.5 h-3.5" />
+                <span>Edit Post</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  confirm({
+                    title: "Delete Product Post?",
+                    message:
+                      "Are you sure you want to permanently delete this product post? This action cannot be undone.",
+                    onConfirm: async () => {
+                      const { deleteDoc, doc } = await import(
+                        "firebase/firestore"
+                      );
+                      await deleteDoc(doc(db, "products", resolvedId!));
+                      notify("Product post removed successfully.", "info");
+                      navigate("/all-products");
+                    },
+                  });
+                }}
+                className="px-3.5 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* =====================================================================
+            DESKTOP LIQUID GLASS TOP BREADCRUMB & UTILITY BAR (lg+)
+           ===================================================================== */}
+        <div className="hidden lg:flex items-center justify-between gap-6 ds-liquid-panel px-6 py-3.5">
           <nav
             aria-label="Breadcrumb"
-            className="flex items-center text-sm text-zinc-500 dark:text-zinc-400 mb-6 whitespace-nowrap overflow-x-auto no-scrollbar"
+            className="flex items-center gap-1.5 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 min-w-0"
           >
             <button
+              type="button"
               onClick={() => navigate("/")}
-              className="hover:text-zinc-900 dark:text-zinc-100 transition-colors"
+              className="hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer whitespace-nowrap"
             >
               Home
             </button>
-            <ChevronRight className="h-4 w-4 mx-1 shrink-0" />
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
             <button
+              type="button"
               onClick={() => navigate("/all-products")}
-              className="hover:text-zinc-900 dark:text-zinc-100 transition-colors"
+              className="hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer whitespace-nowrap"
             >
               Products
             </button>
-            <ChevronRight className="h-4 w-4 mx-1 shrink-0" />
-            <span className="text-zinc-900 dark:text-zinc-100 font-medium truncate">
+            {product.category && (
+              <>
+                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                <span className="whitespace-nowrap">{product.category}</span>
+              </>
+            )}
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-zinc-900 dark:text-white font-semibold truncate max-w-md">
               {product.name}
             </span>
           </nav>
 
-          {isAdmin && (
-            <div className="bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-200 p-4 rounded-2xl mb-6 flex flex-wrap gap-4 items-center justify-between">
-              <div className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-                <span>Admin Settings</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => navigate(`/admin/products/edit/${resolvedId}`)}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow flex items-center gap-1.5"
-                >
-                  <Icon name="edit" className="w-3.5 h-3.5" />
-                  <span>Edit Post</span>
-                </button>
-                <button
-                  onClick={() => {
-                    confirm({
-                      title: "Delete Product Post?",
-                      message: "Are you sure you want to permanently delete this product post? This action cannot be undone.",
-                      onConfirm: async () => {
-                        const { deleteDoc, doc } = await import("firebase/firestore");
-                        await deleteDoc(doc(db, "products", resolvedId!));
-                        notify("Product post removed successfully.", "info");
-                        navigate("/all-products");
-                      }
-                    });
-                  }}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow flex items-center gap-1.5"
-                >
-                  <Icon name="trash" className="w-3.5 h-3.5" />
-                  <span>Delete Post</span>
-                </button>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+              {getGreeting()},{" "}
+              <strong className="text-zinc-900 dark:text-white">
+                {userName || "Guest"}
+              </strong>
+            </span>
 
-          {/* Time-Based Dynamic Greeting & Share */}
-          <div className="flex justify-between items-center mb-6 gap-4">
-            {/* Time-Based Dynamic Greeting */}
-            <div className="pGV flex items-center gap-2.5 px-4 py-2 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200/55 dark:border-zinc-800/80 rounded-[12px] w-fit text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-bold shadow-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 shrink-0">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                <line x1="9" x2="9.01" y1="9" y2="9"/>
-                <line x1="15" x2="15.01" y1="9" y2="9"/>
-              </svg>
-              <span>
-                {getGreeting()}, <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">{userName || "Guest"}</span>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 relative z-20">
-              <Button
-                onClick={() => {
-                  const shareUrl = `${getPublicShareOrigin()}${window.location.pathname}${window.location.search}`;
-                  if (navigator.share) {
-                    navigator
-                      .share({
-                        title: product.name,
-                        text: product.description || product.name,
-                        url: shareUrl,
-                      })
-                      .catch(() => {});
-                  } else {
-                    navigator.clipboard.writeText(shareUrl);
-                    notify("Link copied!", "success");
-                  }
-                }}
-                variant="ghost"
-                size="icon"
+            {cartItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowSideCart((prev) => !prev)}
+                className="px-3.5 py-1.5 ds-liquid-dock rounded-full text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer tabular-nums whitespace-nowrap"
               >
-                <Icon name="share-alt" className="h-5 w-5" />
-                <span className="sr-only">Share</span>
-              </Button>
+                <ShoppingCart className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                <span>কার্ট ({totalCartQty})</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={toggleWishlist}
+              aria-label="Save to wishlist"
+              className="w-9 h-9 rounded-full ds-liquid-icon-btn flex items-center justify-center cursor-pointer"
+            >
+              <Heart
+                className={`w-4 h-4 ${
+                  isWishlisted
+                    ? "text-rose-500 fill-rose-500"
+                    : "text-zinc-700 dark:text-zinc-200"
+                }`}
+              />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShareProduct}
+              aria-label="Share product"
+              className="w-9 h-9 rounded-full ds-liquid-icon-btn flex items-center justify-center cursor-pointer"
+            >
+              <Share2 className="w-4 h-4 text-zinc-700 dark:text-zinc-200" />
+            </button>
+          </div>
+        </div>
+
+        {/* =====================================================================
+            MOBILE LIQUID GLASS UTILITY BAR & SWIPE GALLERY (< lg)
+           ===================================================================== */}
+        <div className="flex lg:hidden flex-col gap-4">
+          {/* Mobile Breadcrumb + Quick Wishlist/Share */}
+          <div className="flex items-center justify-between gap-2 px-0.5">
+            <nav
+              aria-label="Breadcrumb"
+              className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400 min-w-0"
+            >
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="hover:text-zinc-900 dark:hover:text-white cursor-pointer whitespace-nowrap"
+              >
+                Home
+              </button>
+              <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+              <button
+                type="button"
+                onClick={() => navigate("/all-products")}
+                className="hover:text-zinc-900 dark:hover:text-white cursor-pointer whitespace-nowrap"
+              >
+                Products
+              </button>
+              {product.category && (
+                <>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-zinc-800 dark:text-zinc-200 font-medium truncate">
+                    {product.category}
+                  </span>
+                </>
+              )}
+            </nav>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={toggleWishlist}
+                aria-label="Save to wishlist"
+                className="w-9 h-9 rounded-full ds-liquid-icon-btn flex items-center justify-center cursor-pointer"
+              >
+                <Heart
+                  className={`w-4 h-4 ${
+                    isWishlisted
+                      ? "text-rose-500 fill-rose-500"
+                      : "text-zinc-700 dark:text-zinc-200"
+                  }`}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={handleShareProduct}
+                aria-label="Share product"
+                className="w-9 h-9 rounded-full ds-liquid-icon-btn flex items-center justify-center cursor-pointer"
+              >
+                <Share2 className="w-4 h-4 text-zinc-700 dark:text-zinc-200" />
+              </button>
             </div>
           </div>
 
-          {/* Main content grid */}
-          <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
-            {/* Image Gallery Section */}
-            <div className="flex flex-col gap-4">
-              <div className="relative aspect-square md:aspect-[4/5] w-full rounded-[32px] overflow-hidden bg-[#f5f5f5] dark:bg-zinc-800/80">
+          {/* Mobile Touch Swipe Studio Gallery */}
+          <div className="space-y-3">
+            <div className="relative aspect-square w-full ds-liquid-gallery-stage overflow-hidden">
+              <AnimatePresence mode="popLayout" custom={direction}>
+                <motion.div
+                  key={activeImg}
+                  initial={{ opacity: 0, x: direction > 0 ? 40 : -40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: direction < 0 ? 40 : -40 }}
+                  transition={{ duration: 0.2 }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.9}
+                  onDragEnd={(_, { offset, velocity }) => {
+                    const swipe = Math.abs(offset.x) * velocity.x;
+                    if (swipe < -8000) {
+                      changeImage(
+                        activeImg === images.length - 1 ? 0 : activeImg + 1
+                      );
+                    } else if (swipe > 8000) {
+                      changeImage(
+                        activeImg === 0 ? images.length - 1 : activeImg - 1
+                      );
+                    }
+                  }}
+                  onClick={() => setIsLightboxOpen(true)}
+                  className="absolute inset-0 w-full h-full p-5 flex items-center justify-center cursor-zoom-in"
+                >
+                  <PixelImage
+                    src={images[activeImg]}
+                    alt={`${product.name} image ${activeImg + 1}`}
+                    imgClassName={`object-contain mix-blend-multiply dark:mix-blend-normal ${
+                      product.stock <= 0 ? "grayscale opacity-70" : ""
+                    }`}
+                  />
+                </motion.div>
+              </AnimatePresence>
+
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      changeImage(
+                        activeImg === 0 ? images.length - 1 : activeImg - 1
+                      );
+                    }}
+                    aria-label="Previous image"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full ds-liquid-icon-btn flex items-center justify-center cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-zinc-800 dark:text-zinc-100" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      changeImage(
+                        activeImg === images.length - 1 ? 0 : activeImg + 1
+                      );
+                    }}
+                    aria-label="Next image"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full ds-liquid-icon-btn flex items-center justify-center cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4 text-zinc-800 dark:text-zinc-100" />
+                  </button>
+                </>
+              )}
+
+              {/* Bottom Glass Frame Controls */}
+              <div className="absolute bottom-3 inset-x-3 flex items-center justify-between pointer-events-none z-10">
+                <span className="px-2.5 py-1 rounded-full ds-liquid-icon-btn text-[11px] font-bold text-zinc-700 dark:text-zinc-200 tabular-nums">
+                  {activeImg + 1} / {images.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsLightboxOpen(true);
+                  }}
+                  className="pointer-events-auto px-3 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>বড় করে দেখুন</span>
+                </button>
+              </div>
+
+              {product.stock <= 0 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                  <div className="ds-liquid-panel px-5 py-2.5 text-xs font-extrabold text-zinc-900 dark:text-white">
+                    স্টক শেষ · শীঘ্রই আসছে
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Horizontal Thumbnail Strip */}
+            {images.length > 1 && (
+              <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-0.5">
+                {images.map((imgSrc, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => changeImage(idx)}
+                    className={`w-16 h-16 shrink-0 p-1.5 overflow-hidden transition-all cursor-pointer ${
+                      activeImg === idx
+                        ? "ds-liquid-subpanel-active"
+                        : "ds-liquid-subpanel opacity-75 hover:opacity-100"
+                    }`}
+                  >
+                    <img
+                      src={imgSrc}
+                      alt={`${product.name} thumbnail ${idx + 1}`}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Product Summary & Price Glass Panel */}
+          <div className="ds-liquid-panel p-4 sm:p-5 space-y-4">
+            {/* Unboxed Metadata Line */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+              <span>{product.category || "Premium"}</span>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("customer-reviews")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+                className="inline-flex items-center gap-1 font-bold text-zinc-800 dark:text-zinc-200 hover:underline cursor-pointer tabular-nums"
+              >
+                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                <span>
+                  {liveAverageRating.toFixed(1)} ({liveReviewCount})
+                </span>
+              </button>
+              <span>·</span>
+              <span
+                className={
+                  product.stock > 0
+                    ? "font-semibold text-emerald-600 dark:text-emerald-400"
+                    : "font-semibold text-rose-500"
+                }
+              >
+                {product.stock > 0 ? "স্টকে আছে" : "স্টক নেই"}
+              </span>
+            </div>
+
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-snug">
+              <Tr>{product.name}</Tr>
+            </h1>
+
+            {/* Refractive Price & Advance Box */}
+            <div className="ds-liquid-subpanel p-3.5 space-y-2.5">
+              <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                <div className="flex items-baseline gap-2.5">
+                  <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                    {formatPrice(basePrice)}
+                  </span>
+                  {hasDiscount && (
+                    <span className="text-sm font-semibold text-zinc-400 line-through tabular-nums">
+                      {formatPrice(product.price)}
+                    </span>
+                  )}
+                </div>
+                {savingsAmount > 0 && (
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    সাশ্রয় {formatPrice(savingsAmount)}
+                  </span>
+                )}
+              </div>
+
+              {timeLeft && (
+                <div className="text-xs font-semibold text-sky-600 dark:text-sky-400 tabular-nums">
+                  স্পেশাল অফার বাকি: {timeLeft.d > 0 ? `${timeLeft.d}d ` : ""}
+                  {timeLeft.h}h {timeLeft.m}m {timeLeft.s}s
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className={`font-bold ${paymentTermInfo.accentText}`}>
+                  {paymentTermInfo.label}
+                </span>
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  ডেলিভারি ৩০-৪৫ দিন
+                  {actualReward > 0 ? ` · +${actualReward} VG Coins` : ""}
+                </span>
+              </div>
+            </div>
+
+            {/* Mobile Quantity Stepper */}
+            {product.stock > 0 && (
+              <div className="flex items-center justify-between gap-3 pt-0.5">
+                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                  পরিমাণ নির্বাচন করুন
+                </span>
+                <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Decrease quantity"
+                    className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-7 text-center text-sm font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQuantity((q) => Math.min(maxStockQty, q + 1))
+                    }
+                    disabled={quantity >= maxStockQty}
+                    aria-label="Increase quantity"
+                    className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Segmented Liquid Glass Info Tabs */}
+          <div className="space-y-3">
+            <div
+              className={`ds-liquid-dock rounded-full p-1 grid gap-1 ${
+                infoTabs.length === 4 ? "grid-cols-4" : "grid-cols-3"
+              }`}
+            >
+              {infoTabs.map((tab) => {
+                const isActive = activeInfoTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveInfoTab(tab.key)}
+                    className={`py-2 px-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      isActive
+                        ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  >
+                    {tab.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="ds-liquid-panel p-4 sm:p-5">
+              {renderActiveTabBody()}
+            </div>
+          </div>
+
+          {/* Mobile Seller Card */}
+          {renderSellerCard()}
+        </div>
+
+        {/* =====================================================================
+            DESKTOP 12-COLUMN LIQUID GLASS SHOWCASE & PURCHASE WORKSPACE (lg+)
+            Left (7 cols): Vertical Thumbnail Rail + Studio Stage + Tabbed Specs
+            Right (5 cols): Sticky Contiguous Purchase Module + Seller + Mini-Cart
+           ===================================================================== */}
+        <div className="hidden lg:grid lg:grid-cols-12 gap-7 items-start">
+          {/* LEFT 7 COLUMNS: GALLERY + DETAILS */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Desktop Studio Gallery with Vertical Rail */}
+            <div className="flex gap-4 items-start">
+              {images.length > 1 && (
+                <div className="w-20 shrink-0 flex flex-col gap-3 max-h-[520px] overflow-y-auto no-scrollbar py-0.5">
+                  {images.map((imgSrc, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => changeImage(idx)}
+                      className={`w-20 h-20 p-2 overflow-hidden transition-all cursor-pointer shrink-0 ${
+                        activeImg === idx
+                          ? "ds-liquid-subpanel-active"
+                          : "ds-liquid-subpanel opacity-75 hover:opacity-100"
+                      }`}
+                    >
+                      <img
+                        src={imgSrc}
+                        alt={`${product.name} view ${idx + 1}`}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex-1 relative aspect-[10/9] ds-liquid-gallery-stage overflow-hidden">
                 <AnimatePresence mode="popLayout" custom={direction}>
                   <motion.div
                     key={activeImg}
-                    initial={{ opacity: 0, x: direction > 0 ? 50 : -50 }}
+                    initial={{ opacity: 0, x: direction > 0 ? 40 : -40 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: direction < 0 ? 50 : -50 }}
-                    transition={{ duration: 0.3 }}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={1}
-                    onDragEnd={(e, { offset, velocity }) => {
-                      const swipe = Math.abs(offset.x) * velocity.x;
-                      if (swipe < -10000) {
-                        changeImage(activeImg === images.length - 1 ? 0 : activeImg + 1);
-                      } else if (swipe > 10000) {
-                        changeImage(activeImg === 0 ? images.length - 1 : activeImg - 1);
-                      }
-                    }}
-                    className="absolute inset-0 w-full h-full flex items-center justify-center cursor-zoom-in group"
+                    exit={{ opacity: 0, x: direction < 0 ? 40 : -40 }}
+                    transition={{ duration: 0.2 }}
                     onClick={() => setIsLightboxOpen(true)}
+                    className="absolute inset-0 w-full h-full p-8 flex items-center justify-center cursor-zoom-in group"
                   >
                     <PixelImage
                       src={images[activeImg]}
                       alt={`${product.name} image ${activeImg + 1}`}
-                      imgClassName={`object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition-transform duration-700 ${product.stock <= 0 ? "grayscale opacity-75" : ""}`}
+                      imgClassName={`object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-[1.03] transition-transform duration-300 ${
+                        product.stock <= 0 ? "grayscale opacity-75" : ""
+                      }`}
                     />
-
-                    {/* Top Right Heart Outline */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleWishlist();
-                      }}
-                      className="absolute top-5 right-5 bg-white/70 backdrop-blur-md dark:bg-zinc-900/70 border border-white/20 dark:border-zinc-700/50 rounded-full p-3 flex items-center justify-center transition-colors hover:bg-orange-50 dark:hover:bg-zinc-800 z-10 cursor-pointer shadow-sm"
-                    >
-                      <Icon
-                        name="heart"
-                        className="w-6 h-6 transition-colors text-[#ea580c]"
-                        solid={isWishlisted}
-                      />
-                    </button>
-
-                    {/* Dynamic Price Corner Bottom Right */}
-                    <div className="absolute bottom-0 right-0 bg-white dark:bg-zinc-950 rounded-tl-[32px] pl-6 pt-5 pb-4 pr-6 flex items-center justify-center min-w-[120px]">
-                      {/* VG Coin Badge */}
-                      {actualReward > 0 && (
-                        <div className="absolute bottom-full right-4 mb-2 flex items-center bg-zinc-900/80 backdrop-blur-md rounded-full px-2 py-1">
-                          <div className="h-4 w-4 flex items-center justify-center font-black text-[9px] text-amber-500 border-2 border-amber-500 rounded-full mr-1.5 bg-white">
-                            V
-                          </div>
-                          <span className="text-xs font-bold text-amber-400">
-                            +{actualReward}
-                          </span>
-                        </div>
-                      )}
-                      {/* Inverted curves using SVG */}
-                      <svg
-                        className="absolute right-0 bottom-full w-6 h-6 text-white dark:text-zinc-950 translate-y-[0.5px]"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M24 24H0C13.2548 24 24 13.2548 24 0V24Z" />
-                      </svg>
-                      <svg
-                        className="absolute right-full bottom-0 w-6 h-6 text-white dark:text-zinc-950 translate-x-[0.5px]"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M24 24H0C13.2548 24 24 13.2548 24 0V24Z" />
-                      </svg>
-
-                      {/* Price Text directly on the cutout shape */}
-                      <div className="flex items-center justify-center gap-2">
-                        {product.isOffer && product.offerPrice ? (
-                          <>
-                            <span className="text-sm text-zinc-400 font-bold line-through">
-                              {formatPrice(product.price)}
-                            </span>
-                            <span className="text-xl md:text-2xl font-black text-[#ea580c] tracking-tight">
-                              {formatPrice(product.offerPrice)}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-xl md:text-2xl font-black text-[#ea580c] tracking-tight">
-                            {formatPrice(product.price)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
                   </motion.div>
                 </AnimatePresence>
 
                 {images.length > 1 && (
                   <>
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        changeImage(activeImg === 0 ? images.length - 1 : activeImg - 1);
+                        changeImage(
+                          activeImg === 0 ? images.length - 1 : activeImg - 1
+                        );
                       }}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/70 backdrop-blur-md dark:bg-zinc-900/70 border border-white/20 dark:border-zinc-700/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm"
+                      aria-label="Previous image"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full ds-liquid-icon-btn flex items-center justify-center cursor-pointer"
                     >
-                      <ChevronLeft className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />
+                      <ChevronLeft className="w-5 h-5 text-zinc-800 dark:text-zinc-100" />
                     </button>
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        changeImage(activeImg === images.length - 1 ? 0 : activeImg + 1);
+                        changeImage(
+                          activeImg === images.length - 1 ? 0 : activeImg + 1
+                        );
                       }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/70 backdrop-blur-md dark:bg-zinc-900/70 border border-white/20 dark:border-zinc-700/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm"
+                      aria-label="Next image"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full ds-liquid-icon-btn flex items-center justify-center cursor-pointer"
                     >
-                      <ChevronRight className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />
+                      <ChevronRight className="w-5 h-5 text-zinc-800 dark:text-zinc-100" />
                     </button>
                   </>
                 )}
 
+                <div className="absolute bottom-4 inset-x-4 flex items-center justify-between pointer-events-none z-10">
+                  <span className="px-3 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-700 dark:text-zinc-200 tabular-nums">
+                    ছবি {activeImg + 1} / {images.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLightboxOpen(true);
+                    }}
+                    className="pointer-events-auto px-4 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>ফুল স্ক্রিন ভিউ</span>
+                  </button>
+                </div>
+
                 {product.stock <= 0 && (
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
-                    <div className="bg-zinc-900 text-white px-6 py-3 rounded-full border border-zinc-700 shadow-sm flex items-center space-x-2 animate-pulse">
-                      <Icon name="clock" className="text-zinc-400" />
-                      <span className="text-[10px] font-semibold tracking-normal whitespace-nowrap">
-                        Restocking Soon
-                      </span>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                    <div className="ds-liquid-panel px-6 py-3 text-sm font-extrabold text-zinc-900 dark:text-white">
+                      স্টক শেষ (Restocking Soon)
                     </div>
                   </div>
                 )}
               </div>
-
-              {images.length > 1 && (
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    {images.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => changeImage(index)}
-                        className={`h-2 w-2 rounded-full transition-colors ${activeImg === index ? "bg-zinc-100 dark:bg-zinc-8000 w-4" : "bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-500"}`}
-                        aria-label={`View image ${index + 1}`}
-                      />
-                    ))}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setIsLightboxOpen(true)}
-                  >
-                    <Camera className="h-4 w-4" /> Full View
-                  </Button>
-                </div>
-              )}
             </div>
 
-            {/* Product Details Section */}
-            <div className="flex flex-col">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2 text-zinc-900 dark:text-zinc-100">
-                <Tr>{product.name}</Tr>
-              </h1>
+            {/* Desktop Segmented Details, Policy, FAQ & Video Dock */}
+            <div className="space-y-4">
+              <div className="ds-liquid-dock rounded-full p-1.5 inline-flex items-center gap-1 flex-wrap">
+                {infoTabs.map((tab) => {
+                  const isActive = activeInfoTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveInfoTab(tab.key)}
+                      className={`px-5 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                        isActive
+                          ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
+                          : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      {tab.fullLabel}
+                    </button>
+                  );
+                })}
+              </div>
 
-              <div className="flex items-center gap-4 mb-4">
+              <div className="ds-liquid-panel p-6 sm:p-7">
+                {renderActiveTabBody()}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT 5 COLUMNS: STICKY CONTIGUOUS PURCHASE CONSOLE */}
+          <aside className="lg:col-span-5 lg:sticky lg:top-24 space-y-5">
+            <div className="ds-liquid-panel p-6 space-y-5">
+              {/* Unboxed Product Metadata */}
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <span>
+                  {product.category || "Premium"} · ১০০% অরিজিনাল · বর্ডার ক্রস
+                </span>
                 <button
                   type="button"
                   onClick={() =>
@@ -1303,590 +1804,291 @@ const ProductDetails: React.FC = () => {
                       .getElementById("customer-reviews")
                       ?.scrollIntoView({ behavior: "smooth" })
                   }
-                  className="flex items-center gap-1.5 group cursor-pointer"
+                  className="inline-flex items-center gap-1 font-bold text-zinc-800 dark:text-zinc-200 hover:underline cursor-pointer tabular-nums whitespace-nowrap"
                 >
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-4 w-4 ${
-                          star <= Math.round(liveAverageRating)
-                            ? "text-amber-400 fill-amber-400"
-                            : "text-zinc-300 dark:text-zinc-700"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="ml-1 text-sm font-semibold text-zinc-700 dark:text-zinc-300 group-hover:underline tabular-nums">
+                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  <span>
                     {liveAverageRating.toFixed(1)} ({liveReviewCount}{" "}
                     <Tr>reviews</Tr>)
                   </span>
                 </button>
               </div>
 
-              <div className="mt-2 mb-6">
+              {/* Balanced Product Title */}
+              <h1 className="text-2xl xl:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight">
+                <Tr>{product.name}</Tr>
+              </h1>
+
+              {/* Refractive Price & Advance Transparency Well */}
+              <div className="ds-liquid-subpanel p-4 space-y-3">
+                <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                  <div className="flex items-baseline gap-2.5">
+                    <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                      {formatPrice(basePrice)}
+                    </span>
+                    {hasDiscount && (
+                      <span className="text-sm font-semibold text-zinc-400 line-through tabular-nums">
+                        {formatPrice(product.price)}
+                      </span>
+                    )}
+                  </div>
+
+                  <span
+                    className={`text-xs font-bold ${
+                      product.stock > 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-rose-500"
+                    }`}
+                  >
+                    {product.stock > 0 ? "স্টকে উপলব্ধ" : "স্টক শেষ"}
+                  </span>
+                </div>
+
+                {savingsAmount > 0 && (
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    আপনি সাশ্রয় করছেন {formatPrice(savingsAmount)}
+                    {mysteryOffer ? " (Mystery Box Offer)" : ""}
+                  </p>
+                )}
+
+                {timeLeft && (
+                  <div className="text-xs font-semibold text-sky-600 dark:text-sky-400 tabular-nums">
+                    অফার সময় বাকি: {timeLeft.d > 0 ? `${timeLeft.d}d ` : ""}
+                    {timeLeft.h}h {timeLeft.m}m {timeLeft.s}s
+                  </div>
+                )}
+
                 {actualReward > 0 && (
-                  <FlashSaleTimer
-                    productId={product.id}
-                    reward={actualReward}
-                  />
-                )}
-
-                {mysteryOffer && (
-                  <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-white">
-                    <div>
-                      <p className="text-xs font-semibold tracking-wide text-zinc-400 mb-1">
-                        Mystery Box Offer active!
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <span className="text-4xl font-bold tracking-tighter text-zinc-700 dark:text-zinc-300">
-                          {formatPrice(mysteryOffer.discountPrice.toLocaleString())}
-                        </span>
-                        <span className="text-sm line-through text-zinc-500 font-semibold">
-                          {formatPrice(product.price.toLocaleString())}
-                        </span>
-                      </div>
-                    </div>
-                    <Icon
-                      name="gift"
-                      className="text-3xl text-zinc-700 dark:text-zinc-300 animate-pulse hidden sm:block"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Tags/Badges based on product attributes */}
-              <div className="flex flex-wrap gap-2 my-6">
-                <StatusBadge leftIcon="check-circle" leftLabel="Used" />
-                {product.category && (
-                  <StatusBadge leftIcon="box" leftLabel={product.category} />
-                )}
-                <StatusBadge
-                  leftIcon="shield-alt"
-                  leftLabel="100% Authentic"
-                />
-                <StatusBadge
-                  leftIcon="clock"
-                  leftLabel="Delivery: 1 Month+ (Border Cross)"
-                  className="bg-amber-500/10 border-amber-500/20 text-[#EF8020] font-bold"
-                />
-                {(() => {
-                  const p: any = product;
-                  const isBypass = p.isBypass || p.productType === 'bypass' || p.category?.toLowerCase()?.includes('bypass');
-                  const isOffer = p.isOffer || p.productType === 'offer';
-                  const isCustom = p.productType === 'custom' || (p.advanceType === 'custom' && p.advanceAmount);
-                  
-                  if (isBypass) {
-                    return (
-                      <StatusBadge
-                        leftIcon="shield-alt"
-                        leftLabel="Cash on Delivery (ক্যাশ অন ডেলিভারি)"
-                        className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold"
-                      />
-                    );
-                  }
-                  if (isOffer) {
-                    return (
-                      <StatusBadge
-                        leftIcon="shield-alt"
-                        leftLabel="100% Full Advance (ফুল এডভান্স)"
-                        className="bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400 font-bold"
-                      />
-                    );
-                  }
-                  if (isCustom && p.advanceAmount) {
-                    return (
-                      <StatusBadge
-                        leftIcon="shield-alt"
-                        leftLabel={`৳${p.advanceAmount} Booking Fee`}
-                        className="bg-amber-500/10 border-amber-500/20 text-[#EF8020] font-bold"
-                      />
-                    );
-                  }
-                  return (
-                    <StatusBadge
-                      leftIcon="shield-alt"
-                      leftLabel="50% Half Advance (হাফ এডভান্স)"
-                      className="bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 font-bold"
-                    />
-                  );
-                })()}
-              </div>
-
-              {/* Description */}
-              <section className="bg-white dark:bg-zinc-900/50 rounded-2xl p-5 md:p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm mt-2">
-                <h2 className="text-sm font-bold mb-3 text-zinc-900 dark:text-zinc-100">
-                  <Tr>Product Description</Tr>
-                </h2>
-                <div className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed whitespace-pre-wrap">
-                  <Tr>
-                    {product.description ||
-                      "High-quality premium accessory designed for ultimate performance and style."}
-                  </Tr>
-                </div>
-              </section>
-
-              {/* Seller Information */}
-              <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                <div className="p-4 bg-white dark:bg-zinc-900/80 backdrop-blur-sm rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-4">
-                  {/* Top row: Avatar & Shop Details */}
-                  <div className="flex items-center gap-3 w-full">
-                    <Avatar className="h-12 w-12 border-2 border-emerald-100 dark:border-emerald-900/50 bg-zinc-100 dark:bg-zinc-800 shrink-0">
-                      {sellerInfo?.photoURL ? (
-                        <img src={sellerInfo.photoURL} alt={sellerInfo.shopName || "Seller"} className="w-full h-full object-cover rounded-full" />
-                      ) : (
-                        <AvatarFallback className="bg-zinc-200 dark:bg-zinc-700 text-zinc-950 dark:text-zinc-50 font-bold">
-                          {(sellerInfo?.shopName || sellerInfo?.displayName || "VG").slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm sm:text-base truncate">
-                          {sellerInfo?.shopName || sellerInfo?.displayName || "Deep Shop"}
-                        </p>
-                        {sellerInfo ? (
-                          sellerInfo.kycStatus === "verified" ? (
-                            <VerifiedIcon className="w-4 h-4 text-emerald-500 shrink-0" />
-                          ) : (
-                            <div className="inline-flex items-center gap-1 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 text-[10px] font-bold px-1.5 py-0.5 rounded border border-rose-100 dark:border-rose-900/30 whitespace-nowrap">
-                              <AlertCircle className="w-3 h-3" /> Not Verified
-                            </div>
-                          )
-                        ) : (
-                          <VerifiedIcon className="w-4 h-4 text-emerald-500 shrink-0" />
-                        )}
-                      </div>
-                      <div className="mt-1">
-                        {renderStars(sellerRating)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom row: Action Buttons */}
-                  <div className="flex items-center gap-2.5 w-full pt-1">
-                    <Button
-                      variant="outline"
-                      className="flex-1 h-10 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-sm rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
-                      onClick={() => {
-                        const targetChatId = product?.sellerId || "system";
-                        navigate(`/messages?chatId=${targetChatId}`);
-                      }}
-                    >
-                      <MessageSquare className="w-4 h-4 text-[#EF8020]" />
-                      <span>Message Seller</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 h-10 bg-white hover:bg-zinc-100 dark:bg-[#1a1a1c] dark:hover:bg-[#2a2a2c] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
-                      onClick={() => {
-                        const targetSellerId = product?.sellerId || "system";
-                        navigate(`/store/${targetSellerId}`);
-                      }}
-                    >
-                      <span>Visit Store</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Product Policy Notes */}
-              <div className="space-y-4 mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                <p className="note">
-                  <strong>Authenticity Guarantee:</strong> This product is 100% authentic, verified, and sourced directly from official channels by DEEP SHOP.
-                </p>
-                <p className="note wr">
-                  <strong>Strict Return Policy:</strong> Since this is a Border Cross product, returns and refunds are strictly subject to physical damage verification upon unboxing. Please record an unboxing video as proof.
-                </p>
-              </div>
-
-              {/* FAQ Section */}
-              <section className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                <h2 className="text-lg font-bold mb-4 text-zinc-900 dark:text-zinc-100">
-                  <Tr>Frequently Asked Questions</Tr>
-                </h2>
-                <div className="space-y-4">
-                  <article className="bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800/60">
-                    <h3 className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 mb-1">
-                      Is the {product.name} Authentic?
-                    </h3>
-                    <p className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400">
-                      Yes, absolutely! We guarantee 100% authenticity for all our border cross phones, mobiles and accessories at DEEP SHOP.
-                    </p>
-                  </article>
-                  <article className="bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800/60">
-                    <h3 className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 mb-1">
-                      What is the delivery time?
-                    </h3>
-                    <p className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400">
-                      Our border cross imported products standard delivery time is 1 month+ (approx 30-45 business days).
-                    </p>
-                  </article>
-                </div>
-              </section>
-            </div>
-          </main>
-
-          {/* Customer Reviews Section */}
-          <section
-            id="customer-reviews"
-            className="mt-16 pt-10 border-t border-zinc-200 dark:border-zinc-800 pb-8"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                  <Tr>Customer Reviews</Tr>
-                </h2>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 tabular-nums">
-                  {liveReviewCount > 0 ? (
-                    <>
-                      <Tr>Based on</Tr> {liveReviewCount}{" "}
-                      <Tr>{liveReviewCount === 1 ? "review" : "reviews"}</Tr>
-                    </>
-                  ) : (
-                    <Tr>Share your experience with the community</Tr>
-                  )}
-                </p>
-              </div>
-              {reviews.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => navigate(`/product/${product.id}/reviews`)}
-                  className="text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 cursor-pointer self-start sm:self-auto whitespace-nowrap"
-                >
-                  <span>
-                    <Tr>See all</Tr> ({reviews.length})
-                  </span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* 2-Column Editorial Summary & Rating Breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
-              <div className="lg:col-span-5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800 p-6 flex flex-col justify-between gap-5">
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                    <Tr>Overall Rating</Tr>
-                  </span>
-                  <div className="flex items-baseline gap-2.5 mt-2">
-                    <span className="text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 tabular-nums">
-                      {liveAverageRating.toFixed(1)}
+                  <div className="pt-2 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex items-center justify-between text-xs">
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      রিওয়ার্ড বোনাস
                     </span>
-                    <span className="text-sm font-medium text-zinc-400">
-                      / 5.0
+                    <span className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+                      +{actualReward} VG Coins অর্জন করুন
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 mt-2">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star
-                        key={s}
-                        className={`w-4 h-4 ${
-                          s <= Math.round(liveAverageRating)
-                            ? "text-amber-400 fill-amber-400"
-                            : "text-zinc-300 dark:text-zinc-700"
-                        }`}
-                      />
-                    ))}
+                )}
+              </div>
+
+              {/* Payment & Delivery Transparency Callout */}
+              <div className={`${paymentTermInfo.boxClass} p-4 space-y-1`}>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className={`font-extrabold ${paymentTermInfo.accentText}`}>
+                    {paymentTermInfo.label}
+                  </span>
+                  <span className="text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">
+                    ডেলিভারি ৩০-৪৫ দিন
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                  {paymentTermInfo.sublabel}
+                </p>
+              </div>
+
+              {/* Seller Paused Notice */}
+              {sellerInfo?.ordersPaused && (
+                <div className="ds-liquid-callout-amber p-3.5 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-semibold min-w-0">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                    <span className="truncate">
+                      সেলার সাময়িকভাবে অর্ডার গ্রহণ বন্ধ রেখেছেন
+                    </span>
                   </div>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2.5 tabular-nums">
-                    {liveReviewCount > 0
-                      ? `${liveReviewCount} verified customer ${
-                          liveReviewCount === 1 ? "rating" : "ratings"
-                        }`
-                      : "No ratings yet — be the first to review"}
-                  </p>
-                </div>
-
-                <div>
-                  <ReviewComposer
-                    productId={product.id}
-                    product={product}
-                    isOpen={false}
-                    onOpenChange={() =>
-                      setReviewComposerOpen((prev) => !prev)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="lg:col-span-7 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800 p-5 sm:p-6 flex flex-col justify-center">
-                <ReviewFilterGroup
-                  value={
-                    ["5", "4", "3", "2", "1"].includes(reviewFilter)
-                      ? reviewFilter
-                      : ""
-                  }
-                  onValueChange={(val) =>
-                    setReviewFilter((prev) =>
-                      prev === val ? "all" : (val as any)
-                    )
-                  }
-                >
-                  {[5, 4, 3, 2, 1].map((stars) => (
-                    <ReviewFilterItem
-                      key={stars}
-                      value={String(stars)}
-                      stars={stars}
-                      count={
-                        reviews.filter(
-                          (r) => Math.round(Number(r.rating || 0)) === stars
-                        ).length
-                      }
-                      total={reviews.length}
-                    />
-                  ))}
-                </ReviewFilterGroup>
-              </div>
-            </div>
-
-            {/* Full-Width Expandable Review Composer */}
-            {reviewComposerOpen && (
-              <div className="mb-6">
-                <ReviewComposer
-                  productId={product.id}
-                  product={product}
-                  isOpen={true}
-                  onOpenChange={setReviewComposerOpen}
-                />
-              </div>
-            )}
-
-            {/* Interactive Filter Tabs */}
-            {reviews.length > 0 && (
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-4">
-                {(
-                  [
-                    { key: "all", label: `All (${reviews.length})` },
-                    ...(photoReviewsTotal > 0
-                      ? [
-                          {
-                            key: "photos",
-                            label: `With Photos (${photoReviewsTotal})`,
-                          },
-                        ]
-                      : []),
-                    { key: "5", label: "5 ★" },
-                    { key: "4", label: "4 ★" },
-                    { key: "3", label: "3 ★" },
-                    { key: "2", label: "2 ★" },
-                    { key: "1", label: "1 ★" },
-                  ] as {
-                    key: "all" | "photos" | "5" | "4" | "3" | "2" | "1";
-                    label: string;
-                  }[]
-                ).map((tab) => {
-                  const active = reviewFilter === tab.key;
-                  return (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => setReviewFilter(tab.key)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer tabular-nums border ${
-                        active
-                          ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-900"
-                          : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Reviews List */}
-            <div className="flex flex-col gap-3.5">
-              {filteredProductReviews.slice(0, 6).map((review) => {
-                const isOwn =
-                  Boolean(auth.currentUser?.uid) &&
-                  review.userId === auth.currentUser?.uid;
-                return (
-                  <ReviewCard
-                    key={review.id}
-                    name={review.userName}
-                    handle={isOwn ? "Your Review" : "Verified Buyer"}
-                    review={review.comment}
-                    rating={review.rating}
-                    imageUrl={review.userPhoto}
-                    createdAt={review.createdAt}
-                    images={(review as any).images}
-                    canDelete={isOwn || isAdmin}
-                    onDelete={() => handleDeleteProductReview(review.id)}
-                  />
-                );
-              })}
-
-              {filteredProductReviews.length > 6 && (
-                <Button
-                  onClick={() => navigate(`/product/${product.id}/reviews`)}
-                  variant="outline"
-                  className="w-full mt-2 rounded-xl py-6 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-2xs font-semibold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                >
-                  <Tr>View All Reviews</Tr> ({reviews.length})
-                </Button>
-              )}
-
-              {reviews.length > 0 && filteredProductReviews.length === 0 && (
-                <div className="py-12 px-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center">
-                  <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-                    No reviews match the selected filter.
-                  </p>
                   <button
                     type="button"
-                    onClick={() => setReviewFilter("all")}
-                    className="mt-2.5 text-xs font-bold text-[#1877F2] hover:underline cursor-pointer"
+                    onClick={() => setShowOrdersPausedModal(true)}
+                    className="font-bold text-amber-800 dark:text-amber-300 underline shrink-0 cursor-pointer whitespace-nowrap"
                   >
-                    Reset filter
+                    কারণ দেখুন
                   </button>
                 </div>
               )}
 
-              {reviews.length === 0 && (
-                <div className="py-12 px-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 text-center space-y-2">
-                  <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                    <Tr>No customer reviews yet</Tr>
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    <Tr>Purchased this item? Click "Write a Review" above to share your feedback.</Tr>
-                  </p>
+              {/* Quantity Stepper + Primary Desktop Purchase Actions */}
+              {product.stock <= 0 ? (
+                <div className="space-y-2.5">
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-3.5 rounded-full ds-liquid-subpanel text-sm font-bold text-zinc-400 cursor-not-allowed whitespace-nowrap"
+                  >
+                    স্টক নেই (Out of Stock)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNotifyMe}
+                    disabled={notifying}
+                    className="w-full py-3 ds-liquid-btn-secondary text-xs font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                  >
+                    <Bell className="w-4 h-4" />
+                    <span>
+                      {notifying
+                        ? "নোটিফিকেশন সেট হচ্ছে..."
+                        : "স্টকে এলে আমাকে জানান"}
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                      পরিমাণ (Quantity)
+                    </span>
+                    <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        disabled={quantity <= 1}
+                        aria-label="Decrease quantity"
+                        className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="w-8 text-center text-sm font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                        {quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setQuantity((q) => Math.min(maxStockQty, q + 1))
+                        }
+                        disabled={quantity >= maxStockQty}
+                        aria-label="Increase quantity"
+                        className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => addToCart(false)}
+                      disabled={addingToCart}
+                      className="px-4 py-3.5 ds-liquid-btn-secondary text-sm font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                    >
+                      {addingToCart ? (
+                        <span className="w-20 h-4 rounded-full ds-skeleton inline-block" />
+                      ) : (
+                        <>
+                          <ShoppingCart className="w-4 h-4 shrink-0" />
+                          <span>কার্টে রাখুন</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => addToCart(true)}
+                      className="px-4 py-3.5 ds-liquid-btn-primary text-sm font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                    >
+                      <span>এখনই কিনুন</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          </section>
 
-          {/* Related / Bundle section moved below Reviews */}
-          {bundleItems.length > 0 && (
-            <aside className="xl:hidden mt-16 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                  <Tr>You May Like</Tr>
-                </h2>
-              </div>
+            {/* Seller Storefront Card */}
+            {renderSellerCard()}
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {bundleItems.map((item, index) => (
-                  <ProductCard key={item.id} product={item} index={index} />
-                ))}
-              </div>
-            </aside>
-          )}
-
-          {typeof product.videoUrl === "string" &&
-            product.videoUrl.length > 0 && (
-              <div className="mt-16 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-                <h2 className="text-2xl font-bold tracking-tight mb-6 text-zinc-900 dark:text-zinc-100">
-                  Product Video
-                </h2>
-                <div className="rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-lg bg-black relative aspect-video w-full">
-                  <iframe
-                    src={product.videoUrl
-                      .replace("watch?v=", "embed/")
-                      .replace("youtu.be/", "youtube.com/embed/")}
-                    className="absolute inset-0 w-full h-full"
-                    allowFullScreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  ></iframe>
+            {/* Live Compact Mini-Cart Console on Desktop */}
+            {showSideCart && cartItems.length > 0 && (
+              <div className="ds-liquid-panel p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                    <span>আপনার কার্ট ({totalCartQty})</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowSideCart(false)}
+                    aria-label="Hide mini cart"
+                    className="w-7 h-7 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              </div>
-            )}
-        </article>
 
-        <aside className="hidden xl:block w-[350px] shrink-0 sticky top-24 h-max z-30">
-          {showSideCart ? (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg flex items-center space-x-2 text-zinc-900 dark:text-zinc-100">
-                  <Icon name="shopping-cart" className="w-5 h-5" />
-                  <span>Your Cart</span>
-                </h3>
-                <button
-                  onClick={() => setShowSideCart(false)}
-                  className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full text-zinc-500"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {cartItems.length === 0 ? (
-                <div className="text-center py-10 flex flex-col items-center">
-                  <Icon name="shopping-cart" className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mb-2" />
-                  <p className="text-zinc-500 font-medium text-sm">
-                    Your cart is empty.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4 mb-4">
+                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
                   {cartItems.map((item, idx) => (
-                    <div key={idx} className="flex gap-3">
-                      <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl flex items-center justify-center shrink-0 border border-zinc-100 dark:border-zinc-800 p-1">
+                    <div
+                      key={idx}
+                      className="ds-liquid-subpanel p-2.5 flex items-center gap-3"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-white/70 dark:bg-white/5 p-1 flex items-center justify-center shrink-0">
                         <img
                           src={item.image}
                           alt={item.name}
+                          referrerPolicy="no-referrer"
                           className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-tight mb-1">
+                        <h4 className="font-bold text-xs text-zinc-900 dark:text-white truncate">
                           {item.name}
                         </h4>
-                        <div className="flex justify-between items-end">
-                          <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <span className="font-extrabold text-xs text-zinc-900 dark:text-white tabular-nums">
                             {formatPrice(item.price * item.quantity)}
                           </span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <button
+                              type="button"
                               onClick={() => {
                                 const newItems = [...cartItems];
                                 newItems[idx].quantity = Math.max(
                                   1,
-                                  newItems[idx].quantity - 1,
+                                  newItems[idx].quantity - 1
                                 );
                                 setCartItems(newItems);
                                 localStorage.setItem(
                                   "f_cart",
-                                  JSON.stringify(newItems),
+                                  JSON.stringify(newItems)
                                 );
                                 window.dispatchEvent(new Event("update_cart"));
                               }}
-                              className="w-6 h-6 bg-zinc-100 dark:bg-zinc-800 rounded-md flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                              className="w-6 h-6 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center cursor-pointer"
                             >
-                              <Icon name="minus" className="w-3 h-3" />
+                              <Minus className="w-3 h-3" />
                             </button>
-                            <span className="text-sm font-bold">
+                            <span className="text-xs font-bold tabular-nums w-4 text-center">
                               {item.quantity}
                             </span>
                             <button
+                              type="button"
                               onClick={() => {
                                 const newItems = [...cartItems];
                                 newItems[idx].quantity += 1;
                                 setCartItems(newItems);
                                 localStorage.setItem(
                                   "f_cart",
-                                  JSON.stringify(newItems),
+                                  JSON.stringify(newItems)
                                 );
                                 window.dispatchEvent(new Event("update_cart"));
                               }}
-                              className="w-6 h-6 bg-zinc-100 dark:bg-zinc-800 rounded-md flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                              className="w-6 h-6 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center cursor-pointer"
                             >
-                              <Icon name="plus" className="w-3 h-3" />
+                              <Plus className="w-3 h-3" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => {
                                 const newItems = cartItems.filter(
-                                  (_, i) => i !== idx,
+                                  (_, i) => i !== idx
                                 );
                                 setCartItems(newItems);
                                 localStorage.setItem(
                                   "f_cart",
-                                  JSON.stringify(newItems),
+                                  JSON.stringify(newItems)
                                 );
                                 window.dispatchEvent(new Event("update_cart"));
                               }}
-                              className="w-6 h-6 ml-1 text-zinc-400 hover:text-red-500 bg-zinc-50 dark:bg-zinc-800 rounded-md flex items-center justify-center transition-colors shrink-0"
+                              aria-label="Remove item"
+                              className="w-6 h-6 rounded-full text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer"
                             >
-                              <Icon name="trash" className="w-3 h-3" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -1894,74 +2096,290 @@ const ProductDetails: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              )}
 
-              {cartItems.length > 0 && (
-                <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-zinc-500 font-medium text-sm">
-                      Subtotal
+                <div className="pt-3 border-t border-slate-900/[0.08] dark:border-white/[0.1] space-y-3">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="text-zinc-500 dark:text-zinc-400 font-medium">
+                      সাবটোটাল
                     </span>
-                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                      {formatPrice(cartItems.reduce(
-                        (acc, curr) => acc + curr.price * curr.quantity,
-                        0,
-                      ))}
+                    <span className="font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                      {formatPrice(
+                        cartItems.reduce(
+                          (acc, curr) => acc + curr.price * curr.quantity,
+                          0
+                        )
+                      )}
                     </span>
                   </div>
-                  <Button
+                  <button
+                    type="button"
                     onClick={() => navigate("/checkout")}
-                    className="w-full rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 font-bold py-5"
+                    className="w-full py-3 ds-liquid-btn-primary text-xs sm:text-sm font-bold cursor-pointer whitespace-nowrap"
                   >
-                    Checkout Now
-                  </Button>
+                    চেকআউট করুন
+                  </button>
                 </div>
-              )}
+              </div>
+            )}
+          </aside>
+        </div>
+
+        {/* =====================================================================
+            CUSTOMER REVIEWS SECTION (Full-Width Liquid Glass Console)
+           ===================================================================== */}
+        <section
+          id="customer-reviews"
+          className="ds-liquid-panel p-5 sm:p-7 lg:p-8 space-y-6"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+                <Tr>Customer Reviews</Tr>
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
+                {liveReviewCount > 0 ? (
+                  <>
+                    <Tr>Based on</Tr> {liveReviewCount}{" "}
+                    <Tr>{liveReviewCount === 1 ? "review" : "reviews"}</Tr>
+                  </>
+                ) : (
+                  <Tr>Share your experience with the community</Tr>
+                )}
+              </p>
             </div>
-          ) : (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 shadow-sm">
-              <h3 className="font-bold text-lg mb-4 text-zinc-900 dark:text-zinc-100 tracking-tight">
-                You May Like
-              </h3>
-              <div className="flex flex-col gap-4">
-                {bundleItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex gap-3 group cursor-pointer"
-                    onClick={() => navigate(`/product/${item.id}`)}
-                  >
-                    <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl flex items-center justify-center shrink-0 border border-zinc-100 dark:border-zinc-800 p-2 overflow-hidden">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-110 transition-transform"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0 py-1">
-                      <h4 className="font-bold text-[13px] tracking-tight text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug mb-1 group-hover:text-orange-600 transition-colors">
-                        {item.name}
-                      </h4>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
-                          {item.isOffer && item.offerPrice ? (
-                            <>{formatPrice(item.offerPrice)}</>
-                          ) : (
-                            <>{formatPrice(item.price)}</>
-                          )}
-                        </span>
-                        {item.isOffer && item.offerPrice && (
-                          <span className="text-zinc-400 line-through text-[11px] font-medium">
-                            {formatPrice(item.price)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            {reviews.length > 0 && (
+              <button
+                type="button"
+                onClick={() => navigate(`/product/${product.id}/reviews`)}
+                className="px-4 py-2 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center gap-1 cursor-pointer self-start sm:self-auto whitespace-nowrap"
+              >
+                <span>
+                  <Tr>See all</Tr> ({reviews.length})
+                </span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* 2-Column Rating Summary & Breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="lg:col-span-5 ds-liquid-subpanel p-5 sm:p-6 flex flex-col justify-between gap-5">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  <Tr>Overall Rating</Tr>
+                </span>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                    {liveAverageRating.toFixed(1)}
+                  </span>
+                  <span className="text-sm font-medium text-zinc-400">
+                    / 5.0
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 mt-2">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star
+                      key={s}
+                      className={`w-4 h-4 ${
+                        s <= Math.round(liveAverageRating)
+                          ? "text-amber-400 fill-amber-400"
+                          : "text-zinc-300 dark:text-zinc-700"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 tabular-nums">
+                  {liveReviewCount > 0
+                    ? `${liveReviewCount} verified customer ${
+                        liveReviewCount === 1 ? "rating" : "ratings"
+                      }`
+                    : "No ratings yet — be the first to review"}
+                </p>
+              </div>
+
+              <div>
+                <ReviewComposer
+                  productId={product.id}
+                  product={product}
+                  isOpen={false}
+                  onOpenChange={() => setReviewComposerOpen((prev) => !prev)}
+                />
               </div>
             </div>
+
+            <div className="lg:col-span-7 ds-liquid-subpanel p-5 sm:p-6 flex flex-col justify-center">
+              <ReviewFilterGroup
+                value={
+                  ["5", "4", "3", "2", "1"].includes(reviewFilter)
+                    ? reviewFilter
+                    : ""
+                }
+                onValueChange={(val) =>
+                  setReviewFilter((prev) =>
+                    prev === val ? "all" : (val as any)
+                  )
+                }
+              >
+                {[5, 4, 3, 2, 1].map((stars) => (
+                  <ReviewFilterItem
+                    key={stars}
+                    value={String(stars)}
+                    stars={stars}
+                    count={
+                      reviews.filter(
+                        (r) => Math.round(Number(r.rating || 0)) === stars
+                      ).length
+                    }
+                    total={reviews.length}
+                  />
+                ))}
+              </ReviewFilterGroup>
+            </div>
+          </div>
+
+          {reviewComposerOpen && (
+            <div>
+              <ReviewComposer
+                productId={product.id}
+                product={product}
+                isOpen={true}
+                onOpenChange={setReviewComposerOpen}
+              />
+            </div>
           )}
-        </aside>
+
+          {/* Liquid Glass Filter Tabs */}
+          {reviews.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+              {(
+                [
+                  { key: "all", label: `All (${reviews.length})` },
+                  ...(photoReviewsTotal > 0
+                    ? [
+                        {
+                          key: "photos",
+                          label: `With Photos (${photoReviewsTotal})`,
+                        },
+                      ]
+                    : []),
+                  { key: "5", label: "5 ★" },
+                  { key: "4", label: "4 ★" },
+                  { key: "3", label: "3 ★" },
+                  { key: "2", label: "2 ★" },
+                  { key: "1", label: "1 ★" },
+                ] as {
+                  key: "all" | "photos" | "5" | "4" | "3" | "2" | "1";
+                  label: string;
+                }[]
+              ).map((tab) => {
+                const active = reviewFilter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setReviewFilter(tab.key)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer tabular-nums ${
+                      active
+                        ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
+                        : "ds-liquid-subpanel text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Reviews List */}
+          <div className="flex flex-col gap-3.5">
+            {filteredProductReviews.slice(0, 6).map((review) => {
+              const isOwn =
+                Boolean(auth.currentUser?.uid) &&
+                review.userId === auth.currentUser?.uid;
+              return (
+                <ReviewCard
+                  key={review.id}
+                  name={review.userName}
+                  handle={isOwn ? "Your Review" : "Verified Buyer"}
+                  review={review.comment}
+                  rating={review.rating}
+                  imageUrl={review.userPhoto}
+                  createdAt={review.createdAt}
+                  images={(review as any).images}
+                  canDelete={isOwn || isAdmin}
+                  onDelete={() => handleDeleteProductReview(review.id)}
+                />
+              );
+            })}
+
+            {filteredProductReviews.length > 6 && (
+              <button
+                type="button"
+                onClick={() => navigate(`/product/${product.id}/reviews`)}
+                className="w-full py-3.5 ds-liquid-btn-secondary text-sm font-bold cursor-pointer whitespace-nowrap"
+              >
+                <Tr>View All Reviews</Tr> ({reviews.length})
+              </button>
+            )}
+
+            {reviews.length > 0 && filteredProductReviews.length === 0 && (
+              <div className="py-10 px-6 ds-liquid-subpanel text-center space-y-2">
+                <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                  নির্বাচিত ফিল্টারে কোনো রিভিউ পাওয়া যায়নি।
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setReviewFilter("all")}
+                  className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                >
+                  সব রিভিউ দেখুন
+                </button>
+              </div>
+            )}
+
+            {reviews.length === 0 && (
+              <div className="py-10 px-6 ds-liquid-subpanel text-center space-y-1.5">
+                <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                  <Tr>No customer reviews yet</Tr>
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <Tr>
+                    Purchased this item? Click "Write a Review" above to share
+                    your feedback.
+                  </Tr>
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* =====================================================================
+            RELATED PRODUCTS SECTION ("You May Like" — 2-col Mobile, 4-col Desktop)
+           ===================================================================== */}
+        {bundleItems.length > 0 && (
+          <section className="space-y-4 pt-2">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+                <Tr>You May Like</Tr>
+              </h2>
+              <button
+                type="button"
+                onClick={() => navigate("/all-products")}
+                className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer whitespace-nowrap"
+              >
+                <span>সব পণ্য দেখুন</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {bundleItems.map((item, index) => (
+                <ProductCard key={item.id} product={item} index={index} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       <ImageLightbox
@@ -1972,133 +2390,148 @@ const ProductDetails: React.FC = () => {
       />
       <CustomSectionEmbed location="product_bottom" />
 
-      {/* Fixed Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+      {/* =====================================================================
+          MOBILE-ONLY FROSTED LIQUID GLASS STICKY BOTTOM BAR (< lg)
+          Compact height within strict 15% mobile sticky governance
+         ===================================================================== */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[60] ds-liquid-bottom-bar px-3.5 py-2.5 pb-[calc(10px+env(safe-area-inset-bottom))]">
         {sellerInfo?.ordersPaused && (
-          <div className="max-w-7xl mx-auto mb-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/25 rounded-xl flex items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-semibold min-w-0">
-              <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
-              <span className="truncate">⏸️ সেলার সাময়িকভাবে নতুন অর্ডার গ্রহণ বন্ধ রেখেছেন</span>
-            </div>
-            <button 
-              onClick={() => setShowOrdersPausedModal(true)} 
-              className="text-[11px] font-bold text-amber-700 dark:text-amber-300 underline shrink-0 cursor-pointer"
+          <div className="max-w-xl mx-auto mb-2 px-3 py-1.5 ds-liquid-callout-amber flex items-center justify-between gap-2 text-[11px]">
+            <span className="font-semibold text-amber-800 dark:text-amber-200 truncate">
+              সেলার সাময়িকভাবে অর্ডার গ্রহণ বন্ধ রেখেছেন
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowOrdersPausedModal(true)}
+              className="font-bold text-amber-800 dark:text-amber-300 underline shrink-0 cursor-pointer whitespace-nowrap"
             >
-              কারণ দেখুন
+              কারণ
             </button>
           </div>
         )}
-        <div className="flex gap-3 max-w-7xl mx-auto w-full">
+
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 block whitespace-nowrap">
+              মোট মূল্য ({quantity}টি)
+            </span>
+            <span className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white tabular-nums whitespace-nowrap">
+              {formatPrice(Number(basePrice) * quantity)}
+            </span>
+          </div>
+
           {product.stock <= 0 ? (
-            <Button
-              size="lg"
-              disabled
-              className="flex-1 gap-2 rounded-2xl py-6 text-base bg-zinc-300 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-500 cursor-not-allowed"
+            <button
+              type="button"
+              onClick={handleNotifyMe}
+              disabled={notifying}
+              className="flex-1 max-w-[220px] py-2.5 px-4 ds-liquid-btn-secondary !min-h-0 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              <Icon name="times" className="text-lg" /> Out of Stock (স্টক নেই)
-            </Button>
+              <Bell className="w-3.5 h-3.5 shrink-0" />
+              <span>{notifying ? "অপেক্ষা করুন..." : "স্টকে এলে জানান"}</span>
+            </button>
           ) : (
-            <>
-              <Button
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
                 onClick={() => addToCart(false)}
                 disabled={addingToCart}
-                variant="outline"
-                size="lg"
-                className="flex-1 gap-2 rounded-2xl py-6 text-[15px] font-bold border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm transition-all active:scale-[0.98]"
+                aria-label="Add to cart"
+                className="px-4 py-2.5 ds-liquid-btn-secondary !min-h-0 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
-                {addingToCart ? (
-                  <span className="w-20 h-4 rounded-full ds-skeleton inline-block" />
-                ) : (
-                  <>
-                    <Icon name="shopping-cart" className="h-5 w-5" />
-                    <span>Add to Cart</span>
-                  </>
-                )}
-              </Button>
-              <Button
+                <ShoppingCart className="w-4 h-4 shrink-0" />
+                <span>কার্ট</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => addToCart(true)}
-                size="lg"
-                className="flex-1 rounded-2xl py-6 text-[15px] font-bold shadow-lg shadow-[#1cdb5e]/20 bg-[#1cdb5e] hover:bg-[#17ba4f] text-white border-none transition-all active:scale-[0.98]"
+                className="px-5 py-2.5 ds-liquid-btn-primary !min-h-0 text-xs sm:text-sm font-bold flex items-center justify-center cursor-pointer whitespace-nowrap"
               >
-                Buy Now
-              </Button>
-            </>
+                এখনই কিনুন
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Seller Orders Paused Bottom Sheet Popup */}
+      {/* Seller Orders Paused Liquid Glass Sheet / Modal */}
       <AnimatePresence>
         {showOrdersPausedModal && (
-          <div 
-            className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+          <div
+            className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center ds-liquid-backdrop p-0 sm:p-4"
             onClick={() => setShowOrdersPausedModal(false)}
           >
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 280 }}
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ duration: 0.18 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto"
+              className="w-full max-w-lg ds-liquid-panel rounded-t-3xl sm:rounded-3xl p-6 pb-8 space-y-4 max-h-[85vh] overflow-y-auto"
             >
-              <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-1" />
-              
               <div className="flex items-start gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                  <AlertCircle className="w-6 h-6" />
+                <div className="w-11 h-11 rounded-2xl ds-liquid-callout-amber flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                  <AlertCircle className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white leading-snug">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white leading-snug">
                       অর্ডার নেওয়া সাময়িকভাবে বন্ধ আছে
                     </h3>
-                    <button 
+                    <button
+                      type="button"
                       onClick={() => setShowOrdersPausedModal(false)}
-                      className="p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400"
+                      className="w-8 h-8 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center cursor-pointer shrink-0"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium">
-                    দোকান / বিক্রেতা: {sellerInfo?.shopName || sellerInfo?.displayName || "Official Seller"}
+                    বিক্রেতা:{" "}
+                    {sellerInfo?.shopName ||
+                      sellerInfo?.displayName ||
+                      "Official Seller"}
                   </p>
                 </div>
               </div>
 
-              {/* Reason Box */}
-              <div className="p-4 bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/25 rounded-2xl space-y-1.5">
-                <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                  <span>🚫 সেলারের দেওয়া কারণ (Seller's Reason):</span>
+              <div className="ds-liquid-callout-amber p-4 space-y-1.5">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                  সেলারের দেওয়া কারণ
                 </p>
-                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 leading-relaxed bg-white/60 dark:bg-zinc-900/60 p-3 rounded-xl border border-amber-500/20">
-                  "{sellerInfo?.pauseReason || "বিক্রেতা সাময়িক বিরতিতে বা স্টক আপডেটে থাকায় বর্তমানে কোনো নতুন অর্ডার গ্রহণ করা হচ্ছে না।"}"
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-relaxed">
+                  "
+                  {sellerInfo?.pauseReason ||
+                    "বিক্রেতা সাময়িক বিরতিতে বা স্টক আপডেটে থাকায় বর্তমানে কোনো নতুন অর্ডার গ্রহণ করা হচ্ছে না।"}
+                  "
                 </p>
               </div>
 
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                এই সেলার আবার অর্ডার গ্রহণ চালু না করা পর্যন্ত Buy Now বা কার্টে যোগ করে অর্ডার করা যাবে না। প্রয়োজনে আপনি সরাসরি সেলারের সাথে চ্যাটে যোগাযোগ করতে পারেন।
+              <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                এই সেলার আবার অর্ডার গ্রহণ চালু না করা পর্যন্ত নতুন অর্ডার প্লেস করা যাবে না। প্রয়োজনে সরাসরি সেলারকে মেসেজ পাঠাতে পারেন।
               </p>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-                <Button
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <button
+                  type="button"
                   onClick={() => {
                     setShowOrdersPausedModal(false);
-                    navigate(`/messages?chatId=${sellerInfo?.id || product.sellerId}`);
+                    navigate(
+                      `/messages?chatId=${sellerInfo?.id || product.sellerId}`
+                    );
                   }}
-                  variant="outline"
-                  className="flex-1 py-3.5 rounded-2xl border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold"
+                  className="py-3 px-4 ds-liquid-btn-secondary text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                 >
-                  <MessageCircle className="w-4 h-4 mr-2 text-emerald-500" />
-                  সেলারকে মেসেজ দিন
-                </Button>
-                <Button
+                  <MessageCircle className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                  <span>সেলারকে মেসেজ দিন</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setShowOrdersPausedModal(false)}
-                  className="flex-1 py-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-bold shadow-md"
+                  className="py-3 px-4 ds-liquid-btn-primary text-xs sm:text-sm font-bold cursor-pointer whitespace-nowrap"
                 >
-                  বুঝেছি (Understood)
-                </Button>
+                  বুঝেছি
+                </button>
               </div>
             </motion.div>
           </div>
