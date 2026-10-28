@@ -33,6 +33,7 @@ interface ResellerTeacherGuideProps {
   userData?: any;
   onScrollToPlans?: () => void;
   standalone?: boolean;
+  onVoiceGuide?: (message: string) => void;
 }
 
 // Live interactive alerts with full details
@@ -93,6 +94,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
   user,
   userData,
   onScrollToPlans,
+  onVoiceGuide,
 }) => {
   const navigate = useNavigate();
   const { notify } = useNotify();
@@ -350,11 +352,36 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
         {/* 3. Navigation Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
           {[
-            { id: "simulator", label: "১. লাইভ অর্ডার ডেমো", icon: Zap },
-            { id: "blueprint", label: "২. বিস্তারিত কর্মপদ্ধতি ও স্ক্রিপ্ট", icon: BookOpen },
-            { id: "calculator", label: "৩. লাভ ও আয় ক্যালকুলেটর", icon: TrendingUp },
-            { id: "refer", label: "৪. রেফার অ্যান্ড আর্ন (বিনা পুঁজিতে)", icon: Gift },
-            { id: "faq", label: "৫. সাধারণ প্রশ্নোত্তর (FAQ)", icon: Info },
+            {
+              id: "simulator",
+              label: "১. লাইভ অর্ডার ডেমো",
+              icon: Zap,
+              voice: "লাইভ অর্ডার ডেমো। এখানে দেখুন কীভাবে শূন্য টাকা অগ্রিমে কাস্টমারের ঠিকানায় পার্সেল বুক করবেন।",
+            },
+            {
+              id: "blueprint",
+              label: "২. বিস্তারিত কর্মপদ্ধতি ও স্ক্রিপ্ট",
+              icon: BookOpen,
+              voice: "বিস্তারিত কর্মপদ্ধতি ও রেডিমেড কাস্টমার মেসেজিং স্ক্রিপ্ট।",
+            },
+            {
+              id: "calculator",
+              label: "৩. লাভ ও আয় ক্যালকুলেটর",
+              icon: TrendingUp,
+              voice: "লাভ ও আয় ক্যালকুলেটর। প্রতিদিনের অর্ডার এবং প্রফিট মার্জিন অনুযায়ী আপনার সম্ভাব্য মাসিক আয় হিসাব করুন।",
+            },
+            {
+              id: "refer",
+              label: "৪. রেফার অ্যান্ড আর্ন (বিনা পুঁজিতে)",
+              icon: Gift,
+              voice: "রেফার অ্যান্ড আর্ন। আপনার রেফারেল কোড শেয়ার করে বিনা পুঁজিতে আয় করুন।",
+            },
+            {
+              id: "faq",
+              label: "৫. সাধারণ প্রশ্নোত্তর (FAQ)",
+              icon: Info,
+              voice: "ভিআইপি সাবস্ক্রিপশন ও রিসেলিং সম্পর্কে সাধারণ প্রশ্নোত্তর।",
+            },
           ].map((tab) => {
             const IconComp = tab.icon;
             const isActive = activeTab === tab.id;
@@ -364,8 +391,9 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                 onClick={() => {
                   triggerHaptic();
                   setActiveTab(tab.id as any);
+                  onVoiceGuide?.(tab.voice);
                 }}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                   isActive
                     ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-xs"
                     : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -385,7 +413,6 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <h3 className="text-base font-bold text-zinc-900 dark:text-white">
                   ইন্টারেক্টিভ রিসেলার লাইভ সিমুলেটর (Live Click-through)
                 </h3>

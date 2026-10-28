@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Volume2 } from "lucide-react";
 import { Button } from "./button";
 import { cn } from "../../lib/utils";
 import Avatar from "./components-primitives-avatar";
@@ -226,9 +227,11 @@ type TabKey = "individuals" | "teams";
 function PlanCard({
   plan,
   onSelectPlan,
+  onListenPlan,
 }: {
   plan: Plan6;
   onSelectPlan?: (plan: Plan6) => void;
+  onListenPlan?: (plan: Plan6) => void;
 }) {
   const pal = CARD_PALETTES[plan.palette];
 
@@ -255,17 +258,30 @@ function PlanCard({
 
         <div className="relative z-10 flex flex-col gap-3.5">
           <div className="flex items-center gap-2 justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <Avatar shape="squircle" size="sm" color={pal.avatarColor} />
               <h3 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100 truncate">
                 {plan.name}
               </h3>
             </div>
-            {plan.featuredLabel && (
-              <span className="rounded-full bg-black/10 dark:bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-zinc-800 dark:text-zinc-200 backdrop-blur-sm whitespace-nowrap shrink-0">
-                {plan.featuredLabel}
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {onListenPlan && (
+                <button
+                  type="button"
+                  onClick={() => onListenPlan(plan)}
+                  title={`${plan.name} সম্পর্কে শুনুন`}
+                  aria-label={`${plan.name} সম্পর্কে শুনুন`}
+                  className="w-7 h-7 rounded-full bg-white/80 dark:bg-zinc-900/70 hover:bg-white dark:hover:bg-zinc-800 border border-black/10 dark:border-white/15 flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer active:scale-95"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {plan.featuredLabel && (
+                <span className="rounded-full bg-black/10 dark:bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-zinc-800 dark:text-zinc-200 backdrop-blur-sm whitespace-nowrap shrink-0">
+                  {plan.featuredLabel}
+                </span>
+              )}
+            </div>
           </div>
 
           <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
@@ -347,6 +363,8 @@ export default function Pricing6({
   title = "ভিআইপি সাবস্ক্রিপশন প্ল্যানসমূহ",
   subtitle = "কোনো হিডেন ফি নেই। আপনার পছন্দের সময়কাল অনুযায়ী নির্বাচন করুন।",
   onSelectPlan,
+  onTabChange,
+  onListenPlan,
 }: {
   individualPlans?: Plan6[];
   teamsPlans?: Plan6[];
@@ -356,6 +374,8 @@ export default function Pricing6({
   title?: string;
   subtitle?: string;
   onSelectPlan?: (plan: Plan6) => void;
+  onTabChange?: (tab: TabKey) => void;
+  onListenPlan?: (plan: Plan6) => void;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
 
@@ -382,9 +402,12 @@ export default function Pricing6({
             <button
               key={key}
               type="button"
-              onClick={() => setActiveTab(key)}
+              onClick={() => {
+                setActiveTab(key);
+                onTabChange?.(key);
+              }}
               className={cn(
-                "rounded-full px-3 sm:px-4 py-1 text-xs font-bold transition-all duration-200 whitespace-nowrap",
+                "rounded-full px-3 sm:px-4 py-1 text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer",
                 activeTab === key
                   ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
                   : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white",
@@ -402,6 +425,7 @@ export default function Pricing6({
             key={plan.id}
             plan={plan}
             onSelectPlan={onSelectPlan}
+            onListenPlan={onListenPlan}
           />
         ))}
       </div>

@@ -1287,4 +1287,165 @@ html.dark .ds-liquid-input {
   border-radius: 16px;
 }
 
+/* ==========================================================================
+   LIQUID GLASS WORKSPACE & CHECKOUT SURFACES
+   Authentic frosted refractive glass cards, docks, and wells
+   ========================================================================== */
+html:not(.dark) .ds-liquid-checkout-shell {
+  background-color: #f3f8ff !important;
+  background-image:
+    radial-gradient(ellipse 68% 420px at 16% 4%, rgba(56, 189, 248, 0.2), transparent 72%),
+    radial-gradient(ellipse 60% 420px at 86% 12%, rgba(99, 102, 241, 0.14), transparent 72%),
+    radial-gradient(ellipse 75% 460px at 50% 96%, rgba(14, 165, 233, 0.12), transparent 75%) !important;
+}
+
+html.dark .ds-liquid-checkout-shell {
+  background-color: #030408 !important;
+  background-image:
+    radial-gradient(ellipse 68% 420px at 16% 4%, rgba(13, 130, 255, 0.18), transparent 72%),
+    radial-gradient(ellipse 60% 420px at 86% 14%, rgba(139, 92, 246, 0.16), transparent 72%),
+    radial-gradient(ellipse 70% 460px at 50% 96%, rgba(14, 165, 233, 0.1), transparent 75%) !important;
+}
+
+html:not(.dark) .ds-liquid-panel {
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.78) 0%,
+    rgba(248, 251, 255, 0.68) 52%,
+    rgba(240, 246, 255, 0.76) 100%
+  ) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.92) !important;
+  border-radius: 28px;
+  box-shadow:
+    0 20px 50px -14px rgba(15, 23, 42, 0.1),
+    0 4px 16px -4px rgba(15, 23, 42, 0.04),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+html.dark .ds-liquid-panel {
+  background: linear-gradient(
+    155deg,
+    rgba(34, 36, 48, 0.76) 0%,
+    rgba(22, 24, 34, 0.68) 52%,
+    rgba(18, 20, 30, 0.78) 100%
+  ) !important;
+  backdrop-filter: blur(28px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 28px;
+  box-shadow:
+    0 24px 60px -14px rgba(0, 0, 0, 0.62),
+    0 6px 20px -4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+html:not(.dark) .ds-liquid-subpanel {
+  background: rgba(255, 255, 255, 0.56) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+  border-radius: 20px;
+}
+
+html.dark .ds-liquid-subpanel {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px;
+}
+
+html:not(.dark) .ds-liquid-subpanel-active {
+  background: linear-gradient(145deg, rgba(235, 246, 255, 0.88) 0%, rgba(255, 255, 255, 0.82) 100%) !important;
+  border: 1.5px solid rgba(13, 130, 255, 0.55) !important;
+  box-shadow:
+    0 8px 22px -8px rgba(13, 130, 255, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95) !important;
+  border-radius: 20px;
+}
+
+html.dark .ds-liquid-subpanel-active {
+  background: linear-gradient(145deg, rgba(13, 130, 255, 0.18) 0%, rgba(30, 41, 59, 0.55) 100%) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.55) !important;
+  box-shadow:
+    0 10px 26px -8px rgba(13, 130, 255, 0.32),
+    inset 0 1px 1px rgba(255, 255, 255, 0.18) !important;
+  border-radius: 20px;
+}
+
+html:not(.dark) .ds-liquid-dock {
+  background: rgba(255, 255, 255, 0.66) !important;
+  backdrop-filter: blur(24px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(185%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow:
+    0 10px 28px -10px rgba(15, 23, 42, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.92) !important;
+}
+
+html.dark .ds-liquid-dock {
+  background: rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(24px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(185%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
+  box-shadow:
+    0 12px 32px -10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.14) !important;
+}
+
+html:not(.dark) .ds-liquid-dock-pill {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%) !important;
+  border: 1px solid rgba(13, 130, 255, 0.22) !important;
+  box-shadow:
+    0 4px 12px -2px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+}
+
+html.dark .ds-liquid-dock-pill {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow:
+    0 4px 14px -2px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+html:not(.dark) .ds-liquid-callout-amber {
+  background: linear-gradient(145deg, rgba(254, 243, 199, 0.65) 0%, rgba(255, 251, 235, 0.72) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.32) !important;
+  border-radius: 20px;
+}
+
+html.dark .ds-liquid-callout-amber {
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.14) 0%, rgba(120, 53, 15, 0.18) 100%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.28) !important;
+  border-radius: 20px;
+}
+
+html:not(.dark) .ds-liquid-callout-emerald {
+  background: linear-gradient(145deg, rgba(209, 250, 229, 0.62) 0%, rgba(236, 253, 245, 0.75) 100%) !important;
+  border: 1px solid rgba(16, 185, 129, 0.32) !important;
+  border-radius: 20px;
+}
+
+html.dark .ds-liquid-callout-emerald {
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.14) 0%, rgba(6, 78, 59, 0.2) 100%) !important;
+  border: 1px solid rgba(16, 185, 129, 0.28) !important;
+  border-radius: 20px;
+}
+
+html:not(.dark) .ds-liquid-callout-rose {
+  background: linear-gradient(145deg, rgba(252, 231, 243, 0.62) 0%, rgba(255, 241, 242, 0.75) 100%) !important;
+  border: 1px solid rgba(226, 18, 91, 0.24) !important;
+  border-radius: 22px;
+}
+
+html.dark .ds-liquid-callout-rose {
+  background: linear-gradient(145deg, rgba(226, 18, 91, 0.14) 0%, rgba(76, 5, 25, 0.22) 100%) !important;
+  border: 1px solid rgba(244, 63, 94, 0.26) !important;
+  border-radius: 22px;
+}
+
+
 

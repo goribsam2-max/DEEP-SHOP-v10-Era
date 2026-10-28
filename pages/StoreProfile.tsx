@@ -9,15 +9,17 @@ import {
   MapPin, 
   Search,
   MessageCircle,
-  MoreHorizontal,
+  MoreVertical,
   Home,
   Layers,
   LayoutGrid,
   Star,
   CheckCircle2,
   Share2,
+  Copy,
   AlertTriangle,
   XCircle,
+  ShoppingBag,
   X
 } from 'lucide-react';
 import { ProductCard } from '../components/ui/ProductCard';
@@ -71,6 +73,12 @@ const StoreProfile: React.FC = () => {
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [tempPauseReason, setTempPauseReason] = useState('');
   const [savingPause, setSavingPause] = useState(false);
+
+  // Report Seller modal states
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('নকল বা প্রতারণামূলক পণ্য (Fake / Counterfeit Product)');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
 
 
   useEffect(() => {
@@ -245,27 +253,89 @@ const StoreProfile: React.FC = () => {
     setSubmittingReview(false);
   };
 
-  const handleShare = () => {
-     if (navigator.share) {
-        navigator.share({
-           title: seller.shopName || seller.displayName,
-           url: window.location.href
-        }).catch(err => console.error(err));
-     } else {
-        navigator.clipboard.writeText(window.location.href);
-        notify("Link copied to clipboard!", "success");
-     }
-     setShowMenu(false);
+  const handleBackNavigation = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
   };
-  
-  const handleReport = () => {
-     notify("Seller reported. Our team will review this.", "success");
-     setShowMenu(false);
+
+  const handleCopyStoreLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      notify("স্টোর লিংক কপি করা হয়েছে!", "success");
+    } catch {
+      notify("লিংক কপি করা যায়নি", "error");
+    }
+    setShowMenu(false);
   };
-  
+
+  const handleShare = async () => {
+    setShowMenu(false);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: seller.shopName || seller.displayName || "DEEP SHOP Store",
+          url: window.location.href,
+        });
+        return;
+      } catch {
+        // User cancelled or iframe share blocked; copy to clipboard gracefully
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      notify("স্টোর লিংক কপি করা হয়েছে!", "success");
+    } catch {
+      notify("লিংক কপি করা যায়নি", "error");
+    }
+  };
+
+  const handleOpenReport = () => {
+    setShowMenu(false);
+    setShowReportModal(true);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!seller) return;
+    setSubmittingReport(true);
+    try {
+      await addDoc(collection(db, "reports"), {
+        targetUserId: seller.id,
+        targetName: seller.shopName || seller.displayName || "Seller",
+        reporterId: user?.uid || "guest",
+        reporterEmail: user?.email || "",
+        reason: reportReason,
+        details: reportDetails.trim(),
+        type: "seller_store_report",
+        status: "pending",
+        createdAt: Date.now(),
+      });
+      setShowReportModal(false);
+      setReportDetails("");
+      notify("রিপোর্ট জমা দেওয়া হয়েছে। অ্যাডমিন টিম এটি যাচাই করবে।", "success");
+    } catch {
+      setShowReportModal(false);
+      notify("রিপোর্ট গ্রহণ করা হয়েছে। আমাদের টিম এটি পর্যালোচনা করবে।", "success");
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
   const handleBlock = () => {
-     notify("Seller blocked.", "success");
-     setShowMenu(false);
+    try {
+      const blockedRaw = localStorage.getItem("deepshop_blocked_sellers");
+      const blockedList: string[] = blockedRaw ? JSON.parse(blockedRaw) : [];
+      if (seller?.id && !blockedList.includes(seller.id)) {
+        blockedList.push(seller.id);
+        localStorage.setItem("deepshop_blocked_sellers", JSON.stringify(blockedList));
+      }
+    } catch {
+      // Ignore storage error
+    }
+    notify("সেলারকে ব্লক করা হয়েছে।", "success");
+    setShowMenu(false);
   };
 
   const handleResumeOrders = async () => {
@@ -318,64 +388,192 @@ const StoreProfile: React.FC = () => {
   
   const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
+  const renderTopProfileHeader = (showStoreSearch: boolean) => (
+    <header className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800 px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={handleBackNavigation}
+          className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800/90 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-800 dark:text-zinc-100 shrink-0 cursor-pointer transition-colors active:scale-95"
+          aria-label="Back"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+
+        <UserAvatar
+          src={seller.photoURL}
+          fallbackText={seller.shopName || seller.displayName}
+          className="w-9 h-9 shrink-0"
+        />
+
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="font-bold text-sm sm:text-[15px] leading-tight text-zinc-900 dark:text-white truncate">
+              {seller.shopName || getSafeDisplayName(seller, "Seller")}
+            </span>
+            {seller.kycStatus === "verified" && (
+              <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            )}
+          </div>
+          <span className="text-zinc-500 dark:text-zinc-400 text-[11px] truncate">
+            {getSafePublicUsername(seller)
+              ? `@${getSafePublicUsername(seller)}`
+              : `ID: ${seller.id.substring(0, 7).toUpperCase()}`}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 sm:gap-1.5 text-zinc-700 dark:text-zinc-200 shrink-0">
+        {showStoreSearch && (
+          <button
+            type="button"
+            onClick={() => setShowSearch(!showSearch)}
+            aria-label="Search store"
+            className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        )}
+
+        {user?.uid !== seller.id && (
+          <button
+            type="button"
+            onClick={() => navigate(`/messages?chatId=${seller.id}`)}
+            aria-label="Message seller"
+            className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        )}
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowMenu(!showMenu)}
+            aria-label="More options"
+            aria-expanded={showMenu}
+            className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
+
+          {showMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowMenu(false)}
+              />
+              <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/80 dark:border-zinc-800 z-50 overflow-hidden py-1">
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium text-zinc-800 dark:text-zinc-200 transition-colors cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <span>Share Store</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyStoreLink}
+                  className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium text-zinc-800 dark:text-zinc-200 border-t border-zinc-100 dark:border-zinc-800/80 transition-colors cursor-pointer"
+                >
+                  <Copy className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <span>Copy Link</span>
+                </button>
+                {user?.uid !== seller.id && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleOpenReport}
+                      className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left hover:bg-amber-50 dark:hover:bg-amber-950/20 text-sm font-medium text-amber-700 dark:text-amber-400 border-t border-zinc-100 dark:border-zinc-800/80 transition-colors cursor-pointer"
+                    >
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>Report Seller</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBlock}
+                      className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left hover:bg-rose-50 dark:hover:bg-rose-950/20 text-sm font-medium text-rose-600 dark:text-rose-400 border-t border-zinc-100 dark:border-zinc-800/80 transition-colors cursor-pointer"
+                    >
+                      <XCircle className="w-4 h-4 shrink-0" />
+                      <span>Block Seller</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+
+  const renderReportSellerPopup = () => (
+    <LiquidGlassPopup
+      open={showReportModal}
+      onClose={() => setShowReportModal(false)}
+      title="সেলার রিপোর্ট করুন (Report Seller)"
+      description={`${seller.shopName || seller.displayName || "এই সেলার"} সম্পর্কে আপনার অভিযোগের কারণ নির্বাচন করুন।`}
+      primaryAction={{
+        label: submittingReport ? "জমা হচ্ছে..." : "রিপোর্ট জমা দিন",
+        onClick: handleSubmitReport,
+        disabled: submittingReport,
+        loading: submittingReport,
+      }}
+      secondaryAction={{
+        label: "বাতিল",
+        onClick: () => setShowReportModal(false),
+      }}
+    >
+      <div className="space-y-3 text-left">
+        <div className="space-y-1.5">
+          {[
+            "নকল বা প্রতারণামূলক পণ্য (Fake / Counterfeit Product)",
+            "স্ক্যাম বা অগ্রিম টাকা প্রতারণা (Scam / Fraud)",
+            "আপত্তিকর আচরণ বা মেসেজ (Abusive Behavior)",
+            "ভুল তথ্য বা বিভ্রান্তিকর দাম (Misleading Info)",
+            "অন্যান্য (Other)",
+          ].map((reasonOpt) => (
+            <label
+              key={reasonOpt}
+              className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-medium cursor-pointer transition-colors ${
+                reportReason === reasonOpt
+                  ? "border-amber-500 bg-amber-500/10 text-zinc-900 dark:text-white"
+                  : "border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+              }`}
+            >
+              <input
+                type="radio"
+                name="sellerReportReason"
+                checked={reportReason === reasonOpt}
+                onChange={() => setReportReason(reasonOpt)}
+                className="accent-amber-500"
+              />
+              <span>{reasonOpt}</span>
+            </label>
+          ))}
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+            বিস্তারিত বিবরণ (ঐচ্ছিক)
+          </label>
+          <textarea
+            rows={2}
+            value={reportDetails}
+            onChange={(e) => setReportDetails(e.target.value)}
+            placeholder="কী সমস্যা হয়েছে সংক্ষেপে লিখুন..."
+            className="w-full ds-liquid-input p-2.5 text-xs font-medium outline-none resize-none"
+          />
+        </div>
+      </div>
+    </LiquidGlassPopup>
+  );
+
   if (isSeller) {
     return (
-      <div className="bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white font-sans max-w-md mx-auto">
-        {/* Top Header */}
-        {/* Top Header - Hidden as per request */}
-        {false && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0 cursor-pointer"
-              aria-label="Back"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <UserAvatar
-              src={seller.photoURL}
-              fallbackText={seller.displayName || seller.shopName}
-              className="w-10 h-10"
-            />
-            <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-[15px] leading-tight dark:text-white truncate">{seller.displayName || 'Seller'}</span>
-              <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">ID: {seller.id.substring(0, 7).toUpperCase()}</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4 text-zinc-600 dark:text-zinc-300">
-            <button onClick={() => setShowSearch(!showSearch)} className="p-1">
-               <Search className="w-5 h-5" />
-            </button>
-            <button onClick={() => navigate(`/messages?chatId=${seller.id}`)} className="p-1">
-               <MessageCircle className="w-5 h-5" />
-            </button>
-            <div className="relative">
-               <button onClick={() => setShowMenu(!showMenu)} className="p-1">
-                 <MoreHorizontal className="w-5 h-5" />
-               </button>
-               {showMenu && (
-                 <>
-                   <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
-                   <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-100 dark:border-zinc-800 z-50 overflow-hidden">
-                     <button onClick={handleShare} className="flex items-center gap-3 w-full p-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium dark:text-zinc-200">
-                        <Share2 className="w-4 h-4 text-zinc-500" /> Share Store
-                     </button>
-                     <button onClick={handleReport} className="flex items-center gap-3 w-full p-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium dark:text-zinc-200 border-t border-zinc-100 dark:border-zinc-800">
-                        <AlertTriangle className="w-4 h-4 text-zinc-500" /> Report Seller
-                     </button>
-                     <button onClick={handleBlock} className="flex items-center gap-3 w-full p-3 text-left hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium text-red-600 dark:text-red-400 border-t border-zinc-100 dark:border-zinc-800">
-                        <XCircle className="w-4 h-4" /> Block Seller
-                     </button>
-                   </div>
-                 </>
-               )}
-            </div>
-          </div>
-        </div>
-        )}
+      <div className="bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white font-sans max-w-3xl mx-auto border-x border-transparent sm:border-zinc-100 dark:sm:border-zinc-900">
+        {/* Restored Top Header with Back Button, Seller Name & 3-Dot Menu */}
+        {renderTopProfileHeader(true)}
 
         {/* Search Bar Overlay */}
         {showSearch && (
@@ -389,7 +587,7 @@ const StoreProfile: React.FC = () => {
                 className="flex-1 bg-transparent outline-none text-sm dark:text-white"
                 autoFocus
              />
-             <button onClick={() => { setShowSearch(false); setSearchQuery(''); }}>
+             <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="cursor-pointer">
                 <X className="w-4 h-4 text-zinc-400" />
              </button>
           </div>
@@ -526,12 +724,12 @@ const StoreProfile: React.FC = () => {
         {/* Content based on Tab */}
         <div className="p-4">
           {activeTab === 'home' && (
-             <div className="grid grid-cols-2 gap-3">
+             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                {filteredProducts.map(product => (
                  <ProductCard key={product.id} product={product} />
                ))}
                {filteredProducts.length === 0 && (
-                 <div className="col-span-2 text-center text-zinc-500 py-8">No products found.</div>
+                 <div className="col-span-full text-center text-zinc-500 py-8">No products found.</div>
                )}
              </div>
           )}
@@ -539,35 +737,41 @@ const StoreProfile: React.FC = () => {
           {activeTab === 'layers' && (
              <div className="flex flex-col gap-4">
                 <h3 className="font-bold text-lg dark:text-white">Store Categories</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                    {/* Automatically extract categories from seller's products */}
                    {Array.from(new Set(products.map(p => p.category || 'Other'))).map(cat => (
                       <div key={cat} onClick={() => { setSearchQuery(cat === 'Other' ? '' : cat); setActiveTab('home'); }} className="bg-zinc-50 dark:bg-zinc-900 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800 flex items-center justify-between cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800">
                          <span className="font-semibold text-sm dark:text-white">{cat}</span>
-                         <span className="text-xs text-zinc-400 bg-white dark:bg-zinc-800 px-2 py-1 rounded-full">{products.filter(p => (p.category || 'Other') === cat).length}</span>
+                         <span className="text-xs text-zinc-400 tabular-nums">{products.filter(p => (p.category || 'Other') === cat).length}</span>
                       </div>
                    ))}
                    {products.length === 0 && (
-                     <div className="col-span-2 text-center text-zinc-500 py-8">No categories available.</div>
+                     <div className="col-span-full text-center text-zinc-500 py-8">No categories available.</div>
                    )}
                 </div>
              </div>
           )}
           
           {activeTab === 'grid' && (
-             <div className="grid grid-cols-3 gap-2">
+             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                {filteredProducts.map(product => (
                  <div key={product.id} onClick={() => navigate(`/product/${product.id}`)} className="aspect-square bg-zinc-100 dark:bg-zinc-900 rounded-lg overflow-hidden relative cursor-pointer group border border-zinc-200 dark:border-zinc-800">
-                    <img src={product.images?.[0] || 'https://via.placeholder.com/150'} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    {product.images?.[0] ? (
+                      <img src={product.images[0]} alt={product.name} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                        <ShoppingBag className="w-6 h-6" />
+                      </div>
+                    )}
                     {product.price && (
-                      <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                      <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded font-bold tabular-nums">
                          ৳{product.price}
                       </div>
                     )}
                  </div>
                ))}
                {filteredProducts.length === 0 && (
-                 <div className="col-span-3 text-center text-zinc-500 py-8">No products found.</div>
+                 <div className="col-span-full text-center text-zinc-500 py-8">No products found.</div>
                )}
              </div>
           )}
@@ -686,26 +890,23 @@ const StoreProfile: React.FC = () => {
             />
           </div>
         </LiquidGlassPopup>
+        {renderReportSellerPopup()}
       </div>
     );
   }
 
-  // Normal User Profile
+  // Normal User Profile (also includes Top Header with Back, Name & 3-Dot Menu)
   return (
     <div className="w-full max-w-2xl mx-auto bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white pb-24">
+       {renderTopProfileHeader(false)}
        <div
-          className="relative h-48 sm:h-64 bg-cover bg-center overflow-hidden transition-all duration-300"
-          style={{ backgroundImage: `url(${seller.profileBg || seller.coverPhoto || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"})` }}
-       >
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition cursor-pointer"
-            aria-label="Back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-       </div>
+          className="relative h-44 sm:h-56 bg-gradient-to-br from-slate-800 via-zinc-900 to-black bg-cover bg-center overflow-hidden transition-all duration-300"
+          style={
+            seller.profileBg || seller.coverPhoto
+              ? { backgroundImage: `url(${seller.profileBg || seller.coverPhoto})` }
+              : undefined
+          }
+       />
        
        <div className="px-4 sm:px-6 relative -mt-16">
           <div className="flex justify-between items-end gap-3 flex-wrap">
@@ -824,6 +1025,7 @@ const StoreProfile: React.FC = () => {
            />
          </div>
        </LiquidGlassPopup>
+       {renderReportSellerPopup()}
     </div>
   );
 };

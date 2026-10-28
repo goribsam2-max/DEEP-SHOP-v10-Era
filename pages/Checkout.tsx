@@ -23,6 +23,8 @@ import { uploadToImgbb } from "../services/imgbb";
 import { PixelImage } from "../components/ui/PixelImage";
 import { BangladeshAddressSelector } from "../components/BangladeshAddressSelector";
 import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
+import AuthVoiceToggle from "../components/AuthVoiceToggle";
+import { isAuthVoiceMuted, playAuthVoice } from "../lib/authVoiceAndValidation";
 
 import { Button } from "../components/ui/button";
 import {
@@ -45,6 +47,11 @@ import {
   Lock,
   Check,
   ChevronLeft,
+  ChevronDown,
+  ArrowRight,
+  Gift,
+  Plus,
+  Edit3,
   Percent,
   X,
   Smartphone,
@@ -1034,1022 +1041,1357 @@ export default function CheckoutPage() {
     return false;
   };
 
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+
+  const speakStepGuide = (targetStep: number) => {
+    if (isAuthVoiceMuted()) return;
+    if (targetStep === 1) {
+      playAuthVoice("ডেলিভারি ঠিকানা নির্বাচন করুন অথবা নতুন ঠিকানা যোগ করুন।");
+    } else if (targetStep === 2) {
+      if (requiredAdvance === 0) {
+        playAuthVoice("আপনার অর্ডারে কোনো অগ্রিম পেমেন্ট প্রযোজ্য নয়। ক্যাশ অন ডেলিভারি সুবিধা সক্রিয় আছে।");
+      } else {
+        playAuthVoice("পেমেন্ট তথ্য যাচাই করুন এবং পরবর্তী ধাপে অর্ডার রিভিউ করুন।");
+      }
+    } else if (targetStep === 3) {
+      playAuthVoice("আপনার অর্ডারের ঠিকানা ও পেমেন্ট তথ্য যাচাই করে শর্তাবলীতে টিক দিন এবং অর্ডার কনফার্ম করুন।");
+    }
+  };
+
   const nextStep = () => {
     if (currentStep === 1) {
       if (!selectedAddressId) {
         return notify("অনুগ্রহ করে একটি ডেলিভারি ঠিকানা নির্বাচন করুন।", "error");
       }
-      if (hasBypassProduct && !isVipSubscriber && (!guardianNumber.trim() || guardianNumber.trim().replace(/\D/g, "").length < 11)) {
-        return notify("বাইপাস অর্ডারের জন্য গার্ডিয়ান / অভিভাবকের ১১ ডিজিটের মোবাইল নম্বর প্রদান করুন।", "error");
+      if (
+        hasBypassProduct &&
+        !isVipSubscriber &&
+        (!guardianNumber.trim() || guardianNumber.trim().replace(/\D/g, "").length < 11)
+      ) {
+        return notify(
+          "বাইপাস অর্ডারের জন্য গার্ডিয়ান / অভিভাবকের ১১ ডিজিটের মোবাইল নম্বর প্রদান করুন।",
+          "error"
+        );
       }
     }
     if (currentStep === 2) {
       if (paymentType === "vgcoin") {
         const coinCost = advanceType === "full" ? total : requiredAdvance;
         if (userCoins < coinCost) {
-          return notify(`পর্যাপ্ত ডিপি কয়েন নেই। আপনার প্রয়োজন আরও ${coinCost - userCoins} কয়েন।`, "error");
+          return notify(
+            `পর্যাপ্ত ডিপি কয়েন নেই। আপনার প্রয়োজন আরও ${coinCost - userCoins} কয়েন।`,
+            "error"
+          );
         }
       }
     }
     if (validateStep(currentStep)) {
-      setCurrentStep((p) => Math.min(p + 1, 3));
+      const target = Math.min(currentStep + 1, 3);
+      setCurrentStep(target);
+      speakStepGuide(target);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
-      notify("Please complete the required fields.", "error");
+      notify("অনুগ্রহ করে প্রয়োজনীয় তথ্যগুলো সঠিকভাবে পূরণ করুন।", "error");
     }
   };
 
-  const prevStep = () => setCurrentStep((p) => Math.max(p - 1, 1));
+  const prevStep = () => {
+    const target = Math.max(currentStep - 1, 1);
+    setCurrentStep(target);
+    speakStepGuide(target);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const jumpToStep = (step: number) => {
+    if (step < currentStep) {
+      setCurrentStep(step);
+      speakStepGuide(step);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (step === currentStep + 1 && validateStep(currentStep)) {
+      nextStep();
+    }
+  };
+
+  const totalItemQty = items.reduce((acc, i) => acc + (Number(i.quantity) || 1), 0);
+  const selectedAddrObj = savedAddresses.find((a) => a.id === selectedAddressId);
+
+  const stepsMeta = [
+    { step: 1, shortLabel: "ডেলিভারি", fullLabel: "01. ডেলিভারি ঠিকানা", icon: Truck },
+    { step: 2, shortLabel: "পেমেন্ট", fullLabel: "02. পেমেন্ট পদ্ধতি", icon: CreditCard },
+    { step: 3, shortLabel: "রিভিউ", fullLabel: "03. চূড়ান্ত রিভিউ", icon: Check },
+  ];
+
+  // Shared Voucher & Promo Input Block (rendered inside Mobile Sheet & Desktop Sticky Console)
+  const renderPromoControls = () => (
+    <div className="space-y-2.5">
+      {!appliedPromo ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowCouponsModal(true)}
+            className="w-full px-4 py-2.5 ds-liquid-subpanel hover:opacity-90 transition-opacity flex items-center justify-between text-xs font-semibold text-zinc-800 dark:text-zinc-100 cursor-pointer"
+          >
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <Ticket className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+              <span>ভাউচার বা কুপন নির্বাচন করুন</span>
+            </span>
+            <span className="text-[11px] text-sky-600 dark:text-sky-400 font-bold whitespace-nowrap">
+              দেখুন
+            </span>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="প্রোমো বা অ্যাফিলিয়েট কোড লিখুন"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              className="flex-1 min-w-0 h-10 px-3.5 text-xs font-medium ds-liquid-input outline-none focus:ring-2 focus:ring-sky-500/40"
+            />
+            <button
+              type="button"
+              onClick={applyPromo}
+              className="px-4 h-10 ds-liquid-btn-secondary !min-h-0 !text-xs !font-bold shrink-0 whitespace-nowrap cursor-pointer"
+            >
+              প্রয়োগ করুন
+            </button>
+          </div>
+          {couponError && (
+            <p className="text-xs font-semibold text-rose-500 px-1">{couponError}</p>
+          )}
+        </>
+      ) : (
+        <div className="flex items-center justify-between gap-2 p-3 ds-liquid-callout-emerald">
+          <div className="min-w-0 flex items-center gap-2.5">
+            <Ticket className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <div className="min-w-0">
+              <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white truncate">
+                {appliedPromo.code}
+              </div>
+              <div className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium tabular-nums">
+                {appliedPromo.type === "percent"
+                  ? `${appliedPromo.discount}% ছাড় যুক্ত হয়েছে`
+                  : `${formatPrice(appliedPromo.discount)} ছাড় যুক্ত হয়েছে`}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={removePromo}
+            aria-label="প্রোমো কোড সরান"
+            className="w-7 h-7 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center shrink-0 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Shared Price Breakdown Rows
+  const renderPriceBreakdown = () => (
+    <div className="space-y-2.5 text-xs sm:text-sm">
+      <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-300">
+        <span>{t("Subtotal") || "সাবটোটাল"} ({totalItemQty}টি পণ্য)</span>
+        <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">
+          {formatPrice(subtotal)}
+        </span>
+      </div>
+      {discount > 0 && (
+        <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+          <span>ডিসকাউন্ট ছাড়</span>
+          <span className="tabular-nums">-{formatPrice(discount)}</span>
+        </div>
+      )}
+      <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-300">
+        <span>{t("Delivery Fee") || "ডেলিভারি চার্জ"}</span>
+        <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">
+          {formatPrice(deliveryFee)}
+        </span>
+      </div>
+
+      <div className="pt-3 border-t border-slate-900/[0.08] dark:border-white/[0.1] flex items-baseline justify-between gap-2">
+        <span className="text-sm font-bold text-zinc-900 dark:text-white">
+          {t("Total") || "সর্বমোট মূল্য"}
+        </span>
+        <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
+          {formatPrice(total)}
+        </span>
+      </div>
+
+      {/* Advance vs Due Transparency Line */}
+      <div className="pt-1 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+        <span>
+          এখন অগ্রিম প্রদেয়:{" "}
+          <strong className="text-zinc-900 dark:text-white">
+            {requiredAdvance === 0 ? "৳০" : formatPrice(requiredAdvance)}
+          </strong>
+        </span>
+        <span>·</span>
+        <span>
+          ডেলিভারিতে বাকি:{" "}
+          <strong className="text-zinc-900 dark:text-white">
+            {formatPrice(dueOnDelivery)}
+          </strong>
+        </span>
+      </div>
+    </div>
+  );
 
   if (isLoading) {
     return (
-      <div className="w-full max-w-7xl mx-auto p-6 flex flex-col gap-6 font-inter bg-zinc-50 dark:bg-[#000000]">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <Skeleton className="h-8 w-32" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-96 lg:col-span-2" />
-          <Skeleton className="h-96" />
+      <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell py-6 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="ds-liquid-panel p-5 flex items-center justify-between gap-4">
+            <div className="h-7 w-44 rounded-full ds-skeleton" />
+            <div className="h-10 w-64 rounded-full ds-skeleton hidden sm:block" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-7">
+            <div className="lg:col-span-7 ds-liquid-panel p-6 space-y-4">
+              <div className="h-6 w-48 rounded-full ds-skeleton" />
+              <div className="h-28 w-full rounded-2xl ds-skeleton" />
+              <div className="h-28 w-full rounded-2xl ds-skeleton" />
+            </div>
+            <div className="hidden lg:block lg:col-span-5 ds-liquid-panel p-6 space-y-4">
+              <div className="h-6 w-40 rounded-full ds-skeleton" />
+              <div className="h-20 w-full rounded-2xl ds-skeleton" />
+              <div className="h-32 w-full rounded-2xl ds-skeleton" />
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full min-h-screen bg-zinc-50 dark:bg-[#000000] font-inter">
-      <div className="max-w-7xl mx-auto p-6 flex flex-col gap-6">
-        {/* Progress Steps */}
-        <div className="flex items-center justify-between sm:justify-start sm:gap-6 py-4 overflow-x-auto no-scrollbar mask-linear-fade pr-4">
-          {[
-            { step: 1, label: "Shipping", icon: Truck },
-            { step: 2, label: "Payment", icon: CreditCard },
-            { step: 3, label: "Review", icon: Check },
-          ].map(({ step, label, icon: Icon }, index) => (
-            <div key={step} className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1 sm:gap-2">
-                <div
-                  className={cn(
-                    "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 transition-colors",
-                    currentStep >= step
-                      ? "bg-zinc-900 dark:bg-zinc-100 border-zinc-900 dark:border-zinc-100 text-white dark:text-zinc-900"
-                      : "border-zinc-300 dark:border-zinc-700 text-zinc-400",
-                  )}
-                >
-                  {currentStep > step ? (
-                    <Check className="h-3 w-3 sm:h-4 sm:w-4" />
-                  ) : (
-                    <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
-                  )}
-                </div>
-                <span
-                  className={cn(
-                    "text-[10px] sm:text-sm font-bold whitespace-nowrap",
-                    currentStep >= step
-                      ? "text-zinc-900 dark:text-zinc-100"
-                      : "text-zinc-400",
-                  )}
-                >
-                  {label}
-                </span>
-              </div>
-              {index < 2 && (
-                <div
-                  className={cn(
-                    "w-4 sm:w-8 h-0.5",
-                    currentStep > step
-                      ? "bg-zinc-900 dark:bg-zinc-100"
-                      : "bg-zinc-200 dark:bg-zinc-800",
-                  )}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            {/* Step 1: Shipping */}
-            {currentStep === 1 && (
-              <Card className="rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-2">
-                <CardHeader>
-                  <h2 className="text-xl font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
-                    <MapPin className="h-5 w-5 text-zinc-900 dark:text-zinc-100" />{" "}
-                    {t('Shipping Information') || 'Shipping Information'}
-                  </h2>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-6">
-                  {savedAddresses && savedAddresses.length > 0 ? (
-                    <div className="space-y-3">
-                      {savedAddresses
-                        .filter(Boolean)
-                        .map((addr, idx) => {
-                          const addrId = String(addr?.id || `addr_${idx}`);
-                          const addrName = typeof addr?.name === "string" ? addr.name : "User";
-                          const addrPhone = typeof addr?.phone === "string" ? addr.phone : "";
-                          const addrText = formatAddressText(addr?.address || addr);
-
-                          return (
-                            <div
-                              key={addrId}
-                              onClick={() => setSelectedAddressId(addrId)}
-                              className={cn(
-                                "p-4 border-2 rounded-2xl cursor-pointer transition-all",
-                                selectedAddressId === addrId
-                                  ? "border-emerald-600 dark:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
-                                  : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700",
-                              )}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className={cn(
-                                    "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                                    selectedAddressId === addrId
-                                      ? "border-emerald-600 dark:border-emerald-500"
-                                      : "border-zinc-300 dark:border-zinc-600",
-                                  )}
-                                >
-                                  {selectedAddressId === addrId && (
-                                    <div className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-500" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-bold text-zinc-900 dark:text-zinc-100">
-                                    {addrName}
-                                  </div>
-                                  {addrPhone ? (
-                                    <div className="text-sm font-medium text-zinc-500">
-                                      {addrPhone}
-                                    </div>
-                                  ) : null}
-                                  {addrText ? (
-                                    <div className="text-sm mt-1 text-zinc-600 dark:text-zinc-400">
-                                      {addrText}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
-                        <Button
-                          variant="outline"
-                          type="button"
-                          className="border-dashed border-emerald-500/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-2xl py-2.5 px-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all"
-                          onClick={() => navigate('/shipping-address')}
-                        >
-                          + নতুন ঠিকানা যোগ করুন
-                        </Button>
-                        <Button
-                          variant="outline"
-                          type="button"
-                          className="border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-2xl py-2.5 px-3 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
-                          onClick={() => navigate('/shipping-address')}
-                        >
-                          <Settings className="w-3.5 h-3.5 text-zinc-400" />
-                          <span>ঠিকানা ম্যানেজ</span>
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {/* Empty Address State navigating to shipping address page */}
-                  {savedAddresses.length === 0 && (
-                    <div className="p-6 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 border border-dashed border-zinc-200 dark:border-zinc-700 text-center space-y-3">
-                      <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                        <MapPin className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-zinc-900 dark:text-white text-sm sm:text-base">কোনো ডেলিভারি ঠিকানা পাওয়া যায়নি</h4>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">অর্ডার সম্পন্ন করতে অনুগ্রহ করে একটি ডেলিভারি ঠিকানা যুক্ত করুন</p>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={() => navigate('/shipping-address')}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-full text-xs shadow-md"
-                      >
-                        + নতুন ঠিকানা যোগ করুন
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Gift Toggle */}
-                  <div className="mt-4 border-t border-zinc-100 dark:border-zinc-800 pt-6">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          id="gift"
-                          checked={isGift}
-                          onCheckedChange={(c) => setIsGift(!!c)}
-                        />
-                        <div>
-                          <Label
-                            htmlFor="gift"
-                            className="font-bold text-base cursor-pointer"
-                          >
-                            Send as a Gift
-                          </Label>
-                          <p className="text-sm text-zinc-500">
-                            Invoice will hide prices. COD disabled.
-                          </p>
-                        </div>
-                      </div>
-                      {isGift && (
-                        <div className="space-y-2 ml-7">
-                          <Label>Gift Note</Label>
-                          <Input
-                            placeholder="Happy Birthday!..."
-                            value={giftNote}
-                            onChange={(e) => setGiftNote(e.target.value)}
-                          />
-                        </div>
-                      )}
-
-                      {/* Bypass Mal Verification Section */}
-                      {hasBypassProduct && !isVipSubscriber && (
-                        <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-4 mt-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
-                              <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2 flex-nowrap">
-                                <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
-                                  বাইপাস ভেরিফিকেশন
-                                </h4>
-                                <span className="text-[10px] bg-amber-500 text-white font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                                  COD সুবিধা
-                                </span>
-                              </div>
-                              <p className="text-[11px] sm:text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                                ক্যাশ অন ডেলিভারি (COD) নিশ্চিত করতে অভিভাবকের নম্বর দিন
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Guardian Number (Mandatory) */}
-                          <div className="space-y-1.5">
-                            <Label htmlFor="guardianNumber" className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center justify-between whitespace-nowrap">
-                              <span className="whitespace-nowrap">অভিভাবকের মোবাইল নম্বর <span className="text-red-500">*</span></span>
-                              <span className="text-[11px] text-amber-600 dark:text-amber-400 font-normal whitespace-nowrap">(১১ ডিজিট)</span>
-                            </Label>
-                            <Input
-                              id="guardianNumber"
-                              type="tel"
-                              placeholder="01XXXXXXXXX"
-                              value={guardianNumber}
-                              onChange={(e) => setGuardianNumber(e.target.value)}
-                              className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 h-10 sm:h-11 text-xs sm:text-sm"
-                            />
-                            <p className="text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-1.5 pt-0.5 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                              <span className="whitespace-nowrap overflow-hidden text-ellipsis">বিশেষ দ্রষ্টব্য: অর্ডার নিশ্চিত করতে অভিভাবককে কল করা হতে পারে</span>
-                            </p>
-                          </div>
-
-                          {/* NID Card Upload (Optional) */}
-                          <div className="space-y-2 pt-3 border-t border-amber-500/20">
-                            <div className="flex items-center justify-between whitespace-nowrap">
-                              <Label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 whitespace-nowrap">
-                                NID কার্ড সংযুক্তকরণ (ঐচ্ছিক)
-                              </Label>
-                              <span className="text-[11px] text-zinc-500 font-normal whitespace-nowrap">ছবি আপলোড</span>
-                            </div>
-                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 whitespace-nowrap overflow-hidden text-ellipsis">
-                              আপনার বা অভিভাবকের NID কার্ডের ছবি আপলোড করতে পারেন
-                            </p>
-
-                            {nidCardUrl ? (
-                              <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-500/30">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <img
-                                    src={nidCardUrl}
-                                    alt="Uploaded NID"
-                                    className="w-12 h-12 object-cover rounded-lg border border-zinc-200 dark:border-zinc-700"
-                                  />
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate">
-                                      ✓ NID কার্ড ছবি সংযুক্ত হয়েছে
-                                    </p>
-                                    <a
-                                      href={nidCardUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-[11px] text-zinc-400 underline hover:text-zinc-300"
-                                    >
-                                      ছবি দেখুন
-                                    </a>
-                                  </div>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setNidCardUrl("")}
-                                  className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                >
-                                  মুছুন
-                                </Button>
-                              </div>
-                            ) : (
-                              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-amber-500/30 hover:border-amber-500/60 rounded-xl cursor-pointer bg-white/70 dark:bg-zinc-900/70 transition-colors">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  disabled={uploadingNid}
-                                  onChange={handleNidUpload}
-                                />
-                                {uploadingNid ? (
-                                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-medium">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>NID ছবি আপলোড হচ্ছে (imgbb)...</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-col items-center gap-1 text-center">
-                                    <Upload className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
-                                    <span className="text-[11px] sm:text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
-                                      NID কার্ড ছবি আপলোড করুন (JPG, PNG সর্বোচ্চ 10MB)
-                                    </span>
-                                  </div>
-                                )}
-                              </label>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-end pt-4 pb-2">
-                  <Button
-                    onClick={nextStep}
-                    disabled={!validateStep(1)}
-                    size="default"
-                    className="text-xs sm:text-sm px-4 sm:px-6"
-                  >
-                    Continue
-                  </Button>
-                </CardFooter>
-              </Card>
-            )}
-
-            {/* Step 2: Payment */}
-            {currentStep === 2 && (
-              <Card className="rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-2">
-                <CardHeader>
-                  <h2 className="text-xl font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
-                    <CreditCard className="h-5 w-5 text-zinc-900 dark:text-zinc-100" />{" "}
-                    Payment Information
-                  </h2>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-6">
-                  {requiredAdvance === 0 ? (
-                    /* Bypass Mal / VIP COD Confirmation */
-                    <div className="space-y-4">
-                      <div className="p-4 sm:p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-4 overflow-hidden">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-sm shrink-0">
-                              {isVipSubscriber ? <Crown className="w-5 h-5" /> : <Truck className="w-5 h-5" />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 leading-snug break-words">
-                                {isVipSubscriber ? "ভিআইপি ফুল ক্যাশ অন ডেলিভারি" : "ক্যাশ অন ডেলিভারি (COD)"}
-                              </h3>
-                              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 leading-relaxed break-words">
-                                {isVipSubscriber
-                                  ? "ভিআইপি মেম্বারশিপ সক্রিয় থাকায় কোনো প্রকার অগ্রিম পেমেন্ট ছাড়াই সরাসরি ক্যাশ অন ডেলিভারিতে অর্ডার সম্পন্ন হচ্ছে।"
-                                  : "এই অর্ডারে কোনো প্রকার অগ্রিম পেমেন্ট করতে হবে না।"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="shrink-0 self-start sm:self-center">
-                            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-emerald-500 text-white font-bold px-3 py-1 rounded-full shadow-sm">
-                              {isVipSubscriber ? "👑 VIP মেম্বার (০৳ অগ্রিম)" : "বাইপাস প্রোডাক্ট"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                          <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 flex justify-between sm:flex-col sm:justify-start items-center sm:items-start gap-1">
-                            <span className="text-xs text-zinc-500">মোট অর্ডার মূল্য</span>
-                            <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</span>
-                          </div>
-                          <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-emerald-500/30 flex justify-between sm:flex-col sm:justify-start items-center sm:items-start gap-1">
-                            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">অগ্রিম প্রদেয়</span>
-                            <span className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400">৳০ (কোনো অগ্রিম নেই)</span>
-                          </div>
-                          <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 flex justify-between sm:flex-col sm:justify-start items-center sm:items-start gap-1">
-                            <span className="text-xs text-zinc-500">ডেলিভারির সময় প্রদেয়</span>
-                            <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</span>
-                          </div>
-                        </div>
-
-                        <div className="p-3 sm:p-4 bg-white/80 dark:bg-zinc-900/80 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs space-y-1.5 text-zinc-700 dark:text-zinc-300">
-                          {isVipSubscriber ? (
-                            <p className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 leading-relaxed break-words">
-                              <Crown className="w-4 h-4 text-amber-500 shrink-0" />
-                              <span>ভিআইপি মেম্বারশিপ প্রিভিলেজ সক্রিয় রয়েছে — কোনো সার্ভিস বা অগ্রিম চার্জ নেই!</span>
-                            </p>
-                          ) : (
-                            guardianNumber && (
-                              <p className="font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 leading-relaxed break-words">
-                                <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                <span>অভিভাবক নম্বর: <strong className="font-mono">{guardianNumber}</strong></span>
-                              </p>
-                            )
-                          )}
-                          <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed break-words">
-                            পণ্য হাতে পেয়ে পুরোপুরি যাচাই করে কুরিয়ার কর্মীকে ক্যাশ পরিশোধ করবেন।
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Advance Payment via Rotating bKash / Nagad */
-                    <div className="space-y-6">
-                      {/* VIP Subscription CTA for Free Tier */}
-                      <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-amber-500/5 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-amber-400 text-zinc-950 flex items-center justify-center font-black shrink-0 shadow-md">
-                            <Crown className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white">
-                              কোনো অগ্রিম ছাড়া ফুল ক্যাশ অন ডেলিভারিতে অর্ডার করতে চান?
-                            </div>
-                            <div className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                              ভিআইপি মেম্বারশিপ নিলে কোনো অগ্রিম (৳{requiredAdvance}) ছাড়াই অর্ডার করতে পারবেন!
-                            </div>
-                          </div>
-                        </div>
-                        <Link
-                          to="/subscription"
-                          target="_blank"
-                          className="px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-zinc-950 font-black text-xs shrink-0 shadow-md text-center transition-all flex items-center justify-center gap-1.5"
-                        >
-                          <Crown className="w-3.5 h-3.5" />
-                          <span>ভিআইপি নিন</span>
-                        </Link>
-                      </div>
-
-                      {/* Product Advance Type Banner */}
-                      <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 flex items-start gap-2.5">
-                        <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                        <div>
-                          {isAllOffer ? (
-                            <p className="font-semibold text-amber-800 dark:text-amber-300">
-                              অফার পণ্যের ক্ষেত্রে ১০০% ফুল অগ্রিম পেমেন্ট আবশ্যক।
-                            </p>
-                          ) : hasOfferProduct ? (
-                            <p className="font-semibold text-amber-800 dark:text-amber-300">
-                              অর্ডারে অফার বা কাস্টম প্রোডাক্ট থাকায় নির্ধারিত পরিমাণ অগ্রিম পেমেন্ট প্রযোজ্য।
-                            </p>
-                          ) : (
-                            <p className="font-semibold text-amber-800 dark:text-amber-300">
-                              নরমাল বর্ডার মালের ক্ষেত্রে ৫০% হাফ অগ্রিম পেমেন্ট প্রযোজ্য। বাকি টাকা ডেলিভারির সময় ক্যাশে প্রদান করবেন।
-                            </p>
-                          )}
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                            নিচের যেকোনো একটি পেমেন্ট মেথড নির্বাচন করে অগ্রিম পরিশোধ সম্পন্ন করুন।
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Mobile Banking Advance Info Card */}
-                      <div className="rounded-2xl p-5 sm:p-6 border-2 border-pink-500/20 bg-pink-50/20 dark:bg-pink-950/10 space-y-5">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4 border-zinc-200/80 dark:border-zinc-800">
-                          <div>
-                            <span className="text-xs font-semibold text-zinc-500 tracking-normal">
-                              মোবাইল ব্যাংকিং পেমেন্ট (বিকাশ / নগদ)
-                            </span>
-                            <h4 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                              Send Money / পেমেন্ট গেটওয়ে
-                            </h4>
-                          </div>
-                          <span className="self-start sm:self-auto text-[11px] font-bold px-3 py-1 rounded-full tracking-normal bg-[#EF8020] text-white">
-                            সুরক্ষিত গেটওয়ে
-                          </span>
-                        </div>
-
-                        {/* Notice: bKash/Nagad number shown on dedicated Payment Page */}
-                        <div className="p-4 bg-gradient-to-r from-pink-500/10 via-amber-500/10 to-transparent border border-pink-500/20 dark:border-pink-500/30 rounded-2xl space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-full bg-[#E2125B] text-white flex items-center justify-center text-xs font-black shrink-0 shadow-sm">
-                              ৳
-                            </span>
-                            <h5 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                              পেমেন্ট পেজে বিকাশ ও নগদ নির্বাচন করতে পারবেন
-                            </h5>
-                          </div>
-                          <p className="text-xs text-zinc-600 dark:text-zinc-400 pl-9 leading-relaxed">
-                            সুরক্ষা ও নির্ভুল ট্রানজেকশনের স্বার্থে পরবর্তী সুরক্ষিত পেমেন্ট পেজে আপনাকে সক্রিয় নম্বর ও বিস্তারিত প্রদান করা হবে এবং সেখান থেকে বিকাশ অথবা নগদ নির্বাচন করতে পারবেন।
-                          </p>
-                        </div>
-
-                        {/* Amount Breakdown Summary Box */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-white/90 dark:bg-zinc-900/90 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                          <div>
-                            <span className="text-[11px] text-zinc-500 block">মোট অর্ডার মূল্য</span>
-                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{formatPrice(total)}</span>
-                          </div>
-                          <div>
-                            <span className="text-[11px] text-[#D12053] dark:text-[#f8719d] block font-semibold">অগ্রিম পরিশোধযোগ্য (Send Money)</span>
-                            <span className="text-base sm:text-lg font-black text-[#D12053] dark:text-[#f8719d]">৳{requiredAdvance}</span>
-                          </div>
-                          <div>
-                            <span className="text-[11px] text-zinc-500 block">ক্যাশ অন ডেলিভারিতে বাকি প্রদেয়</span>
-                            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">৳{dueOnDelivery}</span>
-                          </div>
-                        </div>
-
-                        {/* Notice: Payment takes place on dedicated page */}
-                        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                              ✓
-                            </span>
-                            <span className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-300">
-                              পেমেন্ট পরবর্তী ডেডিকেটেড পেজে সম্পন্ন হবে
-                            </span>
-                          </div>
-                          <p className="text-xs text-zinc-600 dark:text-zinc-400 pl-8 leading-relaxed">
-                            চেকআউট পেজে আপনাকে কোনো TrxID দিতে হবে না। অর্ডার রিভিউ কনফার্ম করার পর সরাসরি সুরক্ষিত ডেডিকেটেড গেটওয়ে পেজে নিয়ে যাওয়া হবে, যেখান থেকে আপনি আপনার বিকাশ অথবা নগদ অ্যাকাউন্ট থেকে খুব সহজেই পেমেন্ট সম্পন্ন করতে পারবেন।
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Optional: DP Coin payment if user has coins */}
-                      {userCoins > 0 && (
-                        <div className="pt-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPaymentType(paymentType === "vgcoin" ? "advance" : "vgcoin");
-                              setAdvanceType("full");
-                            }}
-                            className={cn(
-                              "w-full flex items-center justify-between p-3 rounded-xl border text-xs transition-colors cursor-pointer gap-2 overflow-hidden",
-                              paymentType === "vgcoin"
-                                ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-100"
-                                : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300"
-                            )}
-                          >
-                            <span className="font-semibold text-[11px] sm:text-xs whitespace-nowrap overflow-hidden text-ellipsis truncate">
-                              💎 ডিপি কয়েন ব্যালেন্স: {userCoins} কয়েন
-                            </span>
-                            <span className="font-bold underline text-[11px] sm:text-xs whitespace-nowrap shrink-0">
-                              {paymentType === "vgcoin" ? "সক্রিয় ✓" : "কয়েন ব্যবহার করুন"}
-                            </span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter className="flex justify-between items-center border-t border-zinc-100 dark:border-zinc-800 pt-4 pb-2">
-                  <Button
-                    variant="ghost"
-                    className="text-xs sm:text-sm px-2 sm:px-4"
-                    onClick={prevStep}
-                  >
-                    <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" /> Back
-                  </Button>
-                  <Button
-                    onClick={nextStep}
-                    disabled={!validateStep(2)}
-                    size="default"
-                    className="text-xs sm:text-sm px-4 sm:px-6"
-                  >
-                    Review Order
-                  </Button>
-                </CardFooter>
-              </Card>
-            )}
-
-            {/* Step 3: Review */}
-            {currentStep === 3 && (
-              <Card className="rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col gap-2">
-                <CardHeader>
-                  <h2 className="text-xl font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
-                    <Check className="h-5 w-5 text-zinc-900 dark:text-zinc-100" />{" "}
-                    Review Your Order
-                  </h2>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-zinc-500">Shipping Details</Label>
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-sm font-medium">
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">
-                          {
-                            typeof savedAddresses.find((a) => a.id === selectedAddressId)?.name === "string"
-                              ? savedAddresses.find((a) => a.id === selectedAddressId)?.name
-                              : "User"
-                          }
-                        </p>
-                        <p className="text-zinc-500">
-                          {
-                            typeof savedAddresses.find((a) => a.id === selectedAddressId)?.phone === "string"
-                              ? savedAddresses.find((a) => a.id === selectedAddressId)?.phone
-                              : ""
-                          }
-                        </p>
-                        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-                          {
-                            formatAddressText(
-                              savedAddresses.find((a) => a.id === selectedAddressId)?.address
-                            )
-                          }
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-zinc-500">{t('Payment Details') || 'Payment Details'}</Label>
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-sm font-medium space-y-2.5">
-                        {paymentType === "vgcoin" ? (
-                          <div>
-                            <p className="font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis truncate">
-                              DP Coins ({advanceType === "full" ? "সম্পূর্ণ পেমেন্ট" : "অগ্রিম বুকিং"})
-                            </p>
-                            <p className="text-[11px] sm:text-xs text-zinc-500 mt-1 whitespace-nowrap truncate">পেমেন্ট স্ট্যাটাস: কয়েন দিয়ে সংরক্ষিত</p>
-                          </div>
-                        ) : requiredAdvance === 0 ? (
-                          <div className="space-y-1.5 overflow-hidden">
-                            <div className="flex items-center justify-between gap-2 overflow-hidden">
-                              <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis truncate">
-                                {isVipSubscriber ? "ভিআইপি ফুল ক্যাশ অন ডেলিভারি" : "ক্যাশ অন ডেলিভারি (বাইপাস)"}
-                              </span>
-                              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0 whitespace-nowrap">
-                                {isVipSubscriber ? "👑 VIP 0 Advance" : "0 Advance"}
-                              </span>
-                            </div>
-                            <p className="text-xs text-zinc-600 dark:text-zinc-300 whitespace-nowrap truncate">অগ্রিম প্রদেয়: <strong className="text-zinc-900 dark:text-zinc-100">৳০</strong> • বাকি: <strong className="text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</strong></p>
-                            {!isVipSubscriber && guardianNumber && (
-                              <p className="text-xs text-zinc-600 dark:text-zinc-300 whitespace-nowrap truncate">গার্ডিয়ান মোবাইল: <strong className="font-mono">{guardianNumber}</strong></p>
-                            )}
-                            {nidCardUrl && (
-                              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 whitespace-nowrap truncate">
-                                ✓ এনআইডি কার্ড সংযুক্ত হয়েছে
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                                {selectedPaymentMethod === "bkash" ? "bKash (বিকাশ) সেন্ড মানি" : "Nagad (নগদ) সেন্ড মানি"}
-                              </span>
-                              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
-                                পরবর্তী পেজে পরিশোধযোগ্য
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-zinc-200 dark:border-zinc-700">
-                              <div>
-                                <span className="text-zinc-500 block">অগ্রিম পরিশোধযোগ্য:</span>
-                                <span className="font-bold text-[#D12053] dark:text-[#f8719d] text-sm">
-                                  ৳{requiredAdvance}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-zinc-500 block">ক্যাশ অন ডেলিভারিতে বাকি:</span>
-                                <span className="font-bold text-zinc-800 dark:text-zinc-200 text-sm">
-                                  ৳{dueOnDelivery}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Checkout Policy Notes */}
-                  <div className="space-y-4 mb-6 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                    <p className="note">
-                      <strong>Delivery Notice:</strong> Border cross imported products delivery time is 1 month+ (approx 30-45 business days) with dedicated tracking.
-                    </p>
-                    <p className="note wr">
-                      <strong>Important Warning:</strong> Mismatched transaction details or wrong IDs will result in immediate order cancellation. Recording an unboxing video is mandatory for returns.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-3 border-t border-zinc-100 dark:border-zinc-800 pt-6">
-                    <Checkbox
-                      id="terms"
-                      checked={agreeToTerms}
-                      onCheckedChange={(c) => setAgreeToTerms(!!c)}
-                      className="mt-0.5"
-                    />
-                    <div className="text-sm font-bold leading-snug">
-                      <label htmlFor="terms" className="cursor-pointer text-zinc-900 dark:text-zinc-100 mr-1">
-                        I agree to the
-                      </label>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          navigate('/terms');
-                        }}
-                        className="underline text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-extrabold cursor-pointer inline-block"
-                      >
-                        Terms of Service
-                      </button>{" "}
-                      <label htmlFor="terms" className="cursor-pointer text-zinc-900 dark:text-zinc-100 mx-1">
-                        and
-                      </label>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          navigate('/privacy');
-                        }}
-                        className="underline text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-extrabold cursor-pointer inline-block"
-                      >
-                        Privacy Policy
-                      </button>
-                      <span className="text-zinc-600 dark:text-zinc-400 font-normal">
-                        . Note: Returns are subjective to{" "}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          navigate('/refund-policy');
-                        }}
-                        className="underline text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-extrabold cursor-pointer inline-block"
-                      >
-                        warranty policies
-                      </button>
-                      <span className="text-zinc-600 dark:text-zinc-400 font-normal">.</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-row justify-between items-center border-t border-zinc-100 dark:border-zinc-800 pt-4 pb-2 sm:gap-4 gap-2">
-                  <Button
-                    variant="ghost"
-                    className="text-xs sm:text-sm px-2 sm:px-4"
-                    onClick={prevStep}
-                  >
-                    <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" /> Back
-                  </Button>
-                  <Button
-                    onClick={placeOrder}
-                    disabled={!validateStep(3) || isLoading}
-                    size="default"
-                    className="bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-lg shadow-black/10 dark:shadow-white/10 text-white dark:text-zinc-900 border-0 text-xs sm:text-sm px-3.5 sm:px-5 flex-1 sm:flex-none"
-                  >
-                    <Lock className="mr-2 h-3 w-3 sm:h-4 sm:w-4" /> {isLoading ? "অর্ডার তৈরি হচ্ছে..." : requiredAdvance === 0 ? "Confirm COD Order" : "Go to Payment Page"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            )}
+    <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell py-4 sm:py-7 lg:py-9 px-3.5 sm:px-6 pb-28 lg:pb-16">
+      <div className="max-w-6xl mx-auto space-y-5 lg:space-y-7">
+        {/* =====================================================================
+            DESKTOP LIQUID GLASS TOP BAR (lg and up)
+            Wide architectural header + interactive Liquid Glass Segmented Dock
+           ===================================================================== */}
+        <div className="hidden lg:flex items-center justify-between gap-6 ds-liquid-panel px-7 py-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">
+              সুরক্ষিত চেকআউট
+            </h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
+              {totalItemQty}টি পণ্য · ধাপ {currentStep}/3 · এনক্রিপ্টেড অর্ডার প্রসেসিং
+            </p>
           </div>
 
-          {/* Sidebar */}
-          <div className="flex flex-col gap-6">
-            <Card className="rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-              <CardHeader className="bg-zinc-50/50 dark:bg-zinc-800/20 border-b border-zinc-100 dark:border-zinc-800 pb-5">
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingBag className="text-zinc-500 w-5 h-5" /> {t('Order Summary') || 'Order Summary'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-5">
-                <div className="flex flex-col gap-4 max-h-64 overflow-y-auto pr-2 scrollbar-thin">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="ds-liquid-dock rounded-full p-1.5 flex items-center gap-1">
+              {stepsMeta.map(({ step, fullLabel, icon: Icon }) => {
+                const isActive = currentStep === step;
+                const isDone = currentStep > step;
+                return (
+                  <button
+                    key={step}
+                    type="button"
+                    onClick={() => jumpToStep(step)}
+                    disabled={step > currentStep && !validateStep(currentStep)}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed",
+                      isActive
+                        ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
+                        : isDone
+                          ? "text-sky-600 dark:text-sky-400 hover:opacity-80"
+                          : "text-zinc-400 dark:text-zinc-500"
+                    )}
+                  >
+                    {isDone ? (
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    ) : (
+                      <Icon className="w-3.5 h-3.5" />
+                    )}
+                    <span>{fullLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <AuthVoiceToggle isInline />
+          </div>
+        </div>
+
+        {/* =====================================================================
+            MOBILE & TABLET LIQUID GLASS HEADER + COLLAPSIBLE SUMMARY (< lg)
+            Thumb-friendly segmented bar + expandable frosted order drawer
+           ===================================================================== */}
+        <div className="flex lg:hidden flex-col gap-3">
+          {/* Mobile Title + Voice Assistant Row */}
+          <div className="flex items-center justify-between gap-2 px-1">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900 dark:text-white truncate">
+                চেকআউট
+              </h1>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                {totalItemQty}টি পণ্য · ধাপ {currentStep}/3
+              </p>
+            </div>
+            <AuthVoiceToggle isInline />
+          </div>
+
+          {/* Mobile 3-Segment Liquid Glass Stepper */}
+          <div className="ds-liquid-dock rounded-full p-1 grid grid-cols-3 gap-1">
+            {stepsMeta.map(({ step, shortLabel, icon: Icon }) => {
+              const isActive = currentStep === step;
+              const isDone = currentStep > step;
+              return (
+                <button
+                  key={step}
+                  type="button"
+                  onClick={() => jumpToStep(step)}
+                  disabled={step > currentStep && !validateStep(currentStep)}
+                  className={cn(
+                    "py-2 px-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed",
+                    isActive
+                      ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
+                      : isDone
+                        ? "text-sky-600 dark:text-sky-400"
+                        : "text-zinc-400 dark:text-zinc-500"
+                  )}
+                >
+                  {isDone ? (
+                    <Check className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" />
+                  ) : (
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  <span>{shortLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile Collapsible Liquid Glass Order Summary Sheet */}
+          <div className="ds-liquid-panel !rounded-[24px] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMobileSummaryOpen((prev) => !prev)}
+              className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex -space-x-2 shrink-0">
+                  {items.slice(0, 3).map((item, idx) => (
+                    <div
+                      key={`${item.id}_${idx}`}
+                      className="w-9 h-9 rounded-xl ds-liquid-subpanel overflow-hidden flex items-center justify-center p-0.5"
+                    >
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-contain rounded-lg"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1 whitespace-nowrap">
+                    <span>অর্ডার সামারি ও ভাউচার</span>
+                    <ChevronDown
+                      className={cn(
+                        "w-4 h-4 text-zinc-500 transition-transform duration-200 shrink-0",
+                        mobileSummaryOpen && "rotate-180"
+                      )}
+                    />
+                  </div>
+                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate tabular-nums">
+                    {mobileSummaryOpen ? "সংক্ষিপ্ত করতে ট্যাপ করুন" : `${totalItemQty}টি পণ্য · ভাউচার যোগ করুন`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                <div className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                  {formatPrice(total)}
+                </div>
+                {discount > 0 && (
+                  <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    -{formatPrice(discount)} ছাড়
+                  </div>
+                )}
+              </div>
+            </button>
+
+            {mobileSummaryOpen && (
+              <div className="px-4 pb-4 pt-3 border-t border-slate-900/[0.07] dark:border-white/[0.08] space-y-4">
+                <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
                   {items.map((item) => (
-                    <div key={item.id} className="flex gap-4 items-center">
-                      <div className="relative w-16 h-16 shrink-0 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 overflow-hidden">
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 p-2.5 ds-liquid-subpanel"
+                    >
+                      <div className="relative w-12 h-12 rounded-xl bg-white/70 dark:bg-white/5 overflow-hidden shrink-0 p-1">
                         <PixelImage
                           src={item.image}
                           alt={item.name}
                           className="w-full h-full bg-transparent"
-                          imgClassName="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal p-1"
+                          imgClassName="w-full h-full object-contain"
                         />
-                        <span className="absolute -top-1 -right-1 bg-zinc-900 text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold shadow-sm z-10">
-                          {item.quantity}
-                        </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">
+                        <div className="text-xs font-bold text-zinc-900 dark:text-white truncate">
                           {item.name}
                         </div>
-                        <div className="font-bold text-sm text-zinc-500 mt-1">
-                          {formatPrice(item.price * item.quantity)}
+                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
+                          পরিমাণ: {item.quantity} × {formatPrice(item.price)}
                         </div>
+                      </div>
+                      <div className="text-xs font-bold text-zinc-900 dark:text-white shrink-0 tabular-nums">
+                        {formatPrice(item.price * item.quantity)}
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  {!appliedPromo ? (
-                    <>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          onClick={() => setShowCouponsModal(true)}
-                          variant="outline"
-                          className="w-full text-xs font-bold border-dashed border-zinc-300 dark:border-zinc-700 h-10 flex items-center justify-center gap-2 text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800"
-                        >
-                          <Ticket className="w-4 h-4" /> Select a Voucher
-                        </Button>
-                      </div>
+                {renderPromoControls()}
+                <div className="pt-2 border-t border-slate-900/[0.07] dark:border-white/[0.08]">
+                  {renderPriceBreakdown()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
-                      <div className="flex items-center gap-4 px-2">
-                        <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800"></div>
-                        <span className="text-[10px] uppercase font-bold text-zinc-400">
-                          OR
-                        </span>
-                        <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800"></div>
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Enter Promo/Affiliate Code"
-                            value={couponCode}
-                            onChange={(e) =>
-                              setCouponCode(e.target.value.toUpperCase())
-                            }
-                            className="h-10 text-xs"
-                          />
-                          <Button
-                            onClick={applyPromo}
-                            variant="outline"
-                            size="sm"
-                            className="h-10 text-xs shrink-0"
-                          >
-                            Apply
-                          </Button>
-                        </div>
-                        {couponError && (
-                          <div className="text-xs font-bold text-red-500">
-                            {couponError}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/20 rounded-xl">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <Ticket className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          <span className="font-bold text-sm text-emerald-800 dark:text-emerald-300">
-                            {appliedPromo.code}
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-emerald-600 font-medium ml-6">
-                          -
-                          {appliedPromo.type === "percent"
-                            ? `${appliedPromo.discount}%`
-                            : `${formatPrice(appliedPromo.discount)}`}{" "}
-                          OFF
-                        </span>
-                      </div>
-                      <button
-                        onClick={removePromo}
-                        className="text-zinc-500 hover:text-red-500 bg-white dark:bg-zinc-800 rounded-full p-1"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+        {/* =====================================================================
+            MAIN ASYMMETRIC WORKSPACE:
+            Left 7 Cols (Active Step Liquid Glass Stage) + Right 5 Cols (Desktop Sticky Glass Console)
+           ===================================================================== */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          {/* LEFT / MAIN STAGE */}
+          <div className="lg:col-span-7 flex flex-col gap-5">
+            {/* ------------------------- STEP 1: SHIPPING ------------------------- */}
+            {currentStep === 1 && (
+              <div className="ds-liquid-panel p-4 sm:p-6 lg:p-7 space-y-6">
+                <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-900/[0.07] dark:border-white/[0.08]">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl ds-liquid-subpanel flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
+                      <MapPin className="w-5 h-5" />
                     </div>
-                  )}
+                    <div className="min-w-0">
+                      <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">
+                        {t("Shipping Information") || "ডেলিভারি ঠিকানা"}
+                      </h2>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                        পার্সেল রিসিভ করার ঠিকানা নির্বাচন বা নতুন যোগ করুন
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                {showCouponsModal && (
-                  <div
-                    className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm"
-                    onClick={() => setShowCouponsModal(false)}
-                  >
+                {/* Saved Addresses: 1-col on mobile, 2-col grid on desktop when multiple addresses exist */}
+                {savedAddresses && savedAddresses.length > 0 ? (
+                  <div className="space-y-4">
                     <div
-                      className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-t-[32px] md:rounded-[32px] p-6 pb-12 md:pb-6 shadow-2xl animate-in slide-in-from-bottom md:zoom-in-95"
-                      onClick={(e) => e.stopPropagation()}
+                      className={cn(
+                        "grid grid-cols-1 gap-3",
+                        savedAddresses.length > 1 && "md:grid-cols-2"
+                      )}
                     >
-                      <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">
-                            My Vouchers
-                          </h3>
-                          <p className="text-xs text-zinc-500">
-                            Select a voucher to apply to this order
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setShowCouponsModal(false)}
-                          className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
+                      {savedAddresses.filter(Boolean).map((addr, idx) => {
+                        const addrId = String(addr?.id || `addr_${idx}`);
+                        const addrName =
+                          typeof addr?.name === "string" ? addr.name : "User";
+                        const addrPhone =
+                          typeof addr?.phone === "string" ? addr.phone : "";
+                        const addrText = formatAddressText(addr?.address || addr);
+                        const isSelected = selectedAddressId === addrId;
 
-                      <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-2">
-                        {claimedCouponsList
-                          .filter(
-                            (c) => !(c.expiresAt && c.expiresAt < Date.now()),
-                          )
-                          .map((c, i) => {
-                            const minMet =
-                              !c.minOrderAmount || subtotal >= c.minOrderAmount;
-                            return (
+                        return (
+                          <div
+                            key={addrId}
+                            onClick={() => {
+                              setSelectedAddressId(addrId);
+                              if (!isAuthVoiceMuted()) {
+                                playAuthVoice(`${addrName} এর ডেলিভারি ঠিকানা নির্বাচন করা হয়েছে।`);
+                              }
+                            }}
+                            className={cn(
+                              "p-4 cursor-pointer transition-transform duration-150 active:scale-[0.99] flex flex-col justify-between gap-2",
+                              isSelected
+                                ? "ds-liquid-subpanel-active"
+                                : "ds-liquid-subpanel hover:opacity-95"
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
                               <div
-                                key={i}
-                                className={`relative rounded-xl border flex overflow-hidden ${minMet ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-900" : "border-zinc-200 bg-zinc-50 dark:bg-zinc-800/50 opacity-60"}`}
+                                className={cn(
+                                  "mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                                  isSelected
+                                    ? "border-[#0d82ff] bg-[#0d82ff]"
+                                    : "border-zinc-300 dark:border-zinc-600"
+                                )}
                               >
-                                <div
-                                  className={`w-[80px] flex flex-col justify-center items-center p-3 text-white ${minMet ? "bg-amber-500" : "bg-zinc-400 dark:bg-zinc-600"}`}
-                                >
-                                  <span className="text-xl font-black">
-                                    {c.type === "percent"
-                                      ? `${c.discount}%`
-                                      : `${formatPrice(c.discount)}`}
+                                {isSelected && (
+                                  <Check className="w-3 h-3 text-white stroke-[3]" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+                                    {addrName}
                                   </span>
-                                  <span className="text-[10px] font-bold">
-                                    OFF
-                                  </span>
-                                </div>
-                                <div className="flex-1 p-3 flex flex-col justify-center bg-white dark:bg-zinc-900">
-                                  <div className="font-bold text-sm mb-0.5">
-                                    {c.code}
-                                  </div>
-                                  <div className="text-[10px] text-zinc-500">
-                                    {c.minOrderAmount > 0
-                                      ? `Min purchase ${formatPrice(c.minOrderAmount)}`
-                                      : "No minimum"}
-                                  </div>
-                                  {!minMet && (
-                                    <div className="text-[10px] text-red-500 font-bold mt-1">
-                                      Need {formatPrice(c.minOrderAmount - subtotal)} more
-                                    </div>
+                                  {addr?.isDefault && (
+                                    <span className="text-[11px] font-medium text-sky-600 dark:text-sky-400 shrink-0">
+                                      ডিফল্ট
+                                    </span>
                                   )}
                                 </div>
-                                <button
-                                  disabled={!minMet}
-                                  onClick={() => {
-                                    setAppliedPromo({
-                                      id: c.id,
-                                      ...c,
-                                      isVoucher: true,
-                                    });
-                                    setCouponCode(c.code);
-                                    setShowCouponsModal(false);
-                                    notify("Voucher applied!", "success");
-                                  }}
-                                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold px-4 py-2 rounded-full disabled:hidden"
-                                >
-                                  Use
-                                </button>
+                                {addrPhone && (
+                                  <div className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 tabular-nums">
+                                    {addrPhone}
+                                  </div>
+                                )}
+                                {addrText && (
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-2">
+                                    {addrText}
+                                  </p>
+                                )}
                               </div>
-                            );
-                          })}
-                        {claimedCouponsList.length === 0 && (
-                          <div className="text-center py-10">
-                            <Ticket className="w-10 h-10 text-zinc-300 mx-auto mb-2" />
-                            <p className="text-sm font-medium text-zinc-500">
-                              You don't have any vouchers
-                            </p>
+                            </div>
                           </div>
-                        )}
-                      </div>
+                        );
+                      })}
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => navigate("/shipping-address")}
+                        className="px-4 py-3 ds-liquid-btn-secondary !min-h-[44px] !text-xs sm:!text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4 shrink-0" />
+                        <span>নতুন ঠিকানা যোগ করুন</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/shipping-address")}
+                        className="px-4 py-3 ds-liquid-subpanel hover:opacity-90 text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer transition-opacity"
+                      >
+                        <Settings className="w-4 h-4 text-zinc-500 shrink-0" />
+                        <span>ঠিকানা ম্যানেজ করুন</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-7 ds-liquid-subpanel text-center space-y-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
+                      <MapPin className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1 max-w-xs mx-auto">
+                      <h4 className="font-bold text-zinc-900 dark:text-white text-sm sm:text-base">
+                        কোনো ডেলিভারি ঠিকানা পাওয়া যায়নি
+                      </h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        অর্ডার সম্পন্ন করতে অনুগ্রহ করে আপনার ডেলিভারি ঠিকানা যুক্ত করুন।
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/shipping-address")}
+                      className="px-6 py-3 ds-liquid-btn-primary !min-h-[44px] !text-xs sm:!text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>নতুন ঠিকানা যোগ করুন</span>
+                    </button>
                   </div>
                 )}
 
-                <div className="space-y-3 pt-4 border-t border-zinc-100 dark:border-zinc-800 text-sm font-medium">
-                  <div className="flex justify-between text-zinc-500">
-                    <span>{t('Subtotal') || 'Subtotal'}</span>
-                    <span className="text-zinc-900 dark:text-zinc-100">
-                      {formatPrice(subtotal)}
-                    </span>
+                {/* Gift Option & Bypass Verification */}
+                <div className="pt-5 border-t border-slate-900/[0.07] dark:border-white/[0.08] space-y-4">
+                  <div className="p-3.5 sm:p-4 ds-liquid-subpanel space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <label
+                        htmlFor="gift"
+                        className="flex items-center gap-3 cursor-pointer min-w-0"
+                      >
+                        <Checkbox
+                          id="gift"
+                          checked={isGift}
+                          onCheckedChange={(c) => setIsGift(!!c)}
+                        />
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white flex items-center gap-1.5">
+                            <Gift className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                            <span>উপহার হিসেবে পাঠান (Send as a Gift)</span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                            ইনভয়েসে পণ্যের দাম গোপন থাকবে
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {isGift && (
+                      <div className="pt-1 space-y-1.5">
+                        <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                          গিফট নোট (শুভেচ্ছা বার্তা)
+                        </Label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: শুভ জন্মদিন!..."
+                          value={giftNote}
+                          onChange={(e) => setGiftNote(e.target.value)}
+                          className="w-full h-11 px-3.5 text-sm ds-liquid-input outline-none focus:ring-2 focus:ring-sky-500/40"
+                        />
+                      </div>
+                    )}
                   </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-zinc-800 dark:text-zinc-200 font-bold">
-                      <span>Discount</span>
-                      <span>-{formatPrice(discount)}</span>
+
+                  {/* Bypass Mal Verification Section */}
+                  {hasBypassProduct && !isVipSubscriber && (
+                    <div className="p-4 sm:p-5 ds-liquid-callout-amber space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+                          <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white">
+                              বাইপাস ক্যাশ অন ডেলিভারি ভেরিফিকেশন
+                            </h4>
+                            <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 shrink-0">
+                              COD সুবিধা
+                            </span>
+                          </div>
+                          <p className="text-[11px] sm:text-xs text-zinc-600 dark:text-zinc-300 mt-0.5 leading-relaxed">
+                            অগ্রিম ছাড়া ক্যাশ অন ডেলিভারি নিশ্চিত করতে অভিভাবকের সচল নম্বর দিন
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="guardianNumber"
+                          className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center justify-between"
+                        >
+                          <span>
+                            অভিভাবকের মোবাইল নম্বর <span className="text-rose-500">*</span>
+                          </span>
+                          <span className="text-[11px] text-amber-700 dark:text-amber-300 font-normal">
+                            ১১ ডিজিট আবশ্যক
+                          </span>
+                        </Label>
+                        <input
+                          id="guardianNumber"
+                          type="tel"
+                          placeholder="01XXXXXXXXX"
+                          value={guardianNumber}
+                          onFocus={() => {
+                            if (!isAuthVoiceMuted()) {
+                              playAuthVoice(
+                                "ক্যাশ অন ডেলিভারি নিশ্চিত করতে অভিভাবকের এগারো ডিজিটের মোবাইল নম্বর লিখুন।"
+                              );
+                            }
+                          }}
+                          onChange={(e) => setGuardianNumber(e.target.value)}
+                          className="w-full h-11 px-3.5 text-sm ds-liquid-input outline-none focus:ring-2 focus:ring-amber-500/40 tabular-nums"
+                        />
+                        <p className="text-[11px] text-amber-800 dark:text-amber-200 flex items-center gap-1.5 pt-0.5 font-medium">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>অর্ডার কনফার্ম করতে অভিভাবককে ভেরিফিকেশন কল করা হতে পারে</span>
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 pt-3 border-t border-amber-500/20">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                            NID কার্ড সংযুক্তকরণ (ঐচ্ছিক)
+                          </Label>
+                          <span className="text-[11px] text-zinc-500">সর্বোচ্চ 10MB</span>
+                        </div>
+
+                        {nidCardUrl ? (
+                          <div className="flex items-center justify-between p-3 ds-liquid-subpanel">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <img
+                                src={nidCardUrl}
+                                alt="Uploaded NID"
+                                referrerPolicy="no-referrer"
+                                className="w-11 h-11 object-cover rounded-xl border border-white/40 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                                  NID কার্ড ছবি সংযুক্ত হয়েছে
+                                </p>
+                                <p className="text-[11px] text-zinc-500 truncate">
+                                  ভেরিফিকেশনের জন্য সংরক্ষিত
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setNidCardUrl("")}
+                              className="px-3 py-1.5 rounded-full text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer shrink-0"
+                            >
+                              মুছুন
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center p-4 border border-dashed border-amber-500/40 hover:border-amber-500/70 rounded-2xl cursor-pointer bg-white/50 dark:bg-white/5 transition-colors">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={uploadingNid}
+                              onChange={handleNidUpload}
+                            />
+                            {uploadingNid ? (
+                              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>NID ছবি আপলোড হচ্ছে...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-center">
+                                <Upload className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                                <span className="text-xs font-medium text-zinc-700 dark:text-zinc-200">
+                                  আপনার বা অভিভাবকের NID কার্ডের ছবি আপলোড করুন
+                                </span>
+                              </div>
+                            )}
+                          </label>
+                        )}
+                      </div>
                     </div>
                   )}
-                  <div className="flex justify-between text-zinc-500">
-                    <span>{t('Delivery Fee') || 'Shipping'}</span>
-                    <span className="text-zinc-900 dark:text-zinc-100">
-                      {formatPrice(deliveryFee)}
-                    </span>
+                </div>
+
+                {/* Step 1 Footer CTA */}
+                <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex justify-end">
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    disabled={!validateStep(1)}
+                    className="w-full sm:w-auto sm:min-w-[230px] px-7 py-3.5 ds-liquid-btn-primary flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                  >
+                    <span>পেমেন্ট ধাপে যান</span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ------------------------- STEP 2: PAYMENT ------------------------- */}
+            {currentStep === 2 && (
+              <div className="ds-liquid-panel p-4 sm:p-6 lg:p-7 space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-900/[0.07] dark:border-white/[0.08]">
+                  <div className="w-10 h-10 rounded-2xl ds-liquid-subpanel flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
+                    <CreditCard className="w-5 h-5" />
                   </div>
-                  <div className="flex justify-between items-end pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <span className="text-zinc-500 font-bold">{t('Total') || 'Total'}</span>
-                    <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                      {formatPrice(total)}
-                    </span>
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">
+                      পেমেন্ট পদ্ধতি ও বিবরণ
+                    </h2>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                      আপনার অর্ডারের প্রদেয় হিসাব ও পেমেন্ট মাধ্যম দেখুন
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                {requiredAdvance === 0 ? (
+                  /* Zero Advance (VIP Full COD or Bypass COD) */
+                  <div className="p-4 sm:p-6 ds-liquid-callout-emerald space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                          {isVipSubscriber ? (
+                            <Crown className="w-5 h-5" />
+                          ) : (
+                            <Truck className="w-5 h-5" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">
+                            {isVipSubscriber
+                              ? "ভিআইপি শতভাগ ক্যাশ অন ডেলিভারি"
+                              : "ক্যাশ অন ডেলিভারি (COD)"}
+                          </h3>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-300 mt-0.5 leading-relaxed">
+                            {isVipSubscriber
+                              ? "আপনার ভিআইপি পাস সক্রিয় থাকায় কোনো অগ্রিম টাকা ছাড়াই সরাসরি অর্ডার কনফার্ম হবে।"
+                              : "এই অর্ডারে এখন কোনো অগ্রিম পেমেন্ট করতে হবে না।"}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0 whitespace-nowrap">
+                        {isVipSubscriber ? "VIP মেম্বার · ০৳ অগ্রিম" : "বাইপাস · ০৳ অগ্রিম"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">মোট অর্ডার মূল্য</span>
+                        <span className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                          {formatPrice(total)}
+                        </span>
+                      </div>
+                      <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+                        <span className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
+                          অগ্রিম প্রদেয়
+                        </span>
+                        <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                          ৳০
+                        </span>
+                      </div>
+                      <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          ডেলিভারিতে প্রদেয়
+                        </span>
+                        <span className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                          {formatPrice(total)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 ds-liquid-subpanel text-xs space-y-1 text-zinc-700 dark:text-zinc-300">
+                      {!isVipSubscriber && guardianNumber && (
+                        <p className="font-semibold text-zinc-900 dark:text-white tabular-nums">
+                          অভিভাবক নম্বর: {guardianNumber}
+                        </p>
+                      )}
+                      <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        পার্সেল হাতে পেয়ে যাচাই করে ডেলিভারি ম্যানকে সম্পূর্ণ মূল্য ক্যাশে পরিশোধ করবেন।
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Advance Payment Flow */
+                  <div className="space-y-4">
+                    {/* VIP Pass Zero-Advance Upgrade Callout */}
+                    <div className="p-4 ds-liquid-callout-amber flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start sm:items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-2xl bg-amber-400 text-zinc-950 flex items-center justify-center shrink-0">
+                          <Crown className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white">
+                            ০৳ অগ্রিমে ফুল ক্যাশ অন ডেলিভারিতে অর্ডার করতে চান?
+                          </div>
+                          <div className="text-[11px] text-zinc-600 dark:text-zinc-300 mt-0.5 tabular-nums">
+                            ভিআইপি পাস নিলে এই অর্ডারের ৳{requiredAdvance} অগ্রিম ছাড়াই অর্ডার করতে পারবেন।
+                          </div>
+                        </div>
+                      </div>
+                      <Link
+                        to="/subscription"
+                        className="px-4 py-2.5 rounded-full bg-amber-400 hover:bg-amber-500 text-zinc-950 font-bold text-xs shrink-0 text-center transition-colors inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                      >
+                        <Crown className="w-3.5 h-3.5" />
+                        <span>ভিআইপি পাস নিন</span>
+                      </Link>
+                    </div>
+
+                    {/* Advance Policy Subpanel */}
+                    <div className="p-4 ds-liquid-subpanel flex items-start gap-3">
+                      <Sparkles className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
+                      <div className="text-xs leading-relaxed">
+                        <p className="font-bold text-zinc-900 dark:text-white">
+                          {isAllOffer
+                            ? "অফার পণ্যের ক্ষেত্রে ১০০% ফুল অগ্রিম পেমেন্ট প্রযোজ্য।"
+                            : hasOfferProduct
+                              ? "অফার বা কাস্টম প্রোডাক্ট থাকায় নির্ধারিত অগ্রিম বুকিং পেমেন্ট প্রযোজ্য।"
+                              : "বর্ডার ইমপোর্ট পণ্যের ক্ষেত্রে ৫০% অগ্রিম বুকিং এবং বাকি ৫০% ডেলিভারির সময় ক্যাশে প্রদেয়।"}
+                        </p>
+                        <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          রিভিউ কনফার্ম করার পর সুরক্ষিত পেমেন্ট গেটওয়ে পেজে বিকাশ বা নগদ বেছে নিতে পারবেন।
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Mobile Banking Gateway Refractive Panel */}
+                    <div className="p-4 sm:p-5 ds-liquid-callout-rose space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-3 border-b border-rose-500/15">
+                        <div>
+                          <div className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                            মোবাইল ব্যাংকিং · বিকাশ / নগদ
+                          </div>
+                          <h4 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                            সুরক্ষিত সেন্ড মানি গেটওয়ে
+                          </h4>
+                        </div>
+                        <span className="text-xs font-bold text-[#D12053] dark:text-rose-300 whitespace-nowrap">
+                          পরবর্তী ধাপে পরিশোধযোগ্য
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+                          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                            মোট অর্ডার মূল্য
+                          </span>
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
+                            {formatPrice(total)}
+                          </span>
+                        </div>
+                        <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+                          <span className="text-[11px] font-semibold text-[#D12053] dark:text-rose-300">
+                            এখন অগ্রিম প্রদেয়
+                          </span>
+                          <span className="text-base sm:text-lg font-extrabold text-[#D12053] dark:text-rose-300 tabular-nums">
+                            ৳{requiredAdvance}
+                          </span>
+                        </div>
+                        <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+                          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                            ডেলিভারিতে বাকি
+                          </span>
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
+                            ৳{dueOnDelivery}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                        এখানে কোনো TrxID দিতে হবে না। অর্ডার রিভিউ কনফার্ম করলেই আপনাকে ডেডিকেটেড পেমেন্ট পেজে সক্রিয় বিকাশ ও নগদ নম্বর দেখানো হবে।
+                      </p>
+                    </div>
+
+                    {/* Optional DP Coin Selector */}
+                    {userCoins > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentType(paymentType === "vgcoin" ? "advance" : "vgcoin");
+                          setAdvanceType("full");
+                        }}
+                        className={cn(
+                          "w-full p-4 flex items-center justify-between gap-3 text-xs sm:text-sm transition-all cursor-pointer",
+                          paymentType === "vgcoin"
+                            ? "ds-liquid-subpanel-active"
+                            : "ds-liquid-subpanel hover:opacity-90"
+                        )}
+                      >
+                        <span className="font-bold text-zinc-900 dark:text-white truncate tabular-nums">
+                          ডিপি কয়েন ব্যালেন্স: {userCoins} কয়েন
+                        </span>
+                        <span className="font-bold text-sky-600 dark:text-sky-400 whitespace-nowrap shrink-0">
+                          {paymentType === "vgcoin" ? "সক্রিয় আছে ✓" : "কয়েন ব্যবহার করুন"}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 2 Footer Navigation */}
+                <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className="px-5 py-3 ds-liquid-btn-secondary !min-h-[46px] !text-xs sm:!text-sm flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4 shrink-0" />
+                    <span>পিছনে</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    disabled={!validateStep(2)}
+                    className="flex-1 sm:flex-none sm:min-w-[220px] px-7 py-3 ds-liquid-btn-primary !min-h-[46px] !text-xs sm:!text-sm flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                  >
+                    <span>অর্ডার রিভিউ করুন</span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ------------------------- STEP 3: REVIEW & CONFIRM ------------------------- */}
+            {currentStep === 3 && (
+              <div className="ds-liquid-panel p-4 sm:p-6 lg:p-7 space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-900/[0.07] dark:border-white/[0.08]">
+                  <div className="w-10 h-10 rounded-2xl ds-liquid-subpanel flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">
+                      অর্ডার রিভিউ ও কনফার্মেশন
+                    </h2>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                      সকল তথ্য যাচাই করে আপনার অর্ডার চূড়ান্ত করুন
+                    </p>
+                  </div>
+                </div>
+
+                {/* Shipping + Payment Summary Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Shipping Tile */}
+                  <div className="p-4 ds-liquid-subpanel space-y-2 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                          ডেলিভারি ঠিকানা
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(1)}
+                          className="text-xs font-bold text-sky-600 dark:text-sky-400 inline-flex items-center gap-1 hover:underline cursor-pointer whitespace-nowrap"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>পরিবর্তন</span>
+                        </button>
+                      </div>
+                      <p className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+                        {typeof selectedAddrObj?.name === "string"
+                          ? selectedAddrObj.name
+                          : "User"}
+                      </p>
+                      <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 tabular-nums">
+                        {typeof selectedAddrObj?.phone === "string"
+                          ? selectedAddrObj.phone
+                          : ""}
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        {formatAddressText(selectedAddrObj?.address)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Tile */}
+                  <div className="p-4 ds-liquid-subpanel space-y-2 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                          {t("Payment Details") || "পেমেন্ট বিবরণ"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(2)}
+                          className="text-xs font-bold text-sky-600 dark:text-sky-400 inline-flex items-center gap-1 hover:underline cursor-pointer whitespace-nowrap"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>পরিবর্তন</span>
+                        </button>
+                      </div>
+
+                      {paymentType === "vgcoin" ? (
+                        <div className="space-y-1">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-white">
+                            DP Coins ({advanceType === "full" ? "সম্পূর্ণ পেমেন্ট" : "অগ্রিম বুকিং"})
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            ডিপি কয়েন ব্যালেন্স থেকে সমন্বয় হবে
+                          </p>
+                        </div>
+                      ) : requiredAdvance === 0 ? (
+                        <div className="space-y-1">
+                          <p className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                            {isVipSubscriber
+                              ? "ভিআইপি ফুল ক্যাশ অন ডেলিভারি"
+                              : "ক্যাশ অন ডেলিভারি (বাইপাস)"}
+                          </p>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-300 tabular-nums">
+                            অগ্রিম: ৳০ · ডেলিভারিতে প্রদেয়: {formatPrice(total)}
+                          </p>
+                          {!isVipSubscriber && guardianNumber && (
+                            <p className="text-xs text-zinc-500 tabular-nums">
+                              অভিভাবক: {guardianNumber}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-white">
+                            মোবাইল ব্যাংকিং (বিকাশ / নগদ গেটওয়ে)
+                          </p>
+                          <div className="text-xs text-zinc-600 dark:text-zinc-300 space-y-0.5 tabular-nums">
+                            <div>
+                              এখন অগ্রিম প্রদেয়:{" "}
+                              <strong className="text-[#D12053] dark:text-rose-300">
+                                ৳{requiredAdvance}
+                              </strong>
+                            </div>
+                            <div>
+                              ডেলিভারিতে বাকি:{" "}
+                              <strong className="text-zinc-900 dark:text-white">
+                                ৳{dueOnDelivery}
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile-Only Compact Receipt Recap right before confirmation */}
+                <div className="lg:hidden p-4 ds-liquid-subpanel space-y-3">
+                  <div className="text-xs font-bold text-zinc-900 dark:text-white pb-2 border-b border-slate-900/[0.07] dark:border-white/[0.08]">
+                    চূড়ান্ত হিসাব সংক্ষেপ
+                  </div>
+                  {renderPriceBreakdown()}
+                </div>
+
+                {/* Delivery & Unboxing Policies in Clean Refractive Glass */}
+                <div className="space-y-3">
+                  <div className="p-3.5 sm:p-4 ds-liquid-subpanel text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
+                    <strong className="text-zinc-900 dark:text-white">ডেলিভারি সময়সীমা:</strong>{" "}
+                    বর্ডার ক্রস ইমপোর্টেড পণ্যের ক্ষেত্রে নির্ধারিত ডেলিভারি সময় আনুমানিক ৩০–৪৫ কার্যদিবস (ডেডিকেটেড ট্র্যাকিং সুবিধাসহ)।
+                  </div>
+                  <div className="p-3.5 sm:p-4 ds-liquid-callout-amber text-xs leading-relaxed text-zinc-700 dark:text-zinc-200">
+                    <strong className="text-zinc-900 dark:text-white">গুরুত্বপূর্ণ নির্দেশনা:</strong>{" "}
+                    ভুল ট্রানজেকশন তথ্য দিলে অর্ডার বাতিল হতে পারে। যেকোনো রিটার্ন বা ওয়ারেন্টি দাবির জন্য পার্সেল খোলার আনবক্সিং ভিডিও থাকা আবশ্যক।
+                  </div>
+                </div>
+
+                {/* Terms Agreement Checkbox */}
+                <div className="p-4 ds-liquid-subpanel flex items-start gap-3">
+                  <Checkbox
+                    id="terms"
+                    checked={agreeToTerms}
+                    onCheckedChange={(c) => setAgreeToTerms(!!c)}
+                    className="mt-0.5"
+                  />
+                  <div className="text-xs sm:text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                    <label
+                      htmlFor="terms"
+                      className="cursor-pointer font-semibold text-zinc-900 dark:text-white mr-1"
+                    >
+                      আমি ডিপশপের
+                    </label>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate("/terms");
+                      }}
+                      className="underline text-sky-600 dark:text-sky-400 font-bold cursor-pointer"
+                    >
+                      শর্তাবলী (Terms)
+                    </button>
+                    {", "}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate("/privacy");
+                      }}
+                      className="underline text-sky-600 dark:text-sky-400 font-bold cursor-pointer"
+                    >
+                      প্রাইভেসি পলিসি
+                    </button>{" "}
+                    এবং{" "}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate("/refund-policy");
+                      }}
+                      className="underline text-sky-600 dark:text-sky-400 font-bold cursor-pointer"
+                    >
+                      রিফান্ড নীতিমালায়
+                    </button>{" "}
+                    সম্মতি প্রদান করছি।
+                  </div>
+                </div>
+
+                {/* Step 3 Final Confirm Bar */}
+                <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className="px-5 py-3 ds-liquid-btn-secondary !min-h-[48px] !text-xs sm:!text-sm flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4 shrink-0" />
+                    <span>পিছনে</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={placeOrder}
+                    disabled={!validateStep(3) || isLoading}
+                    className="flex-1 sm:flex-none sm:min-w-[260px] px-7 py-3.5 ds-liquid-btn-primary !min-h-[48px] !text-xs sm:!text-sm flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4 shrink-0" />
+                    <span>
+                      {isLoading
+                        ? "অর্ডার তৈরি হচ্ছে..."
+                        : requiredAdvance === 0
+                          ? "অর্ডার কনফার্ম করুন (COD)"
+                          : "সুরক্ষিত পেমেন্ট পেজে যান"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* =====================================================================
+              DESKTOP RIGHT-HAND STICKY LIQUID GLASS RECEIPT CONSOLE (lg and up)
+             ===================================================================== */}
+          <aside className="hidden lg:flex lg:col-span-5 flex-col gap-4 lg:sticky lg:top-24">
+            <div className="ds-liquid-panel p-6 space-y-5">
+              <div className="flex items-center justify-between gap-2 pb-4 border-b border-slate-900/[0.07] dark:border-white/[0.08]">
+                <div className="flex items-center gap-2.5">
+                  <ShoppingBag className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0" />
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                    {t("Order Summary") || "অর্ডার সামারি"}
+                  </h3>
+                </div>
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 tabular-nums">
+                  {totalItemQty}টি পণ্য
+                </span>
+              </div>
+
+              {/* Itemized Cart List */}
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3.5 p-3 ds-liquid-subpanel"
+                  >
+                    <div className="relative w-14 h-14 shrink-0 rounded-2xl bg-white/80 dark:bg-white/5 border border-white/60 dark:border-white/10 overflow-hidden p-1">
+                      <PixelImage
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full bg-transparent"
+                        imgClassName="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+                        {item.name}
+                      </div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
+                        পরিমাণ: {item.quantity} × {formatPrice(item.price)}
+                      </div>
+                    </div>
+                    <div className="font-bold text-sm text-zinc-900 dark:text-white shrink-0 tabular-nums">
+                      {formatPrice(item.price * item.quantity)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Promo & Voucher Controls */}
+              <div className="pt-2 border-t border-slate-900/[0.07] dark:border-white/[0.08]">
+                {renderPromoControls()}
+              </div>
+
+              {/* Financial Breakdown */}
+              <div className="pt-3 border-t border-slate-900/[0.07] dark:border-white/[0.08]">
+                {renderPriceBreakdown()}
+              </div>
+            </div>
+
+            {/* Quiet Trust Guarantee Line */}
+            <div className="px-5 py-3.5 ds-liquid-subpanel flex items-center justify-between gap-3 text-xs text-zinc-600 dark:text-zinc-300">
+              <div className="flex items-center gap-2 min-w-0">
+                <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                <span className="truncate">১০০% সুরক্ষিত পেমেন্ট ও অথেনটিক ইমপোর্ট গ্যারান্টি</span>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
+
+      {/* =====================================================================
+          LIQUID GLASS VOUCHERS MODAL (Mobile Bottom Sheet / Desktop Lens Dialog)
+         ===================================================================== */}
+      {showCouponsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 ds-liquid-backdrop"
+          onClick={() => setShowCouponsModal(false)}
+        >
+          <div
+            className="w-full max-w-md ds-liquid-glass-popup !rounded-b-none md:!rounded-[32px] p-6 pb-10 md:pb-6 animate-in slide-in-from-bottom md:zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="ds-liquid-popup-title">আমার ভাউচারসমূহ</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  অর্ডারে ছাড় পেতে যেকোনো সক্রিয় ভাউচার নির্বাচন করুন
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCouponsModal(false)}
+                aria-label="বন্ধ করুন"
+                className="w-8 h-8 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 max-h-[58vh] overflow-y-auto pr-1">
+              {claimedCouponsList
+                .filter((c) => !(c.expiresAt && c.expiresAt < Date.now()))
+                .map((c, i) => {
+                  const minMet = !c.minOrderAmount || subtotal >= c.minOrderAmount;
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "p-3.5 ds-liquid-section flex items-center justify-between gap-3",
+                        !minMet && "opacity-60"
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base font-extrabold text-sky-600 dark:text-sky-400 tabular-nums">
+                            {c.type === "percent"
+                              ? `${c.discount}%`
+                              : formatPrice(c.discount)}{" "}
+                            ছাড়
+                          </span>
+                          <span className="text-xs text-zinc-400">·</span>
+                          <span className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white truncate">
+                            {c.code}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
+                          {c.minOrderAmount > 0
+                            ? `সর্বনিম্ন অর্ডার ${formatPrice(c.minOrderAmount)}`
+                            : "যেকোনো অর্ডারে প্রযোজ্য"}
+                        </div>
+                        {!minMet && (
+                          <div className="text-[11px] text-rose-500 font-semibold mt-0.5 tabular-nums">
+                            আরও {formatPrice(c.minOrderAmount - subtotal)} প্রয়োজন
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!minMet}
+                        onClick={() => {
+                          setAppliedPromo({
+                            id: c.id,
+                            ...c,
+                            isVoucher: true,
+                          });
+                          setCouponCode(c.code);
+                          setShowCouponsModal(false);
+                          notify("ভাউচার সফলভাবে যুক্ত হয়েছে!", "success");
+                        }}
+                        className="px-4 py-2 ds-liquid-btn-primary !min-h-0 !text-xs shrink-0 disabled:opacity-40 whitespace-nowrap cursor-pointer"
+                      >
+                        ব্যবহার করুন
+                      </button>
+                    </div>
+                  );
+                })}
+
+              {claimedCouponsList.length === 0 && (
+                <div className="text-center py-10 ds-liquid-section">
+                  <Ticket className="w-9 h-9 text-zinc-400 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                    আপনার কোনো সংরক্ষিত ভাউচার নেই
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <CustomSectionEmbed location="checkout_bottom" />
     </div>
   );
 }
+

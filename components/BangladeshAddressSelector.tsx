@@ -9,7 +9,8 @@ import {
   BangladeshUpazila
 } from "../src/lib/bangladeshGeo";
 import { detectAbuse } from "../src/lib/abuseProtection";
-import { MapPin, Building, Home, Search, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { isAuthVoiceMuted, playAuthVoice } from "../lib/authVoiceAndValidation";
 
 interface BangladeshAddressSelectorProps {
   onAddressChange: (fullAddress: string, structuredData: {
@@ -21,12 +22,14 @@ interface BangladeshAddressSelectorProps {
   }) => void;
   initialValue?: string;
   onErrorState?: (hasError: boolean, errorMsg?: string) => void;
+  enableVoiceGuide?: boolean;
 }
 
 export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps> = ({
   onAddressChange,
   initialValue,
-  onErrorState
+  onErrorState,
+  enableVoiceGuide = false,
 }) => {
   const [selectedDivisionId, setSelectedDivisionId] = useState<string>("dhaka");
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>("dhaka");
@@ -138,6 +141,11 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           </label>
           <select
             value={selectedDivisionId}
+            onFocus={() => {
+              if (enableVoiceGuide && !isAuthVoiceMuted()) {
+                playAuthVoice("আপনার বিভাগ নির্বাচন করুন।");
+              }
+            }}
             onChange={(e) => handleDivisionChange(e.target.value)}
             className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs md:text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
           >
@@ -156,6 +164,11 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           </label>
           <select
             value={selectedDistrictId}
+            onFocus={() => {
+              if (enableVoiceGuide && !isAuthVoiceMuted()) {
+                playAuthVoice("আপনার জেলা নির্বাচন করুন।");
+              }
+            }}
             onChange={(e) => handleDistrictChange(e.target.value)}
             className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs md:text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
           >
@@ -174,6 +187,11 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           </label>
           <select
             value={selectedUpazilaId}
+            onFocus={() => {
+              if (enableVoiceGuide && !isAuthVoiceMuted()) {
+                playAuthVoice("আপনার উপজেলা বা থানা নির্বাচন করুন।");
+              }
+            }}
             onChange={(e) => {
               setSelectedUpazilaId(e.target.value);
               const upz = BD_UPAZILAS.find((u) => u.id === e.target.value);
@@ -201,6 +219,11 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
               type="text"
               list="bd_area_suggestions"
               value={areaUnion}
+              onFocus={() => {
+                if (enableVoiceGuide && !isAuthVoiceMuted()) {
+                  playAuthVoice("আপনার ইউনিয়ন, এলাকা অথবা ডাকঘরের নাম লিখুন।");
+                }
+              }}
               onChange={(e) => setAreaUnion(e.target.value)}
               placeholder="এলাকা বা ইউনিয়ন লিখুন অথবা সিলেক্ট করুন"
               className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs md:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -221,7 +244,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
                   key={idx}
                   type="button"
                   onClick={() => setAreaUnion(a)}
-                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
                     areaUnion === a
                       ? "bg-emerald-500 text-white border-emerald-500 font-bold"
                       : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500"
@@ -243,6 +266,13 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
         <textarea
           rows={2}
           value={detailedHouseRoad}
+          onFocus={() => {
+            if (enableVoiceGuide && !isAuthVoiceMuted()) {
+              playAuthVoice(
+                "বাসা নম্বর, রোড নম্বর অথবা গ্রাম ও পাড়ার বিস্তারিত ঠিকানা লিখুন, যাতে ডেলিভারি ম্যান সহজেই চিনতে পারেন।"
+              );
+            }
+          }}
           onChange={(e) => setDetailedHouseRoad(e.target.value)}
           placeholder="যেমন: বাসা #১২, রোড #০৪, ব্লক-বি, গ্রাম: রসুলপুর, পাড়া: পূর্ব পাড়া"
           className={`w-full bg-white dark:bg-zinc-800 border rounded-xl px-3 py-2.5 text-xs md:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 resize-none ${

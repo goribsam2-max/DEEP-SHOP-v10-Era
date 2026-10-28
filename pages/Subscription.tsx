@@ -16,7 +16,6 @@ import {
   CheckCircle2,
   XCircle,
   History,
-  ArrowRight,
   Loader2,
   Sparkles,
 } from "lucide-react";
@@ -33,6 +32,12 @@ import {
 import { useNotify } from "../components/Notifications";
 import BillingWarningAlertDialog from "../components/ui/billing-warning-alert-dialog";
 import ResellerTeacherGuide from "../components/ResellerTeacherGuide";
+import AuthVoiceToggle from "../components/AuthVoiceToggle";
+import {
+  isAuthVoiceMuted,
+  playAuthVoice,
+  stopAuthVoice,
+} from "../lib/authVoiceAndValidation";
 
 export default function SubscriptionPage() {
   const navigate = useNavigate();
@@ -49,6 +54,8 @@ export default function SubscriptionPage() {
   // Warning Dialog State
   const [showWarningModal, setShowWarningModal] = useState(false);
   const pricingRef = useRef<HTMLDivElement>(null);
+  const hasPlayedWelcomeRef = useRef(false);
+  const skipStopOnUnmountRef = useRef(false);
 
   // Track auth state & user profile
   useEffect(() => {
@@ -91,19 +98,56 @@ export default function SubscriptionPage() {
       }
     });
 
-    return () => unsubAuth();
+    return () => {
+      unsubAuth();
+      if (!skipStopOnUnmountRef.current) {
+        stopAuthVoice();
+      }
+    };
   }, []);
 
   const subStatus = getSubscriptionStatus(userData);
+
+  // Play Bengali Male Voiceover Welcome once user status loads
+  useEffect(() => {
+    if (loading || hasPlayedWelcomeRef.current) return;
+    hasPlayedWelcomeRef.current = true;
+    if (isAuthVoiceMuted()) return;
+
+    if (subStatus.isSubscribed) {
+      playAuthVoice(
+        `ডিপশপ ভিআইপি মেম্বারশিপ পেজে স্বাগতম। আপনার ভিআইপি সাবস্ক্রিপশন বর্তমানে সক্রিয় আছে এবং আপনি শূন্য টাকা অগ্রিমে ফুল ক্যাশ অন ডেলিভারি সুবিধা পাচ্ছেন। মেয়াদ বাড়াতে নিচের যেকোনো প্ল্যান বেছে নিতে পারেন।`
+      );
+    } else {
+      playAuthVoice(
+        `ডিপশপ ভিআইপি সাবস্ক্রিপশন পেজে স্বাগতম। ভিআইপি মেম্বার হলে কোনো অগ্রিম টাকা ছাড়াই শতভাগ ক্যাশ অন ডেলিভারিতে আনলিমিটেড অর্ডার এবং ফ্রি এক্সপ্রেস ডেলিভারি সুবিধা পাবেন। নিচের প্ল্যানগুলো থেকে আপনার পছন্দের পাসটি বেছে নিন।`
+      );
+    }
+  }, [loading, subStatus.isSubscribed]);
+
+  const speakIfUnmuted = (msg: string) => {
+    if (!isAuthVoiceMuted()) {
+      playAuthVoice(msg);
+    }
+  };
 
   // Handle plan purchase -> directly creates order and redirects to Payment page
   const handleSelectPlan = async (plan: Plan6) => {
     const activeUser = auth.currentUser || currentUser;
     if (!activeUser) {
+      speakIfUnmuted(
+        "ভিআইপি প্ল্যানটি চালু করতে অনুগ্রহ করে প্রথমে আপনার অ্যাকাউন্টে লগইন করুন।"
+      );
+      skipStopOnUnmountRef.current = true;
       notify("প্ল্যানটি নিতে অনুগ্রহ করে প্রথমে সাইন-ইন করুন।", "info");
       navigate("/signin");
       return;
     }
+
+    speakIfUnmuted(
+      `আপনি ${plan.name} নির্বাচন করেছেন। সুরক্ষিত পেমেন্ট পেজে নিয়ে যাওয়া হচ্ছে।`
+    );
+    skipStopOnUnmountRef.current = true;
 
     const priceMap: Record<string, { price: number; days: number }> = {
       "3days": { price: 5000, days: 3 },
@@ -152,7 +196,7 @@ export default function SubscriptionPage() {
             price: config.price,
             priceAtPurchase: config.price,
             quantity: 1,
-            image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80",
+            image: "/favicon.png",
             isSubscription: true,
           },
         ],
@@ -239,46 +283,89 @@ export default function SubscriptionPage() {
       )}
 
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Minimal Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200/80 dark:border-zinc-800 pb-5">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold">
-              <Crown className="w-3.5 h-3.5 text-amber-500" />
-              <span className="truncate">DEEP SHOP VIP</span>
+        {/* Responsive Header with Dedicated Voice Assistant Bar */}
+        <div className="flex flex-col gap-4 border-b border-zinc-200/80 dark:border-zinc-800 pb-5">
+          {/* Top Action & Voice Control Row (Mobile + Desktop Responsive) */}
+          <div className="flex items-center justify-between gap-2.5 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-bold tracking-wide">
+              <Crown className="w-4 h-4 text-amber-500 shrink-0" />
+              <span className="whitespace-nowrap">DEEP SHOP VIP</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white truncate">
-              ০ টাকা অগ্রিমে ফুল ক্যাশ অন ডেলিভারি
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 truncate">
-              কোনো অগ্রিম চার্জ বা বুকিং মানি ছাড়াই যেকোনো পণ্য আনলিমিটেড অর্ডার করার সুবিধা।
-            </p>
+
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto">
+              {/* Desktop Membership Status */}
+              <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+                <ShieldCheck
+                  className={`w-4 h-4 shrink-0 ${
+                    subStatus.isSubscribed
+                      ? "text-emerald-500"
+                      : "text-zinc-400"
+                  }`}
+                />
+                <div className="text-xs font-medium whitespace-nowrap">
+                  <span className="text-zinc-500 dark:text-zinc-400 mr-1.5">
+                    স্ট্যাটাস:
+                  </span>
+                  <span className="font-bold text-zinc-900 dark:text-white">
+                    {subStatus.isSubscribed
+                      ? `${subStatus.plan?.nameBn || "ভিআইপি অ্যাক্টিভ"} (${subStatus.daysRemaining} দিন বাকি)`
+                      : "ফ্রি মেম্বার"}
+                  </span>
+                </div>
+                {subStatus.isExpiringSoon && (
+                  <button
+                    type="button"
+                    onClick={() => setShowWarningModal(true)}
+                    className="text-[11px] text-amber-600 dark:text-amber-400 font-bold underline ml-1 cursor-pointer"
+                  >
+                    সতর্কবার্তা
+                  </button>
+                )}
+              </div>
+
+              {/* Responsive Inline Voice Assistant Toggle */}
+              <AuthVoiceToggle isInline />
+            </div>
           </div>
 
-          {/* Current Status Pill */}
-          <div className="flex items-center gap-2 self-start sm:self-auto px-3.5 py-2 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
-            <div
-              className={`w-2.5 h-2.5 rounded-full ${
-                subStatus.isSubscribed
-                  ? "bg-emerald-500 ring-2 ring-emerald-500/20"
-                  : "bg-zinc-400"
-              }`}
-            />
-            <div className="text-xs font-medium">
-              <span className="text-zinc-500 dark:text-zinc-400 mr-1.5">স্ট্যাটাস:</span>
-              <span className="font-bold text-zinc-900 dark:text-white">
-                {subStatus.isSubscribed
-                  ? `${subStatus.plan?.nameBn || "ভিআইপি অ্যাক্টিভ"} (${subStatus.daysRemaining} দিন বাকি)`
-                  : "ফ্রি মেম্বার (Free)"}
-              </span>
+          {/* Headline + Mobile Membership Status */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div className="space-y-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+                ০ টাকা অগ্রিমে ফুল ক্যাশ অন ডেলিভারি
+              </h1>
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                কোনো অগ্রিম চার্জ বা বুকিং মানি ছাড়াই যেকোনো পণ্য আনলিমিটেড অর্ডার করার সুবিধা।
+              </p>
             </div>
-            {subStatus.isExpiringSoon && (
-              <button
-                onClick={() => setShowWarningModal(true)}
-                className="text-[11px] text-amber-600 dark:text-amber-400 font-bold underline ml-1"
-              >
-                সতর্কবার্তা
-              </button>
-            )}
+
+            {/* Mobile/Tablet Membership Status Row */}
+            <div className="flex md:hidden items-center gap-2 self-start px-3.5 py-2 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+              <ShieldCheck
+                className={`w-4 h-4 shrink-0 ${
+                  subStatus.isSubscribed ? "text-emerald-500" : "text-zinc-400"
+                }`}
+              />
+              <div className="text-xs font-medium">
+                <span className="text-zinc-500 dark:text-zinc-400 mr-1.5">
+                  স্ট্যাটাস:
+                </span>
+                <span className="font-bold text-zinc-900 dark:text-white">
+                  {subStatus.isSubscribed
+                    ? `${subStatus.plan?.nameBn || "ভিআইপি অ্যাক্টিভ"} (${subStatus.daysRemaining} দিন বাকি)`
+                    : "ফ্রি মেম্বার (Free)"}
+                </span>
+              </div>
+              {subStatus.isExpiringSoon && (
+                <button
+                  type="button"
+                  onClick={() => setShowWarningModal(true)}
+                  className="text-[11px] text-amber-600 dark:text-amber-400 font-bold underline ml-1 cursor-pointer"
+                >
+                  সতর্কবার্তা
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -286,9 +373,13 @@ export default function SubscriptionPage() {
         <ResellerTeacherGuide
           user={currentUser}
           userData={userData}
-          onScrollToPlans={() =>
-            pricingRef.current?.scrollIntoView({ behavior: "smooth" })
-          }
+          onVoiceGuide={speakIfUnmuted}
+          onScrollToPlans={() => {
+            speakIfUnmuted(
+              "নিচের তালিকা থেকে আপনার পছন্দের ভিআইপি সাবস্ক্রিপশন প্ল্যানটি বেছে নিন।"
+            );
+            pricingRef.current?.scrollIntoView({ behavior: "smooth" });
+          }}
         />
 
         {/* Pricing6 Component */}
@@ -308,6 +399,22 @@ export default function SubscriptionPage() {
             title="প্ল্যান বেছে নিন ও পেমেন্ট করুন"
             subtitle="ক্লিক করলে সরাসরি চেকআউটের সুরক্ষিত পেমেন্ট পেজে নিয়ে যাওয়া হবে।"
             onSelectPlan={handleSelectPlan}
+            onTabChange={(tab) => {
+              if (tab === "individuals") {
+                speakIfUnmuted(
+                  "স্বল্পমেয়াদী ভিআইপি প্ল্যানসমূহ। এখানে তিন দিন, এক সপ্তাহ এবং এক মাসের পাস রয়েছে।"
+                );
+              } else {
+                speakIfUnmuted(
+                  "দীর্ঘমেয়াদী ভিআইপি প্ল্যানসমূহ। এখানে তিন মাস, ছয় মাস এবং এক বছরের আল্ট্রা পাস রয়েছে।"
+                );
+              }
+            }}
+            onListenPlan={(plan) => {
+              speakIfUnmuted(
+                `${plan.name}। মূল্য ${plan.price}। ${plan.description}`
+              );
+            }}
           />
         </div>
 
