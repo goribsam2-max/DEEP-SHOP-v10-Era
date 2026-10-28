@@ -144,6 +144,48 @@ app.use(async (req, res, next) => {
 
   const PORT = 3000;
 
+  // 🤖 Stealth AI Auto-Reply Proxy for Support (Hides sk-bl API Key)
+  app.post("/api/chat-auto-reply", express.json(), async (req, res) => {
+    try {
+      const { messages, systemPrompt } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: "Missing messages array" });
+      }
+
+      const apiKey = "sk-bl-UIuOu3HlbF1LxOu_NKu2zN8C7F8W5N8ZgyDpKaISJRSCO8OU";
+      const model = "qwen/qwen3.7-flash:free";
+
+      const apiRes = await fetch("https://api.bazaarlink.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+            ...messages
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        }),
+      });
+
+      if (!apiRes.ok) {
+        const errorText = await apiRes.text();
+        console.error("Bazaarlink AI API Error:", errorText);
+        return res.status(apiRes.status).json({ error: "AI Service Error" });
+      }
+
+      const data = await apiRes.json();
+      return res.json(data);
+    } catch (err: any) {
+      console.error("Chat auto-reply proxy error:", err);
+      return res.status(500).json({ error: err.message || "Internal AI failure" });
+    }
+  });
+
   app.get("/api/web-push/public-key", (req, res) => {
     res.json({ publicKey: vapidPublicKey });
   });

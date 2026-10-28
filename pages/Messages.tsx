@@ -2634,6 +2634,96 @@ const handleCreateChannel = async () => {
             link: `/messages?chatId=${user.uid}`
           })
         }).catch(err => console.error("Message push notification failed:", err));
+
+        // 🤖 Stealth AI Auto-Reply Trigger
+        try {
+          const aiSnap = await getDoc(doc(db, 'settings', 'ai_human_agent'));
+          const aiSettings = aiSnap.data();
+          
+          if (aiSettings?.enabled) {
+            const otherEmail = activeChat?.otherUser?.email?.toLowerCase();
+            const targetEmail = aiSettings.targetEmail?.toLowerCase();
+            const isTargetAccount = (otherEmail === targetEmail) || (recipientId === aiSettings.targetUid);
+
+            if (isTargetAccount) {
+              // Simulate human delay
+              const delay = (aiSettings.minDelay || 2) * 1000 + (Math.random() * 2000);
+              
+              setTimeout(async () => {
+                // 1. Show typing indicator
+                if (aiSettings.showTyping) {
+                  updateDoc(doc(db, 'p2p_chats', chatId), {
+                    [`typingState.${recipientId}`]: { status: 'typing', updatedAt: Date.now() }
+                  }).catch(() => {});
+                }
+
+                try {
+                  // 2. Prepare conversation history for AI (last 6 messages)
+                  const msgsSnap = await getDocs(query(
+                    collection(db, 'p2p_chats', chatId, 'messages'),
+                    orderBy('timestamp', 'desc'),
+                    limit(6)
+                  ));
+                  
+                  const history = msgsSnap.docs
+                    .map(d => ({
+                      role: d.data().senderId === recipientId ? 'assistant' : 'user',
+                      content: d.data().text || ''
+                    }))
+                    .filter(m => m.content)
+                    .reverse();
+
+                  // 3. Get AI response via server proxy
+                  const prompt = `${aiSettings.systemPrompt}\n\nContext Information:\n${aiSettings.knowledgeBase}`;
+                  const aiRes = await fetch('/api/chat-auto-reply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      messages: history,
+                      systemPrompt: prompt
+                    })
+                  });
+
+                  if (aiRes.ok) {
+                    const data = await aiRes.json();
+                    const aiText = data.choices?.[0]?.message?.content;
+                    
+                    if (aiText) {
+                      // 4. Send AI message to Firestore as the target user (Admin)
+                      await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), {
+                        text: aiText,
+                        senderId: recipientId,
+                        senderName: activeChat?.otherUser?.shopName || activeChat?.otherUser?.displayName || 'Admin',
+                        senderPhoto: activeChat?.otherUser?.photoURL || '',
+                        createdAt: Date.now(),
+                        timestamp: serverTimestamp(),
+                        seenBy: [recipientId],
+                        isAiGenerated: true // internal flag
+                      });
+
+                      // 5. Update last message in chat doc
+                      await updateDoc(doc(db, 'p2p_chats', chatId), {
+                        updatedAt: serverTimestamp(),
+                        lastMessage: aiText,
+                        lastSenderId: recipientId,
+                        seenBy: [recipientId]
+                      });
+                    }
+                  }
+                } catch (err) {
+                  console.error("AI Auto-reply failed:", err);
+                } finally {
+                  // 6. Clear typing indicator
+                  updateDoc(doc(db, 'p2p_chats', chatId), {
+                    [`typingState.${recipientId}`]: null
+                  }).catch(() => {});
+                }
+              }, delay);
+            }
+          }
+        } catch (err) {
+          console.error("Error checking AI settings:", err);
+        }
       }
     } catch (err: any) {
       console.error("Error in handleSendMessage:", err);

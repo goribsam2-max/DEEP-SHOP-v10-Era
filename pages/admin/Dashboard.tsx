@@ -32,7 +32,8 @@ import {
   ArrowRight,
   Activity,
   Crown,
-  TrendingUp
+  TrendingUp,
+  Bot
 } from "lucide-react";
 import {
   AreaChart,
@@ -47,6 +48,14 @@ import {
 import { StaffContext } from "../../components/AdminLayout";
 
 const ADMIN_PIN_ITEMS: PinListItem[] = [
+  {
+    id: 'ai-assistant',
+    name: 'AI Support Assistant',
+    info: 'Manage stealth human-like auto-reply bot for customer support',
+    icon: Bot,
+    pinned: true,
+    href: 'ai-assistant'
+  },
   {
     id: 'system-diagnostics',
     name: 'System Health & Error Diagnostics Hub',

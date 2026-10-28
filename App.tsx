@@ -365,6 +365,7 @@ import ManageOnboardingOffers from './pages/admin/ManageOnboardingOffers';
 import ManageCreatorRequests from './pages/admin/ManageCreatorRequests';
 import ManageAffiliateVideos from './pages/admin/ManageAffiliateVideos';
 import ManageAds from './pages/admin/ManageAds';
+import ManageAiAssistant from './pages/admin/ManageAiAssistant';
 import ManageGroups from './pages/admin/ManageGroups';
 import ManageSecurity from './pages/admin/ManageSecurity';
 import SystemHealthDiagnostics from './pages/admin/SystemHealthDiagnostics';
@@ -1012,6 +1013,7 @@ const AppContent: React.FC = () => {
                   <Route path="creator-requests" element={<PageWrapper><ManageCreatorRequests /></PageWrapper>} />
                   <Route path="affiliate-videos" element={<PageWrapper><ManageAffiliateVideos /></PageWrapper>} />
                   <Route path="ads" element={<PageWrapper><ManageAds /></PageWrapper>} />
+                  <Route path="ai-assistant" element={<PageWrapper><ManageAiAssistant /></PageWrapper>} />
                   <Route path="mock/*" element={<PageWrapper><GenericAdminMock /></PageWrapper>} />
                 </Route>
              </Routes>

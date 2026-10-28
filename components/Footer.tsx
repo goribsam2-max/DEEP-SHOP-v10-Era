@@ -277,84 +277,153 @@ export const Footer = () => {
         </div>
 
       <footer className="mainF">
-        <div className="fotM secIn">
-          <div className="abtU">
-            <div className="abtT">
-              <div className="abtL">
-                <img src={settings.footerLogo || "/favicon.png"} alt="DEEP SHOP" className="abtI" />
+        <div className="secIn">
+          {/* Desktop Layout (md and up) */}
+          <div className="hidden md:block py-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-zinc-200/80 dark:border-zinc-800/80">
+              {/* Col 1: Brand Info */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm flex items-center justify-center">
+                    <img src={settings.footerLogo || "/favicon.png"} alt="DEEP SHOP" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black tracking-tight text-zinc-900 dark:text-white">DEEP SHOP</h2>
+                    <span className="text-[10px] uppercase font-bold text-amber-500 tracking-wider">Premium Tech Hub</span>
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-xs">
+                  Border cross devices, border cross products & tech marketplace. Quality guaranteed.
+                </p>
+                {/* Social Media Row */}
+                <div className="flex items-center gap-2 pt-1">
+                  <a aria-label="Instagram" href="https://www.instagram.com/deep.shop.official" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-rose-500/10 hover:text-rose-500 dark:hover:text-rose-400 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center transition-all">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                  </a>
+                  <a aria-label="Telegram" href="https://t.me/+jBB7zRRjuF5hYWY1" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-sky-500/10 hover:text-sky-500 dark:hover:text-sky-400 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center transition-all">
+                    <svg className="w-4 h-4 fill-current text-[#229ED9]" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                    </svg>
+                  </a>
+                  <a aria-label="WhatsApp" href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-emerald-500/10 hover:text-emerald-500 dark:hover:text-emerald-400 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center transition-all">
+                    <svg className="w-4 h-4 fill-current text-emerald-500" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+                    </svg>
+                  </a>
+                </div>
               </div>
-              <h2>DEEP SHOP</h2>
+
+              {/* Col 2: Navigation */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 mb-3">Marketplace</h3>
+                <ul className="space-y-2 text-xs">
+                  <li><Link to="/" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Home Marketplace</Link></li>
+                  <li><Link to="/all-products" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">All Products</Link></li>
+                  <li><Link to="/news-hub" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">News Hub & Feed</Link></li>
+                  <li><Link to="/messages" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Direct Chat Support</Link></li>
+                </ul>
+              </div>
+
+              {/* Col 3: Support */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 mb-3">Customer Care</h3>
+                <ul className="space-y-2 text-xs">
+                  <li><Link to="/faq" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Frequently Asked Questions</Link></li>
+                  <li><Link to="/help-center" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Help Center</Link></li>
+                  <li><Link to="/my-tickets" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Support Tickets</Link></li>
+                  <li><Link to="/contact" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Contact Us</Link></li>
+                  <li><button onClick={() => setIsContactOpen(true)} className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold text-left">24/7 Helpline</button></li>
+                </ul>
+              </div>
+
+              {/* Col 4: Policies */}
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 mb-3">Legal & Info</h3>
+                <ul className="space-y-2 text-xs">
+                  <li><Link to="/privacy" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Privacy Policy</Link></li>
+                  <li><Link to="/terms" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Terms of Service</Link></li>
+                  <li><Link to="/refund-policy" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Refund & Return Policy</Link></li>
+                  <li><Link to="/shipping-policy" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">Shipping Policy</Link></li>
+                  <li><Link to="/about" className="text-zinc-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 transition">About DEEP SHOP</Link></li>
+                </ul>
+              </div>
             </div>
-            <p className="abtD">border cross devices, border cross products, illegal products buy sell site</p>
+
+            {/* Desktop Bottom Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between pt-6 text-xs text-zinc-500 dark:text-zinc-400">
+              <p>© {new Date().getFullYear()} DEEP SHOP. All rights reserved.</p>
+              <div className="flex items-center gap-4 mt-2 sm:mt-0">
+                <span className="inline-flex items-center gap-1.5 text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Verified Store Platform
+                </span>
+              </div>
+            </div>
           </div>
 
-          <ul className="fotS">
-            <li>
-              <a aria-label="Instagram" href="https://www.instagram.com/deep.shop.official" target="_blank" rel="noopener noreferrer" title="@deep.shop.official">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">
-                  <defs>
-                    <radialGradient id="igGrad" cx="0.2" cy="1" r="1">
-                      <stop offset="0%" stopColor="#fdf497"/>
-                      <stop offset="5%" stopColor="#fdf497"/>
-                      <stop offset="45%" stopColor="#fd5949"/>
-                      <stop offset="60%" stopColor="#d6249f"/>
-                      <stop offset="90%" stopColor="#285AEB"/>
-                    </radialGradient>
-                  </defs>
-                  <path fill="url(#igGrad)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                </svg>
-              </a>
-            </li>
-            <li>
-              <a aria-label="Telegram" href="https://t.me/+jBB7zRRjuF5hYWY1" target="_blank" rel="noopener noreferrer" title="Join Telegram Channel">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="text-[#229ED9]">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-                </svg>
-              </a>
-            </li>
-            {settings.tiktokUrl && (
-              <li>
-                <a aria-label="TikTok" href={settings.tiktokUrl} target="_blank" rel="noopener noreferrer">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2m5.939 7.713v.646a.37.37 0 0 1-.38.37a5.364 5.364 0 0 1-2.903-1.108v4.728a3.938 3.938 0 0 1-1.18 2.81a4.011 4.011 0 0 1-2.87 1.17a4.103 4.103 0 0 1-2.862-1.17a3.98 3.98 0 0 1-1.026-3.805c.159-.642.48-1.232.933-1.713a3.58 3.58 0 0 1 2.79-1.313h.82v1.703a.348.348 0 0 1-.39.348a1.918 1.918 0 0 0-1.23 3.631c.27.155.572.246.882.267c.24.01.48-.02.708-.092a1.928 1.928 0 0 0 1.313-1.816V5.754a.359.359 0 0 1 .359-.36h1.415a.359.359 0 0 1 .359.34a3.303 3.303 0 0 0 1.282 2.245a3.25 3.25 0 0 0 1.641.636a.37.37 0 0 1 .338.35z"/></svg>
-                </a>
-              </li>
-            )}
-            <li>
-              <a aria-label="Whatsapp" href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 256 258"><defs><linearGradient id="logosWhatsappIcon0" x1="50%" x2="50%" y1="100%" y2="0%"><stop offset="0%" stopColor="#1FAF38"/><stop offset="100%" stopColor="#60D669"/></linearGradient><linearGradient id="logosWhatsappIcon1" x1="50%" x2="50%" y1="100%" y2="0%"><stop offset="0%" stopColor="#F9F9F9"/><stop offset="100%" stopColor="#FFF"/></linearGradient></defs><path fill="url(#logosWhatsappIcon0)" d="M5.463 127.456c-.006 21.677 5.658 42.843 16.428 61.499L4.433 252.697l65.232-17.104a122.994 122.994 0 0 0 58.8 14.97h.054c67.815 0 123.018-55.183 123.047-123.01c.013-32.867-12.775-63.773-36.009-87.025c-23.23-23.25-54.125-36.061-87.043-36.076c-67.823 0-123.022 55.18-123.05 123.004"/><path fill="url(#logosWhatsappIcon1)" d="M1.07 127.416c-.007 22.457 5.86 44.38 17.014 63.704L0 257.147l67.571-17.717c18.618 10.151 39.58 15.503 60.91 15.511h.055c70.248 0 127.434-57.168 127.464-127.423c.012-34.048-13.236-66.065-37.3-90.15C194.633 13.286 162.633.014 128.536 0C58.276 0 1.099 57.16 1.071 127.416Zm40.24 60.376l-2.523-4.005c-10.606-16.864-16.204-36.352-16.196-56.363C22.614 69.029 70.138 21.52 128.576 21.52c28.3.012 54.896 11.044 74.9 31.06c20.003 20.018 31.01 46.628 31.003 74.93c-.026 58.395-47.551 105.91-105.943 105.91h-.042c-19.013-.01-37.66-5.116-53.922-14.765l-3.87-2.295l-40.098 10.513l10.706-39.082Z"/><path fill="#FFFFFF" d="M96.678 74.148c-2.386-5.303-4.897-5.41-7.166-5.503c-1.858-.08-3.982-.074-6.104-.074c-2.124 0-5.575.799-8.492 3.984c-2.92 3.188-11.148 10.892-11.148 26.561c0 15.67 11.413 30.813 13.004 32.94c1.593 2.123 22.033 35.307 54.405 48.073c26.904 10.609 32.379 8.499 38.218 7.967c5.84-.53 18.844-7.702 21.497-15.139c2.655-7.436 2.655-13.81 1.859-15.142c-.796-1.327-2.92-2.124-6.105-3.716c-3.186-1.593-18.844-9.298-21.763-10.361c-2.92-1.062-5.043-1.592-7.167 1.597c-2.124 3.184-8.223 10.356-10.082 12.48c-1.857 2.129-3.716 2.394-6.9.801c-3.187-1.598-13.444-4.957-25.613-15.806c-9.468-8.442-15.86-18.867-17.718-22.056c-1.858-3.184-.199-4.91 1.398-6.497c1.431-1.427 3.186-3.719 4.78-5.578c1.588-1.86 2.118-3.187 3.18-5.311c1.063-2.126.531-3.986-.264-5.579c-.798-1.593-6.987-17.343-9.819-23.64"/></svg>
-              </a>
-            </li>
-          </ul>
+          {/* Mobile Layout (sm & down) */}
+          <div className="block md:hidden py-4 space-y-6">
+            {/* Header & Logo Card */}
+            <div className="flex items-center justify-between bg-zinc-100/60 dark:bg-zinc-800/60 p-3.5 rounded-2xl border border-zinc-200/50 dark:border-zinc-700/50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 shadow-xs flex items-center justify-center">
+                  <img src={settings.footerLogo || "/favicon.png"} alt="DEEP SHOP" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black tracking-tight text-zinc-900 dark:text-white leading-tight">DEEP SHOP</h2>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Border Cross Tech Hub</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsContactOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 active:scale-95 transition"
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                Helpline
+              </button>
+            </div>
 
-          <div className="footer-links-row">
-            <Link to="/">Home</Link>
-            <span className="dot">•</span>
-            <Link to="/all-products">All Products</Link>
-            <span className="dot">•</span>
-            <Link to="/faq">FAQs</Link>
-            <span className="dot">•</span>
-            <Link to="/help-center">Help Center</Link>
-            <span className="dot">•</span>
-            <Link to="/contact">Contact Us</Link>
-            <span className="dot">•</span>
-            <Link to="/my-tickets">Tickets</Link>
-            <span className="dot">•</span>
-            <Link to="/privacy">Privacy</Link>
-            <span className="dot">•</span>
-            <Link to="/terms">Terms</Link>
-            <span className="dot">•</span>
-            <Link to="/refund-policy">Refund</Link>
-            <span className="dot">•</span>
-            <Link to="/shipping-policy">Shipping</Link>
-            <span className="dot">•</span>
-            <Link to="/about">About</Link>
-            <span className="dot">•</span>
-            <button className="hover:underline" onClick={() => setIsContactOpen(true)}>Helpline</button>
-          </div>
+            {/* Social Buttons Dock */}
+            <div className="grid grid-cols-3 gap-2">
+              <a href="https://www.instagram.com/deep.shop.official" target="_blank" rel="noopener noreferrer" className="h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-rose-500/10 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition">
+                <svg className="w-4 h-4 fill-current text-rose-500" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                Instagram
+              </a>
+              <a href="https://t.me/+jBB7zRRjuF5hYWY1" target="_blank" rel="noopener noreferrer" className="h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-sky-500/10 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition">
+                <svg className="w-4 h-4 fill-current text-[#229ED9]" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+                Telegram
+              </a>
+              <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" className="h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-emerald-500/10 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition">
+                <svg className="w-4 h-4 fill-current text-emerald-500" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
+                WhatsApp
+              </a>
+            </div>
 
-          <div className="fotB">
-            <div className="fotC">
-              <span className="credit">© {new Date().getFullYear()} DEEP SHOP. All rights reserved.</span>
+            {/* Quick Links Grid (2 columns) */}
+            <div className="grid grid-cols-2 gap-2 text-xs font-medium">
+              <Link to="/all-products" className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-between transition">
+                <span>Products</span>
+                <span className="text-zinc-400">→</span>
+              </Link>
+              <Link to="/faq" className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-between transition">
+                <span>FAQs</span>
+                <span className="text-zinc-400">→</span>
+              </Link>
+              <Link to="/help-center" className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-between transition">
+                <span>Help Center</span>
+                <span className="text-zinc-400">→</span>
+              </Link>
+              <Link to="/privacy" className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-between transition">
+                <span>Privacy & Terms</span>
+                <span className="text-zinc-400">→</span>
+              </Link>
+            </div>
+
+            {/* Copyright */}
+            <div className="text-center pt-2">
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">© {new Date().getFullYear()} DEEP SHOP. All rights reserved.</p>
             </div>
           </div>
         </div>
