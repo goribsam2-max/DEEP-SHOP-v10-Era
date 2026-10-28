@@ -1,16 +1,27 @@
 import { formatPrice } from "@/lib/utils";
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import Icon from "../components/Icon";
 import { CustomSectionEmbed } from "../components/CustomSectionEmbed";
-import { useTheme } from "../components/ThemeContext";
-import { Button } from "../components/ui/button";
 import { auth, db } from "../firebase";
 import { query, where, getDocs, collection } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
 import { useIllustrations } from "../lib/useIllustrations";
 import { PixelImage } from "../components/ui/PixelImage";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
+import {
+  ShoppingBag,
+  Trash2,
+  Plus,
+  Minus,
+  Ticket,
+  ArrowRight,
+  ArrowLeft,
+  ShieldCheck,
+  X,
+  CheckCircle2,
+  PackageCheck,
+} from "lucide-react";
 
 const Cart: React.FC = () => {
   const [items, setItems] = useState<any[]>([]);
@@ -19,15 +30,24 @@ const Cart: React.FC = () => {
   const [promoError, setPromoError] = useState("");
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
   const [showCouponsModal, setShowCouponsModal] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const illustrations = useIllustrations();
-  
+
   const navigate = useNavigate();
-  const { isDark } = useTheme();
   const notify = useNotify();
 
   useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem("f_cart") || "[]");
-    setItems(cart);
+    const syncCartFromStorage = () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem("f_cart") || "[]");
+        setItems(Array.isArray(cart) ? cart : []);
+      } catch {
+        setItems([]);
+      }
+    };
+
+    syncCartFromStorage();
+    window.addEventListener("update_cart", syncCartFromStorage);
 
     const loadVouchers = async () => {
       try {
@@ -38,18 +58,46 @@ const Cart: React.FC = () => {
           where("isActive", "==", true)
         );
         const snap = await getDocs(q);
-        setMyCoupons(snap.docs.map((d) => ({ id: d.id, ...d.data(), isVoucher: true })));
-      } catch (e) {}
+        setMyCoupons(
+          snap.docs.map((d) => ({ id: d.id, ...d.data(), isVoucher: true }))
+        );
+      } catch {}
     };
     loadVouchers();
+
+    return () => {
+      window.removeEventListener("update_cart", syncCartFromStorage);
+    };
   }, []);
 
-  const total = items.reduce(
-    (acc, curr) => acc + (curr.discountPrice || curr.price) * curr.quantity,
-    0,
+  useEffect(() => {
+    if (!confirmClear) return;
+    const timer = setTimeout(() => setConfirmClear(false), 3200);
+    return () => clearTimeout(timer);
+  }, [confirmClear]);
+
+  const persistCart = (nextItems: any[]) => {
+    setItems(nextItems);
+    localStorage.setItem("f_cart", JSON.stringify(nextItems));
+    window.dispatchEvent(new Event("update_cart"));
+  };
+
+  const totalUnits = useMemo(
+    () => items.reduce((sum, curr) => sum + (Number(curr.quantity) || 1), 0),
+    [items]
   );
 
-  const deliveryCharge = 150; // default delivery charge
+  const total = useMemo(
+    () =>
+      items.reduce(
+        (acc, curr) =>
+          acc + (curr.discountPrice || curr.offerPrice || curr.price || 0) * (curr.quantity || 1),
+        0
+      ),
+    [items]
+  );
+
+  const deliveryCharge = items.length > 0 ? 150 : 0;
 
   let promoDiscount = 0;
   if (appliedPromo) {
@@ -60,17 +108,30 @@ const Cart: React.FC = () => {
     }
   }
 
+  const grandTotal = Math.max(0, total + deliveryCharge - promoDiscount);
+
   const updateQuantity = (index: number, delta: number) => {
     const newItems = [...items];
-    newItems[index].quantity = Math.max(1, newItems[index].quantity + delta);
-    setItems(newItems);
-    localStorage.setItem("f_cart", JSON.stringify(newItems));
+    const nextQty = Math.max(1, (newItems[index].quantity || 1) + delta);
+    newItems[index] = { ...newItems[index], quantity: nextQty };
+    persistCart(newItems);
   };
 
   const removeItem = (index: number) => {
     const newItems = items.filter((_, i) => i !== index);
-    setItems(newItems);
-    localStorage.setItem("f_cart", JSON.stringify(newItems));
+    persistCart(newItems);
+    notify("কার্ট থেকে পণ্য সরানো হয়েছে", "info");
+  };
+
+  const handleClearCart = () => {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    persistCart([]);
+    setAppliedPromo(null);
+    setConfirmClear(false);
+    notify("কার্ট খালি করা হয়েছে", "info");
   };
 
   const applyPromo = async () => {
@@ -82,263 +143,736 @@ const Cart: React.FC = () => {
         where("code", "==", promoCode.trim().toUpperCase())
       );
       const snap = await getDocs(q);
-      if (snap.empty) setPromoError("Invalid promo code");
-      else {
+      if (snap.empty) {
+        setPromoError("প্রোমো কোডটি সঠিক নয়");
+      } else {
         const c = snap.docs[0].data();
         if (!c.isActive) {
-          setPromoError("Promo code inactive");
+          setPromoError("এই প্রোমো কোডটি বর্তমানে নিষ্ক্রিয়");
         } else if (c.expiresAt && c.expiresAt < Date.now()) {
-          setPromoError("Promo code expired");
+          setPromoError("প্রোমো কোডের মেয়াদ শেষ হয়েছে");
         } else if (c.minOrderValue && total < c.minOrderValue) {
-          setPromoError(`Min order value is ৳${c.minOrderValue}`);
+          setPromoError(`সর্বনিম্ন অর্ডার মূল্য ${formatPrice(c.minOrderValue)} হতে হবে`);
         } else {
           setAppliedPromo({ id: snap.docs[0].id, ...c, isVoucher: false });
-          notify("Promo code applied!", "success");
+          notify("প্রোমো কোড সফলভাবে যুক্ত হয়েছে!", "success");
         }
       }
-    } catch (e) {
-      setPromoError("Error verifying promo code");
+    } catch {
+      setPromoError("প্রোমো কোড যাচাই করতে সমস্যা হয়েছে");
     }
   };
-  
+
   const applyVoucher = (voucher: any) => {
     if (voucher.minOrderValue && total < voucher.minOrderValue) {
-      notify(`Minimum order logic value is ৳${voucher.minOrderValue}`, "error");
+      notify(
+        `সর্বনিম্ন অর্ডার মূল্য ${formatPrice(voucher.minOrderValue)} প্রয়োজন`,
+        "error"
+      );
       return;
     }
     setAppliedPromo(voucher);
     setShowCouponsModal(false);
-    notify("Voucher applied!", "success");
+    notify("ভাউচার সফলভাবে যুক্ত হয়েছে!", "success");
+  };
+
+  const getItemImage = (item: any) => {
+    if (item.image) return item.image;
+    if (Array.isArray(item.images) && item.images[0]) return item.images[0];
+    return getProductDisplayImage(item);
+  };
+
+  const getItemUrl = (item: any) => {
+    if (!item.id) return "/all-products";
+    const slug =
+      (item.name || "product")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") || "item";
+    return `/product/${slug}/${item.id}`;
   };
 
   return (
-    <div className="bg-zinc-50 dark:bg-[#121212] min-h-screen animate-fade-in relative transition-colors font-sans pb-24">
-      {/* Header */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-2">
-         <h1 className="text-[2rem] font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-3">
-           My Cart
-         </h1>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 pb-12">
+    <div className="ds-liquid-checkout-shell min-h-screen relative transition-colors font-sans pb-28 lg:pb-16">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8">
+        {/* ====================================================================
+            EMPTY CART STATE (Shared Liquid Glass Showcase)
+            ==================================================================== */}
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 text-center relative z-10 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-xl mx-auto mt-6 lg:mt-12 ds-liquid-panel p-8 sm:p-12 text-center flex flex-col items-center"
+          >
             {illustrations.emptyCart ? (
-              <div className="w-48 h-48 mx-auto mb-6 rounded-[20px] overflow-hidden">
-                 <img src={illustrations.emptyCart} alt="Empty Cart" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-24 h-24 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-6 border border-zinc-100 dark:border-zinc-700">
-                <Icon
-                  name="shopping-cart"
-                  className="text-2xl text-zinc-400 dark:text-zinc-500"
+              <div className="w-40 h-40 sm:w-48 sm:h-48 mx-auto mb-6 rounded-[24px] overflow-hidden ds-liquid-subpanel p-2">
+                <img
+                  src={illustrations.emptyCart}
+                  alt="Empty Cart"
+                  className="w-full h-full object-cover rounded-[18px]"
                 />
               </div>
+            ) : (
+              <div className="w-20 h-20 rounded-full ds-liquid-subpanel flex items-center justify-center mb-6 text-sky-600 dark:text-sky-400">
+                <ShoppingBag className="w-9 h-9 stroke-[1.75px]" />
+              </div>
             )}
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">
-              Your cart is empty
-            </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 max-w-sm">
-              Looks like you haven't added anything to your cart yet. Let's change that!
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">
+              আপনার কার্ট বর্তমানে খালি
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300/85 mb-8 max-w-md leading-relaxed">
+              আপনার পছন্দের স্মার্টফোন, অরিজিনাল পার্টস বা এক্সেসরিজ কার্টে যোগ করে সহজেই অর্ডার সম্পন্ন করুন।
             </p>
-            <button onClick={() => navigate("/")} className="px-8 py-3.5 rounded-full shadow-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 font-bold transition-all border-none">
-              Start Shopping
-            </button>
-          </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => navigate("/all-products")}
+                className="ds-liquid-btn-primary px-7 py-3 w-full sm:w-auto flex items-center justify-center gap-2 whitespace-nowrap"
+              >
+                <span>ক্যাটালগ ঘুরে দেখুন</span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="ds-liquid-btn-secondary px-7 py-3 w-full sm:w-auto flex items-center justify-center gap-2 whitespace-nowrap"
+              >
+                <span>হোম পেজে যান</span>
+              </button>
+            </div>
+          </motion.div>
         ) : (
-          <div className="flex flex-col gap-6 relative z-10">
-            <div id="cart-products" className="flex flex-col gap-5">
-              <AnimatePresence mode="popLayout">
-                {items.map((item, idx) => (
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    key={idx}
-                    className="flex items-center gap-4 group"
+          <>
+            {/* ================================================================
+                MOBILE CART WORKSPACE (< lg)
+                Compact Header + Tactile Item Cards + Voucher/Summary + Sticky Bottom Bar
+                ================================================================ */}
+            <div className="lg:hidden space-y-4">
+              {/* Mobile Top Header Card */}
+              <div className="ds-liquid-panel p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    আপনার কার্ট
+                  </h1>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
+                    {items.length}টি পণ্য · মোট {totalUnits} ইউনিট
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleClearCart}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
+                      confirmClear
+                        ? "bg-rose-600 text-white"
+                        : "ds-liquid-subpanel text-slate-600 dark:text-slate-300"
+                    }`}
                   >
-                     <div className="w-24 h-24 sm:w-28 sm:h-28 bg-white dark:bg-zinc-900/50 rounded-2xl flex items-center justify-center shrink-0 border border-zinc-100 dark:border-zinc-800 overflow-hidden relative shadow-sm">
-                       <PixelImage
-                         src={item.image || (item.images && item.images[0]) || "/favicon.png"}
-                         className="w-full h-full bg-transparent"
-                         imgClassName="w-[85%] h-[85%] object-contain block dark:mix-blend-normal mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                         alt={item.name}
-                       />
-                     </div>
-                     <div className="flex-1 min-w-0">
-                       <div className="flex justify-between items-start mb-1 gap-2">
-                         <h4 className="font-bold text-[15px] sm:text-lg tracking-tight text-zinc-900 dark:text-zinc-100 line-clamp-1 leading-tight capitalize">
-                           {item.name}
-                         </h4>
-                         <button
-                           onClick={() => removeItem(idx)}
-                           className="text-zinc-400 hover:text-red-500 transition-colors shrink-0 p-1"
-                         >
-                           <Icon name="x" className="text-lg" />
-                         </button>
-                       </div>
-                       
-                       <div className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3 truncate">
-                          {item.variant ? item.variant : "Standard"} 
-                          {item.brand && ` | ${item.brand}`}
-                       </div>
-                       
-                       <div className="flex justify-between items-center mt-1">
-                          <div className="font-black text-lg sm:text-xl text-zinc-900 dark:text-zinc-100 tracking-tight">
-                            {formatPrice(item.discountPrice || item.price)}
-                          </div>
-                          
-                          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full h-9 sm:h-10">
-                            <button
-                              onClick={() => updateQuantity(idx, -1)}
-                              className="w-10 sm:w-11 h-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors text-lg font-bold"
-                            >
-                              −
-                            </button>
-                            <span className="w-6 sm:w-8 text-center text-sm font-bold text-zinc-900 dark:text-zinc-100 select-none">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(idx, 1)}
-                              className="w-10 sm:w-11 h-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors text-lg font-bold"
-                            >
-                              +
-                            </button>
-                          </div>
-                       </div>
-                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
+                    {confirmClear ? "নিশ্চিত মুছুন?" : "খালি করুন"}
+                  </button>
+                </div>
+              </div>
 
-            {/* Promo / Voucher Section */}
-            <div>
-               <div className="flex bg-white dark:bg-zinc-900 rounded-full border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden p-1 relative z-10 w-full mb-1">
-                 <input 
-                   type="text" 
-                   value={promoCode}
-                   onChange={(e) => setPromoCode(e.target.value)}
-                   disabled={!!appliedPromo}
-                   placeholder={appliedPromo ? appliedPromo.code : "Promo code (e.g. FESTIVE10)"} 
-                   className="flex-1 min-w-0 bg-transparent px-5 py-3 text-sm font-semibold outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 disabled:opacity-50"
-                 />
-                 {appliedPromo ? (
-                    <button 
-                       onClick={() => setAppliedPromo(null)}
-                       className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 px-6 py-3 rounded-full text-sm font-bold tracking-wide transition-colors whitespace-nowrap overflow-hidden shrink-0"
+              {/* Mobile Cart Item Cards */}
+              <div className="space-y-3">
+                <AnimatePresence mode="popLayout">
+                  {items.map((item, idx) => {
+                    const unitPrice =
+                      item.discountPrice || item.offerPrice || item.price || 0;
+                    const qty = item.quantity || 1;
+                    const lineTotal = unitPrice * qty;
+
+                    return (
+                      <motion.div
+                        layout
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.96 }}
+                        key={item.id ? `${item.id}-${idx}` : idx}
+                        className="ds-liquid-panel p-3.5 rounded-[22px]"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Link
+                            to={getItemUrl(item)}
+                            className="w-20 h-20 rounded-2xl ds-liquid-product-media overflow-hidden shrink-0 flex items-center justify-center"
+                          >
+                            <PixelImage
+                              src={getItemImage(item)}
+                              alt={item.name}
+                              className="w-full h-full bg-transparent"
+                              imgClassName="w-full h-full object-cover"
+                            />
+                          </Link>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <Link
+                                to={getItemUrl(item)}
+                                className="font-bold text-[14px] text-slate-900 dark:text-white leading-snug line-clamp-2"
+                              >
+                                {item.name}
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => removeItem(idx)}
+                                aria-label="Remove item"
+                                className="w-7 h-7 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-500 hover:text-rose-500 shrink-0"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                              {item.variant || "স্ট্যান্ডার্ড ভেরিয়েন্ট"}
+                              {item.brand ? ` · ${item.brand}` : ""}
+                              {` · একক ${formatPrice(unitPrice)}`}
+                            </p>
+
+                            <div className="mt-2.5 pt-2.5 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
+                              <div className="tabular-nums">
+                                <span className="text-[15px] font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
+                                  {formatPrice(lineTotal)}
+                                </span>
+                              </div>
+
+                              <div className="ds-liquid-dock rounded-full p-0.5 flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => updateQuantity(idx, -1)}
+                                  aria-label="Decrease quantity"
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200 active:scale-95"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="min-w-[24px] text-center text-xs font-extrabold text-slate-900 dark:text-white tabular-nums select-none">
+                                  {qty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateQuantity(idx, 1)}
+                                  aria-label="Increase quantity"
+                                  className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-slate-900 dark:text-white active:scale-95"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+
+              {/* Mobile Promo & Voucher Panel */}
+              <div className="ds-liquid-panel p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    প্রোমো কোড বা ভাউচার
+                  </span>
+                  {myCoupons.length > 0 && !appliedPromo && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCouponsModal(true)}
+                      className="text-xs font-semibold text-sky-600 dark:text-sky-400 inline-flex items-center gap-1 whitespace-nowrap"
                     >
-                      Remove
+                      <Ticket className="w-3.5 h-3.5" />
+                      <span>{myCoupons.length}টি ভাউচার দেখুন</span>
                     </button>
-                 ) : (
-                    <button 
-                       onClick={applyPromo}
-                       className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-6 py-3 rounded-full text-[13px] sm:text-sm font-bold tracking-wide transition-transform active:scale-95 whitespace-nowrap overflow-hidden shrink-0"
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    disabled={!!appliedPromo}
+                    placeholder={
+                      appliedPromo
+                        ? `${appliedPromo.code || appliedPromo.title} যুক্ত`
+                        : "প্রোমো কোড লিখুন (যেমন FESTIVE10)"
+                    }
+                    className="ds-liquid-input flex-1 min-w-0 px-3.5 py-2.5 text-xs font-semibold outline-none placeholder:text-slate-400 disabled:opacity-60"
+                  />
+                  {appliedPromo ? (
+                    <button
+                      type="button"
+                      onClick={() => setAppliedPromo(null)}
+                      className="ds-liquid-btn-secondary !min-h-[40px] !text-xs px-4 whitespace-nowrap shrink-0"
                     >
-                      Apply Code
+                      বাতিল
                     </button>
-                 )}
-               </div>
-               
-               {promoError && (
-                 <p className="text-xs text-red-500 font-semibold px-4 mt-1">{promoError}</p>
-               )}
-               
-               {myCoupons.length > 0 && !appliedPromo && (
-                 <button 
-                    onClick={() => setShowCouponsModal(true)}
-                    className="flex justify-between items-center w-full px-5 py-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl mt-4 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
-                 >
-                    <div className="flex items-center gap-3 text-zinc-900 dark:text-zinc-100 font-semibold text-sm">
-                       <Icon name="ticket" className="text-zinc-500" />
-                       You have {myCoupons.length} vouchers available!
-                    </div>
-                    <span className="text-xs font-bold bg-zinc-200 dark:bg-zinc-700 px-3 py-1 rounded-full text-zinc-700 dark:text-zinc-300">
-                       View All
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={applyPromo}
+                      className="ds-liquid-btn-primary !min-h-[40px] !text-xs px-4 whitespace-nowrap shrink-0"
+                    >
+                      প্রয়োগ করুন
+                    </button>
+                  )}
+                </div>
+
+                {promoError && (
+                  <p className="text-xs text-rose-500 font-medium">{promoError}</p>
+                )}
+              </div>
+
+              {/* Mobile Price Breakdown Card */}
+              <div className="ds-liquid-panel p-4 space-y-3">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  অর্ডার সামারি
+                </h2>
+                <div className="space-y-2.5 text-xs sm:text-sm tabular-nums">
+                  <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                    <span>সাবটোটাল ({totalUnits} ইউনিট)</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {formatPrice(total)}
                     </span>
-                 </button>
-               )}
-            </div>
-
-            {/* Order Summary */}
-            <div id="cart-summary" className="mt-2">
-              <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm p-6 sm:p-7">
-                <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 mb-6 tracking-tight">Order Summary</h3>
-                
-                <div className="space-y-4 text-sm sm:text-base font-semibold">
-                  <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-                    <span>Sub Total</span>
-                    <span className="text-zinc-900 dark:text-zinc-100">{formatPrice(total)}</span>
                   </div>
                   {appliedPromo && (
-                    <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-                      <span>Promo Code Discount</span>
-                      <span className="text-red-500">-{formatPrice(promoDiscount)}</span>
+                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                      <span>ডিসকাউন্ট ছাড়</span>
+                      <span className="font-bold">-{formatPrice(promoDiscount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-                    <span>Delivery Charge</span>
-                    <span className="text-zinc-900 dark:text-zinc-100">{formatPrice(deliveryCharge)}</span>
+                  <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                    <span>আনুমানিক ডেলিভারি চার্জ</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {formatPrice(deliveryCharge)}
+                    </span>
                   </div>
-                  <div className="pt-5 mt-1 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-                    <span className="text-zinc-500 dark:text-zinc-400">Total</span>
-                    <span className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
-                      {formatPrice(Math.max(0, total + deliveryCharge - promoDiscount))}
+                  <div className="pt-2.5 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex justify-between items-baseline">
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      সর্বমোট দেয়
+                    </span>
+                    <span className="text-xl font-extrabold text-slate-900 dark:text-white">
+                      {formatPrice(grandTotal)}
                     </span>
                   </div>
                 </div>
+
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed pt-1">
+                  চেকআউট ধাপে ক্যাশ অন ডেলিভারি (COD), মোবাইল ব্যাংকিং অথবা ভিআইপি ফ্রি ডেলিভারি সুবিধা নির্বাচন করা যাবে।
+                </p>
               </div>
             </div>
 
-            <div className="mt-2 text-center pb-4">
-               <button
-                  className="w-full relative overflow-hidden group rounded-full bg-[#1cdb5e] hover:bg-[#17ba4f] text-white transition-all font-bold tracking-wide border-none shadow-xl hover:shadow-2xl py-4 flex items-center justify-center text-lg active:scale-[0.98]"
-                  onClick={() => navigate("/checkout")}
-               >
-                  <span className="relative z-10 flex items-center justify-center">
-                    Proceed to Checkout
-                  </span>
-               </button>
+            {/* ================================================================
+                DESKTOP CART WORKSPACE (lg+)
+                Top Architectural Header + 12-Col Split (8-Col Ledger | 4-Col Sticky Summary)
+                ================================================================ */}
+            <div className="hidden lg:block space-y-7">
+              {/* Desktop Top Header Panel */}
+              <div className="ds-liquid-panel px-7 py-5 flex items-center justify-between gap-6">
+                <div>
+                  <h1 className="text-2xl xl:text-[28px] font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    শপিং কার্ট · Shopping Bag
+                  </h1>
+                  <p className="text-sm text-slate-600 dark:text-slate-300/85 mt-1 tabular-nums">
+                    আপনার কার্টে {items.length}টি ভিন্ন পণ্য · সর্বমোট {totalUnits} ইউনিট সংরক্ষিত আছে
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/all-products")}
+                    className="ds-liquid-btn-secondary !min-h-[44px] !text-sm px-5 flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <ArrowLeft className="w-4 h-4 shrink-0" />
+                    <span>কেনাকাটা চালিয়ে যান</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearCart}
+                    className={`min-h-[44px] px-4 rounded-full text-sm font-semibold transition-colors whitespace-nowrap ${
+                      confirmClear
+                        ? "bg-rose-600 text-white shadow-sm"
+                        : "ds-liquid-subpanel text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400"
+                    }`}
+                  >
+                    {confirmClear ? "সত্যিই সব মুছবেন?" : "কার্ট খালি করুন"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Desktop 12-Column Asymmetric Split */}
+              <div className="grid grid-cols-12 gap-7 items-start">
+                {/* LEFT 8 COLUMNS: Structured Itemized Ledger */}
+                <div className="col-span-8 space-y-5">
+                  <div className="ds-liquid-panel p-6">
+                    {/* Column Labels */}
+                    <div className="grid grid-cols-12 gap-4 pb-3.5 border-b border-slate-900/[0.07] dark:border-white/[0.08] text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      <div className="col-span-6">প্রোডাক্ট ও বিবরণ</div>
+                      <div className="col-span-3 text-center">পরিমাণ</div>
+                      <div className="col-span-3 text-right">মোট মূল্য</div>
+                    </div>
+
+                    {/* Product Rows */}
+                    <div className="divide-y divide-slate-900/[0.06] dark:divide-white/[0.08]">
+                      <AnimatePresence mode="popLayout">
+                        {items.map((item, idx) => {
+                          const unitPrice =
+                            item.discountPrice || item.offerPrice || item.price || 0;
+                          const qty = item.quantity || 1;
+                          const lineTotal = unitPrice * qty;
+
+                          return (
+                            <motion.div
+                              layout
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.97 }}
+                              key={item.id ? `${item.id}-desk-${idx}` : idx}
+                              className="py-5 first:pt-5 last:pb-1 grid grid-cols-12 gap-4 items-center group"
+                            >
+                              {/* Product Media + Info */}
+                              <div className="col-span-6 flex items-center gap-4 min-w-0">
+                                <Link
+                                  to={getItemUrl(item)}
+                                  className="w-24 h-24 rounded-2xl ds-liquid-product-media overflow-hidden shrink-0 flex items-center justify-center"
+                                >
+                                  <PixelImage
+                                    src={getItemImage(item)}
+                                    alt={item.name}
+                                    className="w-full h-full bg-transparent"
+                                    imgClassName="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                </Link>
+
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <Link
+                                    to={getItemUrl(item)}
+                                    className="font-bold text-base text-slate-900 dark:text-white leading-snug line-clamp-2 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                                  >
+                                    {item.name}
+                                  </Link>
+
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                    <span>{item.variant || "স্ট্যান্ডার্ড ভেরিয়েন্ট"}</span>
+                                    {item.brand && (
+                                      <>
+                                        <span className="mx-1.5" aria-hidden="true">
+                                          ·
+                                        </span>
+                                        <span>{item.brand}</span>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
+                                    একক মূল্য: {formatPrice(unitPrice)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Quantity Stepper */}
+                              <div className="col-span-3 flex flex-col items-center justify-center gap-1.5">
+                                <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateQuantity(idx, -1)}
+                                    aria-label="Decrease quantity"
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                                  >
+                                    <Minus className="w-3.5 h-3.5" />
+                                  </button>
+                                  <span className="min-w-[28px] text-center text-sm font-extrabold text-slate-900 dark:text-white tabular-nums select-none">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateQuantity(idx, 1)}
+                                    aria-label="Increase quantity"
+                                    className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-slate-900 dark:text-white transition-transform active:scale-95 cursor-pointer"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Line Subtotal + Remove */}
+                              <div className="col-span-3 flex flex-col items-end justify-center gap-2">
+                                <div className="text-lg font-extrabold text-slate-900 dark:text-white tabular-nums whitespace-nowrap">
+                                  {formatPrice(lineTotal)}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(idx)}
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors cursor-pointer whitespace-nowrap"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>সরান</span>
+                                </button>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* Desktop Reassurance Strip */}
+                  <div className="ds-liquid-panel px-6 py-4 flex items-center justify-between gap-6 text-xs text-slate-600 dark:text-slate-300">
+                    <div className="flex items-center gap-2.5">
+                      <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                      <span>১০০% কোয়ালিটি চেকড অরিজিনাল পণ্য</span>
+                    </div>
+                    <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">
+                      |
+                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <PackageCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>আনবক্সিং ভিডিও প্রোটেকশন ও নিরাপদ কুরিয়ার ট্র্যাকিং</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT 4 COLUMNS: Sticky Order Summary & Promo Console */}
+                <aside className="col-span-4 sticky top-24">
+                  <div className="ds-liquid-panel p-6 space-y-6">
+                    <div>
+                      <h2 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+                        অর্ডার সামারি
+                      </h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        চেকআউটের পূর্বে প্রোমো কোড বা ভাউচার যোগ করুন
+                      </p>
+                    </div>
+
+                    {/* Promo Input */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value)}
+                          disabled={!!appliedPromo}
+                          placeholder={
+                            appliedPromo
+                              ? `${appliedPromo.code || appliedPromo.title}`
+                              : "প্রোমো কোড (যেমন FESTIVE10)"
+                          }
+                          className="ds-liquid-input flex-1 min-w-0 px-4 py-2.5 text-sm font-semibold outline-none placeholder:text-slate-400 disabled:opacity-60"
+                        />
+                        {appliedPromo ? (
+                          <button
+                            type="button"
+                            onClick={() => setAppliedPromo(null)}
+                            className="ds-liquid-btn-secondary !min-h-[42px] !text-xs px-4 whitespace-nowrap shrink-0"
+                          >
+                            সরান
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={applyPromo}
+                            className="ds-liquid-btn-primary !min-h-[42px] !text-xs px-4 whitespace-nowrap shrink-0"
+                          >
+                            প্রয়োগ
+                          </button>
+                        )}
+                      </div>
+
+                      {promoError && (
+                        <p className="text-xs text-rose-500 font-semibold">
+                          {promoError}
+                        </p>
+                      )}
+
+                      {appliedPromo && (
+                        <div className="ds-liquid-callout-emerald px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                          <span className="inline-flex items-center gap-1.5 truncate">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            <span className="truncate">
+                              {appliedPromo.code || appliedPromo.title} যুক্ত হয়েছে
+                            </span>
+                          </span>
+                          <span className="tabular-nums shrink-0">
+                            -{formatPrice(promoDiscount)}
+                          </span>
+                        </div>
+                      )}
+
+                      {myCoupons.length > 0 && !appliedPromo && (
+                        <button
+                          type="button"
+                          onClick={() => setShowCouponsModal(true)}
+                          className="w-full ds-liquid-subpanel px-4 py-3 flex items-center justify-between gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:border-sky-500/40 transition-colors cursor-pointer"
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <Ticket className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                            <span>আপনার {myCoupons.length}টি ভাউচার প্রস্তুত আছে</span>
+                          </span>
+                          <span className="text-sky-600 dark:text-sky-400 whitespace-nowrap">
+                            দেখুন
+                          </span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Tabular Price Breakdown */}
+                    <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] space-y-3 text-sm tabular-nums">
+                      <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                        <span>সাবটোটাল ({totalUnits} ইউনিট)</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {formatPrice(total)}
+                        </span>
+                      </div>
+
+                      {appliedPromo && (
+                        <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                          <span>ভাউচার / প্রোমো ছাড়</span>
+                          <span className="font-bold">
+                            -{formatPrice(promoDiscount)}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                        <span>ডেলিভারি চার্জ (আনুমানিক)</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {formatPrice(deliveryCharge)}
+                        </span>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex justify-between items-baseline">
+                        <span className="text-base font-bold text-slate-900 dark:text-white">
+                          সর্বমোট
+                        </span>
+                        <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                          {formatPrice(grandTotal)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Primary Checkout CTA */}
+                    <div className="space-y-2.5">
+                      <button
+                        type="button"
+                        onClick={() => navigate("/checkout")}
+                        className="w-full ds-liquid-btn-primary py-3.5 px-6 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+                      >
+                        <span>চেকআউটে এগিয়ে যান</span>
+                        <ArrowRight className="w-4 h-4 shrink-0" />
+                      </button>
+
+                      <p className="text-[11px] text-center text-slate-500 dark:text-slate-400 leading-relaxed">
+                        পরবর্তী ধাপে শিপিং ঠিকানা ও নিরাপদ পেমেন্ট পদ্ধতি নির্বাচন করুন
+                      </p>
+                    </div>
+                  </div>
+                </aside>
+              </div>
             </div>
-            
-          </div>
+          </>
         )}
-        <CustomSectionEmbed location="cart_bottom" />
+
+        <div className="mt-8">
+          <CustomSectionEmbed location="cart_bottom" />
+        </div>
       </div>
 
-      {showCouponsModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
-          >
-            <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center shrink-0">
-               <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Your Vouchers</h3>
-               <button onClick={() => setShowCouponsModal(false)} className="w-8 h-8 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-full text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-                  <Icon name="x" className="text-sm" />
-               </button>
+      {/* ====================================================================
+          MOBILE FROSTED STICKY BOTTOM CHECKOUT BAR (< lg, <= 15% Viewport Height)
+          ==================================================================== */}
+      {items.length > 0 && (
+        <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 ds-liquid-bottom-bar px-4 py-2.5">
+          <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+            <div className="min-w-0 tabular-nums">
+              <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-none">
+                সর্বমোট ({totalUnits} ইউনিট)
+              </div>
+              <div className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mt-0.5 truncate">
+                {formatPrice(grandTotal)}
+              </div>
             </div>
-            <div className="overflow-y-auto p-4 space-y-4">
-               {myCoupons.map((voucher) => (
-                  <div key={voucher.id} className="border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-4 flex justify-between items-center gap-4">
-                     <div>
-                        <h4 className="font-bold text-zinc-900 dark:text-zinc-100">{voucher.title}</h4>
-                        <p className="text-[11px] font-semibold text-zinc-500 mt-1">Min. order: {formatPrice(voucher.minOrderValue || 0)}</p>
-                     </div>
-                     <button
-                       onClick={() => applyVoucher(voucher)}
-                       className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap shrink-0 active:scale-95"
-                     >
-                       Apply
-                     </button>
-                  </div>
-               ))}
-            </div>
-          </motion.div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/checkout")}
+              className="ds-liquid-btn-primary !min-h-[44px] !text-sm px-6 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
+            >
+              <span>চেকআউট করুন</span>
+              <ArrowRight className="w-4 h-4 shrink-0" />
+            </button>
+          </div>
         </div>
       )}
+
+      {/* ====================================================================
+          LIQUID GLASS VOUCHERS MODAL
+          ==================================================================== */}
+      <AnimatePresence>
+        {showCouponsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowCouponsModal(false)}
+            className="fixed inset-0 z-50 ds-liquid-backdrop flex items-end sm:items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 24, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 360, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md ds-liquid-panel p-5 sm:p-6 overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="pb-4 border-b border-slate-900/[0.07] dark:border-white/[0.08] flex justify-between items-center shrink-0">
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+                    আপনার ভাউচারসমূহ
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    যেকোনো একটি ভাউচার অর্ডারে যুক্ত করুন
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCouponsModal(false)}
+                  aria-label="Close vouchers"
+                  className="w-8 h-8 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-600 dark:text-slate-300"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto pt-4 space-y-3">
+                {myCoupons.map((voucher) => (
+                  <div
+                    key={voucher.id}
+                    className="ds-liquid-subpanel p-4 flex justify-between items-center gap-4"
+                  >
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        {voucher.title}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+                        সর্বনিম্ন অর্ডার: {formatPrice(voucher.minOrderValue || 0)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => applyVoucher(voucher)}
+                      className="ds-liquid-btn-primary !min-h-[36px] !text-xs px-4 whitespace-nowrap shrink-0"
+                    >
+                      ব্যবহার করুন
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

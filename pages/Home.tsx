@@ -793,9 +793,8 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           ),
         ).length > 0 && (
           <div className="mb-10 w-full animate-fade-in group">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-5">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <h2
                   className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"
                   style={{
@@ -808,14 +807,14 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
               </div>
               <button
                 onClick={() => navigate("/all-products")}
-                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline whitespace-nowrap"
               >
                 See All
               </button>
             </div>
 
-            {/* Chikon Skinny horizontal list rows */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Compact Liquid Glass horizontal list rows */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {products
                 .filter((p) =>
                   ["accessories", "cover", "charger", "cable", "phone", "mobile"].some((word) =>
@@ -825,14 +824,18 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                 .slice(0, 6)
                 .map((product, idx) => {
                   const price = product.isOffer && product.offerPrice ? product.offerPrice : product.price;
+                  const slug = (product.name || "product")
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/(^-|-$)/g, "") || "item";
                   return (
                     <div 
                       key={product.id ? `${product.id}-chikon-${idx}` : idx}
-                      onClick={() => navigate(`/product/${product.id}`)}
-                      className="flex items-center gap-4 bg-zinc-50 dark:bg-[#1c1c1e] hover:bg-zinc-100 dark:hover:bg-[#252528] p-3 rounded-2xl cursor-pointer transition border border-zinc-100 dark:border-zinc-800/80 group/row shadow-sm"
+                      onClick={() => navigate(`/product/${slug}/${product.id}`)}
+                      className="ds-liquid-product-card flex items-center gap-3.5 p-3 rounded-[20px] cursor-pointer group/row"
                     >
-                      {/* Left Square Pic */}
-                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shrink-0">
+                      {/* Left Studio Media Square */}
+                      <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-2xl overflow-hidden ds-liquid-product-media shrink-0">
                         <PixelImage 
                           src={getProductDisplayImage(product)} 
                           alt={product.name} 
@@ -843,18 +846,23 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                       
                       {/* Center Info */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-[14px] text-zinc-950 dark:text-zinc-50 truncate group-hover/row:text-emerald-500 transition-colors">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mb-0.5 truncate">
+                          {product.brand || product.category || "Authentic Gear"}
+                        </p>
+                        <h4 className="font-bold text-[14px] text-slate-900 dark:text-white truncate group-hover/row:text-sky-600 dark:group-hover/row:text-sky-400 transition-colors">
                           {product.name}
                         </h4>
-                        <p className="text-[10px] text-zinc-400 font-semibold mb-1 truncate">
-                          {product.brand || "Authentic Accessory"}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[13px] font-black text-emerald-600 dark:text-emerald-400">
+                        {product.description && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {product.description.replace(/<[^>]*>?/gm, " ").replace(/\s+/g, " ").trim()}
+                          </p>
+                        )}
+                        <div className="flex items-baseline gap-2 mt-1 tabular-nums">
+                          <span className="text-[14px] font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
                             {formatPrice(price)}
                           </span>
-                          {product.isOffer && product.price && (
-                            <span className="text-[10px] text-zinc-400 line-through">
+                          {product.isOffer && product.offerPrice && product.offerPrice < product.price && (
+                            <span className="text-[11px] text-slate-400 line-through whitespace-nowrap">
                               {formatPrice(product.price)}
                             </span>
                           )}
@@ -862,10 +870,8 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                       </div>
 
                       {/* Right View Arrow */}
-                      <div className="w-8 h-8 rounded-full bg-white dark:bg-zinc-800 group-hover/row:bg-emerald-500 group-hover/row:text-white flex items-center justify-center border border-zinc-200/50 dark:border-zinc-700/50 shrink-0 shadow-sm transition">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
+                      <div className="w-8 h-8 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0">
+                        <ChevronRight className="w-4 h-4" />
                       </div>
                     </div>
                   );

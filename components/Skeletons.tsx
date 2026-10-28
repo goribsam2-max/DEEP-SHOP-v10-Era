@@ -6,14 +6,15 @@ export const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) =
 
 export const ProductSkeleton: React.FC = () => {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-200/70 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 p-3 space-y-3">
-      <Skeleton className="w-full aspect-[4/5] rounded-xl" />
-      <div className="space-y-2 px-1 pb-1">
-        <Skeleton className="h-4 w-3/4 rounded-md" />
-        <Skeleton className="h-3.5 w-1/2 rounded-md" />
-        <div className="flex items-center justify-between pt-1">
+    <div className="ds-liquid-product-card relative overflow-hidden rounded-[20px] md:rounded-[24px] flex flex-col">
+      <Skeleton className="w-full aspect-square md:aspect-[4/3] rounded-none" />
+      <div className="space-y-2.5 p-2.5 md:p-4">
+        <Skeleton className="h-3 w-2/5 rounded-md" />
+        <Skeleton className="h-4 w-4/5 rounded-md" />
+        <Skeleton className="hidden md:block h-3.5 w-3/5 rounded-md" />
+        <div className="flex items-center justify-between pt-2 border-t border-slate-900/[0.06] dark:border-white/[0.08]">
           <Skeleton className="h-5 w-20 rounded-md" />
-          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-8 w-8 md:h-4 md:w-16 rounded-full md:rounded-md" />
         </div>
       </div>
     </div>

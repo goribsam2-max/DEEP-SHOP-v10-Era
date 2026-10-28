@@ -972,9 +972,17 @@ const ProductDetails: React.FC = () => {
         accentText: "text-amber-800 dark:text-amber-300",
       };
     }
+    if (p.isBorderOffer || p.productType === "border_offer") {
+      return {
+        label: "বর্ডার ক্রস প্রি-অর্ডার",
+        sublabel: "অর্ডার কনফার্ম করার পর নির্ধারিত সময়ে নিরাপদে কুরিয়ার ডেলিভারি সম্পন্ন হয়",
+        boxClass: "ds-liquid-subpanel-active",
+        accentText: "text-sky-700 dark:text-sky-300",
+      };
+    }
     return {
-      label: "৫০% হাফ এডভান্স",
-      sublabel: "বর্ডার ক্রস ইমপোর্ট · বাকি ৫০% ডেলিভারির সময় পরিশোধযোগ্য",
+      label: "নিরাপদ পেমেন্ট ও কুরিয়ার ডেলিভারি",
+      sublabel: "চেকআউট ধাপে প্রযোজ্য পেমেন্ট ও ডেলিভারি সুবিধা বিস্তারিত দেখুন",
       boxClass: "ds-liquid-subpanel-active",
       accentText: "text-sky-700 dark:text-sky-300",
     };
