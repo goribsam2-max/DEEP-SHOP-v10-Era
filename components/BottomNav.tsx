@@ -55,8 +55,8 @@ const BottomNav: React.FC = () => {
   const navItems = [
     { to: "/", label: "Home", icon: Home },
     { to: "/orders", label: "Activity", icon: Activity },
-    { to: "/news-hub/create", label: "Create", icon: Plus, isCreate: true },
-    { to: "/news-hub", label: "Explore", icon: Compass },
+    { to: "/loops/create", label: "Create", icon: Plus, isCreate: true },
+    { to: "/loops", label: "Loops", icon: Compass },
     { to: "/profile", label: "Profile", icon: User },
   ];
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
@@ -39,6 +40,8 @@ import {
   BookOpen,
   Eye,
   Bell,
+  Menu,
+  Settings,
 } from "lucide-react";
 
 const BellRingIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -129,6 +132,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   collection,
   query,
   where,
@@ -136,10 +140,13 @@ import {
   orderBy,
   onSnapshot,
 } from "firebase/firestore";
-import { ScamPost } from "../types";
+import { ScamPost, StoryHighlightItem } from "../types";
 import { NewsPostMedia } from "../components/NewsPostMedia";
 import { NewsRichText } from "../components/NewsRichText";
 import { NewsBottomDock } from "../components/NewsBottomDock";
+import { NewsHubDrawer } from "../components/NewsHubDrawer";
+import { LoopPostCard } from "../components/LoopPostCard";
+import { LiquidGlassShareModal } from "../components/LiquidGlassPostInteractions";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
@@ -159,9 +166,62 @@ import {
   subscribeToFollowerStats,
   getEffectiveFollowersCount,
 } from "../lib/follow";
+import {
+  computeNextPostReactionState,
+  toggleMuteUserId,
+  toggleRestrictUserId,
+  toggleBlockUserId,
+} from "../lib/feedAlgorithm";
 import { processCleanImage } from "../lib/watermark";
-import defaultAvatarImg from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
-import deepShopLogoFallback from "../src/assets/images/deep_shop_logo_1783442733929.jpg";
+import { uploadDataUrlToImgbb } from "../services/imgbb";
+const defaultAvatarImg = "";
+const deepShopLogoFallback = "";
+
+const TopicClusterDotsIcon: React.FC<{ className?: string }> = ({
+  className = "w-3.5 h-3.5",
+}) => (
+  <svg className={className} viewBox="0 0 16 16" fill="currentColor">
+    <circle cx="4.2" cy="8" r="2.1" />
+    <circle cx="9.8" cy="4.6" r="2.1" />
+    <circle cx="10.2" cy="11.2" r="1.9" />
+  </svg>
+);
+
+const ShareUploadBoxSvg: React.FC<{ className?: string }> = ({
+  className = "w-4 h-4",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.1"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3v12" />
+    <polyline points="7 8 12 3 17 8" />
+    <path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+  </svg>
+);
+
+const ReportBubbleSvg: React.FC<{ className?: string }> = ({
+  className = "w-[22px] h-[22px]",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.95"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    <line x1="12" y1="8" x2="12" y2="12.5" />
+    <circle cx="12" cy="15.8" r="0.6" fill="currentColor" />
+  </svg>
+);
 
 /** Social SVG Icons */
 const InstagramIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -347,6 +407,7 @@ export const NewsProfilePage: React.FC = () => {
   const [dismissedSuggested, setDismissedSuggested] = useState<string[]>([]);
 
   // Sheets, Modals, & Image Viewers
+  const [showFeedsDrawer, setShowFeedsDrawer] = useState(false);
   const [showOptionsSheet, setShowOptionsSheet] = useState(false);
   const [showAboutSheet, setShowAboutSheet] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -397,9 +458,45 @@ export const NewsProfilePage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [liveFollowersCount, setLiveFollowersCount] = useState<number | null>(null);
+  const [shareSheetTarget, setShareSheetTarget] = useState<{
+    post?: Partial<ScamPost>;
+    url?: string;
+    title?: string;
+  } | null>(null);
+  const [showTopicsSheet, setShowTopicsSheet] = useState(false);
+  const [storyHighlights, setStoryHighlights] = useState<StoryHighlightItem[]>([]);
 
   const targetUid = id || currentUser?.uid;
   const isOwnProfile = Boolean(currentUser?.uid && targetUid === currentUser.uid);
+
+  // Sync Story Highlights (persists permanently on Profile even after 24h feed expiry)
+  useEffect(() => {
+    if (!targetUid) {
+      setStoryHighlights([]);
+      return;
+    }
+    const localKey = `deep_story_highlights_${targetUid}`;
+    let localItems: StoryHighlightItem[] = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(localKey) || "[]");
+      if (Array.isArray(parsed)) localItems = parsed;
+    } catch {}
+
+    const remoteItems: StoryHighlightItem[] = Array.isArray(
+      profileUser?.storyHighlights
+    )
+      ? profileUser.storyHighlights
+      : [];
+
+    if (remoteItems.length > 0) {
+      setStoryHighlights(remoteItems);
+      try {
+        localStorage.setItem(localKey, JSON.stringify(remoteItems));
+      } catch {}
+    } else {
+      setStoryHighlights(localItems);
+    }
+  }, [targetUid, profileUser?.storyHighlights]);
 
   // Load saved creator activity notification preferences (Threads, Replies, Push)
   useEffect(() => {
@@ -529,7 +626,9 @@ export const NewsProfilePage: React.FC = () => {
           setSelectedInterestsList(userInts);
           setEditInterests(userInts.join(", "));
 
-          setEditLinks(d.website || d.link || "");
+          const loadedWebsite =
+            d.website || d.link || d.socialLinks?.website || "";
+          setEditLinks(loadedWebsite);
           setEditPodcast(d.podcast || "");
           setEditShowInstagramBadge(d.showInstagramBadge !== false);
           setEditShowRecentViews(d.showRecentViews !== false);
@@ -542,7 +641,7 @@ export const NewsProfilePage: React.FC = () => {
             setSocialFacebook(d.socialLinks.facebook || "");
             setSocialYouTube(d.socialLinks.youtube || "");
           }
-          setSocialWebsite(d.website || d.link || "");
+          setSocialWebsite(loadedWebsite);
         } else if (isOwnProfile && currentUser) {
           const fallbackObj = {
             uid: currentUser.uid,
@@ -624,7 +723,7 @@ export const NewsProfilePage: React.FC = () => {
 
         getDocs(collection(db, "users")).then((uSnap) => {
           const list = uSnap.docs
-            .map((d) => ({ uid: d.id, ...d.data() }))
+            .map((d) => ({ uid: d.id, ...(d.data() as Record<string, any>) }))
             .filter((u) => {
               const pCount = postingUsersMap.get(u.uid) || 0;
               return (
@@ -632,7 +731,7 @@ export const NewsProfilePage: React.FC = () => {
                 u.uid !== targetUid &&
                 pCount >= 1 &&
                 !dismissedSuggested.includes(u.uid) &&
-                (u.displayName || u.shopName)
+                Boolean(u.displayName || u.shopName)
               );
             })
             .slice(0, 8);
@@ -649,21 +748,25 @@ export const NewsProfilePage: React.FC = () => {
     triggerHaptic();
     setSavingLinks(true);
 
+    const cleanedWebsite = socialWebsite.trim();
     const updatePayload = {
       socialLinks: {
         instagram: socialInstagram.trim().replace(/^@/, ""),
         tiktok: socialTikTok.trim().replace(/^@/, ""),
         facebook: socialFacebook.trim(),
         youtube: socialYouTube.trim(),
+        website: cleanedWebsite,
       },
-      website: socialWebsite.trim(),
+      website: cleanedWebsite,
+      link: cleanedWebsite,
       updatedAt: Date.now(),
     };
 
     try {
       await setDoc(doc(db, "users", currentUser.uid), updatePayload, { merge: true });
+      setEditLinks(cleanedWebsite);
       notify("Links saved successfully!", "success");
-      navigate("/news-hub/profile/edit");
+      navigate("/loops/profile/edit");
     } catch {
       notify("Could not save links. Please try again.", "error");
     } finally {
@@ -687,7 +790,7 @@ export const NewsProfilePage: React.FC = () => {
         { merge: true }
       );
       notify("Interests saved successfully!", "success");
-      navigate("/news-hub/profile");
+      navigate("/loops/profile");
     } catch {
       notify("Could not save interests.", "error");
     } finally {
@@ -722,25 +825,28 @@ export const NewsProfilePage: React.FC = () => {
       .map((s) => s.trim())
       .filter(Boolean);
 
+    const resolvedWebsite = (editLinks.trim() || socialWebsite.trim()).trim();
+
     const updatePayload = {
       displayName: editName.trim() || "Community Member",
       username: cleanedUsername,
       bio: editBio.trim(),
       location: editLocation.trim(),
       interests: cleanInterests.length > 0 ? cleanInterests : selectedInterestsList,
-      website: editLinks.trim() || socialWebsite.trim(),
+      website: resolvedWebsite,
+      link: resolvedWebsite,
       podcast: editPodcast.trim(),
       showInstagramBadge: editShowInstagramBadge,
       showRecentViews: editShowRecentViews,
       isPrivate: editIsPrivate,
-      photoURL: editAvatarUrl || "",
+      photoURL: typeof editAvatarUrl === "string" ? editAvatarUrl : "",
       updatedAt: Date.now(),
     };
 
     try {
       await setDoc(doc(db, "users", currentUser.uid), updatePayload, { merge: true });
       notify("Profile updated successfully!", "success");
-      navigate("/news-hub/profile");
+      navigate("/loops/profile");
     } catch {
       notify("Could not update profile.", "error");
     } finally {
@@ -748,22 +854,19 @@ export const NewsProfilePage: React.FC = () => {
     }
   };
 
-  // Avatar Image Picker
+  // Avatar Image Picker — properly pass File to processCleanImage & host as URL string
   const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     triggerHaptic();
 
     try {
-      const dataUrl = await new Promise<string>((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result as string);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-
-      const processed = await processCleanImage(dataUrl);
-      setEditAvatarUrl(processed);
+      const processed = await processCleanImage(file, 640);
+      const hostedUrl = await uploadDataUrlToImgbb(
+        processed.dataUrl,
+        `avatar-${Date.now()}.jpg`
+      ).catch(() => "");
+      setEditAvatarUrl(hostedUrl || processed.dataUrl);
       notify("Photo updated!", "info");
     } catch {
       notify("Could not load selected photo", "error");
@@ -771,15 +874,69 @@ export const NewsProfilePage: React.FC = () => {
     e.target.value = "";
   };
 
+  const handleToggleLikePost = async (post: ScamPost) => {
+    if (!currentUser?.uid) {
+      notify("Please sign in to like Loops!", "info");
+      navigate("/signin");
+      return;
+    }
+    triggerHaptic();
+    const uid = currentUser.uid;
+    const nextState = computeNextPostReactionState(
+      post,
+      uid,
+      {
+        userName: getSafeDisplayName(currentUser, "Member"),
+        userAvatar: currentUser.photoURL || "",
+      },
+      "love"
+    );
+
+    try {
+      await updateDoc(doc(db, "scam_posts", post.id), {
+        reactions: nextState.reactions,
+        reactionsCount: nextState.reactionsCount,
+        reactionsUsers: nextState.reactionsUsers,
+        votedUserIds: nextState.votedUserIds,
+        votes: nextState.votes,
+      });
+    } catch {}
+  };
+
+  const handleDeleteProfilePost = async (post: ScamPost) => {
+    triggerHaptic();
+    const ok = await confirm({
+      title: "Delete Loop?",
+      message:
+        "Are you sure you want to permanently delete this Loop? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+    if (!ok) return;
+    try {
+      await deleteDoc(doc(db, "scam_posts", post.id));
+    } catch {}
+    try {
+      const raw = localStorage.getItem("deep_scam_posts");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          localStorage.setItem(
+            "deep_scam_posts",
+            JSON.stringify(parsed.filter((item: any) => item?.id !== post.id))
+          );
+        }
+      }
+    } catch {}
+    setUserPosts((prev) => prev.filter((p) => p.id !== post.id));
+    notify("Loop deleted", "success");
+  };
+
   // Repost Handler
   const handleToggleRepost = async (post: ScamPost) => {
     if (!currentUser?.uid) {
       notify("Please sign in to repost!", "error");
       navigate("/signin");
-      return;
-    }
-    if (post.reporterId === currentUser.uid) {
-      notify("You cannot repost your own post!", "info");
       return;
     }
     triggerHaptic();
@@ -807,20 +964,20 @@ export const NewsProfilePage: React.FC = () => {
             {
               userId: post.reporterId,
               fromUserId: "system_milestone",
-              fromUserName: "News Hub",
+              fromUserName: "Loops",
               fromUserUsername: "",
               fromUserAvatar: "",
               type: "milestone",
               milestoneKind: "reposts",
               totalCount: nextCount,
-              title: "Congratulations! 🎉",
-              body: `Congratulations! Your post now has ${nextCount.toLocaleString()} total reposts.`,
+              title: "Congratulations!",
+              body: `Your Loop now has ${nextCount.toLocaleString()} total reposts.`,
               mediaThumbnail: post.images?.[0] || "",
               targetId: post.id,
               isRead: false,
               read: false,
               createdAt: Date.now(),
-              link: `/news-hub/post/${post.id}`,
+              link: `/loops/post/${post.id}`,
             },
             { merge: true }
           ).catch(() => {});
@@ -832,19 +989,19 @@ export const NewsProfilePage: React.FC = () => {
             fromUserUsername: getSafePublicUsername(currentUser),
             fromUserAvatar: currentUser.photoURL || "",
             type: "repost",
-            title: "New Repost",
-            body: `reposted your post: "${(post.description || post.title || "").slice(0, 30)}..."`,
+            title: "Reposted your Loop",
+            body: `reposted your Loop: "${(post.description || post.title || "").slice(0, 36)}"`,
             mediaThumbnail: post.images?.[0] || "",
             targetId: post.id,
             isRead: false,
             read: false,
             createdAt: Date.now(),
-            link: `/news-hub/post/${post.id}`,
+            link: `/loops/post/${post.id}`,
           }).catch(() => {});
         }
       }
 
-      notify(isReposted ? "Repost removed" : "Post reposted to your profile!", "success");
+      notify(isReposted ? "Repost removed" : "Reposted to Loops!", "success");
     } catch {}
   };
 
@@ -887,7 +1044,7 @@ export const NewsProfilePage: React.FC = () => {
 
   const handleCopyProfileLink = () => {
     triggerHaptic();
-    const url = getPublicShareOrigin() + "/news-hub/profile/" + targetUid;
+    const url = getPublicShareOrigin() + "/loops/profile/" + targetUid;
     navigator.clipboard.writeText(url);
     notify("Profile link copied to clipboard!", "success");
   };
@@ -899,7 +1056,14 @@ export const NewsProfilePage: React.FC = () => {
 
   const username = getSafePublicUsername(profileUser);
 
-  const bio = profileUser?.bio || "No bio added yet.";
+  const rawBioText =
+    typeof profileUser?.bio === "string" ? profileUser.bio.trim() : "";
+  const hasRealBio = Boolean(
+    rawBioText.length > 0 &&
+      rawBioText.toLowerCase() !== "no bio added yet." &&
+      rawBioText.toLowerCase() !== "no bio added yet"
+  );
+  const bio = hasRealBio ? rawBioText : "";
   const avatarUrl = profileUser?.photoURL || profileUser?.shopLogo || "";
   const followersCount =
     liveFollowersCount !== null
@@ -928,7 +1092,7 @@ export const NewsProfilePage: React.FC = () => {
 
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans pb-28">
-        <SEO title="Select Interests — News Hub" description="Choose topics you care about to customize your News Hub experience." />
+        <SEO title="Select Interests — Loops" description="Choose topics you care about to customize your Loops experience." exactTitle />
 
         <div className="max-w-xl mx-auto px-4 pt-4 sm:pt-6">
           <header className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-zinc-800">
@@ -936,7 +1100,7 @@ export const NewsProfilePage: React.FC = () => {
               type="button"
               onClick={() => {
                 triggerHaptic();
-                navigate("/news-hub/profile");
+                navigate("/loops/profile");
               }}
               className="text-sm font-bold text-slate-600 dark:text-zinc-400 hover:text-slate-900 cursor-pointer"
             >
@@ -1018,7 +1182,7 @@ export const NewsProfilePage: React.FC = () => {
 
             <div className="pt-4 text-center">
               <p className="text-[11px] text-slate-400 dark:text-zinc-500 max-w-sm mx-auto leading-relaxed">
-                Selecting topics helps personalize your News Hub feed experience and highlights relevant updates.
+                Selecting topics helps personalize your Loops feed experience and highlights relevant updates.
               </p>
             </div>
           </div>
@@ -1028,12 +1192,12 @@ export const NewsProfilePage: React.FC = () => {
   }
 
   /* ============================================================================
-   * 2. LINKS SUB-PAGE VIEW (/news-hub/profile/links)
+   * 2. LINKS SUB-PAGE VIEW (/loops/profile/links)
    * ========================================================================== */
   if (isLinksView) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans pb-24">
-        <SEO title="Add Links — Edit Profile" description="Manage social IDs and profile links." />
+        <SEO title="Add Links — Loops" description="Manage social IDs and profile links." exactTitle />
 
         <div className="max-w-xl mx-auto px-4 pt-4 sm:pt-6">
           <header className="flex items-center justify-between pb-5 border-b border-slate-200 dark:border-zinc-800">
@@ -1041,7 +1205,7 @@ export const NewsProfilePage: React.FC = () => {
               type="button"
               onClick={() => {
                 triggerHaptic();
-                navigate("/news-hub/profile/edit");
+                navigate("/loops/profile/edit");
               }}
               className="text-sm font-bold text-slate-600 dark:text-zinc-400 hover:text-slate-900 cursor-pointer"
             >
@@ -1153,443 +1317,708 @@ export const NewsProfilePage: React.FC = () => {
   }
 
   /* ============================================================================
-   * 3. EDIT PROFILE PAGE VIEW (/news-hub/profile/edit) — MATCHING IMG_4887.png
+   * 3. EDIT PROFILE PAGE VIEW (/loops/profile/edit) — REDESIGNED STUDIO LAYOUT
    * ========================================================================== */
   if (isEditView) {
+    const cleanEditHandle = editUsername.replace(/^@+/, "").trim();
+    const connectedSocialCount = [
+      socialInstagram,
+      socialTikTok,
+      socialFacebook,
+      socialYouTube,
+    ].filter((v) => Boolean(v && v.trim())).length;
+
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans pb-28">
-        <SEO title="Edit Profile — News Hub" description="Edit your profile parameters." />
+      <div className="min-h-screen loops-surface text-[#0f0f0f] dark:text-zinc-100 font-sans pb-28">
+        <SEO title="Edit Profile — Loops" description="Update your Loops profile details and preferences." exactTitle />
 
-        <div className="max-w-xl mx-auto px-4 pt-4 sm:pt-6">
-          <header className="flex items-center justify-between pb-5 border-b border-slate-200 dark:border-zinc-800">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/news-hub/profile");
-              }}
-              className="text-sm font-bold text-slate-600 dark:text-zinc-400 hover:text-slate-900 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              Edit profile
-            </h1>
-            <button
-              type="button"
-              onClick={handleSaveProfile}
-              disabled={savingEdit}
-              className="text-sm font-bold text-[#1877F2] hover:underline cursor-pointer disabled:opacity-50"
-            >
-              {savingEdit ? "Saving..." : "Done"}
-            </button>
-          </header>
-
-          <form onSubmit={handleSaveProfile} className="mt-6 space-y-4">
-            <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-6 border border-slate-200/80 dark:border-zinc-800 space-y-5 shadow-sm">
-              {/* Name Row + Avatar Badge on the right */}
-              <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-zinc-800">
-                <div className="flex-1 space-y-1">
-                  <label className="text-xs font-bold text-slate-800 dark:text-zinc-200">Name</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Display Name"
-                    className="w-full text-sm font-bold text-slate-900 dark:text-white bg-transparent outline-none"
-                  />
-                </div>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarFileSelected}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="relative group shrink-0 cursor-pointer"
-                  title="Change avatar"
-                >
-                  <ProfileAvatar src={editAvatarUrl} name={editName} className="w-12 h-12" iconClassName="w-6 h-6" />
-                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                    <Camera className="w-4 h-4" />
-                  </div>
-                </button>
-              </div>
-
-              {/* Username */}
-              <div className="pb-3 border-b border-slate-100 dark:border-zinc-800 space-y-1">
-                <label className="text-xs font-bold text-slate-800 dark:text-zinc-200">Username</label>
-                <input
-                  type="text"
-                  value={editUsername}
-                  onChange={(e) => setEditUsername(e.target.value)}
-                  placeholder="Set a username"
-                  className="w-full text-sm font-semibold text-slate-900 dark:text-white bg-transparent outline-none"
-                />
-              </div>
-
-              {/* Bio */}
-              <div className="pb-3 border-b border-slate-100 dark:border-zinc-800 space-y-1">
-                <label className="text-xs font-bold text-slate-800 dark:text-zinc-200">Bio</label>
-                <textarea
-                  rows={2}
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value)}
-                  placeholder="+ Write bio"
-                  className="w-full text-sm font-medium text-slate-800 dark:text-zinc-200 bg-transparent outline-none resize-none"
-                />
-              </div>
-
-              {/* Location */}
-              <div className="pb-3 border-b border-slate-100 dark:border-zinc-800 space-y-1">
-                <label className="text-xs font-bold text-slate-800 dark:text-zinc-200">Location</label>
-                <input
-                  type="text"
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                  placeholder="e.g. Dhaka, Bangladesh"
-                  className="w-full text-sm font-medium text-slate-800 dark:text-zinc-200 bg-transparent outline-none"
-                />
-              </div>
-
-              {/* Interests Navigates to Interests Sub-Page */}
+        {/* Sticky Frosted Header */}
+        <header className="sticky top-0 z-30 loops-surface/90 backdrop-blur-xl border-b loops-divider">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
                 onClick={() => {
                   triggerHaptic();
-                  navigate("/news-hub/profile/interests");
+                  navigate("/loops/profile");
                 }}
-                className="w-full pb-3 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between text-left cursor-pointer"
+                className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-[#0f0f0f] dark:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.07] transition cursor-pointer shrink-0"
+                aria-label="Back to profile"
               >
-                <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">Interests</p>
-                  <p className="text-xs text-slate-400">
-                    {selectedInterestsList.length > 0 ? selectedInterestsList.join(", ") : "+ Select interests & topics"}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <ChevronLeft className="w-6 h-6 stroke-[2.1]" />
               </button>
+              <h1 className="text-[17px] font-bold tracking-tight truncate">
+                Edit profile
+              </h1>
+            </div>
 
-              {/* Links -> Navigates to Links Sub-page */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   triggerHaptic();
-                  navigate("/news-hub/profile/links");
+                  navigate("/loops/profile");
                 }}
-                className="w-full pb-3 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between text-left cursor-pointer"
+                disabled={savingEdit}
+                className="hidden sm:inline-flex items-center justify-center h-9 px-4 rounded-full text-[13.5px] font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-black/[0.05] dark:hover:bg-white/[0.06] transition cursor-pointer disabled:opacity-50"
               >
-                <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">Links</p>
-                  <p className="text-xs text-slate-400">
-                    {socialInstagram || socialTikTok || socialWebsite ? "Social IDs added" : "+ Add links & social IDs"}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={savingEdit}
+                className="inline-flex items-center justify-center h-9 px-5 rounded-full bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] text-[13.5px] font-semibold hover:opacity-90 active:scale-[0.98] transition cursor-pointer disabled:opacity-50"
+              >
+                {savingEdit ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <form
+          onSubmit={handleSaveProfile}
+          className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 space-y-5"
+        >
+          {/* Identity Banner & Avatar Studio Card */}
+          <section className="loops-about-card rounded-[28px] p-5 sm:p-6 border loops-divider flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarFileSelected}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="relative group shrink-0 cursor-pointer"
+                title="Change profile photo"
+              >
+                <ProfileAvatar
+                  src={editAvatarUrl}
+                  name={editName || displayName}
+                  className="w-20 h-20 ring-2 ring-black/[0.06] dark:ring-white/10"
+                  iconClassName="w-9 h-9"
+                />
+                <span className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] ring-2 ring-white dark:ring-[#181818] flex items-center justify-center">
+                  <Camera className="w-3.5 h-3.5" />
+                </span>
               </button>
 
-              {/* Podcast */}
-              <div className="pb-3 border-b border-slate-100 dark:border-zinc-800 space-y-1">
-                <label className="text-xs font-bold text-slate-800 dark:text-zinc-200">Podcast</label>
-                <input
-                  type="text"
-                  value={editPodcast}
-                  onChange={(e) => setEditPodcast(e.target.value)}
-                  placeholder="+ Link to your podcast"
-                  className="w-full text-sm font-medium text-slate-800 dark:text-zinc-200 bg-transparent outline-none"
-                />
-              </div>
-
-              {/* Show Instagram badge toggle */}
-              <div className="pb-3 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">Show Instagram badge</span>
-                <button
-                  type="button"
-                  onClick={() => setEditShowInstagramBadge((v) => !v)}
-                  className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    editShowInstagramBadge ? "bg-black dark:bg-white" : "bg-slate-300 dark:bg-zinc-700"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${
-                      editShowInstagramBadge
-                        ? "left-7 bg-white dark:bg-black"
-                        : "left-1 bg-white"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Show recent views toggle */}
-              <div className="pb-3 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">Show recent views</p>
-                  <p className="text-[11px] text-slate-400 leading-tight">
-                    This will be public on your profile when you get 1K+ recent views.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditShowRecentViews((v) => !v)}
-                  className={`w-12 h-6 rounded-full transition-colors relative shrink-0 cursor-pointer ${
-                    editShowRecentViews ? "bg-black dark:bg-white" : "bg-slate-300 dark:bg-zinc-700"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${
-                      editShowRecentViews
-                        ? "left-7 bg-white dark:bg-black"
-                        : "left-1 bg-white"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Profile Privacy */}
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">Profile privacy</p>
-                  <p className="text-[11px] text-slate-400 leading-tight">
-                    If you switch to private, only followers can see your posts.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditIsPrivate((v) => !v)}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-900 cursor-pointer flex items-center gap-1 shrink-0"
-                >
-                  <span>{editIsPrivate ? "Private" : "Public"}</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+              <div className="min-w-0 space-y-0.5">
+                <h2 className="text-[18px] font-bold text-[#0f0f0f] dark:text-white truncate">
+                  {editName.trim() || "Your Name"}
+                </h2>
+                <p className="text-[14px] text-zinc-500 dark:text-zinc-400 truncate">
+                  {cleanEditHandle ? `@${cleanEditHandle}` : "Choose a username"}
+                  <span aria-hidden="true"> · </span>
+                  <span>{editIsPrivate ? "Private profile" : "Public profile"}</span>
+                </p>
               </div>
             </div>
 
             <button
-              type="submit"
-              disabled={savingEdit}
-              className="w-full py-3.5 rounded-2xl bg-[#1877F2] text-white font-bold text-sm shadow-md cursor-pointer disabled:opacity-50"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-10 px-4 rounded-full loops-gray-pill text-[13.5px] font-semibold text-[#0f0f0f] dark:text-white hover:opacity-85 transition cursor-pointer shrink-0 self-start sm:self-center"
             >
-              {savingEdit ? "Saving profile..." : "Save changes"}
+              Change photo
             </button>
-          </form>
-        </div>
+          </section>
+
+          {/* Main Profile Information Card */}
+          <section className="loops-about-card rounded-[28px] p-5 sm:p-6 border loops-divider space-y-4">
+            <div className="space-y-0.5">
+              <h3 className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
+                Profile information
+              </h3>
+              <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                Visible on your Loops profile and across community conversations.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                  Display name
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Display name"
+                  className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                  Username
+                </label>
+                <div className="relative flex items-center">
+                  <AtSign className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    placeholder="username"
+                    className="w-full h-11 pl-9 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bio */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                  Bio
+                </label>
+                <span className="text-[12px] text-zinc-400 tabular-nums">
+                  {editBio.length}/160
+                </span>
+              </div>
+              <textarea
+                rows={3}
+                maxLength={160}
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                placeholder="Write a short bio about what you loop about..."
+                className="w-full p-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] leading-relaxed font-normal text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none resize-none transition"
+              />
+            </div>
+
+            {/* Location & Website */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                  Location
+                </label>
+                <div className="relative flex items-center">
+                  <MapPin className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder="e.g. Dhaka, Bangladesh"
+                    className="w-full h-11 pl-10 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                  Website
+                </label>
+                <div className="relative flex items-center">
+                  <Globe className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={editLinks}
+                    onChange={(e) => {
+                      setEditLinks(e.target.value);
+                      setSocialWebsite(e.target.value);
+                    }}
+                    placeholder="yoursite.com"
+                    className="w-full h-11 pl-10 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Podcast */}
+            <div className="space-y-1.5">
+              <label className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                Podcast link
+              </label>
+              <div className="relative flex items-center">
+                <Music className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                <input
+                  type="text"
+                  value={editPodcast}
+                  onChange={(e) => setEditPodcast(e.target.value)}
+                  placeholder="Link to your podcast show"
+                  className="w-full h-11 pl-10 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Topics & Connected Social Links Navigation Card */}
+          <section className="loops-about-card rounded-[28px] p-2 border loops-divider divide-y loops-divider">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/loops/profile/interests");
+              }}
+              className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.05] rounded-t-[20px] transition cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center shrink-0">
+                  <TopicClusterDotsIcon className="w-4 h-4 text-[#0095F6]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-[#0f0f0f] dark:text-white">
+                    Interests & topics
+                  </p>
+                  <p className="text-[13px] text-zinc-500 dark:text-zinc-400 truncate">
+                    {selectedInterestsList.length > 0
+                      ? selectedInterestsList.join(" · ")
+                      : "Choose topics you loop about"}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4.5 h-4.5 text-zinc-400 shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/loops/profile/links");
+              }}
+              className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.05] rounded-b-[20px] transition cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center shrink-0">
+                  <Link2 className="w-4.5 h-4.5 text-[#0f0f0f] dark:text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-[#0f0f0f] dark:text-white">
+                    Social links & handles
+                  </p>
+                  <p className="text-[13px] text-zinc-500 dark:text-zinc-400 truncate">
+                    {connectedSocialCount > 0
+                      ? `${connectedSocialCount} social ${connectedSocialCount === 1 ? "account" : "accounts"} linked`
+                      : "Connect Instagram, TikTok, Facebook or YouTube"}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-4.5 h-4.5 text-zinc-400 shrink-0" />
+            </button>
+          </section>
+
+          {/* Privacy & Visibility Preferences Card */}
+          <section className="loops-about-card rounded-[28px] p-5 sm:p-6 border loops-divider space-y-4">
+            <h3 className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
+              Privacy & display
+            </h3>
+
+            <div className="divide-y loops-divider">
+              <div className="pb-4 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium text-[#0f0f0f] dark:text-white">
+                    Private profile
+                  </p>
+                  <p className="text-[13px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                    Only approved followers can view and reply to your loops.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editIsPrivate}
+                  onClick={() => setEditIsPrivate((v) => !v)}
+                  className={`w-12 h-7 rounded-full transition-colors relative shrink-0 cursor-pointer ${
+                    editIsPrivate
+                      ? "bg-[#0f0f0f] dark:bg-white"
+                      : "bg-zinc-300 dark:bg-zinc-700"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 w-5 h-5 rounded-full transition-all shadow-xs ${
+                      editIsPrivate
+                        ? "left-6 bg-white dark:bg-[#0f0f0f]"
+                        : "left-1 bg-white"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="py-4 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium text-[#0f0f0f] dark:text-white">
+                    Show Instagram badge
+                  </p>
+                  <p className="text-[13px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                    Display your linked Instagram shortcut on your Loops header.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editShowInstagramBadge}
+                  onClick={() => setEditShowInstagramBadge((v) => !v)}
+                  className={`w-12 h-7 rounded-full transition-colors relative shrink-0 cursor-pointer ${
+                    editShowInstagramBadge
+                      ? "bg-[#0f0f0f] dark:bg-white"
+                      : "bg-zinc-300 dark:bg-zinc-700"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 w-5 h-5 rounded-full transition-all shadow-xs ${
+                      editShowInstagramBadge
+                        ? "left-6 bg-white dark:bg-[#0f0f0f]"
+                        : "left-1 bg-white"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="pt-4 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium text-[#0f0f0f] dark:text-white">
+                    Show recent views
+                  </p>
+                  <p className="text-[13px] text-zinc-500 dark:text-zinc-400 leading-snug">
+                    Publicly display view activity in About this profile once you pass 1K+ views.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editShowRecentViews}
+                  onClick={() => setEditShowRecentViews((v) => !v)}
+                  className={`w-12 h-7 rounded-full transition-colors relative shrink-0 cursor-pointer ${
+                    editShowRecentViews
+                      ? "bg-[#0f0f0f] dark:bg-white"
+                      : "bg-zinc-300 dark:bg-zinc-700"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 w-5 h-5 rounded-full transition-all shadow-xs ${
+                      editShowRecentViews
+                        ? "left-6 bg-white dark:bg-[#0f0f0f]"
+                        : "left-1 bg-white"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <button
+            type="submit"
+            disabled={savingEdit}
+            className="w-full h-12 rounded-full bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] font-semibold text-[15px] hover:opacity-90 active:scale-[0.99] transition cursor-pointer disabled:opacity-50"
+          >
+            {savingEdit ? "Saving profile..." : "Save changes"}
+          </button>
+        </form>
       </div>
     );
   }
 
   /* ============================================================================
-   * 4. MAIN PROFILE VIEW PAGE (Matching IMG_4885.png & IMG_4922.png)
+   * 4. MAIN PROFILE VIEW PAGE (Matching IMG_5097, IMG_5106 & IMG_5107)
    * ========================================================================== */
+  const rawWebsiteUrl = String(
+    profileUser?.website ||
+      profileUser?.link ||
+      profileUser?.socialLinks?.website ||
+      ""
+  ).trim();
+  const cleanWebsiteHref = rawWebsiteUrl
+    ? /^https?:\/\//i.test(rawWebsiteUrl)
+      ? rawWebsiteUrl
+      : `https://${rawWebsiteUrl}`
+    : "";
+  const cleanWebsiteLabel = rawWebsiteUrl
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .replace(/\/+$/, "");
+
+  const profileTopics: string[] =
+    selectedInterestsList.length > 0
+      ? selectedInterestsList
+      : isOwnProfile
+      ? ["Music Loops"]
+      : [];
+  const primaryTopic = profileTopics[0] || "";
+  const extraTopicsCount = Math.max(0, profileTopics.length - 1);
+  const profileShareUrl = `${getPublicShareOrigin()}/loops/profile/${targetUid || ""}`;
+
+  const hasRealAvatar = Boolean(avatarUrl && avatarUrl.trim().length > 0);
+  const hasFollowedEnough = followedIds.length >= 10;
+  const hasRealInterests =
+    (Array.isArray(profileUser?.interests) && profileUser.interests.length > 0) ||
+    selectedInterestsList.length > 0;
+
+  const incompleteSetupSteps = isOwnProfile
+    ? [
+        ...(!hasFollowedEnough
+          ? [
+              {
+                id: "follow",
+                title: "Follow 10 profiles",
+                description: "Fill your feed with loops that interest you.",
+                cta: "See profiles",
+                icon: <UserPlus className="w-6 h-6 stroke-[1.8]" />,
+                onClick: () => navigate("/loops/search"),
+              },
+            ]
+          : []),
+        ...(!hasRealBio
+          ? [
+              {
+                id: "bio",
+                title: "Add bio",
+                description:
+                  "Introduce yourself and tell people what you're interested in.",
+                cta: "Add",
+                icon: <Pencil className="w-6 h-6 stroke-[1.8]" />,
+                onClick: () => navigate("/loops/profile/edit"),
+              },
+            ]
+          : []),
+        ...(!hasRealAvatar
+          ? [
+              {
+                id: "avatar",
+                title: "Add profile photo",
+                description:
+                  "Make it easier for friends and followers to recognize you.",
+                cta: "Upload",
+                icon: <Camera className="w-6 h-6 stroke-[1.8]" />,
+                onClick: () => navigate("/loops/profile/edit"),
+              },
+            ]
+          : []),
+        ...(!hasRealInterests
+          ? [
+              {
+                id: "interests",
+                title: "Select interests",
+                description:
+                  "Pick topics you enjoy so Loops can tailor your feed.",
+                cta: "Choose",
+                icon: <Sparkles className="w-6 h-6 stroke-[1.8]" />,
+                onClick: () => navigate("/loops/profile/interests"),
+              },
+            ]
+          : []),
+      ]
+    : [];
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/70 via-[#E8F3FF]/35 to-transparent dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans pb-32">
+    <div className="min-h-screen loops-surface text-zinc-950 dark:text-zinc-100 font-sans pb-32">
       <SEO
         title={
           username
-            ? `${displayName} (@${username}) — News Hub`
-            : `${displayName} — News Hub`
+            ? `${displayName} (@${username}) — Loops`
+            : `${displayName} — Loops`
         }
-        description={bio.slice(0, 160)}
+        description={(bio || `${displayName} on Loops`).slice(0, 160)}
+        exactTitle
       />
 
-      <div className="max-w-3xl mx-auto px-4 pt-4 sm:pt-6">
-        {/* Top Header Row with DEEP SHOP Logo & Action Buttons */}
-        <header className="flex items-center justify-between gap-3 pb-4">
+      <div className="max-w-[620px] mx-auto px-4 pt-3 sm:pt-5">
+        {/* Top Header Row matching IMG_5097 & IMG_5106 (Back on left; Search, Visit Shop, Settings on right) */}
+        <header className="flex items-center justify-between gap-3 pb-3">
           <button
             type="button"
             onClick={() => {
               triggerHaptic();
-              navigate("/news-hub");
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate("/loops");
+              }
             }}
-            className="w-10 h-10 rounded-full bg-white/90 dark:bg-zinc-900/90 shadow-sm flex items-center justify-center text-zinc-800 dark:text-zinc-200 cursor-pointer active:scale-95 transition"
-            aria-label="Back to Feed"
+            className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
+            aria-label="Back"
+            title="Back"
           >
-            <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+            <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
           </button>
 
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-slate-200/80 dark:ring-zinc-700 flex items-center justify-center">
-              <img
-                src={footerLogo}
-                alt="DEEP SHOP"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = deepShopLogoFallback;
-                }}
-              />
-            </div>
-            <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-              News Hub
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!isOwnProfile && targetUid && (
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  if (!currentUser) {
-                    notify("Please sign in to manage profile notifications", "info");
-                    navigate("/signin");
-                    return;
-                  }
-                  setShowNotifBellSheet(true);
-                }}
-                className={`w-10 h-10 rounded-full shadow-sm flex items-center justify-center cursor-pointer active:scale-95 transition ${
-                  notifPrefs.push || notifPrefs.replies
-                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                    : "bg-white/90 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-200"
-                }`}
-                aria-label="Activity notifications"
-                title="Activity notifications"
-              >
-                {notifPrefs.push ? (
-                  <BellRingIcon className="w-4 h-4" />
-                ) : (
-                  <Bell className="w-4 h-4" />
-                )}
-              </button>
-            )}
+          <div className="flex items-center gap-1.5 -mr-1.5">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic();
-                setShowQrModal(true);
+                navigate("/loops/search");
               }}
-              className="w-10 h-10 rounded-full bg-white/90 dark:bg-zinc-900/90 shadow-sm flex items-center justify-center text-zinc-800 dark:text-zinc-200 cursor-pointer active:scale-95 transition"
-              aria-label="Show QR Code"
-              title="QR Code"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
+              aria-label="Search"
+              title="Search"
             >
-              <QrCode className="w-4 h-4" />
+              <Search className="w-[22px] h-[22px] stroke-[2]" />
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/");
+              }}
+              className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
+              aria-label="Visit Shop"
+              title="Visit Shop"
+            >
+              <ShoppingBagIconLocal className="w-[21px] h-[21px]" />
+            </button>
+
             <button
               type="button"
               onClick={() => {
                 triggerHaptic();
                 setShowOptionsSheet(true);
               }}
-              className="w-10 h-10 rounded-full bg-white/90 dark:bg-zinc-900/90 shadow-sm flex items-center justify-center text-zinc-800 dark:text-zinc-200 cursor-pointer active:scale-95 transition"
-              aria-label="More options"
-              title="Options"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
+              aria-label="Settings & Options"
+              title="Settings"
             >
-              <MoreHorizontal className="w-5 h-5" />
+              <Settings className="w-[22px] h-[22px] stroke-[2]" />
             </button>
           </div>
         </header>
 
-        {/* Profile Card Header */}
-        <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[32px] p-5 sm:p-7 shadow-[0_8px_30px_rgba(15,23,42,0.06)] border border-white/80 dark:border-zinc-800 space-y-5">
+        {/* Feeds Drawer */}
+        <NewsHubDrawer
+          isOpen={showFeedsDrawer}
+          onClose={() => setShowFeedsDrawer(false)}
+          userData={profileUser}
+        />
+
+        {/* Flat Loops Profile Header matching IMG_5097 & IMG_5106 */}
+        <div className="pt-1 pb-2 space-y-3.5">
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1 min-w-0 flex-1">
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
+            <div className="space-y-0.5 min-w-0 flex-1 pt-1">
+              <h1 className="text-[23px] sm:text-[26px] font-bold tracking-tight text-zinc-950 dark:text-white leading-tight truncate">
                 {displayName}
               </h1>
-              <div className="flex items-center gap-2 flex-wrap">
-                {username && (
-                  <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
-                    @{username}
-                  </span>
-                )}
+              {username && (
+                <p className="text-[15px] font-normal text-zinc-900 dark:text-zinc-200 truncate">
+                  {username.replace(/^@+/, "")}
+                </p>
+              )}
 
-                {/* Social Badges / Pills */}
-                {profileUser?.socialLinks?.instagram && (
-                  <a
-                    href={`https://instagram.com/${profileUser.socialLinks.instagram}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 py-0.5 rounded-full bg-pink-50 text-pink-600 dark:bg-pink-950/30 dark:text-pink-400 text-[11px] font-bold inline-flex items-center gap-1 hover:underline"
-                  >
-                    <InstagramIcon className="w-3 h-3" />
-                    <span>@{profileUser.socialLinks.instagram}</span>
-                  </a>
-                )}
-                {profileUser?.socialLinks?.tiktok && (
-                  <a
-                    href={`https://tiktok.com/@${profileUser.socialLinks.tiktok}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-600 dark:bg-cyan-950/30 dark:text-cyan-400 text-[11px] font-bold inline-flex items-center gap-1 hover:underline"
-                  >
-                    <VideoIcon className="w-3 h-3" />
-                    <span>@{profileUser.socialLinks.tiktok}</span>
-                  </a>
-                )}
-              </div>
+              {/* Topic Pills Row matching IMG_5097 & IMG_5106 */}
+              {(primaryTopic || isOwnProfile) && (
+                <div className="pt-2.5 flex items-center gap-2 flex-wrap">
+                  {primaryTopic && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        navigate(
+                          `/loops/search?q=${encodeURIComponent(primaryTopic)}`
+                        );
+                      }}
+                      className="px-3.5 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[#0095F6] text-[13.5px] font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                    >
+                      <TopicClusterDotsIcon className="w-3.5 h-3.5 text-[#0095F6] shrink-0" />
+                      <span>{primaryTopic}</span>
+                    </button>
+                  )}
+
+                  {extraTopicsCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setShowTopicsSheet(true);
+                      }}
+                      className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 text-[13.5px] font-semibold cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                    >
+                      +{extraTopicsCount}
+                    </button>
+                  )}
+
+                  {isOwnProfile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        navigate("/loops/profile/interests");
+                      }}
+                      className="h-[34px] px-3.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-300 flex items-center justify-center hover:bg-zinc-50 dark:hover:bg-zinc-800 transition cursor-pointer"
+                      title="Edit topics"
+                      aria-label="Edit topics"
+                    >
+                      <Plus className="w-4 h-4 stroke-[2.3]" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Clickable Profile Avatar -> opens full screen viewer IMG_4923 */}
-            <ProfileAvatar
-              src={avatarUrl}
-              name={displayName}
-              onClick={() => {
-                triggerHaptic();
-                setShowAvatarViewerModal(true);
-              }}
-              className="w-20 h-20 sm:w-24 sm:h-24 ring-4 ring-white dark:ring-zinc-800 shadow-md cursor-pointer hover:opacity-90 transition"
-              iconClassName="w-10 h-10"
-            />
+            {/* Right Circular Avatar + Dashed '+' Speech Bubble Badge (IMG_5097) */}
+            <div className="relative shrink-0">
+              <div
+                onClick={() => {
+                  triggerHaptic();
+                  setShowAvatarViewerModal(true);
+                }}
+                className="w-[76px] h-[76px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 ring-1 ring-black/[0.06] dark:ring-white/10 cursor-pointer flex items-center justify-center"
+              >
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-[#B2FF00] flex flex-col items-center justify-center text-black font-black text-center leading-none p-1">
+                    <span className="text-[22px] tracking-tighter">DS</span>
+                    <span className="text-[8.5px] uppercase tracking-widest font-bold mt-0.5">
+                      DEEP SHOP
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate("/loops/create?ghost=1");
+                  }}
+                  className="absolute -bottom-0.5 -left-2.5 w-8 h-8 rounded-full bg-white dark:bg-zinc-900 border-[1.6px] border-dashed border-zinc-400 dark:border-zinc-500 flex items-center justify-center text-zinc-900 dark:text-zinc-100 shadow-xs active:scale-90 transition cursor-pointer"
+                  title="Share a Ghost post"
+                  aria-label="Share a Ghost post"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Bio */}
-          {bio && (
-            <p className="text-sm sm:text-base text-slate-800 dark:text-zinc-200 leading-relaxed whitespace-pre-line">
-              {bio}
+          {/* Bio Row (IMG_5106) */}
+          {bio && bio.trim().length > 0 && (
+            <p className="text-[15px] leading-[1.42] text-zinc-900 dark:text-zinc-100 whitespace-pre-line break-words">
+              <NewsRichText text={bio} />
             </p>
           )}
 
-          {/* Selected Interest Badges (Matching IMG_4922_4f91a0b7.png) */}
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            {selectedInterestsList.map((interest) => (
-              <span
-                key={interest}
-                className="px-3.5 py-1.5 rounded-full bg-[#1877F2]/5 text-[#1877F2] dark:bg-[#1877F2]/10 dark:text-[#58A6FF] text-[11px] font-bold border border-[#1877F2]/20 flex items-center gap-1.5 shadow-2xs"
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-[#1877F2] dark:bg-[#58A6FF]" />
-                <span>{interest}</span>
-              </span>
-            ))}
-            {isOwnProfile && (
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/news-hub/profile/interests");
-                }}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-[#1877F2] flex items-center justify-center border border-slate-200/80 dark:border-zinc-700 transition cursor-pointer"
-                title="Edit interests"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Stats Bar */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-zinc-400">
-            <span>{formatCompactNumber(followersCount)} followers</span>
-            {profileUser?.showRecentViews !== false && (
+          {/* Followers + Website Link Row matching IMG_5106 */}
+          <div className="flex items-center gap-1.5 flex-wrap text-[14.5px] text-zinc-400 dark:text-zinc-500">
+            <span className="tabular-nums">
+              {formatCompactNumber(followersCount)}{" "}
+              {followersCount === 1 ? "follower" : "followers"}
+            </span>
+            {cleanWebsiteHref && (
               <>
-                <span>·</span>
-                <span>
-                  {(() => {
-                    const totalViews =
-                      Number(profileUser?.views || 0) +
-                      userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
-                    return (
-                      <span>
-                        {formatCompactNumber(totalViews)} recent views
-                      </span>
-                    );
-                  })()}
-                </span>
+                <span aria-hidden="true">·</span>
+                <a
+                  href={cleanWebsiteHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-zinc-500 dark:text-zinc-300 hover:text-[#0095F6] hover:underline font-normal truncate max-w-[230px]"
+                >
+                  {cleanWebsiteLabel}
+                </a>
               </>
             )}
           </div>
 
-          {/* Action Buttons Row */}
+          {/* Action Buttons Row matching IMG_5097 */}
           <div className="flex items-center gap-2 pt-1">
             {isOwnProfile ? (
               <>
@@ -1597,9 +2026,9 @@ export const NewsProfilePage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    navigate("/news-hub/profile/edit");
+                    navigate("/loops/profile/edit");
                   }}
-                  className="flex-1 h-11 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-900 dark:text-white text-xs font-bold transition flex items-center justify-center cursor-pointer"
+                  className="flex-1 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white text-[14.5px] font-semibold transition flex items-center justify-center cursor-pointer"
                 >
                   Edit profile
                 </button>
@@ -1609,18 +2038,24 @@ export const NewsProfilePage: React.FC = () => {
                     triggerHaptic();
                     navigate("/creator-dashboard");
                   }}
-                  className="flex-1 h-11 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-900 dark:text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white text-[14.5px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <BarChart2 className="w-4 h-4 text-[#1877F2]" />
                   <span>View Insights</span>
                 </button>
                 <button
                   type="button"
-                  onClick={handleCopyProfileLink}
-                  className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-900 dark:text-white flex items-center justify-center shrink-0 cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShareSheetTarget({
+                      url: profileShareUrl,
+                      title: `Check out ${displayName} on Loops`,
+                    });
+                  }}
+                  className="w-10 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white flex items-center justify-center shrink-0 cursor-pointer"
                   aria-label="Share Profile"
+                  title="Share Profile"
                 >
-                  <Share2 className="w-4 h-4" />
+                  <ShareUploadBoxSvg className="w-[18px] h-[18px]" />
                 </button>
               </>
             ) : (
@@ -1637,23 +2072,13 @@ export const NewsProfilePage: React.FC = () => {
                       currentlyFollowing: isF,
                     });
                   }}
-                  className={`flex-1 h-11 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 h-10 rounded-xl text-[14.5px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     followedIds.includes(targetUid)
-                      ? "bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white"
-                      : "bg-[#1877F2] text-white shadow-md hover:bg-[#166FE5]"
+                      ? "loops-gray-pill text-zinc-950 dark:text-white"
+                      : "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950"
                   }`}
                 >
-                  {followedIds.includes(targetUid) ? (
-                    <>
-                      <UserCheck className="w-4 h-4" />
-                      <span>Following</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-4 h-4" />
-                      <span>Follow</span>
-                    </>
-                  )}
+                  {followedIds.includes(targetUid) ? "Following" : "Follow"}
                 </button>
                 <button
                   type="button"
@@ -1661,23 +2086,73 @@ export const NewsProfilePage: React.FC = () => {
                     triggerHaptic();
                     navigate(`/messages?uid=${targetUid}`);
                   }}
-                  className="flex-1 h-11 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-900 dark:text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white text-[14.5px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <MessageSquare className="w-4 h-4 text-[#1877F2]" />
                   <span>Message</span>
                 </button>
                 <button
                   type="button"
-                  onClick={handleCopyProfileLink}
-                  className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-900 dark:text-white flex items-center justify-center shrink-0 cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShareSheetTarget({
+                      url: profileShareUrl,
+                      title: `Check out ${displayName} on Loops`,
+                    });
+                  }}
+                  className="w-10 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white flex items-center justify-center shrink-0 cursor-pointer"
                   aria-label="Share Profile"
                 >
-                  <Share2 className="w-4 h-4" />
+                  <ShareUploadBoxSvg className="w-[18px] h-[18px]" />
                 </button>
               </>
             )}
           </div>
         </div>
+
+        {/* Finish your profile Cards Section — Only shown when setup steps are genuinely incomplete */}
+        {isOwnProfile && incompleteSetupSteps.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Finish your profile
+              </h3>
+              <span className="text-xs font-semibold text-slate-400 tabular-nums">
+                {incompleteSetupSteps.length} left
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {incompleteSetupSteps.map((step) => (
+                <div
+                  key={step.id}
+                  className="bg-zinc-100/80 dark:bg-zinc-900/80 rounded-[24px] p-5 flex flex-col items-center text-center justify-between space-y-3 border border-black/5 dark:border-white/5"
+                >
+                  <div className="w-13 h-13 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 shadow-xs">
+                    {step.icon}
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                      {step.title}
+                    </h4>
+                    <p className="text-[11.5px] text-zinc-400 leading-snug">
+                      {step.description}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      step.onClick();
+                    }}
+                    className="w-full py-2.5 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-xs font-bold cursor-pointer active:scale-95 transition"
+                  >
+                    {step.cta}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Suggested For You (Only Real Users with postsCount >= 1 - Matching IMG_4922) */}
         {suggestedProfiles.length > 0 && (
@@ -1706,7 +2181,7 @@ export const NewsProfilePage: React.FC = () => {
                   <div
                     key={sProf.uid}
                     className="relative w-[156px] shrink-0 bg-[#F8FAFC] dark:bg-zinc-900/50 rounded-[28px] p-5 border border-slate-200/80 dark:border-zinc-800/80 shadow-2xs flex flex-col items-center text-center space-y-3 cursor-pointer"
-                    onClick={() => navigate(`/news-hub/profile/${sProf.uid}`)}
+                    onClick={() => navigate(`/loops/profile/${sProf.uid}`)}
                   >
                     <button
                       type="button"
@@ -1756,10 +2231,76 @@ export const NewsProfilePage: React.FC = () => {
           </div>
         )}
 
-        {/* Profile Tabs Bar (Posts, Replies, Media, Reposts) */}
-        <div className="mt-6 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-around">
+        {/* Story Highlights Row (IMG_5137 1:1 — stays on Profile permanently after 24h feed expiry) */}
+        {storyHighlights.length > 0 && (
+          <div className="pt-4 pb-1 -mx-4 px-4 flex items-start gap-4 overflow-x-auto no-scrollbar">
+            {storyHighlights.map((hl) => {
+              const firstStoryId =
+                hl.storiesSnapshot?.[0]?.id ||
+                hl.storyIds?.[0] ||
+                hl.id;
+              return (
+                <button
+                  key={hl.id}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate(
+                      `/loops/story/${encodeURIComponent(
+                        firstStoryId
+                      )}?highlightId=${encodeURIComponent(
+                        hl.id
+                      )}&uid=${encodeURIComponent(targetUid || "")}`
+                    );
+                  }}
+                  onContextMenu={async (e) => {
+                    if (!isOwnProfile || !currentUser?.uid) return;
+                    e.preventDefault();
+                    const ok = await confirm({
+                      title: "Remove Highlight",
+                      message: `Remove "${hl.title}" from your profile highlights?`,
+                      confirmText: "Remove",
+                    });
+                    if (!ok) return;
+                    const nextList = storyHighlights.filter(
+                      (item) => item.id !== hl.id
+                    );
+                    setStoryHighlights(nextList);
+                    try {
+                      localStorage.setItem(
+                        `deep_story_highlights_${currentUser.uid}`,
+                        JSON.stringify(nextList)
+                      );
+                    } catch {}
+                    await setDoc(
+                      doc(db, "users", currentUser.uid),
+                      { storyHighlights: nextList },
+                      { merge: true }
+                    ).catch(() => {});
+                    notify("Highlight removed.", "success");
+                  }}
+                  className="flex flex-col items-center shrink-0 cursor-pointer active:scale-95 transition-transform select-none"
+                >
+                  <div className="loops-highlight-ring w-[74px] h-[74px] rounded-full p-[3.5px] flex items-center justify-center">
+                    <div className="loops-highlight-inner w-full h-full rounded-full flex items-center justify-center px-1.5 text-center overflow-hidden">
+                      <span className="text-[9.5px] font-extrabold tracking-[0.04em] uppercase leading-[1.15] line-clamp-2 break-words">
+                        {hl.title}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="mt-1.5 text-[12px] font-normal tracking-[0.03em] text-zinc-900 dark:text-zinc-100 uppercase truncate w-[78px] text-center">
+                    {hl.title}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Profile Tabs Bar (Loops, Replies, Media, Reposts matching IMG_5097) */}
+        <div className="mt-5 -mx-4 px-4 border-b loops-divider flex items-center justify-around">
           {[
-            { id: "posts", label: "Posts" },
+            { id: "posts", label: "Loops" },
             { id: "replies", label: "Replies" },
             { id: "media", label: "Media" },
             { id: "reposts", label: "Reposts" },
@@ -1773,17 +2314,17 @@ export const NewsProfilePage: React.FC = () => {
                   triggerHaptic();
                   setActiveTab(tab.id as any);
                 }}
-                className={`py-3 px-4 text-xs sm:text-sm font-bold relative cursor-pointer transition-colors ${
+                className={`flex-1 py-3 text-[15px] font-semibold relative cursor-pointer transition-colors text-center ${
                   isActive
-                    ? "text-slate-900 dark:text-white"
-                    : "text-slate-400 dark:text-zinc-500 hover:text-slate-700"
+                    ? "text-zinc-950 dark:text-white"
+                    : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-700"
                 }`}
               >
                 <span>{tab.label}</span>
                 {isActive && (
                   <motion.div
                     layoutId="activeProfileTabUnderline"
-                    className="absolute bottom-0 inset-x-0 h-0.5 bg-slate-900 dark:bg-white rounded-full"
+                    className="absolute bottom-0 inset-x-3 h-[2px] bg-zinc-950 dark:bg-white rounded-full"
                   />
                 )}
               </button>
@@ -1799,7 +2340,7 @@ export const NewsProfilePage: React.FC = () => {
                 <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[32px] p-6 sm:p-8 border border-slate-200/80 dark:border-zinc-800 shadow-sm space-y-8 flex flex-col items-center text-center">
                   <div className="space-y-2">
                     <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-                      Start your first post
+                      Start your first Loop
                     </h3>
                     <p className="text-sm text-slate-400 dark:text-zinc-500 font-medium max-w-[280px] mx-auto">
                       Need inspiration? Pick a prompt to get going.
@@ -1820,9 +2361,9 @@ export const NewsProfilePage: React.FC = () => {
                           type="button"
                           onClick={() => {
                             triggerHaptic();
-                            navigate(`/news-hub/create?text=${encodeURIComponent(suggestion)}`);
+                            navigate(`/loops/create?text=${encodeURIComponent(suggestion)}`);
                           }}
-                          className="px-5 py-3 rounded-full bg-white dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white border border-slate-200/80 dark:border-zinc-700 shadow-2xs whitespace-nowrap cursor-pointer hover:border-[#1877F2] transition"
+                          className="px-5 py-3 rounded-full bg-white dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white border border-slate-200/80 dark:border-zinc-700 shadow-2xs whitespace-nowrap cursor-pointer hover:border-[#0095F6] transition"
                         >
                           {suggestion}
                         </button>
@@ -1834,119 +2375,71 @@ export const NewsProfilePage: React.FC = () => {
                     type="button"
                     onClick={() => {
                       triggerHaptic();
-                      navigate("/news-hub/create");
+                      navigate("/loops/create");
                     }}
                     className="w-full py-4 rounded-[20px] bg-black dark:bg-white text-white dark:text-black font-extrabold text-sm shadow-lg active:scale-[0.98] transition cursor-pointer"
                   >
-                    Create post
+                    Create Loop
                   </button>
                 </div>
               ) : (
                 <div className="text-center py-12 text-xs font-semibold text-slate-500 dark:text-zinc-400 bg-white/60 dark:bg-zinc-900/60 rounded-3xl p-6 border border-slate-200/60 dark:border-zinc-800">
-                  No post available
+                  No Loops available
                 </div>
               )
             ) : (
-              userPosts.map((post) => {
-                const postReactionsTotal = post.reactionsCount
-                  ? (Object.values(post.reactionsCount) as number[]).reduce(
-                      (a, b) => a + (Number(b) || 0),
-                      0
-                    )
-                  : Number(post.votes || 0);
-                return (
-                  <article
+              <div className="-mx-4 loops-surface border-t loops-divider">
+                {userPosts.map((post) => (
+                  <LoopPostCard
                     key={post.id}
-                    onClick={() => navigate(`/news-hub/post/${post.id}`)}
-                    className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[28px] p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-zinc-800 space-y-3 cursor-pointer hover:border-slate-300 transition"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <ProfileAvatar src={avatarUrl} name={displayName} className="w-10 h-10" iconClassName="w-5 h-5" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold truncate text-slate-900 dark:text-white">{displayName}</p>
-                        <p className="text-[11px] font-medium text-slate-500">{formatDhakaFeedTime(post.createdAt)}</p>
-                      </div>
-                    </div>
-
-                    {post.description && (
-                      <p className="text-sm text-slate-800 dark:text-zinc-200 leading-relaxed">
-                        <NewsRichText text={post.description} />
-                      </p>
-                    )}
-
-                    <NewsPostMedia post={post} onOpenImage={(idx) => navigate(`/news-hub/photo/${post.id}/${idx}`)} />
-
-                    <div className="flex items-center gap-5 text-xs font-semibold text-slate-500 pt-1">
-                      <span className="flex items-center gap-1">
-                        <Heart className="w-4 h-4" />
-                        <span>{formatCompactNumber(postReactionsTotal)}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle className="w-4 h-4" />
-                        <span>{formatCompactNumber(post.commentsCount || 0)}</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleRepost(post);
-                        }}
-                        className="flex items-center gap-1 hover:text-[#1877F2] cursor-pointer"
-                      >
-                        <RepeatIcon className="w-4 h-4" />
-                        <span>{formatCompactNumber(post.repostsCount || 0)}</span>
-                      </button>
-                      {Boolean(
-                        currentUser?.uid &&
-                          (post.reporterId === currentUser.uid ||
-                            (post as any).authorId === currentUser.uid)
-                      ) && (
-                        <span className="flex items-center gap-1 ml-auto" title="Only visible to you">
-                          <Eye className="w-4 h-4" />
-                          <span>{formatCompactNumber(post.views || 0)}</span>
-                        </span>
-                      )}
-                    </div>
-                  </article>
-                );
-              })
+                    post={post}
+                    authorProfile={profileUser}
+                    currentUser={currentUser}
+                    isFollowingAuthor={followedIds.includes(targetUid)}
+                    canManage={isOwnProfile}
+                    onToggleLike={handleToggleLikePost}
+                    onToggleRepost={handleToggleRepost}
+                    onOpenShare={(p) => setShareSheetTarget({ post: p })}
+                    onCopyLink={(pid) => {
+                      navigator.clipboard.writeText(`${getPublicShareOrigin()}/loops/post/${pid}`);
+                      notify("Link copied to clipboard!", "success");
+                    }}
+                    onEditPost={(p) => navigate(`/loops/edit/${p.id}`)}
+                    onDeletePost={handleDeleteProfilePost}
+                    onRequireAuth={() => navigate("/signin")}
+                  />
+                ))}
+              </div>
             )
           )}
 
           {activeTab === "reposts" && (
             repostedPosts.length === 0 ? (
               <div className="text-center py-12 text-xs text-slate-500 bg-white/60 dark:bg-zinc-900/60 rounded-3xl p-6">
-                No reposted posts yet.
+                No reposted Loops yet.
               </div>
             ) : (
-              repostedPosts.map((rPost) => (
-                <article
-                  key={rPost.id}
-                  onClick={() => navigate(`/news-hub/post/${rPost.id}`)}
-                  className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[28px] p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-zinc-800 space-y-3 cursor-pointer hover:border-slate-300 transition"
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 pb-1 border-b border-slate-100 dark:border-zinc-800">
-                    <RepeatIcon className="w-3.5 h-3.5 text-[#1877F2]" />
-                    <span>{displayName} reposted</span>
-                  </div>
-
-                  <div className="flex items-center gap-2.5">
-                    <ProfileAvatar src={rPost.reporterAvatar} name={rPost.reporterName} className="w-10 h-10" iconClassName="w-5 h-5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate text-slate-900 dark:text-white">{rPost.reporterName}</p>
-                      <p className="text-[11px] font-medium text-slate-500">{formatDhakaFeedTime(rPost.createdAt)}</p>
-                    </div>
-                  </div>
-
-                  {rPost.description && (
-                    <p className="text-sm text-slate-800 dark:text-zinc-200 leading-relaxed">
-                      <NewsRichText text={rPost.description} />
-                    </p>
-                  )}
-
-                  <NewsPostMedia post={rPost} onOpenImage={(idx) => navigate(`/news-hub/photo/${rPost.id}/${idx}`)} />
-                </article>
-              ))
+              <div className="-mx-4 loops-surface border-t loops-divider">
+                {repostedPosts.map((rPost) => (
+                  <LoopPostCard
+                    key={rPost.id}
+                    post={rPost}
+                    currentUser={currentUser}
+                    isFollowingAuthor={Boolean(
+                      rPost.reporterId && followedIds.includes(rPost.reporterId)
+                    )}
+                    repostedHeaderLabel={`${username || displayName} reposted`}
+                    onToggleLike={handleToggleLikePost}
+                    onToggleRepost={handleToggleRepost}
+                    onOpenShare={(p) => setShareSheetTarget({ post: p })}
+                    onCopyLink={(pid) => {
+                      navigator.clipboard.writeText(`${getPublicShareOrigin()}/loops/post/${pid}`);
+                      notify("Link copied to clipboard!", "success");
+                    }}
+                    onRequireAuth={() => navigate("/signin")}
+                  />
+                ))}
+              </div>
             )
           )}
 
@@ -1956,15 +2449,15 @@ export const NewsProfilePage: React.FC = () => {
                 No media attachments found.
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
                 {userMedia.map((mPost) => (
                   <div
                     key={mPost.id}
-                    onClick={() => navigate(`/news-hub/post/${mPost.id}`)}
-                    className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer group shadow-sm"
+                    onClick={() => navigate(`/loops/post/${mPost.id}`)}
+                    className="relative aspect-square rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer group"
                   >
                     {mPost.images?.[0] ? (
-                      <img src={mPost.images[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <img src={mPost.images[0]} alt="" className="w-full h-full object-cover rounded-none group-hover:scale-105 transition-transform" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400">
                         <ImageIcon className="w-8 h-8" />
@@ -1987,7 +2480,7 @@ export const NewsProfilePage: React.FC = () => {
                   <div
                     key={comment.id}
                     onClick={() => {
-                      if (comment.postId) navigate(`/news-hub/post/${comment.postId}#comments`);
+                      if (comment.postId) navigate(`/loops/post/${comment.postId}#comments`);
                     }}
                     className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[24px] p-4 shadow-sm border border-slate-200/80 dark:border-zinc-800 space-y-2 cursor-pointer hover:border-slate-300 transition"
                   >
@@ -2002,7 +2495,7 @@ export const NewsProfilePage: React.FC = () => {
                       {comment.text}
                     </p>
                     {comment.imageUrl && (
-                      <img src={comment.imageUrl} alt="" className="max-h-36 rounded-xl object-cover mt-1" />
+                      <img src={comment.imageUrl} alt="" className="max-h-36 rounded-none object-cover mt-1" />
                     )}
                   </div>
                 ))}
@@ -2012,510 +2505,829 @@ export const NewsProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* OPTIONS SHEET (Matching IMG_4890.png) - High z-index z-[100] */}
-      <AnimatePresence>
-        {showOptionsSheet && (
-          <div
-            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm p-4"
-            onClick={() => setShowOptionsSheet(false)}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#F8FAFC] dark:bg-zinc-900 rounded-t-[36px] rounded-b-[32px] w-full max-w-md p-4 space-y-3 shadow-2xl border border-slate-200/80 dark:border-zinc-800 overflow-hidden max-h-[85vh] overflow-y-auto"
-            >
-              <div className="w-10 h-1 bg-slate-300 dark:bg-zinc-700 rounded-full mx-auto my-1" />
-
-              {/* Group 1: Add to feed */}
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-sm border border-slate-200/60 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setShowOptionsSheet(false);
-                    notify("Added profile updates to feed", "success");
-                  }}
-                  className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800"
+      {/* ALL PROFILE POPUPS UNIFIED TO POST CARD BOTTOM-SHEET DESIGN (LoopPostOptionsSheet) */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <>
+            {/* 1. PROFILE OPTIONS BOTTOM SHEET */}
+            <AnimatePresence>
+              {showOptionsSheet && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={() => setShowOptionsSheet(false)}
                 >
-                  <span>Add to feed</span>
-                  <Plus className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                </button>
-              </div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  />
 
-              {/* Group 2: QR code, Copy link, Share */}
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-sm border border-slate-200/60 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setShowOptionsSheet(false);
-                    setShowQrModal(true);
-                  }}
-                  className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800"
-                >
-                  <span>QR code</span>
-                  <QrCode className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setShowOptionsSheet(false);
-                    handleCopyProfileLink();
-                  }}
-                  className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800"
-                >
-                  <span>Copy link</span>
-                  <Link2 className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setShowOptionsSheet(false);
-                    handleCopyProfileLink();
-                  }}
-                  className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800"
-                >
-                  <span>Share</span>
-                  <Share2 className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                </button>
-              </div>
-
-              {/* Group 3: About this profile */}
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-sm border border-slate-200/60 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setShowOptionsSheet(false);
-                    setShowAboutSheet(true);
-                  }}
-                  className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800"
-                >
-                  <span>About this profile</span>
-                  <Info className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                </button>
-              </div>
-
-              {/* Group 4: Mute, Restrict */}
-              {!isOwnProfile && (
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-sm border border-slate-200/60 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setShowOptionsSheet(false);
-                      notify(`Muted ${displayName}`, "info");
-                    }}
-                    className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800"
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
                   >
-                    <span>Mute</span>
-                    <VolumeX className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                  </button>
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setShowOptionsSheet(false);
-                      notify(`Restricted ${displayName}`, "info");
-                    }}
-                    className="w-full p-4 text-left text-sm font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800"
-                  >
-                    <span>Restrict</span>
-                    <Lock className="w-5 h-5 text-slate-700 dark:text-zinc-300" />
-                  </button>
+                    <div className="space-y-1 pt-0.5">
+                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                        {isOwnProfile ? "Profile options" : `Options for ${displayName}`}
+                      </h3>
+                      {username && (
+                        <p className="text-[14px] text-zinc-500 dark:text-zinc-400">
+                          @{username.replace(/^@+/, "")}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Group 1: Own Profile Shortcuts OR Add to Feed */}
+                    {isOwnProfile ? (
+                      <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            navigate("/loops/profile/edit");
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <Pencil className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Edit profile</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            setShowNotifBellSheet(true);
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <Bell className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Notification preferences</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            navigate("/loops/saved");
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <BookOpen className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Saved loops</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            notify("Added profile updates to feed", "success");
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <Plus className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Add to feed</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            setShowNotifBellSheet(true);
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <Bell className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Activity notifications</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Group 2: Share, Copy Link, QR Code, About */}
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setShowOptionsSheet(false);
+                          setShowQrModal(true);
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <QrCode className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>QR code</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setShowOptionsSheet(false);
+                          handleCopyProfileLink();
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <Link2 className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Copy link</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setShowOptionsSheet(false);
+                          setShareSheetTarget({
+                            url: profileShareUrl,
+                            title: `Check out ${displayName} on Loops`,
+                          });
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <ShareUploadBoxSvg className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Share profile</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setShowOptionsSheet(false);
+                          setShowAboutSheet(true);
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <Info className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>About this profile</span>
+                      </button>
+                    </div>
+
+                    {/* Group 3: Mute, Restrict, Block, Report for Other Profiles */}
+                    {!isOwnProfile && (
+                      <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            const nowMuted = toggleMuteUserId(targetUid);
+                            notify(
+                              nowMuted ? `Muted ${displayName}` : `Unmuted ${displayName}`,
+                              "info"
+                            );
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <VolumeX className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Mute</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            const nowRestricted = toggleRestrictUserId(targetUid);
+                            notify(
+                              nowRestricted
+                                ? `Restricted ${displayName}`
+                                : `Unrestricted ${displayName}`,
+                              "info"
+                            );
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <Lock className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Restrict</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            const nowBlocked = toggleBlockUserId(targetUid);
+                            notify(
+                              nowBlocked
+                                ? `Blocked ${displayName}`
+                                : `Unblocked ${displayName}`,
+                              "info"
+                            );
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-rose-500/10 text-[16px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                        >
+                          <Shield className="w-[22px] h-[22px] stroke-[1.95] text-[#FF3040] shrink-0" />
+                          <span>Block</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            notify("Profile reported for review.", "info");
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-rose-500/10 text-[16px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                        >
+                          <ReportBubbleSvg className="w-[22px] h-[22px] text-[#FF3040] shrink-0" />
+                          <span>Report</span>
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
                 </div>
               )}
+            </AnimatePresence>
 
-              {/* Group 5: Block, Report */}
-              {!isOwnProfile && (
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden shadow-sm border border-slate-200/60 dark:border-zinc-800 divide-y divide-slate-100 dark:divide-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setShowOptionsSheet(false);
-                      notify(`Blocked ${displayName}`, "info");
-                    }}
-                    className="w-full p-4 text-left text-sm font-bold text-rose-600 flex items-center justify-between cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                  >
-                    <span>Block</span>
-                    <Shield className="w-5 h-5 text-rose-600" />
-                  </button>
+            {/* 2. ABOUT THIS PROFILE BOTTOM SHEET */}
+            <AnimatePresence>
+              {showAboutSheet && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={() => setShowAboutSheet(false)}
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  />
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setShowOptionsSheet(false);
-                      notify("Profile reported for review.", "info");
-                    }}
-                    className="w-full p-4 text-left text-sm font-bold text-rose-600 flex items-center justify-between cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
                   >
-                    <span>Report</span>
-                    <Info className="w-5 h-5 text-rose-600" />
-                  </button>
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+                    <div className="space-y-1 pt-0.5">
+                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                        About this profile
+                      </h3>
+                      <p className="text-[14.5px] leading-snug text-zinc-500 dark:text-zinc-400">
+                        Verified account details and community activity on Loops.
+                      </p>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] p-4 space-y-4 divide-y loops-divider">
+                      <div className="flex items-center justify-between gap-3 pb-3.5">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <UserIcon className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                              Name
+                            </p>
+                            <p className="text-[15.5px] font-semibold text-[#0f0f0f] dark:text-white truncate">
+                              {displayName}
+                              {username ? ` (@${username.replace(/^@+/, "")})` : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <ProfileAvatar
+                          src={avatarUrl}
+                          name={displayName}
+                          className="w-11 h-11 shrink-0"
+                          iconClassName="w-5 h-5"
+                        />
+                      </div>
+
+                      <div className="flex items-start gap-3.5 py-3.5">
+                        <Eye className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                            Joined & activity
+                          </p>
+                          <p className="text-[15px] font-semibold text-[#0f0f0f] dark:text-white">
+                            Joined{" "}
+                            {profileUser?.createdAt
+                              ? formatDhakaDateTime(profileUser.createdAt)
+                              : "September 2026"}
+                            {profileUser?.showRecentViews !== false
+                              ? ` · ${(() => {
+                                  const totalViews =
+                                    Number(profileUser?.views || 0) +
+                                    userPosts.reduce(
+                                      (acc, p) => acc + Number(p.views || 0),
+                                      0
+                                    );
+                                  return `${formatCompactNumber(totalViews)} recent views`;
+                                })()}`
+                              : ""}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3.5 pt-3.5">
+                        <MapPin className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                            Based in
+                          </p>
+                          <p className="text-[15px] font-semibold text-[#0f0f0f] dark:text-white">
+                            {profileUser?.location ||
+                              profileUser?.address ||
+                              "Bangladesh"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowAboutSheet(false)}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <X className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Close</span>
+                      </button>
+                    </div>
+                  </motion.div>
                 </div>
               )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            </AnimatePresence>
 
-      {/* ABOUT THIS PROFILE SHEET (Matching IMG_4888.png) - High z-index z-[100] */}
-      <AnimatePresence>
-        {showAboutSheet && (
-          <div
-            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm p-4"
-            onClick={() => setShowAboutSheet(false)}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-zinc-900 rounded-t-[36px] rounded-b-[32px] w-full max-w-md p-6 space-y-5 shadow-2xl border border-slate-200 dark:border-zinc-800"
-            >
-              <div className="w-10 h-1 bg-slate-300 dark:bg-zinc-700 rounded-full mx-auto" />
-
-              <h2 className="text-center text-base font-extrabold text-slate-900 dark:text-white">
-                About this profile
-              </h2>
-
-              <div className="bg-slate-50 dark:bg-zinc-800/60 rounded-[24px] p-5 border border-slate-200/60 dark:border-zinc-700/60 space-y-4">
-                <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-zinc-700/60">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-slate-500">Name</p>
-                    <p className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                      {displayName}{username ? ` (@${username})` : ""}
-                    </p>
-                  </div>
-                  <ProfileAvatar src={avatarUrl} name={displayName} className="w-12 h-12" iconClassName="w-6 h-6" />
-                </div>
-
-                <div className="pb-3 border-b border-slate-200/60 dark:border-zinc-700/60">
-                  <p className="text-xs font-bold text-slate-500">Joined & Activity</p>
-                  <p className="text-sm font-extrabold text-slate-900 dark:text-white">
-                    Joined {profileUser?.createdAt ? formatDhakaDateTime(profileUser.createdAt) : "September 2026"}
-                    {profileUser?.showRecentViews !== false
-                      ? ` · ${(() => {
-                          const totalViews =
-                            Number(profileUser?.views || 0) +
-                            userPosts.reduce((acc, p) => acc + Number(p.views || 0), 0);
-                          return `${formatCompactNumber(totalViews)} recent views`;
-                        })()}`
-                      : ""}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs font-bold text-slate-500">Based in</p>
-                  <p className="text-sm font-extrabold text-slate-900 dark:text-white">
-                    {profileUser?.location || profileUser?.address || "Bangladesh"}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowAboutSheet(false)}
-                className="w-full py-3.5 rounded-2xl bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-white font-bold text-sm cursor-pointer"
-              >
-                Close
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* QR MODAL (Matching IMG_4891.png) - High z-index z-[110] */}
-      <AnimatePresence>
-        {showQrModal && (
-          <div
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
-            onClick={() => setShowQrModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#F8FAFC] dark:bg-zinc-900 rounded-[40px] w-full max-w-sm p-8 flex flex-col items-center text-center space-y-6 shadow-2xl relative border border-white/10"
-            >
-              <button
-                onClick={() => setShowQrModal(false)}
-                className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-200/50 dark:bg-zinc-800 flex items-center justify-center text-slate-600 dark:text-zinc-400 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="space-y-1">
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">Profile QR Code</h3>
-                <p className="text-xs font-semibold text-slate-500">
-                  {username ? `Scan to follow @${username}` : `Scan to follow ${displayName}`}
-                </p>
-              </div>
-
-              <div className="bg-white p-4 rounded-[32px] shadow-sm border border-slate-200/60">
-                <ScannableQRCodeCard
-                  profileUrl={getPublicShareOrigin() + "/news-hub/profile/" + targetUid}
-                  name={displayName}
-                  username={username}
-                  avatarUrl={avatarUrl}
-                  footerLogo={footerLogo}
-                  onCanvasReady={setQrDataUrl}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 w-full">
-                <button
-                  type="button"
-                  onClick={handleDownloadQR}
-                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700 shadow-sm hover:bg-slate-50 transition cursor-pointer"
+            {/* 3. PROFILE QR CODE BOTTOM SHEET */}
+            <AnimatePresence>
+              {showQrModal && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={() => setShowQrModal(false)}
                 >
-                  <Download className="w-5 h-5 text-[#1877F2]" />
-                  <span className="text-[10px] font-bold">Download</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCopyProfileLink}
-                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700 shadow-sm hover:bg-slate-50 transition cursor-pointer"
-                >
-                  <Copy className="w-5 h-5 text-[#1877F2]" />
-                  <span className="text-[10px] font-bold">Copy Link</span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  />
 
-      {/* FULLSCREEN AVATAR VIEWER MODAL (Matching IMG_4923.png) - High z-index z-[120] */}
-      <AnimatePresence>
-        {showAvatarViewerModal && (
-          <div
-            className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-xl flex flex-col"
-            onClick={() => setShowAvatarViewerModal(false)}
-          >
-            <div className="flex items-center justify-between p-6 text-white pt-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full border border-white/20 overflow-hidden bg-zinc-800">
-                  <ProfileAvatar src={avatarUrl} name={displayName} className="w-full h-full" iconClassName="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold truncate">{displayName}</p>
-                  {username && (
-                    <p className="text-[10px] text-zinc-400 font-semibold truncate">@{username}</p>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAvatarViewerModal(false)}
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                className="w-full max-w-lg aspect-square rounded-[40px] overflow-hidden bg-zinc-900 shadow-2xl border border-white/10 relative"
-              >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-700">
-                    <UserIcon className="w-32 h-32" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 pointer-events-none" />
-              </motion.div>
-            </div>
-
-            <div className="p-8 flex items-center justify-center gap-6">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  notify("Image saved to gallery", "success");
-                }}
-                className="flex flex-col items-center gap-2 text-white/70 hover:text-white transition cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                  <Download className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-bold">Save</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCopyProfileLink();
-                }}
-                className="flex flex-col items-center gap-2 text-white/70 hover:text-white transition cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                  <Share2 className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] font-bold">Share</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* LIVE CAMERA QR SCANNER MODAL */}
-      <AnimatePresence>
-        {showScannerModal && (
-          <div className="fixed inset-0 z-[130] bg-black flex flex-col justify-between p-6">
-            <div className="flex items-center justify-between text-white pt-2">
-              <span className="text-sm font-bold">Point camera at a QR code</span>
-              <button
-                type="button"
-                onClick={stopCameraScanner}
-                className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="relative w-full max-w-sm aspect-square mx-auto rounded-3xl overflow-hidden border-2 border-white/40 shadow-2xl flex items-center justify-center bg-zinc-900">
-              <video ref={videoScannerRef} playsInline className="w-full h-full object-cover" />
-              <div className="absolute inset-8 border-2 border-dashed border-[#1877F2] rounded-2xl animate-pulse pointer-events-none" />
-            </div>
-
-            <div className="text-center text-white space-y-3 pb-4">
-              <p className="text-xs text-zinc-300">Align QR code inside frame to visit profile</p>
-              <button
-                type="button"
-                onClick={stopCameraScanner}
-                className="px-6 py-3 rounded-full bg-white text-zinc-900 font-bold text-xs cursor-pointer"
-              >
-                Close Camera
-              </button>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ACTIVITY NOTIFICATIONS BELL BOTTOM SHEET (Matching IMG_4968) */}
-      <AnimatePresence>
-        {showNotifBellSheet && (
-          <div
-            className="fixed inset-0 z-[125] bg-black/45 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
-            onClick={() => setShowNotifBellSheet(false)}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 370, damping: 32 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-[#F3F4F6] dark:bg-zinc-950 rounded-t-[34px] sm:rounded-[34px] p-5 pb-8 space-y-4 shadow-2xl border border-white/80 dark:border-zinc-800"
-            >
-              {/* Grab Handle */}
-              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto" />
-
-              {/* Threads & Replies Checkmark Group */}
-              <div className="rounded-[24px] bg-white dark:bg-zinc-900 divide-y divide-slate-100 dark:divide-zinc-800/80 overflow-hidden shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateProfileNotifPrefs({ threads: !notifPrefs.threads })
-                  }
-                  className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
-                >
-                  <span className="text-[15.5px] font-semibold text-zinc-900 dark:text-white">
-                    Threads
-                  </span>
-                  <span
-                    className={`w-6 h-6 rounded-full flex items-center justify-center transition ${
-                      notifPrefs.threads
-                        ? "bg-black dark:bg-white text-white dark:text-black"
-                        : "border-2 border-zinc-300 dark:border-zinc-600"
-                    }`}
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
                   >
-                    {notifPrefs.threads && (
-                      <Check className="w-3.5 h-3.5 stroke-[2.8]" />
-                    )}
-                  </span>
-                </button>
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateProfileNotifPrefs({ replies: !notifPrefs.replies })
-                  }
-                  className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition cursor-pointer"
-                >
-                  <span className="text-[15.5px] font-semibold text-zinc-900 dark:text-white">
-                    Replies
-                  </span>
-                  <span
-                    className={`w-6 h-6 rounded-full flex items-center justify-center transition ${
-                      notifPrefs.replies
-                        ? "bg-black dark:bg-white text-white dark:text-black"
-                        : "border-2 border-zinc-300 dark:border-zinc-600"
-                    }`}
-                  >
-                    {notifPrefs.replies && (
-                      <Check className="w-3.5 h-3.5 stroke-[2.8]" />
-                    )}
-                  </span>
-                </button>
-              </div>
+                    <div className="space-y-1 pt-0.5">
+                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                        Profile QR code
+                      </h3>
+                      <p className="text-[14.5px] text-zinc-500 dark:text-zinc-400">
+                        {username
+                          ? `Scan to follow @${username.replace(/^@+/, "")} on Loops`
+                          : `Scan to follow ${displayName} on Loops`}
+                      </p>
+                    </div>
 
-              {/* Push Notifications Toggle Card */}
-              <div className="space-y-2">
-                <div className="rounded-[24px] bg-white dark:bg-zinc-900 px-5 py-4 flex items-center justify-between gap-3 shadow-2xs">
-                  <span className="text-[15.5px] font-semibold text-zinc-900 dark:text-white">
-                    Push notifications
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={notifPrefs.push}
-                    onClick={() =>
-                      updateProfileNotifPrefs({ push: !notifPrefs.push })
-                    }
-                    className={`relative w-13 h-7.5 rounded-full transition-colors cursor-pointer shrink-0 ${
-                      notifPrefs.push
-                        ? "bg-zinc-900 dark:bg-white"
-                        : "bg-zinc-300 dark:bg-zinc-700"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-1 w-5.5 h-5.5 rounded-full transition-all shadow-xs ${
-                        notifPrefs.push
-                          ? "left-6.5 bg-white dark:bg-zinc-900"
-                          : "left-1 bg-white"
-                      }`}
-                    />
-                  </button>
+                    <div className="loops-about-card rounded-[22px] p-5 flex items-center justify-center">
+                      <div className="bg-white p-3.5 rounded-[24px] border border-black/[0.06]">
+                        <ScannableQRCodeCard
+                          profileUrl={
+                            getPublicShareOrigin() + "/loops/profile/" + targetUid
+                          }
+                          name={displayName}
+                          username={username}
+                          avatarUrl={avatarUrl}
+                          footerLogo={footerLogo}
+                          onCanvasReady={setQrDataUrl}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={handleDownloadQR}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <Download className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Save QR image</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyProfileLink}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <Copy className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Copy profile link</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowQrModal(false);
+                          startCameraScanner();
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <Camera className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Scan another QR code</span>
+                      </button>
+                    </div>
+                  </motion.div>
                 </div>
+              )}
+            </AnimatePresence>
 
-                <p className="px-2 text-[13px] text-zinc-500 dark:text-zinc-400">
-                  You&apos;ll get activity notifications for{" "}
-                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                    {username || displayName}
-                  </span>
-                  .
-                </p>
-              </div>
-            </motion.div>
-          </div>
+            {/* 4. AVATAR PREVIEW & PHOTO OPTIONS BOTTOM SHEET */}
+            <AnimatePresence>
+              {showAvatarViewerModal && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={() => setShowAvatarViewerModal(false)}
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  />
+
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
+                  >
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+                    <div className="space-y-0.5 pt-0.5">
+                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight truncate">
+                        {displayName}
+                      </h3>
+                      {username && (
+                        <p className="text-[14px] text-zinc-500 dark:text-zinc-400 truncate">
+                          @{username.replace(/^@+/, "")}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] p-5 flex items-center justify-center">
+                      <div className="w-52 h-52 sm:w-60 sm:h-60 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 ring-1 ring-black/[0.08] dark:ring-white/10 flex items-center justify-center">
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={displayName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <UserIcon className="w-20 h-20 text-zinc-400" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                      {isOwnProfile && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowAvatarViewerModal(false);
+                            navigate("/loops/profile/edit");
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <Camera className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Change profile photo</span>
+                        </button>
+                      )}
+
+                      {avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            notify("Image saved to gallery", "success");
+                            setShowAvatarViewerModal(false);
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <Download className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Save photo</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setShowAvatarViewerModal(false);
+                          setShareSheetTarget({
+                            url: profileShareUrl,
+                            title: `Check out ${displayName} on Loops`,
+                          });
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <ShareUploadBoxSvg className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Share profile</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleCopyProfileLink();
+                          setShowAvatarViewerModal(false);
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <Link2 className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Copy profile link</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* 5. LIVE CAMERA QR SCANNER BOTTOM SHEET */}
+            <AnimatePresence>
+              {showScannerModal && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={stopCameraScanner}
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  />
+
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
+                  >
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+                    <div className="space-y-1 pt-0.5">
+                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                        Scan profile QR code
+                      </h3>
+                      <p className="text-[14px] text-zinc-500 dark:text-zinc-400">
+                        Align a Loops QR code inside the camera frame to open their profile.
+                      </p>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] p-3">
+                      <div className="relative w-full aspect-square max-w-[300px] mx-auto rounded-[18px] overflow-hidden bg-zinc-950 flex items-center justify-center">
+                        <video
+                          ref={videoScannerRef}
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-6 border-2 border-dashed border-white/75 rounded-2xl pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5">
+                      <button
+                        type="button"
+                        onClick={stopCameraScanner}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <X className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Close camera</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* 6. ACTIVITY NOTIFICATIONS BOTTOM SHEET */}
+            <AnimatePresence>
+              {showNotifBellSheet && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={() => setShowNotifBellSheet(false)}
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  />
+
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
+                  >
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+                    <div className="space-y-1 pt-0.5">
+                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                        Activity notifications
+                      </h3>
+                      <p className="text-[14px] text-zinc-500 dark:text-zinc-400">
+                        Manage alerts for{" "}
+                        <span className="font-medium text-[#0f0f0f] dark:text-zinc-200">
+                          {username ? `@${username.replace(/^@+/, "")}` : displayName}
+                        </span>
+                        .
+                      </p>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateProfileNotifPrefs({ threads: !notifPrefs.threads })
+                        }
+                        className="w-full flex items-center justify-between gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <span className="flex items-center gap-3.5">
+                          <Bell className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Loops</span>
+                        </span>
+                        <span
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition ${
+                            notifPrefs.threads
+                              ? "bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f]"
+                              : "border-2 border-zinc-300 dark:border-zinc-600"
+                          }`}
+                        >
+                          {notifPrefs.threads && (
+                            <Check className="w-3.5 h-3.5 stroke-[2.8]" />
+                          )}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateProfileNotifPrefs({ replies: !notifPrefs.replies })
+                        }
+                        className="w-full flex items-center justify-between gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <span className="flex items-center gap-3.5">
+                          <MessageCircle className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Replies</span>
+                        </span>
+                        <span
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition ${
+                            notifPrefs.replies
+                              ? "bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f]"
+                              : "border-2 border-zinc-300 dark:border-zinc-600"
+                          }`}
+                        >
+                          {notifPrefs.replies && (
+                            <Check className="w-3.5 h-3.5 stroke-[2.8]" />
+                          )}
+                        </span>
+                      </button>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5">
+                      <div className="flex items-center justify-between gap-3.5 px-3.5 py-3.5">
+                        <span className="flex items-center gap-3.5 text-[16px] font-normal text-[#0f0f0f] dark:text-white">
+                          <BellRingIcon className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Push notifications</span>
+                        </span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={notifPrefs.push}
+                          onClick={() =>
+                            updateProfileNotifPrefs({ push: !notifPrefs.push })
+                          }
+                          className={`relative w-12 h-7 rounded-full transition-colors cursor-pointer shrink-0 ${
+                            notifPrefs.push
+                              ? "bg-[#0f0f0f] dark:bg-white"
+                              : "bg-zinc-300 dark:bg-zinc-700"
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-1 w-5 h-5 rounded-full transition-all shadow-xs ${
+                              notifPrefs.push
+                                ? "left-6 bg-white dark:bg-[#0f0f0f]"
+                                : "left-1 bg-white"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* 7. USER TOPICS BOTTOM SHEET */}
+            <AnimatePresence>
+              {showTopicsSheet && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={() => setShowTopicsSheet(false)}
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  />
+
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
+                  >
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+                    <div className="space-y-1 pt-0.5">
+                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                        Topics that{" "}
+                        {username ? username.replace(/^@+/, "") : displayName} loops about
+                      </h3>
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                      {profileTopics.map((topic) => (
+                        <button
+                          key={topic}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowTopicsSheet(false);
+                            navigate(`/loops/search?q=${encodeURIComponent(topic)}`);
+                          }}
+                          className="w-full flex items-center justify-between gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <span className="flex items-center gap-3.5">
+                            <TopicClusterDotsIcon className="w-[20px] h-[20px] text-[#0095F6] shrink-0" />
+                            <span>{topic}</span>
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+          </>,
+          document.body
         )}
-      </AnimatePresence>
+
+      {/* SHARE SHEET (IMG_5099 — Supports both Profile Share & Post Share) */}
+      <LiquidGlassShareModal
+        isOpen={Boolean(shareSheetTarget)}
+        post={shareSheetTarget?.post || {}}
+        customShareUrl={shareSheetTarget?.url}
+        customShareTitle={shareSheetTarget?.title}
+        onClose={() => setShareSheetTarget(null)}
+        onRepost={
+          shareSheetTarget?.post?.id
+            ? () => handleToggleRepost(shareSheetTarget.post as ScamPost)
+            : undefined
+        }
+        onQuotePost={
+          shareSheetTarget?.post?.id
+            ? () =>
+                navigate(
+                  `/loops/create?quotePostId=${shareSheetTarget.post?.id}`
+                )
+            : undefined
+        }
+      />
 
       <NewsBottomDock />
     </div>

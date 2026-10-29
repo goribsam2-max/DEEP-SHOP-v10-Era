@@ -121,6 +121,37 @@ export interface UserProfile {
   contentMonetizationEnabled?: boolean;
   monetizationEnabledAt?: number;
   closeFriends?: string[];
+  storyHighlights?: StoryHighlightItem[];
+}
+
+export interface StoryHighlightSnapshot {
+  id: string;
+  userId: string;
+  authorName: string;
+  avatar?: string;
+  mediaUrl: string;
+  mediaType?: string;
+  caption?: string;
+  linkUrl?: string;
+  songTitle?: string;
+  music?: any;
+  textLayers?: any[];
+  stickers?: any[];
+  aiLabel?: boolean;
+  allowCommenting?: boolean;
+  isBoomerang?: boolean;
+  createdAtMs: number;
+}
+
+export interface StoryHighlightItem {
+  id: string;
+  title: string;
+  coverUrl?: string;
+  coverImage?: string;
+  storyIds: string[];
+  storiesSnapshot: StoryHighlightSnapshot[];
+  createdAt: number;
+  updatedAt?: number;
 }
 
 export interface CreatorRequest {

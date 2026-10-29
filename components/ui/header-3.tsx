@@ -12,12 +12,15 @@ import {
   ShoppingBag,
   Heart,
   ChevronLeft,
+  ChevronDown,
+  Check,
   Settings,
   Shield,
   Search,
   ShoppingCart,
   MessageSquare,
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 
 import { triggerHaptic } from "../../lib/haptics";
@@ -128,9 +131,9 @@ const adminLinks: LinkItem[] = [
 
 const productLinks: LinkItem[] = [
   {
-    title: "News Hub",
-    href: "/news-hub",
-    description: "Scam alerts, verified reports & community stories",
+    title: "Loops",
+    href: "/loops",
+    description: "Community updates, discussions & verified reports",
     icon: "comment-dots",
   },
   {
@@ -179,6 +182,8 @@ const productLinks: LinkItem[] = [
 
 export function Header() {
   const [open, setOpen] = React.useState(false);
+  const [brandMenuOpen, setBrandMenuOpen] = React.useState(false);
+  const brandMenuRef = React.useRef<HTMLDivElement | null>(null);
   const [user, setUser] = React.useState<any>(null);
   const [userProfile, setUserProfile] = React.useState<any>(null);
   const [isStaffDoc, setIsStaffDoc] = React.useState(false);
@@ -190,6 +195,24 @@ export function Header() {
   const isIslandActive = useIsland();
   const [cartCount, setCartCount] = React.useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = React.useState(0);
+
+  useEffect(() => {
+    setBrandMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!brandMenuOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        brandMenuRef.current &&
+        !brandMenuRef.current.contains(e.target as Node)
+      ) {
+        setBrandMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [brandMenuOpen]);
 
   useEffect(() => {
     const updateCount = () => {
@@ -424,24 +447,109 @@ export function Header() {
             )}
           </Button>
 
-          {/* Left Brand Title — Matches News Hub's circular blue gradient badge + bold clean title on Home */}
-          <NavLink
-            to={isAdminRoute ? "/admin" : "/"}
-            className={cn(
-              "flex items-center gap-2.5 shrink-0 rounded-3xl border-none ring-0 shadow-none bg-transparent transition-all duration-300",
-              isIslandActive
-                ? "opacity-0 scale-95 pointer-events-none w-0 overflow-hidden"
-                : "opacity-100 scale-100 w-auto"
-            )}
-          >
-            {isHomePage ? (
-              <span className="font-brand lowercase text-[24px] sm:text-[26px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
-                deep shop
-              </span>
-            ) : (
+          {/* Left Brand Title — Compact Switcher Popover (Shop <-> Loops) */}
+          {isAdminRoute ? (
+            <NavLink
+              to="/admin"
+              className={cn(
+                "flex items-center gap-2.5 shrink-0 rounded-3xl border-none ring-0 shadow-none bg-transparent transition-all duration-300",
+                isIslandActive
+                  ? "opacity-0 scale-95 pointer-events-none w-0 overflow-hidden"
+                  : "opacity-100 scale-100 w-auto"
+              )}
+            >
               <WordmarkIcon />
-            )}
-          </NavLink>
+            </NavLink>
+          ) : (
+            <div
+              ref={brandMenuRef}
+              className={cn(
+                "relative shrink-0 transition-all duration-300",
+                isIslandActive
+                  ? "opacity-0 scale-95 pointer-events-none w-0 overflow-hidden"
+                  : "opacity-100 scale-100 w-auto"
+              )}
+            >
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic();
+                  setBrandMenuOpen((prev) => !prev);
+                }}
+                className="inline-flex items-center gap-1.5 px-1.5 py-1 rounded-2xl hover:bg-black/[0.03] dark:hover:bg-white/[0.05] active:scale-95 transition cursor-pointer select-none"
+                aria-label="Switch between Deep Shop and Loops"
+                aria-expanded={brandMenuOpen}
+              >
+                {isHomePage ? (
+                  <span className="font-brand lowercase text-[24px] sm:text-[26px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
+                    deep shop
+                  </span>
+                ) : (
+                  <WordmarkIcon />
+                )}
+                <ChevronDown
+                  className={cn(
+                    "w-4 h-4 text-zinc-900 dark:text-zinc-200 stroke-[2.3] mt-0.5 transition-transform duration-200 shrink-0",
+                    brandMenuOpen && "rotate-180"
+                  )}
+                />
+              </button>
+
+              <AnimatePresence>
+                {brandMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.94, y: -6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.94, y: -6 }}
+                    transition={{ type: "spring", stiffness: 430, damping: 30 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-liquid-popover absolute left-0 top-full mt-2 z-[160] w-[216px] rounded-[26px] py-2 px-1.5 space-y-0.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setBrandMenuOpen(false);
+                        if (location.pathname !== "/") {
+                          navigate("/");
+                        }
+                      }}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
+                    >
+                      <span>Deep Shop</span>
+                      <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                    </button>
+
+                    <div className="my-1 border-t loops-divider mx-2" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setBrandMenuOpen(false);
+                        navigate("/loops");
+                      }}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
+                    >
+                      <span>Loops</span>
+                      <svg
+                        className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.95"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z" />
+                      </svg>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
 
         {/* DESKTOP RIGHT ACTION BUTTONS */}

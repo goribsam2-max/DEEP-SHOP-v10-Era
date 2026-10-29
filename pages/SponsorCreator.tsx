@@ -23,7 +23,7 @@ import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
-import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
+const creatorAvatar1 = "";
 import {
   extractConfiguredMobileAccounts,
   getMobileActionLabel,

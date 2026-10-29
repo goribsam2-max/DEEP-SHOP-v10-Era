@@ -80,6 +80,7 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     isAuthPage ||
     location.pathname === '/help-center' ||
     location.pathname === '/messages' ||
+    location.pathname.startsWith('/loops') ||
     location.pathname.startsWith('/news-hub') ||
     location.pathname.startsWith('/news') ||
     location.pathname.startsWith('/author') ||

@@ -12,14 +12,15 @@ import { triggerHaptic } from "../lib/haptics";
 import { isEmbeddableVideoUrl } from "../lib/videoEmbed";
 
 export interface ParsedSegment {
-  type: "text" | "hashtag" | "link";
+  type: "text" | "hashtag" | "mention" | "link";
   raw: string;
   href?: string;
   tag?: string;
+  mention?: string;
 }
 
 const TOKEN_REGEX =
-  /(https?:\/\/[^\s<>"]+|www\.[^\s<>"]+|\b(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|io|top|me|co|bd|app|dev|watch|be|ly)(?:\/[^\s<>"]*)?|#[\p{L}\p{M}\p{N}_]+)/gu;
+  /(https?:\/\/[^\s<>"]+|www\.[^\s<>"]+|\b(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|io|top|me|co|bd|app|dev|watch|be|ly)(?:\/[^\s<>"]*)?|@[a-zA-Z0-9_.]+|#[\p{L}\p{M}\p{N}_]+)/gu;
 
 const stripTrailingPunctuation = (val: string): { clean: string; trailing: string } => {
   let clean = val;
@@ -59,6 +60,22 @@ export const parseRichSegments = (text: string): ParsedSegment[] => {
           raw: token,
           tag: tagBody,
         });
+      } else {
+        segments.push({ type: "text", raw: token });
+      }
+      lastIndex = matchIndex + token.length;
+    } else if (token.startsWith("@")) {
+      const { clean, trailing } = stripTrailingPunctuation(token);
+      const handle = clean.slice(1);
+      if (handle.length > 0) {
+        segments.push({
+          type: "mention",
+          raw: clean,
+          mention: handle,
+        });
+        if (trailing) {
+          segments.push({ type: "text", raw: trailing });
+        }
       } else {
         segments.push({ type: "text", raw: token });
       }
@@ -256,11 +273,30 @@ export const NewsRichText: React.FC<{
                   onHashtagClick(seg.tag!);
                 } else {
                   navigate(
-                    `/news-hub/search?tag=${encodeURIComponent(seg.tag!)}`
+                    `/loops/search?tag=${encodeURIComponent(seg.tag!)}`
                   );
                 }
               }}
-              className="text-[#1877F2] dark:text-[#58A6FF] font-semibold hover:underline cursor-pointer inline"
+              className="text-[#0095F6] hover:underline font-normal cursor-pointer inline"
+            >
+              {seg.raw}
+            </button>
+          );
+        }
+
+        if (seg.type === "mention" && seg.mention) {
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic();
+                navigate(
+                  `/loops/search?q=${encodeURIComponent(seg.mention!)}`
+                );
+              }}
+              className="text-[#0095F6] hover:underline font-normal cursor-pointer inline"
             >
               {seg.raw}
             </button>

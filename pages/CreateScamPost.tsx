@@ -35,6 +35,7 @@ import {
   addDoc,
   doc,
   getDoc,
+  setDoc,
   updateDoc,
 } from "firebase/firestore";
 import {
@@ -100,8 +101,6 @@ import {
   LiveCameraCaptureModal,
   LocationPickerModal,
 } from "../components/ComposerLiquidGlassSheets";
-
-import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
 
 const STUDIO_BAR_COUNT = 36;
 
@@ -283,7 +282,9 @@ export const CreateScamPost: React.FC = () => {
   } | null>(null);
   const [threadItems, setThreadItems] = useState<PostThreadItem[]>([]);
   const [scheduledAt, setScheduledAt] = useState<number | null>(null);
-  const [isGhostPost, setIsGhostPost] = useState(false);
+  const [isGhostPost, setIsGhostPost] = useState(
+    () => searchParams.get("ghost") === "1"
+  );
   const [replyPermission, setReplyPermission] =
     useState<ReplyPermissionMode>("anyone");
   const [reviewApproveReplies, setReviewApproveReplies] = useState(false);
@@ -392,8 +393,8 @@ export const CreateScamPost: React.FC = () => {
     if (!editId) return;
     resolvePostById(editId).then((found) => {
       if (!found) {
-        notify("Post not found", "error");
-        navigate("/news-hub", { replace: true });
+        notify("Loop not found", "error");
+        navigate("/loops", { replace: true });
         return;
       }
       setOriginalPost(found);
@@ -494,6 +495,22 @@ export const CreateScamPost: React.FC = () => {
     };
   }, []);
 
+function cleanPayload<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj as T;
+  if (Array.isArray(obj)) return obj.map(cleanPayload) as unknown as T;
+  if (typeof obj === "object" && !(obj instanceof Date)) {
+    const res: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      const val = (obj as Record<string, any>)[key];
+      if (val !== undefined) {
+        res[key] = cleanPayload(val);
+      }
+    }
+    return res as T;
+  }
+  return obj;
+}
+
   // Verify edit permission once both auth and originalPost are ready
   useEffect(() => {
     if (!editId || !authReady || !originalPost) return;
@@ -502,9 +519,13 @@ export const CreateScamPost: React.FC = () => {
       navigate("/signin", { replace: true });
       return;
     }
-    if (originalPost.reporterId !== currentUser.uid && !isAdmin) {
-      notify("You can only edit your own posts.", "error");
-      navigate(`/news-hub/post/${editId}`, { replace: true });
+    const isAuthor =
+      originalPost.reporterId === currentUser.uid ||
+      (originalPost as any).authorId === currentUser.uid ||
+      (originalPost as any).userId === currentUser.uid;
+    if (!isAuthor && !isAdmin) {
+      notify("You can only edit your own loops.", "error");
+      navigate(`/loops/post/${editId}`, { replace: true });
     }
   }, [editId, authReady, originalPost, currentUser, isAdmin, navigate, notify]);
 
@@ -1380,7 +1401,7 @@ export const CreateScamPost: React.FC = () => {
         currentUser?.displayName ||
         currentUser?.email?.split("@")[0] ||
         "Community Member";
-      const authorAvatar = currentUser?.photoURL || creatorAvatar1;
+      const authorAvatar = currentUser?.photoURL || "";
       const authorId = currentUser?.uid || "member_local";
 
       const autoTitle =
@@ -1457,7 +1478,7 @@ export const CreateScamPost: React.FC = () => {
         reporterName: isOwnerEditing ? authorName : originalPost.reporterName,
         reporterAvatar: isOwnerEditing
           ? authorAvatar
-          : originalPost.reporterAvatar || creatorAvatar1,
+          : originalPost.reporterAvatar || "",
         status: originalPost?.status || "active",
       };
 
@@ -1476,33 +1497,53 @@ export const CreateScamPost: React.FC = () => {
         postPayload.scammedAmount = 0;
       }
 
+      const resolvedReporterId = editId
+        ? originalPost?.reporterId ||
+          (originalPost as any)?.authorId ||
+          authorId
+        : authorId;
+      const resolvedReporterName = editId
+        ? originalPost?.reporterName || authorName
+        : authorName;
+      const resolvedReporterAvatar = editId
+        ? originalPost?.reporterAvatar || authorAvatar
+        : authorAvatar;
+
+      postPayload.reporterId = resolvedReporterId;
+      postPayload.reporterName = resolvedReporterName;
+      postPayload.reporterAvatar = resolvedReporterAvatar;
+
       if (editId) {
-        const editUpdatePayload = {
+        const editUpdatePayload = cleanPayload({
           ...postPayload,
           isEdited: true,
           updatedAt: Date.now(),
-        };
+        });
 
-        if (!editId.startsWith("showcase_") && !editId.startsWith("post_")) {
-          await updateDoc(doc(db, "scam_posts", editId), editUpdatePayload);
+        if (!editId.startsWith("showcase_")) {
+          await setDoc(doc(db, "scam_posts", editId), editUpdatePayload, {
+            merge: true,
+          });
         }
 
         try {
           const existing = JSON.parse(
             localStorage.getItem("deep_scam_posts") || "[]"
           );
-          const updated = existing.map((item: any) =>
-            item.id === editId ? { ...item, ...editUpdatePayload } : item
-          );
+          const updated = Array.isArray(existing)
+            ? existing.map((item: any) =>
+                item.id === editId ? { ...item, ...editUpdatePayload } : item
+              )
+            : [];
           localStorage.setItem("deep_scam_posts", JSON.stringify(updated));
         } catch {}
 
-        notify("Post updated!", "success");
-        navigate(`/news-hub/post/${editId}`);
+        notify("Loop updated!", "success");
+        navigate(`/loops/post/${editId}`);
         return;
       }
 
-      const fullNewDoc = {
+      const fullNewDoc = cleanPayload({
         ...postPayload,
         votes: 1,
         votedUserIds: currentUser?.uid ? [currentUser.uid] : [],
@@ -1520,7 +1561,7 @@ export const CreateScamPost: React.FC = () => {
         savedByUserIds: [],
         createdAt: publishTimestamp,
         views: 1,
-      };
+      });
 
       const ref = await addDoc(collection(db, "scam_posts"), fullNewDoc);
       const createdId = ref.id;
@@ -1529,7 +1570,7 @@ export const CreateScamPost: React.FC = () => {
       if (alsoShareOn.includes("copy_link")) {
         try {
           await navigator.clipboard?.writeText(
-            `${window.location.origin}/news-hub/post/${createdId}`
+            `${window.location.origin}/loops/post/${createdId}`
           );
         } catch {}
       }
@@ -1568,13 +1609,13 @@ export const CreateScamPost: React.FC = () => {
               minute: "2-digit",
             })}!`
           : isGhostPost
-          ? "24-hour Ghost post shared to Feed!"
+          ? "24-hour Ghost loop shared to Loops!"
           : postType === "scam"
           ? "Scam report published with verified location stamp!"
-          : "Post shared to Feed!",
+          : "Shared to Loops!",
         "success"
       );
-      navigate("/news-hub");
+      navigate("/loops");
     } catch (err) {
       console.error("Publish error:", err);
       notify(
@@ -1590,7 +1631,7 @@ export const CreateScamPost: React.FC = () => {
     currentUser?.displayName ||
     currentUser?.email?.split("@")[0] ||
     "Community Member";
-  const userAvatarDisplay = currentUser?.photoURL || creatorAvatar1;
+  const userAvatarDisplay = currentUser?.photoURL || "";
 
   const previewPostObj: Partial<ScamPost> = {
     id: "composer_preview",
@@ -1621,8 +1662,8 @@ export const CreateScamPost: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-8">
       <SEO
-        title={editId ? "Edit Post — Feed" : "Create a post — Feed"}
-        description="Share photos, videos, YouTube/Facebook/TikTok embeds, voice notes, polls, GIFs, or verified community scam alerts."
+        title={editId ? "Edit Loop — Loops" : "New Loop — Loops"}
+        description="Share thoughts, photos, videos, voice notes, polls, GIFs, or verified community alerts on Loops."
       />
 
       {/* Hidden Multi-Image File Input */}
@@ -1644,7 +1685,7 @@ export const CreateScamPost: React.FC = () => {
       />
 
       <div className="max-w-2xl mx-auto pt-4 sm:pt-7 px-3 sm:px-4">
-        {/* Top Header matching Screenshot 3 */}
+        {/* Top Header */}
         <header className="flex items-center justify-between gap-3 px-1 pb-5">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -1654,7 +1695,7 @@ export const CreateScamPost: React.FC = () => {
                 if (step === 2) {
                   setStep(1);
                 } else {
-                  navigate("/news-hub");
+                  navigate("/loops");
                 }
               }}
               className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 active:scale-95 transition cursor-pointer shrink-0"
@@ -1662,12 +1703,14 @@ export const CreateScamPost: React.FC = () => {
             >
               <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
             </button>
-            <h1 className="text-[18px] sm:text-[21px] font-bold tracking-tight text-zinc-900 dark:text-white truncate whitespace-nowrap">
-              {editId
-                ? "Edit post"
-                : step === 1
-                ? "Create a post"
-                : "Review & Publish"}
+            <h1 className="text-[18px] sm:text-[21px] font-bold tracking-tight text-zinc-900 dark:text-white truncate whitespace-nowrap flex items-center gap-1.5">
+              <span>
+                {editId
+                  ? "Edit loop"
+                  : step === 1
+                  ? "New loop"
+                  : "Review & Publish"}
+              </span>
             </h1>
           </div>
 
@@ -1702,10 +1745,20 @@ export const CreateScamPost: React.FC = () => {
                   if (isRecording) stopVoiceRecording();
                   setStep(2);
                 }}
-                className="px-4.5 py-2 rounded-full bg-white dark:bg-zinc-100 text-zinc-900 font-semibold text-[13px] shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:bg-slate-50 active:scale-95 transition cursor-pointer shrink-0 whitespace-nowrap"
+                className="px-4 py-2 rounded-full bg-white dark:bg-zinc-100 text-zinc-900 font-semibold text-[13px] shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:bg-slate-50 active:scale-95 transition cursor-pointer shrink-0 whitespace-nowrap"
               >
                 Next
               </button>
+              {editId && (
+                <button
+                  type="button"
+                  onClick={handlePublish}
+                  disabled={isSubmitting || isProcessingImages}
+                  className="px-4.5 py-2 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-semibold text-[13px] shadow-xs active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
+                >
+                  {isSubmitting ? "Saving..." : "Save"}
+                </button>
+              )}
             </div>
           ) : (
             <button
@@ -1731,29 +1784,35 @@ export const CreateScamPost: React.FC = () => {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                     <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full p-[2.5px] border-[1.5px] border-dashed border-[#1877F2] shrink-0">
-                      <img
-                        src={userAvatarDisplay}
-                        alt={userNameDisplay}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full rounded-full object-cover"
-                      />
+                      {userAvatarDisplay ? (
+                        <img
+                          src={userAvatarDisplay}
+                          alt={userNameDisplay}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                          {(userNameDisplay || "M").slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
                     </div>
-                    <div className="min-w-0 relative">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <p className="text-[15px] sm:text-[16px] font-bold text-zinc-900 dark:text-white truncate max-w-[140px] sm:max-w-[200px]">
+                    <div className="min-w-0 flex-1 relative">
+                      <div className="flex items-center gap-1 flex-nowrap whitespace-nowrap overflow-x-auto no-scrollbar">
+                        <p className="text-[15px] sm:text-[16px] font-bold text-zinc-900 dark:text-white truncate max-w-[125px] sm:max-w-[200px] shrink-0">
                           {userNameDisplay}
                         </p>
                         <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                         {postTag ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1877F2]/10 text-[#1877F2] dark:text-[#58A6FF] text-xs font-semibold">
-                            <span>{postTag}</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1877F2]/10 text-[#1877F2] dark:text-[#58A6FF] text-xs font-semibold whitespace-nowrap shrink-0">
+                            <span className="truncate max-w-[90px]">{postTag}</span>
                             <button
                               type="button"
                               onClick={() => {
                                 triggerHaptic();
                                 setPostTag("");
                               }}
-                              className="hover:opacity-75 cursor-pointer"
+                              className="hover:opacity-75 cursor-pointer shrink-0"
                               aria-label="Remove tag"
                             >
                               <X className="w-3 h-3" />
@@ -1767,7 +1826,7 @@ export const CreateScamPost: React.FC = () => {
                               setTagInput("");
                               setShowTagPopover((p) => !p);
                             }}
-                            className="text-[13.5px] font-medium text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition cursor-pointer whitespace-nowrap"
+                            className="text-[13px] font-medium text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition cursor-pointer whitespace-nowrap shrink-0"
                           >
                             Add tag
                           </button>
@@ -1839,7 +1898,7 @@ export const CreateScamPost: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                      <div className="flex items-center gap-1.5 flex-nowrap whitespace-nowrap overflow-x-auto no-scrollbar mt-0.5">
                         <button
                           type="button"
                           onClick={() => {
@@ -1848,25 +1907,25 @@ export const CreateScamPost: React.FC = () => {
                               p === "audience" ? null : "audience"
                             );
                           }}
-                          className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1 whitespace-nowrap cursor-pointer hover:text-[#1877F2] transition"
+                          className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer hover:text-[#1877F2] transition"
                         >
                           <Globe className="w-3 h-3 shrink-0" />
-                          <span className="capitalize">
+                          <span className="capitalize whitespace-nowrap">
                             {privacy === "only_me" ? "Only Me" : privacy}
                           </span>
                           {textStyle !== "normal" && (
-                            <span>· {textStyle}</span>
+                            <span className="whitespace-nowrap">· {textStyle}</span>
                           )}
                         </button>
 
                         {effectiveAiLabel && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] text-[10.5px] font-semibold">
-                            <Sparkles className="w-2.5 h-2.5" />
-                            <span>AI label</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] text-[10.5px] font-semibold whitespace-nowrap shrink-0">
+                            <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                            <span className="whitespace-nowrap">AI label</span>
                             <button
                               type="button"
                               onClick={() => setManualAiLabel(false)}
-                              className="cursor-pointer"
+                              className="cursor-pointer shrink-0"
                             >
                               <X className="w-2.5 h-2.5" />
                             </button>
@@ -1874,9 +1933,9 @@ export const CreateScamPost: React.FC = () => {
                         )}
 
                         {scheduledAt && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10.5px] font-semibold">
-                            <Clock className="w-2.5 h-2.5" />
-                            <span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10.5px] font-semibold whitespace-nowrap shrink-0">
+                            <Clock className="w-2.5 h-2.5 shrink-0" />
+                            <span className="whitespace-nowrap">
                               {new Date(scheduledAt).toLocaleString([], {
                                 month: "short",
                                 day: "numeric",
@@ -1887,7 +1946,7 @@ export const CreateScamPost: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setScheduledAt(null)}
-                              className="cursor-pointer"
+                              className="cursor-pointer shrink-0"
                             >
                               <X className="w-2.5 h-2.5" />
                             </button>
@@ -1895,25 +1954,18 @@ export const CreateScamPost: React.FC = () => {
                         )}
 
                         {locationTag && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[10.5px] font-semibold">
-                            <MapPin className="w-2.5 h-2.5" />
-                            <span className="max-w-[120px] truncate">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[10.5px] font-semibold whitespace-nowrap shrink-0">
+                            <MapPin className="w-2.5 h-2.5 shrink-0" />
+                            <span className="max-w-[110px] truncate whitespace-nowrap">
                               {locationTag}
                             </span>
                             <button
                               type="button"
                               onClick={() => setLocationTag("")}
-                              className="cursor-pointer"
+                              className="cursor-pointer shrink-0"
                             >
                               <X className="w-2.5 h-2.5" />
                             </button>
-                          </span>
-                        )}
-
-                        {isGhostPost && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 text-[10.5px] font-semibold">
-                            <DottedGhostCatIcon className="w-3 h-3" />
-                            <span>Ghost · 24h</span>
                           </span>
                         )}
                       </div>
@@ -1954,11 +2006,31 @@ export const CreateScamPost: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Single-line Ghost Post Active Pill when Ghost Post is enabled */}
+                {isGhostPost && (
+                  <div className="w-full flex items-center">
+                    <div className="max-w-full inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/90 border border-dashed border-zinc-300 dark:border-zinc-600 text-[12px] font-medium text-zinc-700 dark:text-zinc-200 whitespace-nowrap overflow-hidden">
+                      <DottedGhostCatIcon className="w-3.5 h-3.5 text-zinc-900 dark:text-white shrink-0" />
+                      <span className="truncate whitespace-nowrap">
+                        Ghost post · Archives automatically after 24 hours
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsGhostPost(false)}
+                        className="ml-0.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-white shrink-0 cursor-pointer"
+                        aria-label="Turn off Ghost post"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Borderless Text Composer matching Screenshot 3 */}
                 <div
                   className={
                     textStyle === "quote"
-                      ? "rounded-[24px] bg-[#F5F7FA] dark:bg-zinc-800/70 p-5 border-l-4 border-[#1877F2]"
+                      ? "rounded-[24px] bg-[#F5F7FA] dark:bg-zinc-800/70 p-5 border border-slate-200 dark:border-zinc-700"
                       : ""
                   }
                 >
@@ -2426,22 +2498,28 @@ export const CreateScamPost: React.FC = () => {
                   </div>
                 )}
 
-                {/* CONNECTED "ADD TO THREAD" ITEMS + TRIGGER (Matching IMG_4957) */}
+                {/* CONNECTED "ADD TO LOOP" ITEMS + TRIGGER */}
                 <div className="pt-1 space-y-3">
                   {threadItems.map((item, idx) => (
                     <div
                       key={item.id}
                       className="relative pl-9 pt-1 space-y-2 border-l-2 border-slate-200 dark:border-zinc-800 ml-4"
                     >
-                      <img
-                        src={userAvatarDisplay}
-                        alt={userNameDisplay}
-                        referrerPolicy="no-referrer"
-                        className="absolute -left-[15px] top-1 w-7 h-7 rounded-full object-cover ring-2 ring-white dark:ring-zinc-900"
-                      />
+                      {userAvatarDisplay ? (
+                        <img
+                          src={userAvatarDisplay}
+                          alt={userNameDisplay}
+                          referrerPolicy="no-referrer"
+                          className="absolute -left-[15px] top-1 w-7 h-7 rounded-full object-cover ring-2 ring-white dark:ring-zinc-900"
+                        />
+                      ) : (
+                        <div className="absolute -left-[15px] top-1 w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 ring-2 ring-white dark:ring-zinc-900 flex items-center justify-center text-[11px] font-bold text-zinc-700 dark:text-zinc-200">
+                          {(userNameDisplay || "M").slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                          Thread #{idx + 2}
+                          Loop #{idx + 2}
                         </span>
                         <button
                           type="button"
@@ -2451,7 +2529,7 @@ export const CreateScamPost: React.FC = () => {
                             )
                           }
                           className="text-zinc-400 hover:text-rose-500 cursor-pointer"
-                          aria-label="Remove thread item"
+                          aria-label="Remove loop item"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -2467,14 +2545,14 @@ export const CreateScamPost: React.FC = () => {
                             )
                           );
                         }}
-                        placeholder="Add another thought to this thread..."
+                        placeholder="Add another thought to this loop..."
                         className="w-full bg-[#F6F8FB] dark:bg-zinc-800/70 rounded-2xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none resize-none"
                       />
                       {item.imageUrl ? (
                         <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700">
                           <img
                             src={item.imageUrl}
-                            alt="Thread attachment"
+                            alt="Loop attachment"
                             className="w-full h-full object-cover"
                           />
                           <button
@@ -2515,13 +2593,19 @@ export const CreateScamPost: React.FC = () => {
                     onClick={handleAddThreadItem}
                     className="flex items-center gap-2.5 pl-1.5 py-1 text-[13.5px] font-medium text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition cursor-pointer"
                   >
-                    <img
-                      src={userAvatarDisplay}
-                      alt={userNameDisplay}
-                      referrerPolicy="no-referrer"
-                      className="w-5 h-5 rounded-full object-cover opacity-65"
-                    />
-                    <span>Add to thread</span>
+                    {userAvatarDisplay ? (
+                      <img
+                        src={userAvatarDisplay}
+                        alt={userNameDisplay}
+                        referrerPolicy="no-referrer"
+                        className="w-5 h-5 rounded-full object-cover opacity-65"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-600 dark:text-zinc-300 opacity-75">
+                        {(userNameDisplay || "M").slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <span>Add to loop</span>
                   </button>
                 </div>
 
@@ -2656,7 +2740,7 @@ export const CreateScamPost: React.FC = () => {
                     {/* Image Card Size / Aspect Ratio Picker */}
                     {processedImages.length > 0 && (
                       <div className="space-y-1.5">
-                        <span className="text-[11px] font-semibold text-zinc-500 block">
+                        <span className="text-[11px] font-semibold text-zinc-500 block whitespace-nowrap truncate">
                           Card Image Size (Matches photo shape)
                         </span>
                         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
@@ -2712,7 +2796,7 @@ export const CreateScamPost: React.FC = () => {
                     {/* Multi-Image Display Style Picker (when 2+ photos attached) */}
                     {processedImages.length > 1 && (
                       <div className="space-y-1.5">
-                        <span className="text-[11px] font-semibold text-zinc-500 block">
+                        <span className="text-[11px] font-semibold text-zinc-500 block whitespace-nowrap truncate">
                           Multi-Photo Display Style
                         </span>
                         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
@@ -2759,12 +2843,12 @@ export const CreateScamPost: React.FC = () => {
                     {processedImages.length > 0 && (
                       <div className="space-y-2.5">
                         {(isCheckingAiImage || isAiGenerated) && (
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 px-1">
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 px-1 whitespace-nowrap overflow-hidden">
                             <Sparkles className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
-                            <span>
+                            <span className="truncate whitespace-nowrap">
                               {isCheckingAiImage
                                 ? "Checking image authenticity..."
-                                : "AI generated · Auto-detected (shown below post date)"}
+                                : "AI generated · Auto-detected"}
                             </span>
                           </div>
                         )}
@@ -3207,22 +3291,22 @@ export const CreateScamPost: React.FC = () => {
                 </button>
               </div>
 
-              {/* Liquid Glass Footer Row: Post options + Prismatic Ghost Switch + Direct Post CTA (IMG_4957 & Video 00:08-00:11) */}
-              <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between gap-3">
+              {/* Liquid Glass Footer Row: Post options + Prismatic Ghost Switch + Direct Post CTA */}
+              <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic();
                     setShowPostOptionsSheet(true);
                   }}
-                  className="flex items-center gap-2 text-[14px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition cursor-pointer"
+                  className="flex items-center gap-1.5 text-[13.5px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  <SlidersSquareIcon className="w-[19px] h-[19px]" />
-                  <span>Post options</span>
+                  <SlidersSquareIcon className="w-[18px] h-[18px] shrink-0" />
+                  <span className="whitespace-nowrap">Post options</span>
                   {(replyPermission !== "anyone" ||
                     reviewApproveReplies ||
                     alsoShareOn.length > 0) && (
-                    <span className="w-2 h-2 rounded-full bg-[#1877F2]" />
+                    <span className="w-2 h-2 rounded-full bg-[#1877F2] shrink-0" />
                   )}
                 </button>
 
@@ -3263,44 +3347,50 @@ export const CreateScamPost: React.FC = () => {
               <div className="space-y-5">
                 <div>
                   <h2 className="text-base font-bold text-zinc-900 dark:text-white">
-                    Live Feed Card Preview
+                    Live Loop Preview
                   </h2>
                   <p className="text-xs text-zinc-500">
                     {postType === "scam"
                       ? `Scam Report · Location stamp: "${scamLocation}"`
-                      : "Clean Community Post · No scam watermarks or labels"}
+                      : "Clean Community Loop · No scam watermarks or labels"}
                   </p>
                 </div>
 
-                {/* Exact Feed Card Preview */}
+                {/* Exact Loop Card Preview */}
                 <div className="rounded-[28px] bg-[#F6F8FB] dark:bg-zinc-800/80 p-4 space-y-3 border border-slate-200/70 dark:border-zinc-700">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={userAvatarDisplay}
-                      alt={userNameDisplay}
-                      referrerPolicy="no-referrer"
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                    {userAvatarDisplay ? (
+                      <img
+                        src={userAvatarDisplay}
+                        alt={userNameDisplay}
+                        referrerPolicy="no-referrer"
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                        {(userNameDisplay || "M").slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
                     <div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                      <div className="flex items-center gap-1.5 flex-nowrap whitespace-nowrap overflow-hidden">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">
                           {userNameDisplay}
                         </p>
                         {postTag && (
-                          <span className="text-xs font-semibold text-[#1877F2]">
+                          <span className="text-xs font-semibold text-[#1877F2] whitespace-nowrap shrink-0">
                             › {postTag}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-zinc-500 whitespace-nowrap truncate">
                         {scheduledAt
                           ? `Scheduled · ${new Date(
                               scheduledAt
                             ).toLocaleString()}`
                           : "Just now"}{" "}
                         · {privacy === "only_me" ? "Only Me" : privacy}
-                        {locationTag ? ` · 📍 ${locationTag}` : ""}
-                        {isGhostPost ? " · 👻 24h Ghost" : ""}
+                        {locationTag ? ` · ${locationTag}` : ""}
+                        {isGhostPost ? " · 24h Ghost" : ""}
                       </p>
                       {effectiveAiLabel && (
                         <p className="text-[11px] text-[#1877F2] font-medium flex items-center gap-1 mt-0.5">
@@ -3350,8 +3440,8 @@ export const CreateScamPost: React.FC = () => {
                     : editId
                     ? "Save Changes"
                     : scheduledAt
-                    ? "Schedule Post"
-                    : "Publish to Feed"}
+                    ? "Schedule Loop"
+                    : "Publish to Loops"}
                 </button>
               </div>
             </div>

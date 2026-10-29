@@ -36,6 +36,8 @@ import {
   type ThemeDefinition 
 } from "../lib/feed-themes";
 
+const VALID_THEME_ID_SET = new Set(FEED_THEMES.map((t) => t.id));
+
 export const DEFAULT_FEED_PREFERENCES: FeedPreferencesData = {
   selectedThemes: FEED_THEMES.map((t) => t.id),
   contentPreferences: {
@@ -157,8 +159,8 @@ export const FeedPersonalization: React.FC = () => {
     }
 
     setSaving(false);
-    notify("Feed personalization applied!", "success");
-    navigate("/news-hub");
+    notify("Loops personalization applied!", "success");
+    navigate("/loops");
   };
 
   const handleSelectAll = () => {
@@ -175,27 +177,28 @@ export const FeedPersonalization: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-10">
       <SEO
-        title="Feed Personalization — Feed"
-        description="Customize the themes and content types shown in your feed."
+        title="Personalize — Loops"
+        description="Customize the themes and content types shown in your Loops feed."
       />
 
       <div className="max-w-xl mx-auto pt-4 sm:pt-7 px-3 sm:px-4">
-        {/* Top Bar matching reference screenshot */}
+        {/* Top Bar */}
         <header className="flex items-center justify-between gap-3 px-1 pb-5">
           <div className="flex items-center gap-3.5 min-w-0">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic();
-                navigate("/news-hub");
+                navigate("/loops");
               }}
               className="w-11 h-11 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 active:scale-95 transition cursor-pointer shrink-0"
-              aria-label="Back to Feed"
+              aria-label="Back to Loops"
             >
               <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
             </button>
-            <h1 className="text-[19px] sm:text-[21px] font-bold tracking-tight text-zinc-900 dark:text-white truncate">
-              Feed Personalization
+            <h1 className="text-[19px] sm:text-[21px] font-bold tracking-tight text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
+              <span>Personalize</span>
+              <span className="loops-wordmark">Loops</span>
             </h1>
           </div>
 

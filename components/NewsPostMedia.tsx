@@ -804,12 +804,12 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
 
       {/* Attached Animated GIF if present */}
       {post.gifUrl && (
-        <div className="relative w-full rounded-[22px] overflow-hidden bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-zinc-700/60">
+        <div className="relative w-full rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800">
           <img
             src={post.gifUrl}
             alt="Attached GIF"
             referrerPolicy="no-referrer"
-            className="w-full max-h-[420px] object-cover block"
+            className="w-full max-h-[420px] object-cover block rounded-none"
           />
           <span className="absolute bottom-3 left-3 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-white text-[10px] font-extrabold tracking-wider">
             GIF
@@ -846,11 +846,11 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
         />
       )}
 
-      {/* Single Image Attachment — Dynamically sized to match photo aspect ratio */}
+      {/* Single Image Attachment — Zero Radius, No Top-Right Count/Button */}
       {images.length === 1 && (
         <div
           onClick={(e) => handleImgClick(e, 0)}
-          className={`group relative w-full rounded-[22px] overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer ${getAspectClass(
+          className={`loops-edge-media group relative w-full rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer ${getAspectClass(
             detectedRatios[0]
           )}`}
         >
@@ -859,23 +859,15 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
             alt={post.title || "Post photo"}
             referrerPolicy="no-referrer"
             onLoad={(e) => recordNaturalRatio(0, e)}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.015]"
+            className="w-full h-full object-cover rounded-none transition-transform duration-300 group-hover:scale-[1.015]"
           />
           {renderScamOverlay()}
-          <button
-            type="button"
-            onClick={(e) => handleImgClick(e, 0)}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/45 hover:bg-black/65 backdrop-blur-md text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer"
-            aria-label="Open full screen image"
-          >
-            <Icon name="maximize-2" className="w-3.5 h-3.5" />
-          </button>
         </div>
       )}
 
       {/* Multiple Images: CAROUSEL SLIDER STYLE */}
       {images.length > 1 && layout === "carousel" && (
-        <div className="relative w-full rounded-[22px] overflow-hidden bg-slate-100 dark:bg-zinc-800 group">
+        <div className="loops-edge-media relative w-full rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800 group">
           <div
             onClick={(e) => handleImgClick(e, carouselIdx)}
             className={`w-full cursor-pointer ${getAspectClass(
@@ -887,13 +879,13 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
               alt={`Slide ${carouselIdx + 1}`}
               referrerPolicy="no-referrer"
               onLoad={(e) => recordNaturalRatio(carouselIdx, e)}
-              className="w-full h-full object-cover transition-all duration-300"
+              className="w-full h-full object-cover rounded-none transition-all duration-300"
             />
           </div>
           {renderScamOverlay()}
 
-          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold tabular-nums">
-            {carouselIdx + 1} / {images.length}
+          <div className="loops-media-count-pill absolute top-3 right-3 z-20 px-2.5 py-1 text-[12px] font-semibold tabular-nums leading-none select-none pointer-events-none">
+            {carouselIdx + 1}/{images.length}
           </div>
 
           {carouselIdx > 0 && (
@@ -948,7 +940,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
 
       {/* Multiple Images: EVEN 2x2 GRID STYLE */}
       {images.length > 1 && layout === "grid" && (
-        <div className="relative rounded-[22px] overflow-hidden">
+        <div className="relative rounded-none overflow-hidden">
           <div className="grid grid-cols-2 gap-1.5">
             {images.slice(0, 4).map((url, idx) => (
               <div
@@ -1012,7 +1004,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                         setStackOrder((prev) => [...prev.slice(1), prev[0]]);
                       }
                     }}
-                    className={`absolute w-[84%] h-full rounded-[22px] overflow-hidden shadow-lg border-[3px] border-white dark:border-zinc-900 bg-slate-100 dark:bg-zinc-800 cursor-pointer transition-all duration-300 ${getStackLayerClasses(
+                    className={`absolute w-[84%] h-full rounded-none overflow-hidden shadow-lg border-[3px] border-white dark:border-zinc-900 bg-slate-100 dark:bg-zinc-800 cursor-pointer transition-all duration-300 ${getStackLayerClasses(
                       offsetIndex,
                       isFront
                     )}`}
@@ -1022,7 +1014,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                       alt={`Stack card ${imgIdx + 1}`}
                       referrerPolicy="no-referrer"
                       onLoad={(e) => recordNaturalRatio(imgIdx, e)}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover rounded-none"
                     />
                     {isFront && renderScamOverlay()}
                   </div>
@@ -1046,7 +1038,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
 
       {/* Multiple Images: SMART COLLAGE STYLE (Default) */}
       {images.length > 1 && layout === "collage" && (
-        <div className="relative rounded-[22px] overflow-hidden">
+        <div className="relative rounded-none overflow-hidden">
           {images.length === 2 ? (
             <div className="grid grid-cols-2 gap-1.5">
               {images.map((url, idx) => (

@@ -1228,42 +1228,59 @@ export const Profile: React.FC<ProfileProps> = ({
         </div>
       </div>
 
-      {/* LOGOUT CONFIRMATION MODAL (Portaled above Bottom Navigation) */}
+      {/* LOGOUT CONFIRMATION BOTTOM SHEET (Unified with Post Card Bottom Sheet) */}
       {typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence>
             {showLogoutModal && (
-              <div className="fixed inset-0 z-[200000] flex items-end sm:items-center justify-center px-4 pb-24 pt-4 sm:p-4 bg-black/70 backdrop-blur-md">
+              <div
+                className="fixed inset-0 z-[280] flex flex-col justify-end"
+                onClick={() => setShowLogoutModal(false)}
+              >
                 <motion.div
-                  initial={{ opacity: 0, y: 36, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 36, scale: 0.96 }}
-                  className="w-full max-w-sm bg-white dark:bg-zinc-950 rounded-[32px] p-7 sm:p-8 text-center shadow-2xl border border-white/20 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                />
+
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
                 >
-                  <div className="w-16 h-16 rounded-[24px] bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-5 shadow-lg">
-                    <LogOut className="w-8 h-8" />
+                  <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+                  <div className="space-y-1.5 pt-0.5">
+                    <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                      Log out of your account?
+                    </h3>
+                    <p className="text-[14.5px] leading-snug text-zinc-500 dark:text-zinc-400">
+                      You will need to sign in again to access your orders, wallet, and Loops profile.
+                    </p>
                   </div>
-                  <h3 className="text-2xl font-black tracking-tight">
-                    Are you sure?
-                  </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 mb-7 font-medium leading-relaxed">
-                    You will need to sign in again to access your orders, wallet,
-                    and rewards.
-                  </p>
-                  <div className="grid grid-cols-2 gap-3.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowLogoutModal(false)}
-                      className="py-3.5 rounded-full bg-zinc-100 dark:bg-zinc-800 font-black text-xs uppercase tracking-widest transition cursor-pointer"
-                    >
-                      Cancel
-                    </button>
+
+                  <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="py-3.5 rounded-full bg-rose-600 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-rose-600/20 transition cursor-pointer"
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-rose-500/10 text-[16px] font-normal text-[#FF3040] cursor-pointer text-left transition"
                     >
-                      Log Out
+                      <LogOut className="w-[22px] h-[22px] stroke-[1.95] text-[#FF3040] shrink-0" />
+                      <span>Log out</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowLogoutModal(false)}
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    >
+                      <X className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <span>Cancel</span>
                     </button>
                   </div>
                 </motion.div>

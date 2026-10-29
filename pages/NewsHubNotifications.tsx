@@ -184,27 +184,7 @@ export const NewsHubNotifications: React.FC = () => {
     return () => unsubNews();
   }, [currentUser?.uid]);
 
-  // If no real notifications yet, show account setup notification for logged-in user!
-  const setupNotificationItem: NewsNotificationItem = {
-    id: "setup_account_notif",
-    userId: currentUser?.uid || "me",
-    fromUserId: "system_newshub",
-    fromUserName: "News Hub Team",
-    fromUserUsername: "News Hub",
-    fromUserAvatar: "",
-    type: "system",
-    title: "Account Setup",
-    body: "setup your account profile to customize your bio, avatar, and social links.",
-    link: "/news-hub/profile/edit",
-    createdAt: Date.now(),
-  };
-
-  const displayedNotifications =
-    notifications.length > 0
-      ? notifications
-      : currentUser
-      ? [setupNotificationItem]
-      : [];
+  const displayedNotifications = notifications;
 
   // Group notifications into New, Yesterday, Last 7 days, Earlier
   const groupedNotifications = React.useMemo(() => {
@@ -258,53 +238,70 @@ export const NewsHubNotifications: React.FC = () => {
   const handleNotificationClick = (item: NewsNotificationItem) => {
     triggerHaptic();
     if (item.link) {
-      navigate(item.link);
+      navigate(item.link.replace(/^\/news-hub/, "/loops"));
     } else if (
       item.fromUserId &&
       item.fromUserId !== "system_newshub" &&
       item.fromUserId !== "system_milestone"
     ) {
-      navigate(`/news-hub/profile/${item.fromUserId}`);
+      navigate(`/loops/profile/${item.fromUserId}`);
     } else {
-      navigate("/news-hub/profile");
+      navigate("/loops/profile");
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans pb-28">
-      <SEO title="Notifications — News Hub" description="Stay updated on new followers, likes, comments, and story replies." />
+    <div className="min-h-screen loops-surface text-slate-900 dark:text-zinc-100 font-sans pb-28">
+      <SEO title="Notifications — Loops" description="Stay updated on new followers, likes, replies, and reposts on Loops." />
 
       {/* Sticky Header */}
-      <header className="sticky top-0 z-30 w-full bg-[#F8FAFC]/90 dark:bg-zinc-950/90 backdrop-blur-md px-4 py-3 border-b border-slate-200/60 dark:border-zinc-800">
-        <div className="max-w-md mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-30 w-full bg-white/90 dark:bg-[#101010]/90 backdrop-blur-md px-4 py-3 border-b border-black/[0.08] dark:border-white/[0.1]">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => {
               triggerHaptic();
-              navigate("/news-hub");
+              navigate("/loops");
             }}
-            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-slate-200/70 dark:border-zinc-800 shadow-2xs flex items-center justify-center text-slate-800 dark:text-zinc-200 cursor-pointer active:scale-95 transition"
-            aria-label="Back"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-900 dark:text-zinc-100 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] cursor-pointer active:scale-95 transition"
+            aria-label="Back to Loops"
           >
             <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
           </button>
 
-          <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-            Notifications
-          </h1>
+          <div className="flex items-center gap-1.5">
+            <span className="loops-wordmark text-[18px] text-slate-950 dark:text-white">
+              Loops
+            </span>
+            <span className="text-sm font-semibold text-slate-500 dark:text-zinc-400">
+              · Notifications
+            </span>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic();
-              setShowPreferencesModal(true);
-            }}
-            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-slate-200/70 dark:border-zinc-800 shadow-2xs flex items-center justify-center text-slate-800 dark:text-zinc-200 cursor-pointer active:scale-95 transition"
-            aria-label="Settings"
-            title="Notification settings"
-          >
-            <Settings className="w-4.5 h-4.5 stroke-[2]" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/loops/activity");
+              }}
+              className="px-3 h-9 rounded-full border border-black/[0.12] dark:border-white/[0.16] text-xs font-bold text-slate-900 dark:text-zinc-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
+            >
+              Activity
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setShowPreferencesModal(true);
+              }}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-slate-800 dark:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] cursor-pointer active:scale-95 transition"
+              aria-label="Settings"
+              title="Notification settings"
+            >
+              <Settings className="w-4.5 h-4.5 stroke-[2]" />
+            </button>
+          </div>
         </div>
       </header>
 

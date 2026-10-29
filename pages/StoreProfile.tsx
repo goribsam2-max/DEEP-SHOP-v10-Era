@@ -20,7 +20,18 @@ import {
   AlertTriangle,
   XCircle,
   ShoppingBag,
-  X
+  X,
+  Globe,
+  UserCheck,
+  UserPlus,
+  ShieldCheck,
+  TrendingUp,
+  ThumbsUp,
+  Users,
+  Package,
+  Sparkles,
+  ExternalLink,
+  Edit3
 } from 'lucide-react';
 import { ProductCard } from '../components/ui/ProductCard';
 import Icon from '../components/Icon';
@@ -38,14 +49,14 @@ import {
   getSafePublicUsername,
 } from '../lib/utils';
 
-const StoreProfile: React.FC = () => {
+export const StoreProfile: React.FC = () => {
   const { sellerId } = useParams();
   const navigate = useNavigate();
   const notify = useNotify();
 
   const [user, setUser] = useState(auth.currentUser);
   
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'categories' | 'gallery' | 'reviews'>('home');
   const [seller, setSeller] = useState<any>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -79,7 +90,6 @@ const StoreProfile: React.FC = () => {
   const [reportReason, setReportReason] = useState('নকল বা প্রতারণামূলক পণ্য (Fake / Counterfeit Product)');
   const [reportDetails, setReportDetails] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -205,7 +215,6 @@ const StoreProfile: React.FC = () => {
     }
   };
   
-  
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -222,7 +231,6 @@ const StoreProfile: React.FC = () => {
       return;
     }
     if (isScamReview(newReviewComment)) {
-      // Auto-remove: silently drop scam accusation
       setNewReviewComment('');
       setNewReviewRating(5);
       notify('Review submitted successfully!', 'success');
@@ -276,20 +284,13 @@ const StoreProfile: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: seller.shopName || seller.displayName || "DEEP SHOP Store",
+          title: seller?.shopName || seller?.displayName || "DEEP SHOP Store",
           url: window.location.href,
         });
         return;
-      } catch {
-        // User cancelled or iframe share blocked; copy to clipboard gracefully
-      }
+      } catch {}
     }
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      notify("স্টোর লিংক কপি করা হয়েছে!", "success");
-    } catch {
-      notify("লিংক কপি করা যায়নি", "error");
-    }
+    handleCopyStoreLink();
   };
 
   const handleOpenReport = () => {
@@ -331,9 +332,7 @@ const StoreProfile: React.FC = () => {
         blockedList.push(seller.id);
         localStorage.setItem("deepshop_blocked_sellers", JSON.stringify(blockedList));
       }
-    } catch {
-      // Ignore storage error
-    }
+    } catch {}
     notify("সেলারকে ব্লক করা হয়েছে।", "success");
     setShowMenu(false);
   };
@@ -381,41 +380,44 @@ const StoreProfile: React.FC = () => {
   }
 
   if (!seller) {
-    return <div className="p-8 text-center text-zinc-500">User not found</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 text-center text-zinc-500">
+        User not found
+      </div>
+    );
   }
 
   const isSeller = seller.role === "seller" || products.length > 0;
-  
   const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const renderTopProfileHeader = (showStoreSearch: boolean) => (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800 px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2">
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+    <header className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-white/60 dark:border-zinc-800/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 shadow-xs">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <button
           type="button"
           onClick={handleBackNavigation}
-          className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800/90 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-800 dark:text-zinc-100 shrink-0 cursor-pointer transition-colors active:scale-95"
+          className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 flex items-center justify-center text-zinc-800 dark:text-zinc-100 shrink-0 cursor-pointer transition active:scale-95"
           aria-label="Back"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
 
         <UserAvatar
           src={seller.photoURL}
           fallbackText={seller.shopName || seller.displayName}
-          className="w-9 h-9 shrink-0"
+          className="w-10 h-10 shrink-0 border-2 border-white dark:border-zinc-800 shadow-xs"
         />
 
         <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-1 min-w-0">
-            <span className="font-bold text-sm sm:text-[15px] leading-tight text-zinc-900 dark:text-white truncate">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-extrabold text-base leading-tight text-zinc-900 dark:text-white truncate">
               {seller.shopName || getSafeDisplayName(seller, "Seller")}
             </span>
             {seller.kycStatus === "verified" && (
-              <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" />
             )}
           </div>
-          <span className="text-zinc-500 dark:text-zinc-400 text-[11px] truncate">
+          <span className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">
             {getSafePublicUsername(seller)
               ? `@${getSafePublicUsername(seller)}`
               : `ID: ${seller.id.substring(0, 7).toUpperCase()}`}
@@ -423,15 +425,15 @@ const StoreProfile: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-1.5 text-zinc-700 dark:text-zinc-200 shrink-0">
+      <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200 shrink-0">
         {showStoreSearch && (
           <button
             type="button"
             onClick={() => setShowSearch(!showSearch)}
             aria-label="Search store"
-            className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 flex items-center justify-center transition cursor-pointer active:scale-95"
           >
-            <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Search className="w-5 h-5" />
           </button>
         )}
 
@@ -440,9 +442,9 @@ const StoreProfile: React.FC = () => {
             type="button"
             onClick={() => navigate(`/messages?chatId=${seller.id}`)}
             aria-label="Message seller"
-            className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-full bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-600/20 flex items-center justify-center transition cursor-pointer active:scale-95"
           >
-            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            <MessageCircle className="w-5 h-5" />
           </button>
         )}
 
@@ -452,7 +454,7 @@ const StoreProfile: React.FC = () => {
             onClick={() => setShowMenu(!showMenu)}
             aria-label="More options"
             aria-expanded={showMenu}
-            className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 flex items-center justify-center transition cursor-pointer active:scale-95"
           >
             <MoreVertical className="w-5 h-5" />
           </button>
@@ -463,11 +465,11 @@ const StoreProfile: React.FC = () => {
                 className="fixed inset-0 z-40"
                 onClick={() => setShowMenu(false)}
               />
-              <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/80 dark:border-zinc-800 z-50 overflow-hidden py-1">
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/60 dark:border-zinc-800 z-50 overflow-hidden py-1.5">
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium text-zinc-800 dark:text-zinc-200 transition-colors cursor-pointer"
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-black/5 dark:hover:bg-white/10 text-sm font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
                 >
                   <Share2 className="w-4 h-4 text-zinc-500 shrink-0" />
                   <span>Share Store</span>
@@ -475,17 +477,17 @@ const StoreProfile: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCopyStoreLink}
-                  className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium text-zinc-800 dark:text-zinc-200 border-t border-zinc-100 dark:border-zinc-800/80 transition-colors cursor-pointer"
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-black/5 dark:hover:bg-white/10 text-sm font-semibold text-zinc-800 dark:text-zinc-200 border-t border-zinc-100 dark:border-zinc-800/80 transition cursor-pointer"
                 >
                   <Copy className="w-4 h-4 text-zinc-500 shrink-0" />
-                  <span>Copy Link</span>
+                  <span>Copy Store Link</span>
                 </button>
                 {user?.uid !== seller.id && (
                   <>
                     <button
                       type="button"
                       onClick={handleOpenReport}
-                      className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left hover:bg-amber-50 dark:hover:bg-amber-950/20 text-sm font-medium text-amber-700 dark:text-amber-400 border-t border-zinc-100 dark:border-zinc-800/80 transition-colors cursor-pointer"
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-amber-500/10 text-sm font-semibold text-amber-600 dark:text-amber-400 border-t border-zinc-100 dark:border-zinc-800/80 transition cursor-pointer"
                     >
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       <span>Report Seller</span>
@@ -493,7 +495,7 @@ const StoreProfile: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleBlock}
-                      className="flex items-center gap-3 w-full px-3.5 py-2.5 text-left hover:bg-rose-50 dark:hover:bg-rose-950/20 text-sm font-medium text-rose-600 dark:text-rose-400 border-t border-zinc-100 dark:border-zinc-800/80 transition-colors cursor-pointer"
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-rose-500/10 text-sm font-semibold text-rose-600 dark:text-rose-400 border-t border-zinc-100 dark:border-zinc-800/80 transition cursor-pointer"
                     >
                       <XCircle className="w-4 h-4 shrink-0" />
                       <span>Block Seller</span>
@@ -526,7 +528,7 @@ const StoreProfile: React.FC = () => {
       }}
     >
       <div className="space-y-3 text-left">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {[
             "নকল বা প্রতারণামূলক পণ্য (Fake / Counterfeit Product)",
             "স্ক্যাম বা অগ্রিম টাকা প্রতারণা (Scam / Fraud)",
@@ -536,7 +538,7 @@ const StoreProfile: React.FC = () => {
           ].map((reasonOpt) => (
             <label
               key={reasonOpt}
-              className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-medium cursor-pointer transition-colors ${
+              className={`flex items-center gap-3 p-3 rounded-2xl border text-xs font-semibold cursor-pointer transition ${
                 reportReason === reasonOpt
                   ? "border-amber-500 bg-amber-500/10 text-zinc-900 dark:text-white"
                   : "border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
@@ -547,14 +549,14 @@ const StoreProfile: React.FC = () => {
                 name="sellerReportReason"
                 checked={reportReason === reasonOpt}
                 onChange={() => setReportReason(reasonOpt)}
-                className="accent-amber-500"
+                className="accent-amber-500 w-4 h-4"
               />
               <span>{reasonOpt}</span>
             </label>
           ))}
         </div>
         <div>
-          <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+          <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
             বিস্তারিত বিবরণ (ঐচ্ছিক)
           </label>
           <textarea
@@ -562,470 +564,634 @@ const StoreProfile: React.FC = () => {
             value={reportDetails}
             onChange={(e) => setReportDetails(e.target.value)}
             placeholder="কী সমস্যা হয়েছে সংক্ষেপে লিখুন..."
-            className="w-full ds-liquid-input p-2.5 text-xs font-medium outline-none resize-none"
+            className="w-full ds-liquid-input p-3 text-xs font-medium outline-none resize-none rounded-2xl"
           />
         </div>
       </div>
     </LiquidGlassPopup>
   );
 
-  if (isSeller) {
-    return (
-      <div className="bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white font-sans max-w-3xl mx-auto border-x border-transparent sm:border-zinc-100 dark:sm:border-zinc-900">
-        {/* Restored Top Header with Back Button, Seller Name & 3-Dot Menu */}
-        {renderTopProfileHeader(true)}
+  return (
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#090a0f] text-zinc-950 dark:text-white font-sans pb-32">
+      {/* Top Glass Header */}
+      {renderTopProfileHeader(true)}
 
-        {/* Search Bar Overlay */}
-        {showSearch && (
-          <div className="px-4 py-3 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
-             <Search className="w-4 h-4 text-zinc-400" />
-             <input 
-                type="text" 
-                placeholder="Search in this store..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-sm dark:text-white"
-                autoFocus
-             />
-             <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="cursor-pointer">
-                <X className="w-4 h-4 text-zinc-400" />
-             </button>
+      {/* Search Overlay */}
+      {showSearch && (
+        <div className="px-4 py-3 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
+          <Search className="w-5 h-5 text-zinc-400 shrink-0" />
+          <input 
+            type="text" 
+            placeholder="Search in this seller's store..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 bg-transparent outline-none text-sm dark:text-white font-medium"
+            autoFocus
+          />
+          <button 
+            type="button" 
+            onClick={() => { setShowSearch(false); setSearchQuery(''); }} 
+            className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+          >
+            <X className="w-5 h-5 text-zinc-400" />
+          </button>
+        </div>
+      )}
+
+      {/* Main Responsive Store Layout */}
+      <main className="max-w-6xl mx-auto px-3 sm:px-6 pt-4 space-y-6">
+
+        {/* Seller Store Paused Status Banner */}
+        {seller.ordersPaused && (
+          <div className="bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 rounded-[28px] p-5 backdrop-blur-xl shadow-lg space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2.5 text-amber-700 dark:text-amber-400 font-extrabold text-sm sm:text-base">
+                <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
+                <span>অর্ডার গ্রহণ সাময়িকভাবে বন্ধ আছে (Orders Paused)</span>
+              </div>
+              {user?.uid === seller.id && (
+                <button 
+                  type="button"
+                  onClick={handleResumeOrders}
+                  disabled={savingPause}
+                  className="text-xs px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-xs cursor-pointer"
+                >
+                  চালু করুন
+                </button>
+              )}
+            </div>
+            <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
+              <strong>কারণ:</strong> "{seller.pauseReason || "বিক্রেতা সাময়িক বিরতিতে থাকায় বর্তমানে অর্ডার গ্রহণ বন্ধ রয়েছে।"}"
+            </p>
           </div>
         )}
 
-        <div className="p-4 pb-20">
-          {/* Seller Store Paused Status Banner / Controls */}
-          {seller.ordersPaused && (
-            <div className="bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 rounded-2xl p-4 mb-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-                  <span>⏸️ অর্ডার গ্রহণ সাময়িকভাবে বন্ধ আছে</span>
-                </div>
-                {user?.uid === seller.id && (
-                  <button 
-                    onClick={handleResumeOrders}
-                    disabled={savingPause}
-                    className="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition"
-                  >
-                    চালু করুন
-                  </button>
+        {/* Owner Quick Controls (When viewing own store) */}
+        {user?.uid === seller.id && !seller.ordersPaused && (
+          <div className="bg-emerald-50/90 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-[24px] p-4 flex items-center justify-between flex-wrap gap-3 backdrop-blur-xl">
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+              <span>আপনার সেলার স্টোরে স্বাভাবিকভাবে অর্ডার গ্রহণ চলছে</span>
+            </div>
+            <button 
+              type="button"
+              onClick={() => {
+                setTempPauseReason(seller.pauseReason || "সাময়িক বিরতির কারণে অর্ডার গ্রহণ বন্ধ রাখা হলো।");
+                setShowPauseModal(true);
+              }}
+              className="text-xs px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition shadow-xs cursor-pointer"
+            >
+              অর্ডার বন্ধ করুন
+            </button>
+          </div>
+        )}
+
+        {/* ================= HERO STORE BANNER ================= */}
+        <div className="relative rounded-[32px] overflow-hidden bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl border border-white/60 dark:border-zinc-800/80 shadow-xl">
+          {/* Cover Photo */}
+          <div 
+            className="h-44 sm:h-64 w-full bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 bg-cover bg-center relative"
+            style={
+              seller.profileBg || seller.coverPhoto
+                ? { backgroundImage: `url(${seller.profileBg || seller.coverPhoto})` }
+                : undefined
+            }
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+          </div>
+
+          {/* Profile Details Container */}
+          <div className="px-5 sm:px-8 pb-6 relative -mt-16 sm:-mt-20 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6 min-w-0">
+              {/* Store Avatar */}
+              <div className="relative shrink-0">
+                <UserAvatar
+                  src={seller.photoURL}
+                  fallbackText={seller.shopName || seller.displayName}
+                  className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl ring-4 ring-white dark:ring-zinc-900 shadow-2xl object-cover"
+                />
+                {seller.kycStatus === "verified" && (
+                  <span className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center ring-4 ring-white dark:ring-zinc-900 shadow-md">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </span>
                 )}
               </div>
-              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
-                <strong>কারণ:</strong> "{seller.pauseReason || "বিক্রেতা সাময়িক বিরতিতে থাকায় বর্তমানে অর্ডার গ্রহণ বন্ধ রয়েছে।"}"
-              </p>
-            </div>
-          )}
 
-          {/* Owner Quick Controls (When viewing own store) */}
-          {user?.uid === seller.id && !seller.ordersPaused && (
-            <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-3.5 mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>আপনার স্টোরে স্বাভাবিকভাবে অর্ডার গ্রহণ চলছে</span>
-              </div>
-              <button 
-                onClick={() => {
-                  setTempPauseReason(seller.pauseReason || "সাময়িক বিরতির কারণে অর্ডার গ্রহণ বন্ধ রাখা হলো।");
-                  setShowPauseModal(true);
-                }}
-                className="text-xs px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition shadow-sm"
-              >
-                অর্ডার বন্ধ করুন
-              </button>
-            </div>
-          )}
-
-          {/* Store Card */}
-          <div className="relative bg-[#F3F0FF] dark:bg-[#1A1625] rounded-2xl p-4 overflow-hidden mb-4 border border-[#E9E1FF] dark:border-[#2D2442]">
-            <div className="absolute right-0 top-0 opacity-10 pointer-events-none w-32 h-32 transform translate-x-4 -translate-y-4">
-               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="w-full h-full text-[#8B5CF6]"><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.974 0-5.699-1.06-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" /></svg>
-            </div>
-            
-            <div className="relative z-10 flex justify-between items-start mb-2 gap-2">
-               <h1 className="text-[20px] font-bold text-zinc-800 dark:text-zinc-100 truncate">{seller.shopName || seller.displayName}</h1>
-               <div className="flex flex-col items-end gap-2">
-                 {user?.uid !== seller.id && (
-                   <button onClick={handleFollowToggle} className={`${isFollowing ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200' : 'bg-[#8B5CF6] text-white'} px-5 py-1.5 rounded-full text-sm font-semibold shrink-0 cursor-pointer transition active:scale-95`}>
-                     {isFollowing ? 'Following' : 'Follow'}
-                   </button>
-                 )}
-                 <button 
-                   onClick={() => navigate(`/news-hub/profile/${seller.id}`)}
-                   className="text-[10px] font-bold text-[#8B5CF6] dark:text-[#A78BFA] hover:underline flex items-center gap-1 cursor-pointer"
-                 >
-                   <Icon name="globe" className="w-3 h-3" />
-                   Check Feed Profile
-                 </button>
-               </div>
-            </div>
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                 <div className="flex">
-                    {[1,2,3,4,5].map(star => (
-                      <Star key={star} className={`w-4 h-4 ${star <= averageRating ? 'fill-[#F97316] text-[#F97316]' : 'fill-zinc-300 text-zinc-300 dark:fill-zinc-700 dark:text-zinc-700'}`} />
-                    ))}
-                 </div>
-                 <span className="font-bold text-sm text-zinc-800 dark:text-zinc-200">{averageRating > 0 ? averageRating.toFixed(1) : 'New'}</span>
-                 <span className="text-zinc-500 dark:text-zinc-400 text-sm">({reviews.length} ratings)</span>
-              </div>
-              
-              <div className="flex items-center gap-4 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                 <span>{positivePercent}% Positive seller ratings</span>
-                 <span>{formatCompactNumber(followersCount)} Followers</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Row */}
-          <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 flex justify-between items-center text-center">
-             <div className="flex-1">
-               <div className="text-lg font-bold text-zinc-900 dark:text-white tabular-nums">
-                 {formatCompactNumber(followersCount)}
-               </div>
-               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Followers</div>
-             </div>
-             <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800"></div>
-             <div className="flex-1">
-               <div className="text-lg font-bold text-zinc-900 dark:text-white">{positivePercent}%</div>
-               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Positive</div>
-             </div>
-             <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800"></div>
-             <div className="flex-1">
-               <div className="text-lg font-bold text-zinc-900 dark:text-white">{formatCompactNumber(totalSold)}+</div>
-               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Sold</div>
-             </div>
-             <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800"></div>
-             <div className="flex-1">
-               <div className="text-lg font-bold text-zinc-900 dark:text-white">{formatCompactNumber(regularBuyers)}+</div>
-               <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Buyers</div>
-             </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex justify-around items-center border-y border-zinc-100 dark:border-zinc-800 py-3 mt-2">
-           <button onClick={() => setActiveTab('home')} className={`p-2 flex flex-col items-center gap-1 ${activeTab === 'home' ? 'text-[#8B5CF6] border-b-2 border-[#8B5CF6]' : 'text-zinc-500 dark:text-zinc-400'}`}>
-              <Home className="w-6 h-6" />
-           </button>
-           <button onClick={() => setActiveTab('layers')} className={`p-2 flex flex-col items-center gap-1 ${activeTab === 'layers' ? 'text-[#8B5CF6] border-b-2 border-[#8B5CF6]' : 'text-zinc-500 dark:text-zinc-400'}`}>
-              <Layers className="w-6 h-6" />
-           </button>
-           <button onClick={() => setActiveTab('grid')} className={`p-2 flex flex-col items-center gap-1 ${activeTab === 'grid' ? 'text-[#8B5CF6] border-b-2 border-[#8B5CF6]' : 'text-zinc-500 dark:text-zinc-400'}`}>
-              <LayoutGrid className="w-6 h-6" />
-           </button>
-           <button onClick={() => setActiveTab('star')} className={`p-2 flex flex-col items-center gap-1 ${activeTab === 'star' ? 'text-[#8B5CF6] border-b-2 border-[#8B5CF6]' : 'text-zinc-500 dark:text-zinc-400'}`}>
-              <Star className={`w-6 h-6 ${activeTab === 'star' ? 'fill-current' : ''}`} />
-           </button>
-        </div>
-
-        {/* Content based on Tab */}
-        <div className="p-4">
-          {activeTab === 'home' && (
-             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-               {filteredProducts.map(product => (
-                 <ProductCard key={product.id} product={product} />
-               ))}
-               {filteredProducts.length === 0 && (
-                 <div className="col-span-full text-center text-zinc-500 py-8">No products found.</div>
-               )}
-             </div>
-          )}
-          
-          {activeTab === 'layers' && (
-             <div className="flex flex-col gap-4">
-                <h3 className="font-bold text-lg dark:text-white">Store Categories</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                   {/* Automatically extract categories from seller's products */}
-                   {Array.from(new Set(products.map(p => p.category || 'Other'))).map(cat => (
-                      <div key={cat} onClick={() => { setSearchQuery(cat === 'Other' ? '' : cat); setActiveTab('home'); }} className="bg-zinc-50 dark:bg-zinc-900 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800 flex items-center justify-between cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                         <span className="font-semibold text-sm dark:text-white">{cat}</span>
-                         <span className="text-xs text-zinc-400 tabular-nums">{products.filter(p => (p.category || 'Other') === cat).length}</span>
-                      </div>
-                   ))}
-                   {products.length === 0 && (
-                     <div className="col-span-full text-center text-zinc-500 py-8">No categories available.</div>
-                   )}
+              {/* Title & Info */}
+              <div className="min-w-0 space-y-1.5">
+                {/* Line 1: Shop Name + Verified Badge */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white tracking-tight truncate">
+                    {seller.shopName || getSafeDisplayName(seller, "Seller Store")}
+                  </h1>
+                  {seller.kycStatus === "verified" && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-extrabold border border-blue-500/20 inline-flex items-center gap-1 shrink-0">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Verified Seller</span>
+                    </span>
+                  )}
                 </div>
-             </div>
-          )}
-          
-          {activeTab === 'grid' && (
-             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-               {filteredProducts.map(product => (
-                 <div key={product.id} onClick={() => navigate(`/product/${product.id}`)} className="aspect-square bg-zinc-100 dark:bg-zinc-900 rounded-lg overflow-hidden relative cursor-pointer group border border-zinc-200 dark:border-zinc-800">
-                    {product.images?.[0] ? (
-                      <img src={product.images[0]} alt={product.name} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-400">
-                        <ShoppingBag className="w-6 h-6" />
-                      </div>
-                    )}
-                    {product.price && (
-                      <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded font-bold tabular-nums">
-                         ৳{product.price}
-                      </div>
-                    )}
-                 </div>
-               ))}
-               {filteredProducts.length === 0 && (
-                 <div className="col-span-full text-center text-zinc-500 py-8">No products found.</div>
-               )}
-             </div>
-          )}
 
-          
-          {activeTab === 'star' && (
-            <div className="flex flex-col gap-6">
-               {/* Review Input */}
-               <div className="bg-zinc-50 dark:bg-zinc-900 rounded-xl p-4 border border-zinc-100 dark:border-zinc-800">
-                 <h3 className="font-bold text-sm text-zinc-900 dark:text-white mb-3">Leave a Review</h3>
-                 <form onSubmit={handleReviewSubmit} className="flex flex-col gap-3">
-                   <div className="flex gap-1">
-                     {[1, 2, 3, 4, 5].map((star) => (
-                       <Star
-                         key={star}
-                         onClick={() => setNewReviewRating(star)}
-                         className={`w-6 h-6 cursor-pointer transition-colors ${
-                           star <= newReviewRating
-                             ? 'fill-[#F97316] text-[#F97316]'
-                             : 'fill-zinc-300 text-zinc-300 dark:fill-zinc-700 dark:text-zinc-700 hover:text-[#F97316]'
-                         }`}
-                       />
-                     ))}
-                   </div>
-                   <textarea
-                     value={newReviewComment}
-                     onChange={(e) => setNewReviewComment(e.target.value)}
-                     placeholder="Write your review..."
-                     className="w-full bg-white dark:bg-black border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 text-sm focus:outline-none focus:border-[#1cdb5e] transition-colors dark:text-white min-h-[80px]"
-                   />
-                   <button
-                     type="submit"
-                     disabled={submittingReview}
-                     className="bg-[#1cdb5e] text-white px-4 py-2 rounded-lg font-bold text-sm self-end disabled:opacity-50"
-                   >
-                     {submittingReview ? 'Submitting...' : 'Post Review'}
-                   </button>
-                 </form>
-               </div>
+                {/* Line 2: Username Handle */}
+                <div className="text-xs sm:text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+                  {getSafePublicUsername(seller)
+                    ? `@${getSafePublicUsername(seller)}`
+                    : `ID: ${seller.id.substring(0, 8).toUpperCase()}`}
+                </div>
 
-               {reviews.length === 0 && (
-                 <div className="text-center text-zinc-500 py-8">No reviews yet.</div>
-               )}
-               {reviews.map((review, i) => (
-                 <div key={i} className="border-b border-zinc-100 dark:border-zinc-800 pb-4">
-                   <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shrink-0 text-white font-bold text-lg">
-                           {(review.reviewerName || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex flex-col">
-                           <Link to={`/store/${review.reviewerId || review.userId}`} className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 hover:underline">
-                              {review.reviewerName || 'Anonymous'}
-                           </Link>
-                           <span className="text-zinc-400 text-[11px]">{review.reviewerCountry || 'Verified Buyer'}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <div className="flex">
-                           {[1,2,3,4,5].map(star => (
-                              <Star key={star} className={`w-3.5 h-3.5 ${star <= (review.rating || 5) ? 'fill-[#F97316] text-[#F97316]' : 'fill-zinc-300 text-zinc-300 dark:fill-zinc-700 dark:text-zinc-700'}`} />
-                           ))}
-                        </div>
-                        <span className="text-zinc-400 text-[11px] mt-0.5">{review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Recent'}</span>
-                      </div>
-                   </div>
-                   
-                   {review.title && <h3 className="font-bold text-[15px] text-zinc-800 dark:text-zinc-200 mb-1">{review.title}</h3>}
-                   <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-3">
-                     {review.comment || 'No comments provided.'}
-                   </p>
-                   
-                   {/* Chat review images display */}
-                   {review.images && Array.isArray(review.images) && review.images.length > 0 && (
-                     <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                        {review.images.map((img: string, idx: number) => (
-                          <div key={idx} className="w-24 h-24 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                             <img src={img} className="w-full h-full object-cover" />
-                          </div>
-                        ))}
-                     </div>
-                   )}
-                 </div>
-               ))}
+                {/* Line 3: Location Address */}
+                {seller.address && (
+                  <div className="flex items-start gap-1.5 text-xs sm:text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                    <span className="leading-snug">{seller.address}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
 
-        <LiquidGlassPopup
-          open={showPauseModal}
-          onClose={() => setShowPauseModal(false)}
-          title="স্টোরের অর্ডার গ্রহণ বন্ধ রাখুন"
-          description='এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে "Buy Now" ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।'
-          primaryAction={{
-            label: "বন্ধ রাখুন (Pause)",
-            onClick: handleSavePauseOrders,
-            disabled: !tempPauseReason.trim() || savingPause,
-            loading: savingPause,
-          }}
-          secondaryAction={{
-            label: "বাতিল",
-            onClick: () => setShowPauseModal(false),
-          }}
-        >
-          <div>
-            <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
-              অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
-            </label>
-            <textarea
-              rows={3}
-              autoFocus
-              className="w-full ds-liquid-input p-3 font-medium outline-none transition-all placeholder:text-zinc-400 resize-none text-sm"
-              value={tempPauseReason}
-              placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
-              onChange={(e) => setTempPauseReason(e.target.value)}
-            />
-          </div>
-        </LiquidGlassPopup>
-        {renderReportSellerPopup()}
-      </div>
-    );
-  }
-
-  // Normal User Profile (also includes Top Header with Back, Name & 3-Dot Menu)
-  return (
-    <div className="w-full max-w-2xl mx-auto bg-white dark:bg-black min-h-screen text-zinc-900 dark:text-white pb-24">
-       {renderTopProfileHeader(false)}
-       <div
-          className="relative h-44 sm:h-56 bg-gradient-to-br from-slate-800 via-zinc-900 to-black bg-cover bg-center overflow-hidden transition-all duration-300"
-          style={
-            seller.profileBg || seller.coverPhoto
-              ? { backgroundImage: `url(${seller.profileBg || seller.coverPhoto})` }
-              : undefined
-          }
-       />
-       
-       <div className="px-4 sm:px-6 relative -mt-16">
-          <div className="flex justify-between items-end gap-3 flex-wrap">
-             <div className="relative p-1 bg-white dark:bg-zinc-950 rounded-full inline-block">
-                <UserAvatar
-                   src={seller.photoURL}
-                   fallbackText={seller.displayName || seller.shopName}
-                   className="w-28 h-28 sm:w-32 sm:h-32 border-4 border-zinc-100 dark:border-zinc-800"
-                />
-             </div>
-             
-             {user?.uid !== seller.id && (
-               <div className="mb-2 flex gap-2">
+            {/* Action Buttons Cluster */}
+            <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+              {user?.uid !== seller.id && (
+                <>
                   <button
                     type="button"
                     onClick={() => navigate(`/messages?chatId=${seller.id}`)}
-                    className="px-4 py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-xl font-bold text-sm shadow-sm cursor-pointer"
+                    className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition cursor-pointer"
                   >
-                     Message
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Chat with Seller</span>
                   </button>
+
                   <button
                     type="button"
                     onClick={handleFollowToggle}
-                    className={`px-6 py-2 rounded-xl text-sm font-bold shadow-sm transition-all cursor-pointer active:scale-95 ${isFollowing ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                    className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-xs active:scale-95 transition cursor-pointer ${
+                      isFollowing
+                        ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-black/10 dark:border-zinc-700"
+                        : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                    }`}
                   >
-                    {isFollowing ? 'Following' : 'Follow'}
+                    {isFollowing ? (
+                      <>
+                        <UserCheck className="w-4 h-4 text-emerald-500" />
+                        <span>Following</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        <span>Follow Store</span>
+                      </>
+                    )}
                   </button>
-               </div>
-             )}
+                </>
+              )}
+
+              <button
+                type="button"
+                onClick={() => navigate(`/loops/profile/${seller.id}`)}
+                className="px-4 py-2.5 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-300 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <Globe className="w-4 h-4" />
+                <span>Feed Profile</span>
+              </button>
+            </div>
           </div>
-          
-          <div className="mt-3">
-             <h1 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-               {getSafeDisplayName(seller, "Store")}
-               {seller.kycStatus === 'verified' && <CheckCircle2 className="w-4 h-4 text-blue-500" />}
-             </h1>
-             {getSafePublicUsername(seller) && (
-               <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                 @{getSafePublicUsername(seller)}
-               </p>
-             )}
-             {seller.bio && <p className="text-sm mt-2 text-zinc-600 dark:text-zinc-400">{seller.bio}</p>}
-             
-             <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-xs text-zinc-500 font-medium">
-                {seller.address && (
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>Lives in {seller.address}</span>
+        </div>
+
+        {/* ================= LIQUID GLASS TRUST METRICS BAR ================= */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+          {/* Rating */}
+          <div className="p-4 rounded-3xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 shadow-md flex flex-col justify-between">
+            <div className="flex items-center justify-between text-amber-500 mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Rating</span>
+              <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-black tabular-nums text-zinc-950 dark:text-white">
+                {averageRating > 0 ? averageRating.toFixed(1) : "New"}
+              </span>
+              <span className="text-xs text-zinc-400 font-semibold">/ 5.0</span>
+            </div>
+            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium truncate mt-0.5">
+              ({reviews.length} ratings)
+            </span>
+          </div>
+
+          {/* Positive Percent */}
+          <div className="p-4 rounded-3xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 shadow-md flex flex-col justify-between">
+            <div className="flex items-center justify-between text-emerald-500 mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Positive</span>
+              <ThumbsUp className="w-4 h-4" />
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black tabular-nums text-zinc-950 dark:text-white">
+                {positivePercent}%
+              </span>
+            </div>
+            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium truncate mt-0.5">
+              Satisfaction score
+            </span>
+          </div>
+
+          {/* Total Sold */}
+          <div className="p-4 rounded-3xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 shadow-md flex flex-col justify-between">
+            <div className="flex items-center justify-between text-blue-500 mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Total Sold</span>
+              <Package className="w-4 h-4" />
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black tabular-nums text-zinc-950 dark:text-white">
+                {formatCompactNumber(totalSold)}+
+              </span>
+            </div>
+            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium truncate mt-0.5">
+              Products delivered
+            </span>
+          </div>
+
+          {/* Regular Buyers */}
+          <div className="p-4 rounded-3xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 shadow-md flex flex-col justify-between">
+            <div className="flex items-center justify-between text-purple-500 mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Buyers</span>
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black tabular-nums text-zinc-950 dark:text-white">
+                {formatCompactNumber(regularBuyers)}+
+              </span>
+            </div>
+            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium truncate mt-0.5">
+              Repeat customers
+            </span>
+          </div>
+
+          {/* Followers */}
+          <div className="col-span-2 sm:col-span-4 lg:col-span-1 p-4 rounded-3xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 shadow-md flex flex-col justify-between">
+            <div className="flex items-center justify-between text-indigo-500 mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Followers</span>
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black tabular-nums text-zinc-950 dark:text-white">
+                {formatCompactNumber(followersCount)}
+              </span>
+            </div>
+            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium truncate mt-0.5">
+              Community reach
+            </span>
+          </div>
+        </div>
+
+        {/* ================= LIQUID GLASS TAB NAVIGATION ================= */}
+        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-1.5 rounded-[24px] border border-white/60 dark:border-zinc-800/80 shadow-lg flex items-center justify-start sm:justify-around gap-1.5 w-full overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setActiveTab('home')}
+            className={`py-2.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 transition cursor-pointer shrink-0 whitespace-nowrap ${
+              activeTab === 'home'
+                ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-md'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+            }`}
+          >
+            <Home className="w-4 h-4 shrink-0" />
+            <span className="whitespace-nowrap">Products ({filteredProducts.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('categories')}
+            className={`py-2.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 transition cursor-pointer shrink-0 whitespace-nowrap ${
+              activeTab === 'categories'
+                ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-md'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+            }`}
+          >
+            <Layers className="w-4 h-4 shrink-0" />
+            <span className="whitespace-nowrap">Categories</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('gallery')}
+            className={`py-2.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 transition cursor-pointer shrink-0 whitespace-nowrap ${
+              activeTab === 'gallery'
+                ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-md'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+            }`}
+          >
+            <LayoutGrid className="w-4 h-4 shrink-0" />
+            <span className="whitespace-nowrap">Gallery</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('reviews')}
+            className={`py-2.5 px-4 rounded-2xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 transition cursor-pointer shrink-0 whitespace-nowrap ${
+              activeTab === 'reviews'
+                ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-md'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+            }`}
+          >
+            <Star className="w-4 h-4 shrink-0" />
+            <span className="whitespace-nowrap">Reviews ({reviews.length})</span>
+          </button>
+        </div>
+
+        {/* ================= TAB CONTENT DISPLAY ================= */}
+        <div className="pt-2">
+          {/* TAB 1: PRODUCTS GRID */}
+          {activeTab === 'home' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+
+              {filteredProducts.length === 0 && (
+                <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 rounded-[32px] p-12 text-center space-y-3">
+                  <ShoppingBag className="w-12 h-12 text-zinc-400 mx-auto" />
+                  <p className="text-zinc-500 dark:text-zinc-400 font-semibold text-sm">
+                    {searchQuery ? `No products match "${searchQuery}"` : "No products available in this store yet."}
+                  </p>
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="text-xs font-bold text-blue-500 hover:underline cursor-pointer"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: STORE CATEGORIES */}
+          {activeTab === 'categories' && (
+            <div className="space-y-4">
+              <h3 className="font-extrabold text-lg text-zinc-950 dark:text-white">Store Categories</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from(new Set(products.map(p => p.category || 'Other'))).map(cat => {
+                  const catCount = products.filter(p => (p.category || 'Other') === cat).length;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(cat === 'Other' ? '' : cat);
+                        setActiveTab('home');
+                      }}
+                      className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-5 rounded-[24px] border border-white/60 dark:border-zinc-800/80 hover:border-blue-500/50 shadow-md flex items-center justify-between gap-3 text-left transition active:scale-95 cursor-pointer"
+                    >
+                      <div>
+                        <span className="font-bold text-sm text-zinc-950 dark:text-white block">{cat}</span>
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold">{catCount} items</span>
+                      </div>
+                      <Layers className="w-5 h-5 text-blue-500 shrink-0" />
+                    </button>
+                  );
+                })}
+                {products.length === 0 && (
+                  <div className="col-span-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 rounded-[28px] p-8 text-center text-zinc-500">
+                    No categories available.
                   </div>
                 )}
-             </div>
-             
-             <div className="grid grid-cols-2 sm:w-72 gap-3 mt-4">
-                <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 px-4 py-3 text-center">
-                  <div className="text-lg font-black text-zinc-900 dark:text-white tabular-nums">
-                    {followersCount.toLocaleString()}
-                  </div>
-                  <div className="text-xs font-semibold text-zinc-500">Followers</div>
-                </div>
-                <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 px-4 py-3 text-center">
-                  <div className="text-lg font-black text-zinc-900 dark:text-white tabular-nums">
-                    {followingCount.toLocaleString()}
-                  </div>
-                  <div className="text-xs font-semibold text-zinc-500">Following</div>
-                </div>
-             </div>
+              </div>
+            </div>
+          )}
 
-             <div className="mt-4">
-               <button
-                 type="button"
-                 onClick={() => navigate(`/author/${seller.id}`)}
-                 className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-xs font-bold text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
-               >
-                 View Feed Posts & Creator Profile &rarr;
-               </button>
-             </div>
-             
-             {/* Social Links */}
-             <div className="flex gap-2 mt-4">
-                {seller.facebookUrl && (
-                  <a href={seller.facebookUrl} target="_blank" rel="noreferrer" className="p-2 bg-blue-50 text-blue-600 dark:bg-blue-900/20 rounded-full">
-                     <Icon name="facebook" className="w-4 h-4" />
-                  </a>
+          {/* TAB 3: PRODUCT GALLERY */}
+          {activeTab === 'gallery' && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {filteredProducts.map((product) => (
+                <div 
+                  key={product.id} 
+                  onClick={() => navigate(`/product/${product.id}`)} 
+                  className="aspect-square bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl overflow-hidden relative cursor-pointer group border border-white/60 dark:border-zinc-800/80 shadow-xs"
+                >
+                  {product.images?.[0] ? (
+                    <img 
+                      src={product.images[0]} 
+                      alt={product.name} 
+                      referrerPolicy="no-referrer" 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                      <ShoppingBag className="w-8 h-8" />
+                    </div>
+                  )}
+                  {product.price && (
+                    <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-md text-white text-[11px] px-2 py-0.5 rounded-lg font-extrabold tabular-nums">
+                      ৳{product.price}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {filteredProducts.length === 0 && (
+                <div className="col-span-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 rounded-[28px] p-8 text-center text-zinc-500">
+                  No products found in gallery.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: REVIEWS & RATINGS */}
+          {activeTab === 'reviews' && (
+            <div className="space-y-6">
+              {/* Leave a Review Form */}
+              <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[28px] p-5 sm:p-6 border border-white/60 dark:border-zinc-800/80 shadow-lg space-y-4">
+                <h3 className="font-extrabold text-base text-zinc-950 dark:text-white">Write a Verified Store Review</h3>
+                <form onSubmit={handleReviewSubmit} className="space-y-4">
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewReviewRating(star)}
+                        className="p-1 cursor-pointer transition active:scale-110"
+                      >
+                        <Star
+                          className={`w-7 h-7 ${
+                            star <= newReviewRating
+                              ? 'fill-amber-500 text-amber-500'
+                              : 'fill-zinc-200 text-zinc-300 dark:fill-zinc-800 dark:text-zinc-700'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    value={newReviewComment}
+                    onChange={(e) => setNewReviewComment(e.target.value)}
+                    placeholder="Describe your purchase experience with this seller..."
+                    className="w-full bg-white/90 dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition font-medium min-h-[90px] dark:text-white"
+                  />
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-2xl font-bold text-sm shadow-md disabled:opacity-50 transition cursor-pointer"
+                    >
+                      {submittingReview ? 'Submitting...' : 'Post Review'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Reviews List */}
+              <div className="space-y-3">
+                {reviews.length === 0 && (
+                  <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 rounded-[28px] p-8 text-center text-zinc-500">
+                    No reviews submitted yet.
+                  </div>
                 )}
-             </div>
-          </div>
-       </div>
 
-       <LiquidGlassPopup
-         open={showPauseModal}
-         onClose={() => setShowPauseModal(false)}
-         title="স্টোরের অর্ডার গ্রহণ বন্ধ রাখুন"
-         description='এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে "Buy Now" ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।'
-         primaryAction={{
-           label: "বন্ধ রাখুন (Pause)",
-           onClick: handleSavePauseOrders,
-           disabled: !tempPauseReason.trim() || savingPause,
-           loading: savingPause,
-         }}
-         secondaryAction={{
-           label: "বাতিল",
-           onClick: () => setShowPauseModal(false),
-         }}
-       >
-         <div>
-           <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
-             অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
-           </label>
-           <textarea
-             rows={3}
-             autoFocus
-             className="w-full ds-liquid-input p-3 font-medium outline-none transition-all placeholder:text-zinc-400 resize-none text-sm"
-             value={tempPauseReason}
-             placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
-             onChange={(e) => setTempPauseReason(e.target.value)}
-           />
-         </div>
-       </LiquidGlassPopup>
-       {renderReportSellerPopup()}
+                {reviews.map((review, i) => (
+                  <div 
+                    key={i} 
+                    className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[24px] p-5 border border-white/60 dark:border-zinc-800/80 shadow-md space-y-3"
+                  >
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-base shrink-0 shadow-xs">
+                          {(review.reviewerName || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <Link 
+                            to={`/store/${review.reviewerId || review.userId}`} 
+                            className="font-extrabold text-sm text-zinc-950 dark:text-white hover:underline"
+                          >
+                            {review.reviewerName || 'Anonymous Buyer'}
+                          </Link>
+                          <span className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold block">
+                            {review.reviewerCountry || 'Verified Buyer'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={`w-4 h-4 ${
+                                star <= (review.rating || 5) 
+                                  ? 'fill-amber-500 text-amber-500' 
+                                  : 'fill-zinc-200 text-zinc-300 dark:fill-zinc-800 dark:text-zinc-700'
+                              }`} 
+                            />
+                          ))}
+                        </div>
+                        <span className="text-zinc-400 text-[11px] font-medium mt-1">
+                          {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Recent'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {review.title && (
+                      <h4 className="font-extrabold text-base text-zinc-900 dark:text-zinc-100">
+                        {review.title}
+                      </h4>
+                    )}
+
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed">
+                      {review.comment || 'No comments provided.'}
+                    </p>
+
+                    {review.images && Array.isArray(review.images) && review.images.length > 0 && (
+                      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        {review.images.map((img: string, idx: number) => (
+                          <div key={idx} className="w-20 h-20 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shrink-0 overflow-hidden">
+                            <img src={img} alt="Review attachment" className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Floating Liquid Glass Contact Dock for Mobile */}
+      {user?.uid !== seller.id && (
+        <div className="fixed bottom-4 left-4 right-4 sm:hidden z-30">
+          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-2xl border border-white/60 dark:border-zinc-800 rounded-full p-2 shadow-2xl flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/messages?chatId=${seller.id}`)}
+              className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-full font-extrabold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer active:scale-95 transition"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Chat Seller</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFollowToggle}
+              className={`flex-1 py-3 px-4 rounded-full font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition ${
+                isFollowing
+                  ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                  : 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950'
+              }`}
+            >
+              {isFollowing ? <UserCheck className="w-4 h-4 text-emerald-500" /> : <UserPlus className="w-4 h-4" />}
+              <span>{isFollowing ? 'Following' : 'Follow'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              className="w-11 h-11 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-zinc-800 dark:text-zinc-100 cursor-pointer active:scale-95 transition"
+              title="Share Store"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Pause Orders Confirmation Modal */}
+      <LiquidGlassPopup
+        open={showPauseModal}
+        onClose={() => setShowPauseModal(false)}
+        title="স্টোরের অর্ডার গ্রহণ বন্ধ রাখুন"
+        description='এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে "Buy Now" ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।'
+        primaryAction={{
+          label: "বন্ধ রাখুন (Pause)",
+          onClick: handleSavePauseOrders,
+          disabled: !tempPauseReason.trim() || savingPause,
+          loading: savingPause,
+        }}
+        secondaryAction={{
+          label: "বাতিল",
+          onClick: () => setShowPauseModal(false),
+        }}
+      >
+        <div>
+          <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+            অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
+          </label>
+          <textarea
+            rows={3}
+            autoFocus
+            className="w-full ds-liquid-input p-3 font-medium outline-none transition placeholder:text-zinc-400 resize-none text-sm rounded-2xl"
+            value={tempPauseReason}
+            placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
+            onChange={(e) => setTempPauseReason(e.target.value)}
+          />
+        </div>
+      </LiquidGlassPopup>
+
+      {/* Report Seller Popup */}
+      {renderReportSellerPopup()}
     </div>
   );
 };

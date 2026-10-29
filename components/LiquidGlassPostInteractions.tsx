@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
@@ -7,23 +8,28 @@ import {
   Copy,
   Share2,
   MoreHorizontal,
-  Eye,
   Heart,
   MessageCircle,
-  Repeat,
   Sparkles,
-  Link,
   ShieldAlert,
   Edit3,
   Trash2,
   Reply,
   Smile,
   BarChart2,
-  TrendingUp,
-  Users,
   Search,
-  CheckCircle2,
-  Lock,
+  UserPlus,
+  Bookmark,
+  Link2,
+  Eye,
+  EyeOff,
+  SlidersHorizontal,
+  ThumbsUp,
+  Frown,
+  AlertCircle,
+  User as UserIcon,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { ScamPost, ScamComment, ReactionType } from "../types";
 import { auth, db } from "../firebase";
@@ -34,23 +40,835 @@ import {
   getDocs,
   addDoc,
   doc,
-  updateDoc,
-  onSnapshot,
+  deleteDoc,
   limit,
 } from "firebase/firestore";
 import { triggerHaptic } from "../lib/haptics";
 import {
   formatCompactNumber,
   getSafeDisplayName,
-  getSafePublicUsername,
   getPublicShareOrigin,
 } from "../lib/utils";
 import { formatDhakaFeedTime } from "../lib/dhakaTime";
 import { useNotify, useConfirm } from "./Notifications";
 import { useNavigate } from "react-router-dom";
+import {
+  getTotalPostReactions,
+  boostPostAffinity,
+  dismissSuggestedPostId,
+  getMutedUserIds,
+  toggleMuteUserId,
+  getRestrictedUserIds,
+  toggleRestrictUserId,
+  getBlockedUserIds,
+  toggleBlockUserId,
+} from "../lib/feedAlgorithm";
 
 /* ============================================================================
- * 1. SHARE IN DIRECT INBOX & SOCIAL SHEET (Matching IMG_4996, IMG_4997)
+ * CRISP OUTLINE SVG ICONS FOR POST OPTIONS & SHARE SHEET (IMG_5098 & IMG_5099)
+ * ========================================================================== */
+const MutePersonOutlineIcon: React.FC<{ className?: string }> = ({
+  className = "w-5 h-5",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M11 5L6 9H2v6h4l5 4V5z" />
+    <line x1="22" y1="9" x2="16" y2="15" />
+    <line x1="16" y1="9" x2="22" y2="15" />
+  </svg>
+);
+
+const RestrictPersonOutlineIcon: React.FC<{ className?: string }> = ({
+  className = "w-5 h-5",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="10" cy="8" r="4" />
+    <path d="M3 20a7 7 0 0 1 11.5-5.3" />
+    <rect x="14.5" y="14" width="6.5" height="6" rx="1.5" />
+    <path d="M16 14v-1.5a1.75 1.75 0 0 1 3.5 0V14" />
+  </svg>
+);
+
+const BlockUserOutlineIcon: React.FC<{ className?: string }> = ({
+  className = "w-5 h-5",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="10" cy="8" r="4" />
+    <path d="M3 20a7 7 0 0 1 10.2-6.2" />
+    <circle cx="17.5" cy="17.5" r="4.5" />
+    <line x1="14.4" y1="14.4" x2="20.6" y2="20.6" />
+  </svg>
+);
+
+const ReportBubbleExclamationIcon: React.FC<{ className?: string }> = ({
+  className = "w-5 h-5",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    <line x1="12" y1="8" x2="12" y2="11.5" />
+    <circle cx="12" cy="14.5" r="0.6" fill="currentColor" />
+  </svg>
+);
+
+const ShareUploadIcon: React.FC<{ className?: string }> = ({
+  className = "w-5 h-5",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3v12" />
+    <polyline points="7 8 12 3 17 8" />
+    <path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+  </svg>
+);
+
+const WhatsAppOutlineSvg: React.FC<{ className?: string }> = ({
+  className = "w-6 h-6",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    <path d="M9.5 9.5c.3 1.8 2.2 3.7 4 4l1.3-1.1c.2-.2.5-.2.8-.1l1.6.7c.3.1.4.5.3.8-.3.9-1.1 1.6-2.1 1.7-2.8.2-6.5-3.5-6.3-6.3.1-1 .8-1.8 1.7-2.1.3-.1.7 0 .8.3l.7 1.6c.1.3.1.6-.1.8L9.5 9.5z" />
+  </svg>
+);
+
+const MessengerBoltSvg: React.FC<{ className?: string }> = ({
+  className = "w-6 h-6",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3c-5 0-9 3.7-9 8.3 0 2.6 1.3 4.9 3.4 6.4V21l3.1-1.7c.8.2 1.6.3 2.5.3 5 0 9-3.7 9-8.3S17 3 12 3z" />
+    <polyline points="7.5 13 10.8 9.5 13.2 11.8 16.5 8.5" />
+  </svg>
+);
+
+const AddStoryCirclePlusSvg: React.FC<{ className?: string }> = ({
+  className = "w-6 h-6",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3a9 9 0 1 1-6.36 2.64" strokeDasharray="3.2 2.4" />
+    <line x1="12" y1="8.5" x2="12" y2="15.5" />
+    <line x1="8.5" y1="12" x2="15.5" y2="12" />
+  </svg>
+);
+
+/* ============================================================================
+ * 0. SHARED POST OPTIONS BOTTOM SHEET ("About this post" — Matching IMG_5127)
+ * ========================================================================== */
+const CircledInfoSvg: React.FC<{ className?: string }> = ({
+  className = "w-[22px] h-[22px]",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.95"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="9.25" />
+    <line x1="12" y1="11" x2="12" y2="16.2" />
+    <circle cx="12" cy="7.7" r="0.85" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+const CircledCheckSvg: React.FC<{ className?: string }> = ({
+  className = "w-[22px] h-[22px]",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.95"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="9.25" />
+    <polyline points="8.3 12.3 10.9 14.9 15.8 9.6" />
+  </svg>
+);
+
+const CircledCrossSvg: React.FC<{ className?: string }> = ({
+  className = "w-[22px] h-[22px]",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.95"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="9.25" />
+    <line x1="9.3" y1="9.3" x2="14.7" y2="14.7" />
+    <line x1="14.7" y1="9.3" x2="9.3" y2="14.7" />
+  </svg>
+);
+
+const REPORT_REASONS = [
+  "Spam or misleading content",
+  "Scam, fraud, or impersonation",
+  "Harassment or bullying",
+  "Hate speech or abusive language",
+  "False information",
+];
+
+function buildAboutPostSummary(post: ScamPost): string {
+  const author = (post?.reporterName || "This creator").trim();
+  const rawBody = (post?.description || post?.title || "")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const imgCount = Array.isArray(post?.images) ? post.images.length : 0;
+  const mediaPhrase =
+    imgCount > 1
+      ? `a ${imgCount}-photo carousel`
+      : imgCount === 1
+      ? "a visual post"
+      : post?.videoUrl
+      ? "a video post"
+      : post?.audioUrl
+      ? "a voice Loop"
+      : "a community Loop";
+
+  if (rawBody.length > 0) {
+    const trimmed =
+      rawBody.length > 185 ? `${rawBody.slice(0, 182).trimEnd()}...` : rawBody;
+    return `${author} shares ${mediaPhrase}: ${trimmed}`;
+  }
+  if (post?.postTag) {
+    return `${author} shared ${mediaPhrase} in ${post.postTag} on Loops.`;
+  }
+  return `${author} shared ${mediaPhrase} with the Loops community.`;
+}
+
+export const LoopPostOptionsSheet: React.FC<{
+  isOpen: boolean;
+  post: ScamPost;
+  isSaved?: boolean;
+  canManage?: boolean;
+  isFollowingAuthor?: boolean;
+  onClose: () => void;
+  onToggleSave?: () => void;
+  onCopyLink?: () => void;
+  onOpenShare?: () => void;
+  onOpenReplyOptions?: () => void;
+  onEditPost?: () => void;
+  onDeletePost?: () => void;
+  onPostHidden?: (postId: string) => void;
+}> = ({
+  isOpen,
+  post,
+  isSaved = false,
+  canManage = false,
+  isFollowingAuthor = false,
+  onClose,
+  onToggleSave,
+  onCopyLink,
+  onOpenShare,
+  onOpenReplyOptions,
+  onEditPost,
+  onDeletePost,
+  onPostHidden,
+}) => {
+  const navigate = useNavigate();
+  const notify = useNotify();
+  const confirm = useConfirm();
+  const currentUser = auth.currentUser;
+
+  const [subView, setSubView] = useState<"main" | "why" | "report">("main");
+  const [submittingReport, setSubmittingReport] = useState(false);
+
+  const authorId = post?.reporterId || "";
+  const authorLabel = post?.reporterName || "this user";
+  const isOwnPost = Boolean(
+    currentUser?.uid && authorId && currentUser.uid === authorId
+  );
+
+  const [isMuted, setIsMuted] = useState(false);
+  const [isRestricted, setIsRestricted] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  const aboutSummary = useMemo(() => buildAboutPostSummary(post), [post]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSubView("main");
+      return;
+    }
+    if (authorId) {
+      setIsMuted(getMutedUserIds().includes(authorId));
+      setIsRestricted(getRestrictedUserIds().includes(authorId));
+      setIsBlocked(getBlockedUserIds().includes(authorId));
+    }
+  }, [isOpen, authorId]);
+
+  const handleDefaultCopy = async () => {
+    triggerHaptic();
+    if (onCopyLink) {
+      onCopyLink();
+      onClose();
+      return;
+    }
+    const url = `${getPublicShareOrigin()}/loops/post/${post.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      notify("Link copied to clipboard", "success");
+    } catch {
+      notify("Could not copy link", "error");
+    }
+    onClose();
+  };
+
+  const handleDefaultSave = () => {
+    triggerHaptic();
+    if (onToggleSave) {
+      onToggleSave();
+      onClose();
+      return;
+    }
+    try {
+      const key = "deep_saved_scam_posts";
+      const list: string[] = JSON.parse(localStorage.getItem(key) || "[]");
+      const exists = list.includes(post.id);
+      const next = exists
+        ? list.filter((id) => id !== post.id)
+        : [post.id, ...list];
+      localStorage.setItem(key, JSON.stringify(next));
+      notify(exists ? "Removed from saved" : "Saved to Loops", "info");
+    } catch {}
+    onClose();
+  };
+
+  const handleInterested = () => {
+    triggerHaptic();
+    boostPostAffinity(post);
+    notify("Showing more Loops like this", "success");
+    onClose();
+  };
+
+  const handleNotInterested = () => {
+    triggerHaptic();
+    dismissSuggestedPostId(post.id);
+    onPostHidden?.(post.id);
+    notify("Loop hidden from your feed", "info");
+    onClose();
+  };
+
+  const handleToggleMute = () => {
+    triggerHaptic();
+    if (!authorId) {
+      onClose();
+      return;
+    }
+    const nowMuted = toggleMuteUserId(authorId);
+    setIsMuted(nowMuted);
+    notify(
+      nowMuted ? `Muted ${authorLabel}` : `Unmuted ${authorLabel}`,
+      "info"
+    );
+    onClose();
+  };
+
+  const handleToggleRestrict = () => {
+    triggerHaptic();
+    if (!authorId) {
+      onClose();
+      return;
+    }
+    const nowRestricted = toggleRestrictUserId(authorId);
+    setIsRestricted(nowRestricted);
+    notify(
+      nowRestricted
+        ? `Restricted ${authorLabel}`
+        : `Unrestricted ${authorLabel}`,
+      "info"
+    );
+    onClose();
+  };
+
+  const handleToggleBlock = async () => {
+    triggerHaptic();
+    if (!authorId) {
+      onClose();
+      return;
+    }
+    if (!isBlocked) {
+      const ok = await confirm({
+        title: `Block ${authorLabel}?`,
+        message:
+          "They will not be able to interact with your Loops, and their posts will be hidden from your feed.",
+        confirmText: "Block",
+        cancelText: "Cancel",
+      });
+      if (!ok) return;
+    }
+    const nowBlocked = toggleBlockUserId(authorId);
+    setIsBlocked(nowBlocked);
+    notify(
+      nowBlocked ? `Blocked ${authorLabel}` : `Unblocked ${authorLabel}`,
+      "info"
+    );
+    onClose();
+  };
+
+  const handleSubmitReportReason = async (reason: string) => {
+    if (submittingReport) return;
+    triggerHaptic();
+    setSubmittingReport(true);
+    try {
+      await addDoc(collection(db, "notifications"), {
+        type: "loop_post_report",
+        title: "Loop Reported",
+        message: `Post ${post.id} by ${authorLabel} reported for: ${reason}`,
+        postId: post.id,
+        reportedAuthorId: authorId,
+        reporterUid: currentUser?.uid || "guest",
+        reason,
+        read: false,
+        createdAt: Date.now(),
+      });
+    } catch {}
+    dismissSuggestedPostId(post.id);
+    onPostHidden?.(post.id);
+    setSubmittingReport(false);
+    notify("Thank you. Your report has been submitted.", "success");
+    onClose();
+  };
+
+  const handleFallbackDelete = async () => {
+    triggerHaptic();
+    if (onDeletePost) {
+      onClose();
+      onDeletePost();
+      return;
+    }
+    const ok = await confirm({
+      title: "Delete Loop?",
+      message: "Are you sure you want to permanently delete this Loop?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+    if (!ok) return;
+    try {
+      if (!post.id.startsWith("showcase_")) {
+        await deleteDoc(doc(db, "scam_posts", post.id));
+      }
+      const raw = localStorage.getItem("deep_scam_posts");
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          localStorage.setItem(
+            "deep_scam_posts",
+            JSON.stringify(list.filter((p: any) => p.id !== post.id))
+          );
+        }
+      }
+      onPostHidden?.(post.id);
+      notify("Loop deleted", "info");
+    } catch {
+      notify("Could not delete Loop", "error");
+    }
+    onClose();
+  };
+
+  const sheetNode = (
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-[280] flex flex-col justify-end"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+          />
+
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 390, damping: 34 }}
+            onClick={(e) => e.stopPropagation()}
+            className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
+          >
+            {/* Top Grab Handle matching IMG_5127 */}
+            <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+            {subView === "report" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setSubView("main")}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                    aria-label="Back"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
+                    Why are you reporting this post?
+                  </span>
+                  <span className="w-8" />
+                </div>
+
+                <div className="loops-about-card rounded-[22px] divide-y loops-divider overflow-hidden">
+                  {REPORT_REASONS.map((reason) => (
+                    <button
+                      key={reason}
+                      type="button"
+                      disabled={submittingReport}
+                      onClick={() => handleSubmitReportReason(reason)}
+                      className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[15.5px] font-medium text-[#0f0f0f] dark:text-white cursor-pointer text-left"
+                    >
+                      <span>{reason}</span>
+                      <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : subView === "why" ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setSubView("main")}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                    aria-label="Back"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
+                    Why you&apos;re seeing this post
+                  </span>
+                  <span className="w-8" />
+                </div>
+
+                <p className="text-[14.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                  Posts in Loops are shown based on profiles you follow, topics
+                  you engage with, and recent conversations in the community.
+                </p>
+
+                <div className="loops-about-card rounded-[22px] p-4 space-y-3.5">
+                  <div className="flex items-start gap-3">
+                    <UserIcon className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mt-0.5 shrink-0" />
+                    <div className="text-[14.5px] leading-snug">
+                      <p className="font-semibold text-[#0f0f0f] dark:text-white">
+                        {isOwnPost
+                          ? "You shared this post"
+                          : isFollowingAuthor
+                          ? `You follow ${authorLabel}`
+                          : `Suggested creator · ${authorLabel}`}
+                      </p>
+                      <p className="text-zinc-500 dark:text-zinc-400 text-[13px] mt-0.5">
+                        {isFollowingAuthor
+                          ? "Posts from accounts you follow appear higher in your feed."
+                          : "Popular with members who share similar Loops interests."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {post.postTag && (
+                    <div className="flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mt-0.5 shrink-0" />
+                      <div className="text-[14.5px] leading-snug">
+                        <p className="font-semibold text-[#0f0f0f] dark:text-white">
+                          Topic: {post.postTag}
+                        </p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-[13px] mt-0.5">
+                          Matched with active community topics in your feed.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    onClose();
+                    navigate("/loops/personalization");
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] text-[15px] font-semibold cursor-pointer active:scale-[0.98] transition"
+                >
+                  Manage feed preferences
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* "About this post" Heading + Real Post Summary matching IMG_5127 */}
+                <div className="space-y-2 pt-0.5">
+                  <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                    About this post
+                  </h3>
+                  <p className="text-[15px] leading-[1.42] text-[#141414] dark:text-zinc-200">
+                    {aboutSummary}
+                  </p>
+                </div>
+
+                {/* Primary Options Card matching IMG_5127 exact left-icon layout */}
+                <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setSubView("why");
+                    }}
+                    className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                  >
+                    <CircledInfoSvg className="w-[23px] h-[23px] text-[#0f0f0f] dark:text-white shrink-0" />
+                    <span>Why you&apos;re seeing this post</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleInterested}
+                    className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                  >
+                    <CircledCheckSvg className="w-[23px] h-[23px] text-[#0f0f0f] dark:text-white shrink-0" />
+                    <span>Interested</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNotInterested}
+                    className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                  >
+                    <CircledCrossSvg className="w-[23px] h-[23px] text-[#0f0f0f] dark:text-white shrink-0" />
+                    <span>Not interested</span>
+                  </button>
+
+                  {!isOwnPost && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setSubView("report");
+                      }}
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-rose-500/10 text-[16px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                    >
+                      <ReportBubbleExclamationIcon className="w-[23px] h-[23px] text-[#FF3040] shrink-0" />
+                      <span>Report</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Secondary Actions Card (Save, Copy link, Share, Author/Moderation controls) */}
+                <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={handleDefaultSave}
+                    className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                  >
+                    <Bookmark
+                      className={`w-[22px] h-[22px] stroke-[1.95] shrink-0 ${
+                        isSaved
+                          ? "fill-current text-[#0f0f0f] dark:text-white"
+                          : "text-[#0f0f0f] dark:text-white"
+                      }`}
+                    />
+                    <span>{isSaved ? "Unsave" : "Save"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDefaultCopy}
+                    className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                  >
+                    <Link2 className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                    <span>Copy link</span>
+                  </button>
+
+                  {onOpenShare && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        onClose();
+                        onOpenShare();
+                      }}
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    >
+                      <ShareUploadIcon className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <span>Share</span>
+                    </button>
+                  )}
+
+                  {!isOwnPost && authorId && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleToggleMute}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <MutePersonOutlineIcon className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>{isMuted ? "Unmute" : "Mute"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleToggleRestrict}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <RestrictPersonOutlineIcon className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>{isRestricted ? "Unrestrict" : "Restrict"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleToggleBlock}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-rose-500/10 text-[15.5px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                      >
+                        <BlockUserOutlineIcon className="w-[22px] h-[22px] text-[#FF3040] shrink-0" />
+                        <span>{isBlocked ? "Unblock" : "Block"}</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Author / Admin Controls Card */}
+                {canManage && (
+                  <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        onClose();
+                        navigate(`/loops/post/${post.id}/activity`);
+                      }}
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    >
+                      <BarChart2 className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <span>View activity</span>
+                    </button>
+
+                    {onOpenReplyOptions && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          onClose();
+                          onOpenReplyOptions();
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <SlidersHorizontal className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <span>Who can reply</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        onClose();
+                        if (onEditPost) {
+                          onEditPost();
+                        } else {
+                          navigate(`/loops/edit/${post.id}`);
+                        }
+                      }}
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    >
+                      <Edit3 className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleFallbackDelete}
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-rose-500/10 text-[15.5px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                    >
+                      <Trash2 className="w-[22px] h-[22px] stroke-[1.95] text-[#FF3040] shrink-0" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+
+  if (typeof document !== "undefined") {
+    return createPortal(sheetNode, document.body);
+  }
+  return sheetNode;
+};
+
+/* ============================================================================
+ * 1. SHARE IN DIRECT INBOX & SOCIAL SHEET (Matching IMG_5099)
  * ========================================================================== */
 export interface ShareUserContact {
   id: string;
@@ -63,88 +881,91 @@ export interface ShareUserContact {
 export const LiquidGlassShareModal: React.FC<{
   isOpen: boolean;
   post: Partial<ScamPost>;
+  customShareUrl?: string;
+  customShareTitle?: string;
   onClose: () => void;
   onRepost?: () => void;
   onQuotePost?: () => void;
-}> = ({ isOpen, post, onClose, onRepost, onQuotePost }) => {
+}> = ({
+  isOpen,
+  post,
+  customShareUrl,
+  customShareTitle,
+  onClose,
+}) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [contacts, setContacts] = useState<ShareUserContact[]>([]);
   const [sentUserIds, setSentUserIds] = useState<Record<string, boolean>>({});
   const [sendingMap, setSendingMap] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState(false);
+  const [bannerVisible, setBannerVisible] = useState(true);
   const notify = useNotify();
+  const navigate = useNavigate();
   const currentUser = auth.currentUser;
 
-  // Load recent contacts from Firestore chats & messages or fallback users
+  const resolvedShareUrl =
+    customShareUrl || `${getPublicShareOrigin()}/loops/post/${post?.id || ""}`;
+  const resolvedShareTitle =
+    customShareTitle ||
+    (post?.description || post?.title || "Check out this Loop").slice(0, 100);
+
+  // Load recent contacts from Firestore chats & messages or real users
   useEffect(() => {
     if (!isOpen) return;
     let active = true;
 
     const loadInboxContacts = async () => {
-      if (!currentUser) {
-        setContacts([
-          {
-            id: "contact_1",
-            name: "Deep Shop Support",
-            username: "deepshop_official",
-            avatar: "https://www.deepshop.top/favicon.png",
-          },
-          {
-            id: "contact_2",
-            name: "Community Moderation",
-            username: "news_hub_mod",
-            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop",
-          },
-        ]);
-        return;
-      }
-
       try {
-        // Query user's recent chats in Firestore
-        const chatsRef = collection(db, "chats");
-        const q1 = query(
-          chatsRef,
-          where("participants", "array-contains", currentUser.uid),
-          limit(12)
-        );
-        const snap = await getDocs(q1);
-        const list: ShareUserContact[] = [];
-
-        snap.forEach((d) => {
-          const data = d.data();
-          const otherId = (data.participants || []).find(
-            (uid: string) => uid !== currentUser.uid
+        if (currentUser?.uid) {
+          const chatsRef = collection(db, "chats");
+          const q1 = query(
+            chatsRef,
+            where("participants", "array-contains", currentUser.uid),
+            limit(12)
           );
-          if (otherId) {
-            const partnerInfo = data.partnerInfo?.[otherId] || {};
-            list.push({
-              id: otherId,
-              name: partnerInfo.displayName || partnerInfo.name || "News Hub Member",
-              username: partnerInfo.username || partnerInfo.handle || "user",
-              avatar: partnerInfo.photoURL || partnerInfo.avatar || "",
-            });
-          }
-        });
+          const snap = await getDocs(q1);
+          const list: ShareUserContact[] = [];
 
-        if (active && list.length > 0) {
-          setContacts(list);
-          return;
+          snap.forEach((d) => {
+            const data = d.data();
+            const otherId = (data.participants || []).find(
+              (uid: string) => uid !== currentUser.uid
+            );
+            if (otherId) {
+              const partnerInfo = data.partnerInfo?.[otherId] || {};
+              list.push({
+                id: otherId,
+                name:
+                  partnerInfo.displayName || partnerInfo.name || "Loops Member",
+                username: partnerInfo.username || partnerInfo.handle || "member",
+                avatar: partnerInfo.photoURL || partnerInfo.avatar || "",
+              });
+            }
+          });
+
+          if (active && list.length > 0) {
+            setContacts(list);
+            return;
+          }
         }
       } catch {}
 
-      // Fallback: Query recent active users from Firestore
       try {
         const usersRef = collection(db, "users");
-        const snap = await getDocs(query(usersRef, limit(10)));
+        const snap = await getDocs(query(usersRef, limit(12)));
         const fallbackList: ShareUserContact[] = [];
         snap.forEach((d) => {
-          if (d.id !== currentUser.uid) {
+          if (!currentUser?.uid || d.id !== currentUser.uid) {
             const data = d.data();
+            const name = data.displayName || data.shopName || data.name || "";
+            if (!name) return;
             fallbackList.push({
               id: d.id,
-              name: data.displayName || data.name || "News Hub User",
-              username: data.username || "member",
-              avatar: data.photoURL || data.avatar || "",
+              name,
+              username:
+                data.username ||
+                name.toLowerCase().replace(/\s+/g, "_").slice(0, 18),
+              avatar: data.photoURL || data.shopLogo || data.avatar || "",
             });
           }
         });
@@ -157,46 +978,47 @@ export const LiquidGlassShareModal: React.FC<{
     return () => {
       active = false;
     };
-  }, [isOpen, currentUser]);
+  }, [isOpen, currentUser?.uid]);
 
   const handleSendToUser = async (user: ShareUserContact) => {
     if (sendingMap[user.id] || sentUserIds[user.id]) return;
     triggerHaptic();
+    if (!currentUser?.uid) {
+      onClose();
+      navigate("/signin");
+      return;
+    }
     setSendingMap((m) => ({ ...m, [user.id]: true }));
 
-    const postShareUrl = `${getPublicShareOrigin()}/news-hub/post/${post.id || "1"}`;
-    const messageContent = `🔗 Shared Post: "${(post.description || post.title || "Check out this post").slice(0, 80)}..."\n${postShareUrl}`;
+    const messageContent = `${resolvedShareTitle}\n${resolvedShareUrl}`;
 
     try {
-      if (currentUser) {
-        const chatDocId = [currentUser.uid, user.id].sort().join("_");
-        const msgRef = collection(db, "chats", chatDocId, "messages");
-        await addDoc(msgRef, {
-          senderId: currentUser.uid,
-          senderName: getSafeDisplayName(currentUser, "Me"),
-          text: messageContent,
-          sharedPostId: post.id,
-          sharedPostTitle: post.title || post.description || "Post",
-          createdAt: Date.now(),
-        });
-      }
+      const chatDocId = [currentUser.uid, user.id].sort().join("_");
+      const msgRef = collection(db, "chats", chatDocId, "messages");
+      await addDoc(msgRef, {
+        senderId: currentUser.uid,
+        senderName: getSafeDisplayName(currentUser, "Me"),
+        text: messageContent,
+        sharedPostId: post?.id || null,
+        sharedPostTitle: resolvedShareTitle,
+        createdAt: Date.now(),
+      });
       setSentUserIds((s) => ({ ...s, [user.id]: true }));
-      notify(`Sent to ${user.name}!`, "success");
+      notify(`Sent to ${user.name}`, "success");
     } catch {
       setSentUserIds((s) => ({ ...s, [user.id]: true }));
-      notify(`Shared with ${user.name}!`, "success");
+      notify(`Shared with ${user.name}`, "success");
     } finally {
       setSendingMap((m) => ({ ...m, [user.id]: false }));
     }
   };
 
-  const handleCopyPostLink = async () => {
+  const handleCopyShareLink = async () => {
     triggerHaptic();
-    const url = `${getPublicShareOrigin()}/news-hub/post/${post.id || "1"}`;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(resolvedShareUrl);
       setCopied(true);
-      notify("Post link copied to clipboard!", "success");
+      notify("Link copied to clipboard", "success");
       setTimeout(() => setCopied(false), 2000);
     } catch {
       notify("Failed to copy link", "error");
@@ -205,14 +1027,16 @@ export const LiquidGlassShareModal: React.FC<{
 
   const handleNativeShare = async () => {
     triggerHaptic();
-    const url = `${getPublicShareOrigin()}/news-hub/post/${post.id || "1"}`;
-    const text = (post.description || post.title || "Check out this post on News Hub").slice(0, 120);
     if (navigator.share) {
       try {
-        await navigator.share({ title: "News Hub Post", text, url });
+        await navigator.share({
+          title: "Loops",
+          text: resolvedShareTitle,
+          url: resolvedShareUrl,
+        });
       } catch {}
     } else {
-      handleCopyPostLink();
+      handleCopyShareLink();
     }
   };
 
@@ -223,206 +1047,205 @@ export const LiquidGlassShareModal: React.FC<{
       c.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const whatsappHref = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+    `${resolvedShareTitle}\n${resolvedShareUrl}`
+  )}`;
+
   return (
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-[120] bg-black/50 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 z-[135] bg-black/55 backdrop-blur-[2px] flex items-end justify-center"
           onClick={onClose}
         >
           <motion.div
-            initial={{ y: "100%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0 }}
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 32 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl rounded-t-[34px] sm:rounded-[34px] shadow-2xl border border-white/80 dark:border-zinc-800/80 flex flex-col overflow-hidden max-h-[88vh]"
+            className="loops-surface w-full max-w-md rounded-t-[34px] shadow-2xl px-4 pt-3 pb-6 flex flex-col max-h-[85vh] overflow-hidden border-t loops-divider"
           >
             {/* Grab Handle */}
-            <div className="w-11 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto mt-3 mb-2 shrink-0" />
+            <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto my-1 shrink-0" />
 
-            {/* Header */}
-            <div className="px-5 py-2 flex items-center justify-between shrink-0">
-              <span className="text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <Send className="w-4 h-4 text-[#1877F2]" />
-                <span>Share Post</span>
-              </span>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Inbox Search Bar */}
-            <div className="px-5 py-2 shrink-0">
-              <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-[#F2F3F5] dark:bg-zinc-900">
+            {/* Top Row: Search Input + Add User Icon matching IMG_5099 */}
+            <div className="mt-2.5 flex items-center gap-2.5 shrink-0">
+              <div className="loops-gray-pill flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-2xl">
                 <Search className="w-4 h-4 text-zinc-400 shrink-0" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search contacts & inbox..."
-                  className="w-full bg-transparent text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none"
+                  placeholder="Search"
+                  className="w-full bg-transparent text-[15px] text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none"
                 />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="text-zinc-400 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
               </div>
-            </div>
-
-            {/* Direct Send to Inbox Contacts (Horizontal or Grid list) */}
-            <div className="px-5 py-2 shrink-0">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block mb-2">
-                Send to Inbox
-              </span>
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-2">
-                {filteredContacts.length === 0 ? (
-                  <p className="text-xs text-zinc-400 py-1">No contacts found</p>
-                ) : (
-                  filteredContacts.map((contact) => {
-                    const isSent = sentUserIds[contact.id];
-                    const isSending = sendingMap[contact.id];
-                    return (
-                      <div
-                        key={contact.id}
-                        className="flex flex-col items-center gap-1.5 shrink-0 w-16 text-center"
-                      >
-                        <div className="relative">
-                          <img
-                            src={contact.avatar || "https://www.deepshop.top/favicon.png"}
-                            alt={contact.name}
-                            className="w-12 h-12 rounded-full object-cover shadow-xs border border-white dark:border-zinc-800"
-                          />
-                          {isSent && (
-                            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-                              <Check className="w-3 h-3 stroke-[3]" />
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 truncate w-full">
-                          {contact.name.split(" ")[0]}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={isSent || isSending}
-                          onClick={() => handleSendToUser(contact)}
-                          className={`w-full py-1 rounded-full text-[10.5px] font-extrabold transition cursor-pointer ${
-                            isSent
-                              ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
-                              : "bg-[#1877F2] text-white hover:bg-blue-600 active:scale-95"
-                          }`}
-                        >
-                          {isSending ? "..." : isSent ? "Sent" : "Send"}
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Quick Actions List (Repost, Quote, Copy Link, Native Share) */}
-            <div className="px-5 py-3 border-t border-slate-100 dark:border-zinc-800 space-y-2 overflow-y-auto flex-1">
               <button
                 type="button"
                 onClick={() => {
-                  if (onRepost) onRepost();
+                  triggerHaptic();
                   onClose();
+                  navigate("/loops/search");
                 }}
-                className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-between text-left transition cursor-pointer"
+                className="loops-gray-pill w-11 h-11 rounded-full flex items-center justify-center text-zinc-900 dark:text-zinc-100 active:scale-92 transition cursor-pointer shrink-0"
+                aria-label="Find people"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <Repeat className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                      Repost to Feed
-                    </p>
-                    <p className="text-[11px] text-zinc-400">
-                      Share instantly with your followers
-                    </p>
-                  </div>
-                </div>
+                <UserPlus className="w-5 h-5 stroke-[1.9]" />
               </button>
+            </div>
 
-              {onQuotePost && (
+            {/* Dismissible Banner Note matching IMG_5099 */}
+            {bannerVisible && (
+              <div className="loops-gray-pill mt-3 px-4 py-3 rounded-2xl flex items-center justify-between gap-2 shrink-0">
+                <p className="text-[13px] text-zinc-500 dark:text-zinc-400 font-normal">
+                  You can now message people directly on Loops.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setBannerVisible(false)}
+                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer shrink-0"
+                  aria-label="Dismiss message tip"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* 3-Column Contact Grid matching IMG_5099 */}
+            <div className="mt-4 overflow-y-auto flex-1 pr-0.5 no-scrollbar">
+              {filteredContacts.length === 0 ? (
+                <div className="py-10 text-center text-xs text-zinc-400">
+                  No people found matching your search.
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-y-4 gap-x-2">
+                  {filteredContacts.map((contact) => {
+                    const isSent = sentUserIds[contact.id];
+                    const isSending = sendingMap[contact.id];
+                    return (
+                      <button
+                        key={contact.id}
+                        type="button"
+                        disabled={isSending}
+                        onClick={() => handleSendToUser(contact)}
+                        className="flex flex-col items-center text-center group cursor-pointer"
+                      >
+                        <div className="relative w-[72px] h-[72px] rounded-full overflow-hidden loops-gray-pill border loops-divider mb-1.5 flex items-center justify-center transition group-active:scale-95">
+                          {contact.avatar ? (
+                            <img
+                              src={contact.avatar}
+                              alt={contact.name}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-lg font-bold text-zinc-600 dark:text-zinc-300">
+                              {(contact.name || "U").charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                          {isSent && (
+                            <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+                              <Check className="w-6 h-6 text-white stroke-[2.8]" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[12.5px] font-semibold text-zinc-950 dark:text-white truncate w-full px-1">
+                          {contact.username || contact.name}
+                        </span>
+                        <span className="text-[11.5px] text-zinc-400 dark:text-zinc-500 truncate w-full px-1">
+                          {contact.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Horizontal Action Row matching IMG_5099 */}
+            <div className="mt-4 pt-3.5 border-t loops-divider shrink-0">
+              <div className="flex items-start gap-4 overflow-x-auto no-scrollbar pb-1">
+                {/* 1. Share to */}
+                <button
+                  type="button"
+                  onClick={handleNativeShare}
+                  className="flex flex-col items-center gap-1.5 shrink-0 w-16 text-center cursor-pointer group"
+                >
+                  <div className="loops-gray-pill w-14 h-14 rounded-full flex items-center justify-center text-zinc-950 dark:text-white group-active:scale-90 transition">
+                    <ShareUploadIcon className="w-[22px] h-[22px]" />
+                  </div>
+                  <span className="text-[11.5px] font-normal text-zinc-800 dark:text-zinc-200 leading-tight">
+                    Share to
+                  </span>
+                </button>
+
+                {/* 2. WhatsApp (Anchor tag — zero window.open) */}
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => triggerHaptic()}
+                  className="flex flex-col items-center gap-1.5 shrink-0 w-16 text-center cursor-pointer group"
+                >
+                  <div className="loops-gray-pill w-14 h-14 rounded-full flex items-center justify-center text-[#1FAF5A] group-active:scale-90 transition">
+                    <WhatsAppOutlineSvg className="w-[24px] h-[24px]" />
+                  </div>
+                  <span className="text-[11.5px] font-normal text-zinc-800 dark:text-zinc-200 leading-tight">
+                    WhatsApp
+                  </span>
+                </a>
+
+                {/* 3. Messenger */}
+                <button
+                  type="button"
+                  onClick={handleCopyShareLink}
+                  className="flex flex-col items-center gap-1.5 shrink-0 w-16 text-center cursor-pointer group"
+                >
+                  <div className="loops-gray-pill w-14 h-14 rounded-full flex items-center justify-center text-[#0084FF] group-active:scale-90 transition">
+                    <MessengerBoltSvg className="w-[24px] h-[24px]" />
+                  </div>
+                  <span className="text-[11.5px] font-normal text-zinc-800 dark:text-zinc-200 leading-tight">
+                    Messenger
+                  </span>
+                </button>
+
+                {/* 4. Add to story */}
                 <button
                   type="button"
                   onClick={() => {
-                    onQuotePost();
+                    triggerHaptic();
                     onClose();
+                    navigate("/loops/create-story?from=loops");
                   }}
-                  className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-between text-left transition cursor-pointer"
+                  className="flex flex-col items-center gap-1.5 shrink-0 w-16 text-center cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                        Quote Post
-                      </p>
-                      <p className="text-[11px] text-zinc-400">
-                        Add your thoughts before reposting
-                      </p>
-                    </div>
+                  <div className="loops-gray-pill w-14 h-14 rounded-full flex items-center justify-center text-[#E1306C] group-active:scale-90 transition">
+                    <AddStoryCirclePlusSvg className="w-[24px] h-[24px]" />
                   </div>
+                  <span className="text-[11.5px] font-normal text-zinc-800 dark:text-zinc-200 leading-tight">
+                    Loops story
+                  </span>
                 </button>
-              )}
 
-              <button
-                type="button"
-                onClick={handleCopyPostLink}
-                className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-between text-left transition cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] flex items-center justify-center">
+                {/* 5. Copy link */}
+                <button
+                  type="button"
+                  onClick={handleCopyShareLink}
+                  className="flex flex-col items-center gap-1.5 shrink-0 w-16 text-center cursor-pointer group"
+                >
+                  <div className="loops-gray-pill w-14 h-14 rounded-full flex items-center justify-center text-zinc-900 dark:text-white group-active:scale-90 transition">
                     {copied ? (
-                      <Check className="w-4 h-4 text-emerald-500" />
+                      <Check className="w-[22px] h-[22px] text-emerald-500 stroke-[2.5]" />
                     ) : (
-                      <Copy className="w-4 h-4" />
+                      <Link2 className="w-[22px] h-[22px] stroke-[2]" />
                     )}
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                      {copied ? "Link Copied!" : "Copy Post Link"}
-                    </p>
-                    <p className="text-[11px] text-zinc-400">
-                      Direct shareable URL for web
-                    </p>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNativeShare}
-                className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center justify-between text-left transition cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 flex items-center justify-center">
-                    <Share2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                      Share via WhatsApp / External
-                    </p>
-                    <p className="text-[11px] text-zinc-400">
-                      Open system share menu
-                    </p>
-                  </div>
-                </div>
-              </button>
+                  <span className="text-[11.5px] font-normal text-zinc-800 dark:text-zinc-200 leading-tight">
+                    {copied ? "Copied" : "Copy link"}
+                  </span>
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -432,7 +1255,7 @@ export const LiquidGlassShareModal: React.FC<{
 };
 
 /* ============================================================================
- * 2. POST ACTIVITY & ANALYTICS MODAL (Matching IMG_4999)
+ * 2. POST ACTIVITY & ANALYTICS MODAL (Zero Emojis + Synced Admin Reactions)
  * ========================================================================== */
 export const LiquidGlassActivityModal: React.FC<{
   isOpen: boolean;
@@ -443,8 +1266,7 @@ export const LiquidGlassActivityModal: React.FC<{
 
   const views = Number(post.views || 0);
   const commentsCount = Number(post.commentsCount || 0);
-  const repostsCount = Number(post.repostsCount || 0);
-  const votesTotal = Number(post.votes || 0);
+  const totalReactions = getTotalPostReactions(post);
 
   const reactionsCount = post.reactionsCount || {
     like: 0,
@@ -455,18 +1277,57 @@ export const LiquidGlassActivityModal: React.FC<{
     angry: 0,
   };
 
-  const totalReactions = Object.values(reactionsCount).reduce(
-    (a, b) => a + (Number(b) || 0),
+  const sumRaw = Object.values(reactionsCount).reduce(
+    (a, b) => a + Math.max(0, Number(b || 0)),
     0
   );
+  const effectiveLove =
+    Math.max(0, Number(reactionsCount.love || 0)) +
+    Math.max(0, totalReactions - sumRaw);
 
   const reactionMetaList = [
-    { key: "like", label: "Likes", emoji: "👍", count: reactionsCount.like || 0, color: "bg-blue-500" },
-    { key: "love", label: "Loves", emoji: "❤️", count: reactionsCount.love || 0, color: "bg-rose-500" },
-    { key: "haha", label: "Hahas", emoji: "😆", count: reactionsCount.haha || 0, color: "bg-amber-500" },
-    { key: "wow", label: "Wows", emoji: "😮", count: reactionsCount.wow || 0, color: "bg-yellow-500" },
-    { key: "sad", label: "Sads", emoji: "😢", count: reactionsCount.sad || 0, color: "bg-indigo-500" },
-    { key: "angry", label: "Angries", emoji: "😡", count: reactionsCount.angry || 0, color: "bg-red-600" },
+    {
+      key: "love",
+      label: "Loves",
+      Icon: Heart,
+      count: effectiveLove,
+      color: "bg-rose-500",
+    },
+    {
+      key: "like",
+      label: "Likes",
+      Icon: ThumbsUp,
+      count: Number(reactionsCount.like || 0),
+      color: "bg-sky-500",
+    },
+    {
+      key: "haha",
+      label: "Laughs",
+      Icon: Smile,
+      count: Number(reactionsCount.haha || 0),
+      color: "bg-amber-500",
+    },
+    {
+      key: "wow",
+      label: "Wows",
+      Icon: Sparkles,
+      count: Number(reactionsCount.wow || 0),
+      color: "bg-yellow-500",
+    },
+    {
+      key: "sad",
+      label: "Sads",
+      Icon: Frown,
+      count: Number(reactionsCount.sad || 0),
+      color: "bg-indigo-500",
+    },
+    {
+      key: "angry",
+      label: "Angries",
+      Icon: AlertCircle,
+      count: Number(reactionsCount.angry || 0),
+      color: "bg-red-600",
+    },
   ];
 
   return (
@@ -482,78 +1343,78 @@ export const LiquidGlassActivityModal: React.FC<{
             exit={{ scale: 0.94, opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl rounded-t-[34px] sm:rounded-[34px] p-5 space-y-4 shadow-2xl border border-white/80 dark:border-zinc-800 overflow-hidden"
+            className="loops-surface w-full max-w-md rounded-t-[34px] sm:rounded-[34px] p-5 space-y-4 shadow-2xl border loops-divider overflow-hidden"
           >
-            {/* Grab Handle */}
             <div className="w-11 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto" />
 
-            {/* Title */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
-              <span className="text-base font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
-                <BarChart2 className="w-4 h-4 text-[#1877F2]" />
-                <span>Post Activity & Analytics</span>
+            <div className="flex items-center justify-between border-b loops-divider pb-3">
+              <span className="text-base font-bold text-zinc-950 dark:text-white flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-[#0095F6]" />
+                <span>Loop Activity</span>
               </span>
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
+                className="loops-gray-pill w-8 h-8 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Top Stat Cards */}
             <div className="grid grid-cols-3 gap-2.5">
-              <div className="rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 p-3 text-center border border-blue-100/50 dark:border-blue-900/30">
-                <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 block">
-                  Total Views
+              <div className="loops-gray-pill rounded-2xl p-3 text-center">
+                <span className="text-[11px] font-semibold text-zinc-500 block">
+                  Views
                 </span>
-                <span className="text-lg font-black text-zinc-900 dark:text-white tabular-nums">
+                <span className="text-lg font-bold text-zinc-950 dark:text-white tabular-nums">
                   {formatCompactNumber(views)}
                 </span>
               </div>
-              <div className="rounded-2xl bg-rose-50/80 dark:bg-rose-950/30 p-3 text-center border border-rose-100/50 dark:border-rose-900/30">
-                <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 block">
+              <div className="loops-gray-pill rounded-2xl p-3 text-center">
+                <span className="text-[11px] font-semibold text-zinc-500 block">
                   Reactions
                 </span>
-                <span className="text-lg font-black text-zinc-900 dark:text-white tabular-nums">
+                <span className="text-lg font-bold text-zinc-950 dark:text-white tabular-nums">
                   {formatCompactNumber(totalReactions)}
                 </span>
               </div>
-              <div className="rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 p-3 text-center border border-emerald-100/50 dark:border-emerald-900/30">
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block">
-                  Comments
+              <div className="loops-gray-pill rounded-2xl p-3 text-center">
+                <span className="text-[11px] font-semibold text-zinc-500 block">
+                  Replies
                 </span>
-                <span className="text-lg font-black text-zinc-900 dark:text-white tabular-nums">
+                <span className="text-lg font-bold text-zinc-950 dark:text-white tabular-nums">
                   {formatCompactNumber(commentsCount)}
                 </span>
               </div>
             </div>
 
-            {/* Reactions Breakdown Bars */}
             <div className="space-y-2 pt-1">
-              <span className="text-xs font-extrabold text-zinc-900 dark:text-white block">
+              <span className="text-xs font-bold text-zinc-950 dark:text-white block">
                 Reaction Breakdown
               </span>
               <div className="space-y-2">
                 {reactionMetaList.map((item) => {
-                  const pct = totalReactions > 0 ? Math.round((item.count / totalReactions) * 100) : 0;
+                  const pct =
+                    totalReactions > 0
+                      ? Math.round((item.count / totalReactions) * 100)
+                      : 0;
+                  const ItemIcon = item.Icon;
                   return (
                     <div key={item.key} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-semibold">
+                      <div className="flex items-center justify-between text-xs font-medium">
                         <span className="flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200">
-                          <span>{item.emoji}</span>
+                          <ItemIcon className="w-3.5 h-3.5 text-zinc-500" />
                           <span>{item.label}</span>
                         </span>
                         <span className="text-zinc-500 tabular-nums">
                           {item.count} ({pct}%)
                         </span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                      <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
-                          transition={{ duration: 0.5, ease: "easeOut" }}
+                          transition={{ duration: 0.45, ease: "easeOut" }}
                           className={`h-full rounded-full ${item.color}`}
                         />
                       </div>
@@ -562,11 +1423,6 @@ export const LiquidGlassActivityModal: React.FC<{
                 })}
               </div>
             </div>
-
-            {/* Footer Note */}
-            <p className="text-[11px] text-zinc-400 text-center pt-1 leading-relaxed">
-              Post view stats are visible exclusively to the author to preserve privacy.
-            </p>
           </motion.div>
         </div>
       )}
@@ -575,7 +1431,7 @@ export const LiquidGlassActivityModal: React.FC<{
 };
 
 /* ============================================================================
- * 3. ENHANCED COMMENT ITEM COMPONENT WITH ACTIONS & 3-DOT MENU (Matching IMG_4998)
+ * 3. ENHANCED COMMENT ITEM COMPONENT WITH ACTIONS & 3-DOT MENU (Zero Emojis)
  * ========================================================================== */
 export const CommentItemWithActions: React.FC<{
   comment: ScamComment;
@@ -585,18 +1441,21 @@ export const CommentItemWithActions: React.FC<{
   onEdit: (cmt: ScamComment) => void;
   onDelete: (cmt: ScamComment) => void;
   onReport?: (cmt: ScamComment) => void;
-}> = ({ comment, postAuthorId, onReact, onReply, onEdit, onDelete, onReport }) => {
+}> = ({ comment, postAuthorId, onReact, onReply, onEdit, onDelete }) => {
   const [showMenu, setShowMenu] = useState(false);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [copied, setCopied] = useState(false);
   const notify = useNotify();
   const navigate = useNavigate();
   const currentUser = auth.currentUser;
 
-  const isCommentOwner = Boolean(currentUser?.uid && currentUser.uid === comment.userId);
+  const isCommentOwner = Boolean(
+    currentUser?.uid && currentUser.uid === comment.userId
+  );
   const canDelete =
     isCommentOwner ||
-    Boolean(currentUser?.uid && postAuthorId && currentUser.uid === postAuthorId);
+    Boolean(
+      currentUser?.uid && postAuthorId && currentUser.uid === postAuthorId
+    );
 
   const handleCopyText = async () => {
     triggerHaptic();
@@ -614,23 +1473,33 @@ export const CommentItemWithActions: React.FC<{
   return (
     <div
       className={`relative flex items-start gap-2.5 sm:gap-3 py-1 ${
-        comment.replyToCommentId ? "pl-7 sm:pl-8 border-l-2 border-slate-100 dark:border-zinc-800 ml-2" : ""
+        comment.replyToCommentId
+          ? "pl-7 sm:pl-8 border-l loops-divider ml-2"
+          : ""
       }`}
     >
-      <img
-        src={comment.userAvatar || "https://www.deepshop.top/favicon.png"}
-        alt={comment.userName}
-        referrerPolicy="no-referrer"
-        onClick={() => navigate(`/author/${comment.userId}`)}
-        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shrink-0 cursor-pointer shadow-2xs"
-      />
+      {comment.userAvatar ? (
+        <img
+          src={comment.userAvatar}
+          alt={comment.userName}
+          referrerPolicy="no-referrer"
+          onClick={() => navigate(`/loops/profile/${comment.userId}`)}
+          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shrink-0 cursor-pointer border loops-divider"
+        />
+      ) : (
+        <div
+          onClick={() => navigate(`/loops/profile/${comment.userId}`)}
+          className="loops-gray-pill w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 cursor-pointer"
+        >
+          <UserIcon className="w-4 h-4 text-zinc-500" />
+        </div>
+      )}
 
       <div className="flex-1 min-w-0">
-        {/* Comment Bubble */}
-        <div className="rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800/90 px-3.5 py-2.5 space-y-1 relative group">
+        <div className="loops-gray-pill rounded-2xl px-3.5 py-2.5 space-y-1 relative group">
           <div className="flex items-center justify-between gap-2">
             <span
-              onClick={() => navigate(`/author/${comment.userId}`)}
+              onClick={() => navigate(`/loops/profile/${comment.userId}`)}
               className="text-xs font-bold text-zinc-900 dark:text-white cursor-pointer hover:underline truncate"
             >
               {comment.userName}
@@ -642,7 +1511,6 @@ export const CommentItemWithActions: React.FC<{
                 {comment.isEdited ? " · Edited" : ""}
               </span>
 
-              {/* 3-Dot Options Button */}
               <button
                 type="button"
                 onClick={() => {
@@ -658,7 +1526,7 @@ export const CommentItemWithActions: React.FC<{
           </div>
 
           {comment.replyToUserName && (
-            <span className="text-[11px] font-semibold text-[#1877F2] block">
+            <span className="text-[11px] font-semibold text-[#0095F6] block">
               @{comment.replyToUserName}
             </span>
           )}
@@ -673,23 +1541,22 @@ export const CommentItemWithActions: React.FC<{
             <img
               src={comment.imageUrl}
               alt="Attached comment image"
-              className="mt-1.5 rounded-xl max-h-48 w-auto object-cover border border-slate-200 dark:border-zinc-700"
+              className="mt-1.5 rounded-xl max-h-48 w-auto object-cover border loops-divider"
             />
           )}
 
-          {/* 3-Dot Popover Menu */}
           <AnimatePresence>
             {showMenu && (
               <motion.div
                 initial={{ scale: 0.9, opacity: 0, y: -4 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: -4 }}
-                className="absolute right-2 top-8 z-30 w-44 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl shadow-xl border border-slate-200/80 dark:border-zinc-700 p-1.5 space-y-1 text-xs font-semibold"
+                className="loops-liquid-popover absolute right-2 top-8 z-30 w-44 rounded-2xl p-1.5 space-y-1 text-xs font-semibold"
               >
                 <button
                   type="button"
                   onClick={handleCopyText}
-                  className="w-full px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-zinc-700 dark:text-zinc-200 cursor-pointer"
+                  className="w-full px-3 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-2 text-zinc-700 dark:text-zinc-200 cursor-pointer"
                 >
                   <Copy className="w-3.5 h-3.5 text-zinc-400" />
                   <span>{copied ? "Copied!" : "Copy text"}</span>
@@ -701,7 +1568,7 @@ export const CommentItemWithActions: React.FC<{
                     onReply(comment);
                     setShowMenu(false);
                   }}
-                  className="w-full px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-zinc-700 dark:text-zinc-200 cursor-pointer"
+                  className="w-full px-3 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-2 text-zinc-700 dark:text-zinc-200 cursor-pointer"
                 >
                   <Reply className="w-3.5 h-3.5 text-zinc-400" />
                   <span>Reply</span>
@@ -714,7 +1581,7 @@ export const CommentItemWithActions: React.FC<{
                       onEdit(comment);
                       setShowMenu(false);
                     }}
-                    className="w-full px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-zinc-700 dark:text-zinc-200 cursor-pointer"
+                    className="w-full px-3 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-2 text-zinc-700 dark:text-zinc-200 cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
                     <span>Edit comment</span>
@@ -728,7 +1595,7 @@ export const CommentItemWithActions: React.FC<{
                       onDelete(comment);
                       setShowMenu(false);
                     }}
-                    className="w-full px-3 py-1.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 text-rose-600 cursor-pointer"
+                    className="w-full px-3 py-1.5 rounded-xl hover:bg-rose-500/10 flex items-center gap-2 text-[#FF3040] cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Delete</span>
@@ -739,72 +1606,36 @@ export const CommentItemWithActions: React.FC<{
           </AnimatePresence>
         </div>
 
-        {/* Action Row below comment: React, Reply, Repost, Share */}
-        <div className="flex items-center gap-3.5 pl-2 pt-1">
-          {/* Reaction Quick Picker */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                setShowReactionPicker((v) => !v);
-              }}
-              className={`text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition ${
-                myReaction
-                  ? "text-[#1877F2] font-bold"
-                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-            >
-              <Heart className={`w-3.5 h-3.5 ${myReaction ? "fill-current" : ""}`} />
-              <span>React</span>
-            </button>
-
-            <AnimatePresence>
-              {showReactionPicker && (
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0, y: 4 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  exit={{ scale: 0.8, opacity: 0, y: 4 }}
-                  className="absolute left-0 bottom-6 z-20 flex items-center gap-1 px-2 py-1 rounded-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl shadow-xl border border-slate-200 dark:border-zinc-700"
-                >
-                  {[
-                    { type: "love", emoji: "❤️" },
-                    { type: "like", emoji: "👍" },
-                    { type: "haha", emoji: "😆" },
-                    { type: "wow", emoji: "😮" },
-                    { type: "sad", emoji: "😢" },
-                    { type: "angry", emoji: "😡" },
-                  ].map((re) => (
-                    <button
-                      key={re.type}
-                      type="button"
-                      onClick={() => {
-                        onReact(comment, re.type as ReactionType);
-                        setShowReactionPicker(false);
-                      }}
-                      className="p-1 text-sm hover:scale-125 transition cursor-pointer"
-                    >
-                      {re.emoji}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+        <div className="flex items-center gap-4 pl-2 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              onReact(comment, "love");
+            }}
+            className={`text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition ${
+              myReaction
+                ? "text-[#FF3040] font-bold"
+                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${myReaction ? "fill-current" : ""}`} />
+            <span>Like</span>
+          </button>
 
           <button
             type="button"
             onClick={() => onReply(comment)}
-            className="text-[11px] font-semibold text-zinc-500 hover:text-[#1877F2] flex items-center gap-1 cursor-pointer"
+            className="text-[11px] font-semibold text-zinc-500 hover:text-[#0095F6] flex items-center gap-1 cursor-pointer"
           >
-            <Reply className="w-3.5 h-3.5" />
+            <MessageCircle className="w-3.5 h-3.5" />
             <span>Reply</span>
           </button>
 
           <button
             type="button"
-            onClick={() => handleCopyText()}
-            className="text-[11px] font-semibold text-zinc-500 hover:text-[#1877F2] flex items-center gap-1 cursor-pointer"
+            onClick={handleCopyText}
+            className="text-[11px] font-semibold text-zinc-500 hover:text-[#0095F6] flex items-center gap-1 cursor-pointer"
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>Share</span>

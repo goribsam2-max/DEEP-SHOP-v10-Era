@@ -79,11 +79,11 @@ import {
   Cpu,
 } from "lucide-react";
 
-import parkShowcaseImg from "../../src/assets/images/feed_showcase_park_1792826817616.jpg";
-import creatorAvatar1 from "../../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
-import creatorAvatar2 from "../../src/assets/images/story_avatar_creator_2_1792826816378.jpg";
-import creatorAvatar3 from "../../src/assets/images/story_avatar_creator_3_1792826816863.jpg";
-import deepShopLogoFallback from "../../src/assets/images/deep_shop_logo_1783442733929.jpg";
+const parkShowcaseImg = "";
+const creatorAvatar1 = "";
+const creatorAvatar2 = "";
+const creatorAvatar3 = "";
+const deepShopLogoFallback = "";
 
 /* ============================================================================
  * TYPES & CONSTANTS (ZERO INLINE STYLES — TAILWIND CLASS MAPS + CANVAS HEX)
@@ -416,7 +416,9 @@ export default function AddStory() {
   const footerLogo = useFooterLogo();
 
   const fromNewsHub =
+    searchParams.get("from") === "loops" ||
     searchParams.get("from") === "news-hub" ||
+    location.pathname.startsWith("/loops") ||
     location.pathname.startsWith("/news-hub");
   const promptParam = searchParams.get("prompt") || "";
 
@@ -1848,8 +1850,8 @@ export default function AddStory() {
       if (selectedDmUserIds.length > 0) {
         const storyShareUrl =
           typeof window !== "undefined"
-            ? `${window.location.origin}/news-hub/story/${storyId}`
-            : `/news-hub/story/${storyId}`;
+            ? `${window.location.origin}/loops/story/${storyId}`
+            : `/loops/story/${storyId}`;
         const dmText = caption.trim()
           ? `Shared a story: "${caption.trim()}"\n${storyShareUrl}`
           : `Shared a story with you:\n${storyShareUrl}`;
@@ -1881,9 +1883,9 @@ export default function AddStory() {
             await addDoc(collection(db, "notifications"), {
               userId: targetUid,
               title: `${authorName} shared a story with you`,
-              message: caption.trim() || "Tap to view story on Deep Shop Feed",
+              message: caption.trim() || "Tap to view story on Loops",
               type: "social",
-              link: `/news-hub/story/${storyId}`,
+              link: `/loops/story/${storyId}`,
               read: false,
               createdAt: new Date().toISOString(),
             }).catch(() => {});
@@ -1899,7 +1901,7 @@ export default function AddStory() {
           : "Your story is now live!",
         "success"
       );
-      navigate("/news-hub");
+      navigate("/loops");
     } catch {
       notify("Could not publish story. Please try again.", "error");
     } finally {
@@ -2475,7 +2477,7 @@ export default function AddStory() {
             <header className="px-4 pt-3 pb-2.5 flex items-center justify-between shrink-0">
               <button
                 type="button"
-                onClick={() => navigate("/news-hub")}
+                onClick={() => navigate("/loops")}
                 className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Close"
               >

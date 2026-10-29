@@ -15,6 +15,7 @@ export const TopNavTabSwitcher: React.FC<TopNavTabSwitcherProps> = ({
   const location = useLocation();
 
   const isNewsHub =
+    location.pathname.startsWith("/loops") ||
     location.pathname.startsWith("/news-hub") ||
     location.pathname.startsWith("/news") ||
     location.pathname.startsWith("/scam");
@@ -42,21 +43,20 @@ export const TopNavTabSwitcher: React.FC<TopNavTabSwitcherProps> = ({
         <span className="truncate">Shop</span>
       </button>
 
-      {/* News Hub Tab */}
+      {/* Loops Tab */}
       <button
         type="button"
         onClick={() => {
           triggerHaptic();
-          if (!isNewsHub) navigate("/news-hub");
+          if (!isNewsHub) navigate("/loops");
         }}
-        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight whitespace-nowrap transition-all duration-200 cursor-pointer relative ${
+        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer relative ${
           isNewsHub
-            ? "bg-[#1877F2] text-white shadow-[0_4px_12px_rgba(24,119,242,0.3)] font-bold"
-            : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+            ? "bg-zinc-950 dark:bg-white text-white dark:text-black shadow-xs font-extrabold"
+            : "text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
         }`}
       >
-        <Newspaper className="w-3.5 h-3.5 shrink-0" />
-        <span className="whitespace-nowrap">News Hub</span>
+        <span className="loops-wordmark text-[13.5px] whitespace-nowrap">Loops</span>
         <span className="flex h-1.5 w-1.5 relative shrink-0">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>

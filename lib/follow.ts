@@ -370,7 +370,7 @@ export async function toggleFollowUser({
             isRead: false,
             read: false,
             createdAt: Date.now(),
-            link: `/news-hub/profile/${targetUid}`,
+            link: `/loops/profile/${targetUid}`,
           },
           { merge: true }
         ).catch(() => {});
@@ -391,7 +391,7 @@ export async function toggleFollowUser({
           isRead: false,
           read: false,
           createdAt: Date.now(),
-          link: `/news-hub/profile/${myUid}`,
+          link: `/loops/profile/${myUid}`,
         };
 
         addDoc(collection(db, "news_hub_notifications"), notifPayload).catch(() => {});

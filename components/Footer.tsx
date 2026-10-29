@@ -189,7 +189,7 @@ export const Footer: React.FC = () => {
         { label: "My Orders & Tracking", to: "/orders" },
         { label: "Delivery Address", to: "/shipping-address" },
         { label: "Direct Chat Support", to: "/messages" },
-        { label: "Community & News Hub", to: "/news-hub" },
+        { label: "Loops", to: "/loops" },
       ],
     },
     {

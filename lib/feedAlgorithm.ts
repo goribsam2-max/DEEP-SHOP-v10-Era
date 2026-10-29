@@ -1,11 +1,14 @@
 import { doc, increment, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import { ScamPost } from "../types";
+import { ScamPost, ReactionType } from "../types";
 
 const AFFINITY_STORAGE_KEY = "deep_feed_affinity_v1";
 const IMPRESSIONS_STORAGE_KEY = "deep_feed_impressions_v1";
 const DISMISSED_PROFILES_KEY = "deep_dismissed_profiles_v1";
 const DISMISSED_POSTS_KEY = "deep_dismissed_posts_v1";
+const MUTED_USERS_KEY = "loops_muted_users_v1";
+const RESTRICTED_USERS_KEY = "loops_restricted_users_v1";
+const BLOCKED_USERS_KEY = "loops_blocked_users_v1";
 
 interface FeedAffinityState {
   authorClicks: Record<string, number>;
@@ -137,14 +140,265 @@ export async function recordPostDetailView(postId: string): Promise<void> {
   } catch {}
 }
 
-export function getTotalPostReactions(post: ScamPost): number {
+export function getTotalPostReactions(post: Partial<ScamPost> | null | undefined): number {
+  if (!post) return 0;
+  let sumFromCounts = 0;
   if (post.reactionsCount && typeof post.reactionsCount === "object") {
-    return (Object.values(post.reactionsCount) as number[]).reduce(
-      (sum, val) => sum + Number(val || 0),
+    sumFromCounts = (Object.values(post.reactionsCount) as number[]).reduce(
+      (sum, val) => sum + Math.max(0, Number(val || 0)),
       0
     );
   }
-  return Number(post.votes || 0);
+  const sumFromReactionsObj =
+    post.reactions && typeof post.reactions === "object"
+      ? Object.keys(post.reactions).length
+      : 0;
+  const sumFromUsersObj =
+    post.reactionsUsers && typeof post.reactionsUsers === "object"
+      ? Object.keys(post.reactionsUsers).length
+      : 0;
+  const sumFromVotedIds = Array.isArray(post.votedUserIds)
+    ? post.votedUserIds.filter(Boolean).length
+    : 0;
+  const votesNum = Math.max(0, Number(post.votes || 0));
+
+  return Math.max(
+    sumFromCounts,
+    sumFromReactionsObj,
+    sumFromUsersObj,
+    sumFromVotedIds,
+    votesNum
+  );
+}
+
+export function hasUserReactedToPost(
+  post: Partial<ScamPost> | null | undefined,
+  uid?: string | null,
+  localReaction?: ReactionType | null
+): boolean {
+  if (!post || !uid) return Boolean(localReaction);
+  if (localReaction) return true;
+  if (post.reactions && post.reactions[uid]) return true;
+  if (post.reactionsUsers && post.reactionsUsers[uid]) return true;
+  if (Array.isArray(post.votedUserIds) && post.votedUserIds.includes(uid)) {
+    return true;
+  }
+  return false;
+}
+
+export function computeNextPostReactionState(
+  post: ScamPost,
+  uid: string,
+  userMeta: {
+    userName: string;
+    userAvatar?: string;
+    username?: string;
+  },
+  chosenType: ReactionType = "love",
+  localReactionHint?: ReactionType | null
+): {
+  isRemoving: boolean;
+  activeReaction: ReactionType | null;
+  reactions: Record<string, ReactionType>;
+  reactionsCount: Record<ReactionType, number>;
+  reactionsUsers: NonNullable<ScamPost["reactionsUsers"]>;
+  votedUserIds: string[];
+  votes: number;
+} {
+  const existingUserReaction: ReactionType | null =
+    post.reactions?.[uid] ||
+    (post.reactionsUsers?.[uid]?.type as ReactionType | undefined) ||
+    localReactionHint ||
+    (Array.isArray(post.votedUserIds) && post.votedUserIds.includes(uid)
+      ? "love"
+      : null);
+
+  const isRemoving = Boolean(existingUserReaction);
+
+  const rawSum = post.reactionsCount
+    ? (Object.values(post.reactionsCount) as number[]).reduce(
+        (a, b) => a + Math.max(0, Number(b || 0)),
+        0
+      )
+    : 0;
+  const baselineTotal = getTotalPostReactions(post);
+
+  const counts: Record<ReactionType, number> = {
+    like: Math.max(0, Number(post.reactionsCount?.like || 0)),
+    love: Math.max(0, Number(post.reactionsCount?.love || 0)),
+    haha: Math.max(0, Number(post.reactionsCount?.haha || 0)),
+    wow: Math.max(0, Number(post.reactionsCount?.wow || 0)),
+    sad: Math.max(0, Number(post.reactionsCount?.sad || 0)),
+    angry: Math.max(0, Number(post.reactionsCount?.angry || 0)),
+  };
+
+  // Preserve admin-configured votes/counts even if reactionsCount was partially unpopulated
+  if (baselineTotal > rawSum) {
+    counts.love += baselineTotal - rawSum;
+  }
+
+  if (isRemoving && existingUserReaction) {
+    if (counts[existingUserReaction] > 0) {
+      counts[existingUserReaction] = Math.max(0, counts[existingUserReaction] - 1);
+    } else if (counts.love > 0) {
+      counts.love = Math.max(0, counts.love - 1);
+    } else if (counts.like > 0) {
+      counts.like = Math.max(0, counts.like - 1);
+    }
+  } else {
+    counts[chosenType] = (counts[chosenType] || 0) + 1;
+  }
+
+  const nextReactions: Record<string, ReactionType> = {
+    ...(post.reactions || {}),
+  };
+  if (isRemoving) {
+    delete nextReactions[uid];
+  } else {
+    nextReactions[uid] = chosenType;
+  }
+
+  const nextReactionsUsers: NonNullable<ScamPost["reactionsUsers"]> = {
+    ...(post.reactionsUsers || {}),
+  };
+  if (isRemoving) {
+    delete nextReactionsUsers[uid];
+  } else {
+    nextReactionsUsers[uid] = {
+      userName: userMeta.userName || "Member",
+      userAvatar: userMeta.userAvatar || "",
+      type: chosenType,
+      timestamp: Date.now(),
+    };
+  }
+
+  const prevVoterSet = new Set<string>(
+    Array.isArray(post.votedUserIds) ? post.votedUserIds.filter(Boolean) : []
+  );
+  if (isRemoving) {
+    prevVoterSet.delete(uid);
+  } else {
+    prevVoterSet.add(uid);
+  }
+  const nextVotedUserIds = Array.from(prevVoterSet);
+
+  const sumCountsAfter = (Object.values(counts) as number[]).reduce(
+    (a, b) => a + Math.max(0, Number(b || 0)),
+    0
+  );
+  const nextVotes = Math.max(
+    sumCountsAfter,
+    Object.keys(nextReactions).length,
+    nextVotedUserIds.length
+  );
+
+  // Sync localStorage caches so offline/local copies never mask admin counts
+  try {
+    const localMap = JSON.parse(
+      localStorage.getItem("deep_post_reactions") || "{}"
+    );
+    if (isRemoving) delete localMap[post.id];
+    else localMap[post.id] = chosenType;
+    localStorage.setItem("deep_post_reactions", JSON.stringify(localMap));
+  } catch {}
+
+  try {
+    const rawPosts = localStorage.getItem("deep_scam_posts");
+    if (rawPosts) {
+      const list = JSON.parse(rawPosts);
+      if (Array.isArray(list)) {
+        const updatedList = list.map((item: any) =>
+          item?.id === post.id
+            ? {
+                ...item,
+                reactions: nextReactions,
+                reactionsCount: counts,
+                reactionsUsers: nextReactionsUsers,
+                votedUserIds: nextVotedUserIds,
+                votes: nextVotes,
+              }
+            : item
+        );
+        localStorage.setItem("deep_scam_posts", JSON.stringify(updatedList));
+      }
+    }
+  } catch {}
+
+  return {
+    isRemoving,
+    activeReaction: isRemoving ? null : chosenType,
+    reactions: nextReactions,
+    reactionsCount: counts,
+    reactionsUsers: nextReactionsUsers,
+    votedUserIds: nextVotedUserIds,
+    votes: nextVotes,
+  };
+}
+
+export function boostPostAffinity(post: Partial<ScamPost>): void {
+  if (!post) return;
+  const affinity = loadAffinity();
+  if (post.reporterId) {
+    affinity.authorClicks[post.reporterId] =
+      (affinity.authorClicks[post.reporterId] || 0) + 5;
+  }
+  const themes = [
+    ...(Array.isArray(post.themes) ? post.themes : []),
+    ...(post.category ? [post.category] : []),
+  ].filter(Boolean);
+  themes.forEach((t) => {
+    affinity.themeClicks[t] = (affinity.themeClicks[t] || 0) + 4;
+  });
+  saveAffinity(affinity);
+}
+
+function readIdList(key: string): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function toggleIdInStorage(key: string, targetId: string): boolean {
+  if (!targetId) return false;
+  const current = readIdList(key);
+  const exists = current.includes(targetId);
+  const next = exists
+    ? current.filter((x) => x !== targetId)
+    : Array.from(new Set([...current, targetId]));
+  try {
+    localStorage.setItem(key, JSON.stringify(next));
+  } catch {}
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("loopsModerationUpdated"));
+  }
+  return !exists;
+}
+
+export function getMutedUserIds(): string[] {
+  return readIdList(MUTED_USERS_KEY);
+}
+
+export function toggleMuteUserId(uid: string): boolean {
+  return toggleIdInStorage(MUTED_USERS_KEY, uid);
+}
+
+export function getRestrictedUserIds(): string[] {
+  return readIdList(RESTRICTED_USERS_KEY);
+}
+
+export function toggleRestrictUserId(uid: string): boolean {
+  return toggleIdInStorage(RESTRICTED_USERS_KEY, uid);
+}
+
+export function getBlockedUserIds(): string[] {
+  return readIdList(BLOCKED_USERS_KEY);
+}
+
+export function toggleBlockUserId(uid: string): boolean {
+  return toggleIdInStorage(BLOCKED_USERS_KEY, uid);
 }
 
 /**
@@ -167,10 +421,17 @@ export function rankFeedPostsSmart(
   }
 ): ScamPost[] {
   const { currentUid, followedIds, sessionSeed, dismissedPostIds = [] } = options;
-  if (posts.length <= 1) return posts;
-
-  const dismissedSet = new Set(dismissedPostIds);
-  const filtered = posts.filter((p) => !dismissedSet.has(p.id));
+  const dismissedSet = new Set([...dismissedPostIds, ...getDismissedPostIds()]);
+  const hiddenAuthorSet = new Set([
+    ...getMutedUserIds(),
+    ...getBlockedUserIds(),
+  ]);
+  const filtered = posts.filter(
+    (p) =>
+      !dismissedSet.has(p.id) &&
+      (!p.reporterId || !hiddenAuthorSet.has(p.reporterId))
+  );
+  if (filtered.length <= 1) return filtered;
 
   const affinity = loadAffinity();
   const localImpressions = loadImpressionCounts();
@@ -312,5 +573,8 @@ export function dismissSuggestedPostId(postId: string): string[] {
   try {
     localStorage.setItem(DISMISSED_POSTS_KEY, JSON.stringify(next));
   } catch {}
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("loopsModerationUpdated"));
+  }
   return next;
 }

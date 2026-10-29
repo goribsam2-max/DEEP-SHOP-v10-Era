@@ -35,10 +35,10 @@ const BottomMenu = () => {
     },
     {
       id: "feed",
-      label: "News Hub Feed",
-      path: "/news-hub",
+      label: "Loops",
+      path: "/loops",
       icon: FileText,
-      isActive: path.startsWith("/news-hub"),
+      isActive: path.startsWith("/loops") || path.startsWith("/news-hub"),
     },
     {
       id: "search",

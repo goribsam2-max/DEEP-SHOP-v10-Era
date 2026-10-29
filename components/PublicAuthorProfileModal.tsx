@@ -36,7 +36,7 @@ interface PublicAuthorProfileModalProps {
 export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> = ({
   userId,
   authorName = "Community Member",
-  authorAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+  authorAvatar = "",
   isOpen,
   onClose,
   onOpenGiftStars
@@ -163,11 +163,17 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
             {/* Centered Avatar Image (Overlapping banner matching IMG_4750.webp) */}
             <div className="flex justify-center -mt-12 relative z-10">
               <div className="relative">
-                <img
-                  src={avatar}
-                  alt={displayName}
-                  className="w-22 h-22 rounded-full object-cover border-4 border-white dark:border-zinc-950 shadow-xl"
-                />
+                {avatar ? (
+                  <img
+                    src={avatar}
+                    alt={displayName}
+                    className="w-22 h-22 rounded-full object-cover border-4 border-white dark:border-zinc-950 shadow-xl"
+                  />
+                ) : (
+                  <div className="w-22 h-22 rounded-full bg-zinc-200 dark:bg-zinc-800 border-4 border-white dark:border-zinc-950 shadow-xl flex items-center justify-center text-2xl font-extrabold text-zinc-700 dark:text-zinc-200">
+                    {(displayName || "M").slice(0, 1).toUpperCase()}
+                  </div>
+                )}
                 <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blue-500 border-2 border-white dark:border-zinc-950 flex items-center justify-center text-white">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>

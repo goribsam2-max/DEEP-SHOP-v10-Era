@@ -49,6 +49,7 @@ import { GlobalCallReceiver } from './components/GlobalCallReceiver';
 import { CustomContextMenu } from './components/CustomContextMenu';
 import { FeedPersonalization } from './pages/FeedPersonalization';
 import { NewsProfilePage } from './pages/NewsProfilePage';
+import { LoopActivityPage } from './pages/LoopActivityPage';
 import {
   NewsPhotoViewerPage,
   NewsSharePage,
@@ -911,12 +912,36 @@ const AppContent: React.FC = () => {
           <Route path="/blog/create" element={<PageWrapper><CreateBlog /></PageWrapper>} />
           <Route path="/blog/edit/:slug" element={<PageWrapper><CreateBlog /></PageWrapper>} />
           <Route path="/blog/:slug" element={<PageWrapper><BlogDetails /></PageWrapper>} />
+          {/* Primary Loops Routes */}
+          <Route path="/loops" element={<PageWrapper><NewsHub /></PageWrapper>} />
+          <Route path="/loops/create-story" element={<PageWrapper><AddStory /></PageWrapper>} />
+          <Route path="/loops/create" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
+          <Route path="/loops/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
+          <Route path="/loops/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
+          <Route path="/loops/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
+          <Route path="/loops/post/:id/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
+          <Route path="/loops/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
+          <Route path="/loops/photo/:postId/:index" element={<PageWrapper><NewsPhotoViewerPage /></PageWrapper>} />
+          <Route path="/loops/share/:id" element={<PageWrapper><NewsSharePage /></PageWrapper>} />
+          <Route path="/loops/search" element={<PageWrapper><NewsSavedAndSearchPage /></PageWrapper>} />
+          <Route path="/loops/saved" element={<PageWrapper><NewsSavedAndSearchPage /></PageWrapper>} />
+          <Route path="/loops/story/:storyId" element={<PageWrapper><NewsStoryViewerPage /></PageWrapper>} />
+          <Route path="/loops/notifications" element={<PageWrapper><NewsHubNotifications /></PageWrapper>} />
+          <Route path="/loops/profile" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/loops/profile/edit" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/loops/profile/links" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/loops/profile/interests" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+          <Route path="/loops/profile/:id" element={<PageWrapper><NewsProfilePage /></PageWrapper>} />
+
+          {/* Backward-Compatible /news-hub Routes */}
           <Route path="/news-hub" element={<PageWrapper><NewsHub /></PageWrapper>} />
           <Route path="/news-hub/create-story" element={<PageWrapper><AddStory /></PageWrapper>} />
           <Route path="/news-hub/create" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/news-hub/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/news-hub/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
           <Route path="/news-hub/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
+          <Route path="/news-hub/post/:id/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
+          <Route path="/news-hub/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
           <Route path="/news-hub/photo/:postId/:index" element={<PageWrapper><NewsPhotoViewerPage /></PageWrapper>} />
           <Route path="/news-hub/share/:id" element={<PageWrapper><NewsSharePage /></PageWrapper>} />
           <Route path="/news-hub/search" element={<PageWrapper><NewsSavedAndSearchPage /></PageWrapper>} />
@@ -938,7 +963,7 @@ const AppContent: React.FC = () => {
           <Route path="/news/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/scam/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/scam-alert" element={<PageWrapper><NewsHub /></PageWrapper>} />
-          <Route path="/news" element={<Navigate to="/news-hub" replace />} />
+          <Route path="/news" element={<Navigate to="/loops" replace />} />
           <Route path="/track-order/:id" element={<PageWrapper><TrackOrder /></PageWrapper>} />
           <Route path="/e-receipt/:id" element={<PageWrapper><EReceipt /></PageWrapper>} />
           <Route path="/leave-review" element={<PageWrapper><LeaveReview /></PageWrapper>} />

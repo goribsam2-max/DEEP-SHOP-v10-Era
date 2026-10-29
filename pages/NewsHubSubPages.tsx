@@ -44,6 +44,11 @@ import {
   Eye,
   BarChart3,
   User,
+  Calendar,
+  MoreHorizontal,
+  TrendingUp,
+  Settings,
+  MessageSquareOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -73,7 +78,7 @@ import {
   StoryTextLayer,
   StoryStickerItem,
 } from "./seller/AddStory";
-import { ScamPost } from "../types";
+import { ScamPost, StoryHighlightItem, StoryHighlightSnapshot } from "../types";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
 import {
   NewsRichText,
@@ -97,8 +102,23 @@ import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
 } from "../lib/admin";
-
-import defaultAvatarImg from "@/src/assets/images/story_avatar_creator_1_1792826814910.jpg";
+import { LoopPostCard, VerifiedLoopBadge } from "../components/LoopPostCard";
+import { LiquidGlassShareModal } from "../components/LiquidGlassPostInteractions";
+import { computeNextPostReactionState } from "../lib/feedAlgorithm";
+import { useFollowedIds, toggleFollowUser, getEffectiveFollowersCount } from "../lib/follow";
+import {
+  DualSocialShareIcon,
+  StoryMusicBarsIcon,
+  OwnStoryMorePopover,
+  PeerStoryMenuPopover,
+  StoryCommentSheet,
+  StoryMentionSheet,
+  StoryHighlightModal,
+  StoryDirectSendSheet,
+  StoryAboutAccountModal,
+  StorySettingsSheet,
+  StoryReplyItem,
+} from "../components/LoopsStoryViewerModals";
 
 export const resolvePostById = async (
   postId: string
@@ -665,7 +685,7 @@ export const NewsSharePage: React.FC = () => {
                     uData.shopLogo ||
                     uData.photoURL ||
                     item.fallbackAvatar ||
-                    defaultAvatarImg,
+                    "",
                 });
                 return;
               }
@@ -675,7 +695,7 @@ export const NewsSharePage: React.FC = () => {
                 chatId: item.chatId,
                 uid: item.otherUid,
                 name: item.fallbackName,
-                avatar: item.fallbackAvatar || defaultAvatarImg,
+                avatar: item.fallbackAvatar || "",
               });
             }
           })
@@ -707,7 +727,7 @@ export const NewsSharePage: React.FC = () => {
   const isScam = isScamPostRecord(post);
   const postUrl =
     typeof window !== "undefined"
-      ? `${getPublicShareOrigin()}/news-hub/post/${post?.id || id}`
+      ? `${getPublicShareOrigin()}/loops/post/${post?.id || id}`
       : "";
 
   const cleanPostDesc = (post?.description || "")
@@ -862,12 +882,18 @@ export const NewsSharePage: React.FC = () => {
             <>
               <div className="rounded-[24px] bg-[#F5F6F8] dark:bg-zinc-800/70 p-4 space-y-3 border border-slate-200/70 dark:border-zinc-700/60">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={post.reporterAvatar || defaultAvatarImg}
-                    alt={post.reporterName}
-                    referrerPolicy="no-referrer"
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
+                  {post.reporterAvatar ? (
+                    <img
+                      src={post.reporterAvatar}
+                      alt={post.reporterName}
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200 shrink-0">
+                      {(post.reporterName || "M").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">
                       {post.reporterName}
@@ -1004,12 +1030,18 @@ export const NewsSharePage: React.FC = () => {
                             className="flex items-center justify-between gap-3 p-2.5 rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800/70"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <img
-                                src={recipient.avatar}
-                                alt={recipient.name}
-                                referrerPolicy="no-referrer"
-                                className="w-9 h-9 rounded-full object-cover shrink-0"
-                              />
+                              {recipient.avatar ? (
+                                <img
+                                  src={recipient.avatar}
+                                  alt={recipient.name}
+                                  referrerPolicy="no-referrer"
+                                  className="w-9 h-9 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-700 dark:text-zinc-200 shrink-0">
+                                  {(recipient.name || "M").slice(0, 1).toUpperCase()}
+                                </div>
+                              )}
                               <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
                                 {recipient.name}
                               </span>
@@ -1054,8 +1086,8 @@ export const NewsSharePage: React.FC = () => {
 };
 
 /* ============================================================================
- * 3. DEDICATED SEARCH, HASHTAG EXPLORE & SAVED POSTS PAGE
- *    (/news-hub/search?tag=... & /news-hub/saved)
+ * 3. DEDICATED SEARCH (/loops/search) & STANDALONE SAVED (/loops/saved) PAGES
+ *    Matches IMG_5128, IMG_5129, IMG_5130 1:1
  * ========================================================================== */
 export const NewsSavedAndSearchPage: React.FC = () => {
   const navigate = useNavigate();
@@ -1064,11 +1096,10 @@ export const NewsSavedAndSearchPage: React.FC = () => {
   const notify = useNotify();
   const confirm = useConfirm();
 
-  const initialTab = location.pathname.includes("/saved") ? "saved" : "explore";
+  const isSavedRoute = location.pathname.includes("/saved");
   const urlTag = searchParams.get("tag") || "";
   const urlQuery = searchParams.get("q") || "";
 
-  const [tab, setTab] = useState<"explore" | "saved">(initialTab);
   const [posts, setPosts] = useState<ScamPost[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>(() =>
     getSavedPostIdsLocal()
@@ -1076,14 +1107,25 @@ export const NewsSavedAndSearchPage: React.FC = () => {
   const [queryText, setQueryText] = useState<string>(() =>
     urlTag ? `#${urlTag.replace(/^#/, "")}` : urlQuery
   );
-  const [filterType, setFilterType] = useState<"all" | "normal" | "scam">(
-    "all"
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [hasCommittedSearch, setHasCommittedSearch] = useState<boolean>(() =>
+    Boolean(urlTag || urlQuery)
   );
+  const [showFilterPopover, setShowFilterPopover] = useState(false);
+  const [filterSubView, setFilterSubView] = useState<"root" | "date" | "profile">("root");
+  const [dateFilter, setDateFilter] = useState<"any" | "24h" | "7d" | "30d">("any");
+  const [fromMeOnly, setFromMeOnly] = useState(false);
+  const [fromProfileUid, setFromProfileUid] = useState<string>("");
+  const [fromProfileHandle, setFromProfileHandle] = useState<string>("");
+  const [profilePickerQuery, setProfilePickerQuery] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(
     () => auth.currentUser
   );
   const [isAdmin, setIsAdmin] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const filterPopoverRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -1109,17 +1151,14 @@ export const NewsSavedAndSearchPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setTab(location.pathname.includes("/saved") ? "saved" : "explore");
-  }, [location.pathname]);
-
-  useEffect(() => {
     const tagParam = searchParams.get("tag");
     const qParam = searchParams.get("q");
     if (tagParam) {
-      setTab("explore");
       setQueryText(`#${tagParam.replace(/^#/, "")}`);
-    } else if (qParam !== null) {
+      setHasCommittedSearch(true);
+    } else if (qParam) {
       setQueryText(qParam);
+      setHasCommittedSearch(true);
     }
   }, [searchParams]);
 
@@ -1130,427 +1169,1081 @@ export const NewsSavedAndSearchPage: React.FC = () => {
     });
   }, []);
 
-  const uid = currentUser?.uid;
+  useEffect(() => {
+    const onDocDown = (ev: MouseEvent) => {
+      if (
+        showFilterPopover &&
+        filterPopoverRef.current &&
+        !filterPopoverRef.current.contains(ev.target as Node)
+      ) {
+        setShowFilterPopover(false);
+        setFilterSubView("root");
+      }
+    };
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, [showFilterPopover]);
 
-  const handleDeletePost = (post: ScamPost, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const uid = currentUser?.uid;
+  const followedIds = useFollowedIds(uid);
+  const [authorProfilesMap, setAuthorProfilesMap] = useState<Record<string, any>>({});
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [sharePost, setSharePost] = useState<ScamPost | null>(null);
+
+  useEffect(() => {
+    getDocs(collection(db, "users"))
+      .then((snap) => {
+        const list = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+        setAllUsers(list);
+        const map: Record<string, any> = {};
+        list.forEach((u) => {
+          map[u.uid] = u;
+        });
+        setAuthorProfilesMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const suggestedAccounts = React.useMemo(
+    () =>
+      allUsers
+        .filter((u) => u.uid !== uid && (u.displayName || u.shopName || u.username))
+        .slice(0, 14),
+    [allUsers, uid]
+  );
+
+  const handleDeletePost = async (post: ScamPost) => {
     triggerHaptic();
-    confirm({
-      title: "Delete Post?",
+    const ok = await confirm({
+      title: "Delete Loop?",
       message:
         "Are you sure you want to permanently delete this post? This action cannot be undone.",
       confirmText: "Delete",
       cancelText: "Cancel",
-      onConfirm: async () => {
-        try {
-          await deleteDoc(doc(db, "scam_posts", post.id));
-        } catch {}
-        try {
-          const local: ScamPost[] = JSON.parse(
-            localStorage.getItem("scam_posts_local_v1") || "[]"
-          );
+    });
+    if (!ok) return;
+    try {
+      await deleteDoc(doc(db, "scam_posts", post.id));
+    } catch {}
+    for (const storageKey of ["deep_scam_posts", "scam_posts_local_v1"]) {
+      try {
+        const local: ScamPost[] = JSON.parse(
+          localStorage.getItem(storageKey) || "[]"
+        );
+        if (Array.isArray(local)) {
           localStorage.setItem(
-            "scam_posts_local_v1",
+            storageKey,
             JSON.stringify(local.filter((p) => p.id !== post.id))
           );
-        } catch {}
-        setPosts((prev) => prev.filter((p) => p.id !== post.id));
-        notify("Post deleted successfully", "success");
+        }
+      } catch {}
+    }
+    setPosts((prev) => prev.filter((p) => p.id !== post.id));
+    notify("Post deleted", "success");
+  };
+
+  const handleToggleLike = async (post: ScamPost) => {
+    if (!uid) {
+      navigate("/signin");
+      return;
+    }
+    triggerHaptic();
+    const nextState = computeNextPostReactionState(
+      post,
+      uid,
+      {
+        userName: getSafeDisplayName(currentUser, "Member"),
+        userAvatar: currentUser?.photoURL || "",
       },
-    });
+      "love"
+    );
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === post.id
+          ? ({
+              ...p,
+              reactions: nextState.reactions,
+              reactionsUsers: nextState.reactionsUsers,
+              reactionsCount: nextState.reactionsCount,
+              votes: nextState.votes,
+              votedUserIds: nextState.votedUserIds,
+            } as ScamPost)
+          : p
+      )
+    );
+    try {
+      await updateDoc(doc(db, "scam_posts", post.id), {
+        reactions: nextState.reactions,
+        reactionsUsers: nextState.reactionsUsers,
+        reactionsCount: nextState.reactionsCount,
+        votes: nextState.votes,
+        votedUserIds: nextState.votedUserIds,
+      });
+    } catch {}
+  };
+
+  const handleToggleRepost = async (post: ScamPost) => {
+    if (!uid) {
+      navigate("/signin");
+      return;
+    }
+    triggerHaptic();
+    const currentList = Array.isArray(post.repostedByUserIds)
+      ? post.repostedByUserIds
+      : [];
+    const already = currentList.includes(uid);
+    const nextList = already
+      ? currentList.filter((id) => id !== uid)
+      : Array.from(new Set([...currentList, uid]));
+    const nextCount = already
+      ? Math.max(0, Number(post.repostsCount || 1) - 1)
+      : Number(post.repostsCount || 0) + 1;
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === post.id
+          ? { ...p, repostedByUserIds: nextList, repostsCount: nextCount }
+          : p
+      )
+    );
+    try {
+      await updateDoc(doc(db, "scam_posts", post.id), {
+        repostedByUserIds: nextList,
+        repostsCount: nextCount,
+      });
+      notify(already ? "Removed repost" : "Reposted to Loops", "success");
+    } catch {}
   };
 
   const isSaved = (post: ScamPost) =>
     savedIds.includes(post.id) ||
     Boolean(uid && post.savedByUserIds?.includes(uid));
 
-  const handleToggleSave = async (post: ScamPost) => {
+  const handleToggleSaveById = async (postId: string) => {
+    const target = posts.find((p) => p.id === postId);
+    if (!target) return;
     triggerHaptic();
-    const next = await toggleSavePostHelper(post, uid);
+    const next = await toggleSavePostHelper(target, uid);
     setSavedIds(getSavedPostIdsLocal());
-    notify(
-      next ? "Saved to your bookmarks" : "Removed from saved posts",
-      "info"
-    );
+    notify(next ? "Saved to your bookmarks" : "Removed from saved", "info");
   };
 
-  // Discover real hashtags used across real posts
-  const discoveredHashtags = React.useMemo(() => {
-    const counts = new Map<string, number>();
+  const handleCopyPostLink = async (postId: string) => {
+    try {
+      await navigator.clipboard.writeText(
+        `${getPublicShareOrigin()}/loops/post/${postId}`
+      );
+      notify("Link copied", "success");
+    } catch {
+      notify("Unable to copy link", "error");
+    }
+  };
+
+  const commitSearch = (qVal?: string) => {
+    const finalQ = (qVal !== undefined ? qVal : queryText).trim();
+    triggerHaptic();
+    if (qVal !== undefined) setQueryText(qVal);
+    setHasCommittedSearch(true);
+    setIsSearchFocused(false);
+    setShowFilterPopover(false);
+    setFilterSubView("root");
+    searchInputRef.current?.blur();
+    if (finalQ) {
+      setSearchParams({ q: finalQ });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  const hasActiveFilter =
+    dateFilter !== "any" || fromMeOnly || Boolean(fromProfileUid);
+
+  // Live Autocomplete Suggestions while typing (IMG_5129)
+  const queryPhraseSuggestions = React.useMemo(() => {
+    const q = queryText.trim().toLowerCase().replace(/^#/, "");
+    if (!q) return [];
+    const candidates = new Set<string>();
+    candidates.add(queryText.trim());
     posts.forEach((p) => {
-      const tags = extractHashtagsFromText(
-        `${p.title || ""} ${p.description || ""}`
-      );
+      if (p.postTag && p.postTag.toLowerCase().includes(q)) {
+        candidates.add(p.postTag.trim());
+      }
+      const tags = extractHashtagsFromText(`${p.title || ""} ${p.description || ""}`);
       tags.forEach((t) => {
-        counts.set(t, (counts.get(t) || 0) + 1);
+        if (t.toLowerCase().includes(q)) candidates.add(t);
       });
+      const rawTitle = (p.title || "").trim();
+      if (rawTitle && rawTitle.toLowerCase().includes(q)) {
+        const cleanTitle = rawTitle.replace(/\s+/g, " ").slice(0, 36).trim();
+        if (cleanTitle) candidates.add(cleanTitle.toLowerCase());
+      }
     });
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([tag, count]) => ({ tag, count }));
-  }, [posts]);
+    return Array.from(candidates).slice(0, 3);
+  }, [queryText, posts]);
 
-  const selectHashtag = (tag: string) => {
-    triggerHaptic();
-    const clean = tag.replace(/^#/, "");
-    setTab("explore");
-    setQueryText(`#${clean}`);
-    setSearchParams({ tag: clean });
-  };
+  const matchingUserSuggestions = React.useMemo(() => {
+    const q = queryText.trim().toLowerCase().replace(/^@/, "");
+    if (!q) return [];
+    return allUsers
+      .filter((u) => {
+        const handle = (getSafePublicUsername(u) || "").toLowerCase();
+        const dName = (getSafeDisplayName(u, "") || u.shopName || "").toLowerCase();
+        return handle.includes(q) || dName.includes(q);
+      })
+      .slice(0, 10);
+  }, [queryText, allUsers]);
 
-  const clearSearch = () => {
-    triggerHaptic();
-    setQueryText("");
-    setSearchParams({});
-  };
+  const savedPosts = React.useMemo(
+    () => posts.filter((p) => isSaved(p)),
+    [posts, savedIds, uid]
+  );
 
-  const filteredPosts = posts.filter((p) => {
-    if (tab === "saved" && !isSaved(p)) return false;
-    const scam = isScamPostRecord(p);
-    if (filterType === "normal" && scam) return false;
-    if (filterType === "scam" && !scam) return false;
+  const searchResultPosts = React.useMemo(() => {
+    const now = Date.now();
+    return posts.filter((p) => {
+      if (fromMeOnly && (!uid || p.reporterId !== uid)) return false;
+      if (fromProfileUid && p.reporterId !== fromProfileUid) return false;
+      if (dateFilter !== "any") {
+        const createdMs =
+          typeof p.createdAt === "number"
+            ? p.createdAt
+            : p.createdAt
+            ? new Date(p.createdAt as any).getTime() || 0
+            : 0;
+        const maxAge =
+          dateFilter === "24h"
+            ? 24 * 60 * 60 * 1000
+            : dateFilter === "7d"
+            ? 7 * 24 * 60 * 60 * 1000
+            : 30 * 24 * 60 * 60 * 1000;
+        if (!createdMs || now - createdMs > maxAge) return false;
+      }
 
-    const trimmed = queryText.trim();
-    if (!trimmed) return true;
+      const trimmed = queryText.trim();
+      if (!trimmed) return hasActiveFilter;
 
-    if (trimmed.startsWith("#")) {
-      const targetTag = trimmed.slice(1).toLowerCase();
-      if (!targetTag) return true;
-      const postTags = extractHashtagsFromText(
-        `${p.title || ""} ${p.description || ""}`
-      );
+      if (trimmed.startsWith("#")) {
+        const targetTag = trimmed.slice(1).toLowerCase();
+        if (!targetTag) return true;
+        const postTags = extractHashtagsFromText(
+          `${p.title || ""} ${p.description || ""}`
+        );
+        const topicMatch = p.postTag?.toLowerCase().includes(targetTag);
+        return (
+          Boolean(topicMatch) ||
+          postTags.some((t) => t === targetTag || t.includes(targetTag)) ||
+          (p.themes || []).some((th) => th.toLowerCase() === targetTag)
+        );
+      }
+
+      const q = trimmed.toLowerCase();
       return (
-        postTags.some((t) => t === targetTag || t.includes(targetTag)) ||
-        (p.themes || []).some((th) => th.toLowerCase() === targetTag)
+        p.title?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q) ||
+        p.reporterName?.toLowerCase().includes(q) ||
+        p.postTag?.toLowerCase().includes(q) ||
+        p.scamLocation?.toLowerCase().includes(q) ||
+        p.scammerName?.toLowerCase().includes(q) ||
+        p.scammerPhone?.toLowerCase().includes(q)
+      );
+    });
+  }, [posts, queryText, dateFilter, fromMeOnly, fromProfileUid, uid, hasActiveFilter]);
+
+  const renderPostStream = (streamPosts: ScamPost[], emptyTitle: string, emptySub: string) => {
+    if (loading) {
+      return (
+        <div className="py-14 text-center text-sm text-zinc-500">
+          Loading loops...
+        </div>
       );
     }
-
-    const q = trimmed.toLowerCase();
+    if (streamPosts.length === 0) {
+      return (
+        <div className="py-16 px-6 text-center space-y-2">
+          <Bookmark className="w-7 h-7 text-zinc-400 mx-auto" />
+          <p className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+            {emptyTitle}
+          </p>
+          <p className="text-xs text-zinc-500">{emptySub}</p>
+        </div>
+      );
+    }
     return (
-      p.title?.toLowerCase().includes(q) ||
-      p.description?.toLowerCase().includes(q) ||
-      p.reporterName?.toLowerCase().includes(q) ||
-      p.scamLocation?.toLowerCase().includes(q) ||
-      p.scammerName?.toLowerCase().includes(q) ||
-      p.scammerPhone?.toLowerCase().includes(q)
-    );
-  });
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#EBF5FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 pb-28">
-      <SEO
-        title={tab === "saved" ? "Saved Posts — Feed" : "Explore & Hashtags — Feed"}
-        description="Search community posts, hashtags, and view your saved bookmarks."
-      />
-
-      <div className="max-w-3xl mx-auto pt-4 sm:pt-7 px-3 sm:px-4 space-y-4">
-        <header className="flex items-center justify-between gap-2 px-0.5">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={() => navigate("/news-hub")}
-              className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 shadow-xs flex items-center justify-center cursor-pointer shrink-0"
-              aria-label="Back to Feed"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <h1 className="text-[15px] sm:text-[20px] font-bold whitespace-nowrap truncate">
-              {tab === "saved" ? "Saved Posts" : "Explore & Search"}
-            </h1>
-          </div>
-
-          <div className="flex items-center bg-white/85 dark:bg-zinc-900 rounded-full p-1 shadow-xs shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                setTab("explore");
-                navigate("/news-hub/search", { replace: true });
-              }}
-              className={`px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
-                tab === "explore"
-                  ? "bg-[#1877F2] text-white"
-                  : "text-zinc-600 dark:text-zinc-300"
-              }`}
-            >
-              Explore
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                setTab("saved");
-                navigate("/news-hub/saved", { replace: true });
-              }}
-              className={`px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
-                tab === "saved"
-                  ? "bg-[#1877F2] text-white"
-                  : "text-zinc-600 dark:text-zinc-300"
-              }`}
-            >
-              Saved ({posts.filter((p) => isSaved(p)).length})
-            </button>
-          </div>
-        </header>
-
-        {/* Search Input + Active Hashtag Chips + Post Type Filter */}
-        <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-xs space-y-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-zinc-400 absolute left-4 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={queryText}
-              onChange={(e) => {
-                const v = e.target.value;
-                setQueryText(v);
-                if (!v.trim()) setSearchParams({});
-              }}
-              placeholder="Search #hashtags, people, links, phone numbers..."
-              className="w-full pl-11 pr-10 py-3 rounded-full bg-[#F4F5F7] dark:bg-zinc-800 text-sm outline-none"
+      <div className="loops-surface rounded-none sm:border loops-divider overflow-hidden">
+        {streamPosts.map((post) => {
+          const canManage = Boolean(
+            (uid &&
+              (post.reporterId === uid || (post as any).authorId === uid)) ||
+              isAdmin
+          );
+          return (
+            <LoopPostCard
+              key={post.id}
+              post={post}
+              authorProfile={
+                post.reporterId ? authorProfilesMap[post.reporterId] : null
+              }
+              currentUser={currentUser as any}
+              isFollowingAuthor={Boolean(
+                post.reporterId && followedIds.includes(post.reporterId)
+              )}
+              isSaved={isSaved(post)}
+              canManage={canManage}
+              onToggleLike={handleToggleLike}
+              onToggleRepost={handleToggleRepost}
+              onOpenShare={(p) => setSharePost(p)}
+              onToggleSave={handleToggleSaveById}
+              onCopyLink={handleCopyPostLink}
+              onEditPost={(p) => navigate(`/loops/edit/${p.id}`)}
+              onDeletePost={handleDeletePost}
+              onRequireAuth={() => navigate("/signin")}
             />
-            {queryText && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                className="w-7 h-7 rounded-full bg-white dark:bg-zinc-700 flex items-center justify-center absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 cursor-pointer"
-                aria-label="Clear search"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // STANDALONE SAVED PAGE (/loops/saved)
+  if (isSavedRoute) {
+    return (
+      <div className="min-h-screen loops-surface text-zinc-900 dark:text-zinc-100 pb-28">
+        <SEO title="Saved — Loops" description="View your saved community loops." />
+        <div className="max-w-[620px] mx-auto pt-3 sm:pt-5">
+          <header className="flex items-center gap-2 px-4 pb-3 border-b loops-divider">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 -ml-2 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08] flex items-center justify-center cursor-pointer shrink-0 transition"
+              aria-label="Back"
+            >
+              <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+            </button>
+            <h1 className="text-[22px] font-bold tracking-tight">Saved</h1>
+          </header>
+
+          <div className="px-0 sm:px-4 sm:pt-3">
+            {renderPostStream(
+              savedPosts,
+              "No saved loops yet",
+              "Save any loop from its menu to keep it bookmarked here."
             )}
-          </div>
-
-          {discoveredHashtags.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-              {discoveredHashtags.map(({ tag, count }) => {
-                const active =
-                  queryText.trim().toLowerCase() === `#${tag.toLowerCase()}`;
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() =>
-                      active ? clearSearch() : selectHashtag(tag)
-                    }
-                    className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 whitespace-nowrap transition cursor-pointer ${
-                      active
-                        ? "bg-[#1877F2] text-white shadow-2xs"
-                        : "bg-[#1877F2]/10 text-[#1877F2] dark:text-[#58A6FF] hover:bg-[#1877F2]/18"
-                    }`}
-                  >
-                    #{tag} ({count})
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-0.5">
-            {[
-              { id: "all", label: "All Posts" },
-              { id: "normal", label: "Community Posts" },
-              { id: "scam", label: "Scam Reports" },
-            ].map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setFilterType(item.id as any)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0 ${
-                  filterType === item.id
-                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                    : "bg-[#F4F5F7] dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
           </div>
         </div>
 
-        {/* Results */}
-        {loading ? (
-          <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-8 text-center text-sm text-zinc-500">
-            Loading posts...
-          </div>
-        ) : filteredPosts.length === 0 ? (
-          <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-10 text-center space-y-3">
-            <Bookmark className="w-8 h-8 text-zinc-400 mx-auto" />
-            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-              {tab === "saved"
-                ? "No saved posts yet"
-                : queryText.trim().startsWith("#")
-                ? `No posts found with ${queryText.trim()}`
-                : "No matching posts found"}
-            </p>
-            <p className="text-xs text-zinc-500">
-              {tab === "saved"
-                ? "Tap the bookmark icon on any feed post to save it here."
-                : "Try another hashtag or keyword."}
-            </p>
+        <LiquidGlassShareModal
+          isOpen={Boolean(sharePost)}
+          post={sharePost || {}}
+          onClose={() => setSharePost(null)}
+          onRepost={() => {
+            if (sharePost) handleToggleRepost(sharePost);
+          }}
+          onQuotePost={() => {
+            if (sharePost) navigate(`/loops/create?quotePostId=${sharePost.id}`);
+          }}
+        />
+        <NewsBottomDock />
+      </div>
+    );
+  }
+
+  // DEDICATED SEARCH PAGE (/loops/search) — Matches IMG_5128, IMG_5129, IMG_5130
+  const isCompactMode =
+    isSearchFocused ||
+    Boolean(queryText.trim()) ||
+    hasCommittedSearch ||
+    showFilterPopover ||
+    hasActiveFilter;
+
+  const showLiveAutocomplete =
+    !hasCommittedSearch && (isSearchFocused || Boolean(queryText.trim()));
+
+  return (
+    <div className="min-h-screen loops-surface text-zinc-900 dark:text-zinc-100 pb-28">
+      <SEO title="Search — Loops" description="Search people, topics, and loops." />
+
+      <div className="max-w-[620px] mx-auto pt-3 sm:pt-5">
+        {!isCompactMode ? (
+          /* IDLE HEADER + SEARCH BAR (IMG_5128) */
+          <div className="px-4 space-y-3.5">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => navigate("/loops")}
+                className="w-9 h-9 -ml-2 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08] flex items-center justify-center cursor-pointer shrink-0"
+                aria-label="Back to Loops"
+              >
+                <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+              </button>
+              <h1 className="text-[28px] font-bold tracking-tight leading-none">
+                Search
+              </h1>
+            </div>
+
+            <div
+              onClick={() => {
+                setIsSearchFocused(true);
+                setTimeout(() => searchInputRef.current?.focus(), 20);
+              }}
+              className="loops-search-pill h-11 rounded-[16px] px-3.5 flex items-center gap-2.5 cursor-text"
+            >
+              <Search className="w-[18px] h-[18px] text-zinc-400 shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={queryText}
+                onFocus={() => setIsSearchFocused(true)}
+                onChange={(e) => {
+                  setQueryText(e.target.value);
+                  setHasCommittedSearch(false);
+                }}
+                placeholder="Search"
+                className="flex-1 text-[16px] placeholder-zinc-400 outline-none border-none bg-transparent"
+              />
+            </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredPosts.map((post) => {
-              const saved = isSaved(post);
-              const totalReactions = post.reactionsCount
-                ? (Object.values(post.reactionsCount) as number[]).reduce(
-                    (a, b) => a + (Number(b) || 0),
-                    0
-                  )
-                : Number(post.votes || 0);
+          /* COMPACT FOCUSED / TYPING / RESULTS HEADER (IMG_5129 & IMG_5130) */
+          <div className="px-3.5 relative z-30" ref={filterPopoverRef}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                commitSearch();
+              }}
+              className="flex items-center gap-2"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  if (hasCommittedSearch || queryText || hasActiveFilter) {
+                    setQueryText("");
+                    setHasCommittedSearch(false);
+                    setIsSearchFocused(false);
+                    setShowFilterPopover(false);
+                    setDateFilter("any");
+                    setFromMeOnly(false);
+                    setFromProfileUid("");
+                    setFromProfileHandle("");
+                    setSearchParams({});
+                  } else {
+                    setIsSearchFocused(false);
+                    navigate("/loops");
+                  }
+                }}
+                className="w-9 h-9 -ml-1 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08] flex items-center justify-center cursor-pointer shrink-0"
+                aria-label="Back"
+              >
+                <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+              </button>
 
-              const canManage = Boolean(
-                (uid &&
-                  (post.reporterId === uid ||
-                    (post as any).authorId === uid)) ||
-                  isAdmin
-              );
-
-              return (
-                <article
-                  key={post.id}
-                  onClick={() => navigate(`/news-hub/post/${post.id}`)}
-                  className="bg-white dark:bg-zinc-900 rounded-[28px] p-4 shadow-[0_6px_24px_rgba(15,23,42,0.05)] space-y-3 cursor-pointer"
+              <div className="loops-search-pill flex-1 h-11 rounded-[18px] pl-3.5 pr-2 flex items-center gap-2">
+                <Search className="w-[18px] h-[18px] text-zinc-400 shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={queryText}
+                  onFocus={() => {
+                    setIsSearchFocused(true);
+                    if (hasCommittedSearch) setHasCommittedSearch(false);
+                  }}
+                  onChange={(e) => {
+                    setQueryText(e.target.value);
+                    setHasCommittedSearch(false);
+                  }}
+                  placeholder="Search"
+                  className="flex-1 min-w-0 text-[16px] placeholder-zinc-400 outline-none border-none bg-transparent"
+                />
+                {queryText && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQueryText("");
+                      setHasCommittedSearch(false);
+                      searchInputRef.current?.focus();
+                    }}
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 cursor-pointer shrink-0"
+                    aria-label="Clear query"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+                {/* Right-side Filter Sliders Icon matching IMG_5129 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShowFilterPopover((v) => !v);
+                    setFilterSubView("root");
+                  }}
+                  className={`w-8 h-8 rounded-[10px] flex items-center justify-center cursor-pointer shrink-0 transition ${
+                    hasActiveFilter || showFilterPopover
+                      ? "text-zinc-950 dark:text-white bg-black/[0.06] dark:bg-white/[0.1]"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800"
+                  }`}
+                  aria-label="Search filters"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/author/${post.reporterId}`);
-                      }}
-                      className="flex items-center gap-3 min-w-0"
-                    >
-                      <img
-                        src={post.reporterAvatar || defaultAvatarImg}
-                        alt={post.reporterName}
-                        referrerPolicy="no-referrer"
-                        className="w-10 h-10 rounded-full object-cover shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold truncate">
-                          {post.reporterName}
-                        </p>
-                        <p className="text-[11px] text-zinc-500 whitespace-nowrap truncate">
-                          {formatDhakaDateTime(post.createdAt)}
-                          {post.isEdited ? " · Edited" : ""}
-                        </p>
-                        {post.isAiGenerated && (
-                          <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
-                            <Sparkles className="w-3 h-3 text-[#1877F2] shrink-0" />
-                            <span>AI generated</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-[21px] h-[21px]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" />
+                    <line x1="9.5" y1="7.5" x2="9.5" y2="16.5" />
+                    <line x1="7.7" y1="10.5" x2="11.3" y2="10.5" />
+                    <line x1="14.5" y1="7.5" x2="14.5" y2="16.5" />
+                    <line x1="12.7" y1="13.5" x2="16.3" y2="13.5" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+
+            {/* FLOATING FILTER POPOVER (IMG_5130) */}
+            <AnimatePresence>
+              {showFilterPopover && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                  transition={{ duration: 0.16 }}
+                  className="loops-liquid-popover absolute right-3.5 top-12 w-[262px] rounded-[26px] overflow-hidden z-50 shadow-2xl"
+                >
+                  {filterSubView === "root" && (
+                    <div className="py-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setFilterSubView("date");
+                        }}
+                        className="w-full px-5 py-3.5 flex items-center justify-between text-[16px] font-medium hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer transition"
+                      >
+                        <span className="flex items-center gap-3.5">
+                          <Calendar className="w-[20px] h-[20px] stroke-[1.9]" />
+                          <span>
+                            {dateFilter === "any"
+                              ? "Date"
+                              : dateFilter === "24h"
+                              ? "Last 24 hours"
+                              : dateFilter === "7d"
+                              ? "Past 7 days"
+                              : "Past 30 days"}
+                          </span>
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-zinc-500 stroke-[2.2]" />
+                      </button>
+
+                      <div className="mx-5 my-1 border-t loops-divider" />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          if (!uid) {
+                            navigate("/signin");
+                            return;
+                          }
+                          setFromMeOnly(true);
+                          setFromProfileUid("");
+                          setFromProfileHandle("");
+                          setHasCommittedSearch(true);
+                          setIsSearchFocused(false);
+                          setShowFilterPopover(false);
+                        }}
+                        className="w-full px-5 py-3.5 flex items-center justify-between text-[16px] font-medium hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer transition"
+                      >
+                        <span className="flex items-center gap-3.5">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="w-[20px] h-[20px]"
+                            fill="currentColor"
+                          >
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4.5 19.5c0-3.6 3.3-6 7.5-6s7.5 2.4 7.5 6a.8.8 0 0 1-.8.8H5.3a.8.8 0 0 1-.8-.8Z" />
+                          </svg>
+                          <span>From me</span>
+                        </span>
+                        {fromMeOnly && <Check className="w-4 h-4 text-[#0095F6]" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setFilterSubView("profile");
+                        }}
+                        className="w-full px-5 py-3.5 flex items-center justify-between text-[16px] font-medium hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer transition"
+                      >
+                        <span className="flex items-center gap-3.5">
+                          <User className="w-[20px] h-[20px] stroke-[1.9]" />
+                          <span className="truncate">
+                            {fromProfileHandle ? `@${fromProfileHandle}` : "From profile"}
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  {filterSubView === "date" && (
+                    <div className="py-2">
+                      <div className="px-4 py-2 flex items-center gap-2 border-b loops-divider">
+                        <button
+                          type="button"
+                          onClick={() => setFilterSubView("root")}
+                          className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.08] cursor-pointer"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <span className="text-sm font-semibold">Date</span>
+                      </div>
+                      {(
+                        [
+                          { id: "any", label: "Any date" },
+                          { id: "24h", label: "Last 24 hours" },
+                          { id: "7d", label: "Past 7 days" },
+                          { id: "30d", label: "Past 30 days" },
+                        ] as const
+                      ).map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setDateFilter(opt.id);
+                            setHasCommittedSearch(true);
+                            setIsSearchFocused(false);
+                            setShowFilterPopover(false);
+                            setFilterSubView("root");
+                          }}
+                          className="w-full px-5 py-3 flex items-center justify-between text-[15px] font-medium hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
+                        >
+                          <span>{opt.label}</span>
+                          {dateFilter === opt.id && (
+                            <Check className="w-4 h-4 text-[#0095F6]" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {filterSubView === "profile" && (
+                    <div className="py-2 max-h-72 flex flex-col">
+                      <div className="px-3.5 py-2 flex items-center gap-2 border-b loops-divider">
+                        <button
+                          type="button"
+                          onClick={() => setFilterSubView("root")}
+                          className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.08] cursor-pointer shrink-0"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <input
+                          type="text"
+                          value={profilePickerQuery}
+                          onChange={(e) => setProfilePickerQuery(e.target.value)}
+                          placeholder="Filter @username..."
+                          className="ds-liquid-input flex-1 text-sm bg-transparent outline-none"
+                        />
+                      </div>
+                      <div className="overflow-y-auto divide-y loops-divider">
+                        {allUsers
+                          .filter((u) => {
+                            const h = (getSafePublicUsername(u) || "").toLowerCase();
+                            const n = (getSafeDisplayName(u, "") || "").toLowerCase();
+                            const pq = profilePickerQuery.trim().toLowerCase();
+                            return !pq || h.includes(pq) || n.includes(pq);
+                          })
+                          .slice(0, 12)
+                          .map((u) => {
+                            const h = getSafePublicUsername(u) || "member";
+                            const n = getSafeDisplayName(u, h);
+                            const av = u.photoURL || u.shopLogo || "";
+                            return (
+                              <button
+                                key={u.uid}
+                                type="button"
+                                onClick={() => {
+                                  triggerHaptic();
+                                  setFromProfileUid(u.uid);
+                                  setFromProfileHandle(h);
+                                  setFromMeOnly(false);
+                                  setHasCommittedSearch(true);
+                                  setIsSearchFocused(false);
+                                  setShowFilterPopover(false);
+                                  setFilterSubView("root");
+                                }}
+                                className="w-full px-4 py-2.5 flex items-center gap-2.5 text-left hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
+                              >
+                                <div className="w-8 h-8 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0">
+                                  {av ? (
+                                    <img
+                                      src={av}
+                                      alt={n}
+                                      referrerPolicy="no-referrer"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-xs font-bold">
+                                      {n.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold truncate">{h}</p>
+                                  <p className="text-[11px] text-zinc-500 truncate">{n}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* VIEW BODY: 1) IDLE FOLLOW SUGGESTIONS (IMG_5128), 2) LIVE AUTOCOMPLETE (IMG_5129), OR 3) COMMITTED POST RESULTS */}
+        {!isCompactMode ? (
+          <div className="pt-4">
+            <h2 className="px-4 pb-2 text-[15px] font-semibold text-zinc-400 dark:text-zinc-500">
+              Follow suggestions
+            </h2>
+            <div className="divide-y loops-divider">
+              {suggestedAccounts.map((account) => {
+                const isFollowing = Boolean(
+                  account.uid && followedIds.includes(account.uid)
+                );
+                const handle = getSafePublicUsername(account) || "creator";
+                const name = getSafeDisplayName(account, handle);
+                const avatar = account.photoURL || account.shopLogo || "";
+                const isVerified = Boolean(
+                  account.isVerifiedBadge ||
+                    account.kycStatus === "approved" ||
+                    account.role === "admin"
+                );
+                const fCount = getEffectiveFollowersCount(account);
+
+                return (
+                  <div
+                    key={account.uid}
+                    onClick={() => navigate(`/loops/profile/${account.uid}`)}
+                    className="flex items-start justify-between gap-3 px-4 py-3.5 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] cursor-pointer transition"
+                  >
+                    <div className="flex items-start gap-3.5 min-w-0">
+                      <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0 mt-0.5">
+                        {avatar ? (
+                          <img
+                            src={avatar}
+                            alt={name}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-bold text-zinc-600 dark:text-zinc-300">
+                            {name.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-[15px] text-zinc-950 dark:text-white truncate">
+                            {handle}
+                          </span>
+                          {isVerified && (
+                            <VerifiedLoopBadge className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-[14.5px] text-zinc-400 dark:text-zinc-500 truncate leading-snug">
+                          {name}
+                        </p>
+                        <p className="mt-1.5 text-[14.5px] font-normal text-zinc-950 dark:text-zinc-100 tabular-nums">
+                          {formatCompactNumber(fCount)} followers
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {canManage && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              triggerHaptic();
-                              navigate(`/news-hub/create?edit=${post.id}`);
-                            }}
-                            className="w-9 h-9 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer transition"
-                            aria-label="Edit post"
-                            title="Edit post"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeletePost(post, e)}
-                            className="w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center cursor-pointer transition"
-                            aria-label="Delete post"
-                            title="Delete post"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleSave(post);
-                        }}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shrink-0 ${
-                          saved
-                            ? "bg-[#1877F2]/10 text-[#1877F2]"
-                            : "bg-[#F5F6F8] dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                        aria-label="Toggle bookmark"
-                      >
-                        <Bookmark
-                          className={`w-4 h-4 ${saved ? "fill-current" : ""}`}
-                        />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        triggerHaptic();
+                        if (!uid) {
+                          navigate("/signin");
+                          return;
+                        }
+                        await toggleFollowUser({
+                          targetUid: account.uid,
+                          targetName: name,
+                          currentUser: currentUser as any,
+                          currentlyFollowing: isFollowing,
+                        });
+                      }}
+                      className={`mt-0.5 min-w-[104px] h-9 px-5 rounded-[11px] text-[14px] font-semibold transition cursor-pointer shrink-0 whitespace-nowrap ${
+                        isFollowing
+                          ? "bg-transparent text-zinc-900 dark:text-zinc-100 border loops-divider"
+                          : "bg-black dark:bg-white text-white dark:text-black hover:opacity-90"
+                      }`}
+                    >
+                      {isFollowing ? "Following" : "Follow"}
+                    </button>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : showLiveAutocomplete ? (
+          /* LIVE AUTOCOMPLETE VIEW (IMG_5129) */
+          <div className="pt-2">
+            {queryText.trim() ? (
+              <div className="space-y-0.5">
+                {/* 1. Magnifying Glass Query Suggestion Rows */}
+                {queryPhraseSuggestions.map((phrase) => {
+                  const rawTyped = queryText.trim();
+                  const lowerPhrase = phrase.toLowerCase();
+                  const lowerTyped = rawTyped.toLowerCase();
+                  const startsWithTyped = lowerPhrase.startsWith(lowerTyped);
 
-                  {post.description && (
-                    <p className="text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                      <NewsRichText
-                        text={post.description}
-                        onHashtagClick={(tag) => selectHashtag(tag)}
-                      />
-                    </p>
-                  )}
-
-                  <NewsLinkPreviewCards text={post.description} />
-
-                  <NewsPostMedia
-                    post={post}
-                    onOpenImage={(idx) =>
-                      navigate(`/news-hub/photo/${post.id}/${idx}`)
-                    }
-                  />
-
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
-                        <Heart className="w-3.5 h-3.5 text-zinc-900 dark:text-white shrink-0" />
-                        <span>{totalReactions}</span>
+                  return (
+                    <button
+                      key={`q_${phrase}`}
+                      type="button"
+                      onClick={() => commitSearch(phrase)}
+                      className="w-full px-4 py-2.5 flex items-center gap-3.5 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] cursor-pointer transition"
+                    >
+                      <div className="loops-search-icon-circle w-11 h-11 rounded-full flex items-center justify-center shrink-0">
+                        <Search className="w-5 h-5 stroke-[1.9]" />
+                      </div>
+                      <span className="text-[16px] text-zinc-950 dark:text-zinc-100 truncate">
+                        {startsWithTyped ? (
+                          <>
+                            <strong className="font-bold">
+                              {phrase.slice(0, rawTyped.length)}
+                            </strong>
+                            <span className="font-normal">
+                              {phrase.slice(rawTyped.length)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-medium">{phrase}</span>
+                        )}
                       </span>
-                      <span className="px-3 py-1.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
-                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>{post.commentsCount || 0}</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/news-hub/share/${post.id}`);
-                        }}
-                        className="px-3 py-1.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 text-xs font-semibold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    </button>
+                  );
+                })}
+
+                {/* 2. Topic Community Row (<Query> Loops  Community) */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    commitSearch(`#${queryText.trim().replace(/^#/, "")}`)
+                  }
+                  className="w-full px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] cursor-pointer transition"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="loops-search-icon-circle w-11 h-11 rounded-full flex items-center justify-center shrink-0">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-5 h-5 text-[#0095F6]"
+                        fill="currentColor"
                       >
-                        <Send className="w-3.5 h-3.5 shrink-0" />
-                        <span>{post.sharesCount || 0}</span>
-                      </button>
-                      {Boolean(
-                        uid &&
-                          (post.reporterId === uid ||
-                            (post as any).authorId === uid)
-                      ) && (
-                        <span
-                          className="px-3 py-1.5 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 text-xs font-semibold flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 whitespace-nowrap"
-                          title="Views (only visible to you)"
-                        >
-                          <Eye className="w-3.5 h-3.5 shrink-0" />
-                          <span>{formatCompactNumber(post.views || 0)}</span>
-                        </span>
-                      )}
+                        <circle cx="8" cy="13" r="3" />
+                        <circle cx="15" cy="8.5" r="2.6" />
+                        <circle cx="14.5" cy="15.8" r="2.2" />
+                      </svg>
                     </div>
+                    <span className="text-[16px] text-[#0095F6] truncate">
+                      <strong className="font-bold">
+                        {queryText.trim().replace(/^#/, "").toUpperCase()}
+                      </strong>{" "}
+                      <span className="font-normal">Loops</span>
+                    </span>
                   </div>
-                </article>
-              );
-            })}
+                  <span className="text-[15px] text-zinc-400 dark:text-zinc-500 shrink-0">
+                    Community
+                  </span>
+                </button>
+
+                {/* 3. Matching User Profile Rows */}
+                {matchingUserSuggestions.map((account) => {
+                  const handle = getSafePublicUsername(account) || "creator";
+                  const name = getSafeDisplayName(account, handle);
+                  const avatar = account.photoURL || account.shopLogo || "";
+                  const isVerified = Boolean(
+                    account.isVerifiedBadge ||
+                      account.kycStatus === "approved" ||
+                      account.role === "admin"
+                  );
+
+                  return (
+                    <button
+                      key={`u_${account.uid}`}
+                      type="button"
+                      onClick={() => navigate(`/loops/profile/${account.uid}`)}
+                      className="w-full px-4 py-2.5 flex items-center gap-3.5 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] cursor-pointer transition"
+                    >
+                      <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0">
+                        {avatar ? (
+                          <img
+                            src={avatar}
+                            alt={name}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-bold text-zinc-600 dark:text-zinc-300">
+                            {name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[15.5px] font-semibold text-zinc-950 dark:text-white truncate">
+                            {handle}
+                          </span>
+                          {isVerified && (
+                            <VerifiedLoopBadge className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-[14.5px] text-zinc-400 dark:text-zinc-500 truncate">
+                          {name}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Focused with empty text: show Follow suggestions cleanly without posts */
+              <div className="pt-3">
+                <h2 className="px-4 pb-2 text-[15px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  Follow suggestions
+                </h2>
+                <div className="divide-y loops-divider">
+                  {suggestedAccounts.slice(0, 8).map((account) => {
+                    const handle = getSafePublicUsername(account) || "creator";
+                    const name = getSafeDisplayName(account, handle);
+                    const avatar = account.photoURL || account.shopLogo || "";
+                    const isVerified = Boolean(
+                      account.isVerifiedBadge ||
+                        account.kycStatus === "approved" ||
+                        account.role === "admin"
+                    );
+                    return (
+                      <button
+                        key={account.uid}
+                        type="button"
+                        onClick={() => navigate(`/loops/profile/${account.uid}`)}
+                        className="w-full px-4 py-3 flex items-center gap-3.5 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.03] cursor-pointer"
+                      >
+                        <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0">
+                          {avatar ? (
+                            <img
+                              src={avatar}
+                              alt={name}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center font-bold">
+                              {name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[15px] font-semibold truncate">
+                              {handle}
+                            </span>
+                            {isVerified && (
+                              <VerifiedLoopBadge className="w-3.5 h-3.5 shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-[14px] text-zinc-400 truncate">
+                            {name}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* COMMITTED SEARCH RESULTS STREAM */
+          <div className="pt-3 space-y-2">
+            {hasActiveFilter && (
+              <div className="px-4 flex items-center gap-2 flex-wrap">
+                {dateFilter !== "any" && (
+                  <button
+                    type="button"
+                    onClick={() => setDateFilter("any")}
+                    className="px-3 py-1 rounded-full border loops-divider text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>
+                      {dateFilter === "24h"
+                        ? "Last 24h"
+                        : dateFilter === "7d"
+                        ? "Past 7d"
+                        : "Past 30d"}
+                    </span>
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+                {fromMeOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setFromMeOnly(false)}
+                    className="px-3 py-1 rounded-full border loops-divider text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>From me</span>
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+                {fromProfileUid && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromProfileUid("");
+                      setFromProfileHandle("");
+                    }}
+                    className="px-3 py-1 rounded-full border loops-divider text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>@{fromProfileHandle}</span>
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="px-0 sm:px-4">
+              {renderPostStream(
+                searchResultPosts,
+                queryText.trim()
+                  ? `No loops found for "${queryText.trim()}"`
+                  : "No matching loops",
+                "Try another search phrase, @username, or adjust your filter."
+              )}
+            </div>
           </div>
         )}
       </div>
+
+      <LiquidGlassShareModal
+        isOpen={Boolean(sharePost)}
+        post={sharePost || {}}
+        onClose={() => setSharePost(null)}
+        onRepost={() => {
+          if (sharePost) handleToggleRepost(sharePost);
+        }}
+        onQuotePost={() => {
+          if (sharePost) navigate(`/loops/create?quotePostId=${sharePost.id}`);
+        }}
+      />
 
       <NewsBottomDock />
     </div>
@@ -1558,10 +2251,29 @@ export const NewsSavedAndSearchPage: React.FC = () => {
 };
 
 /* ============================================================================
- * 4. DEDICATED STORY VIEWER PAGE (/news-hub/story/:storyId) — FULL INTERACTIVE
+ * 4. DEDICATED STORY VIEWER PAGE (/loops/story/:storyId) — 1:1 IMG_5131–IMG_5136
  * ========================================================================== */
+const STORY_TTL_MS = 24 * 60 * 60 * 1000;
+
+const formatCompactStoryAge = (createdAtMs?: number): string => {
+  if (!createdAtMs || createdAtMs <= 0) return "1h";
+  const diffSec = Math.max(1, Math.floor((Date.now() - createdAtMs) / 1000));
+  if (diffSec < 60) return "now";
+  const mins = Math.floor(diffSec / 60);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d`;
+  return `${Math.floor(days / 7)}w`;
+};
+
 export const NewsStoryViewerPage: React.FC = () => {
   const { storyId } = useParams<{ storyId: string }>();
+  const [searchParams] = useSearchParams();
+  const highlightIdParam = searchParams.get("highlightId") || "";
+  const highlightOwnerUid = searchParams.get("uid") || "";
+
   const navigate = useNavigate();
   const notify = useNotify();
   const confirm = useConfirm();
@@ -1573,21 +2285,40 @@ export const NewsStoryViewerPage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(
     () => auth.currentUser
   );
+  const followedIds = useFollowedIds(currentUser?.uid);
+
   const [audioMuted, setAudioMuted] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Interactive Popovers & Sheets State
+  const [showOwnMorePopover, setShowOwnMorePopover] = useState(false);
+  const [showPeerMenuPopover, setShowPeerMenuPopover] = useState(false);
+  const [showCommentSheet, setShowCommentSheet] = useState(false);
+  const [showMentionSheet, setShowMentionSheet] = useState(false);
+  const [showHighlightModal, setShowHighlightModal] = useState(false);
+  const [showDirectSendSheet, setShowDirectSendSheet] = useState(false);
+  const [showAboutAccountModal, setShowAboutAccountModal] = useState(false);
+  const [showStorySettingsSheet, setShowStorySettingsSheet] = useState(false);
+
+  // Directory & Profile Data for Mentions / Highlights / Activity
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [myHighlights, setMyHighlights] = useState<StoryHighlightItem[]>([]);
+  const [authorProfile, setAuthorProfile] = useState<any | null>(null);
+
   // Viewer Stats Modal States
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [viewerProfiles, setViewerProfiles] = useState<any[]>([]);
-  const [reactionProfiles, setReactionProfiles] = useState<any[]>([]);
   const [ownerFollowers, setOwnerFollowers] = useState<string[]>([]);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
-  // 2-Finger Pinch-to-Zoom & Pan State (Defaults to 1:1 exact aspect ratio)
+  // 2-Finger Pinch-to-Zoom & Pan State
   const [viewerScale, setViewerScale] = useState<number>(1);
-  const [viewerOffset, setViewerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [viewerOffset, setViewerOffset] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
   const viewerPinchRef = useRef<{
     active: boolean;
     initialDist: number;
@@ -1605,9 +2336,60 @@ export const NewsStoryViewerPage: React.FC = () => {
     return () => unsub();
   }, []);
 
+  // Load users list for Mention & Direct Send sheets
+  useEffect(() => {
+    let cancelled = false;
+    getDocs(collection(db, "users"))
+      .then((snap) => {
+        if (cancelled) return;
+        setAllUsers(snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Load current user's Highlights so owner can add/create Highlights
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setMyHighlights([]);
+      return;
+    }
+    const localKey = `deep_story_highlights_${currentUser.uid}`;
+    let localItems: StoryHighlightItem[] = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(localKey) || "[]");
+      if (Array.isArray(parsed)) localItems = parsed;
+    } catch {}
+    if (localItems.length > 0) setMyHighlights(localItems);
+
+    const unsub = onSnapshot(
+      doc(db, "users", currentUser.uid),
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data() || {};
+          const remote: StoryHighlightItem[] = Array.isArray(d.storyHighlights)
+            ? d.storyHighlights
+            : [];
+          if (remote.length > 0) {
+            setMyHighlights(remote);
+            try {
+              localStorage.setItem(localKey, JSON.stringify(remote));
+            } catch {}
+          }
+        }
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, [currentUser?.uid]);
+
+  // Load Stories: either permanent Highlight playback OR 24h active Feed playback
   useEffect(() => {
     let mainDocs: Record<string, any> = {};
     let communityDocs: Record<string, any> = {};
+    let highlightSnapshots: StoryHighlightSnapshot[] = [];
 
     const mapDoc = (id: string, data: Record<string, any>) => {
       const createdAtMs =
@@ -1618,20 +2400,22 @@ export const NewsStoryViewerPage: React.FC = () => {
           : 0;
       return {
         id,
-        userId: data.userId || data.sellerId || "",
+        userId: data.userId || data.sellerId || highlightOwnerUid || "",
         authorName:
           data.userName ||
+          data.authorName ||
           data.sellerName ||
           data.category ||
-          "Community Member",
+          "Creator",
+        authorUsername: data.userUsername || data.username || "",
         avatar:
           data.userAvatar ||
+          data.avatar ||
           data.sellerLogo ||
           data.sellerAvatar ||
-          data.mediaUrl ||
-          defaultAvatarImg,
+          "",
         mediaUrl: data.mediaUrl || data.imageUrl || "",
-        mediaType: data.type || "image",
+        mediaType: data.mediaType || data.type || "image",
         linkUrl: data.linkUrl || "",
         caption: data.caption || "",
         songTitle: data.songTitle || "",
@@ -1640,17 +2424,22 @@ export const NewsStoryViewerPage: React.FC = () => {
         stickers: Array.isArray(data.stickers) ? data.stickers : [],
         aiLabel: Boolean(data.aiLabel || data.isAiGenerated),
         allowCommenting: data.allowCommenting !== false,
+        isArchived: Boolean(data.isArchived),
         isCloseFriends: Boolean(data.isCloseFriends),
-        closeFriendIds: Array.isArray(data.closeFriendIds) ? data.closeFriendIds : [],
+        closeFriendIds: Array.isArray(data.closeFriendIds)
+          ? data.closeFriendIds
+          : [],
         isBoomerang: Boolean(data.isBoomerang),
         pollVotes: data.pollVotes || {},
         sliderVotes: data.sliderVotes || {},
         likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
         viewedBy: Array.isArray(data.viewedBy) ? data.viewedBy : [],
+        storyReplies: Array.isArray(data.storyReplies) ? data.storyReplies : [],
         createdAtMs,
         createdAtLabel: data.createdAt
           ? formatDhakaDateTime(data.createdAt)
           : "Recent",
+        ageShort: formatCompactStoryAge(createdAtMs),
       };
     };
 
@@ -1660,8 +2449,8 @@ export const NewsStoryViewerPage: React.FC = () => {
         merged.set(id, mapDoc(id, raw));
       });
       Object.entries(communityDocs).forEach(([id, raw]) => {
-        const existing = merged.get(id);
-        merged.set(id, mapDoc(id, existing ? { ...mainDocs[id], ...raw } : raw));
+        const existingRaw = mainDocs[id] || {};
+        merged.set(id, mapDoc(id, { ...existingRaw, ...raw }));
       });
       try {
         const localList = JSON.parse(
@@ -1676,10 +2465,37 @@ export const NewsStoryViewerPage: React.FC = () => {
         }
       } catch {}
 
+      // HIGHLIGHT PLAYBACK MODE: Plays permanent highlighted stories even after 24h feed expiry!
+      if (highlightIdParam) {
+        const hlItems: any[] = [];
+        highlightSnapshots.forEach((snapItem) => {
+          const live = merged.get(snapItem.id);
+          if (live) {
+            hlItems.push({
+              ...mapDoc(snapItem.id, snapItem as any),
+              ...live,
+              mediaUrl: live.mediaUrl || snapItem.mediaUrl,
+            });
+          } else {
+            hlItems.push(mapDoc(snapItem.id, snapItem as any));
+          }
+        });
+        setStories(hlItems);
+        setLoading(false);
+        return;
+      }
+
+      // NORMAL FEED PLAYBACK MODE: Enforce 24-hour expiry & hide archived stories
+      const now = Date.now();
       const uid = auth.currentUser?.uid || "";
       const isAdm = hasImmediateAdminOrStaffRole(null, auth.currentUser);
       const visible = Array.from(merged.values())
         .filter((s) => {
+          if (!s.mediaUrl) return false;
+          if (s.isArchived) return false;
+          if (s.createdAtMs > 0 && now - s.createdAtMs > STORY_TTL_MS) {
+            return false;
+          }
           if (s.isCloseFriends && s.closeFriendIds.length > 0) {
             return isAdm || s.userId === uid || s.closeFriendIds.includes(uid);
           }
@@ -1687,23 +2503,70 @@ export const NewsStoryViewerPage: React.FC = () => {
         })
         .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
 
-      // Group stories by userId and sort stories within each group chronologically (FB/IG style)
       const userGroups = new Map<string, any[]>();
       visible.forEach((s) => {
-        if (!userGroups.has(s.userId)) userGroups.set(s.userId, []);
-        userGroups.get(s.userId)!.push(s);
+        const groupKey = s.userId || s.id;
+        if (!userGroups.has(groupKey)) userGroups.set(groupKey, []);
+        userGroups.get(groupKey)!.push(s);
       });
 
-      // Sort stories within each group by time (oldest first)
-      for (const [uid, groupStories] of userGroups.entries()) {
+      for (const [, groupStories] of userGroups.entries()) {
         groupStories.sort((a, b) => (a.createdAtMs || 0) - (b.createdAtMs || 0));
       }
 
-      const reordered = Array.from(userGroups.values()).flat();
-
-      setStories(reordered);
+      setStories(Array.from(userGroups.values()).flat());
       setLoading(false);
     };
+
+    const loadHighlightIfNeeded = async () => {
+      if (!highlightIdParam) return;
+      const targetUid = highlightOwnerUid || auth.currentUser?.uid || "";
+      let foundHl: StoryHighlightItem | undefined;
+
+      if (targetUid) {
+        try {
+          const localRaw = localStorage.getItem(
+            `deep_story_highlights_${targetUid}`
+          );
+          if (localRaw) {
+            const parsed: StoryHighlightItem[] = JSON.parse(localRaw);
+            foundHl = parsed.find((h) => h.id === highlightIdParam);
+          }
+        } catch {}
+
+        try {
+          const uSnap = await getDoc(doc(db, "users", targetUid));
+          if (uSnap.exists()) {
+            const remoteHls: StoryHighlightItem[] = Array.isArray(
+              uSnap.data()?.storyHighlights
+            )
+              ? uSnap.data()!.storyHighlights
+              : [];
+            const remoteMatch = remoteHls.find((h) => h.id === highlightIdParam);
+            if (remoteMatch) foundHl = remoteMatch;
+          }
+        } catch {}
+      }
+
+      if (foundHl) {
+        if (Array.isArray(foundHl.storiesSnapshot) && foundHl.storiesSnapshot.length > 0) {
+          highlightSnapshots = foundHl.storiesSnapshot;
+        } else if (Array.isArray(foundHl.storyIds)) {
+          highlightSnapshots = foundHl.storyIds.map((sid) => ({
+            id: sid,
+            userId: targetUid,
+            authorName: "Creator",
+            avatar: "",
+            mediaUrl: foundHl?.coverImage || "",
+            mediaType: "image",
+            createdAtMs: foundHl?.createdAt || Date.now(),
+          }));
+        }
+      }
+      emitMerged();
+    };
+
+    loadHighlightIfNeeded();
 
     const unsubMain = onSnapshot(
       collection(db, "stories"),
@@ -1738,7 +2601,7 @@ export const NewsStoryViewerPage: React.FC = () => {
       unsubMain();
       unsubComm();
     };
-  }, []);
+  }, [highlightIdParam, highlightOwnerUid]);
 
   useEffect(() => {
     if (!storyId || stories.length === 0) return;
@@ -1746,94 +2609,140 @@ export const NewsStoryViewerPage: React.FC = () => {
     if (foundIdx >= 0) setActiveIdx(foundIdx);
   }, [storyId, stories.length]);
 
-  // Effect: Record story view
+  useEffect(() => {
+    if (activeIdx >= stories.length && stories.length > 0) {
+      setActiveIdx(stories.length - 1);
+    }
+  }, [stories.length, activeIdx]);
+
+  // Load active story author's profile for exact username & About Account modal
+  useEffect(() => {
+    if (!story?.userId) {
+      setAuthorProfile(null);
+      return;
+    }
+    let cancelled = false;
+    getDoc(doc(db, "users", story.userId))
+      .then((snap) => {
+        if (!cancelled && snap.exists()) {
+          setAuthorProfile({ uid: snap.id, ...snap.data() });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [story?.userId]);
+
+  // Record story view
   useEffect(() => {
     if (!story || !currentUser?.uid) return;
-    if (story.userId === currentUser.uid) return; // Don't count own view
+    if (story.userId === currentUser.uid) return;
 
     const recordView = async () => {
       try {
-        const alreadyViewed = story.viewedBy?.includes(currentUser.uid);
-        if (alreadyViewed) return;
-
-        const storyRef = doc(db, "stories", story.id);
-        const videoRef = doc(db, "creator_videos", story.id);
+        if (story.viewedBy?.includes(currentUser.uid)) return;
         const payload = { viewedBy: arrayUnion(currentUser.uid) };
-
         await Promise.all([
-          updateDoc(storyRef, payload).catch(() => {}),
-          updateDoc(videoRef, payload).catch(() => {}),
+          updateDoc(doc(db, "stories", story.id), payload).catch(() => {}),
+          updateDoc(doc(db, "creator_videos", story.id), payload).catch(() => {}),
         ]);
-      } catch (e) {}
+      } catch {}
     };
 
     recordView();
   }, [story?.id, currentUser?.uid]);
 
-  // Effect: Fetch owner's followers if viewing own story
+  // Fetch owner's followers & viewer avatar previews when viewing own story
   useEffect(() => {
     if (!story || !currentUser?.uid || story.userId !== currentUser.uid) {
       setOwnerFollowers([]);
       return;
     }
 
-    const unsub = onSnapshot(doc(db, "users", currentUser.uid), (snap) => {
-      if (snap.exists()) {
-        const d = snap.data();
-        setOwnerFollowers(Array.isArray(d.followers) ? d.followers : []);
-      }
-    });
+    const unsub = onSnapshot(
+      doc(db, "users", currentUser.uid),
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          setOwnerFollowers(Array.isArray(d.followers) ? d.followers : []);
+        }
+      },
+      () => {}
+    );
 
     return () => unsub();
   }, [story?.id, currentUser?.uid]);
 
-  // Effect: Fetch detailed profiles for stats modal
+  // Preload up to 3 viewer profiles for bottom-left "Activity" overlapping avatars + full stats modal
   useEffect(() => {
-    if (!showStatsModal || !story) return;
+    if (!story) return;
+    const isMine = Boolean(currentUser?.uid && story.userId === currentUser.uid);
+    if (!isMine && !showStatsModal) return;
 
-    const fetchDetailedStats = async () => {
-      setIsLoadingStats(true);
+    const uidsToFetch: string[] = showStatsModal
+      ? story.viewedBy || []
+      : (story.viewedBy || []).slice(0, 3);
+
+    if (uidsToFetch.length === 0) {
+      setViewerProfiles([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchProfiles = async () => {
+      if (showStatsModal) setIsLoadingStats(true);
       try {
-        const fetchProfiles = async (uids: string[]) => {
-          const profiles: any[] = [];
-          for (const uid of uids) {
-            try {
-              const uSnap = await getDoc(doc(db, "users", uid));
-              if (uSnap.exists()) {
-                profiles.push({ uid: uSnap.id, ...uSnap.data() });
-              }
-            } catch (err) {}
+        const loaded: any[] = [];
+        for (const uid of uidsToFetch) {
+          const cached = allUsers.find((u) => u.uid === uid);
+          if (cached) {
+            loaded.push(cached);
+            continue;
           }
-          return profiles;
-        };
-
-        const [vProfs, rProfs] = await Promise.all([
-          fetchProfiles(story.viewedBy || []),
-          fetchProfiles(story.likedBy || []),
-        ]);
-
-        setViewerProfiles(vProfs);
-        setReactionProfiles(rProfs);
-      } catch (err) {
+          try {
+            const uSnap = await getDoc(doc(db, "users", uid));
+            if (uSnap.exists()) {
+              loaded.push({ uid: uSnap.id, ...uSnap.data() });
+            }
+          } catch {}
+        }
+        if (!cancelled) setViewerProfiles(loaded);
       } finally {
-        setIsLoadingStats(false);
+        if (!cancelled) setIsLoadingStats(false);
       }
     };
+    fetchProfiles();
 
-    fetchDetailedStats();
-  }, [showStatsModal, story?.id]);
-
+    return () => {
+      cancelled = true;
+    };
+  }, [showStatsModal, story?.id, story?.viewedBy?.length, currentUser?.uid, allUsers.length]);
 
   const isSignedIn = Boolean(currentUser);
-  const canDeleteStory =
-    Boolean(currentUser && story) &&
-    (currentUser?.uid === story?.userId ||
-      hasImmediateAdminOrStaffRole(null, currentUser));
+  const isOwnStory = Boolean(
+    currentUser?.uid && story?.userId && currentUser.uid === story.userId
+  );
+
+  // Scoped segments for top progress bar (current author's stories or current highlight's stories)
+  const scopedAuthorStories = React.useMemo(() => {
+    if (!story) return [];
+    if (highlightIdParam) return stories;
+    return stories.filter((s) => s.userId === story.userId);
+  }, [stories, story, highlightIdParam]);
+
+  const scopedActiveIdx = React.useMemo(() => {
+    if (!story) return 0;
+    const idx = scopedAuthorStories.findIndex((s) => s.id === story.id);
+    return idx >= 0 ? idx : 0;
+  }, [scopedAuthorStories, story]);
 
   useEffect(() => {
     setViewerScale(1);
     setViewerOffset({ x: 0, y: 0 });
     viewerPinchRef.current = null;
+    setShowOwnMorePopover(false);
+    setShowPeerMenuPopover(false);
   }, [story?.id, activeIdx]);
 
   const handleViewerTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -1862,13 +2771,23 @@ export const NewsStoryViewerPage: React.FC = () => {
       const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
       const midX = (t0.clientX + t1.clientX) / 2;
       const midY = (t0.clientY + t1.clientY) / 2;
-      const { initialDist, initialScale, initialMidX, initialMidY, initialOffsetX, initialOffsetY } =
-        viewerPinchRef.current;
-      const nextScale = Math.min(4, Math.max(0.5, initialScale * (dist / initialDist)));
-      const nextX = initialOffsetX + (midX - initialMidX);
-      const nextY = initialOffsetY + (midY - initialMidY);
+      const {
+        initialDist,
+        initialScale,
+        initialMidX,
+        initialMidY,
+        initialOffsetX,
+        initialOffsetY,
+      } = viewerPinchRef.current;
+      const nextScale = Math.min(
+        4,
+        Math.max(0.5, initialScale * (dist / initialDist))
+      );
       setViewerScale(nextScale);
-      setViewerOffset({ x: nextX, y: nextY });
+      setViewerOffset({
+        x: initialOffsetX + (midX - initialMidX),
+        y: initialOffsetY + (midY - initialMidY),
+      });
     }
   };
 
@@ -1885,11 +2804,6 @@ export const NewsStoryViewerPage: React.FC = () => {
       setViewerScale((prev) => Math.min(4, Math.max(0.5, prev + delta)));
     }
   };
-
-  const isViewerZoomed =
-    Math.abs(viewerScale - 1) > 0.02 ||
-    Math.abs(viewerOffset.x) > 2 ||
-    Math.abs(viewerOffset.y) > 2;
 
   // Sync story background music playback
   useEffect(() => {
@@ -1913,11 +2827,20 @@ export const NewsStoryViewerPage: React.FC = () => {
     };
   }, [story?.id, story?.music?.url, audioMuted]);
 
+  const handleCloseViewer = () => {
+    triggerHaptic();
+    if (highlightIdParam && highlightOwnerUid) {
+      navigate(`/loops/profile/${highlightOwnerUid}`);
+    } else {
+      navigate("/loops");
+    }
+  };
+
   const handleDeleteCurrentStory = async () => {
     if (!story) return;
     const ok = await confirm({
       title: "Delete Story",
-      message: "Remove this story from the Feed?",
+      message: "Remove this story permanently?",
       confirmText: "Delete",
     });
     if (!ok) return;
@@ -1939,10 +2862,302 @@ export const NewsStoryViewerPage: React.FC = () => {
         }
       } catch {}
       notify("Story deleted.", "success");
-      navigate("/news-hub");
+      handleCloseViewer();
     } catch {
       notify("Could not delete story.", "error");
     }
+  };
+
+  const handleArchiveStory = async () => {
+    if (!story) return;
+    triggerHaptic();
+    try {
+      await Promise.all([
+        updateDoc(doc(db, "stories", story.id), { isArchived: true }).catch(
+          () => {}
+        ),
+        setDoc(
+          doc(db, "creator_videos", story.id),
+          { isArchived: true },
+          { merge: true }
+        ).catch(() => {}),
+      ]);
+      try {
+        const prevLocal = JSON.parse(
+          localStorage.getItem("deep_news_stories_local") || "[]"
+        );
+        if (Array.isArray(prevLocal)) {
+          localStorage.setItem(
+            "deep_news_stories_local",
+            JSON.stringify(
+              prevLocal.map((x: any) =>
+                x?.id === story.id ? { ...x, isArchived: true } : x
+              )
+            )
+          );
+        }
+      } catch {}
+      notify("Story archived.", "success");
+      if (stories.length <= 1) {
+        handleCloseViewer();
+      }
+    } catch {
+      notify("Could not archive story.", "error");
+    }
+  };
+
+  const buildSnapshotFromCurrentStory = (): StoryHighlightSnapshot | null => {
+    if (!story) return null;
+    return {
+      id: story.id,
+      userId: story.userId || currentUser?.uid || "",
+      authorName: story.authorName || "Creator",
+      avatar: story.avatar || "",
+      mediaUrl: story.mediaUrl || "",
+      mediaType: story.mediaType || "image",
+      caption: story.caption || "",
+      songTitle: story.songTitle || "",
+      music: story.music || null,
+      textLayers: story.textLayers || [],
+      stickers: story.stickers || [],
+      aiLabel: Boolean(story.aiLabel),
+      allowCommenting: story.allowCommenting !== false,
+      createdAtMs: story.createdAtMs || Date.now(),
+    };
+  };
+
+  const persistUserHighlights = async (nextList: StoryHighlightItem[]) => {
+    if (!currentUser?.uid) return;
+    setMyHighlights(nextList);
+    try {
+      localStorage.setItem(
+        `deep_story_highlights_${currentUser.uid}`,
+        JSON.stringify(nextList)
+      );
+    } catch {}
+    await setDoc(
+      doc(db, "users", currentUser.uid),
+      { storyHighlights: nextList },
+      { merge: true }
+    ).catch(() => {});
+  };
+
+  const handleCreateNewHighlight = async (title: string) => {
+    const snapItem = buildSnapshotFromCurrentStory();
+    if (!snapItem || !currentUser?.uid) return;
+    triggerHaptic();
+    const newItem: StoryHighlightItem = {
+      id: `hl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      title: title.trim().toUpperCase(),
+      coverImage: story?.mediaUrl || "",
+      storyIds: [snapItem.id],
+      storiesSnapshot: [snapItem],
+      createdAt: Date.now(),
+    };
+    const nextList = [...myHighlights, newItem];
+    await persistUserHighlights(nextList);
+    notify(`Added to "${newItem.title}" highlight!`, "success");
+  };
+
+  const handleAddToExistingHighlight = async (hlId: string) => {
+    const snapItem = buildSnapshotFromCurrentStory();
+    if (!snapItem || !currentUser?.uid) return;
+    triggerHaptic();
+    const nextList = myHighlights.map((hl) => {
+      if (hl.id !== hlId) return hl;
+      const exists = hl.storyIds?.includes(snapItem.id);
+      if (exists) return hl;
+      const nextSnaps = [...(hl.storiesSnapshot || []), snapItem];
+      return {
+        ...hl,
+        storyIds: [...(hl.storyIds || []), snapItem.id],
+        storiesSnapshot: nextSnaps,
+      };
+    });
+    await persistUserHighlights(nextList);
+    notify("Saved to profile highlight!", "success");
+  };
+
+  const handleSaveStoryMedia = async () => {
+    if (!story?.mediaUrl) return;
+    triggerHaptic();
+    try {
+      if (story.mediaType === "image") {
+        await downloadWatermarkedImage(
+          story.mediaUrl,
+          `loops-story-${story.id}.jpg`
+        );
+      } else {
+        const a = document.createElement("a");
+        a.href = story.mediaUrl;
+        a.download = `loops-story-${story.id}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      notify("Saved to device.", "success");
+    } catch {
+      notify("Could not save story media.", "error");
+    }
+  };
+
+  const handleToggleAiLabel = async () => {
+    if (!story) return;
+    triggerHaptic();
+    const nextVal = !story.aiLabel;
+    setStories((prev) =>
+      prev.map((s) => (s.id === story.id ? { ...s, aiLabel: nextVal } : s))
+    );
+    await Promise.all([
+      updateDoc(doc(db, "stories", story.id), { aiLabel: nextVal }).catch(
+        () => {}
+      ),
+      setDoc(
+        doc(db, "creator_videos", story.id),
+        { aiLabel: nextVal },
+        { merge: true }
+      ).catch(() => {}),
+    ]);
+    notify(nextVal ? "AI label added." : "AI label removed.", "success");
+  };
+
+  const handleToggleStoryCommenting = async () => {
+    if (!story) return;
+    triggerHaptic();
+    const nextVal = !story.allowCommenting;
+    setStories((prev) =>
+      prev.map((s) =>
+        s.id === story.id ? { ...s, allowCommenting: nextVal } : s
+      )
+    );
+    await Promise.all([
+      updateDoc(doc(db, "stories", story.id), {
+        allowCommenting: nextVal,
+      }).catch(() => {}),
+      setDoc(
+        doc(db, "creator_videos", story.id),
+        { allowCommenting: nextVal },
+        { merge: true }
+      ).catch(() => {}),
+    ]);
+    notify(
+      nextVal ? "Story commenting turned on." : "Story commenting turned off.",
+      "success"
+    );
+  };
+
+  const handleToggleCloseFriends = async () => {
+    if (!story) return;
+    triggerHaptic();
+    const nextVal = !story.isCloseFriends;
+    setStories((prev) =>
+      prev.map((s) =>
+        s.id === story.id ? { ...s, isCloseFriends: nextVal } : s
+      )
+    );
+    await Promise.all([
+      updateDoc(doc(db, "stories", story.id), {
+        isCloseFriends: nextVal,
+      }).catch(() => {}),
+      setDoc(
+        doc(db, "creator_videos", story.id),
+        { isCloseFriends: nextVal },
+        { merge: true }
+      ).catch(() => {}),
+    ]);
+    notify(
+      nextVal ? "Marked as Close Friends." : "Shared with everyone.",
+      "success"
+    );
+  };
+
+  const handleShareExternal = async () => {
+    if (!story) return;
+    triggerHaptic();
+    const shareUrl = `${getPublicShareOrigin()}/loops/story/${story.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${story.authorName || "Loops"} Story`,
+          url: shareUrl,
+        });
+        return;
+      }
+    } catch {}
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      notify("Story link copied to share!", "success");
+    } catch {
+      notify("Could not copy story link.", "error");
+    }
+  };
+
+  const handleConfirmMentions = async (chosenUsers: any[]) => {
+    if (!story || !currentUser || chosenUsers.length === 0) return;
+    const newStickers: StoryStickerItem[] = chosenUsers.map((u, idx) => ({
+      id: `stk_mention_${Date.now()}_${idx}`,
+      kind: "mention",
+      title: `@${getSafePublicUsername(u) || getSafeDisplayName(u, "member")}`,
+      targetUid: u.uid,
+    }));
+    const updatedStickers = [...(story.stickers || []), ...newStickers];
+    setStories((prev) =>
+      prev.map((s) =>
+        s.id === story.id ? { ...s, stickers: updatedStickers } : s
+      )
+    );
+    await Promise.all([
+      updateDoc(doc(db, "stories", story.id), {
+        stickers: updatedStickers,
+      }).catch(() => {}),
+      setDoc(
+        doc(db, "creator_videos", story.id),
+        { stickers: updatedStickers },
+        { merge: true }
+      ).catch(() => {}),
+    ]);
+
+    for (const u of chosenUsers) {
+      if (u.uid && u.uid !== currentUser.uid) {
+        await addDoc(collection(db, "news_hub_notifications"), {
+          userId: u.uid,
+          fromUserId: currentUser.uid,
+          fromUserName: getSafeDisplayName(currentUser, "Someone"),
+          fromUserUsername: getSafePublicUsername(currentUser),
+          fromUserAvatar: currentUser.photoURL || "",
+          title: "Story Mention",
+          body: "mentioned you in their story.",
+          mediaThumbnail: story.mediaUrl || story.avatar || "",
+          type: "story",
+          link: `/loops/story/${story.id}`,
+          read: false,
+          isRead: false,
+          createdAt: Date.now(),
+        }).catch(() => {});
+      }
+    }
+    notify(
+      `Mentioned ${chosenUsers.length} ${
+        chosenUsers.length === 1 ? "person" : "people"
+      }!`,
+      "success"
+    );
+  };
+
+  const handleReportPeerStory = async () => {
+    if (!story) return;
+    triggerHaptic();
+    try {
+      await addDoc(collection(db, "scam_reports"), {
+        targetType: "story",
+        storyId: story.id,
+        reportedUserId: story.userId || "",
+        reportedBy: currentUser?.uid || "guest",
+        reason: "Story reported from viewer",
+        createdAt: Date.now(),
+      }).catch(() => {});
+    } catch {}
+    notify("Story reported. Thank you for keeping Loops safe.", "success");
   };
 
   async function handleVotePoll(stkId: string, choice: "A" | "B") {
@@ -1988,28 +3203,13 @@ export const NewsStoryViewerPage: React.FC = () => {
     } catch {}
   }
 
-  const deliverStoryMessageToInbox = async (
+  const deliverStoryMessageToUser = async (
+    recipientUidInput: string,
     messageText: string,
     storyContextLabel: string
   ) => {
     if (!currentUser?.uid || !story) return;
-
-    let recipientUid = String(story.userId || "").trim();
-    if (!recipientUid) {
-      try {
-        const adminSnap = await getDocs(
-          query(
-            collection(db, "users"),
-            where("role", "in", ["admin", "super_admin"])
-          )
-        );
-        const firstAdmin = adminSnap.docs.find(
-          (d) => d.id !== currentUser.uid
-        );
-        if (firstAdmin) recipientUid = firstAdmin.id;
-      } catch {}
-    }
-
+    let recipientUid = String(recipientUidInput || "").trim();
     if (!recipientUid || recipientUid === currentUser.uid) return;
 
     const senderDisplayName = getSafeDisplayName(currentUser, "Member");
@@ -2047,7 +3247,7 @@ export const NewsStoryViewerPage: React.FC = () => {
       }
     });
 
-    const summaryPreview = `Story reply: ${messageText.slice(0, 60)}`;
+    const summaryPreview = `Story: ${messageText.slice(0, 60)}`;
 
     if (!targetChatId) {
       const createdChat = await addDoc(collection(db, "p2p_chats"), {
@@ -2101,7 +3301,7 @@ export const NewsStoryViewerPage: React.FC = () => {
       replyTo: {
         id: story.id,
         text: storyContextLabel,
-        senderId: recipientUid,
+        senderId: story.userId || recipientUid,
         senderName: story.authorName || recipientName,
         imageUrl: previewThumb,
       },
@@ -2134,30 +3334,14 @@ export const NewsStoryViewerPage: React.FC = () => {
         },
         { merge: true }
       );
-      await deliverStoryMessageToInbox(
-        answer,
-        `Story Q&A (${stk.title || "Question"})`
-      ).catch(() => {});
-
-      const actorIsAdmin = hasImmediateAdminOrStaffRole(null, currentUser);
-      if (story.userId && story.userId !== currentUser.uid && !actorIsAdmin) {
-        await addDoc(collection(db, "news_hub_notifications"), {
-          userId: story.userId,
-          fromUserId: currentUser.uid,
-          fromUserName: getSafeDisplayName(currentUser, "Someone"),
-          fromUserUsername: getSafePublicUsername(currentUser),
-          fromUserAvatar: currentUser.photoURL || "",
-          title: `New story response`,
-          body: `responded to your story: "${answer}"`,
-          mediaThumbnail: story.avatar || story.mediaUrl || "",
-          type: "story",
-          link: `/news-hub/story/${story.id}`,
-          read: false,
-          isRead: false,
-          createdAt: Date.now(),
-        }).catch(() => {});
+      if (story.userId) {
+        await deliverStoryMessageToUser(
+          story.userId,
+          answer,
+          `Story Q&A (${stk.title || "Question"})`
+        ).catch(() => {});
       }
-      notify("Response sent to inbox!", "success");
+      notify("Response sent!", "success");
     } catch {
       notify("Could not send response.", "error");
     }
@@ -2201,7 +3385,12 @@ export const NewsStoryViewerPage: React.FC = () => {
       ]);
 
       const actorIsAdmin = hasImmediateAdminOrStaffRole(null, currentUser);
-      if (!alreadyLiked && story.userId && story.userId !== currentUser.uid && !actorIsAdmin) {
+      if (
+        !alreadyLiked &&
+        story.userId &&
+        story.userId !== currentUser.uid &&
+        !actorIsAdmin
+      ) {
         await addDoc(collection(db, "news_hub_notifications"), {
           userId: story.userId,
           fromUserId: currentUser.uid,
@@ -2216,43 +3405,58 @@ export const NewsStoryViewerPage: React.FC = () => {
           createdAt: Date.now(),
           read: false,
           isRead: false,
-          link: `/news-hub/story/${story.id}`,
+          link: `/loops/story/${story.id}`,
         }).catch(() => {});
       }
     } catch {}
   };
 
-  const handleSendStoryReply = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!story || !replyText.trim()) return;
+  const submitCommentOrReplyText = async (
+    cleanText: string,
+    alsoSendDm = true
+  ) => {
+    if (!story || !cleanText) return;
     if (!currentUser) {
       navigate("/signin");
       return;
     }
-    const cleanReply = replyText.trim();
-    setReplyText("");
     triggerHaptic();
+    const replyEntry: StoryReplyItem = {
+      uid: currentUser.uid,
+      name: getSafeDisplayName(currentUser, "Member"),
+      avatar: currentUser.photoURL || "",
+      text: cleanText,
+      createdAt: Date.now(),
+    };
+
+    setStories((prev) =>
+      prev.map((s) =>
+        s.id === story.id
+          ? { ...s, storyReplies: [...(s.storyReplies || []), replyEntry] }
+          : s
+      )
+    );
+
     try {
       await Promise.all([
         setDoc(
           doc(db, "creator_videos", story.id),
           {
             kind: story.userId ? "news_story" : "story_engagement",
-            storyReplies: arrayUnion({
-              uid: currentUser.uid,
-              name: getSafeDisplayName(currentUser, "Member"),
-              text: cleanReply,
-              createdAt: Date.now(),
-            }),
+            storyReplies: arrayUnion(replyEntry),
           },
           { merge: true }
         ).catch(() => {}),
-        deliverStoryMessageToInbox(
-          cleanReply,
-          story.caption
-            ? `Replied to story: "${String(story.caption).slice(0, 50)}"`
-            : `Replied to ${story.authorName || "your"} story`
-        ),
+        updateDoc(doc(db, "stories", story.id), {
+          storyReplies: arrayUnion(replyEntry),
+        }).catch(() => {}),
+        alsoSendDm && story.userId && story.userId !== currentUser.uid
+          ? deliverStoryMessageToUser(
+              story.userId,
+              cleanText,
+              `Replied to ${story.authorName || "your"} story`
+            )
+          : Promise.resolve(),
       ]);
 
       const actorIsAdmin = hasImmediateAdminOrStaffRole(null, currentUser);
@@ -2263,25 +3467,35 @@ export const NewsStoryViewerPage: React.FC = () => {
           fromUserName: getSafeDisplayName(currentUser, "Someone"),
           fromUserUsername: getSafePublicUsername(currentUser),
           fromUserAvatar: currentUser.photoURL || "",
-          title: "New Story Reply",
-          body: `replied to your story: "${cleanReply}"`,
+          title: "New Story Comment",
+          body: `commented on your story: "${cleanText}"`,
           mediaThumbnail: story.avatar || story.mediaUrl || "",
           type: "story",
-          link: `/news-hub/story/${story.id}`,
+          link: `/loops/story/${story.id}`,
           read: false,
           isRead: false,
           createdAt: Date.now(),
         }).catch(() => {});
       }
-      notify("Reply sent to inbox!", "success");
+      notify("Sent!", "success");
     } catch {
-      notify("Could not send reply to inbox.", "error");
+      notify("Could not send message.", "error");
     }
   };
 
+  const handleSendStoryReplyForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = replyText.trim();
+    if (!clean) return;
+    setReplyText("");
+    await submitCommentOrReplyText(clean, true);
+  };
+
   function renderViewerTextLayer(layer: StoryTextLayer) {
-    const colorDef = STORY_COLORS.find((c) => c.id === layer.colorId) || STORY_COLORS[0];
-    const fontDef = STORY_FONTS.find((f) => f.id === layer.fontId) || STORY_FONTS[0];
+    const colorDef =
+      STORY_COLORS.find((c) => c.id === layer.colorId) || STORY_COLORS[0];
+    const fontDef =
+      STORY_FONTS.find((f) => f.id === layer.fontId) || STORY_FONTS[0];
     const sizeDef = FONT_SIZE_STEPS[layer.sizeStep] || FONT_SIZE_STEPS[3];
     const alignClass =
       layer.align === "left"
@@ -2327,23 +3541,30 @@ export const NewsStoryViewerPage: React.FC = () => {
 
     switch (stk.kind) {
       case "poll": {
-        const votesObj: Record<string, "A" | "B"> = story?.pollVotes?.[stk.id] || {};
+        const votesObj: Record<string, "A" | "B"> =
+          story?.pollVotes?.[stk.id] || {};
         const vals = Object.values(votesObj);
         const total = vals.length;
         const countA = vals.filter((v) => v === "A").length;
-        const countB = vals.filter((v) => v === "B").length;
         const pctA = total > 0 ? Math.round((countA / total) * 100) : 50;
         const pctB = total > 0 ? 100 - pctA : 50;
         const myVote = voterKey ? votesObj[voterKey] : undefined;
 
         return (
-          <div key={stk.id} className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2">
-            <p className="text-xs font-extrabold text-center text-zinc-900">{stk.title}</p>
+          <div
+            key={stk.id}
+            className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2"
+          >
+            <p className="text-xs font-extrabold text-center text-zinc-900">
+              {stk.title}
+            </p>
             <button
               type="button"
               onClick={() => handleVotePoll(stk.id, "A")}
               className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-between cursor-pointer transition-colors ${
-                myVote === "A" ? "bg-[#1877F2] text-white" : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
+                myVote === "A"
+                  ? "bg-[#1877F2] text-white"
+                  : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
               }`}
             >
               <span className="truncate">{stk.optionA || "Yes"}</span>
@@ -2353,7 +3574,9 @@ export const NewsStoryViewerPage: React.FC = () => {
               type="button"
               onClick={() => handleVotePoll(stk.id, "B")}
               className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-between cursor-pointer transition-colors ${
-                myVote === "B" ? "bg-[#1877F2] text-white" : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
+                myVote === "B"
+                  ? "bg-[#1877F2] text-white"
+                  : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
               }`}
             >
               <span className="truncate">{stk.optionB || "No"}</span>
@@ -2365,14 +3588,22 @@ export const NewsStoryViewerPage: React.FC = () => {
 
       case "questions":
         return (
-          <div key={stk.id} className="w-64 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2">
-            <p className="text-xs font-extrabold text-center text-zinc-900">{stk.title}</p>
+          <div
+            key={stk.id}
+            className="w-64 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2"
+          >
+            <p className="text-xs font-extrabold text-center text-zinc-900">
+              {stk.title}
+            </p>
             <div className="flex items-center gap-1.5">
               <input
                 type="text"
                 value={questionDrafts[stk.id] || ""}
                 onChange={(e) =>
-                  setQuestionDrafts((prev) => ({ ...prev, [stk.id]: e.target.value }))
+                  setQuestionDrafts((prev) => ({
+                    ...prev,
+                    [stk.id]: e.target.value,
+                  }))
                 }
                 placeholder="Type your response..."
                 className="flex-1 h-8 px-2.5 rounded-lg bg-zinc-100 text-xs text-zinc-900 outline-none"
@@ -2389,10 +3620,14 @@ export const NewsStoryViewerPage: React.FC = () => {
         );
 
       case "slider": {
-        const sliderObj: Record<string, number> = story?.sliderVotes?.[stk.id] || {};
+        const sliderObj: Record<string, number> =
+          story?.sliderVotes?.[stk.id] || {};
         const myScore = sliderObj[voterKey] || 0;
         return (
-          <div key={stk.id} className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2 text-center">
+          <div
+            key={stk.id}
+            className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2 text-center"
+          >
             <p className="text-xs font-extrabold text-zinc-900">{stk.title}</p>
             <div className="flex items-center justify-between gap-1 pt-1">
               {[1, 2, 3, 4, 5].map((lv) => (
@@ -2401,7 +3636,9 @@ export const NewsStoryViewerPage: React.FC = () => {
                   type="button"
                   onClick={() => handleVoteSlider(stk.id, lv)}
                   className={`flex-1 py-1.5 rounded-lg text-base cursor-pointer transition-transform hover:scale-110 ${
-                    myScore >= lv ? "bg-[#1877F2]/15 scale-105" : "bg-zinc-100 opacity-65"
+                    myScore >= lv
+                      ? "bg-[#1877F2]/15 scale-105"
+                      : "bg-zinc-100 opacity-65"
                   }`}
                 >
                   {stk.emoji || "🔥"}
@@ -2414,14 +3651,17 @@ export const NewsStoryViewerPage: React.FC = () => {
 
       case "add_yours":
         return (
-          <div key={stk.id} className="w-56 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2.5 text-center">
+          <div
+            key={stk.id}
+            className="w-56 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2.5 text-center"
+          >
             <p className="text-xs font-bold text-zinc-900">{stk.title}</p>
             <button
               type="button"
               onClick={() =>
                 navigate(
                   isSignedIn
-                    ? `/news-hub/create-story?from=news-hub&prompt=${encodeURIComponent(
+                    ? `/loops/create-story?from=loops&prompt=${encodeURIComponent(
                         stk.title
                       )}`
                     : "/signin"
@@ -2443,8 +3683,8 @@ export const NewsStoryViewerPage: React.FC = () => {
             onClick={() =>
               navigate(
                 stk.targetUid
-                  ? `/author/${stk.targetUid}`
-                  : `/news-hub/search?q=${encodeURIComponent(stk.title)}`
+                  ? `/loops/profile/${stk.targetUid}`
+                  : `/loops/search?q=${encodeURIComponent(stk.title)}`
               )
             }
             className="px-3.5 py-2 rounded-xl bg-white/95 text-[#1877F2] shadow-lg inline-flex items-center gap-1 font-extrabold text-sm cursor-pointer"
@@ -2460,7 +3700,11 @@ export const NewsStoryViewerPage: React.FC = () => {
             key={stk.id}
             type="button"
             onClick={() =>
-              navigate(`/news-hub/search?q=${encodeURIComponent("#" + stk.title.replace(/^#/, ""))}`)
+              navigate(
+                `/loops/search?q=${encodeURIComponent(
+                  "#" + stk.title.replace(/^#/, "")
+                )}`
+              )
             }
             className="px-3.5 py-2 rounded-xl bg-zinc-900/90 text-white border border-white/20 shadow-lg inline-flex items-center gap-1 font-bold text-sm cursor-pointer"
           >
@@ -2485,7 +3729,12 @@ export const NewsStoryViewerPage: React.FC = () => {
           <button
             key={stk.id}
             type="button"
-            onClick={() => navigate(stk.url || (stk.productId ? `/product/${stk.productId}` : "/products"))}
+            onClick={() =>
+              navigate(
+                stk.url ||
+                  (stk.productId ? `/product/${stk.productId}` : "/products")
+              )
+            }
             className="w-60 rounded-2xl bg-white text-zinc-900 p-2.5 shadow-xl flex items-center gap-2.5 text-left cursor-pointer hover:scale-[1.02] transition-transform"
           >
             {stk.imageUrl ? (
@@ -2501,7 +3750,9 @@ export const NewsStoryViewerPage: React.FC = () => {
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-extrabold truncate text-zinc-900">{stk.title}</p>
+              <p className="text-xs font-extrabold truncate text-zinc-900">
+                {stk.title}
+              </p>
               <p className="text-[11px] font-bold text-[#1877F2] tabular-nums">
                 {stk.priceLabel || "Shop on Deep Shop →"}
               </p>
@@ -2543,7 +3794,9 @@ export const NewsStoryViewerPage: React.FC = () => {
           <button
             key={stk.id}
             type="button"
-            onClick={() => notify("Reminder turned on for this creator!", "success")}
+            onClick={() =>
+              notify("Reminder turned on for this creator!", "success")
+            }
             className="px-4 py-2.5 rounded-2xl bg-white text-zinc-900 shadow-xl inline-flex items-center gap-2 text-xs font-extrabold cursor-pointer"
           >
             <Bell className="w-4 h-4 text-[#1877F2] fill-[#1877F2]" />
@@ -2599,307 +3852,739 @@ export const NewsStoryViewerPage: React.FC = () => {
           </div>
         ) : null;
     }
-  };
+  }
 
   const isLikedByMe = Boolean(
     currentUser?.uid && story?.likedBy?.includes(currentUser.uid)
   );
+  const isFollowingAuthor = Boolean(
+    story?.userId &&
+      Array.isArray(followedIds) &&
+      followedIds.includes(story.userId)
+  );
+
+  const peerDisplayHandle =
+    getSafePublicUsername(authorProfile) ||
+    story?.authorUsername ||
+    (story?.authorName || "creator").toLowerCase().replace(/\s+/g, "_");
+
+  const musicLabel = React.useMemo(() => {
+    if (!story) return null;
+    if (story.music?.artist && story.music?.title) {
+      return {
+        artist: story.music.artist,
+        title: story.music.title,
+      };
+    }
+    if (story.music?.title) {
+      return { artist: "", title: story.music.title };
+    }
+    if (story.songTitle) {
+      const parts = String(story.songTitle).split("·");
+      if (parts.length >= 2) {
+        return {
+          artist: parts[0].trim(),
+          title: parts.slice(1).join("·").trim(),
+        };
+      }
+      return { artist: "", title: String(story.songTitle).trim() };
+    }
+    return null;
+  }, [story]);
+
+  const alreadyMentionedUids = React.useMemo(() => {
+    if (!story?.stickers) return [];
+    return story.stickers
+      .filter((s: any) => s.kind === "mention" && s.targetUid)
+      .map((s: any) => s.targetUid);
+  }, [story?.stickers]);
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-zinc-950 text-white flex flex-col justify-between">
+    <div className="story-studio-shell h-[100dvh] max-h-[100dvh] overflow-hidden bg-black text-white flex flex-col justify-between select-none">
       <SEO
-        title={`${story?.authorName || "Story"} — Feed`}
+        title={`${story?.authorName || "Story"} — Loops`}
         description="Story viewer"
       />
 
-      {/* Progress & Header */}
-      <header className="px-4 pt-3 pb-2 space-y-2 z-20 shrink-0">
-        {stories.length > 0 && (
-          <div className="flex items-center gap-1.5 max-w-md mx-auto">
-            {stories.map((s, idx) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setActiveIdx(idx)}
-                className={`h-1 flex-1 rounded-full transition-colors cursor-pointer ${
-                  idx <= activeIdx ? "bg-white" : "bg-white/30"
-                }`}
-                aria-label={`Story ${idx + 1}`}
-              />
-            ))}
-          </div>
-        )}
+      {/* Main Centered Mobile Story Viewport */}
+      <div className="w-full max-w-md mx-auto h-full flex flex-col justify-between relative">
+        {/* TOP SEGMENTED PROGRESS + HEADER (IMG_5131 vs IMG_5132) */}
+        <header className="px-3 pt-2.5 pb-2 space-y-2.5 z-30 shrink-0">
+          {scopedAuthorStories.length > 0 && (
+            <div className="flex items-center gap-1 px-0.5">
+              {scopedAuthorStories.map((s, idx) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    const globalIdx = stories.findIndex((item) => item.id === s.id);
+                    if (globalIdx >= 0) setActiveIdx(globalIdx);
+                  }}
+                  className="h-[2.5px] flex-1 rounded-full bg-white/30 overflow-hidden cursor-pointer"
+                  aria-label={`Story segment ${idx + 1}`}
+                >
+                  <div
+                    className={`h-full rounded-full transition-all duration-200 ${
+                      idx <= scopedActiveIdx ? "w-full bg-white" : "w-0"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
 
-        <div className="max-w-md mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              type="button"
-              onClick={() => navigate("/news-hub")}
-              className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center cursor-pointer shrink-0"
-              aria-label="Back to Feed"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            {story && (
-              <>
-                <img
-                  src={story.avatar}
-                  alt={story.authorName}
-                  referrerPolicy="no-referrer"
-                  className={`w-10 h-10 rounded-full object-cover border-2 shrink-0 ${
-                    story.isCloseFriends ? "border-green-500" : "border-white/50"
-                  }`}
-                />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-bold text-white truncate">
-                      {story.authorName}
-                    </p>
+          {story && (
+            <div className="flex items-center justify-between gap-2 px-0.5">
+              {/* Left Avatar + Title + Music Subtitle */}
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                {isOwnStory ? (
+                  /* Own Story Avatar + Bottom-Right Dark "+" Badge (IMG_5131) */
+                  <div className="relative w-10 h-10 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(`/loops/profile/${currentUser?.uid || ""}`)
+                      }
+                      className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-xs font-bold text-white cursor-pointer"
+                    >
+                      {story.avatar || currentUser?.photoURL ? (
+                        <img
+                          src={story.avatar || currentUser?.photoURL || ""}
+                          alt="Your story"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        (story.authorName || "Y").slice(0, 1).toUpperCase()
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerHaptic();
+                        navigate("/loops/create-story?from=loops");
+                      }}
+                      className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 text-white flex items-center justify-center shadow cursor-pointer"
+                      aria-label="Add to your story"
+                    >
+                      <Plus className="w-3 h-3 stroke-[2.8]" />
+                    </button>
+                  </div>
+                ) : (
+                  /* Peer Story Avatar (IMG_5132) */
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (story.userId) {
+                        navigate(`/loops/profile/${story.userId}`);
+                      }
+                    }}
+                    className="w-9 h-9 rounded-full overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center text-xs font-bold text-white cursor-pointer"
+                  >
+                    {authorProfile?.photoURL ||
+                    authorProfile?.shopLogo ||
+                    story.avatar ? (
+                      <img
+                        src={
+                          authorProfile?.photoURL ||
+                          authorProfile?.shopLogo ||
+                          story.avatar
+                        }
+                        alt={peerDisplayHandle}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      peerDisplayHandle.slice(0, 1).toUpperCase()
+                    )}
+                  </button>
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (story.userId) {
+                          navigate(`/loops/profile/${story.userId}`);
+                        }
+                      }}
+                      className="text-[14.5px] font-semibold text-white truncate cursor-pointer"
+                    >
+                      {isOwnStory ? "Your story" : peerDisplayHandle}
+                    </button>
+                    <span className="text-[14px] font-normal text-white/75 shrink-0">
+                      {story.ageShort || formatCompactStoryAge(story.createdAtMs)}
+                    </span>
                     {story.isCloseFriends && (
-                      <span className="px-2 py-0.5 rounded-full bg-green-500 text-white text-[10px] font-bold inline-flex items-center gap-1 shrink-0">
-                        <Star className="w-2.5 h-2.5 fill-white" />
-                        <span>Close Friends</span>
+                      <span className="w-4 h-4 rounded-full bg-emerald-500 inline-flex items-center justify-center shrink-0">
+                        <Star className="w-2.5 h-2.5 fill-white text-white" />
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-zinc-300 truncate leading-tight">
-                    {story.createdAtLabel}
-                  </div>
-                  {story.aiLabel && (
-                    <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-sky-400 leading-tight">
+
+                  {musicLabel ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setAudioMuted((m) => !m);
+                      }}
+                      className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-white/95 max-w-full cursor-pointer"
+                    >
+                      <StoryMusicBarsIcon
+                        playing={!audioMuted}
+                        className="w-3 h-3 shrink-0"
+                      />
+                      <span className="truncate">
+                        {musicLabel.artist ? (
+                          <>
+                            <strong className="font-semibold">
+                              {musicLabel.artist}
+                            </strong>
+                            <span className="mx-1">·</span>
+                            <span>{musicLabel.title}</span>
+                          </>
+                        ) : (
+                          <span className="font-medium">{musicLabel.title}</span>
+                        )}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-white/80 shrink-0" />
+                    </button>
+                  ) : story.aiLabel ? (
+                    <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-white/80">
                       <Sparkles className="w-3 h-3 shrink-0" />
-                      <span>AI generated</span>
+                      <span>Made with AI</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            {story?.music?.url && (
-              <button
-                type="button"
-                onClick={() => setAudioMuted((m) => !m)}
-                className="w-9 h-9 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center cursor-pointer"
-                aria-label={audioMuted ? "Unmute story audio" : "Mute story audio"}
-              >
-                {audioMuted ? (
-                  <VolumeX className="w-4 h-4 text-zinc-300" />
-                ) : (
-                  <Volume2 className="w-4 h-4 text-[#1877F2]" />
-                )}
-              </button>
-            )}
-
-            {isViewerZoomed && (
-              <button
-                type="button"
-                onClick={() => {
-                  setViewerScale(1);
-                  setViewerOffset({ x: 0, y: 0 });
-                }}
-                className="px-2.5 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center gap-1 text-[11px] font-bold text-white cursor-pointer shrink-0 whitespace-nowrap"
-                aria-label="Reset zoom"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>1:1</span>
-              </button>
-            )}
-
-            {canDeleteStory && (
-              <button
-                type="button"
-                onClick={handleDeleteCurrentStory}
-                className="w-9 h-9 rounded-full bg-white/15 hover:bg-red-500/30 flex items-center justify-center cursor-pointer"
-                aria-label="Delete story"
-              >
-                <Trash2 className="w-4 h-4 text-white" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Attached Song Banner */}
-        {story?.songTitle && (
-          <div className="max-w-md mx-auto flex items-center gap-1.5 text-xs text-zinc-300 px-1">
-            <Music className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
-            <span className="truncate">{story.songTitle}</span>
-          </div>
-        )}
-      </header>
-
-      {/* Story Media Stage */}
-      <div className="flex-1 min-h-0 flex items-center justify-center px-4 py-1 bg-transparent overflow-hidden">
-        {loading ? (
-          <p className="text-sm text-zinc-400">Loading story...</p>
-        ) : !story ? (
-          <div className="text-center space-y-3">
-            <p className="text-sm text-zinc-400">No active story found.</p>
-            <button
-              type="button"
-              onClick={() => navigate("/news-hub")}
-              className="px-5 py-2.5 rounded-full bg-white text-zinc-900 text-xs font-bold cursor-pointer"
-            >
-              Back to Feed
-            </button>
-          </div>
-        ) : (
-          <div
-            onTouchStart={handleViewerTouchStart}
-            onTouchMove={handleViewerTouchMove}
-            onTouchEnd={handleViewerTouchEnd}
-            onTouchCancel={handleViewerTouchEnd}
-            onWheel={handleViewerWheel}
-            className="relative w-full max-w-md h-full max-h-[64dvh] sm:max-h-[68dvh] aspect-[9/15] rounded-[28px] overflow-hidden bg-black shadow-2xl touch-none"
-          >
-            {story.mediaType === "video" ? (
-              <video
-                src={story.mediaUrl}
-                autoPlay
-                playsInline
-                controls
-                className="w-full h-full object-contain bg-black"
-              />
-            ) : (
-              <motion.img
-                src={story.mediaUrl}
-                alt={story.authorName}
-                referrerPolicy="no-referrer"
-                animate={{
-                  scale: story.isBoomerang ? viewerScale * 1.03 : viewerScale,
-                  x: viewerOffset.x,
-                  y: viewerOffset.y,
-                }}
-                transition={{ duration: 0 }}
-                className={`w-full h-full object-contain bg-black select-none ${
-                  story.isBoomerang ? "animate-pulse" : ""
-                }`}
-              />
-            )}
-
-            {/* Interactive Text & Sticker Overlays */}
-            {(story?.textLayers?.length > 0 || story?.stickers?.length > 0) && (
-              <div className="absolute inset-0 z-10 p-5 flex flex-col items-center justify-center gap-3 overflow-y-auto">
-                {story?.textLayers?.map((tl: StoryTextLayer) => renderViewerTextLayer(tl))}
-                {story?.stickers?.map((stk: StoryStickerItem) => renderViewerSticker(stk))}
               </div>
-            )}
 
-            {(story.caption || story.linkUrl) && (
-              <div className="absolute inset-x-0 bottom-0 z-20 p-5 bg-gradient-to-t from-black/85 via-black/45 to-transparent space-y-2.5">
-                {story.caption && (
-                  <p className="text-sm font-medium text-white leading-relaxed">
-                    {story.caption}
-                  </p>
-                )}
-                {story.linkUrl && !story.stickers?.some((s: any) => s.kind === "link" || s.kind === "shop_order") && (
-                  <a
-                    href={
-                      /^https?:\/\//i.test(story.linkUrl)
-                        ? story.linkUrl
-                        : story.linkUrl.startsWith("/")
-                        ? story.linkUrl
-                        : `https://${story.linkUrl}`
-                    }
-                    target={story.linkUrl.startsWith("/") ? "_self" : "_blank"}
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1877F2] text-white text-xs font-bold shadow-md"
-                  >
-                    <span>Open Story Link</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                )}
-              </div>
-            )}
-
-            {activeIdx > 0 && (
-              <button
-                type="button"
-                onClick={() => setActiveIdx((i) => i - 1)}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center cursor-pointer"
-                aria-label="Previous story"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            )}
-            {activeIdx < stories.length - 1 && (
-              <button
-                type="button"
-                onClick={() => setActiveIdx((i) => i + 1)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center cursor-pointer"
-                aria-label="Next story"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Reply / Heart Reaction Bar (Lifted above mobile bottom bar) */}
-      <div className="px-4 pt-2 pb-7 sm:pb-8 mb-2 max-w-md mx-auto w-full shrink-0 z-30">
-        {story ? (
-          <div className="flex items-center gap-2.5">
-            {currentUser?.uid === story.userId && (
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  setShowStatsModal(true);
-                }}
-                className="w-11 h-11 rounded-full bg-white/10 border border-white/15 text-white flex items-center justify-center shrink-0 cursor-pointer hover:bg-white/20"
-                aria-label="Story activity"
-              >
-                <BarChart3 className="w-5 h-5" />
-              </button>
-            )}
-
-            {story.allowCommenting ? (
-              <form onSubmit={handleSendStoryReply} className="flex-1 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  placeholder={`Reply to ${story.authorName}...`}
-                  className="flex-1 h-11 px-4 rounded-full bg-white/10 border border-white/15 text-xs text-white placeholder-zinc-400 outline-none focus:border-[#1877F2]"
-                />
-                {replyText.trim() && (
+              {/* Right Controls: Own Story -> X | Peer Story -> Follow + ... + X */}
+              <div className="flex items-center gap-2 shrink-0">
+                {!isOwnStory && story.userId && (
                   <button
-                    type="submit"
-                    className="w-11 h-11 rounded-full bg-[#1877F2] text-white flex items-center justify-center shrink-0 cursor-pointer"
-                    aria-label="Send reply"
+                    type="button"
+                    onClick={() => {
+                      if (!currentUser) {
+                        navigate("/signin");
+                        return;
+                      }
+                      triggerHaptic();
+                      toggleFollowUser({
+                        targetUid: story.userId,
+                        targetName: story.authorName || peerDisplayHandle,
+                        currentUser,
+                        currentlyFollowing: isFollowingAuthor,
+                      });
+                    }}
+                    className="px-3.5 py-1 rounded-[10px] border border-white/65 bg-white/10 backdrop-blur-md text-[13px] font-semibold text-white whitespace-nowrap active:scale-95 transition cursor-pointer"
                   >
-                    <Send className="w-4 h-4" />
+                    {isFollowingAuthor ? "Following" : "Follow"}
                   </button>
                 )}
-              </form>
+
+                {!isOwnStory && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic();
+                      setShowPeerMenuPopover((v) => !v);
+                    }}
+                    className="w-9 h-9 flex items-center justify-center text-white cursor-pointer"
+                    aria-label="More options"
+                  >
+                    <MoreHorizontal className="w-6 h-6" />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleCloseViewer}
+                  className="w-9 h-9 flex items-center justify-center text-white cursor-pointer"
+                  aria-label="Close story"
+                >
+                  <X className="w-7 h-7 stroke-[2]" />
+                </button>
+              </div>
+            </div>
+          )}
+        </header>
+
+        {/* FULL-WIDTH STORY MEDIA STAGE */}
+        <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-hidden bg-black">
+          {loading ? (
+            <p className="text-sm text-zinc-400">Loading story...</p>
+          ) : !story ? (
+            <div className="text-center space-y-3 px-6">
+              <p className="text-sm text-zinc-400">No active story found.</p>
+              <button
+                type="button"
+                onClick={handleCloseViewer}
+                className="px-5 py-2.5 rounded-full bg-white text-zinc-900 text-xs font-bold cursor-pointer"
+              >
+                Back to Loops
+              </button>
+            </div>
+          ) : (
+            <div
+              onTouchStart={handleViewerTouchStart}
+              onTouchMove={handleViewerTouchMove}
+              onTouchEnd={handleViewerTouchEnd}
+              onTouchCancel={handleViewerTouchEnd}
+              onWheel={handleViewerWheel}
+              className="relative w-full h-full flex items-center justify-center overflow-hidden bg-black touch-none"
+            >
+              {story.mediaType === "video" ? (
+                <video
+                  src={story.mediaUrl}
+                  autoPlay
+                  playsInline
+                  muted={audioMuted}
+                  loop
+                  className="w-full h-full object-contain bg-black"
+                />
+              ) : (
+                <motion.img
+                  src={story.mediaUrl}
+                  alt={story.authorName}
+                  referrerPolicy="no-referrer"
+                  animate={{
+                    scale: story.isBoomerang ? viewerScale * 1.03 : viewerScale,
+                    x: viewerOffset.x,
+                    y: viewerOffset.y,
+                  }}
+                  transition={{ duration: 0 }}
+                  className={`w-full h-full object-contain bg-black select-none ${
+                    story.isBoomerang ? "animate-pulse" : ""
+                  }`}
+                />
+              )}
+
+              {/* Left / Right Invisible Tap Zones for Fast Story Stepping */}
+              {activeIdx > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveIdx((i) => i - 1)}
+                  className="absolute inset-y-12 left-0 w-1/4 z-15 cursor-pointer bg-transparent"
+                  aria-label="Previous story"
+                />
+              )}
+              {activeIdx < stories.length - 1 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveIdx((i) => i + 1)}
+                  className="absolute inset-y-12 right-0 w-1/4 z-15 cursor-pointer bg-transparent"
+                  aria-label="Next story"
+                />
+              )}
+
+              {/* Interactive Text & Sticker Overlays */}
+              {(story?.textLayers?.length > 0 ||
+                story?.stickers?.length > 0) && (
+                <div className="absolute inset-0 z-20 p-5 flex flex-col items-center justify-center gap-3 pointer-events-none">
+                  <div className="pointer-events-auto flex flex-col items-center gap-3">
+                    {story?.textLayers?.map((tl: StoryTextLayer) =>
+                      renderViewerTextLayer(tl)
+                    )}
+                    {story?.stickers?.map((stk: StoryStickerItem) =>
+                      renderViewerSticker(stk)
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(story.caption || story.linkUrl) && (
+                <div className="absolute inset-x-0 bottom-0 z-20 px-4 py-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent space-y-2">
+                  {story.caption && (
+                    <p className="text-sm font-medium text-white leading-relaxed">
+                      {story.caption}
+                    </p>
+                  )}
+                  {story.linkUrl &&
+                    !story.stickers?.some(
+                      (s: any) => s.kind === "link" || s.kind === "shop_order"
+                    ) && (
+                      <a
+                        href={
+                          /^https?:\/\//i.test(story.linkUrl)
+                            ? story.linkUrl
+                            : story.linkUrl.startsWith("/")
+                            ? story.linkUrl
+                            : `https://${story.linkUrl}`
+                        }
+                        target={
+                          story.linkUrl.startsWith("/") ? "_self" : "_blank"
+                        }
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white text-zinc-900 text-xs font-bold shadow"
+                      >
+                        <span>Visit Link</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* BOTTOM SECTION: OWN STORY (IMG_5131) VS PEER STORY (IMG_5132) */}
+        {story && (
+          <div className="shrink-0 z-30 bg-black">
+            {isOwnStory ? (
+              /* OWN STORY BOTTOM SECTION (IMG_5131 1:1) */
+              <div className="pt-1 pb-4">
+                {/* Floating Heart Reactions Row when reactions exist */}
+                {(story.likedBy?.length || 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowStatsModal(true);
+                    }}
+                    className="w-full px-7 py-2 flex items-center gap-12 cursor-pointer"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-9 h-9 drop-shadow -rotate-6"
+                    >
+                      <defs>
+                        <linearGradient
+                          id="storyHeartGrad1"
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="100%"
+                        >
+                          <stop offset="0%" stopColor="#ff2a55" />
+                          <stop offset="100%" stopColor="#ff8a00" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        fill="url(#storyHeartGrad1)"
+                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                      />
+                    </svg>
+                    {(story.likedBy?.length || 0) > 1 && (
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-8 h-8 drop-shadow rotate-6"
+                      >
+                        <path
+                          fill="#ff1f7a"
+                          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                )}
+
+                {/* "Say something..." Subtle Bar */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShowCommentSheet(true);
+                  }}
+                  className="w-full px-4 py-2.5 border-y border-white/10 text-left text-[14.5px] text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
+                >
+                  Say something...
+                </button>
+
+                {/* 5-Column Bottom Action Toolbar: Activity | Share on... | Mention | Send | More */}
+                <div className="px-3 pt-2.5 flex items-end justify-between">
+                  {/* 1. Activity */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowStatsModal(true);
+                    }}
+                    className="flex flex-col items-center gap-1 min-w-[60px] cursor-pointer"
+                  >
+                    {viewerProfiles.length > 0 ? (
+                      <div className="flex items-center -space-x-2 h-7">
+                        {viewerProfiles.slice(0, 3).map((vp, i) => {
+                          const av = vp.photoURL || vp.shopLogo || "";
+                          return (
+                            <div
+                              key={vp.uid || i}
+                              className="w-7 h-7 rounded-full overflow-hidden border-2 border-black bg-zinc-700 flex items-center justify-center text-[10px] font-bold text-white"
+                            >
+                              {av ? (
+                                <img
+                                  src={av}
+                                  alt=""
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                (getSafeDisplayName(vp, "V") || "V")
+                                  .slice(0, 1)
+                                  .toUpperCase()
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="h-7 flex items-center justify-center">
+                        <Eye className="w-6 h-6 text-white stroke-[2]" />
+                      </div>
+                    )}
+                    <span className="text-[11.5px] font-medium text-white whitespace-nowrap">
+                      Activity
+                    </span>
+                  </button>
+
+                  {/* 2. Share on... */}
+                  <button
+                    type="button"
+                    onClick={handleShareExternal}
+                    className="flex flex-col items-center gap-1 min-w-[64px] cursor-pointer"
+                  >
+                    <div className="h-7 flex items-center justify-center text-white">
+                      <DualSocialShareIcon className="w-9 h-6.5" />
+                    </div>
+                    <span className="text-[11.5px] font-medium text-white whitespace-nowrap">
+                      Share on...
+                    </span>
+                  </button>
+
+                  {/* 3. Mention */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowMentionSheet(true);
+                    }}
+                    className="flex flex-col items-center gap-1 min-w-[56px] cursor-pointer"
+                  >
+                    <div className="h-7 flex items-center justify-center text-white">
+                      <AtSign className="w-6 h-6 stroke-[2]" />
+                    </div>
+                    <span className="text-[11.5px] font-medium text-white whitespace-nowrap">
+                      Mention
+                    </span>
+                  </button>
+
+                  {/* 4. Send */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowDirectSendSheet(true);
+                    }}
+                    className="flex flex-col items-center gap-1 min-w-[52px] cursor-pointer"
+                  >
+                    <div className="h-7 flex items-center justify-center text-white">
+                      <Send className="w-6 h-6 stroke-[2]" />
+                    </div>
+                    <span className="text-[11.5px] font-medium text-white whitespace-nowrap">
+                      Send
+                    </span>
+                  </button>
+
+                  {/* 5. More */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic();
+                      setShowOwnMorePopover((v) => !v);
+                    }}
+                    className="flex flex-col items-center gap-1 min-w-[52px] cursor-pointer"
+                  >
+                    <div className="h-7 flex items-center justify-center text-white">
+                      <MoreHorizontal className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <span className="text-[11.5px] font-medium text-white whitespace-nowrap">
+                      More
+                    </span>
+                  </button>
+                </div>
+              </div>
             ) : (
-              <div className="flex-1 h-11 px-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs text-zinc-400">
-                Commenting turned off for this story
+              /* PEER STORY BOTTOM BAR (IMG_5132 1:1) */
+              <div className="px-3.5 pt-2.5 pb-5 flex items-center gap-3">
+                <form
+                  onSubmit={handleSendStoryReplyForm}
+                  className="flex-1 h-11 rounded-full border border-white/45 px-4 flex items-center gap-2"
+                >
+                  <input
+                    type="text"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Send message..."
+                    className="ds-liquid-input flex-1 bg-transparent border-0 outline-none text-[14.5px] text-white placeholder-white/85"
+                  />
+                  {replyText.trim() && (
+                    <button
+                      type="submit"
+                      className="text-xs font-bold text-[#0095f6] cursor-pointer"
+                    >
+                      Send
+                    </button>
+                  )}
+                </form>
+
+                {/* Heart Icon */}
+                <button
+                  type="button"
+                  onClick={handleToggleStoryLike}
+                  className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition cursor-pointer shrink-0"
+                  aria-label="Like story"
+                >
+                  <Heart
+                    className={`w-6.5 h-6.5 stroke-[2] ${
+                      isLikedByMe ? "fill-[#FF3040] text-[#FF3040]" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Comment Bubble Icon -> Opens IMG_5134 Sheet */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShowCommentSheet(true);
+                  }}
+                  className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition cursor-pointer shrink-0"
+                  aria-label="Comment on story"
+                >
+                  <MessageCircle className="w-6.5 h-6.5 stroke-[2]" />
+                </button>
+
+                {/* Direct Share Paper-Plane Icon */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    if (!currentUser) {
+                      navigate("/signin");
+                      return;
+                    }
+                    setShowDirectSendSheet(true);
+                  }}
+                  className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition cursor-pointer shrink-0"
+                  aria-label="Share story"
+                >
+                  <Send className="w-6.5 h-6.5 stroke-[2]" />
+                </button>
               </div>
             )}
-
-            <button
-              type="button"
-              onClick={handleToggleStoryLike}
-              className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border transition-colors cursor-pointer ${
-                isLikedByMe
-                  ? "bg-rose-500/20 border-rose-500 text-rose-500"
-                  : "bg-white/10 border-white/15 text-white hover:bg-white/20"
-              }`}
-              aria-label="Like story"
-            >
-              <Heart className={`w-5 h-5 ${isLikedByMe ? "fill-rose-500" : ""}`} />
-            </button>
           </div>
-        ) : null}
+        )}
       </div>
 
-      {/* STORY ACTIVITY / VIEWERS MODAL (Only for owner) */}
+      {/* POPOVERS & BOTTOM SHEETS */}
+      <OwnStoryMorePopover
+        isOpen={showOwnMorePopover}
+        onClose={() => setShowOwnMorePopover(false)}
+        allowCommenting={story?.allowCommenting !== false}
+        aiLabel={Boolean(story?.aiLabel)}
+        onDelete={handleDeleteCurrentStory}
+        onArchive={handleArchiveStory}
+        onHighlight={() => setShowHighlightModal(true)}
+        onSaveMedia={handleSaveStoryMedia}
+        onToggleAiLabel={handleToggleAiLabel}
+        onBoostStory={() =>
+          notify("Story Boost queued for priority discovery!", "success")
+        }
+        onOpenStorySettings={() => setShowStorySettingsSheet(true)}
+        onToggleCommenting={handleToggleStoryCommenting}
+      />
+
+      <PeerStoryMenuPopover
+        isOpen={showPeerMenuPopover}
+        onClose={() => setShowPeerMenuPopover(false)}
+        onReport={handleReportPeerStory}
+        onAboutAccount={() => setShowAboutAccountModal(true)}
+      />
+
+      <StoryCommentSheet
+        isOpen={showCommentSheet}
+        onClose={() => setShowCommentSheet(false)}
+        replies={story?.storyReplies || []}
+        currentUserAvatar={currentUser?.photoURL || ""}
+        currentUserName={getSafeDisplayName(currentUser, "You")}
+        allowCommenting={story?.allowCommenting !== false}
+        onSubmitComment={(txt) => submitCommentOrReplyText(txt, true)}
+        onQuickEmoji={async (emoji) => {
+          await submitCommentOrReplyText(emoji, true);
+          setShowCommentSheet(false);
+        }}
+        onNavigateProfile={(uid) => navigate(`/loops/profile/${uid}`)}
+      />
+
+      <StoryMentionSheet
+        isOpen={showMentionSheet}
+        onClose={() => setShowMentionSheet(false)}
+        allUsers={allUsers}
+        currentUid={currentUser?.uid || ""}
+        alreadyMentionedUids={alreadyMentionedUids}
+        onConfirmMentions={handleConfirmMentions}
+      />
+
+      <StoryHighlightModal
+        isOpen={showHighlightModal}
+        onClose={() => setShowHighlightModal(false)}
+        existingHighlights={myHighlights}
+        currentStoryId={story?.id || ""}
+        onAddToHighlight={handleAddToExistingHighlight}
+        onCreateHighlight={handleCreateNewHighlight}
+      />
+
+      <StoryDirectSendSheet
+        isOpen={showDirectSendSheet}
+        onClose={() => setShowDirectSendSheet(false)}
+        allUsers={allUsers}
+        currentUid={currentUser?.uid || ""}
+        onSendToUser={async (targetUser) => {
+          await deliverStoryMessageToUser(
+            targetUser.uid,
+            `Shared a story from @${peerDisplayHandle}: ${getPublicShareOrigin()}/loops/story/${
+              story?.id || ""
+            }`,
+            "Shared story"
+          );
+          notify(
+            `Sent to ${getSafeDisplayName(targetUser, "member")}!`,
+            "success"
+          );
+        }}
+      />
+
+      <StoryAboutAccountModal
+        isOpen={showAboutAccountModal}
+        onClose={() => setShowAboutAccountModal(false)}
+        authorProfile={authorProfile}
+        fallbackName={story?.authorName || "Creator"}
+        fallbackAvatar={story?.avatar || ""}
+        onViewProfile={() => {
+          if (story?.userId) navigate(`/loops/profile/${story.userId}`);
+        }}
+      />
+
+      <StorySettingsSheet
+        isOpen={showStorySettingsSheet}
+        onClose={() => setShowStorySettingsSheet(false)}
+        isCloseFriends={Boolean(story?.isCloseFriends)}
+        allowCommenting={story?.allowCommenting !== false}
+        onToggleCloseFriends={handleToggleCloseFriends}
+        onToggleCommenting={handleToggleStoryCommenting}
+      />
+
+      {/* STORY ACTIVITY / VIEWERS MODAL (Owner) */}
       <AnimatePresence>
         {showStatsModal && (
-          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-end justify-center p-4" onClick={() => setShowStatsModal(false)}>
+          <div
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-end justify-center p-4"
+            onClick={() => setShowStatsModal(false)}
+          >
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
@@ -2908,83 +4593,117 @@ export const NewsStoryViewerPage: React.FC = () => {
               className="bg-zinc-900 w-full max-w-md rounded-t-[32px] overflow-hidden flex flex-col max-h-[80vh] border border-zinc-800"
             >
               <div className="h-1.5 w-12 bg-zinc-700 rounded-full mx-auto my-3 shrink-0" />
-              
+
               <div className="px-6 py-2 flex items-center justify-between border-b border-zinc-800 shrink-0">
-                <h2 className="text-base font-bold text-white">Story activity</h2>
-                <button onClick={() => setShowStatsModal(false)} className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
+                <h2 className="text-base font-bold text-white">
+                  Story activity
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowStatsModal(false)}
+                  className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 cursor-pointer"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-                {/* Main Stats Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-800">
                     <div className="flex items-center gap-2 text-zinc-400 mb-1">
                       <Eye className="w-4 h-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">Views</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                        Views
+                      </span>
                     </div>
-                    <p className="text-2xl font-black text-white">{formatCompactNumber(story?.viewedBy?.length || 0)}</p>
+                    <p className="text-2xl font-black text-white tabular-nums">
+                      {formatCompactNumber(story?.viewedBy?.length || 0)}
+                    </p>
                   </div>
                   <div className="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-800">
                     <div className="flex items-center gap-2 text-zinc-400 mb-1">
                       <Heart className="w-4 h-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">Reactions</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                        Reactions
+                      </span>
                     </div>
-                    <p className="text-2xl font-black text-white">{story?.likedBy?.length || 0}</p>
+                    <p className="text-2xl font-black text-white tabular-nums">
+                      {story?.likedBy?.length || 0}
+                    </p>
                   </div>
                 </div>
 
-                {/* Followers List (Viewed) */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Followers who viewed</h3>
-                    <span className="text-[10px] font-bold bg-[#1877F2]/20 text-[#1877F2] px-2 py-0.5 rounded-full">Only you see this</span>
+                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                      Viewers
+                    </h3>
+                    <span className="text-[11px] font-medium text-zinc-400">
+                      Only visible to you
+                    </span>
                   </div>
-                  
+
                   {isLoadingStats ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="w-5 h-5 border-2 border-[#1877F2] border-t-transparent rounded-full animate-spin" />
                     </div>
+                  ) : viewerProfiles.length === 0 ? (
+                    <p className="text-xs text-zinc-500 text-center py-4">
+                      No viewers yet.
+                    </p>
                   ) : (
-                    <div className="space-y-4">
-                      {viewerProfiles.filter(p => ownerFollowers.includes(p.uid)).length === 0 ? (
-                        <p className="text-xs text-zinc-500 text-center py-4 italic">No followers have viewed yet.</p>
-                      ) : (
-                        viewerProfiles.filter(p => ownerFollowers.includes(p.uid)).map(prof => (
-                          <div key={prof.uid} className="flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                              <img src={prof.photoURL || prof.shopLogo || defaultAvatarImg} alt="" className="w-10 h-10 rounded-full object-cover bg-zinc-800 border border-zinc-700" />
+                    <div className="space-y-3.5">
+                      {viewerProfiles.map((prof) => {
+                        const isFollower = ownerFollowers.includes(prof.uid);
+                        return (
+                          <div
+                            key={prof.uid}
+                            className="flex items-center justify-between"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowStatsModal(false);
+                                navigate(`/loops/profile/${prof.uid}`);
+                              }}
+                              className="flex items-center gap-3 text-left cursor-pointer"
+                            >
+                              {prof.photoURL || prof.shopLogo ? (
+                                <img
+                                  src={prof.photoURL || prof.shopLogo}
+                                  alt=""
+                                  referrerPolicy="no-referrer"
+                                  className="w-10 h-10 rounded-full object-cover bg-zinc-800 border border-zinc-700"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-200">
+                                  {(getSafeDisplayName(prof, "M") || "M")
+                                    .slice(0, 1)
+                                    .toUpperCase()}
+                                </div>
+                              )}
                               <div>
-                                <p className="text-sm font-bold text-white leading-none mb-1">{getSafeDisplayName(prof, "Member")}</p>
-                                {getSafePublicUsername(prof) ? (
-                                  <p className="text-[11px] text-zinc-500 font-medium">@{getSafePublicUsername(prof)}</p>
-                                ) : null}
+                                <p className="text-sm font-bold text-white leading-none mb-1">
+                                  {getSafeDisplayName(prof, "Member")}
+                                </p>
+                                <p className="text-[11px] text-zinc-400">
+                                  @{getSafePublicUsername(prof) || "member"}
+                                  {isFollower ? " · Follows you" : ""}
+                                </p>
                               </div>
-                            </div>
-                            
-                            {/* If they also liked, show the reaction */}
+                            </button>
+
                             {story.likedBy?.includes(prof.uid) && (
-                              <div className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-500 shadow-sm border border-rose-500/30">
+                              <div className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-500 border border-rose-500/30">
                                 <Heart className="w-4 h-4 fill-current" />
                               </div>
                             )}
                           </div>
-                        ))
-                      )}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
-
-                {/* Reaction Details if any non-follower reacted (Optional, but user said "followers jara tara react dile tader id ar sathe react tao dekhabe") */}
-                {/* We already show heart next to viewer if they are a follower. Let's make sure we show everyone who reacted IF they are followers but maybe didn't trigger a 'view' correctly (unlikely) */}
-              </div>
-
-              <div className="p-6 bg-zinc-900 border-t border-zinc-800">
-                <p className="text-[10px] text-zinc-500 text-center leading-relaxed">
-                  Only views and reactions from your followers are shown in the detailed list. 
-                  Total counts include all community members.
-                </p>
               </div>
             </motion.div>
           </div>
@@ -2993,5 +4712,6 @@ export const NewsStoryViewerPage: React.FC = () => {
     </div>
   );
 };
+
 
 

@@ -1766,3 +1766,350 @@ html.dark .ds-seller-highlight:hover {
   color: #bae6fd !important;
 }
 
+/* ==========================================================================
+   LOOPS — THREADS-STYLE TYPOGRAPHY, SURFACES & FROSTED LIQUID GLASS POPOVERS
+   ========================================================================== */
+.loops-wordmark {
+  font-family: "Satoshi", "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.048em !important;
+  line-height: 1.05 !important;
+}
+
+.loops-script-logo {
+  font-family: "Grand Hotel", cursive !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1.05 !important;
+}
+
+html:not(.dark) .loops-surface {
+  background-color: #ffffff !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-surface {
+  background-color: #0a0a0a !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-divider,
+html:not(.dark) .loops-divider > *,
+html:not(.dark) .loops-divider > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+html.dark .loops-divider,
+html.dark .loops-divider > *,
+html.dark .loops-divider > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+html:not(.dark) .loops-sheet-bg {
+  background-color: #f2f2f7 !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-sheet-bg {
+  background-color: #121214 !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-sheet-group {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.035) !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-sheet-group {
+  background-color: #1c1c1e !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-about-sheet {
+  background-color: #ffffff !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-about-sheet {
+  background-color: #161618 !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-about-card {
+  background-color: #f4f5f7 !important;
+  border-color: rgba(0, 0, 0, 0.03) !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-about-card {
+  background-color: #222226 !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-card-follow-pill {
+  background-color: #efefef !important;
+  color: #0f0f0f !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html.dark .loops-card-follow-pill {
+  background-color: #262629 !important;
+  color: #f5f5f5 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .loops-gray-pill {
+  background-color: #f3f4f6 !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-gray-pill {
+  background-color: #202024 !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-dock-pill {
+  background: rgba(255, 255, 255, 0.97) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.045) !important;
+  box-shadow:
+    0 10px 32px -4px rgba(0, 0, 0, 0.11),
+    0 2px 6px rgba(0, 0, 0, 0.04) !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-dock-pill {
+  background: rgba(22, 22, 25, 0.95) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 14px 38px -6px rgba(0, 0, 0, 0.65) !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-dock-active-pill {
+  background-color: #ebecef !important;
+  color: #0f0f0f !important;
+  box-shadow: none !important;
+}
+
+html.dark .loops-dock-active-pill {
+  background-color: #2a2a2e !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .loops-liquid-popover {
+  background: rgba(255, 255, 255, 0.86) !important;
+  backdrop-filter: blur(28px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(195%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow:
+    0 18px 46px -8px rgba(15, 23, 42, 0.16),
+    0 4px 14px rgba(15, 23, 42, 0.06),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.95) !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-liquid-popover {
+  background: rgba(28, 28, 32, 0.88) !important;
+  backdrop-filter: blur(28px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(195%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    0 22px 50px -8px rgba(0, 0, 0, 0.65),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12) !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-plus-badge {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+}
+
+html.dark .loops-plus-badge {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #0a0a0a !important;
+}
+
+html:not(.dark) .loops-follow-btn {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid #000000 !important;
+}
+
+html.dark .loops-follow-btn {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #ffffff !important;
+}
+
+html:not(.dark) .loops-following-btn {
+  background-color: #ffffff !important;
+  color: #0f0f0f !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+html.dark .loops-following-btn {
+  background-color: transparent !important;
+  color: #f4f4f5 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+html:not(.dark) .loops-reply-pill {
+  background: rgba(242, 243, 245, 0.92) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 50px !important;
+}
+
+html.dark .loops-reply-pill {
+  background: rgba(28, 28, 31, 0.92) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 50px !important;
+}
+
+/* Edge-to-edge zero-radius post media enforcement */
+.loops-edge-media,
+.loops-edge-media img,
+.loops-edge-media video {
+  border-radius: 0px !important;
+}
+
+/* Top-right liquid-glass image count pill (1/N) */
+html:not(.dark) .loops-media-count-pill,
+html.dark .loops-media-count-pill {
+  background: rgba(18, 18, 22, 0.5) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+}
+
+/* Loops Search Pill Bar (IMG_5128 & IMG_5129) */
+html:not(.dark) .loops-search-pill {
+  background-color: #f3f4f6 !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-search-pill {
+  background-color: #1c1c1f !important;
+  color: #f5f5f5 !important;
+}
+
+html:not(.dark) .loops-search-pill input,
+html.dark .loops-search-pill input {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .loops-search-icon-circle {
+  background-color: #f3f4f6 !important;
+  color: #52525b !important;
+}
+
+html.dark .loops-search-icon-circle {
+  background-color: #1f1f23 !important;
+  color: #d4d4d8 !important;
+}
+
+/* Signature Frosted Ice Glass Popover on Stories (IMG_5136 & IMG_5133) */
+html:not(.dark) .loops-story-glass-popover,
+html.dark .loops-story-glass-popover {
+  background: rgba(238, 242, 247, 0.82) !important;
+  backdrop-filter: blur(34px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(195%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.58) !important;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.38),
+    inset 0 1px 1px rgba(255, 255, 255, 0.78) !important;
+  color: #0f0f0f !important;
+}
+
+html:not(.dark) .loops-story-glass-popover button:not(.loops-story-danger-item),
+html.dark .loops-story-glass-popover button:not(.loops-story-danger-item) {
+  color: #0f0f0f !important;
+}
+
+html:not(.dark) .loops-story-danger-item,
+html.dark .loops-story-danger-item {
+  color: #ff3040 !important;
+}
+
+/* Story Comment & 8-Emoji Sheet (IMG_5134) */
+html:not(.dark) .loops-story-comment-sheet,
+html.dark .loops-story-comment-sheet {
+  background: rgba(78, 80, 86, 0.88) !important;
+  backdrop-filter: blur(34px) saturate(175%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(175%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .loops-story-comment-input,
+html.dark .loops-story-comment-input {
+  background: rgba(22, 23, 26, 0.44) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Story Mention Sheet Sheet & CTA Button (IMG_5135) */
+html:not(.dark) .loops-mention-sheet {
+  background-color: #ffffff !important;
+  color: #0f0f0f !important;
+}
+
+html.dark .loops-mention-sheet {
+  background-color: #161618 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .loops-mention-cta-active,
+html.dark .loops-mention-cta-active {
+  background-color: #0095f6 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .loops-mention-cta-disabled,
+html.dark .loops-mention-cta-disabled {
+  background-color: #9cc0ff !important;
+  color: #ffffff !important;
+}
+
+/* Profile Story Highlights Ring & Black Inner Circle (IMG_5137) */
+html:not(.dark) .loops-highlight-ring {
+  border: 2.5px solid #d8dce3 !important;
+  background-color: #ffffff !important;
+}
+
+html.dark .loops-highlight-ring {
+  border: 2.5px solid #3f3f46 !important;
+  background-color: #0a0a0a !important;
+}
+
+html:not(.dark) .loops-highlight-inner,
+html.dark .loops-highlight-inner {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .loops-highlight-inner span,
+html.dark .loops-highlight-inner span {
+  color: #ffffff !important;
+}
+
