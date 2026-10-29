@@ -22,6 +22,9 @@ import {
   Lock,
   Globe,
   Link2,
+  ArrowUpRight,
+  ExternalLink,
+  Trash2,
   Sparkles,
   Camera,
   AtSign,
@@ -147,6 +150,7 @@ import { NewsBottomDock } from "../components/NewsBottomDock";
 import { NewsHubDrawer } from "../components/NewsHubDrawer";
 import { LoopPostCard } from "../components/LoopPostCard";
 import { LiquidGlassShareModal } from "../components/LiquidGlassPostInteractions";
+import { SmoothImage } from "../components/SmoothImage";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
@@ -242,6 +246,39 @@ const YoutubeIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
 const FacebookIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+  </svg>
+);
+
+const ProfileChainLinkSvg = ({ className = "w-[18px] h-[18px]" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
+const LoopsSpiralAtSvg = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 12a4 4 0 1 0-4 4c2.5 0 4.5-1.6 4.5-4.2C16.5 8.2 14.2 6 11.2 6 7.5 6 5 8.8 5 12.4 5 16.8 8.3 20 12.8 20c2.6 0 4.8-.9 6.2-2.3" />
+  </svg>
+);
+
+const WhatsAppOutlineSvg = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20.5l1.7-5.2A8.5 8.5 0 1 1 21 11.5Z" />
+    <path d="M9.4 8.8c.2-.4.4-.4.7-.4h.5c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4 0 .6l-.4.6c-.1.2-.2.3 0 .6.3.5.8 1.1 1.4 1.5.6.4 1 .5 1.2.4.2-.1.6-.7.8-.9.2-.2.3-.2.6-.1l1.4.7c.3.1.4.2.5.4.1.3 0 .9-.3 1.3-.4.5-1.1.9-1.8.9-.8 0-1.9-.3-3.2-1.2-1.5-1-2.5-2.5-2.8-3.3-.3-.8-.1-1.5.3-1.9Z" />
+  </svg>
+);
+
+const TelegramOutlineSvg = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m22 3-8.97 18-3.51-7.52L2 9.97 22 3Z" />
+    <path d="M22 3 9.52 13.48" />
+  </svg>
+);
+
+const TikTokOutlineSvg = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
   </svg>
 );
 
@@ -444,11 +481,18 @@ export const NewsProfilePage: React.FC = () => {
   const [interestSearchQuery, setInterestSearchQuery] = useState("");
   const [savingInterests, setSavingInterests] = useState(false);
 
-  // Social Links Sub-Page Form State
+  // Social Links & Custom Profile Links Sub-Page Form State
   const [socialInstagram, setSocialInstagram] = useState("");
   const [socialTikTok, setSocialTikTok] = useState("");
   const [socialFacebook, setSocialFacebook] = useState("");
   const [socialYouTube, setSocialYouTube] = useState("");
+  const [socialWhatsApp, setSocialWhatsApp] = useState("");
+  const [socialTelegram, setSocialTelegram] = useState("");
+  const [socialThreads, setSocialThreads] = useState("");
+  const [editShowLoopsBadge, setEditShowLoopsBadge] = useState(true);
+  const [customLinks, setCustomLinks] = useState<
+    { id: string; title: string; url: string }[]
+  >([]);
   const [userComments, setUserComments] = useState<any[]>([]);
   const [socialWebsite, setSocialWebsite] = useState("");
   const [savingLinks, setSavingLinks] = useState(false);
@@ -464,10 +508,35 @@ export const NewsProfilePage: React.FC = () => {
     title?: string;
   } | null>(null);
   const [showTopicsSheet, setShowTopicsSheet] = useState(false);
+  const [showLinksSheet, setShowLinksSheet] = useState(false);
+  const [userStoriesViews30d, setUserStoriesViews30d] = useState(0);
   const [storyHighlights, setStoryHighlights] = useState<StoryHighlightItem[]>([]);
 
   const targetUid = id || currentUser?.uid;
   const isOwnProfile = Boolean(currentUser?.uid && targetUid === currentUser.uid);
+
+  // Load 30-day story view count for own profile "Your dashboard" summary card
+  useEffect(() => {
+    if (!isOwnProfile || !targetUid) {
+      setUserStoriesViews30d(0);
+      return;
+    }
+    const cutoff30d = Date.now() - 30 * 86_400_000;
+    getDocs(query(collection(db, "stories"), where("userId", "==", targetUid)))
+      .then((snap) => {
+        let total = 0;
+        snap.forEach((d) => {
+          const data = d.data();
+          const ts = Number(data.createdAtMs || data.createdAt || 0);
+          if (!ts || ts >= cutoff30d) {
+            const vb = Array.isArray(data.viewedBy) ? data.viewedBy.length : 0;
+            total += Math.max(vb, Number(data.views || 0));
+          }
+        });
+        setUserStoriesViews30d(total);
+      })
+      .catch(() => {});
+  }, [isOwnProfile, targetUid]);
 
   // Sync Story Highlights (persists permanently on Profile even after 24h feed expiry)
   useEffect(() => {
@@ -631,6 +700,7 @@ export const NewsProfilePage: React.FC = () => {
           setEditLinks(loadedWebsite);
           setEditPodcast(d.podcast || "");
           setEditShowInstagramBadge(d.showInstagramBadge !== false);
+          setEditShowLoopsBadge(d.showLoopsBadge !== false);
           setEditShowRecentViews(d.showRecentViews !== false);
           setEditIsPrivate(Boolean(d.isPrivate));
           setEditAvatarUrl(d.photoURL || d.shopLogo || "");
@@ -640,7 +710,33 @@ export const NewsProfilePage: React.FC = () => {
             setSocialTikTok(d.socialLinks.tiktok || "");
             setSocialFacebook(d.socialLinks.facebook || "");
             setSocialYouTube(d.socialLinks.youtube || "");
+            setSocialWhatsApp(d.socialLinks.whatsapp || "");
+            setSocialTelegram(d.socialLinks.telegram || "");
+            setSocialThreads(d.socialLinks.threads || "");
           }
+
+          if (Array.isArray(d.profileLinks) && d.profileLinks.length > 0) {
+            setCustomLinks(
+              d.profileLinks
+                .filter((item: any) => item && typeof item.url === "string")
+                .map((item: any, idx: number) => ({
+                  id: item.id || `plink_${idx}_${Date.now()}`,
+                  title: item.title || "",
+                  url: item.url || "",
+                }))
+            );
+          } else if (loadedWebsite) {
+            setCustomLinks([
+              {
+                id: "primary_web",
+                title: "",
+                url: loadedWebsite,
+              },
+            ]);
+          } else {
+            setCustomLinks([]);
+          }
+
           setSocialWebsite(loadedWebsite);
         } else if (isOwnProfile && currentUser) {
           const fallbackObj = {
@@ -741,32 +837,68 @@ export const NewsProfilePage: React.FC = () => {
       .catch(() => {});
   }, [currentUser?.uid, targetUid, dismissedSuggested]);
 
-  // Save Social Links Handler
+  // Save Social Links & Custom Profile Links Handler
   const handleSaveSocialLinks = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser?.uid) return;
     triggerHaptic();
     setSavingLinks(true);
 
-    const cleanedWebsite = socialWebsite.trim();
+    const normalizedCustomLinks = customLinks
+      .map((item, idx) => ({
+        id: item.id || `link_${Date.now()}_${idx}`,
+        title: (item.title || "").trim(),
+        url: (item.url || "").trim(),
+      }))
+      .filter((item) => item.url.length > 0);
+
+    const fallbackWeb = socialWebsite.trim();
+    if (
+      fallbackWeb &&
+      !normalizedCustomLinks.some(
+        (l) => l.url.toLowerCase() === fallbackWeb.toLowerCase()
+      )
+    ) {
+      normalizedCustomLinks.unshift({
+        id: `link_web_${Date.now()}`,
+        title: "",
+        url: fallbackWeb,
+      });
+    }
+
+    const primaryWebsite = normalizedCustomLinks[0]?.url || "";
+    const rawIg = socialInstagram.trim();
+    const cleanedIg = /^https?:\/\//i.test(rawIg)
+      ? rawIg
+      : rawIg.replace(/^@+/, "");
+
     const updatePayload = {
+      profileLinks: normalizedCustomLinks,
+      showLoopsBadge: editShowLoopsBadge,
+      showInstagramBadge: editShowInstagramBadge,
       socialLinks: {
-        instagram: socialInstagram.trim().replace(/^@/, ""),
-        tiktok: socialTikTok.trim().replace(/^@/, ""),
+        instagram: cleanedIg,
+        tiktok: socialTikTok.trim().replace(/^@+/, ""),
         facebook: socialFacebook.trim(),
         youtube: socialYouTube.trim(),
-        website: cleanedWebsite,
+        whatsapp: socialWhatsApp.trim(),
+        telegram: socialTelegram.trim(),
+        threads: socialThreads.trim().replace(/^@+/, ""),
+        website: primaryWebsite,
       },
-      website: cleanedWebsite,
-      link: cleanedWebsite,
+      website: primaryWebsite,
+      link: primaryWebsite,
       updatedAt: Date.now(),
     };
 
     try {
       await setDoc(doc(db, "users", currentUser.uid), updatePayload, { merge: true });
-      setEditLinks(cleanedWebsite);
-      notify("Links saved successfully!", "success");
-      navigate("/loops/profile/edit");
+      setCustomLinks(normalizedCustomLinks);
+      setSocialWebsite(primaryWebsite);
+      setEditLinks(primaryWebsite);
+      notify("Profile links & social badges saved!", "success");
+      const returnTarget = (location.state as any)?.from || "/loops/profile";
+      navigate(returnTarget);
     } catch {
       notify("Could not save links. Please try again.", "error");
     } finally {
@@ -1192,126 +1324,310 @@ export const NewsProfilePage: React.FC = () => {
   }
 
   /* ============================================================================
-   * 2. LINKS SUB-PAGE VIEW (/loops/profile/links)
+   * 2. LINKS SUB-PAGE VIEW (/loops/profile/links) — CUSTOM LINKS & SOCIAL CHIPS
    * ========================================================================== */
   if (isLinksView) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans pb-24">
-        <SEO title="Add Links — Loops" description="Manage social IDs and profile links." exactTitle />
+    const returnToPath = (location.state as any)?.from || "/loops/profile";
 
-        <div className="max-w-xl mx-auto px-4 pt-4 sm:pt-6">
-          <header className="flex items-center justify-between pb-5 border-b border-slate-200 dark:border-zinc-800">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/loops/profile/edit");
-              }}
-              className="text-sm font-bold text-slate-600 dark:text-zinc-400 hover:text-slate-900 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              Social Links & IDs
-            </h1>
+    const addEmptyCustomLink = () => {
+      triggerHaptic();
+      setCustomLinks((prev) => [
+        ...prev,
+        { id: `link_${Date.now()}_${prev.length}`, title: "", url: "" },
+      ]);
+    };
+
+    const updateCustomLinkItem = (
+      id: string,
+      field: "title" | "url",
+      val: string
+    ) => {
+      setCustomLinks((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, [field]: val } : item))
+      );
+    };
+
+    const removeCustomLinkItem = (id: string) => {
+      triggerHaptic();
+      setCustomLinks((prev) => prev.filter((item) => item.id !== id));
+    };
+
+    return (
+      <div className="min-h-screen loops-surface text-[#0f0f0f] dark:text-zinc-100 font-sans pb-28">
+        <SEO title="Links & Socials — Loops" description="Manage profile links, WhatsApp, Instagram, and social badges." exactTitle />
+
+        <header className="sticky top-0 z-30 loops-surface/90 backdrop-blur-xl border-b loops-divider">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate(returnToPath);
+                }}
+                className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-[#0f0f0f] dark:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.07] transition cursor-pointer shrink-0"
+                aria-label="Back"
+              >
+                <ChevronLeft className="w-6 h-6 stroke-[2.1]" />
+              </button>
+              <h1 className="text-[17px] font-bold tracking-tight truncate">
+                Links & social badges
+              </h1>
+            </div>
+
             <button
               type="button"
               onClick={handleSaveSocialLinks}
               disabled={savingLinks}
-              className="text-sm font-bold text-[#1877F2] hover:underline cursor-pointer disabled:opacity-50"
+              className="px-4 py-1.5 rounded-full bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] text-[13.5px] font-semibold hover:opacity-90 transition cursor-pointer disabled:opacity-50 shrink-0"
             >
               {savingLinks ? "Saving..." : "Done"}
             </button>
-          </header>
+          </div>
+        </header>
 
-          <form onSubmit={handleSaveSocialLinks} className="mt-6 space-y-4">
-            <div className="bg-white dark:bg-zinc-900 rounded-[28px] p-5 border border-slate-200/80 dark:border-zinc-800 space-y-4 shadow-sm">
-              <div className="space-y-1">
-                <label className="font-bold text-xs text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                  <InstagramIcon className="w-4 h-4 text-pink-500" />
-                  <span>Instagram Username</span>
-                </label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3.5 text-slate-400 font-bold text-xs">@</span>
-                  <input
-                    type="text"
-                    value={socialInstagram}
-                    onChange={(e) => setSocialInstagram(e.target.value)}
-                    placeholder="username"
-                    className="w-full h-11 pl-8 pr-4 rounded-xl bg-slate-50 dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-700 outline-none focus:border-[#1877F2]"
-                  />
-                </div>
+        <form
+          onSubmit={handleSaveSocialLinks}
+          className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 space-y-5"
+        >
+          {/* Section 1: Custom Links (Telegram invite, Shop, Portfolio, etc.) */}
+          <section className="loops-about-card rounded-[26px] p-5 border loops-divider space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-0.5">
+                <h2 className="text-[15.5px] font-bold text-[#0f0f0f] dark:text-white flex items-center gap-2">
+                  <ProfileChainLinkSvg className="w-4 h-4 shrink-0" />
+                  <span>Profile links</span>
+                </h2>
+                <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                  Add Telegram invite links (t.me/...), websites, or store links. Multiple links display as &ldquo;link and X more&rdquo; on your profile.
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={addEmptyCustomLink}
+                className="px-3 py-1.5 rounded-full border loops-divider text-[12.5px] font-semibold text-[#0f0f0f] dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] inline-flex items-center gap-1 shrink-0 cursor-pointer transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add link</span>
+              </button>
+            </div>
 
-              <div className="space-y-1">
-                <label className="font-bold text-xs text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                  <VideoIcon className="w-4 h-4 text-cyan-500" />
-                  <span>TikTok Username</span>
-                </label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3.5 text-slate-400 font-bold text-xs">@</span>
-                  <input
-                    type="text"
-                    value={socialTikTok}
-                    onChange={(e) => setSocialTikTok(e.target.value)}
-                    placeholder="username"
-                    className="w-full h-11 pl-8 pr-4 rounded-xl bg-slate-50 dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-700 outline-none focus:border-[#1877F2]"
-                  />
-                </div>
+            {customLinks.length === 0 ? (
+              <button
+                type="button"
+                onClick={addEmptyCustomLink}
+                className="w-full py-3.5 px-4 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 text-[13.5px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add your first external link</span>
+              </button>
+            ) : (
+              <div className="space-y-3">
+                {customLinks.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border loops-divider space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
+                        Link {idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeCustomLinkItem(item.id)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
+                        aria-label="Remove link"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={item.url}
+                      onChange={(e) =>
+                        updateCustomLinkItem(item.id, "url", e.target.value)
+                      }
+                      placeholder="https://t.me/+jBB7zRRjuF5hYWY1 or yoursite.com"
+                      className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-zinc-900 border loops-divider text-[13.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none focus:border-zinc-900 dark:focus:border-white"
+                    />
+                    <input
+                      type="text"
+                      value={item.title}
+                      onChange={(e) =>
+                        updateCustomLinkItem(item.id, "title", e.target.value)
+                      }
+                      placeholder="Optional title (e.g. Official Channel)"
+                      className="w-full h-9 px-3.5 rounded-xl bg-white/70 dark:bg-zinc-900/70 border loops-divider text-[12.5px] text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none focus:border-zinc-900 dark:focus:border-white"
+                    />
+                  </div>
+                ))}
               </div>
+            )}
+          </section>
 
+          {/* Section 2: Instagram Header Shortcut */}
+          <section className="loops-about-card rounded-[26px] p-5 border loops-divider space-y-3.5">
+            <div className="space-y-0.5">
+              <h2 className="text-[15.5px] font-bold text-[#0f0f0f] dark:text-white flex items-center gap-2">
+                <InstagramIcon className="w-4 h-4 text-pink-500 shrink-0" />
+                <span>Instagram header button</span>
+              </h2>
+              <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                When linked, the Instagram icon replaces the Shop icon in your profile top bar and opens your Instagram directly.
+              </p>
+            </div>
+
+            <div className="relative flex items-center">
+              <span className="absolute left-3.5 text-zinc-400 font-semibold text-[14px]">
+                @
+              </span>
+              <input
+                type="text"
+                value={socialInstagram}
+                onChange={(e) => setSocialInstagram(e.target.value)}
+                placeholder="instagram_username or profile URL"
+                className="w-full h-11 pl-8 pr-4 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+              />
+            </div>
+          </section>
+
+          {/* Section 3: Profile Pill Badges (Loops Handle, WhatsApp, Telegram, TikTok, Facebook, YouTube) */}
+          <section className="loops-about-card rounded-[26px] p-5 border loops-divider space-y-4">
+            <div className="space-y-0.5">
+              <h2 className="text-[15.5px] font-bold text-[#0f0f0f] dark:text-white">
+                Profile pill chips
+              </h2>
+              <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                Displayed as interactive pill buttons right below your bio links.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pb-3 border-b loops-divider">
+              <div className="min-w-0">
+                <p className="text-[14px] font-semibold text-[#0f0f0f] dark:text-white flex items-center gap-1.5">
+                  <LoopsSpiralAtSvg className="w-4 h-4 shrink-0" />
+                  <span>Show Loops handle chip</span>
+                </p>
+                <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                  Displays your @handle pill on your profile bio area.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={editShowLoopsBadge}
+                onClick={() => setEditShowLoopsBadge((v) => !v)}
+                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 cursor-pointer ${
+                  editShowLoopsBadge
+                    ? "bg-[#0f0f0f] dark:bg-white"
+                    : "bg-zinc-300 dark:bg-zinc-700"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-5 h-5 rounded-full transition-all shadow-xs ${
+                    editShowLoopsBadge
+                      ? "left-[22px] bg-white dark:bg-[#0f0f0f]"
+                      : "left-0.5 bg-white"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="space-y-3">
               <div className="space-y-1">
-                <label className="font-bold text-xs text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                  <FacebookIcon className="w-4 h-4 text-blue-600" />
-                  <span>Facebook Profile Link</span>
+                <label className="font-semibold text-[13px] text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <LoopsSpiralAtSvg className="w-4 h-4 shrink-0" />
+                  <span>Custom Loops / Threads handle (optional)</span>
                 </label>
                 <input
-                  type="url"
-                  value={socialFacebook}
-                  onChange={(e) => setSocialFacebook(e.target.value)}
-                  placeholder="https://facebook.com/yourprofile"
-                  className="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-700 outline-none focus:border-[#1877F2]"
+                  type="text"
+                  value={socialThreads}
+                  onChange={(e) => setSocialThreads(e.target.value)}
+                  placeholder={username || "deep.shop.official"}
+                  className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="font-bold text-xs text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                  <YoutubeIcon className="w-4 h-4 text-red-600" />
-                  <span>YouTube Channel</span>
+                <label className="font-semibold text-[13px] text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <WhatsAppOutlineSvg className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>WhatsApp Number or Link</span>
                 </label>
                 <input
-                  type="url"
+                  type="text"
+                  value={socialWhatsApp}
+                  onChange={(e) => setSocialWhatsApp(e.target.value)}
+                  placeholder="+8801XXXXXXXXX or https://wa.me/..."
+                  className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-[13px] text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <TelegramOutlineSvg className="w-4 h-4 text-sky-500 shrink-0" />
+                  <span>Telegram Username or Channel</span>
+                </label>
+                <input
+                  type="text"
+                  value={socialTelegram}
+                  onChange={(e) => setSocialTelegram(e.target.value)}
+                  placeholder="https://t.me/yourchannel or @username"
+                  className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-[13px] text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <TikTokOutlineSvg className="w-4 h-4 shrink-0" />
+                  <span>TikTok Username</span>
+                </label>
+                <input
+                  type="text"
+                  value={socialTikTok}
+                  onChange={(e) => setSocialTikTok(e.target.value)}
+                  placeholder="@username"
+                  className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-[13px] text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <FacebookIcon className="w-4 h-4 text-[#1877F2] shrink-0" />
+                  <span>Facebook Profile / Page URL</span>
+                </label>
+                <input
+                  type="text"
+                  value={socialFacebook}
+                  onChange={(e) => setSocialFacebook(e.target.value)}
+                  placeholder="https://facebook.com/yourpage"
+                  className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-[13px] text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <YoutubeIcon className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>YouTube Channel URL</span>
+                </label>
+                <input
+                  type="text"
                   value={socialYouTube}
                   onChange={(e) => setSocialYouTube(e.target.value)}
                   placeholder="https://youtube.com/@channel"
-                  className="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-700 outline-none focus:border-[#1877F2]"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-xs text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                  <Globe className="w-4 h-4 text-[#1877F2]" />
-                  <span>Website URL</span>
-                </label>
-                <input
-                  type="url"
-                  value={socialWebsite}
-                  onChange={(e) => setSocialWebsite(e.target.value)}
-                  placeholder="https://yourwebsite.com"
-                  className="w-full h-11 px-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800 text-xs font-semibold text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-700 outline-none focus:border-[#1877F2]"
+                  className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
                 />
               </div>
             </div>
+          </section>
 
-            <button
-              type="submit"
-              disabled={savingLinks}
-              className="w-full py-3.5 rounded-2xl bg-[#1877F2] text-white font-bold text-sm shadow-md cursor-pointer disabled:opacity-50"
-            >
-              {savingLinks ? "Saving links..." : "Save links"}
-            </button>
-          </form>
-        </div>
+          <button
+            type="submit"
+            disabled={savingLinks}
+            className="w-full h-12 rounded-full bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] font-semibold text-[15px] hover:opacity-90 active:scale-[0.99] transition cursor-pointer disabled:opacity-50"
+          >
+            {savingLinks ? "Saving links..." : "Save links"}
+          </button>
+        </form>
       </div>
     );
   }
@@ -1323,10 +1639,13 @@ export const NewsProfilePage: React.FC = () => {
     const cleanEditHandle = editUsername.replace(/^@+/, "").trim();
     const connectedSocialCount = [
       socialInstagram,
+      socialWhatsApp,
+      socialTelegram,
+      socialThreads,
       socialTikTok,
       socialFacebook,
       socialYouTube,
-    ].filter((v) => Boolean(v && v.trim())).length;
+    ].filter((v) => Boolean(v && v.trim())).length + customLinks.filter((l) => l.url.trim()).length;
 
     return (
       <div className="min-h-screen loops-surface text-[#0f0f0f] dark:text-zinc-100 font-sans pb-28">
@@ -1578,7 +1897,9 @@ export const NewsProfilePage: React.FC = () => {
               type="button"
               onClick={() => {
                 triggerHaptic();
-                navigate("/loops/profile/links");
+                navigate("/loops/profile/links", {
+                  state: { from: "/loops/profile/edit" },
+                });
               }}
               className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.05] rounded-b-[20px] transition cursor-pointer"
             >
@@ -1715,21 +2036,190 @@ export const NewsProfilePage: React.FC = () => {
   /* ============================================================================
    * 4. MAIN PROFILE VIEW PAGE (Matching IMG_5097, IMG_5106 & IMG_5107)
    * ========================================================================== */
+  const normalizeExternalHref = (rawUrl: string): string => {
+    const trimmed = String(rawUrl || "").trim();
+    if (!trimmed) return "";
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  };
+
+  const formatCleanLinkLabel = (rawUrl: string): string =>
+    String(rawUrl || "")
+      .trim()
+      .replace(/^https?:\/\//i, "")
+      .replace(/^www\./i, "")
+      .replace(/\/+$/, "");
+
   const rawWebsiteUrl = String(
     profileUser?.website ||
       profileUser?.link ||
       profileUser?.socialLinks?.website ||
       ""
   ).trim();
-  const cleanWebsiteHref = rawWebsiteUrl
-    ? /^https?:\/\//i.test(rawWebsiteUrl)
-      ? rawWebsiteUrl
-      : `https://${rawWebsiteUrl}`
-    : "";
-  const cleanWebsiteLabel = rawWebsiteUrl
-    .replace(/^https?:\/\//i, "")
-    .replace(/^www\./i, "")
-    .replace(/\/+$/, "");
+
+  const displayProfileLinks: {
+    id: string;
+    title: string;
+    href: string;
+    cleanLabel: string;
+  }[] = (() => {
+    const list: { id: string; title: string; href: string; cleanLabel: string }[] = [];
+    const seen = new Set<string>();
+
+    const storedArr = Array.isArray(profileUser?.profileLinks)
+      ? profileUser.profileLinks
+      : [];
+    storedArr.forEach((item: any, idx: number) => {
+      const raw = String(item?.url || "").trim();
+      if (!raw) return;
+      const clean = formatCleanLinkLabel(raw);
+      const key = clean.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      list.push({
+        id: item.id || `plink_${idx}`,
+        title: String(item.title || "").trim(),
+        href: normalizeExternalHref(raw),
+        cleanLabel: clean,
+      });
+    });
+
+    if (rawWebsiteUrl) {
+      const clean = formatCleanLinkLabel(rawWebsiteUrl);
+      const key = clean.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push({
+          id: "legacy_website",
+          title: "",
+          href: normalizeExternalHref(rawWebsiteUrl),
+          cleanLabel: clean,
+        });
+      }
+    }
+
+    return list;
+  })();
+
+  // Linked Instagram URL for Top Header (replaces Shop icon when linked)
+  const rawLinkedInstagram = String(
+    profileUser?.socialLinks?.instagram || ""
+  ).trim();
+  const instagramHeaderHref = (() => {
+    if (!rawLinkedInstagram || profileUser?.showInstagramBadge === false) {
+      return "";
+    }
+    if (/^https?:\/\//i.test(rawLinkedInstagram)) return rawLinkedInstagram;
+    const handle = rawLinkedInstagram
+      .replace(/^@+/, "")
+      .replace(/^(?:www\.)?instagram\.com\//i, "")
+      .replace(/\/+$/, "")
+      .trim();
+    return handle ? `https://www.instagram.com/${handle}` : "";
+  })();
+
+  // Social Pill Chips below links (matching IMG_5140)
+  const loopsHandleBadgeText = (() => {
+    if (profileUser?.showLoopsBadge === false) return "";
+    const customThreads = String(
+      profileUser?.socialLinks?.threads || ""
+    )
+      .trim()
+      .replace(/^@+/, "");
+    if (customThreads) return customThreads;
+    return username ? username.replace(/^@+/, "") : "";
+  })();
+
+  const externalSocialChips: {
+    id: string;
+    label: string;
+    href: string;
+    icon: React.ReactNode;
+  }[] = (() => {
+    const chips: {
+      id: string;
+      label: string;
+      href: string;
+      icon: React.ReactNode;
+    }[] = [];
+
+    const rawWa = String(profileUser?.socialLinks?.whatsapp || "").trim();
+    if (rawWa) {
+      const waHref = /^https?:\/\//i.test(rawWa)
+        ? rawWa
+        : /^(?:wa\.me|chat\.whatsapp\.com)\//i.test(rawWa)
+        ? `https://${rawWa}`
+        : `https://wa.me/${rawWa.replace(/[^\d]/g, "")}`;
+      chips.push({
+        id: "whatsapp",
+        label: "WhatsApp",
+        href: waHref,
+        icon: <WhatsAppOutlineSvg className="w-[15px] h-[15px] shrink-0" />,
+      });
+    }
+
+    const rawTg = String(profileUser?.socialLinks?.telegram || "").trim();
+    if (rawTg) {
+      const tgHref = /^https?:\/\//i.test(rawTg)
+        ? rawTg
+        : /^t\.me\//i.test(rawTg)
+        ? `https://${rawTg}`
+        : `https://t.me/${rawTg.replace(/^@+/, "")}`;
+      chips.push({
+        id: "telegram",
+        label: "Telegram",
+        href: tgHref,
+        icon: <TelegramOutlineSvg className="w-[15px] h-[15px] shrink-0" />,
+      });
+    }
+
+    const rawTt = String(profileUser?.socialLinks?.tiktok || "").trim();
+    if (rawTt) {
+      const ttHref = /^https?:\/\//i.test(rawTt)
+        ? rawTt
+        : `https://www.tiktok.com/@${rawTt.replace(/^@+/, "")}`;
+      chips.push({
+        id: "tiktok",
+        label: "TikTok",
+        href: ttHref,
+        icon: <TikTokOutlineSvg className="w-[15px] h-[15px] shrink-0" />,
+      });
+    }
+
+    const rawFb = String(profileUser?.socialLinks?.facebook || "").trim();
+    if (rawFb) {
+      chips.push({
+        id: "facebook",
+        label: "Facebook",
+        href: normalizeExternalHref(rawFb),
+        icon: <FacebookIcon className="w-[15px] h-[15px] shrink-0" />,
+      });
+    }
+
+    const rawYt = String(profileUser?.socialLinks?.youtube || "").trim();
+    if (rawYt) {
+      chips.push({
+        id: "youtube",
+        label: "YouTube",
+        href: normalizeExternalHref(rawYt),
+        icon: <YoutubeIcon className="w-[15px] h-[15px] shrink-0" />,
+      });
+    }
+
+    return chips;
+  })();
+
+  // Real 30-day views count for "Your dashboard" card on own profile
+  const cutoff30DaysMs = Date.now() - 30 * 86_400_000;
+  const recentPostsViews = userPosts.reduce((sum, p) => {
+    const created = Number(p.createdAt || 0);
+    if (!created || created >= cutoff30DaysMs) {
+      return sum + Number(p.views || 0);
+    }
+    return sum;
+  }, 0);
+  const allPostsViews = userPosts.reduce((sum, p) => sum + Number(p.views || 0), 0);
+  const last30DaysViews =
+    (recentPostsViews > 0 ? recentPostsViews : allPostsViews) + userStoriesViews30d;
 
   const profileTopics: string[] =
     selectedInterestsList.length > 0
@@ -1849,18 +2339,32 @@ export const NewsProfilePage: React.FC = () => {
               <Search className="w-[22px] h-[22px] stroke-[2]" />
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/");
-              }}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
-              aria-label="Visit Shop"
-              title="Visit Shop"
-            >
-              <ShoppingBagIconLocal className="w-[21px] h-[21px]" />
-            </button>
+            {instagramHeaderHref ? (
+              <a
+                href={instagramHeaderHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => triggerHaptic()}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
+                aria-label="Instagram profile"
+                title="Instagram"
+              >
+                <InstagramIcon className="w-[21px] h-[21px]" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate("/");
+                }}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
+                aria-label="Visit Shop"
+                title="Visit Shop"
+              >
+                <ShoppingBagIconLocal className="w-[21px] h-[21px]" />
+              </button>
+            )}
 
             <button
               type="button"
@@ -1996,29 +2500,126 @@ export const NewsProfilePage: React.FC = () => {
             </p>
           )}
 
-          {/* Followers + Website Link Row matching IMG_5106 */}
+          {/* Followers Row */}
           <div className="flex items-center gap-1.5 flex-wrap text-[14.5px] text-zinc-400 dark:text-zinc-500">
             <span className="tabular-nums">
               {formatCompactNumber(followersCount)}{" "}
               {followersCount === 1 ? "follower" : "followers"}
             </span>
-            {cleanWebsiteHref && (
-              <>
-                <span aria-hidden="true">·</span>
-                <a
-                  href={cleanWebsiteHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-zinc-500 dark:text-zinc-300 hover:text-[#0095F6] hover:underline font-normal truncate max-w-[230px]"
-                >
-                  {cleanWebsiteLabel}
-                </a>
-              </>
-            )}
           </div>
 
-          {/* Action Buttons Row matching IMG_5097 */}
+          {/* Custom Links Row (IMG_5140: chain icon + "t.me/... and 2 more") */}
+          {displayProfileLinks.length > 0 && (
+            <div className="pt-0.5">
+              {displayProfileLinks.length === 1 ? (
+                <a
+                  href={displayProfileLinks[0].href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => triggerHaptic()}
+                  className="inline-flex items-center gap-2 text-[14.5px] font-semibold text-zinc-950 dark:text-white hover:opacity-80 transition max-w-full"
+                >
+                  <ProfileChainLinkSvg className="w-[17px] h-[17px] shrink-0 text-zinc-950 dark:text-white" />
+                  <span className="truncate">
+                    {displayProfileLinks[0].cleanLabel}
+                  </span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShowLinksSheet(true);
+                  }}
+                  className="inline-flex items-center gap-2 text-[14.5px] font-semibold text-zinc-950 dark:text-white hover:opacity-80 transition max-w-full cursor-pointer text-left"
+                >
+                  <ProfileChainLinkSvg className="w-[17px] h-[17px] shrink-0 text-zinc-950 dark:text-white" />
+                  <span className="truncate">
+                    {displayProfileLinks[0].cleanLabel} and{" "}
+                    {displayProfileLinks.length - 1} more
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Social Pill Chips + "+ Add" Chip Row (IMG_5140) */}
+          {(Boolean(loopsHandleBadgeText) ||
+            externalSocialChips.length > 0 ||
+            isOwnProfile) && (
+            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+              {loopsHandleBadgeText && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigator.clipboard
+                      .writeText(`@${loopsHandleBadgeText}`)
+                      .catch(() => {});
+                    notify(`Copied @${loopsHandleBadgeText}`, "info");
+                  }}
+                  className="h-[34px] px-3.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-zinc-950 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <LoopsSpiralAtSvg className="w-[15px] h-[15px] shrink-0 text-zinc-950 dark:text-white" />
+                  <span>{loopsHandleBadgeText}</span>
+                </button>
+              )}
+
+              {externalSocialChips.map((chip) => (
+                <a
+                  key={chip.id}
+                  href={chip.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => triggerHaptic()}
+                  className="h-[34px] px-3.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-zinc-950 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  {chip.icon}
+                  <span>{chip.label}</span>
+                </a>
+              ))}
+
+              {isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate("/loops/profile/links", {
+                      state: { from: "/loops/profile" },
+                    });
+                  }}
+                  className="h-[34px] px-3.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 inline-flex items-center gap-1 text-[13.5px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.2] shrink-0" />
+                  <span>Add</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Own Profile "Your dashboard" Summary Card (IMG_5140) */}
+          {isOwnProfile && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/creator-dashboard");
+              }}
+              className="w-full rounded-2xl bg-[#F2F4F7] dark:bg-zinc-900/90 hover:bg-[#E8ECEF] dark:hover:bg-zinc-800/90 px-4 py-3.5 text-left transition cursor-pointer block"
+            >
+              <span className="block text-[15.5px] font-bold text-zinc-950 dark:text-white leading-snug">
+                Your dashboard
+              </span>
+              <span className="mt-0.5 flex items-center gap-1.5 text-[13.5px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                <ArrowUpRight className="w-4 h-4 text-[#16A34A] stroke-[2.3] shrink-0" />
+                <span>
+                  {formatCompactNumber(last30DaysViews)} views in the last 30 days.
+                </span>
+              </span>
+            </button>
+          )}
+
+          {/* Action Buttons Row */}
           <div className="flex items-center gap-2 pt-1">
             {isOwnProfile ? (
               <>
@@ -2036,26 +2637,14 @@ export const NewsProfilePage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    navigate("/creator-dashboard");
-                  }}
-                  className="flex-1 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white text-[14.5px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>View Insights</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
                     setShareSheetTarget({
                       url: profileShareUrl,
                       title: `Check out ${displayName} on Loops`,
                     });
                   }}
-                  className="w-10 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white flex items-center justify-center shrink-0 cursor-pointer"
-                  aria-label="Share Profile"
-                  title="Share Profile"
+                  className="flex-1 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white text-[14.5px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <ShareUploadBoxSvg className="w-[18px] h-[18px]" />
+                  <span>Share profile</span>
                 </button>
               </>
             ) : (
@@ -2457,7 +3046,12 @@ export const NewsProfilePage: React.FC = () => {
                     className="relative aspect-square rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer group"
                   >
                     {mPost.images?.[0] ? (
-                      <img src={mPost.images[0]} alt="" className="w-full h-full object-cover rounded-none group-hover:scale-105 transition-transform" />
+                      <SmoothImage
+                        src={mPost.images[0]}
+                        alt=""
+                        wrapperClassName="w-full h-full min-h-0 rounded-none"
+                        className="w-full h-full object-cover rounded-none group-hover:scale-105 transition-transform"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400">
                         <ImageIcon className="w-8 h-8" />
@@ -2495,7 +3089,12 @@ export const NewsProfilePage: React.FC = () => {
                       {comment.text}
                     </p>
                     {comment.imageUrl && (
-                      <img src={comment.imageUrl} alt="" className="max-h-36 rounded-none object-cover mt-1" />
+                      <SmoothImage
+                        src={comment.imageUrl}
+                        alt=""
+                        wrapperClassName="max-w-[220px] min-h-[96px] mt-1 rounded-none"
+                        className="max-h-36 rounded-none object-cover"
+                      />
                     )}
                   </div>
                 ))}
@@ -3297,6 +3896,103 @@ export const NewsProfilePage: React.FC = () => {
                           </span>
                           <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
                         </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* 8. PROFILE LINKS BOTTOM SHEET (When >1 links added) */}
+            <AnimatePresence>
+              {showLinksSheet && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={() => setShowLinksSheet(false)}
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  />
+
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[85vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
+                  >
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+                    <div className="flex items-center justify-between gap-3 pt-0.5">
+                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                        Links
+                      </h3>
+                      {isOwnProfile && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowLinksSheet(false);
+                            navigate("/loops/profile/links", {
+                              state: { from: "/loops/profile" },
+                            });
+                          }}
+                          className="text-[13.5px] font-semibold text-[#0095F6] hover:opacity-80 cursor-pointer"
+                        >
+                          Edit links
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 divide-y loops-divider">
+                      {displayProfileLinks.map((lnk) => (
+                        <div
+                          key={lnk.id}
+                          className="flex items-center justify-between gap-3 px-3.5 py-3"
+                        >
+                          <a
+                            href={lnk.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => triggerHaptic()}
+                            className="flex items-center gap-3 min-w-0 flex-1 group"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-black/[0.05] dark:bg-white/[0.08] flex items-center justify-center shrink-0">
+                              <ProfileChainLinkSvg className="w-4 h-4 text-[#0f0f0f] dark:text-white" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[15px] font-semibold text-[#0f0f0f] dark:text-white truncate group-hover:underline">
+                                {lnk.title || lnk.cleanLabel}
+                              </p>
+                              {lnk.title && (
+                                <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 truncate">
+                                  {lnk.cleanLabel}
+                                </p>
+                              )}
+                            </div>
+                            <ExternalLink className="w-4 h-4 text-zinc-400 shrink-0" />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              navigator.clipboard
+                                .writeText(lnk.href)
+                                .catch(() => {});
+                              notify("Link copied to clipboard", "success");
+                            }}
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-500 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition cursor-pointer shrink-0"
+                            aria-label="Copy link"
+                            title="Copy link"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </motion.div>

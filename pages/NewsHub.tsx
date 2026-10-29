@@ -43,6 +43,7 @@ import {
   LiquidGlassActivityModal,
 } from "../components/LiquidGlassPostInteractions";
 import { AdPlacementSlot } from "../components/AdPlacementSlot";
+import { preloadImageUrl } from "../components/SmoothImage";
 
 const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -76,6 +77,14 @@ import { resolvePostVideoSource } from "../lib/videoEmbed";
 import { NewsBottomDock } from "../components/NewsBottomDock";
 import { NewsHubDrawer } from "../components/NewsHubDrawer";
 import { LoopPostCard, LoopHeartIcon } from "../components/LoopPostCard";
+import { LoopsReelsView } from "../components/LoopsReelsView";
+import {
+  LoopsAlgorithmPrefs,
+  LOOPS_ALGORITHM_CHANGED_EVENT,
+  applyUserAlgorithmToPosts,
+  loadLocalAlgorithmPrefs,
+  syncAlgorithmPrefsFromFirestore,
+} from "../lib/loopsAlgorithmPrefs";
 import {
   loadFeedPreferences,
   FeedPreferencesData,
@@ -234,12 +243,46 @@ export const NewsHub: React.FC = () => {
   const [feedMenuOpen, setFeedMenuOpen] = useState(false);
   const [showGhostIntroSheet, setShowGhostIntroSheet] = useState(false);
   const [moderationTick, setModerationTick] = useState(0);
+  const [algorithmPrefs, setAlgorithmPrefs] = useState<LoopsAlgorithmPrefs>(() =>
+    loadLocalAlgorithmPrefs()
+  );
+  const [reelsOverlayOpen, setReelsOverlayOpen] = useState(false);
   const feedMenuRef = useRef<HTMLDivElement | null>(null);
 
   const activeFeedFilter = React.useMemo(() => {
     const f = new URLSearchParams(location.search).get("filter") || "";
     return f.trim().toLowerCase();
   }, [location.search]);
+
+  useEffect(() => {
+    if (activeFeedFilter !== "video") {
+      setReelsOverlayOpen(false);
+    }
+  }, [activeFeedFilter]);
+
+  useEffect(() => {
+    let active = true;
+    syncAlgorithmPrefsFromFirestore(currentUser?.uid).then((synced) => {
+      if (active) setAlgorithmPrefs(synced);
+    });
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.uid]);
+
+  useEffect(() => {
+    const onAlgoChanged = (ev: Event) => {
+      const detail = (ev as CustomEvent<LoopsAlgorithmPrefs>).detail;
+      if (detail) {
+        setAlgorithmPrefs(detail);
+      } else {
+        setAlgorithmPrefs(loadLocalAlgorithmPrefs());
+      }
+    };
+    window.addEventListener(LOOPS_ALGORITHM_CHANGED_EVENT, onAlgoChanged);
+    return () =>
+      window.removeEventListener(LOOPS_ALGORITHM_CHANGED_EVENT, onAlgoChanged);
+  }, []);
 
   useEffect(() => {
     if (activeFeedFilter === "scam") {
@@ -685,12 +728,13 @@ export const NewsHub: React.FC = () => {
   ]);
 
   const visiblePosts = React.useMemo(() => {
-    return rankFeedPostsSmart(filteredPosts, {
+    const ranked = rankFeedPostsSmart(filteredPosts, {
       currentUid: currentUser?.uid,
       followedIds,
       sessionSeed,
       dismissedPostIds,
     });
+    return applyUserAlgorithmToPosts(ranked, algorithmPrefs);
   }, [
     filteredPosts,
     currentUser?.uid,
@@ -698,6 +742,7 @@ export const NewsHub: React.FC = () => {
     sessionSeed,
     dismissedPostIds,
     moderationTick,
+    algorithmPrefs,
   ]);
 
   const communityUserMap = React.useMemo(() => {
@@ -809,6 +854,23 @@ export const NewsHub: React.FC = () => {
       )
       .slice(0, 6);
   }, [visiblePosts, currentUser?.uid, followedIds, dismissedPostIds]);
+
+  // Background preload active story media & first visible post photos for zero-scanline instant opening
+  useEffect(() => {
+    stories.slice(0, 8).forEach((st: any) => {
+      if (st?.mediaUrl && st?.mediaType !== "video") {
+        preloadImageUrl(st.mediaUrl);
+      }
+    });
+  }, [stories]);
+
+  useEffect(() => {
+    visiblePosts.slice(0, 4).forEach((p) => {
+      if (Array.isArray(p.images) && p.images[0]) {
+        preloadImageUrl(p.images[0]);
+      }
+    });
+  }, [visiblePosts]);
 
   const handleFollowSuggestedProfile = async (
     e: React.MouseEvent,
@@ -1106,12 +1168,124 @@ export const NewsHub: React.FC = () => {
     }
   };
 
+  const handleToggleFollowCreator = async (
+    targetUid: string,
+    targetName: string
+  ) => {
+    triggerHaptic();
+    if (!currentUser?.uid) {
+      notify("Please sign in to follow creators!", "error");
+      navigate("/signin");
+      return;
+    }
+    if (!targetUid || targetUid === currentUser.uid) return;
+    const isNowFollowed = followedIds.includes(targetUid);
+    const res = await toggleFollowUser({
+      targetUid,
+      targetName,
+      currentUser,
+      currentlyFollowing: isNowFollowed,
+    });
+    if (res.ok) {
+      notify(
+        res.isFollowing
+          ? `Following ${targetName}`
+          : `Unfollowed ${targetName}`,
+        res.isFollowing ? "success" : "info"
+      );
+    }
+  };
+
+  const handleDismissReelPost = (postId: string) => {
+    setDismissedPostIds(dismissSuggestedPostId(postId));
+  };
+
+  const handleCommentCountDelta = (postId: string, delta: number) => {
+    setFirestorePosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              commentsCount: Math.max(0, Number(p.commentsCount || 0) + delta),
+            }
+          : p
+      )
+    );
+  };
+
   const isAdmin =
     hasImmediateAdminOrStaffRole(userProfile, currentUser) || isStaffDoc;
   const userAvatar = userProfile?.photoURL || currentUser?.photoURL || "";
   const isPersonalizedActive =
     prefs.selectedThemes.length < FEED_THEMES.length ||
     Object.values(prefs.contentPreferences).some((v) => !v);
+
+  // Full-Screen Immersive Vertical Autoplay Reels Mode (?filter=video)
+  if (activeFeedFilter === "video") {
+    return (
+      <>
+        <SEO
+          title="Reels — Loops"
+          description="Watch community Reels, embedded social clips, and live discussions on Loops."
+          exactTitle
+        />
+
+        {loading && allPosts.length === 0 ? (
+          <div className="fixed inset-0 z-40 bg-black flex items-center justify-center">
+            <div className="w-9 h-9 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          </div>
+        ) : (
+          <LoopsReelsView
+            posts={visiblePosts}
+            allPosts={allPosts}
+            currentUser={currentUser}
+            userProfile={userProfile}
+            userAvatar={userAvatar}
+            communityUserMap={communityUserMap}
+            followedIds={followedIds}
+            savedIds={savedIds}
+            localUserReactions={localUserReactions}
+            algorithmPrefs={algorithmPrefs}
+            onChangeAlgorithmPrefs={setAlgorithmPrefs}
+            onToggleReaction={(post, chosenType) =>
+              handleReaction(post, chosenType)
+            }
+            onToggleRepost={(post) => handleToggleRepost(post)}
+            onToggleSave={(post) => handleToggleSave(post)}
+            onToggleFollowCreator={handleToggleFollowCreator}
+            onOpenShareModal={(post) => {
+              recordPostClick(post);
+              setShareModalPost(post);
+            }}
+            onDismissPost={handleDismissReelPost}
+            onCommentCountDelta={handleCommentCountDelta}
+            onOverlayOpenChange={setReelsOverlayOpen}
+          />
+        )}
+
+        {!reelsOverlayOpen && !shareModalPost && (
+          <NewsBottomDock variant="reels" />
+        )}
+
+        <LiquidGlassShareModal
+          isOpen={Boolean(shareModalPost)}
+          post={shareModalPost || {}}
+          onClose={() => setShareModalPost(null)}
+          onRepost={() => {
+            if (shareModalPost?.id) {
+              const target = allPosts.find((p) => p.id === shareModalPost.id);
+              if (target) handleToggleRepost(target);
+            }
+          }}
+          onQuotePost={() => {
+            if (shareModalPost?.id) {
+              navigate(`/loops/create?quotePostId=${shareModalPost.id}`);
+            }
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <>

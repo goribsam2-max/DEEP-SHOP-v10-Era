@@ -57,6 +57,7 @@ import {
   LiquidGlassShareModal,
   LoopPostOptionsSheet,
 } from "../components/LiquidGlassPostInteractions";
+import { SmoothImage, preloadImageUrl } from "../components/SmoothImage";
 import { auth, db } from "../firebase";
 import {
   doc,
@@ -1724,10 +1725,10 @@ export const NewsDetails: React.FC = () => {
             )}
             {cmt.imageUrl && (
               <div className="mt-2 max-w-[260px] rounded-2xl overflow-hidden border loops-divider">
-                <img
+                <SmoothImage
                   src={cmt.imageUrl}
                   alt="Reply attachment"
-                  referrerPolicy="no-referrer"
+                  wrapperClassName="w-full min-h-[120px]"
                   className="w-full h-auto max-h-64 object-cover"
                 />
               </div>
@@ -2068,10 +2069,11 @@ export const NewsDetails: React.FC = () => {
               }}
               className="loops-edge-media -mx-4 rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
             >
-              <img
+              <SmoothImage
                 src={post.images[0]}
                 alt={post.title || authorHandle}
-                referrerPolicy="no-referrer"
+                eager
+                wrapperClassName="w-full rounded-none"
                 className="w-full max-h-[640px] object-cover block rounded-none"
               />
             </div>
@@ -2095,6 +2097,7 @@ export const NewsDetails: React.FC = () => {
                       delta > 0 &&
                       detailCarouselIdx < post.images.length - 1
                     ) {
+                      preloadImageUrl(post.images[detailCarouselIdx + 2]);
                       setDetailCarouselIdx((i) => i + 1);
                     } else if (delta < 0 && detailCarouselIdx > 0) {
                       setDetailCarouselIdx((i) => i - 1);
@@ -2103,14 +2106,20 @@ export const NewsDetails: React.FC = () => {
                 }}
                 className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden group"
               >
-                <img
+                <SmoothImage
                   src={post.images[detailCarouselIdx] || post.images[0]}
                   alt={`${authorHandle} slide ${detailCarouselIdx + 1}`}
-                  referrerPolicy="no-referrer"
+                  eager
+                  onLoad={() => {
+                    if (post.images && post.images[detailCarouselIdx + 1]) {
+                      preloadImageUrl(post.images[detailCarouselIdx + 1]);
+                    }
+                  }}
                   onClick={() => {
                     triggerHaptic();
                     navigate(`/loops/photo/${post.id}/${detailCarouselIdx}`);
                   }}
+                  wrapperClassName="w-full rounded-none"
                   className="w-full max-h-[640px] object-cover block cursor-pointer select-none rounded-none"
                 />
 

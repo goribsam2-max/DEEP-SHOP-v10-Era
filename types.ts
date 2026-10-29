@@ -83,10 +83,25 @@ export interface UserProfile {
   coverPhoto?: string;
   followers?: string[];
   following?: string[];
+  bio?: string;
+  website?: string;
+  link?: string;
+  showInstagramBadge?: boolean;
+  showLoopsBadge?: boolean;
+  profileLinks?: {
+    id: string;
+    title?: string;
+    url: string;
+  }[];
   socialLinks?: {
     facebook?: string;
     tiktok?: string;
     instagram?: string;
+    youtube?: string;
+    whatsapp?: string;
+    telegram?: string;
+    threads?: string;
+    website?: string;
   };
   totalReviews?: number;
   positiveReviews?: number;

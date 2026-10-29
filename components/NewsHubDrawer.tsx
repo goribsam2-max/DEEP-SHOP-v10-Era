@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DottedGhostCatIcon } from "./ComposerLiquidGlassSheets";
+import { ReelsTuneAlgorithmIcon } from "./LoopsReelsView";
 import { triggerHaptic } from "../lib/haptics";
 
 interface NewsHubDrawerProps {
@@ -56,12 +57,13 @@ interface DrawerMenuPrefs {
 
 const STORAGE_KEY = "loops_custom_drawer_v1";
 
-const DEFAULT_PRIMARY_IDS = ["for_you", "following", "ghost", "music"];
+const DEFAULT_PRIMARY_IDS = ["for_you", "following", "reels", "ghost", "music"];
 const DEFAULT_SECONDARY_IDS = [
   "shop",
   "messages",
   "search",
   "creator_studio",
+  "your_algorithm",
   "preferences",
   "scam_alerts",
   "appearance",
@@ -208,6 +210,10 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
       label: "Following",
       onClick: () => handleNav("/loops?filter=following"),
     },
+    reels: {
+      label: "Reels",
+      onClick: () => handleNav("/loops?filter=video"),
+    },
     ghost: {
       label: "Ghost posts",
       onClick: () => handleNav("/loops?filter=ghost"),
@@ -270,6 +276,13 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
       onClick: () => handleNav("/creator-dashboard"),
       trailing: (
         <BarChart2 className="w-[20px] h-[20px] text-zinc-700 dark:text-zinc-300 stroke-[1.85] shrink-0" />
+      ),
+    },
+    your_algorithm: {
+      label: "Your algorithm",
+      onClick: () => handleNav("/loops/algorithm"),
+      trailing: (
+        <ReelsTuneAlgorithmIcon className="w-[20px] h-[20px] text-zinc-700 dark:text-zinc-300 shrink-0" />
       ),
     },
     preferences: {

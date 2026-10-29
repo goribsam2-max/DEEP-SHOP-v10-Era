@@ -1,16 +1,136 @@
-export type VideoPlatform = "youtube" | "facebook" | "tiktok";
+export type VideoPlatform =
+  | "youtube"
+  | "instagram"
+  | "facebook"
+  | "tiktok"
+  | "x"
+  | "vimeo"
+  | "streamable"
+  | "dailymotion"
+  | "direct";
 
 export interface ParsedVideoEmbed {
   platform: VideoPlatform;
   originalUrl: string;
   canonicalUrl: string;
   videoId?: string;
+  shortcode?: string;
   isVertical: boolean;
   needsResolution?: boolean;
+  directStreamUrl?: string;
+  thumbnailUrl?: string;
+}
+
+export interface VideoPlatformMeta {
+  platform: VideoPlatform;
+  name: string;
+  shortName: string;
+  reelLabel: string;
+  domain: string;
+}
+
+export function getVideoPlatformMeta(
+  platform: VideoPlatform,
+  originalUrl?: string | null
+): VideoPlatformMeta {
+  let parsedDomain = "";
+  if (originalUrl) {
+    try {
+      parsedDomain = new URL(
+        /^https?:\/\//i.test(originalUrl) ? originalUrl : `https://${originalUrl}`
+      ).hostname.replace(/^www\./i, "");
+    } catch {
+      parsedDomain = "";
+    }
+  }
+
+  switch (platform) {
+    case "instagram":
+      return {
+        platform,
+        name: "Instagram",
+        shortName: "Instagram",
+        reelLabel: "Instagram Reel",
+        domain: parsedDomain || "instagram.com",
+      };
+    case "youtube":
+      return {
+        platform,
+        name: "YouTube",
+        shortName: "YouTube",
+        reelLabel:
+          originalUrl && /\/shorts\//i.test(originalUrl)
+            ? "YouTube Shorts"
+            : "YouTube Video",
+        domain: parsedDomain || "youtube.com",
+      };
+    case "facebook":
+      return {
+        platform,
+        name: "Facebook",
+        shortName: "Facebook",
+        reelLabel:
+          originalUrl && /\/reels?\//i.test(originalUrl)
+            ? "Facebook Reel"
+            : "Facebook Video",
+        domain: parsedDomain || "facebook.com",
+      };
+    case "tiktok":
+      return {
+        platform,
+        name: "TikTok",
+        shortName: "TikTok",
+        reelLabel: "TikTok",
+        domain: parsedDomain || "tiktok.com",
+      };
+    case "x":
+      return {
+        platform,
+        name: "X (Twitter)",
+        shortName: "X",
+        reelLabel: "X Video",
+        domain: parsedDomain || "x.com",
+      };
+    case "vimeo":
+      return {
+        platform,
+        name: "Vimeo",
+        shortName: "Vimeo",
+        reelLabel: "Vimeo",
+        domain: parsedDomain || "vimeo.com",
+      };
+    case "streamable":
+      return {
+        platform,
+        name: "Streamable",
+        shortName: "Streamable",
+        reelLabel: "Streamable Clip",
+        domain: parsedDomain || "streamable.com",
+      };
+    case "dailymotion":
+      return {
+        platform,
+        name: "Dailymotion",
+        shortName: "Dailymotion",
+        reelLabel: "Dailymotion Video",
+        domain: parsedDomain || "dailymotion.com",
+      };
+    case "direct":
+    default:
+      return {
+        platform: "direct",
+        name: "Loops Original",
+        shortName: "Loops",
+        reelLabel: "Original Reel",
+        domain: parsedDomain || "loops",
+      };
+  }
 }
 
 const URL_IN_TEXT_REGEX =
-  /(?:https?:\/\/[^\s<>"]+|www\.[^\s<>"]+|\b(?:(?:m|vt|vm|music)\.)?(?:youtube\.com|youtu\.be|facebook\.com|fb\.watch|tiktok\.com)\/[^\s<>"]+)/gi;
+  /(?:https?:\/\/[^\s<>"]+|www\.[^\s<>"]+|\b(?:(?:m|vt|vm|music|player)\.)?(?:youtube\.com|youtu\.be|instagram\.com|instagr\.am|facebook\.com|fb\.watch|fb\.com|tiktok\.com|x\.com|twitter\.com|vimeo\.com|streamable\.com|dailymotion\.com|dai\.ly)\/[^\s<>"]+)/gi;
+
+const DIRECT_VIDEO_EXT_REGEX = /\.(?:mp4|webm|mov|m4v|ogv|ogg)(?:$|[?#])/i;
 
 const stripTrailingPunct = (raw: string): string => {
   let clean = raw.trim();
@@ -26,11 +146,34 @@ const ensureProtocol = (raw: string): string => {
   return `https://${trimmed}`;
 };
 
-export function parseVideoEmbed(rawInput?: string | null): ParsedVideoEmbed | null {
+export function parseVideoEmbed(
+  rawInput?: string | null,
+  options?: { allowFallbackDirectVideo?: boolean }
+): ParsedVideoEmbed | null {
   if (!rawInput || !rawInput.trim()) return null;
 
   const cleaned = stripTrailingPunct(rawInput);
-  if (!cleaned || cleaned.startsWith("/") || cleaned.startsWith("blob:") || cleaned.startsWith("data:")) {
+  if (!cleaned) return null;
+
+  // Support local uploaded / blob / relative direct video paths when explicitly passed via videoUrl
+  if (
+    options?.allowFallbackDirectVideo &&
+    (cleaned.startsWith("/") || cleaned.startsWith("blob:"))
+  ) {
+    return {
+      platform: "direct",
+      originalUrl: cleaned,
+      canonicalUrl: cleaned,
+      directStreamUrl: cleaned,
+      isVertical: true,
+    };
+  }
+
+  if (
+    cleaned.startsWith("/") ||
+    cleaned.startsWith("blob:") ||
+    cleaned.startsWith("data:")
+  ) {
     return null;
   }
 
@@ -45,7 +188,57 @@ export function parseVideoEmbed(rawInput?: string | null): ParsedVideoEmbed | nu
   const host = u.hostname.replace(/^www\./i, "").toLowerCase();
   const pathname = u.pathname || "";
 
-  // 1. YouTube (watch?v=, youtu.be/, shorts/, live/, embed/)
+  // 1. Direct Video File URLs (.mp4, .webm, .mov, .m4v, Cloudinary/Firebase video streams)
+  if (
+    DIRECT_VIDEO_EXT_REGEX.test(pathname) ||
+    DIRECT_VIDEO_EXT_REGEX.test(u.search) ||
+    /\/video\/upload\//i.test(pathname)
+  ) {
+    return {
+      platform: "direct",
+      originalUrl: normalized,
+      canonicalUrl: normalized,
+      directStreamUrl: normalized,
+      isVertical: true,
+    };
+  }
+
+  // 2. Instagram Reels, Posts & IGTV (instagram.com/reel/ID, /reels/ID, /p/ID, /tv/ID, /share/reel/ID)
+  if (
+    host === "instagram.com" ||
+    host.endsWith(".instagram.com") ||
+    host === "instagr.am"
+  ) {
+    const igMatch = pathname.match(
+      /\/(?:(reel|reels|p|tv)\/)([a-zA-Z0-9_-]{5,32})/i
+    );
+    if (igMatch?.[2]) {
+      const kind = igMatch[1].toLowerCase();
+      const shortcode = igMatch[2];
+      const canonicalKind = kind === "p" ? "p" : "reel";
+      return {
+        platform: "instagram",
+        originalUrl: normalized,
+        canonicalUrl: `https://www.instagram.com/${canonicalKind}/${shortcode}/`,
+        videoId: shortcode,
+        shortcode,
+        isVertical: true,
+        needsResolution: true,
+      };
+    }
+
+    if (/^\/share\/(?:reel|reels|p)\/[a-zA-Z0-9_-]+/i.test(pathname)) {
+      return {
+        platform: "instagram",
+        originalUrl: normalized,
+        canonicalUrl: normalized,
+        isVertical: true,
+        needsResolution: true,
+      };
+    }
+  }
+
+  // 3. YouTube (watch?v=, youtu.be/, shorts/, live/, embed/)
   if (
     host === "youtu.be" ||
     host === "youtube.com" ||
@@ -76,12 +269,13 @@ export function parseVideoEmbed(rawInput?: string | null): ParsedVideoEmbed | nu
           ? `https://www.youtube.com/shorts/${ytId}`
           : `https://www.youtube.com/watch?v=${ytId}`,
         videoId: ytId,
+        thumbnailUrl: `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`,
         isVertical,
       };
     }
   }
 
-  // 2. Facebook Videos & Reels (watch, videos, reel, reels, share/v, share/r, fb.watch, video.php)
+  // 4. Facebook Videos & Reels (watch, videos, reel, reels, share/v, share/r, fb.watch, video.php)
   if (
     host === "fb.watch" ||
     host === "facebook.com" ||
@@ -121,12 +315,15 @@ export function parseVideoEmbed(rawInput?: string | null): ParsedVideoEmbed | nu
         canonicalUrl: canonicalFb,
         isVertical: isReel,
         needsResolution:
-          isShortFbWatch || isShareVideo || /^\/share\/r\//i.test(pathname),
+          isShortFbWatch ||
+          isShareVideo ||
+          isReel ||
+          /^\/share\/r\//i.test(pathname),
       };
     }
   }
 
-  // 3. TikTok (@user/video/ID, /v/ID, vt.tiktok.com, vm.tiktok.com, tiktok.com/t/)
+  // 5. TikTok (@user/video/ID, /v/ID, vt.tiktok.com, vm.tiktok.com, tiktok.com/t/)
   if (host === "tiktok.com" || host.endsWith(".tiktok.com")) {
     const idMatch =
       pathname.match(/\/video\/(\d{15,25})/) ||
@@ -160,6 +357,87 @@ export function parseVideoEmbed(rawInput?: string | null): ParsedVideoEmbed | nu
     }
   }
 
+  // 6. X / Twitter Status Videos (x.com/user/status/ID, twitter.com/user/status/ID)
+  if (
+    host === "x.com" ||
+    host.endsWith(".x.com") ||
+    host === "twitter.com" ||
+    host.endsWith(".twitter.com")
+  ) {
+    const statusMatch = pathname.match(/\/status(?:es)?\/(\d{10,25})/i);
+    if (statusMatch?.[1]) {
+      return {
+        platform: "x",
+        originalUrl: normalized,
+        canonicalUrl: `https://x.com/i/status/${statusMatch[1]}`,
+        videoId: statusMatch[1],
+        isVertical: true,
+        needsResolution: true,
+      };
+    }
+  }
+
+  // 7. Vimeo (vimeo.com/ID, player.vimeo.com/video/ID)
+  if (host === "vimeo.com" || host.endsWith(".vimeo.com")) {
+    const vimeoMatch =
+      pathname.match(/\/video\/(\d{6,15})/) || pathname.match(/^\/(\d{6,15})/);
+    if (vimeoMatch?.[1]) {
+      return {
+        platform: "vimeo",
+        originalUrl: normalized,
+        canonicalUrl: `https://vimeo.com/${vimeoMatch[1]}`,
+        videoId: vimeoMatch[1],
+        isVertical: false,
+      };
+    }
+  }
+
+  // 8. Streamable (streamable.com/ID)
+  if (host === "streamable.com" || host.endsWith(".streamable.com")) {
+    const stMatch = pathname.match(/^\/(?:e\/|o\/)?([a-zA-Z0-9]{4,16})/);
+    if (stMatch?.[1]) {
+      return {
+        platform: "streamable",
+        originalUrl: normalized,
+        canonicalUrl: `https://streamable.com/${stMatch[1]}`,
+        videoId: stMatch[1],
+        isVertical: true,
+      };
+    }
+  }
+
+  // 9. Dailymotion (dailymotion.com/video/ID, dai.ly/ID)
+  if (
+    host === "dailymotion.com" ||
+    host.endsWith(".dailymotion.com") ||
+    host === "dai.ly"
+  ) {
+    const dmMatch =
+      host === "dai.ly"
+        ? pathname.match(/^\/([a-zA-Z0-9]{5,16})/)
+        : pathname.match(/\/video\/([a-zA-Z0-9]{5,16})/);
+    if (dmMatch?.[1]) {
+      return {
+        platform: "dailymotion",
+        originalUrl: normalized,
+        canonicalUrl: `https://www.dailymotion.com/video/${dmMatch[1]}`,
+        videoId: dmMatch[1],
+        isVertical: false,
+      };
+    }
+  }
+
+  // Fallback for explicit `post.videoUrl` pointing to a custom CDN/storage video stream without extension
+  if (options?.allowFallbackDirectVideo) {
+    return {
+      platform: "direct",
+      originalUrl: normalized,
+      canonicalUrl: normalized,
+      directStreamUrl: normalized,
+      isVertical: true,
+    };
+  }
+
   return null;
 }
 
@@ -167,7 +445,9 @@ export function isEmbeddableVideoUrl(url?: string | null): boolean {
   return Boolean(parseVideoEmbed(url));
 }
 
-export function extractFirstVideoUrlFromText(text?: string | null): string | null {
+export function extractFirstVideoUrlFromText(
+  text?: string | null
+): string | null {
   if (!text) return null;
   for (const match of text.matchAll(URL_IN_TEXT_REGEX)) {
     const raw = stripTrailingPunct(match[0]);
@@ -187,7 +467,9 @@ export function resolvePostVideoSource(
 ): ParsedVideoEmbed | null {
   if (!post) return null;
   if (post.videoUrl && post.videoUrl.trim()) {
-    const directParsed = parseVideoEmbed(post.videoUrl.trim());
+    const directParsed = parseVideoEmbed(post.videoUrl.trim(), {
+      allowFallbackDirectVideo: true,
+    });
     if (directParsed) return directParsed;
   }
   const fromCaption = extractFirstVideoUrlFromText(post.description);
@@ -197,14 +479,19 @@ export function resolvePostVideoSource(
   return null;
 }
 
-const shortUrlCache = new Map<
-  string,
-  Promise<{ resolvedUrl: string; tiktokVideoId: string | null }>
->();
+export interface ResolvedVideoMetadata {
+  resolvedUrl: string;
+  tiktokVideoId: string | null;
+  instagramShortcode: string | null;
+  directVideoUrl: string | null;
+  thumbnailUrl: string | null;
+}
+
+const shortUrlCache = new Map<string, Promise<ResolvedVideoMetadata>>();
 
 export function resolveShortVideoUrl(
   url: string
-): Promise<{ resolvedUrl: string; tiktokVideoId: string | null }> {
+): Promise<ResolvedVideoMetadata> {
   const key = url.trim();
   const cached = shortUrlCache.get(key);
   if (cached) return cached;
@@ -216,11 +503,21 @@ export function resolveShortVideoUrl(
       return {
         resolvedUrl: String(data.resolvedUrl || key),
         tiktokVideoId: data.tiktokVideoId ? String(data.tiktokVideoId) : null,
+        instagramShortcode: data.instagramShortcode
+          ? String(data.instagramShortcode)
+          : null,
+        directVideoUrl: data.directVideoUrl
+          ? String(data.directVideoUrl)
+          : null,
+        thumbnailUrl: data.thumbnailUrl ? String(data.thumbnailUrl) : null,
       };
     })
     .catch(() => ({
       resolvedUrl: key,
       tiktokVideoId: null,
+      instagramShortcode: null,
+      directVideoUrl: null,
+      thumbnailUrl: null,
     }));
 
   shortUrlCache.set(key, req);

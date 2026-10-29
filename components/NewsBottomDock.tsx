@@ -90,7 +90,9 @@ const DockUserFallbackIcon: React.FC<{ active?: boolean }> = ({ active }) => (
   </svg>
 );
 
-export const NewsBottomDock: React.FC = () => {
+export const NewsBottomDock: React.FC<{
+  variant?: "default" | "reels";
+}> = ({ variant = "default" }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
@@ -157,6 +159,8 @@ export const NewsBottomDock: React.FC = () => {
     path.startsWith("/news-hub/profile") ||
     path.startsWith("/author");
 
+  const isReelsVariant = variant === "reels";
+
   const items = [
     {
       id: "home",
@@ -200,7 +204,11 @@ export const NewsBottomDock: React.FC = () => {
             onError={() => setImgErr(true)}
             className={`w-[29px] h-[29px] rounded-full object-cover transition ${
               active
-                ? "ring-2 ring-[#0f0f0f] dark:ring-white"
+                ? isReelsVariant
+                  ? "ring-2 ring-white"
+                  : "ring-2 ring-[#0f0f0f] dark:ring-white"
+                : isReelsVariant
+                ? "ring-1 ring-white/30"
                 : "ring-1 ring-black/[0.06] dark:ring-white/15"
             }`}
           />
@@ -215,7 +223,11 @@ export const NewsBottomDock: React.FC = () => {
       aria-label="Loops Bottom Navigation"
       className="fixed bottom-4 inset-x-0 z-50 flex justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="loops-dock-pill pointer-events-auto flex items-center justify-between gap-1 p-1.5 rounded-full max-w-[356px] w-full h-[60px]">
+      <div
+        className={`${
+          isReelsVariant ? "loops-reels-dock-pill" : "loops-dock-pill"
+        } pointer-events-auto flex items-center justify-between gap-1 p-1.5 rounded-full max-w-[356px] w-full h-[60px]`}
+      >
         {items.map((item) => (
           <button
             key={item.id}
@@ -228,7 +240,11 @@ export const NewsBottomDock: React.FC = () => {
             aria-label={item.label}
             className={`relative h-full flex-1 rounded-full flex items-center justify-center transition-all duration-200 active:scale-94 cursor-pointer ${
               item.isActive
-                ? "loops-dock-active-pill text-[#0f0f0f] dark:text-white"
+                ? isReelsVariant
+                  ? "loops-reels-dock-active-pill text-white"
+                  : "loops-dock-active-pill text-[#0f0f0f] dark:text-white"
+                : isReelsVariant
+                ? "text-white/95 hover:bg-white/[0.08]"
                 : "text-[#0f0f0f] dark:text-zinc-200 hover:bg-black/[0.035] dark:hover:bg-white/[0.05]"
             }`}
           >

@@ -22,6 +22,7 @@ import {
 import { triggerHaptic } from "../lib/haptics";
 import { toggleFollowUser } from "../lib/follow";
 import { getSafePublicUsername, getSafeDisplayName } from "../lib/utils";
+import { SmoothImage, preloadImageUrl } from "./SmoothImage";
 
 export function formatLoopCompactTime(timestamp?: number | null): string {
   if (!timestamp || Number.isNaN(Number(timestamp))) return "now";
@@ -341,6 +342,13 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
     () => (Array.isArray(post.images) ? post.images.filter(Boolean) : []),
     [post.images]
   );
+
+  useEffect(() => {
+    if (images.length > 1) {
+      preloadImageUrl(images[carouselIdx + 1]);
+      preloadImageUrl(images[carouselIdx - 1]);
+    }
+  }, [images, carouselIdx]);
   const resolvedVideo = useMemo(
     () => resolvePostVideoSource(post),
     [post.videoUrl, post.description]
@@ -705,11 +713,10 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
           }}
           className="loops-edge-media w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
         >
-          <img
+          <SmoothImage
             src={images[0]}
             alt={cleanTitle || displayUsername}
-            loading="lazy"
-            referrerPolicy="no-referrer"
+            wrapperClassName="w-full rounded-none"
             className="w-full max-h-[640px] object-cover block rounded-none"
           />
         </div>
@@ -737,15 +744,15 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             }}
             className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden group"
           >
-            <img
+            <SmoothImage
               src={images[carouselIdx] || images[0]}
               alt={`${displayUsername} slide ${carouselIdx + 1}`}
-              loading="lazy"
-              referrerPolicy="no-referrer"
+              eager={carouselIdx > 0}
               onClick={() => {
                 triggerHaptic();
                 navigate(`/loops/photo/${post.id}/${carouselIdx}`);
               }}
+              wrapperClassName="w-full rounded-none"
               className="w-full max-h-[640px] object-cover block cursor-pointer select-none rounded-none"
             />
 
@@ -824,13 +831,13 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
           onClick={openPostDetails}
           className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
         >
-          <img
+          <SmoothImage
             src={post.gifUrl}
             alt="GIF"
-            referrerPolicy="no-referrer"
+            wrapperClassName="w-full rounded-none"
             className="w-full max-h-[520px] object-cover block rounded-none"
           />
-          <span className="absolute bottom-3 left-3 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-bold tracking-wider">
+          <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-bold tracking-wider">
             GIF
           </span>
         </div>

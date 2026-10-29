@@ -50,6 +50,7 @@ import { CustomContextMenu } from './components/CustomContextMenu';
 import { FeedPersonalization } from './pages/FeedPersonalization';
 import { NewsProfilePage } from './pages/NewsProfilePage';
 import { LoopActivityPage } from './pages/LoopActivityPage';
+import { LoopsAlgorithmPage } from './components/LoopsReelsView';
 import {
   NewsPhotoViewerPage,
   NewsSharePage,
@@ -918,6 +919,7 @@ const AppContent: React.FC = () => {
           <Route path="/loops/create" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/loops/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/loops/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
+          <Route path="/loops/algorithm" element={<PageWrapper><LoopsAlgorithmPage /></PageWrapper>} />
           <Route path="/loops/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/loops/post/:id/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
           <Route path="/loops/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
@@ -939,6 +941,7 @@ const AppContent: React.FC = () => {
           <Route path="/news-hub/create" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/news-hub/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/news-hub/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
+          <Route path="/news-hub/algorithm" element={<PageWrapper><LoopsAlgorithmPage /></PageWrapper>} />
           <Route path="/news-hub/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/news-hub/post/:id/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
           <Route path="/news-hub/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
@@ -1211,6 +1214,10 @@ const GlobalRouteAwareOverlays: React.FC = () => {
     (prefix) =>
       location.pathname === prefix || location.pathname.startsWith(`${prefix}/`)
   );
+  const isReelsFullscreen =
+    (location.pathname.startsWith('/loops') ||
+      location.pathname.startsWith('/news-hub')) &&
+    new URLSearchParams(location.search).get('filter') === 'video';
 
   if (isAuthScreen) {
     return <NetworkStatus />;
@@ -1223,10 +1230,12 @@ const GlobalRouteAwareOverlays: React.FC = () => {
       <CartAbandonmentPopup />
       <NotificationPermissionModal />
       <AdManager />
-      <AdPlacementSlot
-        slot="bottom_fixed"
-        className="fixed bottom-0 inset-x-0 z-[90] bg-white/95 dark:bg-zinc-950/95 border-t border-slate-200/80 dark:border-zinc-800 p-2 shadow-2xl"
-      />
+      {!isReelsFullscreen && (
+        <AdPlacementSlot
+          slot="bottom_fixed"
+          className="fixed bottom-0 inset-x-0 z-[90] bg-white/95 dark:bg-zinc-950/95 border-t border-slate-200/80 dark:border-zinc-800 p-2 shadow-2xl"
+        />
+      )}
       <CookieConsent />
     </>
   );

@@ -994,14 +994,25 @@ app.use(async (req, res, next) => {
       }
 
       let tiktokVideoId: string | null = null;
+      let instagramShortcode: string | null = null;
+      let directVideoUrl: string | null = null;
+      let thumbnailUrl: string | null = null;
+
       const directTtMatch = finalUrl.match(/\/(?:video|v)\/(\d{15,25})/);
       if (directTtMatch) {
         tiktokVideoId = directTtMatch[1];
       }
 
-      // Inspect first chunk of HTML if needed to extract canonical Facebook/TikTok video URL
+      const directIgMatch = finalUrl.match(
+        /instagram\.com\/(?:reel|reels|p|tv)\/([a-zA-Z0-9_-]{5,32})/i
+      );
+      if (directIgMatch) {
+        instagramShortcode = directIgMatch[1];
+      }
+
+      // Inspect first chunk of HTML if needed to extract canonical URL, og:video stream, and og:image
       try {
-        const html = (await response.text()).slice(0, 65000);
+        const html = (await response.text()).slice(0, 85000);
         if (!tiktokVideoId && /tiktok\.com/i.test(finalUrl)) {
           const htmlTtMatch =
             html.match(/\/video\/(\d{15,25})/) ||
@@ -1012,6 +1023,17 @@ app.use(async (req, res, next) => {
             if (!finalUrl.includes(`/video/${tiktokVideoId}`)) {
               finalUrl = `https://www.tiktok.com/@tiktok/video/${tiktokVideoId}`;
             }
+          }
+        }
+
+        if (!instagramShortcode && /instagram\.com|instagr\.am/i.test(finalUrl)) {
+          const htmlIgMatch =
+            html.match(
+              /instagram\.com\/(?:reel|reels|p|tv)\/([a-zA-Z0-9_-]{5,32})/i
+            ) || html.match(/"shortcode"\s*:\s*"([a-zA-Z0-9_-]{5,32})"/);
+          if (htmlIgMatch?.[1]) {
+            instagramShortcode = htmlIgMatch[1];
+            finalUrl = `https://www.instagram.com/reel/${instagramShortcode}/`;
           }
         }
 
@@ -1029,16 +1051,62 @@ app.use(async (req, res, next) => {
             }
           }
         }
+
+        const ogVideoMatch =
+          html.match(
+            /<meta[^>]+property=["']og:video:secure_url["'][^>]+content=["']([^"']+)["']/i
+          ) ||
+          html.match(
+            /<meta[^>]+property=["']og:video:url["'][^>]+content=["']([^"']+)["']/i
+          ) ||
+          html.match(
+            /<meta[^>]+property=["']og:video["'][^>]+content=["']([^"']+)["']/i
+          );
+        if (ogVideoMatch?.[1]) {
+          const candidateVideo = ogVideoMatch[1]
+            .replace(/&amp;/g, "&")
+            .replace(/\\u0026/g, "&");
+          if (
+            /^https:\/\//i.test(candidateVideo) &&
+            isSafePublicUrl(candidateVideo) &&
+            (/\.(?:mp4|webm|mov|m4v)(?:$|[?#])/i.test(candidateVideo) ||
+              /fbcdn\.net|cdninstagram\.com|twimg\.com/i.test(candidateVideo))
+          ) {
+            directVideoUrl = candidateVideo;
+          }
+        }
+
+        const ogImageMatch =
+          html.match(
+            /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
+          ) ||
+          html.match(
+            /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i
+          );
+        if (ogImageMatch?.[1]) {
+          const candidateImg = ogImageMatch[1]
+            .replace(/&amp;/g, "&")
+            .replace(/\\u0026/g, "&");
+          if (/^https:\/\//i.test(candidateImg) && isSafePublicUrl(candidateImg)) {
+            thumbnailUrl = candidateImg;
+          }
+        }
       } catch {}
 
       return res.json({
         resolvedUrl: finalUrl,
         tiktokVideoId,
+        instagramShortcode,
+        directVideoUrl,
+        thumbnailUrl,
       });
     } catch {
       return res.json({
         resolvedUrl: normalizedUrl,
         tiktokVideoId: null,
+        instagramShortcode: null,
+        directVideoUrl: null,
+        thumbnailUrl: null,
       });
     }
   });

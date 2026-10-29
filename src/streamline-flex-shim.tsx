@@ -179,6 +179,7 @@ export const MousePointer2 = c(["M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z", "M13
 export const MoveDown = ArrowDown;
 export const MoveUp = ArrowUp;
 export const Music = c(["M9 18V5l12-2v13", "M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "M21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"]);
+export const Music2 = Music;
 export const Newspaper = c(["M4 4h16v16H4V4z", "M8 8h8", "M8 12h8", "M8 16h4"]);
 export const Package = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8"]);
 export const PackageCheck = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M9 12l2 2 4-4"]);

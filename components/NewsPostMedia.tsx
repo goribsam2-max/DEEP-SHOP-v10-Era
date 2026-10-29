@@ -8,6 +8,7 @@ import { triggerHaptic } from "../lib/haptics";
 import { resolvePostVideoSource } from "../lib/videoEmbed";
 import { NewsVideoPlayer } from "./NewsVideoPlayer";
 import { NewsRichText } from "./NewsRichText";
+import { SmoothImage, preloadImageUrl } from "./SmoothImage";
 
 export const isScamPostRecord = (post?: Partial<ScamPost> | null): boolean => {
   if (!post) return false;
@@ -658,6 +659,13 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
     setDetectedRatios(next);
   }, [images.length, post.id, post.imageNaturalRatios]);
 
+  useEffect(() => {
+    if (images.length > 1) {
+      preloadImageUrl(images[carouselIdx + 1]);
+      preloadImageUrl(images[carouselIdx - 1]);
+    }
+  }, [images, carouselIdx]);
+
   const recordNaturalRatio = (
     idx: number,
     e: React.SyntheticEvent<HTMLImageElement>
@@ -805,13 +813,13 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
       {/* Attached Animated GIF if present */}
       {post.gifUrl && (
         <div className="relative w-full rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800">
-          <img
+          <SmoothImage
             src={post.gifUrl}
             alt="Attached GIF"
-            referrerPolicy="no-referrer"
+            wrapperClassName="w-full rounded-none"
             className="w-full max-h-[420px] object-cover block rounded-none"
           />
-          <span className="absolute bottom-3 left-3 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-white text-[10px] font-extrabold tracking-wider">
+          <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-white text-[10px] font-extrabold tracking-wider">
             GIF
           </span>
         </div>
@@ -854,11 +862,11 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
             detectedRatios[0]
           )}`}
         >
-          <img
+          <SmoothImage
             src={images[0]}
             alt={post.title || "Post photo"}
-            referrerPolicy="no-referrer"
             onLoad={(e) => recordNaturalRatio(0, e)}
+            wrapperClassName="w-full h-full rounded-none"
             className="w-full h-full object-cover rounded-none transition-transform duration-300 group-hover:scale-[1.015]"
           />
           {renderScamOverlay()}
@@ -874,11 +882,12 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
               detectedRatios[carouselIdx] ?? detectedRatios[0]
             )}`}
           >
-            <img
+            <SmoothImage
               src={images[carouselIdx]}
               alt={`Slide ${carouselIdx + 1}`}
-              referrerPolicy="no-referrer"
+              eager={carouselIdx > 0}
               onLoad={(e) => recordNaturalRatio(carouselIdx, e)}
+              wrapperClassName="w-full h-full rounded-none"
               className="w-full h-full object-cover rounded-none transition-all duration-300"
             />
           </div>
@@ -954,15 +963,15 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                     : "aspect-square"
                 }`}
               >
-                <img
+                <SmoothImage
                   src={url}
                   alt={`Photo ${idx + 1}`}
-                  referrerPolicy="no-referrer"
                   onLoad={(e) => recordNaturalRatio(idx, e)}
+                  wrapperClassName="w-full h-full"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
                 {idx === 3 && images.length > 4 && (
-                  <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex items-center justify-center text-white font-bold text-xl tabular-nums">
+                  <div className="absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px] flex items-center justify-center text-white font-bold text-xl tabular-nums">
                     +{images.length - 4}
                   </div>
                 )}
@@ -1009,11 +1018,11 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                       isFront
                     )}`}
                   >
-                    <img
+                    <SmoothImage
                       src={images[imgIdx]}
                       alt={`Stack card ${imgIdx + 1}`}
-                      referrerPolicy="no-referrer"
                       onLoad={(e) => recordNaturalRatio(imgIdx, e)}
+                      wrapperClassName="w-full h-full rounded-none"
                       className="w-full h-full object-cover rounded-none"
                     />
                     {isFront && renderScamOverlay()}
@@ -1053,11 +1062,11 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                       : "aspect-[4/5]"
                   }`}
                 >
-                  <img
+                  <SmoothImage
                     src={url}
                     alt={`Photo ${idx + 1}`}
-                    referrerPolicy="no-referrer"
                     onLoad={(e) => recordNaturalRatio(idx, e)}
+                    wrapperClassName="w-full h-full"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
@@ -1077,11 +1086,11 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                 onClick={(e) => handleImgClick(e, 0)}
                 className="col-span-7 h-full relative overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer group"
               >
-                <img
+                <SmoothImage
                   src={images[0]}
                   alt="Photo 1"
-                  referrerPolicy="no-referrer"
                   onLoad={(e) => recordNaturalRatio(0, e)}
+                  wrapperClassName="w-full h-full"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
@@ -1092,11 +1101,11 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                     onClick={(e) => handleImgClick(e, idx + 1)}
                     className="relative h-full overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer group"
                   >
-                    <img
+                    <SmoothImage
                       src={url}
                       alt={`Photo ${idx + 2}`}
-                      referrerPolicy="no-referrer"
                       onLoad={(e) => recordNaturalRatio(idx + 1, e)}
+                      wrapperClassName="w-full h-full"
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
@@ -1113,15 +1122,15 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                     aspectMode === "square" ? "aspect-square" : "aspect-[4/3]"
                   }`}
                 >
-                  <img
+                  <SmoothImage
                     src={url}
                     alt={`Photo ${idx + 1}`}
-                    referrerPolicy="no-referrer"
                     onLoad={(e) => recordNaturalRatio(idx, e)}
+                    wrapperClassName="w-full h-full"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                   {idx === 3 && images.length > 4 && (
-                    <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex items-center justify-center text-white font-bold text-xl tabular-nums">
+                    <div className="absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px] flex items-center justify-center text-white font-bold text-xl tabular-nums">
                       +{images.length - 4}
                     </div>
                   )}

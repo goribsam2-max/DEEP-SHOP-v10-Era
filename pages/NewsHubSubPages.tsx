@@ -54,6 +54,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "../firebase";
 import {
+  SmoothImage,
+  isImageCached,
+  markImageCached,
+  preloadImageUrl,
+} from "../components/SmoothImage";
+import {
   doc,
   getDoc,
   setDoc,
@@ -446,12 +452,18 @@ export const NewsPhotoViewerPage: React.FC = () => {
           </div>
         ) : (
           <div className="relative max-w-5xl w-full flex flex-col items-center justify-center">
-            <img
+            <SmoothImage
               src={currentImg}
               alt={headerTitle}
-              referrerPolicy="no-referrer"
+              eager
+              onLoad={() => {
+                preloadImageUrl(images[activeIndex + 1]);
+                preloadImageUrl(images[activeIndex - 1]);
+              }}
               onClick={() => setZoomed((z) => !z)}
-              className={`rounded-2xl transition-transform duration-300 cursor-zoom-in ${
+              wrapperClassName="bg-transparent flex items-center justify-center rounded-2xl"
+              skeletonClassName="bg-zinc-900/80 rounded-2xl"
+              className={`rounded-2xl transition-transform duration-200 cursor-zoom-in ${
                 zoomed
                   ? "scale-150 cursor-zoom-out max-h-none"
                   : "max-h-[76vh] w-auto object-contain"
@@ -3899,6 +3911,33 @@ export const NewsStoryViewerPage: React.FC = () => {
       .map((s: any) => s.targetUid);
   }, [story?.stickers]);
 
+  const [storyMediaReady, setStoryMediaReady] = useState<boolean>(() =>
+    story?.mediaType === "video" ? false : isImageCached(story?.mediaUrl)
+  );
+
+  useEffect(() => {
+    if (!story?.mediaUrl) {
+      setStoryMediaReady(true);
+      return;
+    }
+    if (story.mediaType === "video") {
+      setStoryMediaReady(false);
+    } else if (isImageCached(story.mediaUrl)) {
+      setStoryMediaReady(true);
+    } else {
+      setStoryMediaReady(false);
+    }
+
+    const nextStory = stories[activeIdx + 1];
+    const prevStory = stories[activeIdx - 1];
+    if (nextStory?.mediaUrl && nextStory.mediaType !== "video") {
+      preloadImageUrl(nextStory.mediaUrl);
+    }
+    if (prevStory?.mediaUrl && prevStory.mediaType !== "video") {
+      preloadImageUrl(prevStory.mediaUrl);
+    }
+  }, [story?.id, story?.mediaUrl, story?.mediaType, activeIdx, stories]);
+
   return (
     <div className="story-studio-shell h-[100dvh] max-h-[100dvh] overflow-hidden bg-black text-white flex flex-col justify-between select-none">
       <SEO
@@ -4137,6 +4176,12 @@ export const NewsStoryViewerPage: React.FC = () => {
               onWheel={handleViewerWheel}
               className="relative w-full h-full flex items-center justify-center overflow-hidden bg-black touch-none"
             >
+              {!storyMediaReady && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-zinc-950 pointer-events-none">
+                  <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/90 animate-spin" />
+                </div>
+              )}
+
               {story.mediaType === "video" ? (
                 <video
                   src={story.mediaUrl}
@@ -4144,22 +4189,42 @@ export const NewsStoryViewerPage: React.FC = () => {
                   playsInline
                   muted={audioMuted}
                   loop
-                  className="w-full h-full object-contain bg-black"
+                  onLoadedData={() => setStoryMediaReady(true)}
+                  onCanPlay={() => setStoryMediaReady(true)}
+                  className={`w-full h-full object-contain bg-black transition-opacity duration-200 ease-out ${
+                    storyMediaReady ? "opacity-100" : "opacity-0"
+                  }`}
                 />
               ) : (
                 <motion.img
+                  key={story.mediaUrl}
                   src={story.mediaUrl}
                   alt={story.authorName}
+                  loading="eager"
+                  decoding="async"
                   referrerPolicy="no-referrer"
+                  onLoad={(e) => {
+                    const imgEl = e.currentTarget;
+                    const reveal = () => {
+                      markImageCached(story.mediaUrl);
+                      setStoryMediaReady(true);
+                    };
+                    if (typeof imgEl.decode === "function") {
+                      imgEl.decode().then(reveal).catch(reveal);
+                    } else {
+                      reveal();
+                    }
+                  }}
+                  onError={() => setStoryMediaReady(true)}
                   animate={{
                     scale: story.isBoomerang ? viewerScale * 1.03 : viewerScale,
                     x: viewerOffset.x,
                     y: viewerOffset.y,
                   }}
                   transition={{ duration: 0 }}
-                  className={`w-full h-full object-contain bg-black select-none ${
-                    story.isBoomerang ? "animate-pulse" : ""
-                  }`}
+                  className={`w-full h-full object-contain bg-black select-none transition-opacity duration-200 ease-out ${
+                    storyMediaReady ? "opacity-100" : "opacity-0"
+                  } ${story.isBoomerang ? "animate-pulse" : ""}`}
                 />
               )}
 
