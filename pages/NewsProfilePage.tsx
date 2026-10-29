@@ -129,6 +129,7 @@ const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
 import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "qrcode";
 import { auth, db } from "../firebase";
+import { updateProfile } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -178,6 +179,7 @@ import {
 } from "../lib/feedAlgorithm";
 import { processCleanImage } from "../lib/watermark";
 import { uploadDataUrlToImgbb } from "../services/imgbb";
+import { syncCurrentUserToSavedAccounts } from "../lib/savedAccounts";
 const defaultAvatarImg = "";
 const deepShopLogoFallback = "";
 
@@ -961,6 +963,7 @@ export const NewsProfilePage: React.FC = () => {
 
     const updatePayload = {
       displayName: editName.trim() || "Community Member",
+      shopName: editName.trim() || "Community Member",
       username: cleanedUsername,
       bio: editBio.trim(),
       location: editLocation.trim(),
@@ -972,11 +975,35 @@ export const NewsProfilePage: React.FC = () => {
       showRecentViews: editShowRecentViews,
       isPrivate: editIsPrivate,
       photoURL: typeof editAvatarUrl === "string" ? editAvatarUrl : "",
+      shopLogo: typeof editAvatarUrl === "string" ? editAvatarUrl : "",
       updatedAt: Date.now(),
     };
 
     try {
       await setDoc(doc(db, "users", currentUser.uid), updatePayload, { merge: true });
+
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, {
+          displayName: updatePayload.displayName,
+          photoURL: updatePayload.photoURL,
+        }).catch(() => {});
+        await auth.currentUser.reload().catch(() => {});
+        syncCurrentUserToSavedAccounts(auth.currentUser, {
+          displayName: updatePayload.displayName,
+          photoURL: updatePayload.photoURL,
+        });
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("userProfileUpdated", {
+          detail: {
+            displayName: updatePayload.displayName,
+            photoURL: updatePayload.photoURL,
+            username: cleanedUsername,
+          },
+        })
+      );
+
       notify("Profile updated successfully!", "success");
       navigate("/loops/profile");
     } catch {

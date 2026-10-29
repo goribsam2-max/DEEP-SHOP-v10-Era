@@ -4,7 +4,8 @@ import { auth, db } from "../firebase";
 import { updateProfile } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
-import { uploadToImgbb } from "../services/imgbb";
+import { uploadToImgbb, compressImage } from "../services/imgbb";
+import { syncCurrentUserToSavedAccounts } from "../lib/savedAccounts";
 import { useCharacterLimit } from "../components/hooks/use-character-limit";
 import { useImageUpload } from "../components/hooks/use-image-upload";
 import {
@@ -151,29 +152,40 @@ export default function EditProfile() {
 
       if (avatarInputRef.current?.files?.[0]) {
         notify("Uploading profile photo...", "info");
-        finalAvatarUrl = await uploadToImgbb(avatarInputRef.current.files[0]);
+        try {
+          finalAvatarUrl = await uploadToImgbb(avatarInputRef.current.files[0], { requireRemote: false });
+        } catch {
+          finalAvatarUrl = await compressImage(avatarInputRef.current.files[0], 400, 400, 0.85);
+        }
       }
 
       if (bgInputRef.current?.files?.[0]) {
         notify("Uploading cover image...", "info");
-        finalBgUrl = await uploadToImgbb(bgInputRef.current.files[0]);
+        try {
+          finalBgUrl = await uploadToImgbb(bgInputRef.current.files[0], { requireRemote: false });
+        } catch {
+          finalBgUrl = await compressImage(bgInputRef.current.files[0], 1200, 600, 0.8);
+        }
       } else if (!bgPreview && !defaultBg) {
         finalBgUrl = "";
       }
 
-      const newDisplayName = `${firstName} ${lastName}`.trim();
+      const newDisplayName =
+        `${firstName} ${lastName}`.trim() || username.trim() || "Community Member";
 
       await updateProfile(auth.currentUser, {
         displayName: newDisplayName,
         photoURL: finalAvatarUrl,
-      });
+      }).catch(() => {});
 
       await updateDoc(doc(db, "users", auth.currentUser.uid), {
         displayName: newDisplayName,
+        shopName: newDisplayName,
         username: username.replace(/^@+/, "").trim(),
         website: website.trim(),
         bio: bio.trim(),
         photoURL: finalAvatarUrl,
+        shopLogo: finalAvatarUrl,
         profileBg: finalBgUrl,
         address: address.trim(),
         facebookUrl: facebookUrl.trim(),
@@ -181,8 +193,24 @@ export default function EditProfile() {
         instagramUrl: instagramUrl.trim(),
       });
 
+      await auth.currentUser.reload().catch(() => {});
+      syncCurrentUserToSavedAccounts(auth.currentUser, {
+        displayName: newDisplayName,
+        photoURL: finalAvatarUrl,
+      });
+
+      window.dispatchEvent(
+        new CustomEvent("userProfileUpdated", {
+          detail: {
+            displayName: newDisplayName,
+            photoURL: finalAvatarUrl,
+            username: username.replace(/^@+/, "").trim(),
+          },
+        })
+      );
+
       notify("Profile updated successfully!", "success");
-      navigate("/profile");
+      navigate("/loops/profile");
     } catch {
       notify("Failed to update profile", "error");
     } finally {

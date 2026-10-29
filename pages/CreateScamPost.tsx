@@ -357,17 +357,27 @@ export const CreateScamPost: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authReady, setAuthReady] = useState<boolean>(() => Boolean(auth.currentUser));
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [originalPost, setOriginalPost] = useState<ScamPost | null>(null);
 
   // Auth listener & Admin check
   useEffect(() => {
+    let unsubProfileDoc: (() => void) | null = null;
     const unsub = auth.onAuthStateChanged(async (u) => {
       setCurrentUser(u);
       setAuthReady(true);
+      if (unsubProfileDoc) {
+        unsubProfileDoc();
+        unsubProfileDoc = null;
+      }
       if (!u) {
         setIsAdmin(false);
+        setUserProfile(null);
         return;
       }
+      unsubProfileDoc = onSnapshot(doc(db, "users", u.uid), (snap) => {
+        setUserProfile(snap.exists() ? snap.data() : null);
+      });
       if (hasImmediateAdminOrStaffRole(null, u)) {
         setIsAdmin(true);
         return;
@@ -385,7 +395,10 @@ export const CreateScamPost: React.FC = () => {
         setIsAdmin(false);
       }
     });
-    return unsub;
+    return () => {
+      unsub();
+      if (unsubProfileDoc) unsubProfileDoc();
+    };
   }, []);
 
   // Load post if in dedicated Edit Mode (/news-hub/edit/:editId)
@@ -575,10 +588,10 @@ function cleanPayload<T>(obj: T): T {
     const uploadPromise = uploadDataUrlToImgbb(
       src,
       `feed-post-${Date.now()}-${idx + 1}.jpg`,
-      { requireRemote: true }
-    ).catch((err) => {
+      { requireRemote: false }
+    ).catch(() => {
       uploadCacheRef.current.delete(src);
-      throw err;
+      return src; // Safe fallback to local base64 so post upload never fails
     });
 
     uploadCacheRef.current.set(src, uploadPromise);
@@ -1398,10 +1411,13 @@ function cleanPayload<T>(obj: T): T {
           : "text";
 
       const authorName =
+        userProfile?.displayName ||
+        userProfile?.shopName ||
         currentUser?.displayName ||
         currentUser?.email?.split("@")[0] ||
         "Community Member";
-      const authorAvatar = currentUser?.photoURL || "";
+      const authorAvatar =
+        userProfile?.photoURL || userProfile?.shopLogo || currentUser?.photoURL || "";
       const authorId = currentUser?.uid || "member_local";
 
       const autoTitle =
