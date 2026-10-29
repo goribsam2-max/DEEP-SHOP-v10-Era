@@ -423,9 +423,10 @@ export async function linkPendingGuestOrderAndResolveDestination(
 ): Promise<string> {
   const searchParams = new URLSearchParams(locationSearch);
   const redirectParam = searchParams.get("redirect");
-  const pendingGuestOrder =
-    searchParams.get("guestOrder") ||
-    localStorage.getItem("pending_guest_order_id");
+  const urlGuestOrder = searchParams.get("guestOrder");
+  const localGuestOrder = localStorage.getItem("pending_guest_order_id");
+
+  const pendingGuestOrder = urlGuestOrder || localGuestOrder;
 
   if (pendingGuestOrder && uid) {
     try {
@@ -433,14 +434,18 @@ export async function linkPendingGuestOrderAndResolveDestination(
         userId: uid,
         customerEmail: userEmail || "",
       });
-      localStorage.removeItem("pending_guest_order_id");
-      localStorage.removeItem("pending_guest_order_phone");
     } catch (e) {
       console.error("Order linking error:", e);
+    } finally {
+      localStorage.removeItem("pending_guest_order_id");
+      localStorage.removeItem("pending_guest_order_phone");
     }
   }
 
   if (redirectParam) return redirectParam;
-  if (pendingGuestOrder) return "/my-orders";
+  if (urlGuestOrder) return "/my-orders";
+  if (locationSearch.includes("from=loops") || defaultPath.includes("/loops")) {
+    return "/loops";
+  }
   return defaultPath;
 }

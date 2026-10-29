@@ -156,11 +156,20 @@ const SignIn: React.FC = () => {
 
     notify(`Welcome back, ${profileName}!`, "success");
     playAuthVoice("লগইন সফল হয়েছে। ডিপ শপে আপনাকে স্বাগতম।");
+    const fromParam = searchParams.get("from") || "";
+    const returnToState =
+      (location.state as any)?.from || (location.state as any)?.returnTo || "";
+    const defaultDest =
+      redirectParam ||
+      (fromParam === "loops" || String(returnToState).includes("/loops")
+        ? "/loops"
+        : "/");
+
     const dest = await linkPendingGuestOrderAndResolveDestination(
       firebaseUser.uid,
       firebaseUser.email || loginEmail,
       location.search,
-      "/"
+      defaultDest
     );
     navigate(dest);
   };
