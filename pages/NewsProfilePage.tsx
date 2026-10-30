@@ -45,7 +45,12 @@ import {
   Bell,
   Menu,
   Settings,
+  Handshake,
 } from "lucide-react";
+import {
+  validatePublicUsername,
+  validateRealPersonName,
+} from "../lib/authVoiceAndValidation";
 
 const BellRingIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -947,11 +952,26 @@ export const NewsProfilePage: React.FC = () => {
     triggerHaptic();
     setSavingEdit(true);
 
+    const nameValidation = validateRealPersonName(editName, "নাম");
+    if (!nameValidation.isValid) {
+      setSavingEdit(false);
+      notify(nameValidation.errorMsg, "error");
+      return;
+    }
+
     const cleanedUsername = editUsername.trim().replace(/^@+/, "");
     if (cleanedUsername && isPhoneLikeUsername(cleanedUsername)) {
       setSavingEdit(false);
       notify("Phone numbers cannot be used as a public username. Please choose a custom username.", "error");
       return;
+    }
+    if (cleanedUsername) {
+      const usernameValidation = validatePublicUsername(cleanedUsername);
+      if (!usernameValidation.isValid) {
+        setSavingEdit(false);
+        notify(usernameValidation.errorMsg, "error");
+        return;
+      }
     }
 
     const cleanInterests = editInterests
@@ -2688,13 +2708,15 @@ export const NewsProfilePage: React.FC = () => {
                       currentlyFollowing: isF,
                     });
                   }}
-                  className={`flex-1 h-10 rounded-xl text-[14.5px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 min-w-0 h-10 px-2.5 rounded-xl text-[14px] font-semibold transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
                     followedIds.includes(targetUid)
                       ? "loops-gray-pill text-zinc-950 dark:text-white"
                       : "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950"
                   }`}
                 >
-                  {followedIds.includes(targetUid) ? "Following" : "Follow"}
+                  <span>
+                    {followedIds.includes(targetUid) ? "Following" : "Follow"}
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -2702,9 +2724,20 @@ export const NewsProfilePage: React.FC = () => {
                     triggerHaptic();
                     navigate(`/messages?uid=${targetUid}`);
                   }}
-                  className="flex-1 h-10 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white text-[14.5px] font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 min-w-0 h-10 px-2.5 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white text-[14px] font-semibold transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
                 >
                   <span>Message</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate(`/sponsor/${encodeURIComponent(targetUid)}`);
+                  }}
+                  className="flex-1 min-w-0 h-10 px-2.5 rounded-xl loops-gray-pill hover:opacity-90 text-zinc-950 dark:text-white text-[14px] font-semibold transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                >
+                  <Handshake className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>Sponsor</span>
                 </button>
                 <button
                   type="button"

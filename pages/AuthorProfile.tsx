@@ -73,10 +73,6 @@ export const AuthorProfile: React.FC = () => {
 
   // Modals
   const [showGiftModal, setShowGiftModal] = useState(false);
-  const [showSponsorModal, setShowSponsorModal] = useState(false);
-  const [sponsorAmount, setSponsorAmount] = useState("500");
-  const [sponsorPhone, setSponsorPhone] = useState("");
-  const [sponsorTxId, setSponsorTxId] = useState("");
 
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(
     () => auth.currentUser
@@ -274,39 +270,7 @@ export const AuthorProfile: React.FC = () => {
     }
   };
 
-  const handleSponsorSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) {
-      notify("Please sign in to sponsor creators!", "error");
-      return;
-    }
-    if (!sponsorPhone || !sponsorTxId) {
-      notify("Please provide phone and TrxID", "error");
-      return;
-    }
 
-    try {
-      await addDoc(collection(db, "sponsor_requests"), {
-        sponsorUserId: currentUser.uid,
-        sponsorName: getSafeDisplayName(currentUser, "Supporter"),
-        creatorUserId: id,
-        creatorName: getSafeDisplayName(author, "Creator"),
-        amountBDT: Number(sponsorAmount),
-        phone: sponsorPhone,
-        txId: sponsorTxId,
-        status: "pending",
-        createdAt: Date.now()
-      });
-
-      triggerHaptic();
-      notify(`Sponsorship request of ৳${sponsorAmount} submitted to Admin!`, "success");
-      setShowSponsorModal(false);
-      setSponsorPhone("");
-      setSponsorTxId("");
-    } catch (err) {
-      notify("Failed to submit request", "error");
-    }
-  };
 
   if (loading || !author) {
     return <NewsProfilePageSkeleton />;
@@ -428,50 +392,70 @@ export const AuthorProfile: React.FC = () => {
           </div>
         </div>
 
-        {/* FOLLOW + STORY MODE ACTION ROW */}
-        <div className="flex items-center gap-2.5">
+        {/* FOLLOW + MESSAGE + SPONSOR ACTION ROW */}
+        <div className="flex flex-wrap items-center gap-2">
           {currentUser?.uid !== id && (
-            <button
-              type="button"
-              onClick={handleFollowToggle}
-              className={`flex-1 py-3.5 rounded-full font-extrabold text-xs shadow-md active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer ${
-                isFollowing
-                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700"
-                  : "bg-[#1877F2] hover:bg-[#1465D8] text-white"
-              }`}
-            >
-              {isFollowing ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Following ({followerCount.toLocaleString()})</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
-                  <span>Follow ({followerCount.toLocaleString()})</span>
-                </>
-              )}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleFollowToggle}
+                className={`flex-1 min-w-[110px] min-h-[44px] px-3.5 rounded-xl font-bold text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  isFollowing
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700"
+                    : "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950"
+                }`}
+              >
+                {isFollowing ? (
+                  <>
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span>Following</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
+                    <span>Follow</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate(`/messages?uid=${encodeURIComponent(id || "")}`);
+                }}
+                className="flex-1 min-w-[100px] min-h-[44px] px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 font-bold text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span>Message</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate(`/sponsor/${encodeURIComponent(id || "author_demo")}`);
+                }}
+                className="flex-1 min-w-[105px] min-h-[44px] px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 font-bold text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+              >
+                <Handshake className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>Sponsor</span>
+              </button>
+            </>
           )}
 
-          <button
-            type="button"
-            onClick={() => {
-              if (authorStories.length === 0) {
-                notify("No active stories from this user yet.", "info");
-                return;
-              }
-              setActiveStoryIndex(0);
-              setShowStoryMode(true);
-            }}
-            className="flex-1 py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-extrabold text-xs shadow-md hover:opacity-90 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span>
-              {authorStories.length > 0
-                ? `View Stories (${authorStories.length})`
-                : "Story Mode"}
-            </span>
-          </button>
+          {authorStories.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveStoryIndex(0);
+                setShowStoryMode(true);
+              }}
+              className="w-full sm:w-auto min-h-[44px] px-4 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-xs hover:opacity-90 active:scale-98 transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+            >
+              <span>View Stories ({authorStories.length})</span>
+            </button>
+          )}
         </div>
 
         {/* STATS DIVIDER CARD: Followers | Following | Likes | Gifted */}
@@ -834,95 +818,9 @@ export const AuthorProfile: React.FC = () => {
       <GiftStarsModal
         isOpen={showGiftModal}
         onClose={() => setShowGiftModal(false)}
-        targetCreatorId={id || "author_demo"}
-        targetCreatorName={author.displayName || `@${handle}`}
+        targetUserId={id || "author_demo"}
+        targetUserName={author.displayName || `@${handle}`}
       />
-
-      {/* SPONSOR MODAL */}
-      <LiquidGlassPopup
-        open={showSponsorModal}
-        onClose={() => setShowSponsorModal(false)}
-        title={`Sponsor ${handle ? `@${handle}` : safeAuthorName}`}
-        description="Support this creator monthly via bKash or Nagad. Provide your payment details below to request badge activation."
-      >
-        <form onSubmit={handleSponsorSubmit} className="space-y-3.5">
-          <div>
-            <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300 block mb-1.5">
-              Monthly Sponsorship Tier (BDT)
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {["200", "500", "1000"].map((tier) => (
-                <button
-                  key={tier}
-                  type="button"
-                  onClick={() => setSponsorAmount(tier)}
-                  className={`py-2 rounded-full text-xs font-bold transition cursor-pointer ${
-                    sponsorAmount === tier
-                      ? "bg-[#0d82ff] text-white shadow-sm"
-                      : "ds-liquid-section text-zinc-700 dark:text-zinc-200"
-                  }`}
-                >
-                  ৳{tier}/mo
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-3.5 ds-liquid-section text-xs space-y-1 font-mono">
-            <span className="text-[11px] font-sans font-bold text-zinc-700 dark:text-zinc-200 block">
-              bKash / Nagad Personal Number:
-            </span>
-            <strong className="text-[#0d82ff] text-sm block">01812345678</strong>
-            <span className="text-[11px] font-sans text-zinc-500 dark:text-zinc-400 block">
-              Send Money ৳{sponsorAmount} then enter details:
-            </span>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300 block mb-1">
-              Your Mobile Number
-            </label>
-            <input
-              type="tel"
-              placeholder="017XXXXXXXX"
-              value={sponsorPhone}
-              onChange={(e) => setSponsorPhone(e.target.value)}
-              className="w-full px-4 py-2.5 text-xs ds-liquid-input font-medium"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300 block mb-1">
-              Transaction ID (TrxID)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. 9J283HX10"
-              value={sponsorTxId}
-              onChange={(e) => setSponsorTxId(e.target.value)}
-              className="w-full px-4 py-2.5 text-xs ds-liquid-input font-medium font-mono"
-              required
-            />
-          </div>
-
-          <div className="pt-2 flex flex-col gap-2.5">
-            <button
-              type="submit"
-              className="w-full px-6 py-3 ds-liquid-btn-primary cursor-pointer"
-            >
-              Confirm Sponsorship Request
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowSponsorModal(false)}
-              className="w-full px-6 py-3 ds-liquid-btn-secondary cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </LiquidGlassPopup>
     </div>
   );
 };

@@ -2,6 +2,8 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import http from "http";
+import https from "https";
 import admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -133,6 +135,19 @@ export const app = express();
 let vapidInitialized = false;
 
 app.use(async (req, res, next) => {
+    try {
+        const parsed = new URL(req.url || "/", "http://localhost");
+        const rewrittenPath = parsed.searchParams.get("__pathname");
+        if (rewrittenPath && req.path === "/api/index") {
+            parsed.searchParams.delete("__pathname");
+            const cleanPath = rewrittenPath.startsWith("/")
+                ? rewrittenPath
+                : `/${rewrittenPath}`;
+            const restQs = parsed.searchParams.toString();
+            req.url = restQs ? `${cleanPath}?${restQs}` : cleanPath;
+        }
+    } catch {}
+
     if (!vapidInitialized && !req.path.startsWith('/assets')) {
         await initializeVapid();
         vapidInitialized = true;
@@ -877,6 +892,380 @@ app.use(async (req, res, next) => {
       return res.status(500).json({ error: result.error?.message || "Image upload failed" });
     } catch (err: any) {
       console.error("Backend image upload proxy error:", err);
+      return res.status(500).json({ error: err.message || "Internal upload failure" });
+    }
+  });
+
+  // 📦 Helper: Upload binary Buffer to Catbox.moe with verified direct-streaming fallbacks
+  const uploadBufferToMediaHosts = async (
+    buffer: Buffer,
+    fileName: string,
+    mimeType: string
+  ): Promise<string> => {
+    const extFromMime = mimeType.includes("webm")
+      ? ".webm"
+      : mimeType.includes("quicktime")
+      ? ".mov"
+      : mimeType.includes("wav")
+      ? ".wav"
+      : mimeType.includes("mpeg") || mimeType.includes("mp3")
+      ? ".mp3"
+      : ".mp4";
+    const rawClean = (fileName || `media-${Date.now()}${extFromMime}`).replace(/[^\w.\-]/g, "_");
+    const safeName = /\.[a-z0-9]{2,5}$/i.test(rawClean) ? rawClean : `${rawClean}${extFromMime}`;
+    const blob = new Blob([buffer], { type: mimeType || "video/mp4" });
+    const browserUA =
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36";
+
+    // 1. Primary: Catbox.moe (reqtype='fileupload', fileToUpload)
+    try {
+      const fd = new FormData();
+      fd.append("reqtype", "fileupload");
+      fd.append("fileToUpload", blob, safeName);
+      const res = await fetch("https://catbox.moe/user/api.php", {
+        method: "POST",
+        headers: { "User-Agent": browserUA },
+        body: fd,
+      });
+      if (res.ok) {
+        const text = (await res.text()).trim();
+        if (/^https?:\/\/\S+$/i.test(text) && !text.toLowerCase().includes("error") && !text.toLowerCase().includes("invalid")) {
+          return text.replace(/^http:\/\//i, "https://");
+        }
+      }
+    } catch (e) {
+      console.warn("Primary media host attempt failed, trying fallback:", (e as any)?.message);
+    }
+
+    // 2. Fallback A: Pomf2 (permanent direct video/mp4 206 byte-range stream; retry once if IPv6 socket resets)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const fd = new FormData();
+        fd.append("files[]", blob, safeName);
+        const res = await fetch("https://pomf2.lain.la/upload.php", {
+          method: "POST",
+          headers: { "User-Agent": browserUA },
+          body: fd,
+        });
+        if (res.ok) {
+          const json: any = await res.json();
+          const url = json?.files?.[0]?.url;
+          if (typeof url === "string" && /^https?:\/\//i.test(url)) {
+            return url.replace(/^http:\/\//i, "https://");
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Fallback B: Uguu.se (verified direct video/mp4 206 byte-range stream)
+    try {
+      const fd = new FormData();
+      fd.append("files[]", blob, safeName);
+      const res = await fetch("https://uguu.se/upload", {
+        method: "POST",
+        headers: { "User-Agent": browserUA },
+        body: fd,
+      });
+      if (res.ok) {
+        const json: any = await res.json();
+        const url = json?.files?.[0]?.url;
+        if (typeof url === "string" && /^https?:\/\//i.test(url)) {
+          return url.replace(/^http:\/\//i, "https://");
+        }
+      }
+    } catch {}
+
+    // 4. Fallback C: Litterbox Catbox CDN (72h direct stream)
+    try {
+      const fd = new FormData();
+      fd.append("reqtype", "fileupload");
+      fd.append("time", "72h");
+      fd.append("fileToUpload", blob, safeName);
+      const res = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", {
+        method: "POST",
+        headers: { "User-Agent": browserUA },
+        body: fd,
+      });
+      if (res.ok) {
+        const text = (await res.text()).trim();
+        if (/^https?:\/\/\S+$/i.test(text) && !text.toLowerCase().includes("error")) {
+          return text.replace(/^http:\/\//i, "https://");
+        }
+      }
+    } catch {}
+
+    throw new Error("All media upload hosts failed");
+  };
+
+  // 📦 Raw Binary Media Upload Proxy (Zero CORS, Byte-Exact Buffer for Mobile & Desktop Video/Audio)
+  app.post(
+    "/api/upload-media",
+    express.raw({ type: "*/*", limit: "100mb" }),
+    async (req, res) => {
+      try {
+        let bodyBuf: Buffer | null = null;
+        if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+          bodyBuf = req.body;
+        } else if (req.body instanceof Uint8Array && req.body.byteLength > 0) {
+          bodyBuf = Buffer.from(req.body);
+        } else {
+          const chunks: Buffer[] = [];
+          for await (const chunk of req) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          }
+          if (chunks.length > 0) {
+            bodyBuf = Buffer.concat(chunks);
+          }
+        }
+
+        if (!bodyBuf || bodyBuf.length === 0) {
+          return res.status(400).json({ error: "Empty media payload" });
+        }
+        const fileName = String(req.query.filename || `media-${Date.now()}.mp4`);
+        const mimeType = String(
+          req.query.mime || req.headers["content-type"] || "video/mp4"
+        );
+        const url = await uploadBufferToMediaHosts(bodyBuf, fileName, mimeType);
+        return res.json({ success: true, url });
+      } catch (err: any) {
+        console.error("Binary media upload error:", err?.message || err);
+        return res.status(500).json({ error: "Media upload failed" });
+      }
+    }
+  );
+
+  // 🎬 Same-Origin Byte-Range Media Stream Proxy (Fixes ISP blocks, IPv6 socket drops & iOS MIME checks)
+  const ALLOWED_STREAM_MEDIA_HOSTS = [
+    "files.catbox.moe",
+    "litter.catbox.moe",
+    "catbox.moe",
+    "pomf2.lain.la",
+    "uguu.se",
+    "tmpfiles.org",
+  ];
+
+  const isAllowedStreamHost = (hostname: string): boolean => {
+    const clean = hostname.toLowerCase().replace(/^www\./, "");
+    return ALLOWED_STREAM_MEDIA_HOSTS.some(
+      (allowed) => clean === allowed || clean.endsWith(`.${allowed}`)
+    );
+  };
+
+  const inferMediaContentType = (targetUrl: string, upstreamType?: string): string => {
+    const cleanUpstream = (upstreamType || "").split(";")[0].trim().toLowerCase();
+    if (
+      cleanUpstream &&
+      cleanUpstream !== "application/octet-stream" &&
+      cleanUpstream !== "binary/octet-stream" &&
+      !cleanUpstream.startsWith("text/")
+    ) {
+      return cleanUpstream;
+    }
+    const lowerPath = targetUrl.split("?")[0].toLowerCase();
+    if (lowerPath.endsWith(".webm")) return "video/webm";
+    if (lowerPath.endsWith(".mov")) return "video/quicktime";
+    if (lowerPath.endsWith(".ogv") || lowerPath.endsWith(".ogg")) return "video/ogg";
+    if (lowerPath.endsWith(".mp3")) return "audio/mpeg";
+    if (lowerPath.endsWith(".wav")) return "audio/wav";
+    if (lowerPath.endsWith(".m4a")) return "audio/mp4";
+    if (lowerPath.endsWith(".aac")) return "audio/aac";
+    return "video/mp4";
+  };
+
+  app.all("/api/stream-media", (req, res) => {
+    if (req.method === "OPTIONS") {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Range, Content-Type");
+      return res.status(204).end();
+    }
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    const rawUrl = String(req.query.url || "").trim();
+    if (!rawUrl) {
+      return res.status(400).json({ error: "Missing media URL" });
+    }
+
+    let parsedInitial: URL;
+    try {
+      parsedInitial = new URL(rawUrl.replace(/^http:\/\//i, "https://"));
+    } catch {
+      return res.status(400).json({ error: "Invalid media URL" });
+    }
+
+    if (!isAllowedStreamHost(parsedInitial.hostname)) {
+      return res.status(403).json({ error: "Media host not permitted" });
+    }
+
+    const browserUA =
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36";
+
+    let activeUpstreamReq: http.ClientRequest | null = null;
+    let clientClosed = false;
+
+    req.on("close", () => {
+      clientClosed = true;
+      if (activeUpstreamReq && !res.writableEnded) {
+        activeUpstreamReq.destroy();
+      }
+    });
+
+    const streamFromUrl = (
+      currentUrlStr: string,
+      redirectsLeft: number,
+      forceIpv4: boolean
+    ) => {
+      if (clientClosed) return;
+      let target: URL;
+      try {
+        target = new URL(currentUrlStr);
+      } catch {
+        if (!res.headersSent) res.status(400).end("Invalid redirect URL");
+        return;
+      }
+
+      if (!isAllowedStreamHost(target.hostname)) {
+        if (!res.headersSent) res.status(403).end("Redirect host not permitted");
+        return;
+      }
+
+      const isHttps = target.protocol === "https:";
+      const client = isHttps ? https : http;
+      const forwardHeaders: Record<string, string> = {
+        "User-Agent": browserUA,
+        Accept: "*/*",
+        Connection: "keep-alive",
+      };
+      if (typeof req.headers.range === "string" && req.headers.range.trim()) {
+        forwardHeaders.Range = req.headers.range.trim();
+      }
+
+      const reqOpts: https.RequestOptions = {
+        protocol: target.protocol,
+        hostname: target.hostname,
+        port: target.port || (isHttps ? 443 : 80),
+        path: `${target.pathname}${target.search}`,
+        method: req.method === "HEAD" ? "HEAD" : "GET",
+        headers: forwardHeaders,
+        timeout: 25000,
+        ...(forceIpv4 ? { family: 4 } : {}),
+      };
+
+      const upstreamReq = client.request(reqOpts, (upstreamRes) => {
+        const status = upstreamRes.statusCode || 502;
+
+        if (
+          [301, 302, 303, 307, 308].includes(status) &&
+          upstreamRes.headers.location &&
+          redirectsLeft > 0
+        ) {
+          upstreamRes.resume();
+          const nextUrl = new URL(upstreamRes.headers.location, target).toString();
+          streamFromUrl(nextUrl, redirectsLeft - 1, true);
+          return;
+        }
+
+        const upstreamCt = String(upstreamRes.headers["content-type"] || "");
+        if (upstreamCt.toLowerCase().includes("text/html") || status >= 400) {
+          upstreamRes.resume();
+          if (!res.headersSent) {
+            res.status(status >= 400 ? status : 502).end("Media unavailable");
+          }
+          return;
+        }
+
+        const resolvedMime = inferMediaContentType(target.toString(), upstreamCt);
+        res.status(status);
+        res.setHeader("Content-Type", resolvedMime);
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader(
+          "Access-Control-Expose-Headers",
+          "Content-Length, Content-Range, Accept-Ranges, Content-Type"
+        );
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader(
+          "Accept-Ranges",
+          String(upstreamRes.headers["accept-ranges"] || "bytes")
+        );
+        if (upstreamRes.headers["content-length"]) {
+          res.setHeader("Content-Length", upstreamRes.headers["content-length"]);
+        }
+        if (upstreamRes.headers["content-range"]) {
+          res.setHeader("Content-Range", upstreamRes.headers["content-range"]);
+        }
+        if (upstreamRes.headers.etag) {
+          res.setHeader("ETag", upstreamRes.headers.etag);
+        }
+        res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+
+        if (req.method === "HEAD") {
+          upstreamRes.resume();
+          res.end();
+          return;
+        }
+
+        upstreamRes.on("error", () => {
+          if (!res.writableEnded) res.end();
+        });
+        upstreamRes.pipe(res);
+      });
+
+      activeUpstreamReq = upstreamReq;
+
+      upstreamReq.on("timeout", () => {
+        upstreamReq.destroy(new Error("Upstream media timeout"));
+      });
+
+      upstreamReq.on("error", (err) => {
+        if (clientClosed) return;
+        if (forceIpv4 && !res.headersSent) {
+          streamFromUrl(currentUrlStr, redirectsLeft, false);
+          return;
+        }
+        if (!res.headersSent) {
+          res.status(502).end(`Stream error: ${err.message}`);
+        } else if (!res.writableEnded) {
+          res.end();
+        }
+      });
+
+      upstreamReq.end();
+    };
+
+    streamFromUrl(parsedInitial.toString(), 4, true);
+  });
+
+  // 📦 JSON Base64 Media Proxy (Upload MP4, WebM, MP3, WAV, images)
+  app.post("/api/catbox/upload", express.json({ limit: "100mb" }), async (req, res) => {
+    try {
+      const { fileData, fileName } = req.body || {};
+      if (!fileData) {
+        return res.status(400).json({ error: "Missing fileData" });
+      }
+
+      let base64Clean = fileData;
+      let mimeType = "application/octet-stream";
+      if (base64Clean.startsWith("data:")) {
+        const match = base64Clean.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          base64Clean = match[2];
+        } else if (base64Clean.includes("base64,")) {
+          base64Clean = base64Clean.split("base64,")[1];
+        }
+      }
+
+      const buffer = Buffer.from(base64Clean, "base64");
+      const url = await uploadBufferToMediaHosts(
+        buffer,
+        fileName || "media_file",
+        mimeType
+      );
+      return res.json({ success: true, url });
+    } catch (err: any) {
+      console.error("Media upload proxy error:", err?.message || err);
       return res.status(500).json({ error: err.message || "Internal upload failure" });
     }
   });

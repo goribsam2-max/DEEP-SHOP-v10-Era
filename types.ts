@@ -379,6 +379,7 @@ export interface ScamPost {
   reactionsUsers?: Record<string, { userName: string; userAvatar?: string; type: ReactionType; timestamp: number }>;
   commentsCount: number;
   sharesCount?: number;
+  giftedStarsCount?: number;
   savedByUserIds?: string[];
   repostedByUserIds?: string[];
   repostsCount?: number;

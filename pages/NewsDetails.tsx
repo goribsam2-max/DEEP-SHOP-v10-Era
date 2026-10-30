@@ -51,6 +51,7 @@ import {
   LoopCommentIcon,
   LoopRepeatIcon,
   LoopSendIcon,
+  LoopStarIcon,
   LoopPostMenuLinesIcon,
 } from "../components/LoopPostCard";
 import {
@@ -2067,20 +2068,21 @@ export const NewsDetails: React.FC = () => {
                 triggerHaptic();
                 navigate(`/loops/photo/${post.id}/0`);
               }}
-              className="loops-edge-media -mx-4 rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
+              className="loops-edge-media -mx-4 w-[calc(100%+2rem)] max-w-none rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
             >
               <SmoothImage
                 src={post.images[0]}
                 alt={post.title || authorHandle}
                 eager
                 wrapperClassName="w-full rounded-none"
+                skeletonClassName="rounded-none"
                 className="w-full max-h-[640px] object-cover block rounded-none"
               />
             </div>
           )}
 
           {Array.isArray(post.images) && post.images.length > 1 && (
-            <div className="-mx-4">
+            <div className="-mx-4 w-[calc(100%+2rem)] max-w-none">
               <div
                 onTouchStart={(e) => {
                   detailTouchStartXRef.current = e.touches[0]?.clientX ?? null;
@@ -2120,6 +2122,7 @@ export const NewsDetails: React.FC = () => {
                     navigate(`/loops/photo/${post.id}/${detailCarouselIdx}`);
                   }}
                   wrapperClassName="w-full rounded-none"
+                  skeletonClassName="rounded-none"
                   className="w-full max-h-[640px] object-cover block cursor-pointer select-none rounded-none"
                 />
 
@@ -2190,10 +2193,12 @@ export const NewsDetails: React.FC = () => {
           )}
 
           {/* Non-photo rich attachments (Video, GIF, Voice, Music, Poll, Snippet, Quote, Thread items) */}
-          <NewsPostMedia
-            post={{ ...post, images: [] }}
-            onOpenImage={(idx) => navigate(`/loops/photo/${post.id}/${idx}`)}
-          />
+          <div className={post.gifUrl || post.videoUrl ? "-mx-4 w-[calc(100%+2rem)] max-w-none" : ""}>
+            <NewsPostMedia
+              post={{ ...post, images: [] }}
+              onOpenImage={(idx) => navigate(`/loops/photo/${post.id}/${idx}`)}
+            />
+          </div>
 
           {/* Conditional Scam Report Dossier (Only when post is actually a Scam Report) */}
           {isScam && (
@@ -2336,6 +2341,45 @@ export const NewsDetails: React.FC = () => {
               <LoopSendIcon className="w-[20px] h-[20px]" />
               {shareCount > 0 && <span>{formatLoopCount(shareCount)}</span>}
             </button>
+
+            {post.reporterId && currentUser?.uid !== post.reporterId && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  if (!currentUser) {
+                    navigate("/signin", {
+                      state: {
+                        returnTo: `/gift-stars/${encodeURIComponent(
+                          post.reporterId
+                        )}?postId=${encodeURIComponent(post.id)}`,
+                      },
+                    });
+                    return;
+                  }
+                  navigate(
+                    `/gift-stars/${encodeURIComponent(
+                      post.reporterId
+                    )}?postId=${encodeURIComponent(post.id)}`
+                  );
+                }}
+                className={`inline-flex items-center gap-1.5 text-[14px] tabular-nums transition active:scale-90 cursor-pointer ${
+                  Number(post.giftedStarsCount || 0) > 0
+                    ? "text-amber-500"
+                    : "text-zinc-900 dark:text-zinc-100 hover:text-amber-500"
+                }`}
+                aria-label="Gift Stars"
+                title="Gift Stars"
+              >
+                <LoopStarIcon
+                  className="w-[20px] h-[20px]"
+                  filled={Number(post.giftedStarsCount || 0) > 0}
+                />
+                {Number(post.giftedStarsCount || 0) > 0 && (
+                  <span>{formatLoopCount(Number(post.giftedStarsCount || 0))}</span>
+                )}
+              </button>
+            )}
           </div>
         </article>
 

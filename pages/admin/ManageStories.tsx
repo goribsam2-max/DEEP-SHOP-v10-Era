@@ -42,6 +42,7 @@ const PRESET_SONGS = [
   },
 ];
 
+import { uploadFileToCatbox } from "../../lib/catboxUpload";
 import { motion, AnimatePresence } from "framer-motion";
 import Modal from "../../components/ui/modal-drop";
 
@@ -58,6 +59,7 @@ const ManageStories: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isAddingSong, setIsAddingSong] = useState(false);
   const [editStoryId, setEditStoryId] = useState<string | null>(null);
+  const [editSongId, setEditSongId] = useState<string | null>(null);
 
   const [songTitle, setSongTitle] = useState("");
   const [songArtist, setSongArtist] = useState("");
@@ -106,21 +108,65 @@ const ManageStories: React.FC = () => {
     };
   }, []);
 
+  const [songAudioUploading, setSongAudioUploading] = useState(false);
+
+  const handleSongAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSongAudioUploading(true);
+    try {
+      notify("Processing high-quality media...", "info");
+      const url = await uploadFileToCatbox(file);
+      setSongMp3Url(url);
+      if (!songTitle.trim()) {
+        const baseName = file.name.replace(/\.[^/.]+$/, "");
+        setSongTitle(baseName);
+      }
+      notify("Audio track optimized and attached successfully!", "success");
+    } catch (err: any) {
+      notify("Media optimization failed: " + (err.message || "Network error"), "error");
+    } finally {
+      setSongAudioUploading(false);
+    }
+  };
+
+  const handleEditSong = (song: any) => {
+    setEditSongId(song.id);
+    setSongTitle(song.title || "");
+    setSongArtist(song.artist || "");
+    setSongCoverUrl(song.coverUrl || "");
+    setSongMp3Url(song.url || song.audioUrl || "");
+    setIsAddingSong(true);
+  };
+
   const handleSaveSong = async () => {
     if (!songTitle.trim() || !songMp3Url.trim()) {
-      notify("Please fill song title and MP3/GitHub URL", "error");
+      notify("Please fill song title and MP3/WAV URL or upload audio file", "error");
       return;
     }
     setLoading(true);
     try {
-      await addDoc(collection(db, "story_songs"), {
+      const songPayload = {
         title: songTitle.trim(),
-        artist: songArtist.trim() || "Unknown Artist",
+        artist: songArtist.trim() || "Admin Featured",
         coverUrl: songCoverUrl.trim() || "",
         url: songMp3Url.trim(),
-        createdAt: Date.now()
-      });
-      notify("Song added successfully!", "success");
+        audioUrl: songMp3Url.trim(),
+        updatedAt: Date.now()
+      };
+
+      if (editSongId) {
+        await setDoc(doc(db, "story_songs", editSongId), songPayload, { merge: true });
+        await setDoc(doc(db, "background_music", editSongId), songPayload, { merge: true });
+        notify("Song details updated successfully!", "success");
+      } else {
+        const fullPayload = { ...songPayload, createdAt: Date.now() };
+        await addDoc(collection(db, "story_songs"), fullPayload);
+        await addDoc(collection(db, "background_music"), fullPayload);
+        notify("Background Song added successfully to platform library!", "success");
+      }
+
+      setEditSongId(null);
       setSongTitle("");
       setSongArtist("");
       setSongCoverUrl("");
@@ -137,6 +183,7 @@ const ManageStories: React.FC = () => {
     if (await confirm({ title: "Delete Song", message: "Are you sure you want to delete this background song?" })) {
       try {
         await deleteDoc(doc(db, "story_songs", id));
+        await deleteDoc(doc(db, "background_music", id));
         notify("Song deleted", "success");
       } catch (e) {
         notify("Failed to delete song", "error");
@@ -320,11 +367,14 @@ const ManageStories: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal for Adding Song */}
+      {/* Modal for Adding or Editing Song */}
       <Modal
         isOpen={isAddingSong}
-        onClose={() => setIsAddingSong(false)}
-        title="Add Background Song (MP3 / Audio)"
+        onClose={() => {
+          setIsAddingSong(false);
+          setEditSongId(null);
+        }}
+        title={editSongId ? "Edit Background Song Details" : "Add Background Song (MP3 / Audio)"}
       >
         <div className="space-y-4 pt-2">
           <div>
@@ -350,15 +400,33 @@ const ManageStories: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">MP3 Audio Direct Link *</label>
-            <input
-              type="text"
-              value={songMp3Url}
-              onChange={(e) => setSongMp3Url(e.target.value)}
-              placeholder="https://.../song.mp3"
-              className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium"
-            />
-            <p className="text-[10px] text-zinc-400 mt-1">Paste any valid MP3 or CDN audio URL.</p>
+            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">MP3 / WAV Audio File or Direct Link *</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={songMp3Url}
+                onChange={(e) => setSongMp3Url(e.target.value)}
+                placeholder="https://... or upload MP3/WAV"
+                className="flex-1 h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium"
+              />
+              <label className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 shadow-xs">
+                {songAudioUploading ? (
+                  <span>Processing...</span>
+                ) : (
+                  <>
+                    <Icon name="music" className="text-xs" />
+                    <span>Upload Audio</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="audio/mp3,audio/wav,audio/mpeg,audio/x-wav,audio/*,.mp3,.wav"
+                  onChange={handleSongAudioFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            <p className="text-[10px] text-zinc-400 mt-1">Upload MP3/WAV file directly via secure platform proxy or paste audio URL.</p>
           </div>
 
           <div>
@@ -548,6 +616,13 @@ const ManageStories: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleEditSong(song)}
+                    className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all"
+                    title="Edit Song Details"
+                  >
+                    <Icon name="pencil" className="size-4" />
+                  </button>
                   <button
                     onClick={() => handleDeleteSong(song.id)}
                     className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"

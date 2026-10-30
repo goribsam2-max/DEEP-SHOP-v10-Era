@@ -122,7 +122,7 @@ export function getVideoPlatformMeta(
         name: "Loops Original",
         shortName: "Loops",
         reelLabel: "Original Reel",
-        domain: parsedDomain || "loops",
+        domain: "Loops",
       };
   }
 }
@@ -130,7 +130,11 @@ export function getVideoPlatformMeta(
 const URL_IN_TEXT_REGEX =
   /(?:https?:\/\/[^\s<>"]+|www\.[^\s<>"]+|\b(?:(?:m|vt|vm|music|player)\.)?(?:youtube\.com|youtu\.be|instagram\.com|instagr\.am|facebook\.com|fb\.watch|fb\.com|tiktok\.com|x\.com|twitter\.com|vimeo\.com|streamable\.com|dailymotion\.com|dai\.ly)\/[^\s<>"]+)/gi;
 
-const DIRECT_VIDEO_EXT_REGEX = /\.(?:mp4|webm|mov|m4v|ogv|ogg)(?:$|[?#])/i;
+const DIRECT_VIDEO_EXT_REGEX =
+  /\.(?:mp4|webm|mov|m4v|ogv|ogg|mkv|3gp|mpeg|mpg|avi)(?:$|[?#])/i;
+
+const AUDIO_ONLY_EXT_REGEX =
+  /\.(?:mp3|wav|m4a|aac|flac|opus)(?:$|[?#])/i;
 
 const stripTrailingPunct = (raw: string): string => {
   let clean = raw.trim();
@@ -146,6 +150,43 @@ const ensureProtocol = (raw: string): string => {
   return `https://${trimmed}`;
 };
 
+const PROXY_MEDIA_HOSTS = [
+  "files.catbox.moe",
+  "litter.catbox.moe",
+  "catbox.moe",
+  "pomf2.lain.la",
+  "uguu.se",
+  "tmpfiles.org",
+];
+
+export function toPlayableMediaUrl(rawUrl?: string | null): string {
+  if (!rawUrl || !rawUrl.trim()) return "";
+  const trimmed = rawUrl.trim();
+  if (
+    trimmed.startsWith("/api/stream-media") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("/")
+  ) {
+    return trimmed;
+  }
+
+  try {
+    const normalized = ensureProtocol(trimmed).replace(/^http:\/\//i, "https://");
+    const parsed = new URL(normalized);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const shouldProxy = PROXY_MEDIA_HOSTS.some(
+      (allowed) => host === allowed || host.endsWith(`.${allowed}`)
+    );
+    if (shouldProxy) {
+      return `/api/stream-media?url=${encodeURIComponent(normalized)}`;
+    }
+    return normalized;
+  } catch {
+    return trimmed;
+  }
+}
+
 export function parseVideoEmbed(
   rawInput?: string | null,
   options?: { allowFallbackDirectVideo?: boolean }
@@ -155,10 +196,11 @@ export function parseVideoEmbed(
   const cleaned = stripTrailingPunct(rawInput);
   if (!cleaned) return null;
 
-  // Support local uploaded / blob / relative direct video paths when explicitly passed via videoUrl
+  // Support same-origin media stream proxy & local blob previews directly
   if (
-    options?.allowFallbackDirectVideo &&
-    (cleaned.startsWith("/") || cleaned.startsWith("blob:"))
+    cleaned.startsWith("/api/stream-media") ||
+    cleaned.startsWith("blob:") ||
+    (options?.allowFallbackDirectVideo && cleaned.startsWith("/"))
   ) {
     return {
       platform: "direct",
@@ -188,8 +230,18 @@ export function parseVideoEmbed(
   const host = u.hostname.replace(/^www\./i, "").toLowerCase();
   const pathname = u.pathname || "";
 
-  // 1. Direct Video File URLs (.mp4, .webm, .mov, .m4v, Cloudinary/Firebase video streams)
+  // 1. Direct Video File URLs (.mp4, .webm, .mov, .m4v, uploaded direct streams)
+  const isDirectMediaHost =
+    (host === "files.catbox.moe" ||
+      host === "litter.catbox.moe" ||
+      host === "pomf2.lain.la" ||
+      host === "uguu.se" ||
+      host.endsWith(".uguu.se") ||
+      (host === "tmpfiles.org" && pathname.startsWith("/dl/"))) &&
+    !AUDIO_ONLY_EXT_REGEX.test(pathname);
+
   if (
+    isDirectMediaHost ||
     DIRECT_VIDEO_EXT_REGEX.test(pathname) ||
     DIRECT_VIDEO_EXT_REGEX.test(u.search) ||
     /\/video\/upload\//i.test(pathname)
@@ -198,7 +250,7 @@ export function parseVideoEmbed(
       platform: "direct",
       originalUrl: normalized,
       canonicalUrl: normalized,
-      directStreamUrl: normalized,
+      directStreamUrl: toPlayableMediaUrl(normalized),
       isVertical: true,
     };
   }
@@ -433,7 +485,7 @@ export function parseVideoEmbed(
       platform: "direct",
       originalUrl: normalized,
       canonicalUrl: normalized,
-      directStreamUrl: normalized,
+      directStreamUrl: toPlayableMediaUrl(normalized),
       isVertical: true,
     };
   }

@@ -17,6 +17,7 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { db, auth } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
 import { uploadToImgbb, uploadDataUrlToImgbb } from "../../services/imgbb";
+import { uploadFileToCatbox } from "../../lib/catboxUpload";
 import { canAccessSellerDashboard } from "../../lib/admin";
 import { useFooterLogo } from "../../lib/useFooterLogo";
 import { triggerHaptic } from "../../lib/haptics";
@@ -1208,9 +1209,36 @@ export default function AddStory() {
     e.target.value = "";
     if (files.length === 0) return;
 
+    const firstVideo = files.find((f) => f.type.startsWith("video/"));
+    if (firstVideo) {
+      setUploading(true);
+      try {
+        notify("Uploading video story...", "info");
+        const videoUrl = await uploadFileToCatbox(firstVideo);
+        const videoItem: GalleryMediaItem = {
+          id: `vid_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          url: videoUrl,
+          type: "video",
+          source: "upload",
+          label: firstVideo.name,
+        };
+        persistUploadedItem(videoItem);
+        setCreateMode(false);
+        setSelectedMedia(videoItem);
+        setStep("editor");
+        triggerHaptic();
+        notify("Video ready for your story!", "success");
+      } catch {
+        notify("Could not upload selected video. Please try again.", "error");
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
     const imageFiles = files.filter((f) => f.type.startsWith("image/"));
     if (imageFiles.length === 0) {
-      notify("Please select a photo for your story.", "info");
+      notify("Please select a photo or video for your story.", "info");
       return;
     }
 

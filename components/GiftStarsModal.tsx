@@ -32,24 +32,32 @@ interface GiftStarsModalProps {
   onClose: () => void;
   targetUserId?: string;
   targetUserName?: string;
+  targetCreatorId?: string;
+  targetCreatorName?: string;
+  postId?: string;
 }
 
 export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
   isOpen,
   onClose,
   targetUserId,
-  targetUserName = "Creator",
+  targetUserName,
+  targetCreatorId,
+  targetCreatorName,
+  postId,
 }) => {
   const notify = useNotify();
   const currentUser = auth.currentUser;
 
-  const [mode, setMode] = useState<"gift" | "buy">("gift");
-  const [giftStarsAmount, setGiftStarsAmount] = useState(50);
-  const [buyStarsAmount, setBuyStarsAmount] = useState(100);
+  const resolvedTargetId = targetUserId || targetCreatorId || "";
+  const resolvedTargetName =
+    targetUserName || targetCreatorName || "Creator";
 
+  const [mode, setMode] = useState<"gift" | "buy">("gift");
+  const [giftStarsAmount, setGiftStarsAmount] = useState(100);
+  const [buyStarsAmount, setBuyStarsAmount] = useState(250);
   const [userStarsBalance, setUserStarsBalance] = useState(0);
 
-  // Admin Dashboard payment accounts ONLY (rotates 1 number per refresh/open)
   const [paymentsDoc, setPaymentsDoc] = useState<Record<string, any> | null>(
     null
   );
@@ -99,7 +107,9 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
         if (snap.exists()) {
           const data = snap.data();
           setUserStarsBalance(
-            data.starsBalance || data.purchasedStars || data.sparks || 0
+            Number(
+              data.starsBalance ?? data.purchasedStars ?? data.sparks ?? 0
+            )
           );
         } else {
           const localSparks = Number(
@@ -107,8 +117,8 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
           );
           setUserStarsBalance(localSparks);
         }
-      } catch (err) {
-        console.warn("Could not fetch stars balance:", err);
+      } catch {
+        // Ignore read error
       }
     };
     fetchUserStars();
@@ -148,11 +158,11 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
 
   const handleGiftSubmit = async () => {
     if (!currentUser) {
-      notify("Please sign in to gift stars!", "error");
+      notify("Please sign in to gift stars", "error");
       return;
     }
-    if (!targetUserId) {
-      notify("Select a creator to gift stars!", "error");
+    if (!resolvedTargetId) {
+      notify("Select a creator to gift stars", "error");
       return;
     }
     if (giftStarsAmount <= 0) {
@@ -162,14 +172,10 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
 
     if (userStarsBalance < giftStarsAmount) {
       notify(
-        `You need ${giftStarsAmount} stars, but only have ${userStarsBalance} stars. Please buy stars to continue!`,
-        "error"
+        `You need ${giftStarsAmount} Stars (available: ${userStarsBalance}). Top up your balance to continue.`,
+        "info"
       );
-      setBuyStarsAmount(
-        giftStarsAmount - userStarsBalance > 100
-          ? giftStarsAmount - userStarsBalance
-          : 100
-      );
+      setBuyStarsAmount(Math.max(100, giftStarsAmount - userStarsBalance));
       setMode("buy");
       return;
     }
@@ -180,34 +186,37 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
       setUserStarsBalance(newSenderBal);
       localStorage.setItem("user_deep_sparks", String(newSenderBal));
 
-      try {
-        await updateDoc(doc(db, "users", currentUser.uid), {
-          starsBalance: increment(-giftStarsAmount),
-        });
-      } catch {}
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        starsBalance: increment(-giftStarsAmount),
+      }).catch(() => {});
 
-      try {
-        await updateDoc(doc(db, "users", targetUserId), {
-          earnedStars: increment(giftStarsAmount),
-          totalStarsReceived: increment(giftStarsAmount),
-        });
-      } catch {}
+      await updateDoc(doc(db, "users", resolvedTargetId), {
+        earnedStars: increment(giftStarsAmount),
+        totalStarsReceived: increment(giftStarsAmount),
+      }).catch(() => {});
+
+      if (postId) {
+        await updateDoc(doc(db, "scam_posts", postId), {
+          giftedStarsCount: increment(giftStarsAmount),
+        }).catch(() => {});
+      }
 
       await addDoc(collection(db, "star_gifts"), {
         senderUid: currentUser.uid,
         senderName:
           currentUser.displayName ||
           currentUser.email?.split("@")[0] ||
-          "User",
-        recipientUid: targetUserId,
-        recipientName: targetUserName,
+          "Member",
+        recipientUid: resolvedTargetId,
+        recipientName: resolvedTargetName,
+        postId: postId || null,
         starsCount: giftStarsAmount,
         createdAt: Date.now(),
       });
 
       triggerHaptic();
       notify(
-        `Successfully gifted ${giftStarsAmount} Stars to ${targetUserName}!`,
+        `Sent ${giftStarsAmount.toLocaleString()} Stars to ${resolvedTargetName}`,
         "success"
       );
       onClose();
@@ -221,16 +230,16 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
   const handleBuySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
-      notify("Please sign in to buy stars!", "error");
+      notify("Please sign in to top up stars", "error");
       return;
     }
     if (!activeAccount) {
       notify("No official payment number is configured yet.", "error");
       return;
     }
-    if (!paymentPhone || !paymentTxId) {
+    if (!paymentPhone.trim() || !paymentTxId.trim()) {
       notify(
-        `Please provide your ${activeAccount.provider} number and Transaction ID`,
+        `Enter your ${activeAccount.provider} number and Transaction ID`,
         "error"
       );
       return;
@@ -245,14 +254,14 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
         userName:
           currentUser.displayName ||
           currentUser.email?.split("@")[0] ||
-          "User",
+          "Member",
         userEmail: currentUser.email || "",
         starsRequested: buyStarsAmount,
         amountBDT,
         paymentMethod: activeAccount.provider.toLowerCase(),
         officialNumber: activeAccount.number,
         officialAccountType: activeAccount.type,
-        phone: paymentPhone,
+        phone: paymentPhone.trim(),
         txId: paymentTxId.trim().toUpperCase(),
         status: "pending",
         createdAt: Date.now(),
@@ -260,7 +269,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
 
       triggerHaptic();
       notify(
-        `Star purchase request submitted for ${buyStarsAmount} Stars (৳${amountBDT})! Admin will verify your payment.`,
+        `Top-up order submitted for ${buyStarsAmount.toLocaleString()} Stars (৳${amountBDT.toLocaleString()})`,
         "success"
       );
       setPaymentPhone("");
@@ -278,92 +287,92 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
   return (
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-[220] flex items-center justify-center p-5 ds-liquid-backdrop"
+        className="fixed inset-0 z-[220] flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/55 backdrop-blur-[2px]"
         onClick={onClose}
       >
         <motion.div
           role="dialog"
           aria-modal="true"
-          initial={{ opacity: 0, scale: 0.91, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 8 }}
-          transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
+          initial={{ opacity: 0, y: 20, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 16, scale: 0.97 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
           onClick={(e) => e.stopPropagation()}
-          className="ds-liquid-glass-popup px-6 pt-7 pb-6 w-full max-w-[380px] space-y-4 text-left max-h-[88dvh] overflow-y-auto"
+          className="w-full sm:max-w-[430px] rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-950 border-t sm:border border-zinc-200 dark:border-zinc-800 px-5 sm:px-6 pt-5 pb-7 space-y-4 text-left max-h-[90dvh] overflow-y-auto shadow-2xl"
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-1">
-            <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-              <span className="ds-liquid-popup-title font-bold text-[19px] tracking-[-0.02em]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Star className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" />
+              <h3 className="font-bold text-base sm:text-lg text-zinc-950 dark:text-white truncate">
                 {mode === "gift"
-                  ? `Gift Stars to ${targetUserName}`
-                  : "Buy Stars"}
-              </span>
+                  ? `Gift Stars to ${resolvedTargetName}`
+                  : "Top Up Stars"}
+              </h3>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="ds-liquid-btn-secondary w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
+              className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 cursor-pointer shrink-0"
+              aria-label="Close"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Mode Switcher */}
-          <div className="grid grid-cols-2 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-900 text-xs font-extrabold">
+          <div className="grid grid-cols-2 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setMode("gift")}
-              className={`py-2 rounded-xl transition cursor-pointer ${
+              className={`min-h-[38px] rounded-lg transition cursor-pointer ${
                 mode === "gift"
-                  ? "bg-amber-500 text-white shadow-xs"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-2xs"
+                  : "text-zinc-600 dark:text-zinc-400"
               }`}
             >
-              Gift Stars
+              Send Gift
             </button>
             <button
               type="button"
               onClick={() => setMode("buy")}
-              className={`py-2 rounded-xl transition cursor-pointer ${
+              className={`min-h-[38px] rounded-lg transition cursor-pointer ${
                 mode === "buy"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-2xs"
+                  : "text-zinc-600 dark:text-zinc-400"
               }`}
             >
-              Buy Stars
+              Top Up Balance
             </button>
           </div>
 
-          {/* Available Stars Balance */}
-          <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs">
-            <span className="text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" />
-              <span>Available Stars Balance:</span>
+          {/* Available Balance */}
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs sm:text-sm">
+            <span className="text-amber-800 dark:text-amber-300 font-semibold flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span>Available balance</span>
             </span>
-            <span className="font-mono font-black text-amber-600 dark:text-amber-400 text-sm">
-              {userStarsBalance} ★
+            <span className="font-bold tabular-nums text-amber-600 dark:text-amber-400">
+              {userStarsBalance.toLocaleString()} ★
             </span>
           </div>
 
-          {/* MODE 1: GIFT STARS */}
-          {mode === "gift" && (
+          {mode === "gift" ? (
             <div className="space-y-4">
               <div>
-                <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1.5">
-                  Select Stars Amount to Gift:
+                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-2">
+                  Select Stars amount
                 </label>
                 <div className="grid grid-cols-4 gap-2">
-                  {[10, 50, 100, 500].map((count) => (
+                  {[50, 100, 250, 500].map((count) => (
                     <button
                       key={count}
                       type="button"
                       onClick={() => setGiftStarsAmount(count)}
-                      className={`py-2.5 rounded-xl font-mono text-xs font-black transition cursor-pointer ${
+                      className={`min-h-[42px] rounded-xl text-xs font-bold tabular-nums border transition cursor-pointer ${
                         giftStarsAmount === count
-                          ? "bg-amber-500 text-white shadow-xs"
-                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200"
+                          ? "bg-amber-500 text-white border-amber-500"
+                          : "bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
                       }`}
                     >
                       {count} ★
@@ -373,8 +382,8 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                  Custom Stars Quantity:
+                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5">
+                  Custom quantity (1 Star = ৳1 BDT)
                 </label>
                 <input
                   type="number"
@@ -382,47 +391,38 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                   value={giftStarsAmount}
                   onChange={(e) =>
                     setGiftStarsAmount(
-                      Math.max(1, parseInt(e.target.value) || 0)
+                      Math.max(1, parseInt(e.target.value, 10) || 1)
                     )
                   }
-                  className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-mono font-bold"
+                  className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 outline-none font-bold tabular-nums text-zinc-950 dark:text-white"
                 />
               </div>
 
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                Gifted stars go directly to {targetUserName}&apos;s creator
-                dashboard and can be withdrawn once reaching 1,000 stars
-                (৳1,000).
-              </p>
-
-              <div className="pt-2 flex flex-col gap-2.5">
+              <div className="pt-1 flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={handleGiftSubmit}
                   disabled={isSubmitting}
-                  className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer disabled:opacity-50"
+                  className="w-full min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition active:scale-[0.99] cursor-pointer disabled:opacity-50 tabular-nums whitespace-nowrap"
                 >
                   {isSubmitting
-                    ? "Processing..."
-                    : `Send ${giftStarsAmount} Stars to ${targetUserName}`}
+                    ? "Sending..."
+                    : `Send ${giftStarsAmount.toLocaleString()} Stars · ৳${giftStarsAmount.toLocaleString()}`}
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="ds-liquid-btn-secondary w-full min-h-[46px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer"
+                  className="w-full min-h-[44px] px-5 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold text-sm cursor-pointer"
                 >
                   Cancel
                 </button>
               </div>
             </div>
-          )}
-
-          {/* MODE 2: BUY STARS (Strictly Admin Dashboard single rotated number) */}
-          {mode === "buy" && (
-            <form onSubmit={handleBuySubmit} className="space-y-3">
+          ) : (
+            <form onSubmit={handleBuySubmit} className="space-y-3.5">
               <div>
-                <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1.5">
-                  Select Stars Package (1 Star = ৳1 BDT):
+                <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-2">
+                  Select package (1 Star = ৳1 BDT)
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[100, 500, 1000].map((pkg) => (
@@ -430,47 +430,25 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       key={pkg}
                       type="button"
                       onClick={() => setBuyStarsAmount(pkg)}
-                      className={`p-2.5 rounded-xl text-center transition cursor-pointer ${
+                      className={`p-2.5 rounded-xl text-center border transition cursor-pointer ${
                         buyStarsAmount === pkg
-                          ? "bg-blue-600 text-white shadow-xs"
-                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                          ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white"
+                          : "bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
                       }`}
                     >
-                      <span className="block font-mono font-black text-xs">
+                      <span className="block font-bold tabular-nums text-xs">
                         {pkg} ★
                       </span>
-                      <span className="block text-[10px] opacity-80">
-                        ৳{pkg} BDT
+                      <span className="block text-[11px] opacity-80 tabular-nums">
+                        ৳{pkg}
                       </span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                  Custom Quantity:
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={10}
-                    value={buyStarsAmount}
-                    onChange={(e) =>
-                      setBuyStarsAmount(
-                        Math.max(10, parseInt(e.target.value) || 0)
-                      )
-                    }
-                    className="flex-1 px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-mono font-bold"
-                  />
-                  <div className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-mono font-black text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                    ৳{buyStarsAmount} BDT
-                  </div>
-                </div>
-              </div>
-
               {!hasBkash && !hasNagad ? (
-                <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>No official payment number configured yet.</span>
                 </div>
@@ -481,7 +459,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setSelectedProvider("bKash")}
-                        className={`py-2 px-3 rounded-xl text-xs font-black border transition cursor-pointer ${
+                        className={`min-h-[40px] px-3 rounded-xl text-xs font-bold border transition cursor-pointer ${
                           selectedProvider === "bKash"
                             ? "border-[#E2125B] bg-pink-50 dark:bg-pink-950/30 text-[#E2125B]"
                             : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -492,7 +470,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setSelectedProvider("Nagad")}
-                        className={`py-2 px-3 rounded-xl text-xs font-black border transition cursor-pointer ${
+                        className={`min-h-[40px] px-3 rounded-xl text-xs font-bold border transition cursor-pointer ${
                           selectedProvider === "Nagad"
                             ? "border-[#F57C20] bg-orange-50 dark:bg-orange-950/30 text-[#F57C20]"
                             : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -504,13 +482,14 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                   )}
 
                   {activeAccount && (
-                    <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-xs space-y-1.5">
-                      <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 block">
+                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs space-y-2">
+                      <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 block">
                         Official {activeAccount.provider} ({activeAccount.type})
-                        Number:
+                        · {getMobileActionLabel(activeAccount.type)} ৳
+                        {buyStarsAmount.toLocaleString()}
                       </span>
                       <div className="flex items-center justify-between gap-2">
-                        <strong className="text-blue-600 dark:text-blue-400 text-sm font-mono">
+                        <strong className="text-zinc-950 dark:text-white text-sm font-mono tabular-nums">
                           {activeAccount.number}
                         </strong>
                         <button
@@ -520,25 +499,21 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                             setCopied(true);
                             setTimeout(() => setCopied(false), 2000);
                           }}
-                          className="px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                          className="min-h-[34px] px-3 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold flex items-center gap-1 cursor-pointer"
                         >
                           {copied ? (
-                            <Check className="w-3 h-3 text-emerald-500" />
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
                           ) : (
-                            <Copy className="w-3 h-3" />
+                            <Copy className="w-3.5 h-3.5" />
                           )}
                           <span>{copied ? "Copied" : "Copy"}</span>
                         </button>
                       </div>
-                      <span className="text-[10px] text-zinc-500 block">
-                        {getMobileActionLabel(activeAccount.type)} ৳
-                        {buyStarsAmount} then enter details below:
-                      </span>
                     </div>
                   )}
 
                   <div>
-                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
+                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
                       Your {activeAccount?.provider || "Mobile"} Number
                     </label>
                     <input
@@ -546,13 +521,13 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       placeholder="01XXXXXXXXX"
                       value={paymentPhone}
                       onChange={(e) => setPaymentPhone(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-mono"
+                      className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 outline-none font-mono tabular-nums"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
+                    <label className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1">
                       Transaction ID (TrxID)
                     </label>
                     <input
@@ -560,27 +535,20 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       placeholder="e.g. 9J283HX10"
                       value={paymentTxId}
                       onChange={(e) => setPaymentTxId(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-mono font-bold uppercase"
+                      className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 outline-none font-mono uppercase"
                       required
                     />
                   </div>
 
-                  <div className="pt-2 flex flex-col gap-2.5">
+                  <div className="pt-1 flex flex-col gap-2">
                     <button
                       type="submit"
                       disabled={isSubmitting || !activeAccount}
-                      className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer disabled:opacity-50"
+                      className="w-full min-h-[48px] px-5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm transition active:scale-[0.99] cursor-pointer disabled:opacity-50 tabular-nums"
                     >
                       {isSubmitting
                         ? "Submitting..."
-                        : `Submit order (${buyStarsAmount} Stars · ৳${buyStarsAmount})`}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="ds-liquid-btn-secondary w-full min-h-[46px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer"
-                    >
-                      Cancel
+                        : `Submit Top-Up · ৳${buyStarsAmount.toLocaleString()}`}
                     </button>
                   </div>
                 </>

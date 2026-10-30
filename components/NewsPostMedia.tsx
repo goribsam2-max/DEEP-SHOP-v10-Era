@@ -5,7 +5,7 @@ import { auth, db } from "../firebase";
 import Icon from "./Icon";
 import { ScamPost, ImageLayoutStyle, ImageAspectMode, PostPoll } from "../types";
 import { triggerHaptic } from "../lib/haptics";
-import { resolvePostVideoSource } from "../lib/videoEmbed";
+import { resolvePostVideoSource, toPlayableMediaUrl } from "../lib/videoEmbed";
 import { NewsVideoPlayer } from "./NewsVideoPlayer";
 import { NewsRichText } from "./NewsRichText";
 import { SmoothImage, preloadImageUrl } from "./SmoothImage";
@@ -82,7 +82,7 @@ export async function extractAudioPeaks(
       window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return null;
 
-    const resp = await fetch(audioUrl);
+    const resp = await fetch(toPlayableMediaUrl(audioUrl));
     const arrayBuf = await resp.arrayBuffer();
     const ctx = new AudioCtx();
     try {
@@ -251,7 +251,7 @@ export const VoiceNoteCard: React.FC<{
     >
       <audio
         ref={audioRef}
-        src={audioUrl}
+        src={toPlayableMediaUrl(audioUrl)}
         preload="metadata"
         onLoadedMetadata={(e) => {
           const d = e.currentTarget.duration;
@@ -356,7 +356,7 @@ const MusicPostCard: React.FC<{
     >
       <audio
         ref={audioRef}
-        src={music.audioUrl}
+        src={toPlayableMediaUrl(music.audioUrl)}
         preload="none"
         onEnded={() => setPlaying(false)}
         onPause={() => setPlaying(false)}

@@ -6,6 +6,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import Icon from "../components/Icon";
 import { Button } from "@/components/ui/button";
 import { CustomDropdown } from "../components/CustomDropdown";
+import { validateRealPersonName } from "../lib/authVoiceAndValidation";
 
 const CompleteProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -21,11 +22,17 @@ const CompleteProfile: React.FC = () => {
     e.preventDefault();
     if (!auth.currentUser) return;
 
+    const nameCheck = validateRealPersonName(formData.name, "নাম");
+    if (!nameCheck.isValid) {
+      notify(nameCheck.errorMsg, "error");
+      return;
+    }
+
     setLoading(true);
     try {
       await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        displayName: formData.name,
-        phoneNumber: formData.phone,
+        displayName: formData.name.trim(),
+        phoneNumber: formData.phone.trim(),
         gender: formData.gender,
         profileCompleted: true,
       });

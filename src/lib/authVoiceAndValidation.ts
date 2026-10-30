@@ -557,6 +557,155 @@ export const playAuthVoice = (text: string, force = false) => {
   })();
 };
 
+export const BLOCKED_PLACEHOLDER_WORDS = [
+  "test",
+  "testing",
+  "tester",
+  "tests",
+  "user",
+  "users",
+  "username",
+  "demo",
+  "sample",
+  "example",
+  "guest",
+  "fake",
+  "dummy",
+  "default",
+  "placeholder",
+  "admin",
+  "administrator",
+  "moderator",
+  "root",
+  "system",
+  "unknown",
+  "anonymous",
+  "nobody",
+  "noname",
+  "null",
+  "undefined",
+  "none",
+  "temp",
+  "qwerty",
+  "asdf",
+  "zxcv",
+  "abcd",
+  "abc",
+];
+
+const BLOCKED_PLACEHOLDER_SET = new Set(BLOCKED_PLACEHOLDER_WORDS);
+
+/**
+ * Detects default/dummy words such as "test", "user", "test123", "user01",
+ * "testuser", "demouser", "newuser", "mytest", etc. without false positives on real names.
+ */
+export const hasBlockedPlaceholderWord = (rawInput: string): boolean => {
+  const cleaned = rawInput.trim().toLowerCase();
+  if (!cleaned) return false;
+
+  const segments = cleaned
+    .split(/[\s._\-+@/\\|,;:!?()[\]{}'"]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const checkToken = (tok: string): boolean => {
+    if (!tok) return false;
+    if (BLOCKED_PLACEHOLDER_SET.has(tok)) return true;
+
+    const strippedDigits = tok.replace(/^\d+|\d+$/g, "");
+    if (strippedDigits && BLOCKED_PLACEHOLDER_SET.has(strippedDigits)) {
+      return true;
+    }
+
+    if (
+      /^(?:test|testing|tester|user|users|demo|sample|example|guest|fake|dummy|default|admin|temp)(?:user|users|test|testing|tester|demo|account|acc|id|name|mail|email|profile|person|member|login|boy|girl|\d)+$/i.test(
+        tok
+      )
+    ) {
+      return true;
+    }
+
+    if (
+      /^(?:my|new|the|real|app|site|web|dev)(?:test|user|demo|fake|sample|guest|dummy|account)\d*$/i.test(
+        tok
+      )
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  if (checkToken(cleaned.replace(/\s+/g, ""))) {
+    return true;
+  }
+
+  return segments.some(checkToken);
+};
+
+export const validateRealPersonName = (
+  name: string,
+  fieldLabel = "নাম"
+): { isValid: boolean; errorMsg: string } => {
+  const trimmed = name.trim();
+  if (!trimmed || trimmed.length < 2) {
+    return {
+      isValid: false,
+      errorMsg: `অনুগ্রহ করে সঠিক ${fieldLabel} লিখুন (কমপক্ষে ২ অক্ষর)।`,
+    };
+  }
+
+  // Must contain at least two real letters (English or Bengali)
+  const letterMatches = trimmed.match(/[A-Za-z\u0980-\u09FF]/g);
+  if (!letterMatches || letterMatches.length < 2) {
+    return {
+      isValid: false,
+      errorMsg: `${fieldLabel}-এ শুধুমাত্র সংখ্যা বা চিহ্ন ব্যবহার করা যাবে না। আসল নাম লিখুন।`,
+    };
+  }
+
+  // Block repeated single-character mash like "aaaa" or "xxxx"
+  if (/(.)\1{3,}/i.test(trimmed.replace(/\s+/g, ""))) {
+    return {
+      isValid: false,
+      errorMsg: `অনুগ্রহ করে অর্থপূর্ণ আসল ${fieldLabel} প্রদান করুন।`,
+    };
+  }
+
+  if (hasBlockedPlaceholderWord(trimmed)) {
+    return {
+      isValid: false,
+      errorMsg: `${fieldLabel}-এ 'test', 'user', 'demo' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না। আপনার আসল নাম লিখুন।`,
+    };
+  }
+
+  return validateInappropriateContent(trimmed, fieldLabel);
+};
+
+export const validatePublicUsername = (
+  username: string
+): { isValid: boolean; errorMsg: string } => {
+  const cleaned = username.trim().replace(/^@+/, "");
+  if (!cleaned) return { isValid: true, errorMsg: "" };
+
+  if (cleaned.length < 3) {
+    return {
+      isValid: false,
+      errorMsg: "ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে।",
+    };
+  }
+
+  if (hasBlockedPlaceholderWord(cleaned)) {
+    return {
+      isValid: false,
+      errorMsg:
+        "ইউজারনেমে 'test', 'user', 'demo' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না।",
+    };
+  }
+
+  return validateInappropriateContent(cleaned, "ইউজারনেমে");
+};
+
 export const validateRealEmail = (
   email: string
 ): { isValid: boolean; errorMsg: string } => {
@@ -569,16 +718,36 @@ export const validateRealEmail = (
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
     return {
       isValid: false,
-      errorMsg: "একটি সঠিক ইমেইল ঠিকানা প্রদান করুন (যেমন: example@gmail.com)।",
+      errorMsg: "একটি সঠিক ইমেইল ঠিকানা প্রদান করুন (যেমন: rahim.ahmed@gmail.com)।",
     };
   }
 
+  const localPart = parts[0];
+  const baseLocalPart = localPart.split("+")[0] || localPart;
   const domain = parts[1];
+
+  if (
+    baseLocalPart.length < 2 ||
+    /^\d+$/.test(baseLocalPart) ||
+    hasBlockedPlaceholderWord(localPart) ||
+    hasBlockedPlaceholderWord(baseLocalPart) ||
+    /(?:^|[._\-+])(test|testing|tester|user|users|username|demo|sample|example|guest|fake|dummy|default|placeholder|admin|root|qwerty|asdf)\d*(?:$|[._\-+])/i.test(
+      localPart
+    ) ||
+    /^(test|user|demo|fake|sample|example|dummy|guest)/i.test(baseLocalPart)
+  ) {
+    return {
+      isValid: false,
+      errorMsg:
+        "ইমেইলে 'test', 'user', 'demo' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না। অনুগ্রহ করে আপনার আসল ইমেইল দিন।",
+    };
+  }
+
   const isDisposable = DISPOSABLE_EMAIL_DOMAINS.some(
     (d) => domain === d || domain.endsWith("." + d)
   );
 
-  if (isDisposable) {
+  if (isDisposable || hasBlockedPlaceholderWord(domain.split(".")[0] || "")) {
     return {
       isValid: false,
       errorMsg: "ফেক বা টেম্পোরারি ইমেইল ব্যবহার করা যাবে না। আসল ইমেইল দিন।",

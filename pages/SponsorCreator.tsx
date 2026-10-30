@@ -6,6 +6,13 @@ import {
   Check,
   Copy,
   AlertCircle,
+  CheckCircle2,
+  ShieldCheck,
+  MessageSquare,
+  Send,
+  Calendar,
+  FileText,
+  Sparkles,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -23,7 +30,7 @@ import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
-const creatorAvatar1 = "";
+import { getSafeDisplayName, getSafePublicUsername } from "../lib/utils";
 import {
   extractConfiguredMobileAccounts,
   getMobileActionLabel,
@@ -31,23 +38,66 @@ import {
   pickAccountBySeed,
 } from "../lib/dhakaTime";
 
+type SponsorTierId = "monthly" | "per_post" | "yearly" | "custom";
+
+interface SponsorPlanOption {
+  id: SponsorTierId;
+  title: string;
+  cadence: string;
+  bdt: number;
+  summary: string;
+  icon: React.FC<{ className?: string }>;
+}
+
+const SPONSOR_PLANS: SponsorPlanOption[] = [
+  {
+    id: "monthly",
+    title: "Monthly Supporter",
+    cadence: "Monthly",
+    bdt: 300,
+    summary: "Ongoing monthly backing for regular posts & reels",
+    icon: Calendar,
+  },
+  {
+    id: "per_post",
+    title: "Sponsored Post",
+    cadence: "Single post",
+    bdt: 500,
+    summary: "Commission or sponsor a dedicated post or feature",
+    icon: FileText,
+  },
+  {
+    id: "yearly",
+    title: "Annual Patron",
+    cadence: "Yearly · Save 15%",
+    bdt: 3000,
+    summary: "Year-round partner recognition & priority collaboration",
+    icon: ShieldCheck,
+  },
+  {
+    id: "custom",
+    title: "Custom Amount",
+    cadence: "Flexible",
+    bdt: 1000,
+    summary: "Set your own BDT budget for custom campaigns",
+    icon: Sparkles,
+  },
+];
+
 export const SponsorCreator: React.FC = () => {
   const { creatorId } = useParams<{ creatorId: string }>();
   const navigate = useNavigate();
   const notify = useNotify();
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
   const [creator, setCreator] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Sponsorship options
-  const [tierType, setTierType] = useState<
-    "monthly" | "yearly" | "per_post" | "custom"
-  >("monthly");
+  const [tierType, setTierType] = useState<SponsorTierId>("monthly");
   const [selectedAmount, setSelectedAmount] = useState<number>(300);
-  const [customAmount, setCustomAmount] = useState<string>("");
+  const [customAmount, setCustomAmount] = useState<string>("1000");
+  const [sponsorNote, setSponsorNote] = useState<string>("");
 
-  // Payment form states
   const [paymentMethod, setPaymentMethod] = useState<"bkash" | "nagad">(
     "bkash"
   );
@@ -56,7 +106,6 @@ export const SponsorCreator: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Refresh seed rotates to the next configured number on every page refresh
   const [refreshSeed] = useState<number>(() =>
     getNextRefreshSeed(`sponsor_${creatorId || "default"}`)
   );
@@ -82,10 +131,10 @@ export const SponsorCreator: React.FC = () => {
         } else {
           setCreator({
             id: creatorId,
-            displayName: "Community Reporter",
-            username: "reporter_bd",
-            photoURL: creatorAvatar1,
-            bio: "Verified Community Reporter & Incident Investigator on DEEP SHOP.",
+            displayName: "Community Creator",
+            username: "",
+            photoURL: "",
+            bio: "Creator & Community Member on DEEP SHOP Loops.",
           });
         }
         setLoading(false);
@@ -93,10 +142,10 @@ export const SponsorCreator: React.FC = () => {
       () => {
         setCreator({
           id: creatorId,
-          displayName: "Community Reporter",
-          username: "reporter_bd",
-          photoURL: creatorAvatar1,
-          bio: "Verified Community Reporter & Incident Investigator on DEEP SHOP.",
+          displayName: "Community Creator",
+          username: "",
+          photoURL: "",
+          bio: "Creator & Community Member on DEEP SHOP Loops.",
         });
         setLoading(false);
       }
@@ -108,7 +157,7 @@ export const SponsorCreator: React.FC = () => {
     };
   }, [creatorId]);
 
-  // STRICTLY creator's own configured payment accounts from Creator Dashboard (no admin fallback)
+  // Creator's own configured payment accounts from Creator Dashboard
   const configuredAccounts = useMemo(
     () => extractConfiguredMobileAccounts(creator),
     [creator]
@@ -137,14 +186,24 @@ export const SponsorCreator: React.FC = () => {
   const activeAccount =
     paymentMethod === "bkash" ? rotatedBkash : rotatedNagad;
 
-  const activeAmount = customAmount ? Number(customAmount) || 0 : selectedAmount;
+  const activeAmount =
+    tierType === "custom" ? Number(customAmount) || 0 : selectedAmount;
+
+  const creatorName = getSafeDisplayName(creator, "Creator");
+  const creatorHandle = getSafePublicUsername(creator);
+  const creatorAvatar =
+    (creator?.photoURL && String(creator.photoURL).trim()) ||
+    (creator?.avatarUrl && String(creator.avatarUrl).trim()) ||
+    (creator?.shopLogo && String(creator.shopLogo).trim()) ||
+    "";
+  const creatorInitial = (creatorName || "C").trim().charAt(0).toUpperCase();
 
   const handleCopy = (text: string, key: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     triggerHaptic();
-    notify(`${label} number copied!`, "success");
-    setTimeout(() => setCopiedKey(null), 2500);
+    notify(`${label} number copied`, "success");
+    setTimeout(() => setCopiedKey(null), 2400);
   };
 
   const handleSponsorSubmit = async (e: React.FormEvent) => {
@@ -157,19 +216,19 @@ export const SponsorCreator: React.FC = () => {
 
     if (!activeAccount) {
       notify(
-        "This creator has not configured any payment number in Creator Dashboard yet.",
+        "This creator has not added a payment number in Creator Dashboard yet.",
         "error"
       );
       return;
     }
 
     if (activeAmount < 50) {
-      notify("Minimum sponsorship amount is ৳50", "error");
+      notify("Minimum sponsorship amount is ৳50 BDT", "error");
       return;
     }
 
-    if (!senderPhone || !trxId) {
-      notify("Please enter your payment phone number and TrxID", "error");
+    if (!senderPhone.trim() || !trxId.trim()) {
+      notify("Please enter your sender phone number and TrxID", "error");
       return;
     }
 
@@ -179,20 +238,23 @@ export const SponsorCreator: React.FC = () => {
     try {
       const officialNum = activeAccount.number;
       const cleanTrx = trxId.trim().toUpperCase();
+      const cleanNote = sponsorNote.trim();
+      const supporterName = getSafeDisplayName(
+        currentUser,
+        currentUser.email?.split("@")[0] || "Supporter"
+      );
 
       await addDoc(collection(db, "sponsor_requests"), {
         sponsorUserId: currentUser.uid,
-        sponsorName:
-          currentUser.displayName ||
-          currentUser.email?.split("@")[0] ||
-          "Supporter",
+        sponsorName: supporterName,
         sponsorEmail: currentUser.email || "",
         creatorUserId: creatorId,
-        creatorName: creator?.displayName || "Creator",
+        creatorName,
         tierType,
         amountBDT: activeAmount,
+        note: cleanNote,
         paymentMethod,
-        senderPhone,
+        senderPhone: senderPhone.trim(),
         trxId: cleanTrx,
         officialNumber: officialNum,
         officialAccountType: activeAccount.type,
@@ -200,7 +262,6 @@ export const SponsorCreator: React.FC = () => {
         createdAt: Date.now(),
       });
 
-      // Find or create P2P chat with creator to auto-dispatch receipt details into site inbox
       let targetChatId = "";
       if (creatorId && creatorId !== currentUser.uid) {
         try {
@@ -227,43 +288,41 @@ export const SponsorCreator: React.FC = () => {
               participants: [currentUser.uid, creatorId],
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
-              lastMessage: `🤝 Sponsorship Request: ৳${activeAmount} BDT`,
+              lastMessage: `Sponsorship Request · ৳${activeAmount} BDT`,
               lastSenderId: currentUser.uid,
               seenBy: [currentUser.uid],
             });
             targetChatId = newChatRef.id;
           }
 
-          const tierLabels: Record<string, string> = {
+          const tierLabels: Record<SponsorTierId, string> = {
             monthly: "Monthly Supporter",
-            yearly: "Yearly VIP Patron",
-            per_post: "Per-Post Scam Sponsor",
+            yearly: "Annual Patron",
+            per_post: "Sponsored Post",
             custom: "Custom Sponsorship",
           };
 
-          const receiptText =
-            `🤝 SPONSORSHIP REQUEST SUBMITTED\n\n` +
-            `• Creator: ${creator?.displayName || "Creator"} (@${
-              creator?.username || "creator"
-            })\n` +
-            `• Tier: ${tierLabels[tierType] || tierType}\n` +
-            `• Amount: ৳${activeAmount} BDT\n` +
-            `• Payment Gateway: ${paymentMethod.toUpperCase()} (${officialNum} - ${
-              activeAccount.type
-            })\n` +
-            `• Sender Phone: ${senderPhone}\n` +
-            `• Transaction ID (TrxID): ${cleanTrx}\n\n` +
-            `Status: Pending Verification.`;
+          const receiptLines = [
+            `SPONSORSHIP REQUEST SUBMITTED`,
+            ``,
+            `Creator: ${creatorName}${creatorHandle ? ` (@${creatorHandle})` : ""}`,
+            `Plan: ${tierLabels[tierType]}`,
+            `Amount: ৳${activeAmount.toLocaleString()} BDT`,
+            `Gateway: ${paymentMethod.toUpperCase()} (${officialNum} · ${activeAccount.type})`,
+            `Sender Phone: ${senderPhone.trim()}`,
+            `Transaction ID: ${cleanTrx}`,
+          ];
+          if (cleanNote) {
+            receiptLines.push(`Note: ${cleanNote}`);
+          }
+          receiptLines.push(``, `Status: Pending Creator Verification`);
 
           await addDoc(
             collection(db, "p2p_chats", targetChatId, "messages"),
             {
-              text: receiptText,
+              text: receiptLines.join("\n"),
               senderId: currentUser.uid,
-              senderName:
-                currentUser.displayName ||
-                currentUser.email?.split("@")[0] ||
-                "Supporter",
+              senderName: supporterName,
               senderPhoto: currentUser.photoURL || "",
               createdAt: Date.now(),
               timestamp: serverTimestamp(),
@@ -273,7 +332,7 @@ export const SponsorCreator: React.FC = () => {
 
           await updateDoc(doc(db, "p2p_chats", targetChatId), {
             updatedAt: serverTimestamp(),
-            lastMessage: `🤝 Sponsorship Request: ৳${activeAmount} BDT`,
+            lastMessage: `Sponsorship Request · ৳${activeAmount} BDT`,
             lastSenderId: currentUser.uid,
             seenBy: [currentUser.uid],
           });
@@ -286,17 +345,16 @@ export const SponsorCreator: React.FC = () => {
       }
 
       notify(
-        `Sponsorship request of ৳${activeAmount} for ${creator?.displayName} submitted! Details sent to site inbox.`,
+        `Sponsorship request of ৳${activeAmount.toLocaleString()} sent to ${creatorName}`,
         "success"
       );
 
       if (targetChatId) {
         navigate(`/messages?chatId=${targetChatId}`);
       } else {
-        navigate(`/author/${creatorId}`);
+        navigate(`/loops/profile/${creatorId}`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       notify(
         "Failed to submit sponsorship request. Please try again.",
         "error"
@@ -310,357 +368,504 @@ export const SponsorCreator: React.FC = () => {
     return <ProfileSettingsPageSkeleton />;
   }
 
+  const activePlanMeta =
+    SPONSOR_PLANS.find((p) => p.id === tierType) || SPONSOR_PLANS[0];
+
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans pb-24">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#090A0D] text-zinc-900 dark:text-zinc-100 font-sans pb-24">
       <SEO
-        title={`Sponsor ${creator.displayName} • DEEP SHOP`}
-        description={`Sponsor ${creator.displayName} on DEEP SHOP to support verified incident reporting and investigative coverage.`}
+        title={`Sponsor ${creatorName} · DEEP SHOP`}
+        description={`Partner with or sponsor ${creatorName} directly on DEEP SHOP Loops.`}
       />
 
-      {/* TOP HEADER */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-black/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
-        <div className="max-w-xl mx-auto px-4 h-14 sm:h-16 flex items-center justify-between gap-3">
+      {/* STICKY HEADER */}
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#090A0D]/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 transition cursor-pointer shrink-0"
+              className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition cursor-pointer shrink-0"
+              aria-label="Go back"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4.5 h-4.5" />
             </button>
-            <div className="flex items-center gap-2 min-w-0">
-              <Handshake className="w-5 h-5 text-emerald-600 shrink-0" />
-              <h1 className="text-base font-extrabold text-zinc-900 dark:text-white truncate">
-                Sponsor Creator
-              </h1>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Handshake className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-950 dark:text-white truncate">
+                  Sponsor Creator
+                </h1>
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate hidden sm:block">
+                100% direct creator payout · Instant receipt in Messages
+              </p>
             </div>
           </div>
+
+          {creatorId && currentUser?.uid !== creatorId && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                navigate(`/messages?uid=${encodeURIComponent(creatorId)}`);
+              }}
+              className="min-h-[40px] px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
+            >
+              <MessageSquare className="w-4 h-4 shrink-0" />
+              <span>Message</span>
+            </button>
+          )}
         </div>
       </header>
 
-      <div className="max-w-xl mx-auto px-4 py-5 space-y-5">
-        {/* CREATOR PROFILE CARD */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center gap-3.5">
-          <img
-            src={creator.photoURL || creatorAvatar1}
-            alt={creator.displayName}
-            className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shadow-sm shrink-0"
-          />
-          <div className="min-w-0">
-            <h2 className="text-base font-black text-zinc-900 dark:text-white truncate">
-              {creator.displayName}
-            </h2>
-            <p className="text-xs font-mono text-zinc-400">
-              @{creator.username || "creator"}
-            </p>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-              {creator.bio || "Community Reporter & Incident Investigator"}
-            </p>
-          </div>
-        </div>
-
-        {/* STEP 1: SPONSORSHIP TIER */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Step 1: Choose Sponsorship Tier
-          </h3>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            {[
-              {
-                id: "monthly",
-                title: "Monthly Supporter",
-                bdt: 300,
-                desc: "৳300 / month recurring",
-              },
-              {
-                id: "yearly",
-                title: "Yearly VIP Patron",
-                bdt: 3000,
-                desc: "৳3,000 / year (Save 15%)",
-              },
-              {
-                id: "per_post",
-                title: "Per-Post Sponsor",
-                bdt: 500,
-                desc: "৳500 / sponsored report",
-              },
-              {
-                id: "custom",
-                title: "Custom Contribution",
-                bdt: 1000,
-                desc: "Enter your own amount",
-              },
-            ].map((pkg) => {
-              const isSelected = tierType === pkg.id;
-              return (
-                <button
-                  key={pkg.id}
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setTierType(pkg.id as any);
-                    if (pkg.id !== "custom") {
-                      setSelectedAmount(pkg.bdt);
-                      setCustomAmount("");
-                    }
-                  }}
-                  className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                    isSelected
-                      ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-1 ring-emerald-500"
-                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                  }`}
-                >
-                  <div>
-                    <span className="text-xs font-black text-zinc-900 dark:text-white block">
-                      {pkg.title}
-                    </span>
-                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block mt-0.5">
-                      {pkg.desc}
-                    </span>
-                  </div>
-                  <span className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 mt-2 block">
-                    {pkg.id === "custom" ? "Custom" : `৳${pkg.bdt}`}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {tierType === "custom" && (
-            <div className="bg-zinc-50 dark:bg-zinc-900 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3">
-              <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
-                Custom Amount (BDT):
-              </span>
-              <input
-                type="number"
-                min="50"
-                placeholder="e.g. 1500"
-                value={customAmount}
-                onChange={(e) => setCustomAmount(e.target.value)}
-                className="w-32 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-xs font-bold font-mono outline-none"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* STEP 2: CREATOR'S CONFIGURED PAYMENT NUMBERS ONLY */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Step 2: Creator Payment Number
-          </h3>
-
-          {!hasBkash && !hasNagad ? (
-            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-extrabold">
-                  No payment number set by {creator.displayName}
-                </p>
-                <p className="text-[11px] opacity-85 mt-0.5 leading-relaxed">
-                  Payment numbers appear here only when this creator sets a bKash
-                  or Nagad account in their Creator Dashboard.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div
-                className={`grid gap-2.5 ${
-                  hasBkash && hasNagad ? "grid-cols-2" : "grid-cols-1"
-                }`}
-              >
-                {hasBkash && rotatedBkash && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setPaymentMethod("bkash");
-                    }}
-                    className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-center justify-between ${
-                      paymentMethod === "bkash"
-                        ? "bg-rose-50 dark:bg-rose-950/40 border-rose-500 ring-1 ring-rose-500"
-                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                    }`}
-                  >
-                    <div>
-                      <span className="text-xs font-black text-rose-600 block whitespace-nowrap">
-                        bKash ({rotatedBkash.type})
-                      </span>
-                      <span className="text-[10px] text-zinc-400 whitespace-nowrap">
-                        {getMobileActionLabel(rotatedBkash.type)}
-                      </span>
+      {/* RESPONSIVE 2-COLUMN CONTAINER */}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT COLUMN: CREATOR CARD & LIVE SUMMARY */}
+          <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-24">
+            {/* Creator Card */}
+            <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-5 space-y-4 shadow-2xs">
+              <div className="flex items-center gap-3.5">
+                <div className="relative shrink-0">
+                  {creatorAvatar ? (
+                    <img
+                      src={creatorAvatar}
+                      alt={creatorName}
+                      referrerPolicy="no-referrer"
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-xl font-bold">
+                      {creatorInitial}
                     </div>
-                    <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                        paymentMethod === "bkash"
-                          ? "border-rose-600 bg-rose-600 text-white"
-                          : "border-zinc-300"
-                      }`}
-                    >
-                      {paymentMethod === "bkash" && (
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      )}
-                    </div>
-                  </button>
-                )}
-
-                {hasNagad && rotatedNagad && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setPaymentMethod("nagad");
-                    }}
-                    className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-center justify-between ${
-                      paymentMethod === "nagad"
-                        ? "bg-orange-50 dark:bg-orange-950/40 border-orange-500 ring-1 ring-orange-500"
-                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                    }`}
-                  >
-                    <div>
-                      <span className="text-xs font-black text-orange-600 block whitespace-nowrap">
-                        Nagad ({rotatedNagad.type})
-                      </span>
-                      <span className="text-[10px] text-zinc-400 whitespace-nowrap">
-                        {getMobileActionLabel(rotatedNagad.type)}
-                      </span>
-                    </div>
-                    <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                        paymentMethod === "nagad"
-                          ? "border-orange-600 bg-orange-600 text-white"
-                          : "border-zinc-300"
-                      }`}
-                    >
-                      {paymentMethod === "nagad" && (
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      )}
-                    </div>
-                  </button>
-                )}
-              </div>
-
-              {activeAccount && (
-                <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-zinc-500">
-                      {getMobileActionLabel(activeAccount.type)} to{" "}
-                      {activeAccount.provider} ({activeAccount.type}):
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                      {activeAccount.type}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    <span className="text-base sm:text-lg font-black font-mono tracking-wider text-zinc-900 dark:text-white">
-                      {activeAccount.number}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopy(
-                          activeAccount.number,
-                          activeAccount.id,
-                          `${activeAccount.provider} (${activeAccount.type})`
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-200 transition cursor-pointer whitespace-nowrap"
-                    >
-                      {copiedKey === activeAccount.id ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                      <span>
-                        {copiedKey === activeAccount.id ? "Copied" : "Copy"}
-                      </span>
-                    </button>
-                  </div>
-
-                  <div className="text-[11px] text-zinc-500 space-y-1">
-                    <p>
-                      • Open {activeAccount.provider} and select{" "}
-                      <strong className="text-zinc-900 dark:text-white">
-                        {getMobileActionLabel(activeAccount.type)}
-                      </strong>
-                      : <strong className="text-zinc-900 dark:text-white">৳{activeAmount} BDT</strong>
-                    </p>
-                    <p>
-                      • Enter your sender number & Transaction ID below to
-                      verify.
-                    </p>
+                  )}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center ring-2 ring-white dark:ring-zinc-900">
+                    <Handshake className="w-3.5 h-3.5" />
                   </div>
                 </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white truncate">
+                      {creatorName}
+                    </h2>
+                    <CheckCircle2 className="w-4 h-4 text-[#0095F6] shrink-0" />
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 truncate">
+                    {creatorHandle ? `@${creatorHandle}` : "Verified Creator"}
+                  </p>
+                </div>
+              </div>
+
+              {creator.bio && (
+                <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
+                  {creator.bio}
+                </p>
               )}
-            </>
-          )}
-        </div>
+            </section>
 
-        {/* STEP 3: SUBMIT FORM (Only enabled if creator has configured a payment number) */}
-        {(hasBkash || hasNagad) && (
-          <form onSubmit={handleSponsorSubmit} className="space-y-4">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Step 3: Verification
-            </h3>
+            {/* Sponsorship Summary Breakdown */}
+            <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-5 space-y-3.5 shadow-2xs">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                Sponsorship Summary
+              </h3>
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Your Payment Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="01XXXXXXXXX"
-                  value={senderPhone}
-                  onChange={(e) => setSenderPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono"
-                />
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80 text-xs sm:text-sm">
+                <div className="py-2.5 flex items-center justify-between gap-2">
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    Selected tier
+                  </span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    {activePlanMeta.title}
+                  </span>
+                </div>
+
+                <div className="py-2.5 flex items-center justify-between gap-2">
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    Schedule
+                  </span>
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                    {activePlanMeta.cadence}
+                  </span>
+                </div>
+
+                <div className="py-2.5 flex items-center justify-between gap-2">
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    Creator share
+                  </span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    100% Direct
+                  </span>
+                </div>
+
+                <div className="pt-3 flex items-baseline justify-between gap-2">
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    Total amount
+                  </span>
+                  <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    ৳{activeAmount.toLocaleString()} BDT
+                  </span>
+                </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Transaction ID (TrxID) *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 9J283HX10"
-                  value={trxId}
-                  onChange={(e) => setTrxId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 outline-none font-mono uppercase"
-                />
+              <div className="rounded-xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/70 dark:border-zinc-800/80 p-3 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed flex items-start gap-2">
+                <Send className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <span>
+                  Once submitted, a verified sponsorship receipt is
+                  automatically delivered to your direct chat with {creatorName}
+                  .
+                </span>
               </div>
-            </div>
+            </section>
+          </div>
 
-            <div className="pt-2 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold border-t border-zinc-200 dark:border-zinc-800 pt-3">
-                <span>Total Payable Amount:</span>
-                <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                  ৳{activeAmount} BDT
+          {/* RIGHT COLUMN: STEPS 1, 2, 3 */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* STEP 1: CHOOSE PLAN */}
+            <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-6 space-y-4 shadow-2xs">
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white">
+                  1. Choose sponsorship plan
+                </h3>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Min ৳50 BDT
                 </span>
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting || activeAmount < 50 || !activeAccount}
-                className="w-full py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xl transition active:scale-98 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <span className="h-4 w-36 rounded-full ds-skeleton inline-block" />
-                ) : (
-                  <>
-                    <Handshake className="w-4 h-4 shrink-0" />
-                    <span>Confirm Sponsorship (৳{activeAmount})</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {SPONSOR_PLANS.map((plan) => {
+                  const IconComp = plan.icon;
+                  const isSelected = tierType === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setTierType(plan.id);
+                        if (plan.id !== "custom") {
+                          setSelectedAmount(plan.bdt);
+                        }
+                      }}
+                      className={`p-4 rounded-2xl border text-left transition flex flex-col justify-between gap-3 cursor-pointer active:scale-[0.99] ${
+                        isSelected
+                          ? "bg-emerald-500/[0.07] dark:bg-emerald-500/[0.12] border-emerald-600 dark:border-emerald-500 ring-1 ring-emerald-600 dark:ring-emerald-500"
+                          : "bg-zinc-50/70 dark:bg-zinc-950/50 border-zinc-200/90 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                            isSelected
+                              ? "bg-emerald-600 text-white"
+                              : "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
+                          }`}
+                        >
+                          <IconComp className="w-4 h-4" />
+                        </div>
+                        <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                          {plan.cadence}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-sm font-bold text-zinc-950 dark:text-white">
+                            {plan.title}
+                          </span>
+                          <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">
+                            {plan.id === "custom"
+                              ? "Custom"
+                              : `৳${plan.bdt.toLocaleString()}`}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                          {plan.summary}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {tierType === "custom" && (
+                <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
+                  <label
+                    htmlFor="custom-sponsor-bdt"
+                    className="text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5"
+                  >
+                    Enter custom sponsorship amount (BDT)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500">
+                      ৳
+                    </span>
+                    <input
+                      id="custom-sponsor-bdt"
+                      type="number"
+                      min={50}
+                      placeholder="1000"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      className="w-full h-11 pl-8 pr-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-emerald-600 text-base font-bold tabular-nums outline-none text-zinc-950 dark:text-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Optional Sponsorship Note */}
+              <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="sponsor-brief-note"
+                    className="text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300"
+                  >
+                    Campaign or support note (optional)
+                  </label>
+                  <span className="text-xs text-zinc-400 tabular-nums">
+                    {sponsorNote.length}/200
+                  </span>
+                </div>
+                <textarea
+                  id="sponsor-brief-note"
+                  rows={2}
+                  maxLength={200}
+                  value={sponsorNote}
+                  onChange={(e) => setSponsorNote(e.target.value)}
+                  placeholder="Share brand details, collaboration goals, or a note for the creator..."
+                  className="w-full p-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-emerald-600 text-zinc-950 dark:text-white placeholder:text-zinc-400 outline-none resize-none"
+                />
+              </div>
+            </section>
+
+            {/* STEP 2 & 3: CREATOR PAYMENT ACCOUNT & VERIFICATION */}
+            <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-6 space-y-5 shadow-2xs">
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white">
+                  2. Creator payment & verification
+                </h3>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Direct mobile transfer
+                </span>
+              </div>
+
+              {!hasBkash && !hasNagad ? (
+                <div className="rounded-xl bg-amber-50 dark:bg-amber-950/25 border border-amber-200 dark:border-amber-900/50 p-4 space-y-3">
+                  <div className="flex items-start gap-2.5 text-amber-900 dark:text-amber-200">
+                    <AlertCircle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold">
+                        {creatorName} hasn&apos;t added a payout number yet
+                      </p>
+                      <p className="text-xs leading-relaxed text-amber-800/90 dark:text-amber-300/85">
+                        Direct sponsorship numbers appear automatically once the
+                        creator adds a bKash or Nagad account in Creator
+                        Dashboard. You can message them directly to coordinate.
+                      </p>
+                    </div>
+                  </div>
+
+                  {creatorId && currentUser?.uid !== creatorId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        navigate(
+                          `/messages?uid=${encodeURIComponent(creatorId)}`
+                        );
+                      }}
+                      className="min-h-[42px] px-4 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold inline-flex items-center gap-2 cursor-pointer"
+                    >
+                      <MessageSquare className="w-4 h-4 shrink-0" />
+                      <span>Message {creatorName}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleSponsorSubmit} className="space-y-5">
+                  {/* Gateway Selector */}
+                  <div
+                    className={`grid gap-2.5 ${
+                      hasBkash && hasNagad ? "grid-cols-2" : "grid-cols-1"
+                    }`}
+                  >
+                    {hasBkash && rotatedBkash && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setPaymentMethod("bkash");
+                        }}
+                        className={`min-h-[52px] p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                          paymentMethod === "bkash"
+                            ? "bg-pink-50/80 dark:bg-pink-950/30 border-[#E2125B] ring-1 ring-[#E2125B]"
+                            : "bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <span className="text-xs sm:text-sm font-bold text-[#E2125B] block whitespace-nowrap">
+                            bKash · {rotatedBkash.type}
+                          </span>
+                          <span className="text-[11px] text-zinc-500 block whitespace-nowrap">
+                            {getMobileActionLabel(rotatedBkash.type)}
+                          </span>
+                        </div>
+                        <div
+                          className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center shrink-0 ${
+                            paymentMethod === "bkash"
+                              ? "border-[#E2125B] bg-[#E2125B] text-white"
+                              : "border-zinc-300 dark:border-zinc-700"
+                          }`}
+                        >
+                          {paymentMethod === "bkash" && (
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          )}
+                        </div>
+                      </button>
+                    )}
+
+                    {hasNagad && rotatedNagad && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setPaymentMethod("nagad");
+                        }}
+                        className={`min-h-[52px] p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                          paymentMethod === "nagad"
+                            ? "bg-orange-50/80 dark:bg-orange-950/30 border-[#F57C20] ring-1 ring-[#F57C20]"
+                            : "bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <span className="text-xs sm:text-sm font-bold text-[#F57C20] block whitespace-nowrap">
+                            Nagad · {rotatedNagad.type}
+                          </span>
+                          <span className="text-[11px] text-zinc-500 block whitespace-nowrap">
+                            {getMobileActionLabel(rotatedNagad.type)}
+                          </span>
+                        </div>
+                        <div
+                          className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center shrink-0 ${
+                            paymentMethod === "nagad"
+                              ? "border-[#F57C20] bg-[#F57C20] text-white"
+                              : "border-zinc-300 dark:border-zinc-700"
+                          }`}
+                        >
+                          {paymentMethod === "nagad" && (
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          )}
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Active Creator Account Copy Card */}
+                  {activeAccount && (
+                    <div className="rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                          {getMobileActionLabel(activeAccount.type)} to{" "}
+                          {activeAccount.provider} ({activeAccount.type})
+                        </span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">
+                          ৳{activeAmount.toLocaleString()} BDT
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                        <span className="text-base sm:text-lg font-bold font-mono tabular-nums tracking-wider text-zinc-950 dark:text-white truncate">
+                          {activeAccount.number}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCopy(
+                              activeAccount.number,
+                              activeAccount.id,
+                              `${activeAccount.provider} (${activeAccount.type})`
+                            )
+                          }
+                          className="min-h-[38px] px-3.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                        >
+                          {copiedKey === activeAccount.id ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                          <span>
+                            {copiedKey === activeAccount.id ? "Copied" : "Copy"}
+                          </span>
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        Open {activeAccount.provider}, select{" "}
+                        <strong className="text-zinc-800 dark:text-zinc-200">
+                          {getMobileActionLabel(activeAccount.type)}
+                        </strong>{" "}
+                        for{" "}
+                        <strong className="text-zinc-800 dark:text-zinc-200 tabular-nums">
+                          ৳{activeAmount.toLocaleString()} BDT
+                        </strong>
+                        , then enter your sender number and TrxID below.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Sender Phone & TrxID Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                        Your Sender Mobile Number *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="01XXXXXXXXX"
+                        value={senderPhone}
+                        onChange={(e) => setSenderPhone(e.target.value)}
+                        className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-emerald-600 outline-none font-mono tabular-nums"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                        Transaction ID (TrxID) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 9J283HX10"
+                        value={trxId}
+                        onChange={(e) => setTrxId(e.target.value)}
+                        className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-emerald-600 outline-none font-mono uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit CTA */}
+                  <button
+                    type="submit"
+                    disabled={
+                      isSubmitting || activeAmount < 50 || !activeAccount
+                    }
+                    className="w-full min-h-[50px] px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm sm:text-base transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap tabular-nums"
+                  >
+                    <Handshake className="w-4.5 h-4.5 shrink-0" />
+                    <span>
+                      {isSubmitting
+                        ? "Submitting Sponsorship..."
+                        : `Confirm Sponsorship · ৳${activeAmount.toLocaleString()}`}
+                    </span>
+                  </button>
+                </form>
+              )}
+            </section>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };

@@ -202,6 +202,16 @@ const SignIn: React.FC = () => {
         playAuthVoice(emailCheck.errorMsg);
         return;
       }
+    } else if (!isLikelyPhoneNumber(trimmedId)) {
+      const emailLikeCheck = validateRealEmail(`${trimmedId}@gmail.com`);
+      if (!emailLikeCheck.isValid) {
+        const msg =
+          "ইমেইল বা ইউজার আইডিতে 'test', 'user' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না। সঠিক ইমেইল বা ফোন নম্বর দিন।";
+        setFieldError(msg);
+        notify(msg, "error");
+        playAuthVoice(msg);
+        return;
+      }
     }
 
     if (!password) {

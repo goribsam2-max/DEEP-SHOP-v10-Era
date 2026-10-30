@@ -1824,6 +1824,19 @@ export const NewsHub: React.FC = () => {
                 type="button"
                 onClick={() => {
                   triggerHaptic();
+                  navigate("/loops/create?tab=video");
+                }}
+                title="Upload Video / Reel"
+                aria-label="Upload Video or Reel"
+                className="w-9 h-9 rounded-full border loops-divider flex items-center justify-center text-zinc-700 dark:text-zinc-200 hover:text-[#1877F2] dark:hover:text-[#58A6FF] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition shrink-0 cursor-pointer"
+              >
+                <Video className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
                   navigate("/loops/create");
                 }}
                 className="px-4 py-1.5 rounded-full border loops-divider text-[13.5px] font-semibold text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition shrink-0 cursor-pointer"

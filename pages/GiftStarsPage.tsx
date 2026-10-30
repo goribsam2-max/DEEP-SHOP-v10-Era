@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -10,13 +10,12 @@ import {
   AlertCircle,
   Check,
   Copy,
-  Heart,
-  Send,
   Plus,
   Minus,
   MessageSquare,
   ShieldCheck,
-  Zap,
+  FileText,
+  Wallet,
 } from "lucide-react";
 import {
   doc,
@@ -32,7 +31,7 @@ import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
 import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
-import creatorAvatar1 from "../src/assets/images/story_avatar_creator_1_1792826814910.jpg";
+import { getSafeDisplayName, getSafePublicUsername } from "../lib/utils";
 import {
   extractConfiguredMobileAccounts,
   getMobileActionLabel,
@@ -44,112 +43,99 @@ interface GiftTier {
   id: string;
   name: string;
   stars: number;
-  emoji: string;
   tagline: string;
-  badge: string;
-  colorBg: string;
-  colorBorder: string;
-  colorText: string;
+  tierNote: string;
 }
 
 const GIFT_TIERS: GiftTier[] = [
   {
-    id: "rose",
-    name: "Rose Token",
+    id: "starter",
+    name: "Appreciation",
     stars: 50,
-    emoji: "🌹",
-    tagline: "A sweet token of appreciation",
-    badge: "Popular",
-    colorBg: "bg-rose-500/10 dark:bg-rose-950/40",
-    colorBorder: "border-rose-400/40 dark:border-rose-500/50",
-    colorText: "text-rose-600 dark:text-rose-400",
+    tagline: "Quick thank-you for a helpful post",
+    tierNote: "Popular",
   },
   {
-    id: "sparkler",
-    name: "Golden Sparkler",
+    id: "spark",
+    name: "Golden Star",
     stars: 100,
-    emoji: "✨",
-    tagline: "Keep shining on Loops!",
-    badge: "Featured",
-    colorBg: "bg-amber-500/10 dark:bg-amber-950/40",
-    colorBorder: "border-amber-400/40 dark:border-amber-500/50",
-    colorText: "text-amber-600 dark:text-amber-400",
+    tagline: "Highlight great reporting & reels",
+    tierNote: "Recommended",
   },
   {
-    id: "heart",
-    name: "Super Heart",
+    id: "boost",
+    name: "Creator Boost",
+    stars: 250,
+    tagline: "Fuel independent community updates",
+    tierNote: "Supporter",
+  },
+  {
+    id: "super",
+    name: "Super Star",
     stars: 500,
-    emoji: "❤️",
-    tagline: "Huge fan of your content",
-    badge: "Hot",
-    colorBg: "bg-red-500/10 dark:bg-red-950/40",
-    colorBorder: "border-red-400/40 dark:border-red-500/50",
-    colorText: "text-red-600 dark:text-red-400",
+    tagline: "Standout recognition on Loops",
+    tierNote: "Featured",
   },
   {
-    id: "crown",
-    name: "Diamond Crown",
+    id: "patron",
+    name: "Crown Patron",
     stars: 1000,
-    emoji: "👑",
-    tagline: "VIP Royal Patron status",
-    badge: "Royal",
-    colorBg: "bg-blue-500/10 dark:bg-blue-950/40",
-    colorBorder: "border-blue-400/40 dark:border-blue-500/50",
-    colorText: "text-blue-600 dark:text-blue-400",
+    tagline: "Major backing for creator work",
+    tierNote: "Patron",
   },
   {
-    id: "rocket",
-    name: "Rocket Launch",
+    id: "legend",
+    name: "Vanguard",
     stars: 5000,
-    emoji: "🚀",
-    tagline: "To the moon & beyond",
-    badge: "Superstar",
-    colorBg: "bg-indigo-500/10 dark:bg-indigo-950/40",
-    colorBorder: "border-indigo-400/40 dark:border-indigo-500/50",
-    colorText: "text-indigo-600 dark:text-indigo-400",
-  },
-  {
-    id: "castle",
-    name: "Galaxy Castle",
-    stars: 10000,
-    emoji: "🏰",
-    tagline: "Legendary Creator Supporter",
-    badge: "Legendary",
-    colorBg: "bg-purple-500/10 dark:bg-purple-950/40",
-    colorBorder: "border-purple-400/40 dark:border-purple-500/50",
-    colorText: "text-purple-600 dark:text-purple-400",
+    tagline: "Top-tier community backing",
+    tierNote: "Vanguard",
   },
 ];
 
+const TOPUP_PACKAGES = [100, 250, 500, 1000, 2500, 5000];
+
 export const GiftStarsPage: React.FC = () => {
   const { creatorId } = useParams<{ creatorId: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const notify = useNotify();
 
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search]
+  );
+  const postId = searchParams.get("postId")?.trim() || "";
+
   const [creator, setCreator] = useState<any>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [postContext, setPostContext] = useState<Record<string, any> | null>(
+    null
+  );
+  const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
   const [loading, setLoading] = useState(true);
 
-  // Mode: 'gift' or 'buy'
   const [mode, setMode] = useState<"gift" | "buy">("gift");
-  const [selectedTierId, setSelectedTierId] = useState<string>("sparkler");
-  const [giftStarsAmount, setGiftStarsAmount] = useState(100);
-  const [cheerNote, setCheerNote] = useState("");
-  const [buyStarsAmount, setBuyStarsAmount] = useState(100);
+  const [selectedTierId, setSelectedTierId] = useState<string>("spark");
+  const [giftStarsAmount, setGiftStarsAmount] = useState<number>(100);
+  const [cheerNote, setCheerNote] = useState<string>("");
+  const [buyStarsAmount, setBuyStarsAmount] = useState<number>(250);
 
-  // User balances
-  const [userStarsBalance, setUserStarsBalance] = useState(0);
+  const [userStarsBalance, setUserStarsBalance] = useState<number>(0);
 
-  // Payment form states for buying stars
-  const [selectedProvider, setSelectedProvider] = useState<"bKash" | "Nagad">("bKash");
+  const [selectedProvider, setSelectedProvider] = useState<"bKash" | "Nagad">(
+    "bKash"
+  );
   const [paymentPhone, setPaymentPhone] = useState("");
   const [paymentTxId, setPaymentTxId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showParticles, setShowParticles] = useState(false);
+  const [giftSuccessDone, setGiftSuccessDone] = useState(false);
 
-  // Admin Dashboard payment accounts ONLY for buying stars
-  const [platformData, setPlatformData] = useState<Record<string, any> | null>(null);
-  const [platformFallbackData, setPlatformFallbackData] = useState<Record<string, any> | null>(null);
+  const [platformData, setPlatformData] = useState<Record<string, any> | null>(
+    null
+  );
+  const [platformFallbackData, setPlatformFallbackData] = useState<Record<
+    string,
+    any
+  > | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [refreshSeed] = useState<number>(() =>
     getNextRefreshSeed(`gift_buy_stars_${creatorId || "default"}`)
@@ -164,10 +150,12 @@ export const GiftStarsPage: React.FC = () => {
           if (uSnap.exists()) {
             const data = uSnap.data();
             setUserStarsBalance(
-              data.starsBalance ??
-                data.purchasedStars ??
-                data.sparks ??
-                0
+              Number(
+                data.starsBalance ??
+                  data.purchasedStars ??
+                  data.sparks ??
+                  0
+              )
             );
           } else {
             const localSparks = Number(
@@ -176,7 +164,7 @@ export const GiftStarsPage: React.FC = () => {
             setUserStarsBalance(localSparks);
           }
         } catch {
-          // Fallback
+          // Ignore read error
         }
       }
     });
@@ -192,9 +180,9 @@ export const GiftStarsPage: React.FC = () => {
           } else {
             setCreator({
               id: creatorId,
-              displayName: "Creator Member",
-              username: "creator",
-              photoURL: creatorAvatar1,
+              displayName: "Community Creator",
+              username: "",
+              photoURL: "",
             });
           }
           setLoading(false);
@@ -202,9 +190,9 @@ export const GiftStarsPage: React.FC = () => {
         () => {
           setCreator({
             id: creatorId,
-            displayName: "Creator Member",
-            username: "creator",
-            photoURL: creatorAvatar1,
+            displayName: "Community Creator",
+            username: "",
+            photoURL: "",
           });
           setLoading(false);
         }
@@ -213,31 +201,40 @@ export const GiftStarsPage: React.FC = () => {
       setLoading(false);
     }
 
+    let unsubPost: (() => void) | undefined;
+    if (postId) {
+      unsubPost = onSnapshot(
+        doc(db, "scam_posts", postId),
+        (pSnap) => {
+          if (pSnap.exists()) {
+            setPostContext({ id: pSnap.id, ...pSnap.data() });
+          }
+        },
+        () => {}
+      );
+    }
+
     const unsubPayments = onSnapshot(
       doc(db, "settings", "payments"),
-      (snap) => {
-        setPlatformData(snap.exists() ? snap.data() : null);
-      },
+      (snap) => setPlatformData(snap.exists() ? snap.data() : null),
       () => setPlatformData(null)
     );
 
     const unsubPlatform = onSnapshot(
       doc(db, "settings", "platform"),
-      (snap) => {
-        setPlatformFallbackData(snap.exists() ? snap.data() : null);
-      },
+      (snap) => setPlatformFallbackData(snap.exists() ? snap.data() : null),
       () => setPlatformFallbackData(null)
     );
 
     return () => {
       unsubAuth();
       if (unsubCreator) unsubCreator();
+      if (unsubPost) unsubPost();
       unsubPayments();
       unsubPlatform();
     };
-  }, [creatorId]);
+  }, [creatorId, postId]);
 
-  // Resolve Admin Dashboard payment accounts
   const configuredAccounts = useMemo(() => {
     const fromPayments = extractConfiguredMobileAccounts(platformData);
     const fromPlatform = extractConfiguredMobileAccounts(platformFallbackData);
@@ -273,12 +270,27 @@ export const GiftStarsPage: React.FC = () => {
   const activeAccount =
     selectedProvider === "bKash" ? rotatedBkash : rotatedNagad;
 
+  const creatorName = getSafeDisplayName(
+    creator,
+    postContext?.reporterName || "Creator"
+  );
+  const creatorHandle = getSafePublicUsername(creator);
+  const creatorAvatar =
+    (creator?.photoURL && String(creator.photoURL).trim()) ||
+    (creator?.avatarUrl && String(creator.avatarUrl).trim()) ||
+    (postContext?.reporterAvatar && String(postContext.reporterAvatar).trim()) ||
+    "";
+  const creatorInitial = (creatorName || "C").trim().charAt(0).toUpperCase();
+  const totalReceived = Number(
+    creator?.totalStarsReceived || creator?.earnedStars || 0
+  );
+
   const handleCopy = (text: string, key: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     triggerHaptic();
-    notify(`${label} number copied!`, "success");
-    setTimeout(() => setCopiedKey(null), 2500);
+    notify(`${label} number copied`, "success");
+    setTimeout(() => setCopiedKey(null), 2400);
   };
 
   const handleSelectTier = (tier: GiftTier) => {
@@ -289,35 +301,34 @@ export const GiftStarsPage: React.FC = () => {
 
   const handleGiftSubmit = async () => {
     if (!currentUser) {
-      notify("Please sign in to gift stars!", "error");
+      notify("Please sign in to gift stars", "error");
+      const returnUrl = postId
+        ? `/gift-stars/${creatorId}?postId=${encodeURIComponent(postId)}`
+        : `/gift-stars/${creatorId}`;
       navigate("/signin", {
-        state: { returnTo: `/gift-stars/${creatorId}`, from: "/loops" },
+        state: { returnTo: returnUrl, from: "/loops" },
       });
       return;
     }
     if (!creatorId) return;
 
     if (giftStarsAmount <= 0) {
-      notify("Please enter a valid star amount", "error");
+      notify("Please enter a valid star quantity", "error");
       return;
     }
 
     if (userStarsBalance < giftStarsAmount) {
+      const shortfall = Math.max(100, giftStarsAmount - userStarsBalance);
       notify(
-        `You need ${giftStarsAmount} stars, but only have ${userStarsBalance} stars. Top up to continue!`,
+        `You need ${giftStarsAmount.toLocaleString()} Stars (available: ${userStarsBalance.toLocaleString()}). Top up your balance to continue.`,
         "info"
       );
-      setBuyStarsAmount(
-        giftStarsAmount - userStarsBalance > 100
-          ? giftStarsAmount - userStarsBalance
-          : 100
-      );
+      setBuyStarsAmount(shortfall);
       setMode("buy");
       return;
     }
 
     setIsSubmitting(true);
-    setShowParticles(true);
     triggerHaptic();
 
     try {
@@ -325,88 +336,101 @@ export const GiftStarsPage: React.FC = () => {
       setUserStarsBalance(newSenderBal);
       localStorage.setItem("user_deep_sparks", String(newSenderBal));
 
-      try {
-        await updateDoc(doc(db, "users", currentUser.uid), {
-          starsBalance: increment(-giftStarsAmount),
-        });
-      } catch {
-        // Fallback
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        starsBalance: increment(-giftStarsAmount),
+      }).catch(() => {});
+
+      await updateDoc(doc(db, "users", creatorId), {
+        earnedStars: increment(giftStarsAmount),
+        totalStarsReceived: increment(giftStarsAmount),
+      }).catch(() => {});
+
+      if (postId) {
+        await updateDoc(doc(db, "scam_posts", postId), {
+          giftedStarsCount: increment(giftStarsAmount),
+        }).catch(() => {});
       }
 
-      try {
-        await updateDoc(doc(db, "users", creatorId), {
-          earnedStars: increment(giftStarsAmount),
-          totalStarsReceived: increment(giftStarsAmount),
-        });
-      } catch {
-        // Non-fatal
-      }
+      const senderLabel = getSafeDisplayName(
+        currentUser,
+        currentUser.email?.split("@")[0] || "Member"
+      );
 
       const giftDoc = await addDoc(collection(db, "star_gifts"), {
         senderUid: currentUser.uid,
-        senderName:
-          currentUser.displayName ||
-          currentUser.email?.split("@")[0] ||
-          "Member",
+        senderName: senderLabel,
         senderAvatar: currentUser.photoURL || "",
         recipientUid: creatorId,
-        recipientName: creator?.displayName || "Creator",
+        recipientName: creatorName,
+        postId: postId || null,
         starsCount: giftStarsAmount,
         note: cheerNote.trim(),
         createdAt: Date.now(),
       });
 
-      // Post notification to creator's feed
+      const targetLink = postId
+        ? `/loops/post/${postId}`
+        : `/loops/profile/${creatorId}`;
+
       addDoc(collection(db, "news_hub_notifications"), {
+        recipientId: creatorId,
         userId: creatorId,
+        senderId: currentUser.uid,
         fromUserId: currentUser.uid,
-        fromUserName:
-          currentUser.displayName ||
-          currentUser.email?.split("@")[0] ||
-          "Supporter",
+        senderName: senderLabel,
+        fromUserName: senderLabel,
+        senderAvatar: currentUser.photoURL || "",
         fromUserAvatar: currentUser.photoURL || "",
         type: "star_gift",
-        title: `Gifted ${giftStarsAmount} Stars! 🌟`,
+        title: `Gifted ${giftStarsAmount} Stars`,
+        text: cheerNote.trim()
+          ? `sent ${giftStarsAmount} Stars: "${cheerNote.trim().slice(0, 60)}"`
+          : postId
+          ? `sent ${giftStarsAmount} Stars on your post`
+          : `sent you ${giftStarsAmount} Stars on Loops`,
         body: cheerNote.trim()
-          ? `sent ${giftStarsAmount} Stars with note: "${cheerNote.trim().slice(0, 50)}"`
-          : `sent you ${giftStarsAmount} Stars on Loops!`,
+          ? `sent ${giftStarsAmount} Stars: "${cheerNote.trim().slice(0, 60)}"`
+          : `sent you ${giftStarsAmount} Stars on Loops`,
         targetId: giftDoc.id,
+        postId: postId || null,
         isRead: false,
         read: false,
         createdAt: Date.now(),
-        link: `/loops/profile/${creatorId}`,
+        link: targetLink,
       }).catch(() => {});
 
+      setGiftSuccessDone(true);
       notify(
-        `Successfully gifted ${giftStarsAmount} Stars to ${
-          creator?.displayName || "Creator"
-        }! 🎉`,
+        `Sent ${giftStarsAmount.toLocaleString()} Stars to ${creatorName}`,
         "success"
       );
 
       setTimeout(() => {
-        navigate(`/loops/profile/${creatorId}`);
-      }, 1400);
+        if (postId) {
+          navigate(`/loops/post/${postId}`, { replace: true });
+        } else {
+          navigate(`/loops/profile/${creatorId}`, { replace: true });
+        }
+      }, 1100);
     } catch {
-      notify("Failed to gift stars", "error");
+      notify("Could not send stars right now. Please try again.", "error");
       setIsSubmitting(false);
-      setShowParticles(false);
     }
   };
 
   const handleBuySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
-      notify("Please sign in to buy stars!", "error");
+      notify("Please sign in to top up stars", "error");
       return;
     }
     if (!activeAccount) {
       notify("No payment account configured yet.", "error");
       return;
     }
-    if (!paymentPhone || !paymentTxId) {
+    if (!paymentPhone.trim() || !paymentTxId.trim()) {
       notify(
-        `Please enter your ${activeAccount.provider} number and Transaction ID`,
+        `Enter your ${activeAccount.provider} number and Transaction ID`,
         "error"
       );
       return;
@@ -418,31 +442,31 @@ export const GiftStarsPage: React.FC = () => {
     try {
       await addDoc(collection(db, "star_requests"), {
         userId: currentUser.uid,
-        userName:
-          currentUser.displayName ||
-          currentUser.email?.split("@")[0] ||
-          "User",
+        userName: getSafeDisplayName(
+          currentUser,
+          currentUser.email?.split("@")[0] || "Member"
+        ),
         userEmail: currentUser.email || "",
         starsRequested: buyStarsAmount,
         amountBDT: buyStarsAmount,
         paymentMethod: activeAccount.provider.toLowerCase(),
         officialNumber: activeAccount.number,
         officialAccountType: activeAccount.type,
-        phone: paymentPhone,
+        phone: paymentPhone.trim(),
         txId: paymentTxId.trim().toUpperCase(),
         status: "pending",
         createdAt: Date.now(),
       });
 
       notify(
-        `Star order submitted for ${buyStarsAmount} Stars (৳${buyStarsAmount})! Admin will confirm payment shortly.`,
+        `Top-up order for ${buyStarsAmount.toLocaleString()} Stars (৳${buyStarsAmount.toLocaleString()}) submitted for verification`,
         "success"
       );
       setPaymentPhone("");
       setPaymentTxId("");
       setMode("gift");
     } catch {
-      notify("Failed to submit star order", "error");
+      notify("Failed to submit star top-up order", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -452,488 +476,688 @@ export const GiftStarsPage: React.FC = () => {
     return <ProfileSettingsPageSkeleton />;
   }
 
-  const activeTier = GIFT_TIERS.find((t) => t.id === selectedTierId) || GIFT_TIERS[1];
+  const postSnippet =
+    (postContext?.title && String(postContext.title).trim()) ||
+    (postContext?.description && String(postContext.description).trim()) ||
+    "";
+
+  const hasEnoughBalance = userStarsBalance >= giftStarsAmount;
 
   return (
-    <div className="relative min-h-screen bg-[#F5F9FF] dark:bg-[#090A0E] text-zinc-900 dark:text-zinc-100 font-sans pb-28 overflow-x-hidden selection:bg-amber-500/30">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#090A0D] text-zinc-900 dark:text-zinc-100 font-sans pb-24">
       <SEO
-        title={`Support ${creator.displayName} with Stars • DEEP SHOP`}
-        description={`Gift stars to support ${creator.displayName}'s work and content on DEEP SHOP Loops.`}
+        title={`Gift Stars to ${creatorName} · DEEP SHOP`}
+        description={`Support ${creatorName} with Stars on DEEP SHOP Loops.`}
       />
 
-      {/* Floating Particle Fireworks */}
-      <AnimatePresence>
-        {showParticles && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
-          >
-            {Array.from({ length: 24 }).map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-                animate={{
-                  scale: [0, 1.4, 1],
-                  x: (Math.random() - 0.5) * 420,
-                  y: (Math.random() - 0.5) * 520,
-                  opacity: [1, 1, 0],
-                }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-                className="absolute text-2xl"
-              >
-                {i % 3 === 0 ? "🌟" : i % 3 === 1 ? "✨" : "❤️"}
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Ambient Top Glow */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-gradient-to-b from-amber-400/25 via-amber-200/10 to-transparent dark:from-amber-500/15 dark:via-amber-500/5 dark:to-transparent z-0 blur-2xl"
-      />
-
-      {/* STICKY HEADER */}
-      <header className="sticky top-0 z-40 bg-white/85 dark:bg-[#111319]/85 backdrop-blur-xl border-b border-zinc-200/80 dark:border-white/10 shadow-xs">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between gap-3">
+      {/* TOP BAR */}
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-[#090A0D]/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer shrink-0"
+              className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition cursor-pointer shrink-0"
               aria-label="Go back"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4.5 h-4.5" />
             </button>
-            <div className="flex items-center gap-2 min-w-0">
-              <Star className="w-4.5 h-4.5 text-amber-500 fill-amber-500 shrink-0" />
-              <h1 className="text-base font-black text-zinc-950 dark:text-white truncate">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-950 dark:text-white truncate">
                 Gift Stars
               </h1>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate hidden sm:block">
+                Direct creator appreciation · 1 Star = ৳1 BDT
+              </p>
             </div>
           </div>
 
           <button
             type="button"
-            onClick={() => setMode((m) => (m === "gift" ? "buy" : "gift"))}
-            className="px-3.5 py-1.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0"
+            onClick={() => {
+              triggerHaptic();
+              setMode((m) => (m === "gift" ? "buy" : "gift"));
+            }}
+            className="min-h-[40px] px-3.5 rounded-xl bg-amber-500/12 hover:bg-amber-500/20 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-xs sm:text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap cursor-pointer shrink-0 tabular-nums"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{userStarsBalance} ★</span>
+            <Star className="w-4 h-4 fill-amber-500 text-amber-500 shrink-0" />
+            <span>{userStarsBalance.toLocaleString()} Stars</span>
+            <span className="text-amber-600/70 dark:text-amber-400/70">·</span>
+            <span className="underline underline-offset-2">
+              {mode === "gift" ? "Top up" : "Send gift"}
+            </span>
           </button>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-lg mx-auto px-4 pt-5 space-y-5">
-        {/* CREATOR HERO CARD */}
-        <div className="relative overflow-hidden rounded-[28px] bg-white/90 dark:bg-[#14161E]/90 backdrop-blur-xl p-5 border border-zinc-200/80 dark:border-white/10 shadow-xl space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="relative shrink-0">
-              <img
-                src={creator.photoURL || creator.avatarUrl || creatorAvatar1}
-                alt={creator.displayName}
-                referrerPolicy="no-referrer"
-                className="w-16 h-16 rounded-full object-cover ring-4 ring-amber-500/30 shadow-md"
-              />
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs">
-                <Star className="w-3.5 h-3.5 fill-white" />
-              </div>
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-base font-black text-zinc-950 dark:text-white truncate">
-                  {creator.displayName}
-                </h2>
-                <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500 shrink-0" />
-              </div>
-              <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 truncate">
-                @{creator.username || creator.shopName?.toLowerCase().replace(/\s+/g, "_") || "creator"}
-              </p>
-
-              <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11.5px] font-bold">
-                <Zap className="w-3 h-3 fill-current" />
-                <span>
-                  {(creator.totalStarsReceived || creator.earnedStars || 0).toLocaleString()} Stars Received
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* NAVIGATION TABS */}
-        <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-white/80 dark:bg-[#14161E]/80 backdrop-blur-md border border-zinc-200/80 dark:border-white/10 text-xs font-extrabold shadow-xs">
-          <button
-            type="button"
-            onClick={() => setMode("gift")}
-            className={`py-2.5 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
-              mode === "gift"
-                ? "bg-amber-500 text-white shadow-md font-black"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
-            }`}
-          >
-            <Star className="w-4 h-4 fill-current shrink-0" />
-            <span>Send Gift</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("buy")}
-            className={`py-2.5 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
-              mode === "buy"
-                ? "bg-[#1877F2] text-white shadow-md font-black"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
-            }`}
-          >
-            <CreditCard className="w-4 h-4 shrink-0" />
-            <span>Top Up Stars</span>
-          </button>
-        </div>
-
-        {/* MODE 1: GIFT STARS TIERS */}
-        {mode === "gift" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
-                Choose Gift Tier:
-              </h3>
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                1 Star = ৳1.00 BDT
-              </span>
-            </div>
-
-            {/* GIFT TIER GRID */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {GIFT_TIERS.map((tier) => {
-                const isSelected = selectedTierId === tier.id;
-                return (
-                  <button
-                    key={tier.id}
-                    type="button"
-                    onClick={() => handleSelectTier(tier)}
-                    className={`relative p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 active:scale-[0.98] ${
-                      isSelected
-                        ? `${tier.colorBg} ${tier.colorBorder} ring-2 ring-amber-500 shadow-lg scale-[1.02]`
-                        : "bg-white dark:bg-[#14161E] border-zinc-200/80 dark:border-white/10 hover:border-amber-400/50"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-1">
-                      <span className="text-3xl">{tier.emoji}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                          isSelected
-                            ? "bg-amber-500 text-white"
-                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-                        }`}
-                      >
-                        {tier.badge}
-                      </span>
+      {/* MAIN RESPONSIVE CONTAINER */}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT COLUMN: RECIPIENT & WALLET SUMMARY */}
+          <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-24">
+            {/* Creator Summary Card */}
+            <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-5 space-y-4 shadow-2xs">
+              <div className="flex items-center gap-3.5">
+                <div className="relative shrink-0">
+                  {creatorAvatar ? (
+                    <img
+                      src={creatorAvatar}
+                      alt={creatorName}
+                      referrerPolicy="no-referrer"
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center justify-center text-xl font-bold">
+                      {creatorInitial}
                     </div>
+                  )}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center ring-2 ring-white dark:ring-zinc-900">
+                    <Star className="w-3.5 h-3.5 fill-white" />
+                  </div>
+                </div>
 
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-black text-zinc-950 dark:text-white">
-                        {tier.name}
-                      </p>
-                      <p className={`text-sm font-black font-mono ${tier.colorText}`}>
-                        {tier.stars} ★
-                      </p>
-                      <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
-                        {tier.tagline}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* CUSTOM STARS AMOUNT STEPPER */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#14161E] border border-zinc-200/80 dark:border-white/10 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                  Custom Star Quantity:
-                </label>
-                <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
-                  ৳{giftStarsAmount} BDT
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setGiftStarsAmount((v) => Math.max(1, v - 50));
-                  }}
-                  className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 active:scale-90 transition cursor-pointer shrink-0"
-                >
-                  <Minus className="w-4 h-4 stroke-[2.5]" />
-                </button>
-
-                <input
-                  type="number"
-                  min={1}
-                  value={giftStarsAmount}
-                  onChange={(e) => {
-                    const val = Math.max(1, parseInt(e.target.value) || 1);
-                    setGiftStarsAmount(val);
-                  }}
-                  className="flex-1 h-11 px-4 text-center font-mono font-black text-lg rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 outline-none text-zinc-950 dark:text-white"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setGiftStarsAmount((v) => v + 50);
-                  }}
-                  className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 active:scale-90 transition cursor-pointer shrink-0"
-                >
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
-                </button>
-              </div>
-            </div>
-
-            {/* ENCOURAGING NOTE / MESSAGE INPUT */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#14161E] border border-zinc-200/80 dark:border-white/10 space-y-2">
-              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5 text-amber-500" />
-                <span>Add Support Note (Optional):</span>
-              </label>
-              <textarea
-                rows={2}
-                value={cheerNote}
-                onChange={(e) => setCheerNote(e.target.value)}
-                placeholder="Write an encouraging note to show your appreciation..."
-                className="w-full p-3 text-xs rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-950 dark:text-white placeholder:text-zinc-400 outline-none resize-none"
-              />
-            </div>
-
-            {/* SEND GIFT SUBMIT BUTTON */}
-            <button
-              type="button"
-              onClick={handleGiftSubmit}
-              disabled={isSubmitting}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm shadow-xl active:scale-[0.98] transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
-            >
-              <Star className="w-5 h-5 fill-white shrink-0" />
-              <span>
-                Send {activeTier.emoji} {giftStarsAmount} Stars to {creator.displayName}
-              </span>
-            </button>
-          </div>
-        )}
-
-        {/* MODE 2: TOP UP / BUY STARS */}
-        {mode === "buy" && (
-          <form
-            onSubmit={handleBuySubmit}
-            className="p-5 rounded-3xl bg-white dark:bg-[#14161E] border border-zinc-200/80 dark:border-white/10 shadow-xl space-y-4"
-          >
-            <div>
-              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-2">
-                Select Top-Up Package (1 Star = ৳1.00 BDT):
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[100, 500, 1000, 5000].map((pkg) => (
-                  <button
-                    key={pkg}
-                    type="button"
-                    onClick={() => setBuyStarsAmount(pkg)}
-                    className={`p-3 rounded-2xl text-center transition cursor-pointer border ${
-                      buyStarsAmount === pkg
-                        ? "bg-[#1877F2] text-white border-[#1877F2] shadow-md ring-2 ring-blue-400"
-                        : "bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
-                    }`}
-                  >
-                    <span className="block font-mono font-black text-xs whitespace-nowrap">
-                      {pkg} ★
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white truncate">
+                      {creatorName}
+                    </h2>
+                    <CheckCircle2 className="w-4 h-4 text-[#0095F6] shrink-0" />
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 truncate">
+                    {creatorHandle ? `@${creatorHandle}` : "Verified Member"} ·{" "}
+                    <span className="tabular-nums font-medium text-zinc-700 dark:text-zinc-300">
+                      {totalReceived.toLocaleString()} Stars received
                     </span>
-                    <span className="block text-[11px] opacity-90 mt-0.5 whitespace-nowrap font-bold">
-                      ৳{pkg} BDT
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {!hasBkash && !hasNagad ? (
-              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold">No payment number configured yet</p>
-                  <p className="text-[11px] opacity-85 mt-0.5">
-                    Official bKash / Nagad numbers will appear automatically once configured in Seller Payment Settings.
                   </p>
                 </div>
               </div>
-            ) : (
-              <>
-                {/* PROVIDER TABS */}
-                {hasBkash && hasNagad && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setSelectedProvider("bKash");
-                      }}
-                      className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-center justify-between ${
-                        selectedProvider === "bKash"
-                          ? "bg-pink-50 dark:bg-pink-950/40 border-[#E2125B] ring-1 ring-[#E2125B]"
-                          : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <span className="text-xs font-black text-[#E2125B] block whitespace-nowrap">
-                          bKash ({rotatedBkash?.type || "Personal"})
-                        </span>
-                        <span className="text-[10px] text-zinc-500 whitespace-nowrap">
-                          {getMobileActionLabel(rotatedBkash?.type)}
-                        </span>
-                      </div>
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                          selectedProvider === "bKash"
-                            ? "border-[#E2125B] bg-[#E2125B] text-white"
-                            : "border-zinc-300"
-                        }`}
-                      >
-                        {selectedProvider === "bKash" && (
-                          <Check className="w-2.5 h-2.5 stroke-[3]" />
-                        )}
-                      </div>
-                    </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setSelectedProvider("Nagad");
-                      }}
-                      className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-center justify-between ${
-                        selectedProvider === "Nagad"
-                          ? "bg-orange-50 dark:bg-orange-950/40 border-[#F57C20] ring-1 ring-[#F57C20]"
-                          : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <span className="text-xs font-black text-[#F57C20] block whitespace-nowrap">
-                          Nagad ({rotatedNagad?.type || "Personal"})
-                        </span>
-                        <span className="text-[10px] text-zinc-500 whitespace-nowrap">
-                          {getMobileActionLabel(rotatedNagad?.type)}
-                        </span>
-                      </div>
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                          selectedProvider === "Nagad"
-                            ? "border-[#F57C20] bg-[#F57C20] text-white"
-                            : "border-zinc-300"
-                        }`}
-                      >
-                        {selectedProvider === "Nagad" && (
-                          <Check className="w-2.5 h-2.5 stroke-[3]" />
-                        )}
-                      </div>
-                    </button>
-                  </div>
-                )}
-
-                {/* OFFICIAL PAYMENT NUMBER */}
-                {activeAccount && (
-                  <div
-                    className={`p-3.5 rounded-2xl border text-xs space-y-2.5 ${
-                      selectedProvider === "bKash"
-                        ? "bg-pink-50/70 dark:bg-pink-950/25 border-pink-200 dark:border-pink-900/50"
-                        : "bg-orange-50/70 dark:bg-orange-950/25 border-orange-200 dark:border-orange-900/50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={`font-extrabold whitespace-nowrap ${
-                          selectedProvider === "bKash"
-                            ? "text-[#E2125B] dark:text-pink-300"
-                            : "text-[#F57C20] dark:text-orange-300"
-                        }`}
-                      >
-                        Official {selectedProvider} ({activeAccount.type}) Number:
+              {/* Contextual Post Banner when gifting from a normal post */}
+              {postId && (
+                <div className="rounded-xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80 p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-zinc-700 dark:text-zinc-300">
+                      <FileText className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>Gifting on post</span>
+                    </span>
+                    {Number(postContext?.giftedStarsCount || 0) > 0 && (
+                      <span className="tabular-nums font-semibold text-amber-600 dark:text-amber-400">
+                        {Number(postContext?.giftedStarsCount || 0).toLocaleString()} ★ on post
                       </span>
-                      <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-300 whitespace-nowrap">
-                        {getMobileActionLabel(activeAccount.type)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-xs">
-                      <span className="text-base font-black font-mono tracking-wider text-zinc-950 dark:text-white truncate">
-                        {activeAccount.number}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleCopy(
-                            activeAccount.number,
-                            activeAccount.id,
-                            `${activeAccount.provider} (${activeAccount.type})`
-                          )
-                        }
-                        className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
-                      >
-                        {copiedKey === activeAccount.id ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                        <span>
-                          {copiedKey === activeAccount.id ? "Copied" : "Copy"}
-                        </span>
-                      </button>
-                    </div>
+                    )}
                   </div>
-                )}
+                  {postSnippet ? (
+                    <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 line-clamp-2 leading-relaxed">
+                      {postSnippet}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Your Stars will appear directly on this post&apos;s counter.
+                    </p>
+                  )}
+                </div>
+              )}
 
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
-                      Your {activeAccount?.provider || "Mobile"} Number *
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="01XXXXXXXXX"
-                      value={paymentPhone}
-                      onChange={(e) => setPaymentPhone(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 outline-none font-mono"
-                      required
-                    />
+              {/* Wallet Balance Strip */}
+              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0">
+                    <Wallet className="w-4 h-4" />
                   </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
-                      Transaction ID (TrxID) *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 9J283HX10"
-                      value={paymentTxId}
-                      onChange={(e) => setPaymentTxId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 outline-none font-mono uppercase"
-                      required
-                    />
+                  <div className="min-w-0">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 block">
+                      Available wallet balance
+                    </span>
+                    <span className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white tabular-nums">
+                      {userStarsBalance.toLocaleString()} Stars
+                    </span>
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !activeAccount}
-                  className="w-full py-4 rounded-2xl bg-[#1877F2] hover:bg-[#1465D6] text-white font-black text-sm shadow-xl transition active:scale-[0.98] cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                {mode === "gift" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setMode("buy");
+                    }}
+                    className="min-h-[38px] px-3.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-semibold hover:opacity-90 transition whitespace-nowrap cursor-pointer"
+                  >
+                    Add Stars
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setMode("gift");
+                    }}
+                    className="min-h-[38px] px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold hover:opacity-90 transition whitespace-nowrap cursor-pointer"
+                  >
+                    Back to Gift
+                  </button>
+                )}
+              </div>
+            </section>
+
+            {/* Creator Payout Assurance */}
+            <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-5 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Instant Creator Credit</span>
+              </div>
+              <p className="text-xs sm:text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Every Star you send is credited immediately to {creatorName}
+                &apos;s creator balance at a fixed 1 Star = ৳1.00 BDT rate, with
+                an instant notification on Loops.
+              </p>
+            </section>
+          </div>
+
+          {/* RIGHT COLUMN: INTERACTIVE FLOW */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Mode Switcher */}
+            <div className="grid grid-cols-2 p-1 rounded-2xl bg-zinc-200/70 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setMode("gift");
+                }}
+                className={`min-h-[44px] px-4 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer ${
+                  mode === "gift"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                }`}
+              >
+                <Star
+                  className={`w-4 h-4 shrink-0 ${
+                    mode === "gift"
+                      ? "fill-amber-500 text-amber-500"
+                      : "text-current"
+                  }`}
+                />
+                <span>Send Gift</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setMode("buy");
+                }}
+                className={`min-h-[44px] px-4 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer ${
+                  mode === "buy"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                }`}
+              >
+                <CreditCard className="w-4 h-4 shrink-0" />
+                <span>Top Up Balance</span>
+              </button>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {mode === "gift" ? (
+                <motion.div
+                  key="gift-panel"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16 }}
+                  className="space-y-5"
                 >
-                  Confirm Star Order for {buyStarsAmount} Stars (৳{buyStarsAmount})
-                </button>
-              </>
-            )}
-          </form>
-        )}
+                  {/* Tier Grid Card */}
+                  <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-6 space-y-4 shadow-2xs">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white">
+                        Select a Star bundle
+                      </h3>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                        1 Star = ৳1 BDT
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {GIFT_TIERS.map((tier) => {
+                        const isSelected =
+                          selectedTierId === tier.id &&
+                          giftStarsAmount === tier.stars;
+                        return (
+                          <button
+                            key={tier.id}
+                            type="button"
+                            onClick={() => handleSelectTier(tier)}
+                            className={`p-3.5 sm:p-4 rounded-2xl border text-left transition flex flex-col justify-between gap-3 cursor-pointer active:scale-[0.99] ${
+                              isSelected
+                                ? "bg-amber-500/[0.08] dark:bg-amber-500/[0.12] border-amber-500 ring-1 ring-amber-500"
+                                : "bg-zinc-50/70 dark:bg-zinc-950/50 border-zinc-200/90 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                                  isSelected
+                                    ? "bg-amber-500 text-white"
+                                    : "bg-amber-500/12 text-amber-600 dark:text-amber-400"
+                                }`}
+                              >
+                                <Star className="w-4 h-4 fill-current" />
+                              </div>
+                              <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                                {tier.tierNote}
+                              </span>
+                            </div>
+
+                            <div className="space-y-0.5">
+                              <div className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white tabular-nums">
+                                {tier.stars.toLocaleString()}{" "}
+                                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                  Stars
+                                </span>
+                              </div>
+                              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                                {tier.name} ·{" "}
+                                <span className="tabular-nums text-zinc-500 dark:text-zinc-400 font-normal">
+                                  ৳{tier.stars.toLocaleString()}
+                                </span>
+                              </p>
+                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 pt-0.5">
+                                {tier.tagline}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Quantity Stepper */}
+                    <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label
+                          htmlFor="custom-star-qty"
+                          className="text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300"
+                        >
+                          Custom Star amount
+                        </label>
+                        <span className="text-xs sm:text-sm font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+                          Value: ৳{giftStarsAmount.toLocaleString()} BDT
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setGiftStarsAmount((v) => Math.max(10, v - 50));
+                          }}
+                          aria-label="Decrease stars by 50"
+                          className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-800 dark:text-zinc-200 active:scale-95 transition cursor-pointer shrink-0"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+
+                        <input
+                          id="custom-star-qty"
+                          type="number"
+                          min={1}
+                          value={giftStarsAmount}
+                          onChange={(e) => {
+                            const val = Math.max(
+                              1,
+                              parseInt(e.target.value, 10) || 1
+                            );
+                            setGiftStarsAmount(val);
+                          }}
+                          className="flex-1 h-11 px-4 text-center font-bold text-base sm:text-lg tabular-nums rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 outline-none text-zinc-950 dark:text-white"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setGiftStarsAmount((v) => v + 50);
+                          }}
+                          aria-label="Increase stars by 50"
+                          className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-800 dark:text-zinc-200 active:scale-95 transition cursor-pointer shrink-0"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Cheer Note + Submit Section */}
+                  <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-6 space-y-4 shadow-2xs">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label
+                          htmlFor="gift-cheer-note"
+                          className="text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5"
+                        >
+                          <MessageSquare className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span>Add a message (optional)</span>
+                        </label>
+                        <span className="text-xs text-zinc-400 tabular-nums">
+                          {cheerNote.length}/160
+                        </span>
+                      </div>
+                      <textarea
+                        id="gift-cheer-note"
+                        rows={2}
+                        maxLength={160}
+                        value={cheerNote}
+                        onChange={(e) => setCheerNote(e.target.value)}
+                        placeholder={`Write an encouraging note for ${creatorName}...`}
+                        className="w-full p-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 text-zinc-950 dark:text-white placeholder:text-zinc-400 outline-none resize-none"
+                      />
+                    </div>
+
+                    {!hasEnoughBalance && (
+                      <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 p-3.5 flex items-center justify-between gap-3 text-xs sm:text-sm">
+                        <span className="text-amber-800 dark:text-amber-300">
+                          You need{" "}
+                          <strong className="tabular-nums">
+                            {(giftStarsAmount - userStarsBalance).toLocaleString()}
+                          </strong>{" "}
+                          more Stars for this gift.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setBuyStarsAmount(
+                              Math.max(100, giftStarsAmount - userStarsBalance)
+                            );
+                            setMode("buy");
+                          }}
+                          className="min-h-[36px] px-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold whitespace-nowrap cursor-pointer shrink-0"
+                        >
+                          Top Up Now
+                        </button>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleGiftSubmit}
+                      disabled={isSubmitting || giftSuccessDone}
+                      className="w-full min-h-[50px] px-5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-bold text-sm sm:text-base transition cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 whitespace-nowrap"
+                    >
+                      {giftSuccessDone ? (
+                        <>
+                          <Check className="w-5 h-5 shrink-0" />
+                          <span>Stars Sent!</span>
+                        </>
+                      ) : isSubmitting ? (
+                        <span>Sending Stars...</span>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4.5 h-4.5 shrink-0" />
+                          <span className="tabular-nums">
+                            Send {giftStarsAmount.toLocaleString()} Stars · ৳
+                            {giftStarsAmount.toLocaleString()}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </section>
+                </motion.div>
+              ) : (
+                <motion.form
+                  key="buy-panel"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16 }}
+                  onSubmit={handleBuySubmit}
+                  className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-6 space-y-5 shadow-2xs"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white">
+                        Choose top-up package
+                      </h3>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                        1 Star = ৳1.00 BDT
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      {TOPUP_PACKAGES.map((pkg) => {
+                        const active = buyStarsAmount === pkg;
+                        return (
+                          <button
+                            key={pkg}
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setBuyStarsAmount(pkg);
+                            }}
+                            className={`p-3.5 rounded-xl border text-left transition cursor-pointer ${
+                              active
+                                ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white"
+                                : "bg-zinc-50 dark:bg-zinc-950/60 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                            }`}
+                          >
+                            <span className="block text-sm sm:text-base font-bold tabular-nums">
+                              {pkg.toLocaleString()} ★
+                            </span>
+                            <span
+                              className={`block text-xs mt-0.5 tabular-nums ${
+                                active
+                                  ? "text-zinc-300 dark:text-zinc-600"
+                                  : "text-zinc-500 dark:text-zinc-400"
+                              }`}
+                            >
+                              ৳{pkg.toLocaleString()} BDT
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="pt-1">
+                      <label
+                        htmlFor="topup-custom-amount"
+                        className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 block mb-1.5"
+                      >
+                        Or enter custom Star quantity (min 50)
+                      </label>
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          id="topup-custom-amount"
+                          type="number"
+                          min={50}
+                          value={buyStarsAmount}
+                          onChange={(e) =>
+                            setBuyStarsAmount(
+                              Math.max(50, parseInt(e.target.value, 10) || 50)
+                            )
+                          }
+                          className="flex-1 h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm font-bold tabular-nums outline-none focus:border-zinc-900 dark:focus:border-white"
+                        />
+                        <div className="h-11 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center text-sm font-bold tabular-nums text-zinc-900 dark:text-white whitespace-nowrap">
+                          ৳{buyStarsAmount.toLocaleString()} BDT
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!hasBkash && !hasNagad ? (
+                    <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs sm:text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold">
+                          Payment gateway not configured yet
+                        </p>
+                        <p className="text-xs opacity-85 mt-0.5 leading-relaxed">
+                          Official bKash or Nagad numbers appear automatically
+                          once configured in platform payment settings.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {hasBkash && hasNagad && (
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setSelectedProvider("bKash");
+                            }}
+                            className={`min-h-[48px] p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                              selectedProvider === "bKash"
+                                ? "bg-pink-50/80 dark:bg-pink-950/30 border-[#E2125B] ring-1 ring-[#E2125B]"
+                                : "bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <span className="text-xs sm:text-sm font-bold text-[#E2125B] block whitespace-nowrap">
+                                bKash · {rotatedBkash?.type || "Personal"}
+                              </span>
+                              <span className="text-[11px] text-zinc-500 block whitespace-nowrap">
+                                {getMobileActionLabel(rotatedBkash?.type)}
+                              </span>
+                            </div>
+                            <div
+                              className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center shrink-0 ${
+                                selectedProvider === "bKash"
+                                  ? "border-[#E2125B] bg-[#E2125B] text-white"
+                                  : "border-zinc-300 dark:border-zinc-700"
+                              }`}
+                            >
+                              {selectedProvider === "bKash" && (
+                                <Check className="w-3 h-3 stroke-[3]" />
+                              )}
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setSelectedProvider("Nagad");
+                            }}
+                            className={`min-h-[48px] p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                              selectedProvider === "Nagad"
+                                ? "bg-orange-50/80 dark:bg-orange-950/30 border-[#F57C20] ring-1 ring-[#F57C20]"
+                                : "bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <span className="text-xs sm:text-sm font-bold text-[#F57C20] block whitespace-nowrap">
+                                Nagad · {rotatedNagad?.type || "Personal"}
+                              </span>
+                              <span className="text-[11px] text-zinc-500 block whitespace-nowrap">
+                                {getMobileActionLabel(rotatedNagad?.type)}
+                              </span>
+                            </div>
+                            <div
+                              className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center shrink-0 ${
+                                selectedProvider === "Nagad"
+                                  ? "border-[#F57C20] bg-[#F57C20] text-white"
+                                  : "border-zinc-300 dark:border-zinc-700"
+                              }`}
+                            >
+                              {selectedProvider === "Nagad" && (
+                                <Check className="w-3 h-3 stroke-[3]" />
+                              )}
+                            </div>
+                          </button>
+                        </div>
+                      )}
+
+                      {activeAccount && (
+                        <div className="rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                              Official {selectedProvider} ({activeAccount.type})
+                            </span>
+                            <span className="text-zinc-500 dark:text-zinc-400">
+                              {getMobileActionLabel(activeAccount.type)} · ৳
+                              {buyStarsAmount.toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                            <span className="text-base sm:text-lg font-bold font-mono tabular-nums tracking-wider text-zinc-950 dark:text-white truncate">
+                              {activeAccount.number}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopy(
+                                  activeAccount.number,
+                                  activeAccount.id,
+                                  `${activeAccount.provider} (${activeAccount.type})`
+                                )
+                              }
+                              className="min-h-[38px] px-3.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                            >
+                              {copiedKey === activeAccount.id ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                              <span>
+                                {copiedKey === activeAccount.id
+                                  ? "Copied"
+                                  : "Copy"}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                          <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                            Sender {activeAccount?.provider || "Mobile"} Number
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="01XXXXXXXXX"
+                            value={paymentPhone}
+                            onChange={(e) => setPaymentPhone(e.target.value)}
+                            className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-zinc-900 dark:focus:border-white outline-none font-mono tabular-nums"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                            Transaction ID (TrxID)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 9J283HX10"
+                            value={paymentTxId}
+                            onChange={(e) => setPaymentTxId(e.target.value)}
+                            className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-zinc-900 dark:focus:border-white outline-none font-mono uppercase"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !activeAccount}
+                        className="w-full min-h-[50px] px-5 rounded-xl bg-zinc-950 dark:bg-white hover:opacity-90 text-white dark:text-zinc-950 font-bold text-sm sm:text-base transition active:scale-[0.99] cursor-pointer disabled:opacity-50 whitespace-nowrap tabular-nums"
+                      >
+                        {isSubmitting
+                          ? "Submitting verification..."
+                          : `Confirm Top-Up · ${buyStarsAmount.toLocaleString()} Stars (৳${buyStarsAmount.toLocaleString()})`}
+                      </button>
+                    </>
+                  )}
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </main>
     </div>
   );

@@ -224,9 +224,10 @@ export const NewsBottomDock: React.FC<{
       className="fixed bottom-4 inset-x-0 z-50 flex justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom)]"
     >
       <div
+        onTouchStart={(e) => e.stopPropagation()}
         className={`${
           isReelsVariant ? "loops-reels-dock-pill" : "loops-dock-pill"
-        } pointer-events-auto flex items-center justify-between gap-1 p-1.5 rounded-full max-w-[356px] w-full h-[60px]`}
+        } pointer-events-auto flex items-center justify-between gap-1 p-1.5 rounded-full max-w-[356px] w-full h-[60px] touch-manipulation`}
       >
         {items.map((item) => (
           <button
@@ -238,7 +239,7 @@ export const NewsBottomDock: React.FC<{
             }}
             title={item.label}
             aria-label={item.label}
-            className={`relative h-full flex-1 rounded-full flex items-center justify-center transition-all duration-200 active:scale-94 cursor-pointer ${
+            className={`relative h-full flex-1 rounded-full flex items-center justify-center transition-all duration-200 active:scale-94 cursor-pointer touch-manipulation ${
               item.isActive
                 ? isReelsVariant
                   ? "loops-reels-dock-active-pill text-white"

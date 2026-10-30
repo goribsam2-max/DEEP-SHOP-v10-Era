@@ -74,6 +74,7 @@ export const CornerUpLeft = c(["M9 14L4 9l5-5", "M20 20v-7a4 4 0 0 0-4-4H4"]);
 export const CreditCard = c(["M1 6a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V6z", "M1 10h22"]);
 export const Crown = c(["M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"]);
 export const Diamond = c(["M12 2L2 12l10 10 10-10z"]);
+export const Disc = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"]);
 export const DollarSign = c(["M12 1v22", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]);
 export const Download = c(["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10l5 5 5-5", "M12 15V3"]);
 export const Upload = c(["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M17 8l-5-5-5 5", "M12 3v12"]);

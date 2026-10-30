@@ -443,9 +443,9 @@ export async function linkPendingGuestOrderAndResolveDestination(
   }
 
   if (redirectParam) return redirectParam;
-  if (urlGuestOrder) return "/my-orders";
   if (locationSearch.includes("from=loops") || defaultPath.includes("/loops")) {
     return "/loops";
   }
+  if (urlGuestOrder) return "/my-orders";
   return defaultPath;
 }

@@ -195,6 +195,23 @@ export const LoopBookmarkIcon: React.FC<{
   </svg>
 );
 
+export const LoopStarIcon: React.FC<{
+  className?: string;
+  filled?: boolean;
+}> = ({ className = "w-[22px] h-[22px]", filled = false }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill={filled ? "currentColor" : "none"}
+    stroke="currentColor"
+    strokeWidth="1.95"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+);
+
 export interface LoopPostCardProps {
   post: ScamPost;
   authorProfile?: Partial<UserProfile> | Record<string, any> | null;
@@ -330,6 +347,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
 
   const commentsCount = Math.max(0, Number(post.commentsCount || 0));
   const sharesCount = Math.max(0, Number(post.sharesCount || 0));
+  const giftedStarsCount = Math.max(0, Number(post.giftedStarsCount || 0));
 
   const isScamAlert = isScamPostRecord(post);
   const repostBannerText =
@@ -717,6 +735,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             src={images[0]}
             alt={cleanTitle || displayUsername}
             wrapperClassName="w-full rounded-none"
+            skeletonClassName="rounded-none"
             className="w-full max-h-[640px] object-cover block rounded-none"
           />
         </div>
@@ -753,6 +772,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
                 navigate(`/loops/photo/${post.id}/${carouselIdx}`);
               }}
               wrapperClassName="w-full rounded-none"
+              skeletonClassName="rounded-none"
               className="w-full max-h-[640px] object-cover block cursor-pointer select-none rounded-none"
             />
 
@@ -820,7 +840,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
         </div>
       )}
 
-      {images.length === 0 && resolvedVideo && (
+      {resolvedVideo && (
         <div className="loops-edge-media w-full rounded-none overflow-hidden">
           <NewsVideoPlayer videoSource={resolvedVideo} />
         </div>
@@ -835,6 +855,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             src={post.gifUrl}
             alt="GIF"
             wrapperClassName="w-full rounded-none"
+            skeletonClassName="rounded-none"
             className="w-full max-h-[520px] object-cover block rounded-none"
           />
           <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-bold tracking-wider">
@@ -963,6 +984,53 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
               </span>
             )}
           </button>
+
+          {/* Gift Star on Normal Post */}
+          {post.reporterId && !isOwnPost && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic();
+                if (!currentUser) {
+                  if (onRequireAuth) {
+                    onRequireAuth();
+                  } else {
+                    navigate("/signin", {
+                      state: {
+                        returnTo: `/gift-stars/${encodeURIComponent(
+                          post.reporterId
+                        )}?postId=${encodeURIComponent(post.id)}`,
+                      },
+                    });
+                  }
+                  return;
+                }
+                navigate(
+                  `/gift-stars/${encodeURIComponent(
+                    post.reporterId
+                  )}?postId=${encodeURIComponent(post.id)}`
+                );
+              }}
+              aria-label="Gift Stars"
+              title="Gift Stars"
+              className={`inline-flex items-center gap-1.5 transition active:scale-90 cursor-pointer ${
+                giftedStarsCount > 0
+                  ? "text-amber-500"
+                  : "text-[#0f0f0f] dark:text-[#f5f5f5] hover:text-amber-500"
+              }`}
+            >
+              <LoopStarIcon
+                className="w-[22px] h-[22px]"
+                filled={giftedStarsCount > 0}
+              />
+              {giftedStarsCount > 0 && (
+                <span className="text-[14px] font-semibold tabular-nums">
+                  {formatLoopCount(giftedStarsCount)}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Right: Bookmark Save Ribbon */}

@@ -6,6 +6,10 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
 import { uploadToImgbb, compressImage } from "../services/imgbb";
 import { syncCurrentUserToSavedAccounts } from "../lib/savedAccounts";
+import {
+  validatePublicUsername,
+  validateRealPersonName,
+} from "../lib/authVoiceAndValidation";
 import { useCharacterLimit } from "../components/hooks/use-character-limit";
 import { useImageUpload } from "../components/hooks/use-image-upload";
 import {
@@ -144,6 +148,23 @@ export default function EditProfile() {
   const handleUpdate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!auth.currentUser) return;
+
+    const candidateName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const nameCheck = validateRealPersonName(candidateName, "নাম");
+    if (!nameCheck.isValid) {
+      notify(nameCheck.errorMsg, "error");
+      return;
+    }
+
+    const cleanedHandle = username.replace(/^@+/, "").trim();
+    if (cleanedHandle) {
+      const handleCheck = validatePublicUsername(cleanedHandle);
+      if (!handleCheck.isValid) {
+        notify(handleCheck.errorMsg, "error");
+        return;
+      }
+    }
+
     setUpdating(true);
 
     try {
@@ -170,8 +191,7 @@ export default function EditProfile() {
         finalBgUrl = "";
       }
 
-      const newDisplayName =
-        `${firstName} ${lastName}`.trim() || username.trim() || "Community Member";
+      const newDisplayName = candidateName;
 
       await updateProfile(auth.currentUser, {
         displayName: newDisplayName,

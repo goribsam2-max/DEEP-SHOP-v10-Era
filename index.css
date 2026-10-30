@@ -1982,6 +1982,7 @@ html.dark .loops-reply-pill {
 
 /* Edge-to-edge zero-radius post media enforcement */
 .loops-edge-media,
+.loops-edge-media > div,
 .loops-edge-media img,
 .loops-edge-media video {
   border-radius: 0px !important;

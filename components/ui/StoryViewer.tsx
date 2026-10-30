@@ -17,6 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase";
 import ReactPlayer from "react-player";
+import { toPlayableMediaUrl } from "../../lib/videoEmbed";
 
 const Player: any = ReactPlayer;
 
@@ -595,42 +596,53 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                 )}
 
                 {currentStory.type === "video" ? (
-                  <div className="w-full h-full pointer-events-none bg-black">
-                    <Player
-                      url={currentStory.mediaUrl}
-                      playing={!isPaused}
-                      muted={isMuted}
-                      width="100%"
-                      height="100%"
-                      onEnded={handleNext}
-                      controls={false}
-                      className="absolute top-0 left-0 bg-black"
-                      playsinline
-                      onProgress={({ played }: { played: number }) =>
-                        setProgress(played * 100)
-                      }
-                      config={{
-                        file: {
-                          forceVideo:
-                            !!currentStory.mediaUrl &&
-                            !currentStory.mediaUrl.match(
-                              /youtube\.com|youtu\.be|tiktok\.com|vimeo\.com/i
-                            ),
-                        },
-                        youtube: {
-                          playerVars: {
-                            controls: 0,
-                            showinfo: 0,
-                            modestbranding: 1,
-                            rel: 0,
-                            autoplay: 1,
-                            playsinline: 1,
-                            disablekb: 1,
-                            origin: window.location.origin,
+                  <div className="w-full h-full pointer-events-none bg-black flex items-center justify-center">
+                    {!currentStory.mediaUrl.match(/youtube\.com|youtu\.be|tiktok\.com|vimeo\.com/i) ? (
+                      <video
+                        src={toPlayableMediaUrl(currentStory.mediaUrl)}
+                        className="w-full h-full object-contain bg-black"
+                        playsInline
+                        autoPlay={!isPaused}
+                        loop
+                        muted={isMuted}
+                        onEnded={handleNext}
+                        onTimeUpdate={(e) => {
+                          const v = e.currentTarget;
+                          if (v.duration > 0) {
+                            setProgress((v.currentTime / v.duration) * 100);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Player
+                        url={currentStory.mediaUrl}
+                        playing={!isPaused}
+                        muted={isMuted}
+                        width="100%"
+                        height="100%"
+                        onEnded={handleNext}
+                        controls={false}
+                        className="absolute top-0 left-0 bg-black"
+                        playsinline
+                        onProgress={({ played }: { played: number }) =>
+                          setProgress(played * 100)
+                        }
+                        config={{
+                          youtube: {
+                            playerVars: {
+                              controls: 0,
+                              showinfo: 0,
+                              modestbranding: 1,
+                              rel: 0,
+                              autoplay: 1,
+                              playsinline: 1,
+                              disablekb: 1,
+                              origin: window.location.origin,
+                            },
                           },
-                        },
-                      }}
-                    />
+                        }}
+                      />
+                    )}
                   </div>
                 ) : (
                   <motion.img
@@ -648,12 +660,15 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                 )}
 
                 {(currentStory.audioUrl ||
+                  (currentStory as any)?.music?.audioUrl ||
                   (currentStory as any)?.music?.url) && (
                   <audio
                     ref={audioRef}
-                    src={
-                      currentStory.audioUrl || (currentStory as any)?.music?.url
-                    }
+                    src={toPlayableMediaUrl(
+                      currentStory.audioUrl ||
+                        (currentStory as any)?.music?.audioUrl ||
+                        (currentStory as any)?.music?.url
+                    )}
                     preload="auto"
                     loop
                     playsInline

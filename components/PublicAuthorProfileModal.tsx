@@ -48,10 +48,6 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
   const [profileData, setProfileData] = useState<any>(null);
   const [authorPosts, setAuthorPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showSponsorModal, setShowSponsorModal] = useState(false);
-  const [sponsorAmount, setSponsorAmount] = useState("500");
-  const [sponsorPhone, setSponsorPhone] = useState("");
-  const [sponsorTxId, setSponsorTxId] = useState("");
 
   useEffect(() => {
     if (!isOpen || !userId) return;
@@ -92,39 +88,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
   const likesReceived = profileData?.totalLikes || authorPosts.reduce((acc, p) => acc + (p.votes || 0), 0);
   const postsCount = authorPosts.length;
 
-  const handleSponsorSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) {
-      notify("Please sign in to sponsor creators!", "error");
-      return;
-    }
-    if (!sponsorPhone || !sponsorTxId) {
-      notify("Please provide your bKash/Nagad phone number and Transaction ID", "error");
-      return;
-    }
 
-    try {
-      await addDoc(collection(db, "sponsor_requests"), {
-        sponsorUserId: currentUser.uid,
-        sponsorName: getSafeDisplayName(currentUser, "Supporter"),
-        creatorUserId: userId,
-        creatorName: displayName,
-        amountBDT: Number(sponsorAmount),
-        phone: sponsorPhone,
-        txId: sponsorTxId,
-        status: "pending",
-        createdAt: Date.now()
-      });
-
-      triggerHaptic();
-      notify(`Sponsorship request of ৳${sponsorAmount} sent to Admin for verification!`, "success");
-      setShowSponsorModal(false);
-      setSponsorPhone("");
-      setSponsorTxId("");
-    } catch (err) {
-      notify("Failed to submit sponsorship request", "error");
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -246,19 +210,19 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
               ))}
             </div>
 
-            {/* Primary Action Buttons: Sponsor & Gift Stars */}
-            <div className="grid grid-cols-2 gap-2 pt-2">
+            {/* Primary Action Buttons: Message, Sponsor & Gift Stars */}
+            <div className="grid grid-cols-3 gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => {
                   triggerHaptic();
                   onClose();
-                  navigate(`/sponsor/${userId || "creator"}`);
+                  navigate(`/messages?uid=${encodeURIComponent(userId || "")}`);
                 }}
-                className="py-2.5 px-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="min-h-[42px] px-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
-                <Handshake className="w-4 h-4" />
-                <span>Sponsor Creator</span>
+                <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                <span>Message</span>
               </button>
 
               <button
@@ -266,12 +230,29 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                 onClick={() => {
                   triggerHaptic();
                   onClose();
-                  navigate(`/gift-stars/${userId || "creator"}`);
+                  navigate(`/sponsor/${encodeURIComponent(userId || "creator")}`);
                 }}
-                className="py-2.5 px-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="min-h-[42px] px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
-                <Star className="w-4 h-4 fill-white" />
-                <span>Gift Stars ⭐</span>
+                <Handshake className="w-3.5 h-3.5 shrink-0" />
+                <span>Sponsor</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  onClose();
+                  if (onOpenGiftStars && userId) {
+                    onOpenGiftStars(userId, displayName);
+                  } else {
+                    navigate(`/gift-stars/${encodeURIComponent(userId || "creator")}`);
+                  }
+                }}
+                className="min-h-[42px] px-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+              >
+                <Star className="w-3.5 h-3.5 fill-white shrink-0" />
+                <span>Gift Star</span>
               </button>
             </div>
 
@@ -328,124 +309,6 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
           </div>
         </motion.div>
       </div>
-
-      {/* SPONSOR CREATOR PAYMENT MODAL */}
-      <AnimatePresence>
-        {showSponsorModal && (
-          <div
-            className="fixed inset-0 z-[210] flex items-center justify-center p-5 ds-liquid-backdrop"
-            onClick={() => setShowSponsorModal(false)}
-          >
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              initial={{ opacity: 0, scale: 0.91, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 8 }}
-              transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
-              onClick={(e) => e.stopPropagation()}
-              className="ds-liquid-glass-popup px-6 pt-7 pb-6 w-full max-w-[370px] space-y-4 text-left"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Handshake className="w-5 h-5 text-[#0074f8]" />
-                  <span className="ds-liquid-popup-title font-bold text-[19px] tracking-[-0.02em]">Sponsor {displayName}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSponsorModal(false)}
-                  className="ds-liquid-btn-secondary w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <p className="ds-liquid-popup-desc text-[14.5px] leading-[1.42]">
-                Support this creator monthly. Send payment via bKash / Nagad and provide your Transaction ID below.
-              </p>
-
-              <form onSubmit={handleSponsorSubmit} className="space-y-3">
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                    Monthly Sponsorship Tier (BDT)
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["200", "500", "1000"].map((tier) => (
-                      <button
-                        key={tier}
-                        type="button"
-                        onClick={() => setSponsorAmount(tier)}
-                        className={`py-2 rounded-xl text-xs font-bold transition ${
-                          sponsorAmount === tier
-                            ? "bg-emerald-600 text-white shadow-xs"
-                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        ৳{tier}/mo
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Official Payment Number instructions */}
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-xs space-y-1 font-mono">
-                  <span className="text-[10px] font-sans font-bold text-emerald-800 dark:text-emerald-300 block">
-                    bKash / Nagad Personal Number:
-                  </span>
-                  <strong className="text-emerald-600 dark:text-emerald-400 text-sm block">01812345678</strong>
-                  <span className="text-[10px] font-sans text-zinc-500 block">
-                    Send Money ৳{sponsorAmount} then enter details:
-                  </span>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                    Your Mobile Number
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="017XXXXXXXX"
-                    value={sponsorPhone}
-                    onChange={(e) => setSponsorPhone(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-medium"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block mb-1">
-                    Transaction ID (TrxID)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 9J283HX10"
-                    value={sponsorTxId}
-                    onChange={(e) => setSponsorTxId(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-800 border-none outline-none font-medium font-mono"
-                    required
-                  />
-                </div>
-
-                <div className="pt-2 flex flex-col gap-2.5">
-                  <button
-                    type="submit"
-                    className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer"
-                  >
-                    Confirm sponsorship request
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSponsorModal(false)}
-                    className="ds-liquid-btn-secondary w-full min-h-[46px] px-5 rounded-full font-semibold text-[15.5px] transition-transform active:scale-[0.985] cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </AnimatePresence>
   );
 };

@@ -7,12 +7,14 @@ import {
   RotateCcw,
   RotateCw,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import {
   ParsedVideoEmbed,
   parseVideoEmbed,
   resolveShortVideoUrl,
   getVideoPlatformMeta,
+  toPlayableMediaUrl,
 } from "../lib/videoEmbed";
 import { triggerHaptic } from "../lib/haptics";
 
@@ -56,6 +58,11 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     Boolean(videoSource.needsResolution && videoSource.platform === "tiktok")
   );
   const [directStreamFailed, setDirectStreamFailed] = useState<boolean>(false);
+  const [useRawOriginFallback, setUseRawOriginFallback] =
+    useState<boolean>(false);
+  const [hasLoadedFrame, setHasLoadedFrame] = useState<boolean>(false);
+  const [isBuffering, setIsBuffering] = useState<boolean>(false);
+  const [streamError, setStreamError] = useState<boolean>(false);
 
   // Viewport & activation state
   const [hasEnteredView, setHasEnteredView] = useState<boolean>(!autoPlayInView);
@@ -78,6 +85,11 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     setCurrentTime(0);
     setDuration(0);
     setDirectStreamFailed(false);
+    setUseRawOriginFallback(false);
+    setHasLoadedFrame(false);
+    setIsBuffering(false);
+    setStreamError(false);
+    setIsPlaying(false);
     userPausedRef.current = false;
 
     if (!videoSource.needsResolution) {
@@ -297,6 +309,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     const node = containerRef.current;
     if (!node || typeof IntersectionObserver === "undefined") {
       setHasEnteredView(true);
+      setIsInView(true);
       return;
     }
 
@@ -305,15 +318,15 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
         const entry = entries[0];
         if (!entry) return;
 
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.45) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
           setHasEnteredView(true);
           setIsInView(true);
-        } else if (!entry.isIntersecting || entry.intersectionRatio < 0.15) {
+        } else if (!entry.isIntersecting || entry.intersectionRatio < 0.08) {
           setIsInView(false);
         }
       },
       {
-        threshold: [0, 0.15, 0.45, 0.75],
+        threshold: [0, 0.08, 0.2, 0.5],
       }
     );
 
@@ -330,7 +343,16 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
       announceActivePlayback();
 
       if (nativeVideoRef.current) {
-        nativeVideoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        const v = nativeVideoRef.current;
+        v.play()
+          .then(() => setIsPlaying(true))
+          .catch(() => {
+            v.muted = true;
+            setIsMuted(true);
+            v.play()
+              .then(() => setIsPlaying(true))
+              .catch(() => {});
+          });
       } else if (resolvedEmbed.platform === "youtube") {
         sendYouTubeCommand("playVideo");
         setIsPlaying(true);
@@ -354,6 +376,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     isInView,
     autoPlayInView,
     usesNativeStream,
+    useRawOriginFallback,
     resolvedEmbed.platform,
     resolvedEmbed.canonicalUrl,
   ]);
@@ -362,14 +385,27 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     e.stopPropagation();
     triggerHaptic();
     if (nativeVideoRef.current) {
-      if (nativeVideoRef.current.paused) {
+      const v = nativeVideoRef.current;
+      if (streamError) {
+        setStreamError(false);
+        setIsBuffering(true);
+        v.load();
+      }
+      if (v.paused) {
         userPausedRef.current = false;
         announceActivePlayback();
-        nativeVideoRef.current.play().catch(() => {});
-        setIsPlaying(true);
+        v.play()
+          .then(() => setIsPlaying(true))
+          .catch(() => {
+            v.muted = true;
+            setIsMuted(true);
+            v.play()
+              .then(() => setIsPlaying(true))
+              .catch(() => setIsPlaying(false));
+          });
       } else {
         userPausedRef.current = true;
-        nativeVideoRef.current.pause();
+        v.pause();
         setIsPlaying(false);
       }
       return;
@@ -475,17 +511,26 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
 
   // 0. DIRECT VIDEO STREAM (or resolved og:video stream)
   if (usesNativeStream) {
-    const streamSrc =
+    const rawCandidate =
       resolvedEmbed.directStreamUrl || resolvedEmbed.canonicalUrl;
+    const proxiedCandidate = toPlayableMediaUrl(rawCandidate);
+    const streamSrc =
+      useRawOriginFallback &&
+      resolvedEmbed.originalUrl &&
+      resolvedEmbed.originalUrl !== proxiedCandidate
+        ? resolvedEmbed.originalUrl
+        : proxiedCandidate;
+
     return (
       <div
         ref={containerRef}
         onClick={stopBubble}
         onPointerDown={stopBubble}
-        className="w-full overflow-hidden bg-zinc-950 border-y border-slate-200/70 dark:border-zinc-800 select-none"
+        className="w-full overflow-hidden bg-zinc-950 border-y border-slate-200/70 dark:border-zinc-800 select-none touch-manipulation"
       >
         <div
-          className={`relative w-full bg-zinc-950 flex items-center justify-center ${
+          onClick={toggleEmbedPlayPause}
+          className={`relative w-full bg-zinc-950 flex items-center justify-center cursor-pointer ${
             detectedVertical
               ? "aspect-[9/16] max-h-[540px] mx-auto max-w-[340px]"
               : "aspect-video"
@@ -495,32 +540,114 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             ref={nativeVideoRef}
             src={streamSrc}
             poster={resolvedEmbed.thumbnailUrl}
+            preload={hasEnteredView || isInView ? "auto" : "metadata"}
             playsInline
             loop
             muted={isMuted}
             autoPlay={autoPlayInView && isInView}
-            onClick={toggleEmbedPlayPause}
-            onPlay={() => setIsPlaying(true)}
+            onPlay={() => {
+              setIsPlaying(true);
+              setStreamError(false);
+            }}
+            onPlaying={() => {
+              setIsPlaying(true);
+              setHasLoadedFrame(true);
+              setIsBuffering(false);
+              setStreamError(false);
+            }}
             onPause={() => setIsPlaying(false)}
+            onWaiting={() => setIsBuffering(true)}
+            onCanPlay={() => {
+              setHasLoadedFrame(true);
+              setIsBuffering(false);
+            }}
+            onLoadedData={(e) => {
+              setHasLoadedFrame(true);
+              setIsBuffering(false);
+              setStreamError(false);
+              const v = e.currentTarget;
+              if (autoPlayInView && isInView && !userPausedRef.current && v.paused) {
+                v.play()
+                  .then(() => setIsPlaying(true))
+                  .catch(() => {
+                    v.muted = true;
+                    setIsMuted(true);
+                    v.play()
+                      .then(() => setIsPlaying(true))
+                      .catch(() => {});
+                  });
+              }
+            }}
             onLoadedMetadata={(e) => {
               const v = e.currentTarget;
               if (v.duration && Number.isFinite(v.duration)) {
                 setDuration(v.duration);
               }
-              if (v.videoHeight > v.videoWidth) {
-                setDetectedVertical(true);
+              if (v.videoHeight > 0 && v.videoWidth > 0) {
+                setDetectedVertical(v.videoHeight >= v.videoWidth);
+              }
+              if (!resolvedEmbed.thumbnailUrl && v.currentTime === 0 && v.paused) {
+                try {
+                  v.currentTime = 0.001;
+                } catch {}
               }
             }}
             onTimeUpdate={(e) => {
+              if (!hasLoadedFrame && e.currentTarget.currentTime > 0) {
+                setHasLoadedFrame(true);
+              }
               setCurrentTime(e.currentTarget.currentTime);
             }}
             onError={() => {
+              if (
+                !useRawOriginFallback &&
+                resolvedEmbed.originalUrl &&
+                proxiedCandidate.startsWith("/api/stream-media") &&
+                resolvedEmbed.originalUrl !== proxiedCandidate
+              ) {
+                setUseRawOriginFallback(true);
+                return;
+              }
               if (resolvedEmbed.platform !== "direct") {
                 setDirectStreamFailed(true);
+              } else {
+                setIsBuffering(false);
+                setStreamError(true);
               }
             }}
-            className="w-full h-full object-contain cursor-pointer"
+            className="w-full h-full object-contain pointer-events-none"
           />
+
+          {/* Loading / Buffering Spinner */}
+          {(!hasLoadedFrame || isBuffering) && !streamError && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
+              <div className="w-11 h-11 rounded-full bg-black/55 backdrop-blur-md border border-white/15 flex items-center justify-center text-white">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+            </div>
+          )}
+
+          {/* Center Play Button Overlay when Paused */}
+          {!isPlaying && hasLoadedFrame && !isBuffering && !streamError && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-14 h-14 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white flex items-center justify-center shadow-xl">
+                <Play className="w-6 h-6 fill-white ml-0.5" />
+              </div>
+            </div>
+          )}
+
+          {/* Stream Retry State if Network Interrupted */}
+          {streamError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-zinc-950/90 px-4 text-center">
+              <p className="text-xs font-medium text-zinc-300">
+                Tap to reload video stream
+              </p>
+              <span className="px-3.5 py-1.5 rounded-full bg-white/15 text-white text-xs font-semibold">
+                Reload Video
+              </span>
+            </div>
+          )}
+
           {overlayBadge}
         </div>
 
@@ -529,7 +656,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             <button
               type="button"
               onClick={toggleEmbedPlayPause}
-              className="w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 flex items-center justify-center transition cursor-pointer"
+              className="w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 flex items-center justify-center transition cursor-pointer touch-manipulation"
               aria-label={isPlaying ? "Pause video" : "Play video"}
             >
               {isPlaying ? (
@@ -541,7 +668,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             <button
               type="button"
               onClick={(e) => handleEmbedSeekBy(e, -5)}
-              className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0"
+              className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 touch-manipulation"
             >
               <RotateCcw className="w-3 h-3 shrink-0" />
               <span>5s</span>
@@ -549,7 +676,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             <button
               type="button"
               onClick={(e) => handleEmbedSeekBy(e, 5)}
-              className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0"
+              className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 touch-manipulation"
             >
               <RotateCw className="w-3 h-3 shrink-0" />
               <span>5s</span>
@@ -566,7 +693,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
                 value={Math.min(duration, currentTime)}
                 onChange={handleEmbedScrub}
                 aria-label="Seek video"
-                className="w-full h-1.5 accent-[#1877F2] cursor-pointer"
+                className="w-full h-1.5 accent-[#1877F2] cursor-pointer touch-manipulation"
               />
               <span className="text-[10.5px] tabular-nums text-zinc-300 shrink-0 hidden sm:inline">
                 {formatVideoClock(currentTime)} / {formatVideoClock(duration)}
@@ -581,7 +708,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
           <button
             type="button"
             onClick={toggleEmbedMute}
-            className="px-2.5 h-8 rounded-lg bg-white/12 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 shrink-0 whitespace-nowrap transition cursor-pointer"
+            className="px-2.5 h-8 rounded-lg bg-white/12 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 shrink-0 whitespace-nowrap transition cursor-pointer touch-manipulation"
             aria-label={isMuted ? "Unmute" : "Mute"}
           >
             {isMuted ? (

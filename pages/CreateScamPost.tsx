@@ -28,6 +28,9 @@ import {
   ChevronRight,
   Music,
   Volume2,
+  Upload,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -37,6 +40,10 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  onSnapshot,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import {
   ImageLayoutStyle,
@@ -53,6 +60,7 @@ import {
   processCleanImage,
 } from "../lib/watermark";
 import { uploadDataUrlToImgbb } from "../services/imgbb";
+import { uploadFileToCatbox } from "../lib/catboxUpload";
 import { detectAiGeneratedFiles } from "../lib/aiImageDetector";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
 import { NewsVideoPlayer } from "../components/NewsVideoPlayer";
@@ -65,6 +73,7 @@ import {
   extractFirstVideoUrlFromText,
   parseVideoEmbed,
   resolveShortVideoUrl,
+  toPlayableMediaUrl,
 } from "../lib/videoEmbed";
 import { FEED_THEMES, FEED_THEME_GROUPS } from "../lib/feed-themes";
 import { resolvePostById } from "./NewsHubSubPages";
@@ -223,6 +232,100 @@ export const CreateScamPost: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraFallbackInputRef = useRef<HTMLInputElement | null>(null);
   const musicPreviewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Professional Media Uploader Refs & State
+  const videoUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const audioUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedVideoName, setUploadedVideoName] = useState("");
+  const [localVideoBlobUrl, setLocalVideoBlobUrl] = useState<string>("");
+  const [isDraggingVideo, setIsDraggingVideo] = useState(false);
+
+  const isVideoFileCandidate = (file: File): boolean =>
+    file.type.startsWith("video/") ||
+    /\.(mp4|webm|mov|m4v|mkv|3gp|avi|mpeg|mpg|ogv)$/i.test(file.name);
+
+  const uploadVideoFile = async (file: File) => {
+    if (!file) return;
+    if (!isVideoFileCandidate(file)) {
+      notify("Please select a valid video file (MP4, WebM, or MOV).", "error");
+      return;
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      notify("Video must be under 200 MB.", "error");
+      return;
+    }
+
+    triggerHaptic();
+    setActiveInlinePanel("video");
+    setUploadedVideoName(file.name);
+    setIsUploadingVideo(true);
+    setUploadProgress(12);
+
+    const nextBlobUrl = URL.createObjectURL(file);
+    setLocalVideoBlobUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return nextBlobUrl;
+    });
+
+    const progressTimer = window.setInterval(() => {
+      setUploadProgress((prev) => (prev < 82 ? prev + 6 : prev));
+    }, 450);
+
+    try {
+      const url = await uploadFileToCatbox(file, file.name, (p) =>
+        setUploadProgress((prev) => Math.max(prev, p))
+      );
+      setVideoUrl(url);
+      notify("Video attached and ready for Loops & Reels!", "success");
+    } catch {
+      setUploadedVideoName("");
+      setLocalVideoBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return "";
+      });
+      notify(
+        "Could not upload video right now. Please check your connection or try a smaller MP4/WebM file.",
+        "error"
+      );
+    } finally {
+      window.clearInterval(progressTimer);
+      setIsUploadingVideo(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleVideoFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await uploadVideoFile(file);
+  };
+
+  const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    triggerHaptic();
+    setIsUploadingAudio(true);
+    setUploadProgress(15);
+    try {
+      notify("Optimizing audio track for background playback...", "info");
+      const url = await uploadFileToCatbox(file, undefined, (p) => setUploadProgress(p));
+      setAudioUrl(url);
+      setActiveInlinePanel("voice");
+      notify("Audio track attached successfully!", "success");
+    } catch (err: any) {
+      notify("Audio optimization failed. Please try again.", "error");
+    } finally {
+      setIsUploadingAudio(false);
+      setUploadProgress(0);
+      e.target.value = "";
+    }
+  };
 
   const [currentUser, setCurrentUser] = useState<any>(() => auth.currentUser);
   const [step, setStep] = useState<1 | 2>(1);
@@ -732,9 +835,20 @@ function cleanPayload<T>(obj: T): T {
     if (!files || files.length === 0) return;
     triggerHaptic();
     const incoming = Array.from(files);
-    setRawFiles((prev) => [...prev, ...incoming]);
-    setActiveInlinePanel("media");
     e.target.value = "";
+
+    const videoFiles = incoming.filter(isVideoFileCandidate);
+    const imageFiles = incoming.filter((f) => !isVideoFileCandidate(f));
+
+    if (videoFiles.length > 0) {
+      void uploadVideoFile(videoFiles[0]);
+    }
+    if (imageFiles.length > 0) {
+      setRawFiles((prev) => [...prev, ...imageFiles]);
+      if (videoFiles.length === 0) {
+        setActiveInlinePanel("media");
+      }
+    }
   };
 
   const handleRemoveImage = (idx: number) => {
@@ -813,10 +927,17 @@ function cleanPayload<T>(obj: T): T {
     resolvedCaptionVideoUrl,
   ]);
 
-  const activeVideoEmbed = React.useMemo(
-    () => parseVideoEmbed(effectiveVideoUrl),
-    [effectiveVideoUrl]
-  );
+  const activeVideoEmbed = React.useMemo(() => {
+    const parsed = parseVideoEmbed(effectiveVideoUrl);
+    if (!parsed) return null;
+    if (localVideoBlobUrl && parsed.platform === "direct") {
+      return {
+        ...parsed,
+        directStreamUrl: localVideoBlobUrl,
+      };
+    }
+    return parsed;
+  }, [effectiveVideoUrl, localVideoBlobUrl]);
 
   const hasUnsupportedVideoInput = Boolean(
     videoUrl.trim() && !parseVideoEmbed(videoUrl.trim())
@@ -824,6 +945,11 @@ function cleanPayload<T>(obj: T): T {
 
   const handleClearVideo = () => {
     triggerHaptic();
+    setUploadedVideoName("");
+    setLocalVideoBlobUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return "";
+    });
     if (videoUrl.trim()) {
       setVideoUrl("");
     } else if (detectedCaptionVideoUrl) {
@@ -1126,6 +1252,7 @@ function cleanPayload<T>(obj: T): T {
 
   const hasDraftableContent = Boolean(
     description.trim() ||
+      videoUrl.trim() ||
       gifUrl ||
       stickers.length > 0 ||
       pollDraft ||
@@ -1187,6 +1314,7 @@ function cleanPayload<T>(obj: T): T {
       textStyle,
       postTag: postTag || undefined,
       locationTag: locationTag || undefined,
+      videoUrl: videoUrl.trim() || undefined,
       gifUrl: gifUrl || undefined,
       stickers: stickers.length > 0 ? stickers : undefined,
       poll: buildCurrentPollObject(),
@@ -1211,6 +1339,7 @@ function cleanPayload<T>(obj: T): T {
     setTextStyle(draft.textStyle || "normal");
     setPostTag(draft.postTag || "");
     setLocationTag(draft.locationTag || "");
+    setVideoUrl(draft.videoUrl || "");
     setGifUrl(draft.gifUrl || "");
     setStickers(draft.stickers || []);
     setPollDraft(
@@ -1263,7 +1392,7 @@ function cleanPayload<T>(obj: T): T {
     if (musicPreviewAudioRef.current) {
       musicPreviewAudioRef.current.pause();
     }
-    const audio = new Audio(attachedMusic.audioUrl);
+    const audio = new Audio(toPlayableMediaUrl(attachedMusic.audioUrl));
     audio.onended = () => setPlayingAttachedMusic(false);
     audio
       .play()
@@ -1308,13 +1437,21 @@ function cleanPayload<T>(obj: T): T {
       return;
     }
 
+    if (isUploadingVideo || isUploadingAudio) {
+      notify(
+        "Please wait a moment while your media finishes uploading.",
+        "info"
+      );
+      return;
+    }
+
     if (isRecording) {
       stopVoiceRecording();
     }
 
     if (hasUnsupportedVideoInput) {
       notify(
-        "Please paste a valid YouTube, Facebook, or TikTok video link.",
+        "Please upload a video (MP4/WebM) or paste a valid YouTube, Instagram, Facebook, or TikTok link.",
         "error"
       );
       return;
@@ -1351,7 +1488,7 @@ function cleanPayload<T>(obj: T): T {
       validThreadItems.length === 0
     ) {
       notify(
-        "Write something, add a poll/GIF/sticker/music, or attach photos first.",
+        "Write something, upload a video or photo, or attach a poll/GIF/music first.",
         "error"
       );
       return;
@@ -1582,6 +1719,29 @@ function cleanPayload<T>(obj: T): T {
       const ref = await addDoc(collection(db, "scam_posts"), fullNewDoc);
       const createdId = ref.id;
 
+      // Auto-add attached music into platform background music library for site-wide reuse
+      if (attachedMusic?.audioUrl) {
+        try {
+          const bgRef = collection(db, "background_music");
+          const qBg = query(bgRef, where("audioUrl", "==", attachedMusic.audioUrl));
+          const snapBg = await getDocs(qBg);
+          if (snapBg.empty) {
+            const trackPayload = {
+              title: attachedMusic.title || "Shared Track",
+              artist: attachedMusic.artist || userNameDisplay || "Loops Creator",
+              coverUrl: attachedMusic.cover || userAvatarDisplay || "",
+              url: attachedMusic.audioUrl,
+              audioUrl: attachedMusic.audioUrl,
+              createdAt: Date.now(),
+            };
+            await addDoc(collection(db, "background_music"), trackPayload);
+            await addDoc(collection(db, "story_songs"), trackPayload);
+          }
+        } catch (mErr) {
+          console.error("Auto background music sync error:", mErr);
+        }
+      }
+
       // Handle "Also share on..." options from PostOptionsBottomSheet
       if (alsoShareOn.includes("copy_link")) {
         try {
@@ -1644,10 +1804,16 @@ function cleanPayload<T>(obj: T): T {
   };
 
   const userNameDisplay =
+    userProfile?.displayName ||
+    userProfile?.shopName ||
     currentUser?.displayName ||
     currentUser?.email?.split("@")[0] ||
     "Community Member";
-  const userAvatarDisplay = currentUser?.photoURL || "";
+  const userAvatarDisplay =
+    userProfile?.photoURL ||
+    userProfile?.shopLogo ||
+    currentUser?.photoURL ||
+    "";
 
   const previewPostObj: Partial<ScamPost> = {
     id: "composer_preview",
@@ -1662,7 +1828,7 @@ function cleanPayload<T>(obj: T): T {
     audioUrl: audioUrl || undefined,
     audioDuration: audioDuration || undefined,
     audioWaveform: audioWaveform.length > 0 ? audioWaveform : undefined,
-    videoUrl: effectiveVideoUrl || undefined,
+    videoUrl: (localVideoBlobUrl || effectiveVideoUrl) || undefined,
     gifUrl: gifUrl || undefined,
     stickers: stickers.length > 0 ? stickers : undefined,
     music: attachedMusic || undefined,
@@ -1682,19 +1848,26 @@ function cleanPayload<T>(obj: T): T {
         description="Share thoughts, photos, videos, voice notes, polls, GIFs, or verified community alerts on Loops."
       />
 
-      {/* Hidden Multi-Image File Input */}
+      {/* Hidden Media & Video File Inputs */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/mp4,video/webm,video/quicktime,video/*"
         multiple
         onChange={handleFilesSelected}
         className="hidden"
       />
       <input
+        ref={videoUploadInputRef}
+        type="file"
+        accept="video/mp4,video/webm,video/quicktime,video/*,.mp4,.webm,.mov,.m4v"
+        onChange={handleVideoFileUpload}
+        className="hidden"
+      />
+      <input
         ref={cameraFallbackInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         capture="environment"
         onChange={handleFilesSelected}
         className="hidden"
@@ -1749,11 +1922,12 @@ function cleanPayload<T>(obj: T): T {
               />
               <button
                 type="button"
+                disabled={isUploadingVideo || isUploadingAudio}
                 onClick={() => {
                   triggerHaptic();
                   if (hasUnsupportedVideoInput) {
                     notify(
-                      "Please paste a valid YouTube, Facebook, or TikTok video link.",
+                      "Please upload a video (MP4/WebM) or paste a valid YouTube, Instagram, Facebook, or TikTok link.",
                       "error"
                     );
                     return;
@@ -1761,18 +1935,27 @@ function cleanPayload<T>(obj: T): T {
                   if (isRecording) stopVoiceRecording();
                   setStep(2);
                 }}
-                className="px-4 py-2 rounded-full bg-white dark:bg-zinc-100 text-zinc-900 font-semibold text-[13px] shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:bg-slate-50 active:scale-95 transition cursor-pointer shrink-0 whitespace-nowrap"
+                className="px-4 py-2 rounded-full bg-white dark:bg-zinc-100 text-zinc-900 font-semibold text-[13px] shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:bg-slate-50 active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
               >
-                Next
+                {isUploadingVideo ? "Uploading..." : "Next"}
               </button>
               {editId && (
                 <button
                   type="button"
                   onClick={handlePublish}
-                  disabled={isSubmitting || isProcessingImages}
+                  disabled={
+                    isSubmitting ||
+                    isProcessingImages ||
+                    isUploadingVideo ||
+                    isUploadingAudio
+                  }
                   className="px-4.5 py-2 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-semibold text-[13px] shadow-xs active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
                 >
-                  {isSubmitting ? "Saving..." : "Save"}
+                  {isSubmitting
+                    ? "Saving..."
+                    : isUploadingVideo
+                    ? "Uploading..."
+                    : "Save"}
                 </button>
               )}
             </div>
@@ -1780,10 +1963,21 @@ function cleanPayload<T>(obj: T): T {
             <button
               type="button"
               onClick={handlePublish}
-              disabled={isSubmitting || isProcessingImages}
+              disabled={
+                isSubmitting ||
+                isProcessingImages ||
+                isUploadingVideo ||
+                isUploadingAudio
+              }
               className="px-5 py-2 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white font-semibold text-[13px] shadow-[0_6px_18px_rgba(24,119,242,0.35)] active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
             >
-              {isSubmitting ? "Posting..." : editId ? "Save" : "Post"}
+              {isSubmitting
+                ? "Posting..."
+                : isUploadingVideo
+                ? "Uploading..."
+                : editId
+                ? "Save"
+                : "Post"}
             </button>
           )}
         </header>
@@ -2093,15 +2287,19 @@ function cleanPayload<T>(obj: T): T {
                     type="button"
                     onClick={() => {
                       triggerHaptic();
-                      setActiveInlinePanel((p) => (p === "video" ? null : "video"));
+                      setActiveInlinePanel((p) =>
+                        p === "video" ? null : "video"
+                      );
                     }}
-                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
-                      Boolean(activeVideoEmbed) || activeInlinePanel === "video"
+                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer flex items-center gap-1.5 ${
+                      Boolean(activeVideoEmbed) ||
+                      activeInlinePanel === "video" ||
+                      isUploadingVideo
                         ? "text-[#1877F2] dark:text-[#58A6FF]"
                         : ""
                     }`}
-                    title="Embed YouTube, Facebook, or TikTok Video"
-                    aria-label="Video Link"
+                    title="Upload Video (MP4 / WebM) or Embed Reel Link"
+                    aria-label="Attach Video"
                   >
                     <Video className="w-[21px] h-[21px] stroke-[1.85]" />
                   </button>
@@ -2201,6 +2399,150 @@ function cleanPayload<T>(obj: T): T {
                   </div>
                 )}
                 <NewsLinkPreviewCards text={description} />
+
+                {/* UNIFIED INLINE VIDEO UPLOAD & REEL PREVIEW CARD (Right below toolbar for 1-tap access) */}
+                {(activeInlinePanel === "video" ||
+                  isUploadingVideo ||
+                  Boolean(activeVideoEmbed)) && (
+                  <div className="rounded-[24px] bg-[#F5F7FA] dark:bg-zinc-800/70 border border-slate-200/80 dark:border-zinc-700/70 p-3.5 sm:p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Video className="w-4 h-4 text-[#1877F2] shrink-0" />
+                        <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                          {isUploadingVideo
+                            ? "Uploading Video..."
+                            : activeVideoEmbed
+                            ? activeVideoEmbed.platform === "direct"
+                              ? "Video Attached · Ready for Loops & Reels"
+                              : activeVideoEmbed.platform === "instagram"
+                              ? "Instagram Reel Embedded"
+                              : activeVideoEmbed.platform === "youtube"
+                              ? "YouTube Video Embedded"
+                              : activeVideoEmbed.platform === "facebook"
+                              ? "Facebook Video Embedded"
+                              : activeVideoEmbed.platform === "tiktok"
+                              ? "TikTok Video Embedded"
+                              : "Social Video Embedded"
+                            : "Attach Video or Reel"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {activeVideoEmbed && !isUploadingVideo && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              videoUploadInputRef.current?.click();
+                            }}
+                            className="px-2.5 h-7 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 hover:border-[#1877F2] hover:text-[#1877F2] flex items-center gap-1 transition cursor-pointer"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Change</span>
+                          </button>
+                        )}
+                        {!isUploadingVideo && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (activeVideoEmbed) {
+                                handleClearVideo();
+                              } else {
+                                setActiveInlinePanel(null);
+                              }
+                            }}
+                            className="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-zinc-500 hover:text-rose-600 flex items-center justify-center transition cursor-pointer"
+                            aria-label={
+                              activeVideoEmbed ? "Remove video" : "Close video panel"
+                            }
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Live Upload Progress State */}
+                    {isUploadingVideo && (
+                      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-700 p-4 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Loader2 className="w-4 h-4 text-[#1877F2] animate-spin shrink-0" />
+                            <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                              {uploadedVideoName || "Preparing HD video stream..."}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold tabular-nums text-[#1877F2] shrink-0">
+                            {Math.min(99, Math.max(10, uploadProgress))}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-zinc-800 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-[#1877F2] transition-all duration-300"
+                            style={{
+                              width: `${Math.min(
+                                99,
+                                Math.max(12, uploadProgress)
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                          Uploading directly from your browser for instant Feed & Reels playback...
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Instant Video / Reel Player Preview */}
+                    {!isUploadingVideo && activeVideoEmbed && (
+                      <div className="rounded-2xl overflow-hidden border border-slate-200/70 dark:border-zinc-700">
+                        <NewsVideoPlayer
+                          videoSource={activeVideoEmbed}
+                          autoPlayInView={true}
+                        />
+                      </div>
+                    )}
+
+                    {/* Device Upload Dropzone + Optional Social Link Input when choosing/editing video */}
+                    {!isUploadingVideo && !activeVideoEmbed && (
+                      <>
+                        <div
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsDraggingVideo(true);
+                          }}
+                          onDragLeave={() => setIsDraggingVideo(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDraggingVideo(false);
+                            const dropped = e.dataTransfer.files?.[0];
+                            if (dropped) {
+                              void uploadVideoFile(dropped);
+                            }
+                          }}
+                          onClick={() => videoUploadInputRef.current?.click()}
+                          className={`rounded-2xl border-2 border-dashed p-5 text-center transition cursor-pointer flex flex-col items-center justify-center gap-2 ${
+                            isDraggingVideo
+                              ? "border-[#1877F2] bg-[#1877F2]/8"
+                              : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900/90 hover:border-[#1877F2]"
+                          }`}
+                        >
+                          <div className="w-11 h-11 rounded-full bg-[#1877F2]/10 text-[#1877F2] flex items-center justify-center">
+                            <Upload className="w-5 h-5" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs sm:text-[13px] font-bold text-zinc-900 dark:text-white">
+                              Select Video from Device
+                            </p>
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                              MP4, WebM, or MOV · Appears automatically in Loops & Reels
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {/* ATTACHED STICKERS PREVIEW ROW */}
                 {stickers.length > 0 && (
@@ -2625,38 +2967,6 @@ function cleanPayload<T>(obj: T): T {
                   </button>
                 </div>
 
-                {/* Instant Auto-Embedded Social Video Preview when YouTube / Facebook / TikTok Link is Pasted */}
-                {activeVideoEmbed && (
-                  <div className="rounded-[24px] bg-[#F6F8FB] dark:bg-zinc-800/70 border border-slate-200/80 dark:border-zinc-700/70 p-3 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2 px-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Video className="w-4 h-4 text-[#1877F2] shrink-0" />
-                        <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                          {activeVideoEmbed.platform === "youtube"
-                            ? "YouTube Video Embedded"
-                            : activeVideoEmbed.platform === "facebook"
-                            ? "Facebook Video Embedded"
-                            : "TikTok Video Embedded"}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleClearVideo}
-                        className="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-zinc-600 hover:text-rose-600 flex items-center justify-center transition cursor-pointer shrink-0"
-                        aria-label="Remove video"
-                        title="Remove video"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <NewsVideoPlayer
-                      videoSource={activeVideoEmbed}
-                      autoPlayInView={true}
-                    />
-                  </div>
-                )}
-
                 {/* SCAM INCIDENT DETAILS — Shown ONLY when Scam Report is selected */}
                 {postType === "scam" && (
                   <div className="rounded-[24px] bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200/80 dark:border-rose-900/50 p-4 space-y-3">
@@ -3035,6 +3345,26 @@ function cleanPayload<T>(obj: T): T {
                       )}
                     </div>
 
+                    {/* Or Upload Audio File (MP3, WAV) via Secure Proxy */}
+                    <div className="mt-3.5 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => audioUploadInputRef.current?.click()}
+                        disabled={isUploadingAudio}
+                        className="px-3.5 py-1.5 rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-[#1877F2] hover:text-white text-zinc-800 dark:text-zinc-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Music className="w-3.5 h-3.5" />
+                        <span>{isUploadingAudio ? "Optimizing audio track..." : "Upload Audio File (MP3 / WAV)"}</span>
+                      </button>
+                      <input
+                        type="file"
+                        ref={audioUploadInputRef}
+                        accept="audio/mp3,audio/wav,audio/mpeg,audio/x-wav,audio/*,.mp3,.wav"
+                        onChange={handleAudioFileUpload}
+                        className="hidden"
+                      />
+                    </div>
+
                     {/* REAL WORKING BEAT BARS + INTERACTIVE SCRUBBER + DYNAMIC TIMELINE */}
                     <div className="w-full mt-6">
                       <div
@@ -3161,53 +3491,6 @@ function cleanPayload<T>(obj: T): T {
                           );
                         })}
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* INLINE SOCIAL VIDEO LINK EMBED PANEL (YouTube, Facebook, TikTok Only — Zero Storage) */}
-                {activeInlinePanel === "video" && (
-                  <div className="rounded-[24px] bg-[#F5F7FA] dark:bg-zinc-800/65 border border-slate-200/80 dark:border-zinc-700/70 p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Video className="w-4 h-4 text-[#1877F2]" />
-                        <span className="text-xs font-bold text-zinc-900 dark:text-white">
-                          Embed YouTube, Facebook, or TikTok Video
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveInlinePanel(null)}
-                        className="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer"
-                        aria-label="Close video panel"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 flex items-center gap-1.5">
-                        <Link2 className="w-3.5 h-3.5 text-[#1877F2]" />
-                        <span>
-                          Paste YouTube, Facebook Video/Reel, or TikTok link
-                        </span>
-                      </label>
-                      <input
-                        type="url"
-                        value={videoUrl}
-                        onChange={(e) => setVideoUrl(e.target.value)}
-                        placeholder="https://youtube.com/... , facebook.com/... , or tiktok.com/..."
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-xs outline-none border border-slate-200 dark:border-zinc-700 focus:border-[#1877F2]"
-                      />
-                      {hasUnsupportedVideoInput ? (
-                        <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
-                          Only YouTube, Facebook (Video / Watch / Reel), and TikTok links are supported.
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                          You can also paste the link directly inside your post caption above — it embeds automatically in the feed.
-                        </p>
-                      )}
                     </div>
                   </div>
                 )}
@@ -3343,11 +3626,20 @@ function cleanPayload<T>(obj: T): T {
                   <button
                     type="button"
                     onClick={handlePublish}
-                    disabled={isSubmitting || isProcessingImages}
+                    disabled={
+                      isSubmitting ||
+                      isProcessingImages ||
+                      isUploadingVideo ||
+                      isUploadingAudio
+                    }
                     className="h-[40px] px-5 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white font-bold text-[14px] shadow-[0_6px_18px_rgba(24,119,242,0.32)] active:scale-95 transition disabled:opacity-50 cursor-pointer whitespace-nowrap"
                   >
                     {isSubmitting
                       ? "Posting..."
+                      : isUploadingVideo
+                      ? "Uploading video..."
+                      : isUploadingAudio
+                      ? "Uploading audio..."
                       : editId
                       ? "Save"
                       : scheduledAt
@@ -3448,11 +3740,20 @@ function cleanPayload<T>(obj: T): T {
                 <button
                   type="button"
                   onClick={handlePublish}
-                  disabled={isSubmitting || isProcessingImages}
+                  disabled={
+                    isSubmitting ||
+                    isProcessingImages ||
+                    isUploadingVideo ||
+                    isUploadingAudio
+                  }
                   className="flex-1 py-3.5 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white text-sm font-bold shadow-[0_8px_24px_rgba(24,119,242,0.38)] disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting
                     ? "Publishing..."
+                    : isUploadingVideo
+                    ? "Uploading video..."
+                    : isUploadingAudio
+                    ? "Uploading audio..."
                     : editId
                     ? "Save Changes"
                     : scheduledAt
@@ -3547,8 +3848,12 @@ function cleanPayload<T>(obj: T): T {
         isOpen={showCameraModal}
         onClose={() => setShowCameraModal(false)}
         onCaptureFile={(file) => {
-          setRawFiles((prev) => [...prev, file]);
-          setActiveInlinePanel("media");
+          if (isVideoFileCandidate(file)) {
+            void uploadVideoFile(file);
+          } else {
+            setRawFiles((prev) => [...prev, file]);
+            setActiveInlinePanel("media");
+          }
         }}
         onFallbackInput={() => cameraFallbackInputRef.current?.click()}
       />

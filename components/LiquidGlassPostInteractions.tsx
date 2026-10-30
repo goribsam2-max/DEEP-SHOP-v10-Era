@@ -30,6 +30,7 @@ import {
   User as UserIcon,
   ChevronRight,
   ChevronLeft,
+  Star,
 } from "lucide-react";
 import { ScamPost, ScamComment, ReactionType } from "../types";
 import { auth, db } from "../firebase";
@@ -765,6 +766,23 @@ export const LoopPostOptionsSheet: React.FC<{
 
                   {!isOwnPost && authorId && (
                     <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          onClose();
+                          navigate(
+                            `/gift-stars/${encodeURIComponent(
+                              authorId
+                            )}?postId=${encodeURIComponent(post.id)}`
+                          );
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      >
+                        <Star className="w-[22px] h-[22px] stroke-[1.95] text-amber-500 shrink-0" />
+                        <span>Gift Stars</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={handleToggleMute}

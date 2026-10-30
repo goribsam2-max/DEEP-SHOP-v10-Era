@@ -77,6 +77,7 @@ export interface ComposerDraftItem {
   textStyle: "normal" | "large" | "quote";
   postTag?: string;
   locationTag?: string;
+  videoUrl?: string;
   gifUrl?: string;
   stickers?: string[];
   poll?: PostPoll | null;

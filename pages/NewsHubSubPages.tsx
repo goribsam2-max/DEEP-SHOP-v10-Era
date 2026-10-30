@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   useParams,
   useNavigate,
@@ -215,7 +215,7 @@ export const toggleSavePostHelper = async (
 };
 
 /* ============================================================================
- * 1. DEDICATED FULLSCREEN PHOTO VIEWER PAGE (/news-hub/photo/:postId/:index)
+ * 1. DEDICATED FULLSCREEN PHOTO VIEWER PAGE (/loops/photo/:postId/:index)
  * ========================================================================== */
 export const NewsPhotoViewerPage: React.FC = () => {
   const { postId, index } = useParams<{ postId: string; index: string }>();
@@ -249,12 +249,20 @@ export const NewsPhotoViewerPage: React.FC = () => {
     Math.max(0, Number(index) || 0)
   );
   const [zoomed, setZoomed] = useState(false);
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
   const [loading, setLoading] = useState(
     !Boolean(navCommentState?.commentImageUrl)
   );
 
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const lastTapMsRef = useRef<number>(0);
+  const singleTapTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     setActiveIndex(Math.max(0, Number(index) || 0));
+    setZoomed(false);
   }, [index]);
 
   useEffect(() => {
@@ -335,6 +343,9 @@ export const NewsPhotoViewerPage: React.FC = () => {
     loadViewerData();
     return () => {
       mounted = false;
+      if (singleTapTimerRef.current) {
+        window.clearTimeout(singleTapTimerRef.current);
+      }
     };
   }, [postId, commentId, navCommentState?.commentImageUrl]);
 
@@ -348,10 +359,34 @@ export const NewsPhotoViewerPage: React.FC = () => {
   const currentImg = images[activeIndex] || images[0] || "";
   const headerTitle = isCommentPhotoMode
     ? commentMedia?.authorName || "Comment Photo"
-    : post?.reporterName || "Feed Photo";
+    : getSafePublicUsername({
+        username: (post as any)?.reporterUsername,
+        displayName: post?.reporterName,
+      }) ||
+      post?.reporterName ||
+      "Loops Photo";
+  const authorAvatar = !isCommentPhotoMode ? post?.reporterAvatar || "" : "";
   const bottomCaption = isCommentPhotoMode
     ? commentMedia?.text || ""
     : post?.description || "";
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        navigate(-1);
+      } else if (e.key === "ArrowLeft" && !zoomed && activeIndex > 0) {
+        setActiveIndex((i) => Math.max(0, i - 1));
+      } else if (
+        e.key === "ArrowRight" &&
+        !zoomed &&
+        activeIndex < images.length - 1
+      ) {
+        setActiveIndex((i) => Math.min(images.length - 1, i + 1));
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeIndex, images.length, navigate, zoomed]);
 
   const handleDownload = () => {
     if (!currentImg) return;
@@ -360,26 +395,108 @@ export const NewsPhotoViewerPage: React.FC = () => {
       ? `comment-photo-${commentId || "media"}.jpg`
       : isScam
       ? `scam-report-${post?.id || "photo"}-${activeIndex + 1}.jpg`
-      : `feed-photo-${post?.id || "photo"}-${activeIndex + 1}.jpg`;
+      : `loops-photo-${post?.id || "photo"}-${activeIndex + 1}.jpg`;
     downloadWatermarkedImage(currentImg, filename);
     notify("Photo saved to device", "success");
   };
 
+  const handleCopyShareLink = async () => {
+    if (!post?.id) return;
+    triggerHaptic();
+    const shareUrl = `${getPublicShareOrigin()}/loops/post/${post.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      notify("Post link copied", "success");
+    } catch {
+      notify("Could not copy link", "error");
+    }
+  };
+
+  const handleImageStageTap = () => {
+    const now = Date.now();
+    if (now - lastTapMsRef.current < 280) {
+      if (singleTapTimerRef.current) {
+        window.clearTimeout(singleTapTimerRef.current);
+        singleTapTimerRef.current = null;
+      }
+      triggerHaptic();
+      setZoomed((z) => !z);
+      lastTapMsRef.current = 0;
+      return;
+    }
+    lastTapMsRef.current = now;
+    singleTapTimerRef.current = window.setTimeout(() => {
+      if (!zoomed) {
+        setChromeVisible((v) => !v);
+      }
+      singleTapTimerRef.current = null;
+    }, 260);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (zoomed || e.touches.length !== 1) return;
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (
+      zoomed ||
+      touchStartXRef.current === null ||
+      touchStartYRef.current === null
+    ) {
+      return;
+    }
+    const endX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
+    const endY = e.changedTouches[0]?.clientY ?? touchStartYRef.current;
+    const dx = touchStartXRef.current - endX;
+    const dy = touchStartYRef.current - endY;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+
+    if (Math.abs(dy) > 95 && Math.abs(dy) > Math.abs(dx) * 1.4) {
+      triggerHaptic();
+      navigate(-1);
+      return;
+    }
+
+    if (images.length > 1 && Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy)) {
+      triggerHaptic();
+      if (dx > 0 && activeIndex < images.length - 1) {
+        setActiveIndex((i) => Math.min(images.length - 1, i + 1));
+      } else if (dx < 0 && activeIndex > 0) {
+        setActiveIndex((i) => Math.max(0, i - 1));
+      }
+    }
+  };
+
+  const totalLikes = Math.max(
+    Number(post?.votes || 0),
+    post?.reactions ? Object.keys(post.reactions).length : 0
+  );
+  const totalComments = Number(post?.commentsCount || 0);
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between select-none">
+    <div className="fixed inset-0 z-50 bg-black text-white flex flex-col justify-between overflow-hidden select-none">
       <SEO
         title={
           isCommentPhotoMode
             ? `${headerTitle} — Comment Photo`
-            : post?.title
+            : post?.title && post.title !== "Feed Post"
             ? `${post.title} — Photo`
-            : "Fullscreen Photo"
+            : `${headerTitle} on Loops`
         }
-        description="Fullscreen media viewer"
+        description="Fullscreen photo viewer"
       />
 
-      {/* Top Bar */}
-      <header className="px-4 py-4 flex items-center justify-between gap-3 bg-gradient-to-b from-black/80 to-transparent z-20">
+      {/* Top Floating Liquid-Glass Chrome */}
+      <header
+        className={`fixed top-0 inset-x-0 z-30 px-3.5 sm:px-6 pt-3.5 pb-6 flex items-center justify-between gap-3 bg-gradient-to-b from-black/85 via-black/45 to-transparent transition-all duration-200 ${
+          chromeVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 -translate-y-3 pointer-events-none"
+        }`}
+      >
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
@@ -387,33 +504,59 @@ export const NewsPhotoViewerPage: React.FC = () => {
               triggerHaptic();
               navigate(-1);
             }}
-            className="w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md flex items-center justify-center text-white transition cursor-pointer shrink-0"
-            aria-label="Back"
+            className="w-11 h-11 rounded-full bg-white/12 hover:bg-white/20 backdrop-blur-xl border border-white/15 flex items-center justify-center text-white active:scale-95 transition cursor-pointer shrink-0"
+            aria-label="Close photo viewer"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <X className="w-5 h-5 stroke-[2.2]" />
           </button>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-white truncate">
-              {headerTitle}
-            </p>
-            <p className="text-xs text-zinc-400 tabular-nums">
-              {isCommentPhotoMode
-                ? "Comment Photo"
-                : images.length > 0
-                ? `Photo ${activeIndex + 1} of ${images.length}`
-                : "Photo Viewer"}
-            </p>
+
+          <div
+            onClick={() => {
+              if (!isCommentPhotoMode && post?.reporterId) {
+                navigate(`/loops/profile/${post.reporterId}`);
+              }
+            }}
+            className={`flex items-center gap-2.5 min-w-0 ${
+              !isCommentPhotoMode && post?.reporterId ? "cursor-pointer" : ""
+            }`}
+          >
+            {authorAvatar ? (
+              <img
+                src={authorAvatar}
+                alt={headerTitle}
+                referrerPolicy="no-referrer"
+                className="w-9 h-9 rounded-full object-cover ring-1 ring-white/25 shrink-0"
+              />
+            ) : null}
+            <div className="min-w-0">
+              <p className="text-[14.5px] font-semibold text-white truncate leading-tight">
+                {headerTitle}
+              </p>
+              <p className="text-[11.5px] text-zinc-300/85 truncate leading-tight mt-0.5">
+                {isCommentPhotoMode
+                  ? "Reply attachment"
+                  : post?.createdAt
+                  ? formatDhakaDateTime(post.createdAt)
+                  : "Loops"}
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {images.length > 1 && (
+            <div className="px-3 h-9 rounded-full bg-white/12 backdrop-blur-xl border border-white/18 flex items-center justify-center text-xs font-semibold tabular-nums text-white">
+              {activeIndex + 1}/{images.length}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => {
               triggerHaptic();
               setZoomed((z) => !z);
             }}
-            className="w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md flex items-center justify-center text-white transition cursor-pointer"
+            className="w-10 h-10 rounded-full bg-white/12 hover:bg-white/20 backdrop-blur-xl border border-white/15 flex items-center justify-center text-white active:scale-95 transition cursor-pointer"
             aria-label={zoomed ? "Zoom out" : "Zoom in"}
           >
             {zoomed ? (
@@ -422,76 +565,89 @@ export const NewsPhotoViewerPage: React.FC = () => {
               <ZoomIn className="w-4 h-4" />
             )}
           </button>
+
           {currentImg && (
             <button
               type="button"
               onClick={handleDownload}
-              className="px-4 h-10 rounded-full bg-white text-zinc-950 text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-200 transition cursor-pointer"
+              className="w-10 h-10 rounded-full bg-white/12 hover:bg-white/20 backdrop-blur-xl border border-white/15 flex items-center justify-center text-white active:scale-95 transition cursor-pointer"
+              aria-label="Save photo"
+              title="Save photo"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Save</span>
+              <Download className="w-4 h-4" />
             </button>
           )}
         </div>
       </header>
 
-      {/* Main Image Stage (div instead of main to avoid global white main override) */}
-      <div className="relative flex-1 flex items-center justify-center overflow-auto px-2 py-4 bg-transparent">
+      {/* Center Edge-to-Edge Cinema Stage */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className={`relative flex-1 w-full h-full flex items-center justify-center ${
+          zoomed ? "overflow-auto" : "overflow-hidden"
+        }`}
+      >
         {loading ? (
-          <div className="text-sm text-zinc-400">Loading photo...</div>
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-9 h-9 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+            <span className="text-xs font-medium text-zinc-400">
+              Opening photo...
+            </span>
+          </div>
         ) : !currentImg ? (
-          <div className="text-center space-y-3">
-            <p className="text-sm text-zinc-400">Photo not found.</p>
+          <div className="text-center space-y-3 px-6">
+            <p className="text-sm text-zinc-400">Photo unavailable.</p>
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="px-5 py-2.5 rounded-full bg-white text-zinc-900 text-xs font-bold cursor-pointer"
+              className="px-5 py-2.5 rounded-full bg-white text-zinc-950 text-xs font-semibold cursor-pointer"
             >
               Go Back
             </button>
           </div>
         ) : (
-          <div className="relative max-w-5xl w-full flex flex-col items-center justify-center">
-            <SmoothImage
-              src={currentImg}
-              alt={headerTitle}
-              eager
-              onLoad={() => {
-                preloadImageUrl(images[activeIndex + 1]);
-                preloadImageUrl(images[activeIndex - 1]);
-              }}
-              onClick={() => setZoomed((z) => !z)}
-              wrapperClassName="bg-transparent flex items-center justify-center rounded-2xl"
-              skeletonClassName="bg-zinc-900/80 rounded-2xl"
-              className={`rounded-2xl transition-transform duration-200 cursor-zoom-in ${
-                zoomed
-                  ? "scale-150 cursor-zoom-out max-h-none"
-                  : "max-h-[76vh] w-auto object-contain"
-              }`}
-            />
+          <div className="relative w-full h-full flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${currentImg}-${activeIndex}`}
+                initial={{ opacity: 0.4, scale: 0.985 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0.3, scale: 0.985 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                onClick={handleImageStageTap}
+                className="w-full h-full flex items-center justify-center"
+              >
+                <SmoothImage
+                  src={currentImg}
+                  alt={headerTitle}
+                  eager
+                  onLoad={() => {
+                    preloadImageUrl(images[activeIndex + 1]);
+                    preloadImageUrl(images[activeIndex - 1]);
+                  }}
+                  wrapperClassName="bg-transparent flex items-center justify-center w-full h-full rounded-none"
+                  skeletonClassName="bg-zinc-900/60 rounded-none"
+                  className={`rounded-none select-none transition-transform duration-200 ${
+                    zoomed
+                      ? "scale-[2.15] cursor-zoom-out max-h-none w-auto"
+                      : "max-h-[100dvh] w-full object-contain cursor-zoom-in"
+                  }`}
+                />
+              </motion.div>
+            </AnimatePresence>
 
-            {isScam && (
-              <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-600/90 text-white text-xs font-semibold shadow-lg">
-                <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>
-                  Scam Report
-                  {post?.scamLocation
-                    ? ` · Happened on: ${post.scamLocation}`
-                    : " · Verified Evidence"}
-                </span>
-              </div>
-            )}
-
-            {images.length > 1 && !zoomed && (
+            {images.length > 1 && !zoomed && chromeVisible && (
               <>
                 {activeIndex > 0 && (
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       triggerHaptic();
                       setActiveIndex((i) => Math.max(0, i - 1));
                     }}
-                    className="fixed left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md text-white flex items-center justify-center cursor-pointer"
+                    className="hidden sm:flex fixed left-5 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/12 hover:bg-white/22 backdrop-blur-xl border border-white/15 text-white items-center justify-center active:scale-95 transition cursor-pointer"
                     aria-label="Previous photo"
                   >
                     <ChevronLeft className="w-5 h-5" />
@@ -500,13 +656,14 @@ export const NewsPhotoViewerPage: React.FC = () => {
                 {activeIndex < images.length - 1 && (
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       triggerHaptic();
                       setActiveIndex((i) =>
                         Math.min(images.length - 1, i + 1)
                       );
                     }}
-                    className="fixed right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md text-white flex items-center justify-center cursor-pointer"
+                    className="hidden sm:flex fixed right-5 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/12 hover:bg-white/22 backdrop-blur-xl border border-white/15 text-white items-center justify-center active:scale-95 transition cursor-pointer"
                     aria-label="Next photo"
                   >
                     <ChevronRight className="w-5 h-5" />
@@ -518,41 +675,121 @@ export const NewsPhotoViewerPage: React.FC = () => {
         )}
       </div>
 
-      {/* Bottom Thumbnail Strip & Caption */}
-      <div className="px-4 pb-6 pt-2 bg-gradient-to-t from-black/85 to-transparent space-y-3">
-        {images.length > 1 && (
-          <div className="flex items-center justify-center gap-2 overflow-x-auto py-1">
-            {images.map((img, i) => (
+      {/* Bottom Floating Caption, Slide Indicators & Quick Actions */}
+      <footer
+        className={`fixed bottom-0 inset-x-0 z-30 px-4 sm:px-6 pb-6 pt-8 bg-gradient-to-t from-black/90 via-black/55 to-transparent transition-all duration-200 ${
+          chromeVisible && !zoomed
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+      >
+        <div className="max-w-xl mx-auto space-y-3">
+          {isScam && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/90 backdrop-blur-md text-white text-[11.5px] font-semibold">
+              <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                Scam Report
+                {post?.scamLocation ? ` · ${post.scamLocation}` : ""}
+              </span>
+            </div>
+          )}
+
+          {bottomCaption && (
+            <div
+              onClick={() => setCaptionExpanded((p) => !p)}
+              className="cursor-pointer"
+            >
+              <p
+                className={`text-[14px] leading-[1.45] text-zinc-100 break-words ${
+                  captionExpanded ? "max-h-40 overflow-y-auto" : "line-clamp-2"
+                }`}
+              >
+                {bottomCaption}
+              </p>
+            </div>
+          )}
+
+          {images.length > 1 && (
+            <div className="flex items-center justify-center gap-1.5 py-0.5">
+              {images.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setZoomed(false);
+                    setActiveIndex(idx);
+                  }}
+                  aria-label={`View photo ${idx + 1}`}
+                  className={`rounded-full transition-all cursor-pointer ${
+                    idx === activeIndex
+                      ? "w-5 h-1.5 bg-white"
+                      : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {!isCommentPhotoMode && post?.id && (
+            <div className="flex items-center justify-between pt-1 border-t border-white/12 text-zinc-200">
+              <div className="flex items-center gap-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate(`/loops/post/${post.id}`);
+                  }}
+                  className="min-h-[40px] inline-flex items-center gap-1.5 text-[13.5px] font-medium hover:text-white transition cursor-pointer"
+                >
+                  <Heart className="w-[19px] h-[19px]" />
+                  {totalLikes > 0 && (
+                    <span className="tabular-nums">
+                      {formatCompactNumber(totalLikes)}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    navigate(`/loops/post/${post.id}#comments`);
+                  }}
+                  className="min-h-[40px] inline-flex items-center gap-1.5 text-[13.5px] font-medium hover:text-white transition cursor-pointer"
+                >
+                  <MessageCircle className="w-[19px] h-[19px]" />
+                  {totalComments > 0 && (
+                    <span className="tabular-nums">
+                      {formatCompactNumber(totalComments)}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyShareLink}
+                  className="min-h-[40px] inline-flex items-center gap-1.5 text-[13.5px] font-medium hover:text-white transition cursor-pointer"
+                >
+                  <Send className="w-[18px] h-[18px]" />
+                  <span>Share</span>
+                </button>
+              </div>
+
               <button
-                key={i}
                 type="button"
                 onClick={() => {
                   triggerHaptic();
-                  setZoomed(false);
-                  setActiveIndex(i);
+                  navigate(`/loops/post/${post.id}`);
                 }}
-                className={`w-14 h-14 rounded-xl overflow-hidden border-2 shrink-0 transition cursor-pointer ${
-                  i === activeIndex
-                    ? "border-[#1877F2] scale-105"
-                    : "border-white/20 opacity-60 hover:opacity-90"
-                }`}
+                className="px-3.5 h-8 rounded-full bg-white/12 hover:bg-white/20 backdrop-blur-md border border-white/15 text-xs font-semibold text-white transition cursor-pointer"
               >
-                <img
-                  src={img}
-                  alt={`Thumb ${i + 1}`}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
-                />
+                View Loop
               </button>
-            ))}
-          </div>
-        )}
-        {bottomCaption && (
-          <p className="max-w-xl mx-auto text-center text-xs text-zinc-300 line-clamp-2">
-            {bottomCaption}
-          </p>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      </footer>
     </div>
   );
 };
@@ -2297,7 +2534,8 @@ export const NewsStoryViewerPage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(
     () => auth.currentUser
   );
-  const followedIds = useFollowedIds(currentUser?.uid);
+  const followedIdsRaw = useFollowedIds(currentUser?.uid);
+  const followedIds = useMemo(() => new Set(followedIdsRaw || []), [followedIdsRaw]);
 
   const [audioMuted, setAudioMuted] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -3871,8 +4109,7 @@ export const NewsStoryViewerPage: React.FC = () => {
   );
   const isFollowingAuthor = Boolean(
     story?.userId &&
-      Array.isArray(followedIds) &&
-      followedIds.includes(story.userId)
+    followedIds.has(story.userId)
   );
 
   const peerDisplayHandle =

@@ -1,9 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Loader2, Store, Home, X } from "lucide-react";
+import { Bell, Check, Loader2, Store, Home, X } from "lucide-react";
 import { auth, db } from "../firebase";
 import { useNotify } from "../components/Notifications";
 import { getFriendlyErrorMessage } from "../lib/firebaseErrorMapper";
@@ -13,13 +17,16 @@ import {
   DeepShopAuthShell,
   DeepShopEcosystemHero,
   DeepShopFloatingInput,
+  DefaultUserAvatar,
   StopCreatingAccountModal,
 } from "../components/DeepShopAuthShell";
 import {
   formatAccountContact,
   getSavedAccounts,
   linkPendingGuestOrderAndResolveDestination,
+  MatchedAccountProfile,
   normalizeBdPhoneVariants,
+  searchMatchingAccounts,
   upsertSavedAccount,
 } from "../lib/savedAccounts";
 import {
@@ -27,11 +34,19 @@ import {
   isAuthVoiceMuted,
   playAuthVoice,
   validateRealEmail,
+  validateRealPersonName,
   validateInappropriateContent,
   checkPasswordRules,
 } from "../lib/authVoiceAndValidation";
+import { processCleanImage } from "../lib/watermark";
+import { uploadDataUrlToImgbb } from "../services/imgbb";
+import {
+  requestBrowserNotificationPermissionWithMeta,
+  subscribeToWebPush,
+} from "../lib/push";
 
 const DRAFT_STORAGE_KEY = "deepshop_signup_wizard_draft_v1";
+const WIZARD_TEMP_KEY = "deepshop_signup_wizard_temp_v1";
 
 const MONTH_NAMES = [
   "January",
@@ -67,6 +82,13 @@ interface SignUpDraft {
   altPhone: string;
 }
 
+interface SignUpWizardTempState {
+  password?: string;
+  matchedAccount?: MatchedAccountProfile | null;
+  postSignupDest?: string;
+  uploadedPhotoUrl?: string;
+}
+
 const getDefaultDraft = (): SignUpDraft => {
   const defaultYear = new Date().getFullYear() - 22;
   try {
@@ -96,6 +118,36 @@ const getDefaultDraft = (): SignUpDraft => {
   };
 };
 
+const getWizardTempState = (): SignUpWizardTempState => {
+  try {
+    const raw = sessionStorage.getItem(WIZARD_TEMP_KEY);
+    if (raw) {
+      return JSON.parse(raw) as SignUpWizardTempState;
+    }
+  } catch {
+    // Ignore storage read error
+  }
+  return {};
+};
+
+const saveWizardTempState = (patch: Partial<SignUpWizardTempState>) => {
+  try {
+    const prev = getWizardTempState();
+    const next = { ...prev, ...patch };
+    sessionStorage.setItem(WIZARD_TEMP_KEY, JSON.stringify(next));
+  } catch {
+    // Ignore storage write error
+  }
+};
+
+const clearWizardTempState = () => {
+  try {
+    sessionStorage.removeItem(WIZARD_TEMP_KEY);
+  } catch {
+    // Ignore
+  }
+};
+
 function calculateAge(day: number, month: number, year: number): number {
   const today = new Date();
   let age = today.getFullYear() - year;
@@ -121,16 +173,31 @@ const SignUp: React.FC = () => {
   const querySuffix = location.search || "";
   const currentStep = step || (roleParam === "seller" ? "seller" : "welcome");
 
+  const initialTemp = useMemo(() => getWizardTempState(), []);
   const [draft, setDraft] = useState<SignUpDraft>(getDefaultDraft);
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState<string>(initialTemp.password || "");
+  const [matchedAccount, setMatchedAccount] =
+    useState<MatchedAccountProfile | null>(initialTemp.matchedAccount || null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>(
+    initialTemp.uploadedPhotoUrl || ""
+  );
   const [loading, setLoading] = useState(false);
+  const [checkingAccount, setCheckingAccount] = useState(false);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [requestingPush, setRequestingPush] = useState(false);
   const [fieldError, setFieldError] = useState("");
+
+  const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Popups / Bottom Sheets
   const [showBirthdayInfo, setShowBirthdayInfo] = useState(false);
   const [showDatePickerSheet, setShowDatePickerSheet] = useState(false);
   const [showStopModal, setShowStopModal] = useState(false);
   const [showRememberInfoSheet, setShowRememberInfoSheet] = useState(false);
+  const [showTermsLearnMoreSheet, setShowTermsLearnMoreSheet] = useState(false);
+  const [showNotificationsInfoSheet, setShowNotificationsInfoSheet] =
+    useState(false);
+  const [showPushPromptModal, setShowPushPromptModal] = useState(false);
 
   const savedAccounts = getSavedAccounts();
 
@@ -164,8 +231,11 @@ const SignUp: React.FC = () => {
           );
           break;
         case "email":
+          playAuthVoice("আপনার ব্যক্তিগত আসল ইমেইল ঠিকানাটি এখানে লিখুন।");
+          break;
+        case "existing-account":
           playAuthVoice(
-            "আপনার ব্যক্তিগত আসল ইমেইল ঠিকানাটি এখানে লিখুন।"
+            "এই তথ্যে ডিপ শপে আপনার আগে থেকেই একটি অ্যাকাউন্ট রয়েছে। আপনি চাইলে আগের অ্যাকাউন্টে লগইন করতে পারেন, অথবা নতুন অ্যাকাউন্ট তৈরি চালিয়ে যেতে পারেন।"
           );
           break;
         case "password":
@@ -173,6 +243,21 @@ const SignUp: React.FC = () => {
             roleParam === "seller"
               ? "এখন আপনার সেলার অ্যাকাউন্টের সুরক্ষার জন্য একটি শক্তিশালী পাসওয়ার্ড তৈরি করুন।"
               : "আপনার অ্যাকাউন্টের সুরক্ষার জন্য কমপক্ষে আট অক্ষরের একটি শক্তিশালী পাসওয়ার্ড তৈরি করুন।"
+          );
+          break;
+        case "terms":
+          playAuthVoice(
+            "ডিপ শপের শর্তাবলী এবং প্রাইভেসি পলিসিতে সম্মতি জানাতে আই এগ্রি বাটনে ট্যাপ করে আপনার অ্যাকাউন্ট তৈরি সম্পন্ন করুন।"
+          );
+          break;
+        case "profile-picture":
+          playAuthVoice(
+            "আপনার প্রোফাইলে একটি সুন্দর ছবি যোগ করুন যাতে সবাই আপনাকে সহজে চিনতে পারে। ছবি দিতে অ্যাড পিকচার বাটনে ট্যাপ করুন, অথবা পরে দিতে চাইলে স্কিপ করুন।"
+          );
+          break;
+        case "notifications":
+          playAuthVoice(
+            "অর্ডার আপডেট, মেসেজ এবং লুপসের নোটিফিকেশন দ্রুত পেতে নেক্সট বাটনে ট্যাপ করে পুশ নোটিফিকেশন অ্যালাউ করুন।"
           );
           break;
         case "seller":
@@ -204,8 +289,6 @@ const SignUp: React.FC = () => {
     }
   };
 
-
-
   const age = useMemo(
     () => calculateAge(draft.birthDay, draft.birthMonth, draft.birthYear),
     [draft.birthDay, draft.birthMonth, draft.birthYear]
@@ -236,6 +319,7 @@ const SignUp: React.FC = () => {
   const handleConfirmStop = () => {
     setShowStopModal(false);
     clearDraft();
+    clearWizardTempState();
     if (savedAccounts.length > 0) {
       navigate(`/accounts${querySuffix}`);
     } else {
@@ -266,6 +350,17 @@ const SignUp: React.FC = () => {
       case "email":
         navigate(`/signup/gender${querySuffix}`);
         break;
+      case "existing-account":
+        if (roleParam === "seller") {
+          navigate(`/signup/seller${querySuffix}`);
+        } else {
+          navigate(
+            `/signup/${
+              draft.contactMode === "email" ? "email" : "mobile"
+            }${querySuffix}`
+          );
+        }
+        break;
       case "password":
         if (roleParam === "seller") {
           navigate(`/signup/seller${querySuffix}`);
@@ -276,6 +371,9 @@ const SignUp: React.FC = () => {
             }${querySuffix}`
           );
         }
+        break;
+      case "terms":
+        navigate(`/signup/password${querySuffix}`);
         break;
       default:
         navigate(`/signup${querySuffix}`);
@@ -290,7 +388,16 @@ const SignUp: React.FC = () => {
       playAuthVoice("আপনার প্রথম নাম লিখুন।");
       return;
     }
-    const fnCheck = validateInappropriateContent(draft.firstName, "ফার্স্ট নেমে");
+    const fnRealCheck = validateRealPersonName(draft.firstName, "ফার্স্ট নাম");
+    if (!fnRealCheck.isValid) {
+      setFieldError(fnRealCheck.errorMsg);
+      playAuthVoice(fnRealCheck.errorMsg);
+      return;
+    }
+    const fnCheck = validateInappropriateContent(
+      draft.firstName,
+      "ফার্স্ট নেমে"
+    );
     if (!fnCheck.isValid) {
       setFieldError(fnCheck.errorMsg);
       playAuthVoice(fnCheck.errorMsg);
@@ -302,10 +409,25 @@ const SignUp: React.FC = () => {
       playAuthVoice("আপনার সারনেম বা পদবী লিখুন।");
       return;
     }
+    const snRealCheck = validateRealPersonName(draft.surname, "সারনেম");
+    if (!snRealCheck.isValid) {
+      setFieldError(snRealCheck.errorMsg);
+      playAuthVoice(snRealCheck.errorMsg);
+      return;
+    }
     const snCheck = validateInappropriateContent(draft.surname, "সারনেমে");
     if (!snCheck.isValid) {
       setFieldError(snCheck.errorMsg);
       playAuthVoice(snCheck.errorMsg);
+      return;
+    }
+    const fullRealCheck = validateRealPersonName(
+      `${draft.firstName.trim()} ${draft.surname.trim()}`,
+      "পূর্ণ নাম"
+    );
+    if (!fullRealCheck.isValid) {
+      setFieldError(fullRealCheck.errorMsg);
+      playAuthVoice(fullRealCheck.errorMsg);
       return;
     }
     navigate(`/signup/birthday${querySuffix}`);
@@ -337,7 +459,7 @@ const SignUp: React.FC = () => {
     );
   };
 
-  const handleNextFromMobile = (e: React.FormEvent) => {
+  const handleNextFromMobile = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleaned = draft.mobileNumber.trim().replace(/[\s\-().]/g, "");
     if (!/^\+?[0-9]{8,15}$/.test(cleaned)) {
@@ -347,10 +469,24 @@ const SignUp: React.FC = () => {
       return;
     }
     updateDraft({ contactMode: "mobile" });
+    setCheckingAccount(true);
+    try {
+      const matches = await searchMatchingAccounts(draft.mobileNumber.trim());
+      if (matches.length > 0 && matches[0]?.displayName) {
+        setMatchedAccount(matches[0]);
+        saveWizardTempState({ matchedAccount: matches[0] });
+        navigate(`/signup/existing-account${querySuffix}`);
+        return;
+      }
+    } catch {
+      // Proceed to password if lookup fails
+    } finally {
+      setCheckingAccount(false);
+    }
     navigate(`/signup/password${querySuffix}`);
   };
 
-  const handleNextFromEmail = (e: React.FormEvent) => {
+  const handleNextFromEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = draft.email.trim();
     const emailCheck = validateRealEmail(trimmed);
@@ -366,10 +502,24 @@ const SignUp: React.FC = () => {
       return;
     }
     updateDraft({ contactMode: "email" });
+    setCheckingAccount(true);
+    try {
+      const matches = await searchMatchingAccounts(trimmed);
+      if (matches.length > 0 && matches[0]?.displayName) {
+        setMatchedAccount(matches[0]);
+        saveWizardTempState({ matchedAccount: matches[0] });
+        navigate(`/signup/existing-account${querySuffix}`);
+        return;
+      }
+    } catch {
+      // Proceed to password if lookup fails
+    } finally {
+      setCheckingAccount(false);
+    }
     navigate(`/signup/password${querySuffix}`);
   };
 
-  const handleNextFromSeller = (e: React.FormEvent) => {
+  const handleNextFromSeller = async (e: React.FormEvent) => {
     e.preventDefault();
     setFieldError("");
 
@@ -379,7 +529,19 @@ const SignUp: React.FC = () => {
       playAuthVoice(msg);
       return;
     }
-    const shopProf = validateInappropriateContent(draft.shopName, "দোকানের নামে");
+    const shopRealCheck = validateRealPersonName(
+      draft.shopName,
+      "দোকানের নাম"
+    );
+    if (!shopRealCheck.isValid) {
+      setFieldError(shopRealCheck.errorMsg);
+      playAuthVoice(shopRealCheck.errorMsg);
+      return;
+    }
+    const shopProf = validateInappropriateContent(
+      draft.shopName,
+      "দোকানের নামে"
+    );
     if (!shopProf.isValid) {
       setFieldError(shopProf.errorMsg);
       playAuthVoice(shopProf.errorMsg);
@@ -392,7 +554,19 @@ const SignUp: React.FC = () => {
       playAuthVoice(msg);
       return;
     }
-    const ownerProf = validateInappropriateContent(draft.firstName, "মালিকের নামে");
+    const ownerRealCheck = validateRealPersonName(
+      draft.firstName,
+      "মালিকের নাম"
+    );
+    if (!ownerRealCheck.isValid) {
+      setFieldError(ownerRealCheck.errorMsg);
+      playAuthVoice(ownerRealCheck.errorMsg);
+      return;
+    }
+    const ownerProf = validateInappropriateContent(
+      draft.firstName,
+      "মালিকের নামে"
+    );
     if (!ownerProf.isValid) {
       setFieldError(ownerProf.errorMsg);
       playAuthVoice(ownerProf.errorMsg);
@@ -429,10 +603,87 @@ const SignUp: React.FC = () => {
     }
 
     updateDraft({ contactMode: "email" });
+    setCheckingAccount(true);
+    try {
+      let matches = await searchMatchingAccounts(trimmedEmail);
+      if (matches.length === 0) {
+        matches = await searchMatchingAccounts(draft.mobileNumber.trim());
+      }
+      if (matches.length > 0 && matches[0]?.displayName) {
+        setMatchedAccount(matches[0]);
+        saveWizardTempState({ matchedAccount: matches[0] });
+        navigate(`/signup/existing-account${querySuffix}`);
+        return;
+      }
+    } catch {
+      // Proceed to password if lookup fails
+    } finally {
+      setCheckingAccount(false);
+    }
     navigate(`/signup/password${querySuffix}`);
   };
 
-  const handleCreateAccount = async (e: React.FormEvent) => {
+  const handleLoginExistingAccount = async () => {
+    const activeMatch = matchedAccount || getWizardTempState().matchedAccount;
+    if (!activeMatch) {
+      navigate(`/signin${querySuffix}`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const savedEntry = savedAccounts.find(
+        (acc) =>
+          (activeMatch.uid && acc.uid === activeMatch.uid) ||
+          (activeMatch.email &&
+            acc.email.toLowerCase() === activeMatch.email.toLowerCase())
+      );
+
+      if (savedEntry && savedEntry.rememberLogin && savedEntry.password) {
+        const cred = await signInWithEmailAndPassword(
+          auth,
+          savedEntry.email,
+          savedEntry.password
+        );
+        upsertSavedAccount({
+          ...savedEntry,
+          uid: cred.user.uid,
+          lastActive: Date.now(),
+        });
+        clearDraft();
+        clearWizardTempState();
+        notify(`Welcome back, ${activeMatch.displayName}!`, "success");
+        playAuthVoice("আপনার আগের ডিপ শপ অ্যাকাউন্টে সফলভাবে লগইন হয়েছে।");
+        const dest = await linkPendingGuestOrderAndResolveDestination(
+          cred.user.uid,
+          cred.user.email || savedEntry.email,
+          location.search,
+          "/"
+        );
+        navigate(dest);
+        return;
+      }
+    } catch {
+      // Fall through to SignIn screen with prefilled identifier
+    } finally {
+      setLoading(false);
+    }
+
+    const hint =
+      formatAccountContact(activeMatch.email, activeMatch.phoneNumber) ||
+      draft.mobileNumber.trim() ||
+      draft.email.trim();
+    clearDraft();
+    clearWizardTempState();
+    const nextParams = new URLSearchParams(location.search);
+    if (hint) {
+      nextParams.set("login_hint", hint);
+    }
+    const qs = nextParams.toString();
+    navigate(`/signin${qs ? `?${qs}` : ""}`);
+  };
+
+  const handleNextFromPassword = (e: React.FormEvent) => {
     e.preventDefault();
 
     const pwdState = checkPasswordRules(password);
@@ -451,21 +702,54 @@ const SignUp: React.FC = () => {
       return;
     }
 
+    saveWizardTempState({ password });
+    navigate(`/signup/terms${querySuffix}`);
+  };
+
+  const handleAgreeAndCreateAccount = async () => {
+    const effectivePassword =
+      password || getWizardTempState().password || "";
+    const pwdState = checkPasswordRules(effectivePassword);
+    if (!pwdState.isAllValid) {
+      navigate(`/signup/password${querySuffix}`);
+      return;
+    }
+
     const fullName = `${draft.firstName.trim()} ${draft.surname.trim()}`.trim();
-    if (!fullName) {
-      navigate(`/signup/name${querySuffix}`);
+    const fullNameCheck = validateRealPersonName(fullName, "পূর্ণ নাম");
+    if (!fullName || !fullNameCheck.isValid) {
+      if (fullNameCheck.errorMsg) {
+        notify(fullNameCheck.errorMsg, "error");
+        playAuthVoice(fullNameCheck.errorMsg);
+      }
+      navigate(
+        `/signup/${roleParam === "seller" ? "seller" : "name"}${querySuffix}`
+      );
       return;
     }
 
     let authEmail = "";
     let savedPhone = "";
+    let isSyntheticPhoneAuth = false;
+    let phoneDigits = "";
 
     if (draft.contactMode === "mobile" && roleParam !== "seller") {
       const variants = normalizeBdPhoneVariants(draft.mobileNumber);
       authEmail = variants.phoneAuthEmail;
       savedPhone = variants.e164Bd;
+      phoneDigits = variants.digitsOnly;
+      isSyntheticPhoneAuth = true;
     } else {
       authEmail = draft.email.trim().toLowerCase();
+      const emailCheck = validateRealEmail(authEmail);
+      if (!emailCheck.isValid) {
+        notify(emailCheck.errorMsg, "error");
+        playAuthVoice(emailCheck.errorMsg);
+        navigate(
+          `/signup/${roleParam === "seller" ? "seller" : "email"}${querySuffix}`
+        );
+        return;
+      }
       savedPhone = draft.mobileNumber.trim()
         ? normalizeBdPhoneVariants(draft.mobileNumber).e164Bd
         : "";
@@ -478,11 +762,31 @@ const SignUp: React.FC = () => {
 
     setLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(
-        auth,
-        authEmail,
-        password
-      );
+      let cred;
+      try {
+        cred = await createUserWithEmailAndPassword(
+          auth,
+          authEmail,
+          effectivePassword
+        );
+      } catch (firstErr: any) {
+        if (
+          isSyntheticPhoneAuth &&
+          firstErr?.code === "auth/email-already-in-use"
+        ) {
+          authEmail = `${phoneDigits}.${Date.now().toString(
+            36
+          )}@phone.deepshop.local`;
+          cred = await createUserWithEmailAndPassword(
+            auth,
+            authEmail,
+            effectivePassword
+          );
+        } else {
+          throw firstErr;
+        }
+      }
+
       const user = cred.user;
       await updateProfile(user, { displayName: fullName });
 
@@ -511,6 +815,7 @@ const SignUp: React.FC = () => {
         dateOfBirth: isoBirthDate,
         gender: resolvedGender,
         role: resolvedRole,
+        agreedToTermsAt: Date.now(),
         isBanned: false,
         createdAt: Date.now(),
         registrationDate: Date.now(),
@@ -537,21 +842,13 @@ const SignUp: React.FC = () => {
         uid: user.uid,
         email: authEmail,
         contactDisplay: formatAccountContact(authEmail, savedPhone),
-        password: draft.rememberLogin ? password : "",
+        password: draft.rememberLogin ? effectivePassword : "",
         rememberLogin: draft.rememberLogin,
         displayName: fullName,
         photoURL: "",
         provider: "password",
         lastActive: Date.now(),
       });
-
-      clearDraft();
-      notify("Welcome to DEEP SHOP! Account created.", "success");
-      playAuthVoice(
-        roleParam === "seller"
-          ? "অভিনন্দন! আপনার ডিপ শপ সেলার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে।"
-          : "অভিনন্দন! আপনার ডিপ শপ অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে।"
-      );
 
       const defaultDest =
         roleParam === "seller" ? "/seller/dashboard" : "/";
@@ -561,12 +858,221 @@ const SignUp: React.FC = () => {
         location.search,
         defaultDest
       );
-      navigate(dest);
+
+      clearDraft();
+      saveWizardTempState({
+        password: "",
+        matchedAccount: null,
+        postSignupDest: dest,
+        uploadedPhotoUrl: "",
+      });
+
+      notify("Welcome to DEEP SHOP! Account created.", "success");
+      playAuthVoice(
+        roleParam === "seller"
+          ? "অভিনন্দন! আপনার ডিপ শপ সেলার অ্যাকাউন্ট তৈরি হয়েছে। এখন একটি প্রোফাইল ছবি যোগ করুন।"
+          : "অভিনন্দন! আপনার ডিপ শপ অ্যাকাউন্ট তৈরি হয়েছে। এখন একটি প্রোফাইল ছবি যোগ করুন।"
+      );
+
+      navigate(`/signup/profile-picture${querySuffix}`);
     } catch (err: any) {
-      notify(getFriendlyErrorMessage(err), "error");
-      playAuthVoice(getBanglaAuthErrorMessage(err));
+      if (err?.code === "auth/email-already-in-use") {
+        notify(
+          "This email address is already registered on DEEP SHOP. Please sign in or use another email.",
+          "error"
+        );
+        playAuthVoice(
+          "এই ইমেইল দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট রয়েছে। অনুগ্রহ করে লগইন করুন অথবা অন্য ইমেইল ব্যবহার করুন।"
+        );
+        navigate(
+          `/signup/${
+            roleParam === "seller" ? "seller" : "email"
+          }${querySuffix}`
+        );
+      } else {
+        notify(getFriendlyErrorMessage(err), "error");
+        playAuthVoice(getBanglaAuthErrorMessage(err));
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProfilePicturePick = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setUploadingPicture(true);
+    try {
+      const processed = await processCleanImage(file);
+      const hostedUrl = await uploadDataUrlToImgbb(
+        processed.dataUrl,
+        `avatar-${Date.now()}.jpg`,
+        { requireRemote: true }
+      );
+
+      const user = auth.currentUser;
+      if (user) {
+        await updateProfile(user, { photoURL: hostedUrl });
+        await setDoc(
+          doc(db, "users", user.uid),
+          {
+            photoURL: hostedUrl,
+            avatar: hostedUrl,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        );
+
+        const existingSaved = getSavedAccounts().find(
+          (a) => a.uid === user.uid
+        );
+        if (existingSaved) {
+          upsertSavedAccount({
+            ...existingSaved,
+            photoURL: hostedUrl,
+            lastActive: Date.now(),
+          });
+        }
+      }
+
+      setUploadedPhotoUrl(hostedUrl);
+      saveWizardTempState({ uploadedPhotoUrl: hostedUrl });
+      notify("Profile picture added!", "success");
+      playAuthVoice(
+        "প্রোফাইল ছবি সফলভাবে যুক্ত হয়েছে। সামনে এগিয়ে যেতে কন্টিনিউ বাটনে ট্যাপ করুন।"
+      );
+    } catch {
+      notify("Could not upload profile picture. Please try again.", "error");
+      playAuthVoice("ছবি আপলোড করা যায়নি, অনুগ্রহ করে আবার চেষ্টা করুন।");
+    } finally {
+      setUploadingPicture(false);
+    }
+  };
+
+  const finishOnboardingAndNavigate = () => {
+    const temp = getWizardTempState();
+    const defaultDest = roleParam === "seller" ? "/seller/dashboard" : "/";
+    const dest = temp.postSignupDest || defaultDest;
+    clearDraft();
+    clearWizardTempState();
+    navigate(dest, { replace: true });
+  };
+
+  const persistPushPreferenceAndWelcome = async (enabled: boolean) => {
+    const uid = auth.currentUser?.uid;
+    try {
+      localStorage.setItem(
+        "deepshop_push_optin_v1",
+        enabled ? "granted" : "denied"
+      );
+    } catch {
+      // Ignore storage error
+    }
+    if (uid) {
+      await setDoc(
+        doc(db, "users", uid),
+        {
+          notificationsEnabled: enabled,
+          pushAlertsOptIn: enabled,
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      ).catch(() => {});
+
+      if (enabled) {
+        await addDoc(collection(db, "news_hub_notifications"), {
+          recipientId: uid,
+          senderId: "system",
+          senderName: "DEEP SHOP",
+          senderAvatar: "",
+          type: "system",
+          text: "Push notifications are now active for your orders, messages, and Loops activity.",
+          link: "/",
+          read: false,
+          createdAt: Date.now(),
+        }).catch(() => {});
+      }
+    }
+  };
+
+  const handleRequestNotificationsAndFinish = async () => {
+    // Synchronously request OS/Browser permission directly inside user click gesture
+    const permPromise = requestBrowserNotificationPermissionWithMeta();
+    setRequestingPush(true);
+    try {
+      const permResult = await permPromise;
+
+      if (permResult.permission === "granted") {
+        await subscribeToWebPush(auth.currentUser?.uid, "granted").catch(
+          () => {}
+        );
+        await persistPushPreferenceAndWelcome(true);
+        notify("Push notifications enabled!", "success");
+        playAuthVoice("পুশ নোটিফিকেশন চালু হয়েছে। ডিপ শপে আপনাকে স্বাগতম!");
+        setRequestingPush(false);
+        finishOnboardingAndNavigate();
+        return;
+      }
+
+      const isEmbeddedContext =
+        typeof window !== "undefined" && window.self !== window.top;
+      const wasSuppressedWithoutPrompt =
+        permResult.permission === "unsupported" ||
+        (permResult.permission === "denied" &&
+          (permResult.wasPreDenied ||
+            permResult.elapsedMs < 180 ||
+            isEmbeddedContext));
+
+      if (wasSuppressedWithoutPrompt) {
+        setRequestingPush(false);
+        setShowPushPromptModal(true);
+        playAuthVoice(
+          "ডিপ শপ থেকে নোটিফিকেশন পেতে অ্যালাউ বাটনে ট্যাপ করুন।"
+        );
+        return;
+      }
+
+      await persistPushPreferenceAndWelcome(false);
+      setRequestingPush(false);
+      finishOnboardingAndNavigate();
+    } catch {
+      setRequestingPush(false);
+      setShowPushPromptModal(true);
+    }
+  };
+
+  const handleConfirmFallbackPushAllow = async () => {
+    const retryPermPromise = requestBrowserNotificationPermissionWithMeta();
+    setRequestingPush(true);
+    try {
+      const retryRes = await retryPermPromise;
+      if (retryRes.permission === "granted") {
+        await subscribeToWebPush(auth.currentUser?.uid, "granted").catch(
+          () => {}
+        );
+      }
+      await persistPushPreferenceAndWelcome(true);
+      notify("Push notifications enabled!", "success");
+      playAuthVoice("পুশ নোটিফিকেশন চালু হয়েছে। ডিপ শপে আপনাকে স্বাগতম!");
+    } finally {
+      setRequestingPush(false);
+      setShowPushPromptModal(false);
+      finishOnboardingAndNavigate();
+    }
+  };
+
+  const handleDeclinePushPrompt = async () => {
+    setShowPushPromptModal(false);
+    setRequestingPush(true);
+    try {
+      await persistPushPreferenceAndWelcome(false);
+    } finally {
+      setRequestingPush(false);
+      finishOnboardingAndNavigate();
     }
   };
 
@@ -781,9 +1287,11 @@ const SignUp: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+              disabled={checkingAccount}
+              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              Next
+              {checkingAccount && <Loader2 className="w-5 h-5 animate-spin" />}
+              <span>{checkingAccount ? "Checking..." : "Next"}</span>
             </button>
           </form>
         </DeepShopAuthShell>
@@ -940,13 +1448,11 @@ const SignUp: React.FC = () => {
           </form>
         </DeepShopAuthShell>
 
-        {/* Birthdays Explanation Bottom Sheet (IMG_5024) */}
         <BirthdaysInfoSheet
           isOpen={showBirthdayInfo}
           onClose={() => setShowBirthdayInfo(false)}
         />
 
-        {/* Interactive Date of Birth Picker Bottom Sheet */}
         <AnimatePresence>
           {showDatePickerSheet && (
             <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
@@ -1098,7 +1604,6 @@ const SignUp: React.FC = () => {
             </div>
 
             <div className="rounded-[20px] border border-[#dce1e7] dark:border-zinc-800 divide-y divide-[#e5e8ec] dark:divide-zinc-800 bg-white dark:bg-[#121820] overflow-hidden">
-              {/* Female */}
               <button
                 type="button"
                 onClick={() => {
@@ -1120,7 +1625,6 @@ const SignUp: React.FC = () => {
                 />
               </button>
 
-              {/* Male */}
               <button
                 type="button"
                 onClick={() => {
@@ -1142,7 +1646,6 @@ const SignUp: React.FC = () => {
                 />
               </button>
 
-              {/* More options */}
               <div className="w-full">
                 <button
                   type="button"
@@ -1278,9 +1781,13 @@ const SignUp: React.FC = () => {
             <div className="pt-1 space-y-2.5">
               <button
                 type="submit"
-                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+                disabled={checkingAccount}
+                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
               >
-                Next
+                {checkingAccount && (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                )}
+                <span>{checkingAccount ? "Checking..." : "Next"}</span>
               </button>
 
               <button
@@ -1366,9 +1873,13 @@ const SignUp: React.FC = () => {
             <div className="pt-1 space-y-2.5">
               <button
                 type="submit"
-                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+                disabled={checkingAccount}
+                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
               >
-                Next
+                {checkingAccount && (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                )}
+                <span>{checkingAccount ? "Checking..." : "Next"}</span>
               </button>
 
               <button
@@ -1394,6 +1905,579 @@ const SignUp: React.FC = () => {
     );
   }
 
+  // STEP 4C: Existing Account Detected (IMG_5164 — Real User Details Only, DEEP SHOP Branding)
+  if (currentStep === "existing-account") {
+    const activeMatch = matchedAccount || getWizardTempState().matchedAccount;
+    const realFullName = activeMatch?.displayName?.trim() || "";
+    const firstNameLabel = realFullName.split(/\s+/)[0] || "Account";
+    const realContactLabel = activeMatch
+      ? formatAccountContact(activeMatch.email, activeMatch.phoneNumber) ||
+        (draft.contactMode === "mobile"
+          ? normalizeBdPhoneVariants(draft.mobileNumber).e164Bd
+          : draft.email.trim())
+      : draft.contactMode === "mobile"
+      ? normalizeBdPhoneVariants(draft.mobileNumber).e164Bd
+      : draft.email.trim();
+
+    if (!activeMatch || !realFullName) {
+      return (
+        <DeepShopAuthShell onBack={handleBackNavigation}>
+          <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-12">
+            <p className="text-[15px] text-[#5e6c77] dark:text-zinc-400">
+              Continue setting up your DEEP SHOP account.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate(`/signup/password${querySuffix}`)}
+              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] text-white font-semibold text-[16px] cursor-pointer"
+            >
+              Continue
+            </button>
+          </div>
+        </DeepShopAuthShell>
+      );
+    }
+
+    return (
+      <>
+        <SEO
+          title="You already have a DEEP SHOP account"
+          description="Log in to your existing DEEP SHOP account or continue creating a new one."
+          canonical="/signup/existing-account"
+        />
+        <DeepShopAuthShell
+          onBack={handleBackNavigation}
+          desktopHeadline="Welcome back to DEEP SHOP."
+          desktopSubtext="We found an existing DEEP SHOP account linked to your contact info. Log back in with one tap or continue creating a new profile."
+        >
+          <div className="flex-1 flex flex-col pt-2 pb-4">
+            <div className="text-center space-y-2.5 px-1">
+              <h1 className="text-[25px] sm:text-[27px] font-bold tracking-tight leading-[1.22] text-[#0a1317] dark:text-white [text-wrap:balance]">
+                You already have a DEEP SHOP account
+              </h1>
+              <p className="text-[15px] leading-[1.42] text-[#1c2b33] dark:text-zinc-300 max-w-[340px] mx-auto">
+                We can log you in to your existing account or you can continue
+                creating a new one.
+              </p>
+            </div>
+
+            <div className="my-7 flex flex-col items-center justify-center">
+              <DefaultUserAvatar
+                photoURL={activeMatch.photoURL}
+                displayName={realFullName}
+                sizeClass="w-[168px] h-[168px] sm:w-[176px] sm:h-[176px]"
+              />
+
+              <h2 className="mt-5 text-[23px] sm:text-[24px] font-bold tracking-tight text-center text-[#0a1317] dark:text-white">
+                {realFullName}
+              </h2>
+              {realContactLabel && (
+                <p className="mt-1 text-[16px] font-normal text-center text-[#1c2b33] dark:text-zinc-300">
+                  {realContactLabel}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-3 mt-1">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleLoginExistingAccount}
+                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[15.5px] sm:text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                <span>Yes, log in as {firstNameLabel}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playAuthVoice(
+                    "নতুন অ্যাকাউন্ট তৈরি চালিয়ে যেতে পাসওয়ার্ড তৈরি করুন।"
+                  );
+                  navigate(`/signup/password${querySuffix}`);
+                }}
+                className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[15.5px] sm:text-[16px] transition cursor-pointer"
+              >
+                Continue creating account
+              </button>
+            </div>
+          </div>
+        </DeepShopAuthShell>
+      </>
+    );
+  }
+
+  // STEP 6: Agree to DEEP SHOP's Terms & Policies (IMG_5165)
+  if (currentStep === "terms") {
+    return (
+      <>
+        <SEO
+          title="Agree to DEEP SHOP's terms and policies"
+          description="Review and agree to DEEP SHOP's terms, Privacy Policy, and Cookies Policy to create your account."
+          canonical="/signup/terms"
+        />
+        <DeepShopAuthShell
+          onBack={handleBackNavigation}
+          onMoreClick={() => setShowStopModal(true)}
+          desktopHeadline="Transparent terms & privacy protection."
+          desktopSubtext="Your orders, messages, and personal account details are protected under DEEP SHOP's security standards."
+          footer={bottomFindAccountLink}
+        >
+          <div className="space-y-4 pt-1">
+            <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              Agree to DEEP SHOP&apos;s terms and policies
+            </h1>
+
+            <div className="space-y-4 text-[15px] leading-[1.45] text-[#0a1317] dark:text-zinc-200 pt-1">
+              <p>
+                People who use our service may have uploaded your contact
+                information to DEEP SHOP.{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsLearnMoreSheet(true)}
+                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline font-normal cursor-pointer"
+                >
+                  Learn more
+                </button>
+              </p>
+
+              <p>
+                By tapping <strong className="font-bold">I agree</strong>, you
+                agree to create an account and to DEEP SHOP&apos;s{" "}
+                <Link
+                  to="/terms"
+                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
+                >
+                  terms
+                </Link>
+                ,{" "}
+                <Link
+                  to="/privacy"
+                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
+                >
+                  Privacy Policy
+                </Link>{" "}
+                and{" "}
+                <Link
+                  to="/cookie-policy"
+                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
+                >
+                  Cookies Policy
+                </Link>
+                .
+              </p>
+
+              <p>
+                The{" "}
+                <Link
+                  to="/privacy"
+                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
+                >
+                  Privacy Policy
+                </Link>{" "}
+                describes the ways we can use the information we collect when
+                you create an account. For example, we use this information to
+                provide, personalise and improve our products, including ads.
+              </p>
+            </div>
+
+            <div className="pt-3">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleAgreeAndCreateAccount}
+                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                <span>{loading ? "Creating account..." : "I agree"}</span>
+              </button>
+            </div>
+          </div>
+        </DeepShopAuthShell>
+
+        <AnimatePresence>
+          {showTermsLearnMoreSheet && (
+            <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowTermsLearnMoreSheet(false)}
+                className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
+              />
+              <motion.div
+                initial={{ y: "100%", opacity: 0.6 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "100%", opacity: 0 }}
+                transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                className="relative z-10 w-full sm:max-w-[430px] bg-white dark:bg-[#182028] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl border-t sm:border border-zinc-200 dark:border-zinc-800"
+              >
+                <div className="w-10 h-1 rounded-full bg-[#cbd2d9] dark:bg-zinc-600 mx-auto mb-2" />
+                <div className="relative flex items-center justify-center h-12 px-4 border-b border-[#e5e8ec] dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsLearnMoreSheet(false)}
+                    className="absolute left-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <h3 className="text-[17px] font-bold text-[#0a1317] dark:text-white">
+                    Contact information on DEEP SHOP
+                  </h3>
+                </div>
+                <div className="px-6 pt-5 text-[15px] leading-relaxed text-[#1c2b33] dark:text-zinc-200 space-y-3">
+                  <p>
+                    DEEP SHOP uses your phone number or email address to link
+                    your marketplace orders, delivery updates, and account
+                    security alerts accurately.
+                  </p>
+                  <p>
+                    Your contact details remain private and are never displayed
+                    publicly on your Loops profile.
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        <StopCreatingAccountModal
+          isOpen={showStopModal}
+          onStop={handleConfirmStop}
+          onContinue={() => setShowStopModal(false)}
+        />
+      </>
+    );
+  }
+
+  // STEP 7: Add a Profile Picture (IMG_5166)
+  if (currentStep === "profile-picture") {
+    return (
+      <>
+        <SEO
+          title="Add a profile picture — DEEP SHOP"
+          description="Add a profile picture so your friends and community recognize you on DEEP SHOP."
+          canonical="/signup/profile-picture"
+        />
+        <input
+          ref={profilePhotoInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleProfilePicturePick}
+          className="hidden"
+        />
+        <DeepShopAuthShell
+          hideBack
+          desktopHeadline="Make your DEEP SHOP profile yours."
+          desktopSubtext="Upload a profile photo so buyers, sellers, and friends on Loops recognize you right away."
+          footer={
+            <div className="border-t border-[#e5e8ec] dark:border-zinc-800 pt-3.5 -mx-5 sm:-mx-7 lg:-mx-8 px-5 sm:px-7 lg:px-8 space-y-2.5">
+              {uploadedPhotoUrl ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/signup/notifications${querySuffix}`)
+                    }
+                    className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+                  >
+                    Continue
+                  </button>
+                  <button
+                    type="button"
+                    disabled={uploadingPicture}
+                    onClick={() => profilePhotoInputRef.current?.click()}
+                    className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                  >
+                    Change picture
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={uploadingPicture}
+                    onClick={() => profilePhotoInputRef.current?.click()}
+                    className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+                  >
+                    {uploadingPicture && (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    )}
+                    <span>
+                      {uploadingPicture ? "Uploading picture..." : "Add picture"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={uploadingPicture}
+                    onClick={() =>
+                      navigate(`/signup/notifications${querySuffix}`)
+                    }
+                    className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                  >
+                    Skip
+                  </button>
+                </>
+              )}
+            </div>
+          }
+        >
+          <div className="flex-1 flex flex-col pt-1">
+            <div className="space-y-2">
+              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+                Add a profile picture
+              </h1>
+              <p className="text-[15px] leading-[1.45] text-[#0a1317] dark:text-zinc-300">
+                Add a profile picture so that your friends know it&apos;s you.
+                Everyone will be able to see your picture.
+              </p>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center py-8">
+              <button
+                type="button"
+                disabled={uploadingPicture}
+                onClick={() => profilePhotoInputRef.current?.click()}
+                aria-label="Choose profile picture"
+                className="relative w-[188px] h-[188px] rounded-full overflow-hidden flex items-center justify-center transition active:scale-[0.98] cursor-pointer focus:outline-none"
+              >
+                {uploadedPhotoUrl ? (
+                  <img
+                    src={uploadedPhotoUrl}
+                    alt="Profile preview"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <svg
+                    viewBox="0 0 200 200"
+                    className="w-full h-full"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="100"
+                      className="fill-[#cbd2d9] dark:fill-zinc-700"
+                    />
+                    <circle
+                      cx="100"
+                      cy="78"
+                      r="28"
+                      className="fill-[#eef1f4] dark:fill-zinc-400"
+                    />
+                    <path
+                      d="M32 184c9-36 35-58 68-58s59 22 68 58"
+                      className="fill-[#eef1f4] dark:fill-zinc-400"
+                    />
+                  </svg>
+                )}
+
+                {uploadingPicture && (
+                  <div className="absolute inset-0 bg-black/35 flex items-center justify-center rounded-full">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
+        </DeepShopAuthShell>
+      </>
+    );
+  }
+
+  // STEP 8: Allow Push Notifications (IMG_5167 layout adapted for Push Notifications)
+  if (currentStep === "notifications") {
+    return (
+      <>
+        <SEO
+          title="Allow notifications — DEEP SHOP"
+          description="Turn on push notifications to receive instant DEEP SHOP order updates, messages, and community alerts."
+          canonical="/signup/notifications"
+        />
+        <DeepShopAuthShell
+          hideBack
+          desktopHeadline="Stay updated in real time."
+          desktopSubtext="Turn on push notifications so you never miss delivery status updates, seller replies, or Loops activity."
+          footer={
+            <div className="space-y-3">
+              <p className="text-[12.5px] leading-[1.4] text-center text-[#5e6c77] dark:text-zinc-400 px-1">
+                Notifications are delivered instantly to your device. You can
+                manage notification preferences at any time in Settings.
+              </p>
+              <button
+                type="button"
+                disabled={requestingPush}
+                onClick={handleRequestNotificationsAndFinish}
+                className="w-full h-[48px] rounded-[12px] bg-[#0064ff] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                {requestingPush && (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                )}
+                <span>{requestingPush ? "Allowing..." : "Next"}</span>
+              </button>
+            </div>
+          }
+        >
+          <div className="flex-1 flex flex-col pt-1">
+            <div className="space-y-2">
+              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+                To get updates faster, allow notifications
+              </h1>
+              <p className="text-[15px] leading-[1.42] text-[#5e6c77] dark:text-zinc-300">
+                Get instant alerts for your DEEP SHOP orders, messages, and
+                community activity. Next, you can decide if you want to allow
+                push notifications.{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowNotificationsInfoSheet(true)}
+                  className="text-[#0064e0] dark:text-[#4599ff] font-semibold hover:underline cursor-pointer"
+                >
+                  Learn more
+                </button>
+              </p>
+            </div>
+
+            {/* Center Permission Preview Card matching IMG_5167 */}
+            <div className="flex-1 flex items-center justify-center py-8">
+              <div className="w-[264px] sm:w-[276px] rounded-[20px] border border-[#dfe3e8] dark:border-zinc-700/80 bg-[#f8f9fa] dark:bg-zinc-900/90 p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                <div className="space-y-3 pt-1">
+                  <div className="h-[13px] w-full rounded-full bg-[#cfd4da] dark:bg-zinc-700" />
+                  <div className="h-[13px] w-full rounded-full bg-[#cfd4da] dark:bg-zinc-700" />
+                  <div className="h-[13px] w-[76%] rounded-full bg-[#cfd4da] dark:bg-zinc-700" />
+                </div>
+
+                <div className="mt-9 space-y-2.5">
+                  <button
+                    type="button"
+                    disabled={requestingPush}
+                    onClick={handleDeclinePushPrompt}
+                    className="w-full h-[40px] rounded-full bg-[#cfd4da] hover:bg-[#c2c8cf] dark:bg-zinc-700 dark:hover:bg-zinc-600 text-[#0a1317] dark:text-zinc-100 text-[14px] font-medium flex items-center justify-center transition cursor-pointer"
+                  >
+                    Don&apos;t allow
+                  </button>
+                  <button
+                    type="button"
+                    disabled={requestingPush}
+                    onClick={handleRequestNotificationsAndFinish}
+                    className="w-full h-[40px] rounded-full bg-[#000000] hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black text-[14px] font-medium flex items-center justify-center transition cursor-pointer"
+                  >
+                    Allow
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DeepShopAuthShell>
+
+        <AnimatePresence>
+          {showPushPromptModal && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center px-5">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/55 backdrop-blur-[2px]"
+              />
+              <motion.div
+                initial={{ scale: 0.94, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.94, opacity: 0 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="deepshop-push-dialog-title"
+                className="relative z-10 w-full max-w-[330px] rounded-[24px] bg-white dark:bg-[#1c242c] border border-zinc-200/80 dark:border-zinc-700/80 shadow-2xl overflow-hidden"
+              >
+                <div className="px-6 pt-6 pb-5 text-center space-y-2.5">
+                  <div className="w-11 h-11 rounded-full bg-[#0064ff]/10 dark:bg-[#4599ff]/15 text-[#0064ff] dark:text-[#4599ff] flex items-center justify-center mx-auto">
+                    <Bell className="w-5 h-5" />
+                  </div>
+                  <h3
+                    id="deepshop-push-dialog-title"
+                    className="text-[17px] font-bold leading-snug text-[#0a1317] dark:text-white"
+                  >
+                    &ldquo;DEEP SHOP&rdquo; Would Like to Send You Notifications
+                  </h3>
+                  <p className="text-[13.5px] leading-relaxed text-[#5e6c77] dark:text-zinc-300">
+                    Notifications may include order status alerts, direct
+                    messages, and community activity updates. These can be
+                    configured in Settings.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 border-t border-zinc-200 dark:border-zinc-700/80 divide-x divide-zinc-200 dark:divide-zinc-700/80">
+                  <button
+                    type="button"
+                    disabled={requestingPush}
+                    onClick={handleDeclinePushPrompt}
+                    className="min-h-[48px] text-[15px] font-medium text-[#5e6c77] dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 transition cursor-pointer"
+                  >
+                    Don&apos;t Allow
+                  </button>
+                  <button
+                    type="button"
+                    disabled={requestingPush}
+                    onClick={handleConfirmFallbackPushAllow}
+                    className="min-h-[48px] text-[15px] font-bold text-[#0064ff] dark:text-[#4599ff] hover:bg-zinc-100 dark:hover:bg-zinc-800/70 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {requestingPush && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
+                    <span>Allow</span>
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {showNotificationsInfoSheet && (
+            <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowNotificationsInfoSheet(false)}
+                className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
+              />
+              <motion.div
+                initial={{ y: "100%", opacity: 0.6 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "100%", opacity: 0 }}
+                transition={{ type: "spring", stiffness: 320, damping: 30 }}
+                className="relative z-10 w-full sm:max-w-[430px] bg-white dark:bg-[#182028] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl border-t sm:border border-zinc-200 dark:border-zinc-800"
+              >
+                <div className="w-10 h-1 rounded-full bg-[#cbd2d9] dark:bg-zinc-600 mx-auto mb-2" />
+                <div className="relative flex items-center justify-center h-12 px-4 border-b border-[#e5e8ec] dark:border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotificationsInfoSheet(false)}
+                    className="absolute left-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <h3 className="text-[17px] font-bold text-[#0a1317] dark:text-white">
+                    Push notifications
+                  </h3>
+                </div>
+                <div className="px-6 pt-5 text-[15px] leading-relaxed text-[#1c2b33] dark:text-zinc-200 space-y-3">
+                  <p>
+                    Allowing push notifications lets DEEP SHOP send real-time
+                    updates when your order ships, when a seller messages you,
+                    or when someone interacts with your Loops.
+                  </p>
+                  <p>
+                    You can turn push notifications on or off anytime from your
+                    DEEP SHOP Settings page.
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </>
+    );
+  }
+
   // STEP 5: Create a Password (IMG_5028)
   return (
     <>
@@ -1409,14 +2493,15 @@ const SignUp: React.FC = () => {
         desktopSubtext="Save your login info on this browser so you can switch profiles in one tap whenever you return."
         footer={bottomFindAccountLink}
       >
-        <form onSubmit={handleCreateAccount} className="space-y-4 pt-1">
+        <form onSubmit={handleNextFromPassword} className="space-y-4 pt-1">
           <div className="space-y-2">
             <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
               Create a password
             </h1>
             <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
-              Create a password with at least six letters or numbers. It should
-              be something that others can&apos;t guess.
+              Create a password with at least eight characters including
+              uppercase, lowercase, numbers, and symbols. It should be something
+              that others can&apos;t guess.
             </p>
           </div>
 
@@ -1438,7 +2523,6 @@ const SignUp: React.FC = () => {
               autoComplete="new-password"
             />
 
-            {/* Live Password Rules Checklist */}
             {(() => {
               const pwdRules = checkPasswordRules(password);
               return (
@@ -1547,7 +2631,6 @@ const SignUp: React.FC = () => {
             })()}
           </div>
 
-          {/* Remember login info checkbox row matching IMG_5028 */}
           <div className="flex items-center gap-3 py-1">
             <button
               type="button"
@@ -1581,31 +2664,11 @@ const SignUp: React.FC = () => {
           <div className="pt-1">
             <button
               type="submit"
-              disabled={loading}
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-              <span>{loading ? "Creating account..." : "Next"}</span>
+              <span>Next</span>
             </button>
           </div>
-
-          <p className="text-[12px] leading-relaxed text-[#5e6c77] dark:text-zinc-400 pt-2">
-            By tapping Next, you agree to DEEP SHOP&apos;s{" "}
-            <Link
-              to="/terms"
-              className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
-            >
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link
-              to="/privacy"
-              className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
-            >
-              Privacy Policy
-            </Link>
-            .
-          </p>
         </form>
       </DeepShopAuthShell>
 
