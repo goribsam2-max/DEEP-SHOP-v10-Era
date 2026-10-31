@@ -10,7 +10,6 @@ import {
   SlidersHorizontal,
   Image as ImageIcon,
   Sparkles,
-  Video,
   MoreVertical,
   Globe,
   Heart,
@@ -1865,19 +1864,6 @@ export const NewsHub: React.FC = () => {
                 <span className="block text-[14px] text-zinc-400 dark:text-zinc-500 truncate">
                   What&apos;s new?
                 </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/create-reel");
-                }}
-                title="Create Reel"
-                aria-label="Create Reel"
-                className="w-9 h-9 rounded-full border loops-divider flex items-center justify-center text-zinc-700 dark:text-zinc-200 hover:text-[#1877F2] dark:hover:text-[#58A6FF] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition shrink-0 cursor-pointer"
-              >
-                <Video className="w-4 h-4" />
               </button>
 
               <button

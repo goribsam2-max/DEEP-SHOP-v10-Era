@@ -14,7 +14,6 @@ import {
   UserCheck,
   Lock,
   MapPin,
-  Video,
   Trash2,
   Play,
   Pause,
@@ -28,9 +27,7 @@ import {
   ChevronRight,
   Music,
   Volume2,
-  Upload,
   Loader2,
-  RefreshCw,
 } from "lucide-react";
 import { auth, db } from "../firebase";
 import {
@@ -63,7 +60,6 @@ import { uploadDataUrlToImgbb } from "../services/imgbb";
 import { uploadFileToCatbox } from "../lib/catboxUpload";
 import { detectAiGeneratedFiles } from "../lib/aiImageDetector";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
-import { NewsVideoPlayer } from "../components/NewsVideoPlayer";
 import {
   NewsRichText,
   NewsLinkPreviewCards,
@@ -233,78 +229,20 @@ export const CreateScamPost: React.FC = () => {
   const cameraFallbackInputRef = useRef<HTMLInputElement | null>(null);
   const musicPreviewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Professional Media Uploader Refs & State
-  const videoUploadInputRef = useRef<HTMLInputElement | null>(null);
+  // Professional Audio Uploader Refs & State
   const audioUploadInputRef = useRef<HTMLInputElement | null>(null);
-  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadedVideoName, setUploadedVideoName] = useState("");
-  const [localVideoBlobUrl, setLocalVideoBlobUrl] = useState<string>("");
-  const [isDraggingVideo, setIsDraggingVideo] = useState(false);
 
   const isVideoFileCandidate = (file: File): boolean =>
     file.type.startsWith("video/") ||
     /\.(mp4|webm|mov|m4v|mkv|3gp|avi|mpeg|mpg|ogv)$/i.test(file.name);
 
-  const uploadVideoFile = async (file: File) => {
-    if (!file) return;
-    if (!isVideoFileCandidate(file)) {
-      notify("Please select a valid video file (MP4, WebM, or MOV).", "error");
-      return;
+  useEffect(() => {
+    if (initialTab === "video" && !editId) {
+      navigate("/create-reel", { replace: true });
     }
-    if (file.size > 200 * 1024 * 1024) {
-      notify("Video must be under 200 MB.", "error");
-      return;
-    }
-
-    triggerHaptic();
-    setActiveInlinePanel("video");
-    setUploadedVideoName(file.name);
-    setIsUploadingVideo(true);
-    setUploadProgress(12);
-
-    const nextBlobUrl = URL.createObjectURL(file);
-    setLocalVideoBlobUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return nextBlobUrl;
-    });
-
-    const progressTimer = window.setInterval(() => {
-      setUploadProgress((prev) => (prev < 82 ? prev + 6 : prev));
-    }, 450);
-
-    try {
-      const url = await uploadFileToCatbox(file, file.name, (p) =>
-        setUploadProgress((prev) => Math.max(prev, p))
-      );
-      setVideoUrl(url);
-      notify("Video attached and ready for Loops & Reels!", "success");
-    } catch {
-      setUploadedVideoName("");
-      setLocalVideoBlobUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return "";
-      });
-      notify(
-        "Could not upload video right now. Please check your connection or try a smaller MP4/WebM file.",
-        "error"
-      );
-    } finally {
-      window.clearInterval(progressTimer);
-      setIsUploadingVideo(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const handleVideoFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    await uploadVideoFile(file);
-  };
+  }, [initialTab, editId, navigate]);
 
   const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -423,12 +361,10 @@ export const CreateScamPost: React.FC = () => {
 
   // Inline Composer Tool Section (Zero Popups — Voice only opens when user clicks Voice / Mic)
   const [activeInlinePanel, setActiveInlinePanel] = useState<
-    "voice" | "media" | "video" | "themes" | "audience" | null
+    "voice" | "media" | "themes" | "audience" | null
   >(
     initialTab === "photo"
       ? "media"
-      : initialTab === "video"
-      ? "video"
       : initialTab === "voice"
       ? "voice"
       : null
@@ -590,8 +526,6 @@ export const CreateScamPost: React.FC = () => {
       }
       if (found.images?.length) {
         setActiveInlinePanel("media");
-      } else if (found.videoUrl) {
-        setActiveInlinePanel("video");
       } else if (found.audioUrl) {
         setActiveInlinePanel("voice");
       }
@@ -843,13 +777,11 @@ function cleanPayload<T>(obj: T): T {
     const imageFiles = incoming.filter((f) => !isVideoFileCandidate(f));
 
     if (videoFiles.length > 0) {
-      void uploadVideoFile(videoFiles[0]);
+      notify("Please use the Reels section to upload videos.", "info");
     }
     if (imageFiles.length > 0) {
       setRawFiles((prev) => [...prev, ...imageFiles]);
-      if (videoFiles.length === 0) {
-        setActiveInlinePanel("media");
-      }
+      setActiveInlinePanel("media");
     }
   };
 
@@ -930,36 +862,6 @@ function cleanPayload<T>(obj: T): T {
     dismissedCaptionVideoUrl,
     resolvedCaptionVideoUrl,
   ]);
-
-  const activeVideoEmbed = React.useMemo(() => {
-    const parsed = parseVideoEmbed(effectiveVideoUrl);
-    if (!parsed) return null;
-    if (localVideoBlobUrl && parsed.platform === "direct") {
-      return {
-        ...parsed,
-        directStreamUrl: localVideoBlobUrl,
-      };
-    }
-    return parsed;
-  }, [effectiveVideoUrl, localVideoBlobUrl]);
-
-  const hasUnsupportedVideoInput = Boolean(
-    videoUrl.trim() && !parseVideoEmbed(videoUrl.trim())
-  );
-
-  const handleClearVideo = () => {
-    triggerHaptic();
-    setUploadedVideoName("");
-    setLocalVideoBlobUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return "";
-    });
-    if (videoUrl.trim()) {
-      setVideoUrl("");
-    } else if (detectedCaptionVideoUrl) {
-      setDismissedCaptionVideoUrl(detectedCaptionVideoUrl);
-    }
-  };
 
   const formatRecorderClock = (cs: number) => {
     const safeCs = Math.max(0, Math.floor(cs));
@@ -1441,9 +1343,9 @@ function cleanPayload<T>(obj: T): T {
       return;
     }
 
-    if (isUploadingVideo || isUploadingAudio) {
+    if (isUploadingAudio) {
       notify(
-        "Please wait a moment while your media finishes uploading.",
+        "Please wait a moment while your audio finishes uploading.",
         "info"
       );
       return;
@@ -1451,14 +1353,6 @@ function cleanPayload<T>(obj: T): T {
 
     if (isRecording) {
       stopVoiceRecording();
-    }
-
-    if (hasUnsupportedVideoInput) {
-      notify(
-        "Please upload a video (MP4/WebM) or paste a valid YouTube, Instagram, Facebook, or TikTok link.",
-        "error"
-      );
-      return;
     }
 
     if (pollDraft) {
@@ -1492,7 +1386,7 @@ function cleanPayload<T>(obj: T): T {
       validThreadItems.length === 0
     ) {
       notify(
-        "Write something, upload a video or photo, or attach a poll/GIF/music first.",
+        "Write something, attach a photo, or add a voice note/poll/GIF first.",
         "error"
       );
       return;
@@ -1888,7 +1782,7 @@ function cleanPayload<T>(obj: T): T {
     audioUrl: audioUrl || undefined,
     audioDuration: audioDuration || undefined,
     audioWaveform: audioWaveform.length > 0 ? audioWaveform : undefined,
-    videoUrl: (localVideoBlobUrl || effectiveVideoUrl) || undefined,
+    videoUrl: effectiveVideoUrl || undefined,
     gifUrl: gifUrl || undefined,
     stickers: stickers.length > 0 ? stickers : undefined,
     music: attachedMusic || undefined,
@@ -1905,29 +1799,22 @@ function cleanPayload<T>(obj: T): T {
     <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-8">
       <SEO
         title={editId ? "Edit Loop — Loops" : "New Loop — Loops"}
-        description="Share thoughts, photos, videos, voice notes, polls, GIFs, or verified community alerts on Loops."
+        description="Share thoughts, photos, voice notes, polls, GIFs, or verified community alerts on Loops."
       />
 
-      {/* Hidden Media & Video File Inputs */}
+      {/* Hidden Photo File Inputs */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,video/mp4,video/webm,video/quicktime,video/*"
+        accept="image/*"
         multiple
         onChange={handleFilesSelected}
         className="hidden"
       />
       <input
-        ref={videoUploadInputRef}
-        type="file"
-        accept="video/mp4,video/webm,video/quicktime,video/*,.mp4,.webm,.mov,.m4v"
-        onChange={handleVideoFileUpload}
-        className="hidden"
-      />
-      <input
         ref={cameraFallbackInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*"
         capture="environment"
         onChange={handleFilesSelected}
         className="hidden"
@@ -1982,22 +1869,15 @@ function cleanPayload<T>(obj: T): T {
               />
               <button
                 type="button"
-                disabled={isUploadingVideo || isUploadingAudio}
+                disabled={isUploadingAudio}
                 onClick={() => {
                   triggerHaptic();
-                  if (hasUnsupportedVideoInput) {
-                    notify(
-                      "Please upload a video (MP4/WebM) or paste a valid YouTube, Instagram, Facebook, or TikTok link.",
-                      "error"
-                    );
-                    return;
-                  }
                   if (isRecording) stopVoiceRecording();
                   setStep(2);
                 }}
                 className="px-4 py-2 rounded-full bg-white dark:bg-zinc-100 text-zinc-900 font-semibold text-[13px] shadow-[0_2px_10px_rgba(15,23,42,0.06)] hover:bg-slate-50 active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
               >
-                {isUploadingVideo ? "Uploading..." : "Next"}
+                Next
               </button>
               {editId && (
                 <button
@@ -2006,16 +1886,11 @@ function cleanPayload<T>(obj: T): T {
                   disabled={
                     isSubmitting ||
                     isProcessingImages ||
-                    isUploadingVideo ||
                     isUploadingAudio
                   }
                   className="px-4.5 py-2 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-semibold text-[13px] shadow-xs active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
                 >
-                  {isSubmitting
-                    ? "Saving..."
-                    : isUploadingVideo
-                    ? "Uploading..."
-                    : "Save"}
+                  {isSubmitting ? "Saving..." : "Save"}
                 </button>
               )}
             </div>
@@ -2026,15 +1901,12 @@ function cleanPayload<T>(obj: T): T {
               disabled={
                 isSubmitting ||
                 isProcessingImages ||
-                isUploadingVideo ||
                 isUploadingAudio
               }
               className="px-5 py-2 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white font-semibold text-[13px] shadow-[0_6px_18px_rgba(24,119,242,0.35)] active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap"
             >
               {isSubmitting
                 ? "Posting..."
-                : isUploadingVideo
-                ? "Uploading..."
                 : editId
                 ? "Save"
                 : "Post"}
@@ -2325,7 +2197,7 @@ function cleanPayload<T>(obj: T): T {
                   />
                 </div>
 
-                {/* Quick Attachment Row (Photo, Video, Stickers, GIF, More -> Snippet/Quote/Camera/Poll/Location) */}
+                {/* Quick Attachment Row (Photo, Stickers, GIF, More -> Snippet/Quote/Camera/Poll/Location) */}
                 <div className="relative flex items-center gap-4 pt-0.5 px-0.5 text-zinc-400 dark:text-zinc-500">
                   <button
                     type="button"
@@ -2341,27 +2213,6 @@ function cleanPayload<T>(obj: T): T {
                     aria-label="Attach photos"
                   >
                     <ImageIcon className="w-[21px] h-[21px] stroke-[1.85]" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setActiveInlinePanel((p) =>
-                        p === "video" ? null : "video"
-                      );
-                    }}
-                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer flex items-center gap-1.5 ${
-                      Boolean(activeVideoEmbed) ||
-                      activeInlinePanel === "video" ||
-                      isUploadingVideo
-                        ? "text-[#1877F2] dark:text-[#58A6FF]"
-                        : ""
-                    }`}
-                    title="Upload Video (MP4 / WebM) or Embed Reel Link"
-                    aria-label="Attach Video"
-                  >
-                    <Video className="w-[21px] h-[21px] stroke-[1.85]" />
                   </button>
 
                   <button
@@ -2459,218 +2310,6 @@ function cleanPayload<T>(obj: T): T {
                   </div>
                 )}
                 <NewsLinkPreviewCards text={description} />
-
-                {/* UNIFIED INLINE VIDEO UPLOAD & REEL PREVIEW CARD (Right below toolbar for 1-tap access) */}
-                {(activeInlinePanel === "video" ||
-                  isUploadingVideo ||
-                  Boolean(activeVideoEmbed)) && (
-                  <div className="rounded-[24px] bg-[#F5F7FA] dark:bg-zinc-800/70 border border-slate-200/80 dark:border-zinc-700/70 p-3.5 sm:p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Video className="w-4 h-4 text-[#1877F2] shrink-0" />
-                        <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                          {isUploadingVideo
-                            ? "Uploading Video..."
-                            : activeVideoEmbed
-                            ? activeVideoEmbed.platform === "direct"
-                              ? "Video Attached · Ready for Loops & Reels"
-                              : activeVideoEmbed.platform === "instagram"
-                              ? "Instagram Reel Embedded"
-                              : activeVideoEmbed.platform === "youtube"
-                              ? "YouTube Video Embedded"
-                              : activeVideoEmbed.platform === "facebook"
-                              ? "Facebook Video Embedded"
-                              : activeVideoEmbed.platform === "tiktok"
-                              ? "TikTok Video Embedded"
-                              : "Social Video Embedded"
-                            : "Attach Video or Reel"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {activeVideoEmbed && !isUploadingVideo && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic();
-                              videoUploadInputRef.current?.click();
-                            }}
-                            className="px-2.5 h-7 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 hover:border-[#1877F2] hover:text-[#1877F2] flex items-center gap-1 transition cursor-pointer"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            <span>Change</span>
-                          </button>
-                        )}
-                        {!isUploadingVideo && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (activeVideoEmbed) {
-                                handleClearVideo();
-                              } else {
-                                setActiveInlinePanel(null);
-                              }
-                            }}
-                            className="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-zinc-500 hover:text-rose-600 flex items-center justify-center transition cursor-pointer"
-                            aria-label={
-                              activeVideoEmbed ? "Remove video" : "Close video panel"
-                            }
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Live Upload Progress State */}
-                    {isUploadingVideo && (
-                      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-700 p-4 space-y-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Loader2 className="w-4 h-4 text-[#1877F2] animate-spin shrink-0" />
-                            <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 truncate">
-                              {uploadedVideoName || "Preparing HD video stream..."}
-                            </span>
-                          </div>
-                          <span className="text-xs font-bold tabular-nums text-[#1877F2] shrink-0">
-                            {Math.min(99, Math.max(10, uploadProgress))}%
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-zinc-800 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-[#1877F2] transition-all duration-300"
-                            style={{
-                              width: `${Math.min(
-                                99,
-                                Math.max(12, uploadProgress)
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                          Uploading directly from your browser for instant Feed & Reels playback...
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Instant Video / Reel Player Preview */}
-                    {!isUploadingVideo && activeVideoEmbed && (
-                      <div className="space-y-2.5">
-                        <div className="rounded-2xl overflow-hidden border border-slate-200/70 dark:border-zinc-700">
-                          <NewsVideoPlayer
-                            videoSource={activeVideoEmbed}
-                            autoPlayInView={true}
-                            bgMusicUrl={attachedMusic?.audioUrl}
-                            bgMusicVolume={bgMusicVolume}
-                            videoVolume={videoVolume}
-                          />
-                        </div>
-
-                        {/* Interactive Sound Mixer (Mute/Adjust Video & Background Music) */}
-                        <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                              <Volume2 className="w-4 h-4 text-[#0095F6]" />
-                              <span>Sound Mixer (Original Sound & Background Music)</span>
-                            </span>
-                            <span className="text-[11px] text-zinc-500 font-medium">Adjust Volumes</span>
-                          </div>
-
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
-                              <span>Original Video Sound</span>
-                              <span>{Math.round(videoVolume * 100)}%</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setVideoVolume((v) => (v > 0 ? 0 : 1.0))}
-                                className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
-                              >
-                                {videoVolume === 0 ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4 text-[#0095F6]" />}
-                              </button>
-                              <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.05"
-                                value={videoVolume}
-                                onChange={(e) => setVideoVolume(Number(e.target.value))}
-                                className="w-full accent-[#0095F6] h-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-700 cursor-pointer"
-                              />
-                            </div>
-                          </div>
-
-                          {attachedMusic && (
-                            <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-zinc-800">
-                              <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
-                                <span className="truncate">Background Song: {attachedMusic.title}</span>
-                                <span>{Math.round(bgMusicVolume * 100)}%</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setBgMusicVolume((v) => (v > 0 ? 0 : 1.0))}
-                                  className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
-                                >
-                                  {bgMusicVolume === 0 ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4 text-[#0095F6]" />}
-                                </button>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="1"
-                                  step="0.05"
-                                  value={bgMusicVolume}
-                                  onChange={(e) => setBgMusicVolume(Number(e.target.value))}
-                                  className="w-full accent-[#0095F6] h-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-700 cursor-pointer"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Device Upload Dropzone + Optional Social Link Input when choosing/editing video */}
-                    {!isUploadingVideo && !activeVideoEmbed && (
-                      <>
-                        <div
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            setIsDraggingVideo(true);
-                          }}
-                          onDragLeave={() => setIsDraggingVideo(false)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setIsDraggingVideo(false);
-                            const dropped = e.dataTransfer.files?.[0];
-                            if (dropped) {
-                              void uploadVideoFile(dropped);
-                            }
-                          }}
-                          onClick={() => videoUploadInputRef.current?.click()}
-                          className={`rounded-2xl border-2 border-dashed p-5 text-center transition cursor-pointer flex flex-col items-center justify-center gap-2 ${
-                            isDraggingVideo
-                              ? "border-[#1877F2] bg-[#1877F2]/8"
-                              : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900/90 hover:border-[#1877F2]"
-                          }`}
-                        >
-                          <div className="w-11 h-11 rounded-full bg-[#1877F2]/10 text-[#1877F2] flex items-center justify-center">
-                            <Upload className="w-5 h-5" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-xs sm:text-[13px] font-bold text-zinc-900 dark:text-white">
-                              Select Video from Device
-                            </p>
-                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                              MP4, WebM, or MOV · Appears automatically in Loops & Reels
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
 
                 {/* ATTACHED STICKERS PREVIEW ROW */}
                 {stickers.length > 0 && (
@@ -3757,15 +3396,12 @@ function cleanPayload<T>(obj: T): T {
                     disabled={
                       isSubmitting ||
                       isProcessingImages ||
-                      isUploadingVideo ||
                       isUploadingAudio
                     }
                     className="h-[40px] px-5 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white font-bold text-[14px] shadow-[0_6px_18px_rgba(24,119,242,0.32)] active:scale-95 transition disabled:opacity-50 cursor-pointer whitespace-nowrap"
                   >
                     {isSubmitting
                       ? "Posting..."
-                      : isUploadingVideo
-                      ? "Uploading video..."
                       : isUploadingAudio
                       ? "Uploading audio..."
                       : editId
@@ -3871,15 +3507,12 @@ function cleanPayload<T>(obj: T): T {
                   disabled={
                     isSubmitting ||
                     isProcessingImages ||
-                    isUploadingVideo ||
                     isUploadingAudio
                   }
                   className="flex-1 py-3.5 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white text-sm font-bold shadow-[0_8px_24px_rgba(24,119,242,0.38)] disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting
                     ? "Publishing..."
-                    : isUploadingVideo
-                    ? "Uploading video..."
                     : isUploadingAudio
                     ? "Uploading audio..."
                     : editId
@@ -3976,9 +3609,7 @@ function cleanPayload<T>(obj: T): T {
         isOpen={showCameraModal}
         onClose={() => setShowCameraModal(false)}
         onCaptureFile={(file) => {
-          if (isVideoFileCandidate(file)) {
-            void uploadVideoFile(file);
-          } else {
+          if (!isVideoFileCandidate(file)) {
             setRawFiles((prev) => [...prev, file]);
             setActiveInlinePanel("media");
           }
