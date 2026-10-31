@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  Eye,
 } from "lucide-react";
 import { ScamPost, UserProfile } from "../types";
 import {
@@ -23,6 +24,25 @@ import { triggerHaptic } from "../lib/haptics";
 import { toggleFollowUser } from "../lib/follow";
 import { getSafePublicUsername, getSafeDisplayName } from "../lib/utils";
 import { SmoothImage, preloadImageUrl } from "./SmoothImage";
+
+/* Exact custom 'Cokh' Eye SVG Icon matching IMG_5259 */
+export const LoopViewEyeIcon: React.FC<{ className?: string }> = ({
+  className = "w-4 h-4",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M2.5 12.1c0 0 4.5-7.8 9.5-7.8s9.5 7.8 9.5 7.8-4.5 7.8-9.5 7.8-9.5-7.8-9.5-7.8z" />
+    <circle cx="12" cy="12.1" r="3.2" fill="currentColor" fillOpacity="0.12" />
+    <circle cx="12" cy="12.1" r="1" fill="currentColor" />
+  </svg>
+);
 
 export function formatLoopCompactTime(timestamp?: number | null): string {
   if (!timestamp || Number.isNaN(Number(timestamp))) return "now";
@@ -263,6 +283,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [hiddenLocally, setHiddenLocally] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   const touchStartXRef = useRef<number | null>(null);
 
@@ -367,10 +388,18 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
       preloadImageUrl(images[carouselIdx - 1]);
     }
   }, [images, carouselIdx]);
-  const resolvedVideo = useMemo(
-    () => resolvePostVideoSource(post),
-    [post.videoUrl, post.description]
-  );
+  const resolvedVideo = useMemo(() => {
+    const base = resolvePostVideoSource(post);
+    if (!base) return null;
+    if (!base.thumbnailUrl && images[0]) {
+      return { ...base, thumbnailUrl: images[0] };
+    }
+    return base;
+  }, [post.videoUrl, post.description, images]);
+  const isReelOrVideoPost =
+    Boolean(resolvedVideo) ||
+    (post as any).type === "reel" ||
+    Boolean(post.videoUrl && String(post.videoUrl).trim());
   const hasPrimaryVisualMedia =
     images.length > 0 || Boolean(resolvedVideo) || Boolean(post.gifUrl);
 
@@ -477,6 +506,10 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
 
   const openPostDetails = () => {
     triggerHaptic();
+    if (isReelOrVideoPost) {
+      navigate(`/loops?filter=video&postId=${encodeURIComponent(post.id)}`);
+      return;
+    }
     navigate(`/loops/post/${post.id}`);
   };
 
@@ -671,8 +704,9 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             </div>
 
             {headerSubtitle && (
-              <p className="text-[12px] font-normal text-[#262626] dark:text-zinc-400 truncate mt-0.5 leading-tight">
-                {headerSubtitle}
+              <p className="text-[12px] font-normal text-[#262626] dark:text-zinc-400 truncate mt-0.5 leading-tight flex items-center gap-1">
+                {post.music?.title && <span className="text-[11px]">🎵</span>}
+                <span className="truncate">{headerSubtitle}</span>
               </p>
             )}
           </div>
@@ -723,7 +757,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
       )}
 
       {/* 2A. Full-Bleed Edge-to-Edge Visual Media (Photos, Carousel, Video, GIF — Zero Radius) */}
-      {images.length === 1 && (
+      {!resolvedVideo && images.length === 1 && (
         <div
           onClick={() => {
             triggerHaptic();
@@ -741,7 +775,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
         </div>
       )}
 
-      {images.length > 1 && (
+      {!resolvedVideo && images.length > 1 && (
         <div className="w-full">
           <div
             onTouchStart={(e) => {
@@ -841,8 +875,38 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
       )}
 
       {resolvedVideo && (
-        <div className="loops-edge-media w-full rounded-none overflow-hidden">
-          <NewsVideoPlayer videoSource={resolvedVideo} />
+        <div
+          onClick={openPostDetails}
+          className="loops-edge-media w-full rounded-none overflow-hidden cursor-pointer relative group"
+        >
+          <NewsVideoPlayer
+            videoSource={resolvedVideo}
+            bgMusicUrl={post.music?.audioUrl}
+            bgMusicVolume={post.music?.bgMusicVolume ?? 1.0}
+            videoVolume={post.music?.videoVolume ?? 1.0}
+            hideBottomBar={true}
+            onVideoClick={openPostDetails}
+          />
+        </div>
+      )}
+
+      {/* Exact Insights & Boost Post Row matching IMG_5259 */}
+      {(isOwnPost || canManage) && (
+        <div className="px-3.5 py-2.5 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 text-[13px] bg-white dark:bg-black">
+          <div className="flex items-center gap-1.5 text-[#0095F6] font-semibold cursor-pointer" onClick={openPostDetails}>
+            <LoopViewEyeIcon className="w-4 h-4 text-[#0095F6] shrink-0" />
+            <span>{formatLoopCount(post.views || 0)} · View insights</span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/sponsor-creator?postId=${post.id}`);
+            }}
+            className="px-4 py-1.5 rounded-lg bg-[#0095F6] hover:bg-blue-600 text-white font-bold text-xs shadow-xs active:scale-95 transition cursor-pointer"
+          >
+            Boost post
+          </button>
         </div>
       )}
 
@@ -1050,10 +1114,8 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
       {/* 4. Inline Caption Row below Action Bar for Visual Posts (matching IMG_5126) */}
       {hasPrimaryVisualMedia && combinedCaption && (
         <div
-          onClick={() => {
-            if (!shouldTruncateCaption) openPostDetails();
-          }}
-          className="px-3.5 pb-1 text-[14px] leading-[1.42] text-[#0f0f0f] dark:text-[#f5f5f5] break-words"
+          onClick={openPostDetails}
+          className="px-3.5 pb-1 text-[14px] leading-[1.42] text-[#0f0f0f] dark:text-[#f5f5f5] break-words cursor-pointer"
         >
           <button
             type="button"
@@ -1118,4 +1180,5 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
   );
 };
 
-export default LoopPostCard;
+export const MemoizedLoopPostCard = React.memo(LoopPostCard);
+export default MemoizedLoopPostCard;

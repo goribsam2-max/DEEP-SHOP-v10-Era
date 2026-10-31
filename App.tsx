@@ -1,6 +1,6 @@
 import { subscribeToWebPush } from './lib/push';
 
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 
 export const PageLoadingContext = createContext<{
@@ -57,6 +57,7 @@ import {
   NewsSavedAndSearchPage,
   NewsStoryViewerPage,
 } from './pages/NewsHubSubPages';
+import { CreateReelStudio } from './pages/CreateReelStudio';
 import { initGlobalHaptics } from './lib/haptics';
 import { hasImmediateAdminOrStaffRole } from './lib/admin';
 
@@ -250,7 +251,7 @@ import StoreProfile from './pages/StoreProfile';
 import ProductReviews from './pages/ProductReviews';
 import Cart from './pages/Cart';
 import Profile from './pages/Profile';
-import AffiliatePage from './pages/Affiliate';
+const AffiliatePage = lazy(() => import('./pages/Affiliate'));
 import MyOrders from './pages/MyOrders';
 import CustomPay from './pages/CustomPay';
 import ExchangeRequest from './pages/ExchangeRequest';
@@ -283,27 +284,27 @@ import HelpCenter from './pages/HelpCenter';
 import MyTickets from './pages/MyTickets';
 import FAQPage from './pages/FAQ';
 import TicketDetails from './pages/TicketDetails';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import AboutUs from './pages/AboutUs';
-import Terms from './pages/Terms';
-import ContactUs from './pages/ContactUs';
-import CookiePolicy from './pages/CookiePolicy';
-import RefundPolicy from './pages/RefundPolicy';
-import ShippingPolicy from './pages/ShippingPolicy';
-import Disclaimer from './pages/Disclaimer';
-import SitemapPage from './pages/SitemapPage';
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const AboutUs = lazy(() => import('./pages/AboutUs'));
+const Terms = lazy(() => import('./pages/Terms'));
+const ContactUs = lazy(() => import('./pages/ContactUs'));
+const CookiePolicy = lazy(() => import('./pages/CookiePolicy'));
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
+const ShippingPolicy = lazy(() => import('./pages/ShippingPolicy'));
+const Disclaimer = lazy(() => import('./pages/Disclaimer'));
+const SitemapPage = lazy(() => import('./pages/SitemapPage'));
 import PasswordManager from './pages/PasswordManager';
 import AllProducts from './pages/AllProducts';
 import FlashSale from './pages/FlashSale';
 import WithdrawPage from './pages/Withdraw';
-import BlogList from './pages/BlogList';
-import BlogDetails from './pages/BlogDetails';
-import CreateBlog from './pages/CreateBlog';
+const BlogList = lazy(() => import('./pages/BlogList'));
+const BlogDetails = lazy(() => import('./pages/BlogDetails'));
+const CreateBlog = lazy(() => import('./pages/CreateBlog'));
 import NotFound from './pages/NotFound';
 import NewsHub from './pages/NewsHub';
 import CreateScamPost from './pages/CreateScamPost';
 import NewsDetails from './pages/NewsDetails';
-import CreatorDashboard from './pages/CreatorDashboard';
+const CreatorDashboard = lazy(() => import('./pages/CreatorDashboard'));
 import AuthorProfile from './pages/AuthorProfile';
 import BuyStars from './pages/BuyStars';
 import SponsorCreator from './pages/SponsorCreator';
@@ -311,68 +312,67 @@ import GiftStarsPage from './pages/GiftStarsPage';
 import CreatorSubscriptionSetup from './pages/CreatorSubscriptionSetup';
 import NewsHubNotifications from './pages/NewsHubNotifications';
 import RegionSelect from './pages/RegionSelect';
-import SellerDashboard from './pages/seller/Dashboard';
+const SellerDashboard = lazy(() => import('./pages/seller/Dashboard'));
 import AddStory from './pages/seller/AddStory';
 import LoginDevices from './pages/LoginDevices';
 import BiometricSetup from './pages/BiometricSetup';
 
-// Admin Pages
-import AdminDashboard from './pages/admin/Dashboard';
-import ManageProducts from './pages/admin/ManageProducts';
-import EditProduct from './pages/admin/EditProduct';
-import ManageUsers from './pages/admin/ManageUsers';
-import ManagePasswordResets from './pages/admin/ManagePasswordResets';
-import ManagePushNotifications from './pages/admin/ManagePushNotifications';
-import ManageOrders from './pages/admin/ManageOrders';
-import ManageReviews from './pages/admin/ManageReviews';
-import ManageBanners from './pages/admin/ManageBanners';
-import ManageConfig from './pages/admin/ManageConfig';
-import ManageCustomSections from './pages/admin/ManageCustomSections';
-import ManageSEO from './pages/admin/ManageSEO';
-import ManageIcons from './pages/admin/ManageIcons';
-import ManageIllustrations from './pages/admin/ManageIllustrations';
-import AdminNotifications from './pages/admin/AdminNotifications';
-import ManageUsersMobile from './pages/admin/ManageUsersMobile';
-import ManageEngagement from './pages/admin/ManageEngagement';
+// Admin Pages (Lazy-loaded so regular users never download Admin bundles)
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const ManageProducts = lazy(() => import('./pages/admin/ManageProducts'));
+const EditProduct = lazy(() => import('./pages/admin/EditProduct'));
+const ManageUsers = lazy(() => import('./pages/admin/ManageUsers'));
+const ManagePasswordResets = lazy(() => import('./pages/admin/ManagePasswordResets'));
+const ManagePushNotifications = lazy(() => import('./pages/admin/ManagePushNotifications'));
+const ManageOrders = lazy(() => import('./pages/admin/ManageOrders'));
+const ManageReviews = lazy(() => import('./pages/admin/ManageReviews'));
+const ManageBanners = lazy(() => import('./pages/admin/ManageBanners'));
+const ManageConfig = lazy(() => import('./pages/admin/ManageConfig'));
+const ManageCustomSections = lazy(() => import('./pages/admin/ManageCustomSections'));
+const ManageSEO = lazy(() => import('./pages/admin/ManageSEO'));
+const ManageIcons = lazy(() => import('./pages/admin/ManageIcons'));
+const ManageIllustrations = lazy(() => import('./pages/admin/ManageIllustrations'));
+const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'));
+const ManageUsersMobile = lazy(() => import('./pages/admin/ManageUsersMobile'));
+const ManageEngagement = lazy(() => import('./pages/admin/ManageEngagement'));
 
 // Components
 import BottomMenu from './components/ui/BottomMenu';
 import ScrollToTop from './components/ScrollToTop';
 import Logo from './components/Logo';
 import DesktopLayout from './components/DesktopLayout';
-import AdminLayout from './components/AdminLayout';
+const AdminLayout = lazy(() => import('./components/AdminLayout'));
 
-import ManageFakeOrders from './pages/admin/ManageFakeOrders';
+const ManageFakeOrders = lazy(() => import('./pages/admin/ManageFakeOrders'));
 import Deposit from './pages/Deposit';
-import ManageDeposits from './pages/admin/ManageDeposits';
-import ManageSubscriptions from './pages/admin/ManageSubscriptions';
+const ManageDeposits = lazy(() => import('./pages/admin/ManageDeposits'));
+const ManageSubscriptions = lazy(() => import('./pages/admin/ManageSubscriptions'));
 import BonusProducts from './pages/BonusProducts';
 import ShoppingCredits from './pages/ShoppingCredits';
 import BundleDeals from './pages/BundleDeals';
 import BundleBuilder from './pages/BundleBuilder';
 import MyCoupons from './pages/MyCoupons';
 import MyCoins from './pages/MyCoins';
-import GenericAdminMock from './pages/admin/GenericAdminMock';
-import ManageCoupons from './pages/admin/ManageCoupons';
-import ManageHelpDesk from './pages/admin/ManageHelpDesk';
-import ManagePromoCodes from './pages/admin/ManagePromoCodes';
-import ManageChats from './pages/admin/ManageChats';
-import ManageVGHelpline from './pages/admin/ManageVGHelpline';
-import ManageStaff from './pages/admin/ManageStaff';
-import ManageStories from './pages/admin/ManageStories';
-import ManageWithdrawals from './pages/admin/ManageWithdrawals';
-import ManagePayments from './pages/admin/ManagePayments';
-import ManageAffiliateRequests from './pages/admin/ManageAffiliateRequests';
-import ManageOnboardingOffers from './pages/admin/ManageOnboardingOffers';
-import ManageCreatorRequests from './pages/admin/ManageCreatorRequests';
-import ManageAffiliateVideos from './pages/admin/ManageAffiliateVideos';
-import ManageAds from './pages/admin/ManageAds';
-import ManageAiAssistant from './pages/admin/ManageAiAssistant';
-import ManageGroups from './pages/admin/ManageGroups';
-import ManageSecurity from './pages/admin/ManageSecurity';
-import SystemHealthDiagnostics from './pages/admin/SystemHealthDiagnostics';
-
-import ManageRiders from './pages/admin/ManageRiders';
+const GenericAdminMock = lazy(() => import('./pages/admin/GenericAdminMock'));
+const ManageCoupons = lazy(() => import('./pages/admin/ManageCoupons'));
+const ManageHelpDesk = lazy(() => import('./pages/admin/ManageHelpDesk'));
+const ManagePromoCodes = lazy(() => import('./pages/admin/ManagePromoCodes'));
+const ManageChats = lazy(() => import('./pages/admin/ManageChats'));
+const ManageVGHelpline = lazy(() => import('./pages/admin/ManageVGHelpline'));
+const ManageStaff = lazy(() => import('./pages/admin/ManageStaff'));
+const ManageStories = lazy(() => import('./pages/admin/ManageStories'));
+const ManageWithdrawals = lazy(() => import('./pages/admin/ManageWithdrawals'));
+const ManagePayments = lazy(() => import('./pages/admin/ManagePayments'));
+const ManageAffiliateRequests = lazy(() => import('./pages/admin/ManageAffiliateRequests'));
+const ManageOnboardingOffers = lazy(() => import('./pages/admin/ManageOnboardingOffers'));
+const ManageCreatorRequests = lazy(() => import('./pages/admin/ManageCreatorRequests'));
+const ManageAffiliateVideos = lazy(() => import('./pages/admin/ManageAffiliateVideos'));
+const ManageAds = lazy(() => import('./pages/admin/ManageAds'));
+const ManageAiAssistant = lazy(() => import('./pages/admin/ManageAiAssistant'));
+const ManageGroups = lazy(() => import('./pages/admin/ManageGroups'));
+const ManageSecurity = lazy(() => import('./pages/admin/ManageSecurity'));
+const SystemHealthDiagnostics = lazy(() => import('./pages/admin/SystemHealthDiagnostics'));
+const ManageRiders = lazy(() => import('./pages/admin/ManageRiders'));
 
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -406,13 +406,7 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const timer = setTimeout(() => {
-      setIsPageLoading(false);
-    }, 320);
-    return () => {
-      clearTimeout(timer);
-      setIsPageLoading(true);
-    };
+    setIsPageLoading(false);
   }, [location.pathname, setIsPageLoading]);
 
   return (
@@ -860,6 +854,7 @@ const AppContent: React.FC = () => {
         )}
       </AnimatePresence>
       <div className="min-h-screen selection:bg-zinc-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
+        <Suspense fallback={null}>
         <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageWrapper><Home userData={userData} /></PageWrapper>} />
           <Route path="/onboarding" element={<PageWrapper><Onboarding onFinish={() => {}} /></PageWrapper>} />
@@ -915,6 +910,8 @@ const AppContent: React.FC = () => {
           <Route path="/blog/:slug" element={<PageWrapper><BlogDetails /></PageWrapper>} />
           {/* Primary Loops Routes */}
           <Route path="/loops" element={<PageWrapper><NewsHub /></PageWrapper>} />
+          <Route path="/create-reel" element={<PageWrapper><CreateReelStudio /></PageWrapper>} />
+          <Route path="/loops/create-reel" element={<PageWrapper><CreateReelStudio /></PageWrapper>} />
           <Route path="/loops/create-story" element={<PageWrapper><AddStory /></PageWrapper>} />
           <Route path="/loops/create" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/loops/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
@@ -1049,6 +1046,7 @@ const AppContent: React.FC = () => {
           <Route path="/:slug" element={<PageWrapper><ProductDetails /></PageWrapper>} />
           <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
         </Routes>
+        </Suspense>
       </div>
       {showNav && !isPageLoading && <BottomMenu />}
       <div className="stwRainbow" />
@@ -1214,10 +1212,21 @@ const GlobalRouteAwareOverlays: React.FC = () => {
     (prefix) =>
       location.pathname === prefix || location.pathname.startsWith(`${prefix}/`)
   );
+  const searchParams = new URLSearchParams(location.search);
+  const filterParam = (searchParams.get('filter') || '').toLowerCase();
+  const tabParam = (searchParams.get('tab') || '').toLowerCase();
   const isReelsFullscreen =
-    (location.pathname.startsWith('/loops') ||
+    location.pathname.startsWith('/create-reel') ||
+    location.pathname.startsWith('/loops/create-reel') ||
+    location.pathname.startsWith('/loops/create-story') ||
+    location.pathname.startsWith('/news-hub/create-story') ||
+    location.pathname.startsWith('/add-story') ||
+    location.pathname.startsWith('/seller/add-story') ||
+    location.pathname.startsWith('/loops/story') ||
+    location.pathname.startsWith('/news-hub/story') ||
+    ((location.pathname.startsWith('/loops') ||
       location.pathname.startsWith('/news-hub')) &&
-    new URLSearchParams(location.search).get('filter') === 'video';
+      (filterParam === 'video' || filterParam === 'reels' || tabParam === 'reels'));
 
   if (isAuthScreen) {
     return <NetworkStatus />;
@@ -1243,7 +1252,7 @@ const GlobalRouteAwareOverlays: React.FC = () => {
 
 const App: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(false);
 
   useEffect(() => {
     // Auto subscribe if they already granted permission in the past

@@ -404,6 +404,8 @@ export const CreateScamPost: React.FC = () => {
   const [showMoreAttachPopover, setShowMoreAttachPopover] = useState(false);
   const [showPostOptionsSheet, setShowPostOptionsSheet] = useState(false);
   const [showMusicModal, setShowMusicModal] = useState(false);
+  const [videoVolume, setVideoVolume] = useState<number>(1.0);
+  const [bgMusicVolume, setBgMusicVolume] = useState<number>(1.0);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
 
@@ -862,11 +864,13 @@ function cleanPayload<T>(obj: T): T {
     }
   };
 
-  // Detect YouTube / Facebook / TikTok / direct video link pasted inside the main caption
+  const detectedCaptionVideoUrl = "";
+/*
   const detectedCaptionVideoUrl = React.useMemo(
     () => extractFirstVideoUrlFromText(description),
     [description]
   );
+*/
 
   // Automatically resolve short share links (vt.tiktok.com, vm.tiktok.com, fb.watch, facebook.com/share/v|r)
   useEffect(() => {
@@ -1613,7 +1617,31 @@ function cleanPayload<T>(obj: T): T {
         videoUrl: effectiveVideoUrl || null,
         gifUrl: gifUrl || null,
         stickers: stickers.length > 0 ? stickers : null,
-        music: attachedMusic || null,
+        music: attachedMusic?.audioUrl
+          ? {
+              ...attachedMusic,
+              url: attachedMusic.audioUrl,
+              videoVolume,
+              bgMusicVolume,
+              originalVideoMuted: videoVolume === 0,
+            }
+          : effectiveVideoUrl &&
+            !/youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com/i.test(
+              effectiveVideoUrl
+            )
+          ? {
+              audioUrl: effectiveVideoUrl,
+              url: effectiveVideoUrl,
+              title: autoTitle.slice(0, 32) || `${authorName}'s Original Audio`,
+              artist: authorName,
+              cover: authorAvatar || "",
+              coverUrl: authorAvatar || "",
+              isFromVideo: true,
+              videoVolume,
+              bgMusicVolume: 1,
+              originalVideoMuted: videoVolume === 0,
+            }
+          : null,
         poll: builtPoll || null,
         snippet: builtSnippet || null,
         quoteBlock: builtQuote || null,
@@ -1634,6 +1662,57 @@ function cleanPayload<T>(obj: T): T {
           : originalPost.reporterAvatar || "",
         status: originalPost?.status || "active",
       };
+
+      // Auto-save attached music or uploaded video audio into global music library
+      const isDirectVideoAudio =
+        Boolean(effectiveVideoUrl) &&
+        !/youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com/i.test(
+          effectiveVideoUrl
+        );
+      if (attachedMusic?.audioUrl || isDirectVideoAudio) {
+        try {
+          const trackAudioUrl = attachedMusic?.audioUrl || effectiveVideoUrl;
+          const bgRef = collection(db, "background_music");
+          const qBg = query(bgRef, where("audioUrl", "==", trackAudioUrl));
+          const snapBg = await getDocs(qBg);
+
+          if (snapBg.empty) {
+            const trackPayload = {
+              title:
+                attachedMusic?.title ||
+                autoTitle.slice(0, 32) ||
+                `${authorName}'s Original Audio`,
+              artist: attachedMusic?.artist || authorName,
+              coverUrl:
+                attachedMusic?.cover ||
+                (attachedMusic as any)?.coverUrl ||
+                authorAvatar ||
+                "",
+              cover:
+                attachedMusic?.cover ||
+                (attachedMusic as any)?.coverUrl ||
+                authorAvatar ||
+                "",
+              url: trackAudioUrl,
+              audioUrl: trackAudioUrl,
+              createdAt: Date.now(),
+              addedBy: authorName,
+              addedByUid: authorId,
+              isFromVideo: !attachedMusic?.audioUrl && isDirectVideoAudio,
+            };
+            await Promise.all([
+              addDoc(collection(db, "background_music"), trackPayload).catch(
+                () => {}
+              ),
+              addDoc(collection(db, "story_songs"), trackPayload).catch(
+                () => {}
+              ),
+            ]);
+          }
+        } catch (e) {
+          console.error("Music auto-save failed:", e);
+        }
+      }
 
       if (postType === "scam") {
         postPayload.scamLocation = scamLocation.trim();
@@ -1719,29 +1798,6 @@ function cleanPayload<T>(obj: T): T {
       const ref = await addDoc(collection(db, "scam_posts"), fullNewDoc);
       const createdId = ref.id;
 
-      // Auto-add attached music into platform background music library for site-wide reuse
-      if (attachedMusic?.audioUrl) {
-        try {
-          const bgRef = collection(db, "background_music");
-          const qBg = query(bgRef, where("audioUrl", "==", attachedMusic.audioUrl));
-          const snapBg = await getDocs(qBg);
-          if (snapBg.empty) {
-            const trackPayload = {
-              title: attachedMusic.title || "Shared Track",
-              artist: attachedMusic.artist || userNameDisplay || "Loops Creator",
-              coverUrl: attachedMusic.cover || userAvatarDisplay || "",
-              url: attachedMusic.audioUrl,
-              audioUrl: attachedMusic.audioUrl,
-              createdAt: Date.now(),
-            };
-            await addDoc(collection(db, "background_music"), trackPayload);
-            await addDoc(collection(db, "story_songs"), trackPayload);
-          }
-        } catch (mErr) {
-          console.error("Auto background music sync error:", mErr);
-        }
-      }
-
       // Handle "Also share on..." options from PostOptionsBottomSheet
       if (alsoShareOn.includes("copy_link")) {
         try {
@@ -1791,7 +1847,11 @@ function cleanPayload<T>(obj: T): T {
           : "Shared to Loops!",
         "success"
       );
-      navigate("/loops");
+      if (effectiveVideoUrl) {
+        navigate(`/loops?filter=video&postId=${encodeURIComponent(createdId)}`);
+      } else {
+        navigate("/loops");
+      }
     } catch (err) {
       console.error("Publish error:", err);
       notify(
@@ -2250,10 +2310,10 @@ function cleanPayload<T>(obj: T): T {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={
                       postType === "scam"
-                        ? "Describe what happened clearly so others stay safe... (#scamalert or paste links)"
+                        ? "Describe what happened clearly so others stay safe... (#scamalert)"
                         : textStyle === "quote"
                         ? "“Write your daily affirmation or favorite quote...”"
-                        : "Write a caption, paste a YouTube / Facebook / TikTok link, or add #hashtags..."
+                        : "Write a caption, or add #hashtags..."
                     }
                     className={`w-full bg-transparent border-none outline-none resize-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500 ${
                       textStyle === "large"
@@ -2495,11 +2555,79 @@ function cleanPayload<T>(obj: T): T {
 
                     {/* Instant Video / Reel Player Preview */}
                     {!isUploadingVideo && activeVideoEmbed && (
-                      <div className="rounded-2xl overflow-hidden border border-slate-200/70 dark:border-zinc-700">
-                        <NewsVideoPlayer
-                          videoSource={activeVideoEmbed}
-                          autoPlayInView={true}
-                        />
+                      <div className="space-y-2.5">
+                        <div className="rounded-2xl overflow-hidden border border-slate-200/70 dark:border-zinc-700">
+                          <NewsVideoPlayer
+                            videoSource={activeVideoEmbed}
+                            autoPlayInView={true}
+                            bgMusicUrl={attachedMusic?.audioUrl}
+                            bgMusicVolume={bgMusicVolume}
+                            videoVolume={videoVolume}
+                          />
+                        </div>
+
+                        {/* Interactive Sound Mixer (Mute/Adjust Video & Background Music) */}
+                        <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                              <Volume2 className="w-4 h-4 text-[#0095F6]" />
+                              <span>Sound Mixer (Original Sound & Background Music)</span>
+                            </span>
+                            <span className="text-[11px] text-zinc-500 font-medium">Adjust Volumes</span>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
+                              <span>Original Video Sound</span>
+                              <span>{Math.round(videoVolume * 100)}%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setVideoVolume((v) => (v > 0 ? 0 : 1.0))}
+                                className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                              >
+                                {videoVolume === 0 ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4 text-[#0095F6]" />}
+                              </button>
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={videoVolume}
+                                onChange={(e) => setVideoVolume(Number(e.target.value))}
+                                className="w-full accent-[#0095F6] h-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-700 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+
+                          {attachedMusic && (
+                            <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-zinc-800">
+                              <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
+                                <span className="truncate">Background Song: {attachedMusic.title}</span>
+                                <span>{Math.round(bgMusicVolume * 100)}%</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setBgMusicVolume((v) => (v > 0 ? 0 : 1.0))}
+                                  className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+                                >
+                                  {bgMusicVolume === 0 ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4 text-[#0095F6]" />}
+                                </button>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="1"
+                                  step="0.05"
+                                  value={bgMusicVolume}
+                                  onChange={(e) => setBgMusicVolume(Number(e.target.value))}
+                                  className="w-full accent-[#0095F6] h-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-700 cursor-pointer"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 

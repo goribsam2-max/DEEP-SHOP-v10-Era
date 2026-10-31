@@ -11,6 +11,7 @@ import {
   addDoc,
   query,
   where,
+  limit,
   serverTimestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -18,6 +19,7 @@ import { db, auth } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
 import { uploadToImgbb, uploadDataUrlToImgbb } from "../../services/imgbb";
 import { uploadFileToCatbox } from "../../lib/catboxUpload";
+import { toPlayableAudioUrl, toPlayableMediaUrl } from "../../lib/videoEmbed";
 import { canAccessSellerDashboard } from "../../lib/admin";
 import { useFooterLogo } from "../../lib/useFooterLogo";
 import { triggerHaptic } from "../../lib/haptics";
@@ -542,11 +544,15 @@ export default function AddStory() {
   const [configEmoji, setConfigEmoji] = useState("😍");
   const [configSearchUser, setConfigSearchUser] = useState("");
 
-  // Hidden File Inputs
+  // Hidden File Inputs & Background Video Upload Tracker
   const galleryUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const videoUploadInputRef = useRef<HTMLInputElement | null>(null);
   const stickerPhotoInputRef = useRef<HTMLInputElement | null>(null);
   const cutoutPhotoInputRef = useRef<HTMLInputElement | null>(null);
   const collageSlotInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingVideoUploadRef = useRef<Promise<string> | null>(null);
+  const pendingVideoFileRef = useRef<File | null>(null);
+  const hostedVideoUrlsRef = useRef<Record<string, string>>({});
 
   // Close Friends & Share Sheet State
   const [closeFriendsOpen, setCloseFriendsOpen] = useState(false);
@@ -647,40 +653,153 @@ export default function AddStory() {
     }
   }, [promptParam]);
 
-  // Load real songs from Firestore `story_songs` + built-in tracks
+  const safeSmallImageUrl = useCallback(
+    (raw?: string | null, fallback = ""): string => {
+      if (!raw || typeof raw !== "string") return fallback;
+      const trimmed = raw.trim();
+      if (!trimmed) return fallback;
+      // Prevent oversized base64 data URLs from exceeding Firestore's 1MB document limit
+      if (trimmed.startsWith("data:") && trimmed.length > 25000) return fallback;
+      return trimmed;
+    },
+    []
+  );
+
+  // Load real songs from Firestore (`story_songs`, `background_music`, creator reels) + built-in tracks
   useEffect(() => {
-    const unsub = onSnapshot(
+    let storyTracks: any[] = [];
+    let bgTracks: any[] = [];
+    let reelAudioTracks: any[] = [];
+    const safeLogo = safeSmallImageUrl(footerLogo, deepShopLogoFallback);
+
+    const mergeAndPublish = () => {
+      const seen = new Set<string>();
+      const merged: any[] = [];
+      for (const item of [...storyTracks, ...bgTracks, ...reelAudioTracks, ...BUILTIN_SONGS]) {
+        const cleanUrl = String(item?.url || "").trim();
+        if (!cleanUrl || seen.has(cleanUrl)) continue;
+        seen.add(cleanUrl);
+        merged.push({
+          id: String(item.id || `trk_${merged.length}`),
+          title: String(item.title || "Featured Audio"),
+          artist: String(item.artist || "Loops Audio"),
+          url: cleanUrl,
+          coverUrl: safeSmallImageUrl(item.coverUrl, safeLogo),
+        });
+      }
+      setSongsList(merged.length > 0 ? merged : BUILTIN_SONGS);
+    };
+
+    const unsubStorySongs = onSnapshot(
       collection(db, "story_songs"),
       (snap) => {
-        const remote = snap.docs
+        storyTracks = snap.docs
           .map((d) => {
             const data = d.data();
             return {
-              id: d.id,
+              id: `ss_${d.id}`,
               title: data.title || data.name || "Featured Audio",
-              artist: data.artist || "Deep Shop Audio",
-              url: data.url || data.mp3Url || "",
-              coverUrl: data.coverUrl || footerLogo || deepShopLogoFallback,
+              artist: data.artist || "Loops Audio",
+              url: data.url || data.audioUrl || data.mp3Url || "",
+              coverUrl: safeSmallImageUrl(data.coverUrl, safeLogo),
             };
           })
           .filter((s) => Boolean(s.url));
-        setSongsList([...remote, ...BUILTIN_SONGS]);
+        mergeAndPublish();
       },
-      () => {
-        setSongsList(BUILTIN_SONGS);
-      }
+      () => mergeAndPublish()
     );
-    return () => unsub();
-  }, [footerLogo]);
 
-  // Load shop products (for sticker tagging only — NEVER mixed into user's private photo gallery) & community users
+    const unsubBgMusic = onSnapshot(
+      collection(db, "background_music"),
+      (snap) => {
+        bgTracks = snap.docs
+          .map((d) => {
+            const data = d.data();
+            return {
+              id: `bg_${d.id}`,
+              title: data.title || data.name || "Original Sound",
+              artist: data.artist || data.addedBy || "Creator Audio",
+              url: data.audioUrl || data.url || data.mp3Url || "",
+              coverUrl: safeSmallImageUrl(data.coverUrl, safeLogo),
+            };
+          })
+          .filter((s) => Boolean(s.url));
+        mergeAndPublish();
+      },
+      () => mergeAndPublish()
+    );
+
+    getDocs(query(collection(db, "scam_posts"), limit(80)))
+      .then((snap) => {
+        reelAudioTracks = snap.docs
+          .map((d) => {
+            const data = d.data() || {};
+            const audioCandidate =
+              data.music?.audioUrl ||
+              data.music?.url ||
+              data.audioUrl ||
+              (typeof data.videoUrl === "string" &&
+              !/youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com/i.test(
+                data.videoUrl
+              )
+                ? data.videoUrl
+                : "");
+            if (!audioCandidate) return null;
+            return {
+              id: `reel_aud_${d.id}`,
+              title:
+                data.music?.title ||
+                (data.songTitle ? String(data.songTitle).split("·")[0]?.trim() : "") ||
+                `Original audio - ${data.reporterName || data.authorName || "Creator"}`,
+              artist:
+                data.music?.artist ||
+                data.reporterName ||
+                data.authorName ||
+                "Creator",
+              url: audioCandidate,
+              coverUrl: safeSmallImageUrl(
+                data.music?.coverUrl ||
+                  data.music?.cover ||
+                  data.reporterAvatar ||
+                  data.authorPhoto ||
+                  data.thumbnailUrl,
+                safeLogo
+              ),
+            };
+          })
+          .filter(Boolean);
+        mergeAndPublish();
+      })
+      .catch(() => {});
+
+    return () => {
+      unsubStorySongs();
+      unsubBgMusic();
+    };
+  }, [footerLogo, safeSmallImageUrl]);
+
+  const displayedSongs = useMemo(() => {
+    const q = musicSearch.trim().toLowerCase();
+    const localFiltered = songsList.filter((s) =>
+      !q ? true : `${s.title} ${s.artist}`.toLowerCase().includes(q)
+    );
+    const seen = new Set<string>();
+    return localFiltered.filter((s) => {
+      if (!s?.url || seen.has(s.url)) return false;
+      seen.add(s.url);
+      return true;
+    });
+  }, [songsList, musicSearch]);
+
+  // Load shop products (for sticker tagging only) & community users with fast bounded limits
   useEffect(() => {
     let active = true;
     const hydrateData = async () => {
       try {
         const [prodSnap, usersSnap] = await Promise.all([
-          getDocs(collection(db, "products")).catch(() => null),
-          getDocs(collection(db, "users")).catch(() => null),
+          getDocs(query(collection(db, "products"), limit(60))).catch(() => null),
+          getDocs(query(collection(db, "users"), limit(80))).catch(() => null),
         ]);
         if (!active) return;
 
@@ -989,13 +1108,23 @@ export default function AddStory() {
     const audio = audioRef.current;
 
     const previewTrack = previewingSongId
-      ? songsList.find((s) => s.id === previewingSongId)
+      ? displayedSongs.find((s) => s.id === previewingSongId) ||
+        songsList.find((s) => s.id === previewingSongId)
       : null;
-    const activeUrl = previewTrack?.url || (step === "editor" && !audioMuted ? attachedSong?.url : "");
+    const rawActiveUrl =
+      previewTrack?.url || (step === "editor" && !audioMuted ? attachedSong?.url : "");
+    const playableUrl = toPlayableAudioUrl(rawActiveUrl);
 
-    if (activeUrl) {
-      if (audio.src !== activeUrl) {
-        audio.src = activeUrl;
+    if (playableUrl) {
+      if (audio.src !== playableUrl && audio.src !== rawActiveUrl) {
+        audio.onerror = () => {
+          if (rawActiveUrl && audio.src !== rawActiveUrl) {
+            audio.onerror = null;
+            audio.src = rawActiveUrl;
+            audio.play().catch(() => {});
+          }
+        };
+        audio.src = playableUrl;
       }
       audio.muted = false;
       audio.play().catch(() => {});
@@ -1008,7 +1137,7 @@ export default function AddStory() {
         audio.pause();
       }
     };
-  }, [previewingSongId, attachedSong, step, audioMuted, musicSheetOpen, songsList]);
+  }, [previewingSongId, attachedSong, step, audioMuted, musicSheetOpen, displayedSongs, songsList]);
 
   useEffect(() => {
     return () => {
@@ -1209,34 +1338,55 @@ export default function AddStory() {
     e.target.value = "";
     if (files.length === 0) return;
 
-    const firstVideo = files.find((f) => f.type.startsWith("video/"));
+    const firstVideo = files.find(
+      (f) =>
+        f.type.startsWith("video/") ||
+        /\.(mp4|webm|mov|m4v|3gp|mkv|avi)$/i.test(f.name)
+    );
     if (firstVideo) {
-      setUploading(true);
-      try {
-        notify("Uploading video story...", "info");
-        const videoUrl = await uploadFileToCatbox(firstVideo);
-        const videoItem: GalleryMediaItem = {
-          id: `vid_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          url: videoUrl,
-          type: "video",
-          source: "upload",
-          label: firstVideo.name,
-        };
-        persistUploadedItem(videoItem);
-        setCreateMode(false);
-        setSelectedMedia(videoItem);
-        setStep("editor");
-        triggerHaptic();
-        notify("Video ready for your story!", "success");
-      } catch {
-        notify("Could not upload selected video. Please try again.", "error");
-      } finally {
-        setUploading(false);
-      }
+      const localBlobUrl = URL.createObjectURL(firstVideo);
+      const videoItem: GalleryMediaItem = {
+        id: `vid_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        url: localBlobUrl,
+        type: "video",
+        source: "upload",
+        label: firstVideo.name,
+      };
+      // Open video immediately in Story Editor without blocking spinner
+      setCreateMode(false);
+      setSelectedMedia(videoItem);
+      setStep("editor");
+      triggerHaptic();
+
+      pendingVideoFileRef.current = firstVideo;
+      const uploadTask = uploadFileToCatbox(firstVideo);
+      pendingVideoUploadRef.current = uploadTask;
+
+      uploadTask
+        .then((remoteUrl) => {
+          hostedVideoUrlsRef.current[videoItem.id] = remoteUrl;
+          const persistedItem: GalleryMediaItem = {
+            ...videoItem,
+            url: remoteUrl,
+          };
+          persistUploadedItem(persistedItem);
+        })
+        .catch(() => {
+          notify("Video upload encountered a network issue. Will retry on share.", "info");
+        })
+        .finally(() => {
+          if (pendingVideoUploadRef.current === uploadTask) {
+            pendingVideoUploadRef.current = null;
+          }
+        });
       return;
     }
 
-    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+    const imageFiles = files.filter(
+      (f) =>
+        f.type.startsWith("image/") ||
+        /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i.test(f.name)
+    );
     if (imageFiles.length === 0) {
       notify("Please select a photo or video for your story.", "info");
       return;
@@ -1248,7 +1398,9 @@ export default function AddStory() {
       const aiCheckPromise = detectAiGeneratedFiles(batchSlice).catch(() => false);
       const uploadedResults = await Promise.all(
         batchSlice.map(async (file, idx) => {
-          const url = await uploadToImgbb(file, { requireRemote: true });
+          const url = await uploadToImgbb(file, { requireRemote: true }).catch(() =>
+            uploadFileToCatbox(file)
+          );
           if (!url) return null;
           const item: GalleryMediaItem = {
             id: `up_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1638,13 +1790,21 @@ export default function AddStory() {
     } else {
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, 1080, 1920);
-      const bgImg = await new Promise<HTMLImageElement | null>((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = selectedMedia.url;
-      });
+      const loadCanvasImage = (srcUrl: string) =>
+        new Promise<HTMLImageElement | null>((resolve) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = srcUrl;
+        });
+
+      let bgImg = await loadCanvasImage(selectedMedia.url);
+      if (!bgImg && /^https?:\/\//i.test(selectedMedia.url)) {
+        bgImg = await loadCanvasImage(
+          `/api/stream-media?url=${encodeURIComponent(selectedMedia.url)}`
+        );
+      }
       if (bgImg) {
         // Exact natural aspect ratio (object-contain) + user's 2-finger pinch scale & pan
         const fitScale = Math.min(
@@ -1760,6 +1920,45 @@ export default function AddStory() {
     }
   };
 
+  const uploadDataUrlWithStoryFallback = async (
+    rawDataUrl: string,
+    sourceCanvas?: HTMLCanvasElement | null
+  ): Promise<string> => {
+    try {
+      const remoteImgbb = await uploadDataUrlToImgbb(
+        rawDataUrl,
+        `story-${Date.now()}.jpg`,
+        { requireRemote: true }
+      );
+      if (remoteImgbb) return remoteImgbb;
+    } catch {}
+
+    try {
+      const res = await fetch(rawDataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `story-${Date.now()}.jpg`, {
+        type: blob.type || "image/jpeg",
+      });
+      const catboxUrl = await uploadFileToCatbox(file);
+      if (catboxUrl) return catboxUrl;
+    } catch {}
+
+    // Final fail-safe: compact 540x960 JPEG (<90KB) guaranteed to fit inside Firestore 1MB limit
+    if (sourceCanvas) {
+      try {
+        const compact = document.createElement("canvas");
+        compact.width = 540;
+        compact.height = 960;
+        const cCtx = compact.getContext("2d");
+        if (cCtx) {
+          cCtx.drawImage(sourceCanvas, 0, 0, 540, 960);
+          return compact.toDataURL("image/jpeg", 0.62);
+        }
+      } catch {}
+    }
+    return rawDataUrl;
+  };
+
   const handlePublishStory = async (audience: "story" | "close_friends") => {
     if (!currentUser) {
       navigate("/signin");
@@ -1774,30 +1973,47 @@ export default function AddStory() {
     triggerHaptic();
 
     try {
-      let finalMediaUrl = selectedMedia?.url || "";
+      const isVideoStory = !createMode && selectedMedia?.type === "video";
+      let finalMediaUrl =
+        (selectedMedia?.id && hostedVideoUrlsRef.current[selectedMedia.id]) ||
+        selectedMedia?.url ||
+        "";
 
-      // Bake background if using Create Gradient, Effects filter, Freehand Drawing, or 2-finger Zoom/Pan
-      const needsBaseBake =
-        createMode ||
-        strokes.length > 0 ||
-        effectId !== "normal" ||
-        hasCustomMediaTransform ||
-        !finalMediaUrl;
+      if (isVideoStory) {
+        if (finalMediaUrl.startsWith("blob:")) {
+          if (pendingVideoUploadRef.current) {
+            finalMediaUrl = await pendingVideoUploadRef.current;
+          } else if (pendingVideoFileRef.current) {
+            finalMediaUrl = await uploadFileToCatbox(pendingVideoFileRef.current);
+          }
+          if (selectedMedia?.id && finalMediaUrl && !finalMediaUrl.startsWith("blob:")) {
+            hostedVideoUrlsRef.current[selectedMedia.id] = finalMediaUrl;
+          }
+        }
+        if (!finalMediaUrl || finalMediaUrl.startsWith("blob:")) {
+          notify("Video is still uploading. Please try sharing again in a moment.", "error");
+          setPublishing(false);
+          return;
+        }
+      } else {
+        // Bake background if using Create Gradient, Effects filter, Freehand Drawing, or 2-finger Zoom/Pan
+        const needsBaseBake =
+          createMode ||
+          strokes.length > 0 ||
+          effectId !== "normal" ||
+          hasCustomMediaTransform ||
+          !finalMediaUrl;
 
-      if (needsBaseBake) {
-        const bakedCanvas = await renderCompositeCanvas(false);
-        const bakedDataUrl = bakedCanvas.toDataURL("image/jpeg", 0.85);
-        finalMediaUrl = await uploadDataUrlToImgbb(
-          bakedDataUrl,
-          `story-${Date.now()}.jpg`,
-          { requireRemote: true }
-        );
-      } else if (finalMediaUrl && !/^https?:\/\//i.test(finalMediaUrl)) {
-        finalMediaUrl = await uploadDataUrlToImgbb(
-          finalMediaUrl,
-          `story-${Date.now()}.jpg`,
-          { requireRemote: true }
-        );
+        if (needsBaseBake) {
+          const bakedCanvas = await renderCompositeCanvas(false);
+          const bakedDataUrl = bakedCanvas.toDataURL("image/jpeg", 0.85);
+          finalMediaUrl = await uploadDataUrlWithStoryFallback(
+            bakedDataUrl,
+            bakedCanvas
+          );
+        } else if (finalMediaUrl && !/^https?:\/\//i.test(finalMediaUrl)) {
+          finalMediaUrl = await uploadDataUrlWithStoryFallback(finalMediaUrl, null);
+        }
       }
 
       const storyId = `st_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -1806,24 +2022,41 @@ export default function AddStory() {
         userProfile?.name ||
         userProfile?.shopName ||
         currentUser.displayName ||
-        "Deep Shop Member";
-      const authorAvatar =
+        "Creator";
+      const rawAuthorAvatar =
         userProfile?.photoURL ||
         userProfile?.avatar ||
         userProfile?.shopLogo ||
         currentUser.photoURL ||
         footerLogo ||
         deepShopLogoFallback;
+      const authorAvatar = safeSmallImageUrl(
+        rawAuthorAvatar,
+        safeSmallImageUrl(currentUser.photoURL, "")
+      );
 
-      const linkSticker = placedStickers.find((s) => s.kind === "link" || s.kind === "shop_order");
+      const cleanAttachedSong = attachedSong?.url
+        ? {
+            id: String(attachedSong.id || `song_${Date.now()}`),
+            title: String(attachedSong.title || "Story Audio"),
+            artist: String(attachedSong.artist || authorName),
+            url: String(attachedSong.url),
+            coverUrl: safeSmallImageUrl(attachedSong.coverUrl, ""),
+          }
+        : null;
 
-      const storyPayload: Record<string, any> = {
+      const linkSticker = placedStickers.find(
+        (s) => s.kind === "link" || s.kind === "shop_order"
+      );
+
+      const rawStoryPayload: Record<string, any> = {
         id: storyId,
         kind: "news_story",
         source: fromNewsHub ? "news_hub" : "deep_shop",
         category: authorName,
         mediaUrl: finalMediaUrl,
-        type: "image",
+        type: isVideoStory ? "video" : "image",
+        mediaType: isVideoStory ? "video" : "image",
         userId: currentUser.uid,
         sellerId: currentUser.uid,
         userName: authorName,
@@ -1832,34 +2065,79 @@ export default function AddStory() {
         sellerLogo: authorAvatar,
         caption: caption.trim(),
         linkUrl: linkSticker?.url || "",
-        songTitle: attachedSong ? `${attachedSong.title} · ${attachedSong.artist}` : "",
-        audioUrl: attachedSong?.url || "",
-        music: attachedSong || null,
+        songTitle: cleanAttachedSong
+          ? `${cleanAttachedSong.title} · ${cleanAttachedSong.artist}`
+          : "",
+        audioUrl: cleanAttachedSong?.url || "",
+        music: cleanAttachedSong,
         textLayers,
         stickers: placedStickers,
-        aiLabel,
+        aiLabel: Boolean(aiLabel),
         isAiGenerated: Boolean(aiLabel),
         allowCommenting: replyPrivacy !== "off" && allowCommenting,
         replyPrivacy,
         isCloseFriends: audience === "close_friends",
         closeFriendIds: audience === "close_friends" ? closeFriendIds : [],
         isBoomerang: isBoomerangClip,
+        isCreateMode: Boolean(createMode),
         createdAt: new Date().toISOString(),
         createdAtMs: Date.now(),
       };
 
-      // Write to `creator_videos` (open to every signed-in community user)
-      await setDoc(doc(db, "creator_videos", storyId), storyPayload);
+      // Strip any nested undefined properties so Firestore setDoc never rejects the payload
+      const storyPayload = JSON.parse(JSON.stringify(rawStoryPayload));
 
-      // Best-effort sync to `stories` collection as well
-      await setDoc(doc(db, "stories", storyId), storyPayload).catch(() => {});
+      // Auto-save attached music OR uploaded video story audio into global music library
+      if (cleanAttachedSong?.url || (isVideoStory && finalMediaUrl)) {
+        try {
+          const trackAudioUrl = cleanAttachedSong?.url || finalMediaUrl;
+          const bgRef = collection(db, "background_music");
+          const qBg = query(bgRef, where("audioUrl", "==", trackAudioUrl));
+          const snapBg = await getDocs(qBg);
+          if (snapBg.empty) {
+            const trackPayload = {
+              title:
+                cleanAttachedSong?.title ||
+                caption.trim().slice(0, 32) ||
+                `${authorName}'s Original Audio`,
+              artist: cleanAttachedSong?.artist || authorName,
+              coverUrl: cleanAttachedSong?.coverUrl || authorAvatar || "",
+              cover: cleanAttachedSong?.coverUrl || authorAvatar || "",
+              url: trackAudioUrl,
+              audioUrl: trackAudioUrl,
+              isFromVideo: !cleanAttachedSong?.url && isVideoStory,
+              createdAt: Date.now(),
+              addedBy: authorName,
+              addedByUid: currentUser.uid,
+            };
+            await Promise.allSettled([
+              addDoc(collection(db, "background_music"), trackPayload),
+              addDoc(collection(db, "story_songs"), trackPayload),
+            ]);
+          }
+        } catch {}
+      }
+
+      // Write to both `creator_videos` and `stories`; succeed as long as at least one write lands
+      const [cvResult, stResult] = await Promise.allSettled([
+        setDoc(doc(db, "creator_videos", storyId), storyPayload),
+        setDoc(doc(db, "stories", storyId), storyPayload),
+      ]);
+
+      if (cvResult.status === "rejected" && stResult.status === "rejected") {
+        throw cvResult.reason || stResult.reason || new Error("Story write failed");
+      }
 
       // Mirror into local cache for instant zero-latency appearance
       try {
-        const prevLocal = JSON.parse(localStorage.getItem("deep_news_stories_local") || "[]");
+        const prevLocal = JSON.parse(
+          localStorage.getItem("deep_news_stories_local") || "[]"
+        );
         const nextLocal = [
           storyPayload,
-          ...(Array.isArray(prevLocal) ? prevLocal.filter((s: any) => s?.id !== storyId) : []),
+          ...(Array.isArray(prevLocal)
+            ? prevLocal.filter((s: any) => s?.id !== storyId)
+            : []),
         ].slice(0, 20);
         localStorage.setItem("deep_news_stories_local", JSON.stringify(nextLocal));
       } catch {}
@@ -1868,9 +2146,9 @@ export default function AddStory() {
         persistUploadedItem({
           id: storyId,
           url: finalMediaUrl,
-          type: "image",
+          type: isVideoStory ? "video" : "image",
           source: "upload",
-          label: "Archived Story",
+          label: isVideoStory ? "Archived Video Story" : "Archived Story",
         });
       }
 
@@ -1897,8 +2175,8 @@ export default function AddStory() {
 
               await addDoc(collection(db, "p2p_chats", partner.chatId, "messages"), {
                 text: dmText,
-                images: finalMediaUrl ? [finalMediaUrl] : [],
-                imageUrl: finalMediaUrl || null,
+                images: !isVideoStory && finalMediaUrl ? [finalMediaUrl] : [],
+                imageUrl: !isVideoStory && finalMediaUrl ? finalMediaUrl : null,
                 senderId: currentUser.uid,
                 senderName: authorName,
                 senderPhoto: authorAvatar,
@@ -1930,7 +2208,8 @@ export default function AddStory() {
         "success"
       );
       navigate("/loops");
-    } catch {
+    } catch (err) {
+      console.error("Failed to publish story:", err);
       notify("Could not publish story. Please try again.", "error");
     } finally {
       setPublishing(false);
@@ -2435,14 +2714,27 @@ export default function AddStory() {
   };
 
   return (
-    <div className="story-studio-shell min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center select-none overflow-hidden">
+    <div className="story-studio-shell min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-white flex flex-col items-center justify-center select-none overflow-hidden transition-colors">
       {/* Hidden File Pickers */}
       <input
         ref={galleryUploadInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*,.mp4,.mov,.webm,.m4v,.3gp,.mkv"
         multiple
         className="hidden"
+        onClick={(e) => {
+          e.currentTarget.value = "";
+        }}
+        onChange={handleDeviceGalleryUpload}
+      />
+      <input
+        ref={videoUploadInputRef}
+        type="file"
+        accept="video/*,.mp4,.mov,.webm,.m4v,.3gp,.mkv"
+        className="hidden"
+        onClick={(e) => {
+          e.currentTarget.value = "";
+        }}
         onChange={handleDeviceGalleryUpload}
       />
       <input
@@ -2487,43 +2779,47 @@ export default function AddStory() {
       />
 
       {/* Responsive Studio Frame: Full viewport on mobile, sleek studio shell on desktop */}
-      <div className="relative w-full max-w-[440px] h-[100dvh] sm:h-[94dvh] sm:rounded-[34px] sm:border sm:border-white/10 bg-black flex flex-col overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-[440px] h-[100dvh] sm:h-[94dvh] sm:rounded-[34px] sm:border sm:border-zinc-200 dark:sm:border-white/10 bg-white dark:bg-black flex flex-col overflow-hidden shadow-2xl transition-colors">
         {/* Global Uploading Overlay Spinner */}
         {uploading && (
-          <div className="absolute inset-0 z-50 bg-black/65 backdrop-blur-sm flex flex-col items-center justify-center gap-2.5">
+          <div className="absolute inset-0 z-50 bg-white/75 dark:bg-black/65 backdrop-blur-sm flex flex-col items-center justify-center gap-2.5">
             <Loader2 className="w-8 h-8 animate-spin text-[#1877F2]" />
-            <p className="text-xs font-semibold text-zinc-200">Processing studio media...</p>
+            <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+              Processing studio media...
+            </p>
           </div>
         )}
 
         {/* ===================================================================
-         * STEP A: "ADD TO STORY" GALLERY PICKER (IMG_4847)
+         * STEP A: "ADD TO STORY" GALLERY PICKER (Light + Dark Mode)
          * ================================================================= */}
         {step === "gallery" && (
-          <div className="flex-1 flex flex-col overflow-hidden bg-black">
+          <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black transition-colors">
             {/* Header */}
             <header className="px-4 pt-3 pb-2.5 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={() => navigate("/loops")}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Close"
               >
-                <X className="w-6 h-6 text-white" />
+                <X className="w-6 h-6 text-zinc-900 dark:text-white" />
               </button>
-              <h1 className="text-base font-bold tracking-tight text-white">Add to story</h1>
+              <h1 className="text-base font-bold tracking-tight text-zinc-900 dark:text-white">
+                Add to story
+              </h1>
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Story settings"
               >
-                <Settings className="w-5 h-5 text-white" />
+                <Settings className="w-5 h-5 text-zinc-900 dark:text-white" />
               </button>
             </header>
 
-            {/* 3 Feature Tiles: Add yours · Music · Collage */}
-            <div className="px-3.5 pt-1 pb-3 grid grid-cols-3 gap-2.5 shrink-0">
+            {/* 4 Feature Tiles: Add yours · Video · Music · Collage */}
+            <div className="px-3.5 pt-1 pb-3 grid grid-cols-4 gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -2531,12 +2827,30 @@ export default function AddStory() {
                   setStep("editor");
                   openStickerConfigurator("add_yours");
                 }}
-                className="h-20 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
+                className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                  <Camera className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center">
+                  <Camera className="w-4 h-4 text-zinc-900 dark:text-white" />
                 </div>
-                <span className="text-xs font-semibold text-white whitespace-nowrap">Add yours</span>
+                <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
+                  Add yours
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  videoUploadInputRef.current?.click();
+                }}
+                className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#1877F2]/15 dark:bg-[#1877F2]/20 flex items-center justify-center">
+                  <Play className="w-4 h-4 text-[#1877F2]" />
+                </div>
+                <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
+                  Video
+                </span>
               </button>
 
               <button
@@ -2546,12 +2860,14 @@ export default function AddStory() {
                   setStep("editor");
                   setMusicSheetOpen(true);
                 }}
-                className="h-20 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
+                className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                  <Music className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center">
+                  <Music className="w-4 h-4 text-zinc-900 dark:text-white" />
                 </div>
-                <span className="text-xs font-semibold text-white whitespace-nowrap">Music</span>
+                <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
+                  Music
+                </span>
               </button>
 
               <button
@@ -2561,12 +2877,14 @@ export default function AddStory() {
                   setStep("collage");
                   triggerHaptic();
                 }}
-                className="h-20 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
+                className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                  <LayoutGrid className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center">
+                  <LayoutGrid className="w-4 h-4 text-zinc-900 dark:text-white" />
                 </div>
-                <span className="text-xs font-semibold text-white whitespace-nowrap">Collage</span>
+                <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
+                  Collage
+                </span>
               </button>
             </div>
 
@@ -2575,17 +2893,17 @@ export default function AddStory() {
               <button
                 type="button"
                 onClick={() => setAlbumMenuOpen((v) => !v)}
-                className="flex items-center gap-1.5 text-sm font-bold text-white cursor-pointer py-1"
+                className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white cursor-pointer py-1"
               >
                 <span>{albumLabelMap[albumFilter]}</span>
-                <ChevronDown className="w-4 h-4 text-zinc-300" />
+                <ChevronDown className="w-4 h-4 text-zinc-500 dark:text-zinc-300" />
               </button>
 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => galleryUploadInputRef.current?.click()}
-                  className="px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-semibold text-white flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  className="px-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 text-xs font-semibold text-zinc-900 dark:text-white flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
                   <Upload className="w-3.5 h-3.5 text-[#1877F2]" />
                   <span>Upload</span>
@@ -2600,7 +2918,7 @@ export default function AddStory() {
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
                     multiSelectMode
                       ? "bg-[#1877F2] text-white"
-                      : "bg-zinc-900 text-white border border-white/10 hover:bg-zinc-800"
+                      : "bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-white border border-zinc-200/80 dark:border-white/10 hover:bg-zinc-200/80 dark:hover:bg-zinc-800"
                   }`}
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
@@ -2608,9 +2926,9 @@ export default function AddStory() {
                 </button>
               </div>
 
-              {/* Frosted Album Filter Popover (Private User Media Only) */}
+              {/* Frosted Album Filter Popover */}
               {albumMenuOpen && (
-                <div className="absolute left-4 top-11 w-52 rounded-2xl bg-zinc-900/95 backdrop-blur-xl border border-white/15 shadow-2xl py-1.5 z-30">
+                <div className="absolute left-4 top-11 w-52 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200 dark:border-white/15 shadow-2xl py-1.5 z-30">
                   {(
                     [
                       { id: "recents", label: "Recents" },
@@ -2627,7 +2945,7 @@ export default function AddStory() {
                         setAlbumMenuOpen(false);
                         triggerHaptic();
                       }}
-                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-white hover:bg-white/10 flex items-center justify-between cursor-pointer"
+                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center justify-between cursor-pointer"
                     >
                       <span>{alb.label}</span>
                       {albumFilter === alb.id && <Check className="w-4 h-4 text-[#1877F2]" />}
@@ -2647,12 +2965,14 @@ export default function AddStory() {
                     setStep("camera");
                     triggerHaptic();
                   }}
-                  className="aspect-[9/16] bg-zinc-900 hover:bg-zinc-800 flex flex-col items-center justify-center gap-2 border border-white/10 cursor-pointer transition-colors"
+                  className="aspect-[9/16] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 flex flex-col items-center justify-center gap-2 border border-zinc-200/80 dark:border-white/10 cursor-pointer transition-colors"
                 >
-                  <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center">
-                    <Camera className="w-5 h-5 text-white" />
+                  <div className="w-11 h-11 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center">
+                    <Camera className="w-5 h-5 text-zinc-900 dark:text-white" />
                   </div>
-                  <span className="text-xs font-semibold text-zinc-200">Camera</span>
+                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                    Camera
+                  </span>
                 </button>
 
                 {/* Tile 2: Create Aa Text Mode */}
@@ -2664,7 +2984,7 @@ export default function AddStory() {
                     setStep("editor");
                     openTextStudioForNew();
                   }}
-                  className="aspect-[9/16] bg-gradient-to-br from-[#1877F2] via-blue-700 to-slate-950 flex flex-col items-center justify-center gap-1.5 border border-white/10 cursor-pointer"
+                  className="aspect-[9/16] bg-gradient-to-br from-[#1877F2] via-blue-700 to-slate-950 flex flex-col items-center justify-center gap-1.5 border border-zinc-200/50 dark:border-white/10 cursor-pointer"
                 >
                   <span className="text-2xl font-serif font-bold text-white">Aa</span>
                   <span className="text-xs font-semibold text-white/90">Create</span>
@@ -2695,13 +3015,29 @@ export default function AddStory() {
                       }}
                       className="aspect-[9/16] relative bg-zinc-900 overflow-hidden cursor-pointer group"
                     >
-                      <img
-                        src={item.url}
-                        alt={item.label || "Story media"}
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                      />
+                      {item.type === "video" ? (
+                        <>
+                          <video
+                            src={toPlayableMediaUrl(item.url)}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            className="w-full h-full object-cover pointer-events-none"
+                          />
+                          <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-sm flex items-center gap-1 text-[10px] font-bold text-white pointer-events-none">
+                            <Play className="w-2.5 h-2.5 fill-white text-white" />
+                            <span>Video</span>
+                          </div>
+                        </>
+                      ) : (
+                        <img
+                          src={item.url}
+                          alt={item.label || "Story media"}
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                        />
+                      )}
 
                       {/* Favourite toggle */}
                       {!multiSelectMode && (
@@ -2738,24 +3074,33 @@ export default function AddStory() {
 
               {visibleGallery.length === 0 && (
                 <div className="py-16 text-center space-y-3 px-6">
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
                     No media in {albumLabelMap[albumFilter]} yet.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => galleryUploadInputRef.current?.click()}
-                    className="px-5 py-2.5 rounded-full bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
-                  >
-                    Upload Photo from Device
-                  </button>
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => galleryUploadInputRef.current?.click()}
+                      className="px-4 py-2.5 rounded-full bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
+                    >
+                      Upload Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => videoUploadInputRef.current?.click()}
+                      className="px-4 py-2.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/15 text-zinc-900 dark:text-white text-xs font-bold cursor-pointer"
+                    >
+                      Select Video
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Multi-select Floating Next CTA */}
             {multiSelectMode && selectedIds.length > 0 && (
-              <div className="absolute bottom-5 inset-x-4 z-30 flex items-center justify-between bg-zinc-900/95 backdrop-blur-xl border border-white/15 rounded-full p-2 pl-4 shadow-2xl">
-                <span className="text-xs font-semibold text-zinc-200 tabular-nums">
+              <div className="absolute bottom-5 inset-x-4 z-30 flex items-center justify-between bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200 dark:border-white/15 rounded-full p-2 pl-4 shadow-2xl">
+                <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 tabular-nums">
                   {selectedIds.length} selected
                 </span>
                 <button
@@ -3067,16 +3412,16 @@ export default function AddStory() {
          * STEP C: COLLAGE / LAYOUT BUILDER
          * ================================================================= */}
         {step === "collage" && (
-          <div className="flex-1 flex flex-col bg-zinc-950 p-4 gap-4 overflow-hidden">
+          <div className="flex-1 flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white p-4 gap-4 overflow-hidden transition-colors">
             <header className="flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => setStep("gallery")}
-                className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"
+                className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-5 h-5 text-zinc-900 dark:text-white" />
               </button>
-              <div className="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-full border border-white/10">
+              <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-full border border-zinc-200 dark:border-white/10">
                 {([2, 3, 4] as const).map((cnt) => (
                   <button
                     key={cnt}
@@ -3086,7 +3431,9 @@ export default function AddStory() {
                       setCollageImages((prev) => prev.slice(0, cnt));
                     }}
                     className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${
-                      collageSlotsCount === cnt ? "bg-[#1877F2] text-white" : "text-zinc-400"
+                      collageSlotsCount === cnt
+                        ? "bg-[#1877F2] text-white"
+                        : "text-zinc-500 dark:text-zinc-400"
                     }`}
                   >
                     {cnt} Grid
@@ -3105,7 +3452,7 @@ export default function AddStory() {
 
             {/* Collage Preview Stage */}
             <div
-              className={`flex-1 rounded-3xl overflow-hidden bg-zinc-900 border border-white/10 grid gap-1 p-1 ${
+              className={`flex-1 rounded-3xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 grid gap-1 p-1 ${
                 collageSlotsCount === 2 ? "grid-rows-2" : "grid-cols-2 grid-rows-2"
               }`}
             >
@@ -3122,7 +3469,7 @@ export default function AddStory() {
                         collageSlotInputRef.current?.click();
                       }
                     }}
-                    className={`relative bg-zinc-800/80 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer ${spanFull}`}
+                    className={`relative bg-zinc-200/80 dark:bg-zinc-800/80 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer ${spanFull}`}
                   >
                     {img ? (
                       <>
@@ -3137,7 +3484,7 @@ export default function AddStory() {
                         </span>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center gap-1 text-zinc-400">
+                      <div className="flex flex-col items-center gap-1 text-zinc-500 dark:text-zinc-400">
                         <Plus className="w-6 h-6" />
                         <span className="text-[11px] font-semibold">Add Photo</span>
                       </div>
@@ -3149,7 +3496,9 @@ export default function AddStory() {
 
             {/* Quick Tap Strip from Gallery */}
             <div className="space-y-1.5 shrink-0">
-              <p className="text-xs font-semibold text-zinc-400">Tap photos below to fill grid</p>
+              <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Tap photos below to fill grid
+              </p>
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {visibleGallery.slice(0, 12).map((g) => (
                   <button
@@ -3161,7 +3510,7 @@ export default function AddStory() {
                         triggerHaptic();
                       }
                     }}
-                    className="w-14 h-20 rounded-xl overflow-hidden shrink-0 border border-white/15 cursor-pointer"
+                    className="w-14 h-20 rounded-xl overflow-hidden shrink-0 border border-zinc-200 dark:border-white/15 cursor-pointer"
                   >
                     <img
                       src={g.url}
@@ -3177,10 +3526,10 @@ export default function AddStory() {
         )}
 
         {/* ===================================================================
-         * STEP D: FULL STORY CANVAS EDITOR (IMG_4849, IMG_4850, IMG_4853)
+         * STEP D: FULL STORY CANVAS EDITOR
          * ================================================================= */}
         {step === "editor" && (
-          <div className="flex-1 flex flex-col bg-black p-2 sm:p-3 gap-2.5 overflow-hidden">
+          <div className="flex-1 flex flex-col bg-zinc-100 dark:bg-black p-2 sm:p-3 gap-2.5 overflow-hidden transition-colors">
             {/* Rounded 9:16 Interactive Story Stage (Exact Aspect Ratio + 2-Finger Pinch Zoom) */}
             <div
               ref={stageContainerRef}
@@ -3198,7 +3547,48 @@ export default function AddStory() {
               {/* Background Media (Exact Natural Aspect Ratio) or Create Gradient */}
               <div className={`absolute inset-0 flex items-center justify-center overflow-hidden ${activeEffect.filterClass}`}>
                 {createMode || !selectedMedia ? (
-                  <div className={`w-full h-full ${activeCreateGradient.bgClass}`} />
+                  <div className={`w-full h-full ${activeCreateGradient.bgClass} flex items-center justify-center`}>
+                    {attachedSong && textLayers.length === 0 && placedStickers.length === 0 && (
+                      <div className="px-5 py-4 rounded-3xl bg-black/45 backdrop-blur-xl border border-white/15 shadow-2xl flex items-center gap-3.5 max-w-[270px] pointer-events-none">
+                        {attachedSong.coverUrl ? (
+                          <img
+                            src={attachedSong.coverUrl}
+                            alt={attachedSong.title}
+                            referrerPolicy="no-referrer"
+                            className="w-14 h-14 rounded-2xl object-cover shrink-0 shadow-lg"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+                            <Music className="w-6 h-6 text-white" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-extrabold text-white truncate">
+                            {attachedSong.title}
+                          </p>
+                          <p className="text-xs text-white/75 truncate mt-0.5">
+                            {attachedSong.artist}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : selectedMedia.type === "video" ? (
+                  <motion.video
+                    key={selectedMedia.id}
+                    src={toPlayableMediaUrl(selectedMedia.url)}
+                    autoPlay
+                    loop
+                    playsInline
+                    muted={Boolean(attachedSong) || audioMuted}
+                    animate={{
+                      scale: mediaScale,
+                      x: mediaOffset.x,
+                      y: mediaOffset.y,
+                    }}
+                    transition={{ duration: 0 }}
+                    className="w-full h-full object-contain select-none pointer-events-none bg-black"
+                  />
                 ) : (
                   <motion.img
                     src={selectedMedia.url}
@@ -3343,12 +3733,18 @@ export default function AddStory() {
                         }}
                         className="flex items-center gap-2 bg-black/55 backdrop-blur-xl border border-white/15 rounded-full py-1 pl-1.5 pr-2.5 max-w-[230px] cursor-pointer"
                       >
-                        <img
-                          src={attachedSong.coverUrl}
-                          alt=""
-                          referrerPolicy="no-referrer"
-                          className="w-7 h-7 rounded-full object-cover shrink-0"
-                        />
+                        {attachedSong.coverUrl ? (
+                          <img
+                            src={attachedSong.coverUrl}
+                            alt=""
+                            referrerPolicy="no-referrer"
+                            className="w-7 h-7 rounded-full object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                            <Music className="w-3.5 h-3.5 text-white" />
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-bold text-white truncate">
                             {attachedSong.title}
@@ -3698,13 +4094,13 @@ export default function AddStory() {
               )}
             </div>
 
-            {/* Bottom Publish Bar: Your story · Close Friends · #1877F2 → (Zero white background) */}
+            {/* Bottom Publish Bar: Your story · Close Friends · #1877F2 → */}
             <div className="story-publish-bar flex items-center gap-2 shrink-0 pb-1 bg-transparent">
               <button
                 type="button"
                 disabled={publishing}
                 onClick={() => handlePublishStory("story")}
-                className="story-pill-btn flex-1 h-12 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-white/10 flex items-center gap-2.5 px-2.5 transition-colors active:scale-95 cursor-pointer"
+                className="story-pill-btn flex-1 h-12 rounded-full bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center gap-2.5 px-2.5 transition-colors active:scale-95 cursor-pointer shadow-xs"
               >
                 <img
                   src={userAvatarResolved}
@@ -3713,9 +4109,9 @@ export default function AddStory() {
                   onError={(e) => {
                     e.currentTarget.src = deepShopLogoFallback;
                   }}
-                  className="w-7 h-7 rounded-full object-cover border border-white/30 shrink-0"
+                  className="w-7 h-7 rounded-full object-cover border border-zinc-300 dark:border-white/30 shrink-0"
                 />
-                <span className="text-xs font-bold text-white whitespace-nowrap truncate">
+                <span className="text-xs font-bold text-zinc-900 dark:text-white whitespace-nowrap truncate">
                   {publishing ? "Sharing..." : "Your story"}
                 </span>
               </button>
@@ -3724,12 +4120,12 @@ export default function AddStory() {
                 type="button"
                 disabled={publishing}
                 onClick={() => setCloseFriendsOpen(true)}
-                className="story-pill-btn flex-1 h-12 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-white/10 flex items-center gap-2 px-2.5 transition-colors active:scale-95 cursor-pointer"
+                className="story-pill-btn flex-1 h-12 rounded-full bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center gap-2 px-2.5 transition-colors active:scale-95 cursor-pointer shadow-xs"
               >
                 <span className="story-cf-badge w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0">
                   <Star className="w-3.5 h-3.5 text-white fill-white" />
                 </span>
-                <span className="text-xs font-bold text-white whitespace-nowrap truncate">
+                <span className="text-xs font-bold text-zinc-900 dark:text-white whitespace-nowrap truncate">
                   Close Friends
                 </span>
               </button>
@@ -4039,7 +4435,7 @@ export default function AddStory() {
         </AnimatePresence>
 
         {/* ===================================================================
-         * OVERLAY 2: STICKER TRAY (IMG_4855) + CONFIGURATOR MODAL
+         * OVERLAY 2: STICKER TRAY + CONFIGURATOR MODAL (Light + Dark Mode)
          * ================================================================= */}
         <AnimatePresence>
           {stickerTrayOpen && (
@@ -4048,26 +4444,26 @@ export default function AddStory() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-40 bg-zinc-950/95 backdrop-blur-2xl flex flex-col p-4 overflow-hidden"
+              className="absolute inset-0 z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl flex flex-col p-4 overflow-hidden text-zinc-900 dark:text-white"
             >
-              <div className="w-10 h-1 rounded-full bg-white/25 mx-auto mb-3 shrink-0" />
+              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-white/25 mx-auto mb-3 shrink-0" />
 
               {/* Search Bar + Close */}
               <div className="flex items-center gap-2 mb-4 shrink-0">
-                <div className="flex-1 h-10 rounded-xl bg-zinc-800/90 px-3 flex items-center gap-2">
+                <div className="flex-1 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-transparent px-3 flex items-center gap-2">
                   <Search className="w-4 h-4 text-zinc-400 shrink-0" />
                   <input
                     type="text"
                     value={stickerSearch}
                     onChange={(e) => setStickerSearch(e.target.value)}
                     placeholder="Search stickers"
-                    className="w-full bg-transparent text-xs text-white placeholder-zinc-400 outline-none"
+                    className="w-full bg-transparent text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setStickerTrayOpen(false)}
-                  className="px-3 h-10 rounded-xl bg-white/10 text-xs font-bold text-white cursor-pointer"
+                  className="px-3 h-10 rounded-xl bg-zinc-100 dark:bg-white/10 text-xs font-bold text-zinc-800 dark:text-white cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -4081,7 +4477,7 @@ export default function AddStory() {
                       key={`${s.label}_${idx}`}
                       type="button"
                       onClick={s.onSelect}
-                      className="px-3.5 py-2.5 rounded-2xl bg-white text-zinc-950 shadow-md hover:scale-105 active:scale-95 transition-transform flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-tight cursor-pointer whitespace-nowrap"
+                      className="px-3.5 py-2.5 rounded-2xl bg-white dark:bg-white text-zinc-950 border border-zinc-200 dark:border-transparent shadow-sm hover:scale-105 active:scale-95 transition-transform flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-tight cursor-pointer whitespace-nowrap"
                     >
                       <span className={s.badgeClass}>{s.icon}</span>
                       <span>{s.label}</span>
@@ -4090,23 +4486,25 @@ export default function AddStory() {
                 </div>
 
                 {/* Live Dhaka Clock, Heart Counter, SOUND ON, Day Stamp Row */}
-                <div className="pt-2 border-t border-white/10 space-y-3">
-                  <p className="text-xs font-semibold text-zinc-400">Live badges & widgets</p>
+                <div className="pt-2 border-t border-zinc-200 dark:border-white/10 space-y-3">
+                  <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                    Live badges & widgets
+                  </p>
                   <div className="grid grid-cols-2 gap-2.5">
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "clock", title: "Dhaka Time" })}
-                      className="p-3 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center gap-1.5 font-mono font-black text-lg text-white tabular-nums cursor-pointer hover:bg-zinc-800"
+                      className="p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center gap-1.5 font-mono font-black text-lg text-zinc-900 dark:text-white tabular-nums cursor-pointer"
                     >
-                      <span className="px-2 py-1 rounded bg-white/10">{dhakaClock.hh}</span>
+                      <span className="px-2 py-1 rounded bg-white dark:bg-white/10">{dhakaClock.hh}</span>
                       <span>:</span>
-                      <span className="px-2 py-1 rounded bg-white/10">{dhakaClock.mm}</span>
+                      <span className="px-2 py-1 rounded bg-white dark:bg-white/10">{dhakaClock.mm}</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "day_stamp", title: dhakaClock.dayStr })}
-                      className="p-3 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center font-serif font-black tracking-widest text-sm text-white cursor-pointer hover:bg-zinc-800"
+                      className="p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center font-serif font-black tracking-widest text-sm text-zinc-900 dark:text-white cursor-pointer"
                     >
                       {dhakaClock.dayStr}
                     </button>
@@ -4114,7 +4512,7 @@ export default function AddStory() {
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "heart_count", title: "1" })}
-                      className="p-3 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center gap-1.5 text-rose-400 font-extrabold text-sm cursor-pointer hover:bg-zinc-800"
+                      className="p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center gap-1.5 text-rose-500 dark:text-rose-400 font-extrabold text-sm cursor-pointer"
                     >
                       <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
                       <span>1</span>
@@ -4123,7 +4521,7 @@ export default function AddStory() {
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "sound_on", title: "SOUND ON" })}
-                      className="p-3 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center gap-1.5 text-white font-extrabold text-xs cursor-pointer hover:bg-zinc-800"
+                      className="p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center gap-1.5 text-zinc-900 dark:text-white font-extrabold text-xs cursor-pointer"
                     >
                       <Volume2 className="w-4 h-4 text-[#1877F2]" />
                       <span>SOUND ON</span>
@@ -4142,26 +4540,26 @@ export default function AddStory() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-black/85 backdrop-blur-xl flex flex-col justify-center p-5"
+              className="absolute inset-0 z-50 bg-black/60 dark:bg-black/85 backdrop-blur-xl flex flex-col justify-center p-5"
             >
-              <div className="bg-zinc-900 border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl max-h-[82vh] overflow-y-auto">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl max-h-[82vh] overflow-y-auto text-zinc-900 dark:text-white">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white capitalize">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white capitalize">
                     {configuringSticker.replace("_", " ")} sticker
                   </h3>
                   <button
                     type="button"
                     onClick={() => setConfiguringSticker(null)}
-                    className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4 text-zinc-700 dark:text-white" />
                   </button>
                 </div>
 
                 {configuringSticker === "shop_order" ? (
                   <div className="space-y-2.5">
-                    <p className="text-xs text-zinc-400">
-                      Attach a verified Deep Shop product card to your story:
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Attach a verified product card to your story:
                     </p>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {shopProducts.map((p) => (
@@ -4178,7 +4576,7 @@ export default function AddStory() {
                               url: `/product/${p.id}`,
                             })
                           }
-                          className="w-full p-2 rounded-2xl bg-zinc-800 hover:bg-zinc-700 flex items-center gap-3 text-left cursor-pointer"
+                          className="w-full p-2 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center gap-3 text-left cursor-pointer"
                         >
                           <img
                             src={p.image}
@@ -4187,7 +4585,9 @@ export default function AddStory() {
                             className="w-11 h-11 rounded-xl object-cover shrink-0"
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-white truncate">{p.name}</p>
+                            <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                              {p.name}
+                            </p>
                             <p className="text-[11px] font-semibold text-[#1877F2] tabular-nums">
                               ৳{Number(p.price || 0).toLocaleString()}
                             </p>
@@ -4199,14 +4599,14 @@ export default function AddStory() {
                         onClick={() =>
                           addStickerInstant({
                             kind: "shop_order",
-                            title: "Explore Deep Shop Deals",
+                            title: "Explore Featured Deals",
                             priceLabel: "Shop orders →",
                             url: "/products",
                           })
                         }
                         className="w-full py-2.5 rounded-xl bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
                       >
-                        Link All Deep Shop Products
+                        Link All Products
                       </button>
                     </div>
                   </div>
@@ -4218,7 +4618,7 @@ export default function AddStory() {
                       value={configSearchUser}
                       onChange={(e) => setConfigSearchUser(e.target.value)}
                       placeholder="Type @username or search member..."
-                      className="w-full h-10 px-3.5 rounded-xl bg-zinc-800 text-xs text-white outline-none border border-white/10"
+                      className="w-full h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
                     />
                     <div className="space-y-1.5 max-h-48 overflow-y-auto">
                       {communityUsers
@@ -4241,7 +4641,7 @@ export default function AddStory() {
                                 targetUid: u.uid,
                               })
                             }
-                            className="w-full p-2 rounded-xl hover:bg-white/10 flex items-center gap-2.5 text-left cursor-pointer"
+                            className="w-full p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2.5 text-left cursor-pointer"
                           >
                             <img
                               src={u.avatar}
@@ -4250,8 +4650,12 @@ export default function AddStory() {
                               className="w-8 h-8 rounded-full object-cover"
                             />
                             <div className="min-w-0">
-                              <p className="text-xs font-bold text-white truncate">{u.name}</p>
-                              <p className="text-[11px] text-zinc-400 truncate">@{u.handle}</p>
+                              <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                                {u.name}
+                              </p>
+                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                                @{u.handle}
+                              </p>
                             </div>
                           </button>
                         ))}
@@ -4285,18 +4689,18 @@ export default function AddStory() {
                           ? "Topic name"
                           : "Enter title or prompt..."
                       }
-                      className="w-full h-10 px-3.5 rounded-xl bg-zinc-800 text-xs text-white outline-none border border-white/10"
+                      className="w-full h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
                     />
 
                     {configuringSticker === "location" && (
                       <div className="flex flex-wrap gap-1.5">
-                        {["Dhaka, Bangladesh", "Chattogram", "Sylhet", "Deep Shop Verified"].map(
+                        {["Dhaka, Bangladesh", "Chattogram", "Sylhet"].map(
                           (loc) => (
                             <button
                               key={loc}
                               type="button"
                               onClick={() => setConfigTitle(loc)}
-                              className="px-2.5 py-1 rounded-full bg-zinc-800 text-[11px] text-zinc-200 cursor-pointer"
+                              className="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-200 cursor-pointer"
                             >
                               {loc}
                             </button>
@@ -4315,7 +4719,7 @@ export default function AddStory() {
                             ? "Sticker button text (e.g. Shop Now)"
                             : "Time label (e.g. Tonight · 9:00 PM)"
                         }
-                        className="w-full h-10 px-3.5 rounded-xl bg-zinc-800 text-xs text-white outline-none border border-white/10"
+                        className="w-full h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
                       />
                     )}
 
@@ -4326,14 +4730,14 @@ export default function AddStory() {
                           value={configOptA}
                           onChange={(e) => setConfigOptA(e.target.value)}
                           placeholder="Option 1"
-                          className="h-10 px-3 rounded-xl bg-zinc-800 text-xs text-white outline-none border border-white/10"
+                          className="h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
                         />
                         <input
                           type="text"
                           value={configOptB}
                           onChange={(e) => setConfigOptB(e.target.value)}
                           placeholder="Option 2"
-                          className="h-10 px-3 rounded-xl bg-zinc-800 text-xs text-white outline-none border border-white/10"
+                          className="h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
                         />
                       </div>
                     )}
@@ -4346,7 +4750,9 @@ export default function AddStory() {
                             type="button"
                             onClick={() => setConfigEmoji(em)}
                             className={`w-10 h-10 rounded-full text-lg cursor-pointer ${
-                              configEmoji === em ? "bg-[#1877F2]" : "bg-zinc-800"
+                              configEmoji === em
+                                ? "bg-[#1877F2]"
+                                : "bg-zinc-100 dark:bg-zinc-800"
                             }`}
                           >
                             {em}
@@ -4381,7 +4787,7 @@ export default function AddStory() {
         </AnimatePresence>
 
         {/* ===================================================================
-         * OVERLAY 3: MUSIC & AUDIO SHEET
+         * OVERLAY 3: MUSIC & AUDIO SHEET (Zero Deezer · Community Video Audio + Library)
          * ================================================================= */}
         <AnimatePresence>
           {musicSheetOpen && (
@@ -4390,109 +4796,115 @@ export default function AddStory() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-50 bg-zinc-950/95 backdrop-blur-2xl flex flex-col p-4"
+              className="absolute inset-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl flex flex-col p-4 text-zinc-900 dark:text-white"
             >
               <header className="flex items-center justify-between pb-3">
-                <h3 className="text-base font-bold text-white">For you · Audio</h3>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                  Songs & Video Audio
+                </h3>
                 <button
                   type="button"
                   onClick={() => {
                     setPreviewingSongId(null);
                     setMusicSheetOpen(false);
                   }}
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-zinc-900 dark:text-white" />
                 </button>
               </header>
 
-              <div className="h-10 rounded-xl bg-zinc-800/90 px-3 flex items-center gap-2 mb-3 shrink-0">
+              <div className="h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-transparent px-3 flex items-center gap-2 mb-3 shrink-0">
                 <Search className="w-4 h-4 text-zinc-400" />
                 <input
                   type="text"
                   value={musicSearch}
                   onChange={(e) => setMusicSearch(e.target.value)}
-                  placeholder="Search music"
-                  className="w-full bg-transparent text-xs text-white placeholder-zinc-400 outline-none"
+                  placeholder="Search songs or creator video audio..."
+                  className="w-full bg-transparent text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none"
                 />
               </div>
 
               <div className="flex-1 overflow-y-auto space-y-2 pb-4">
-                {songsList
-                  .filter((s) =>
-                    !musicSearch.trim()
-                      ? true
-                      : `${s.title} ${s.artist}`
-                          .toLowerCase()
-                          .includes(musicSearch.toLowerCase())
-                  )
-                  .map((song) => {
-                    const isPlaying = previewingSongId === song.id;
-                    const isAttached = attachedSong?.id === song.id;
-                    return (
-                      <div
-                        key={song.id}
-                        className="p-2.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-white/5 flex items-center gap-3"
-                      >
+                {displayedSongs.map((song) => {
+                  const isPlaying = previewingSongId === song.id;
+                  const isAttached =
+                    attachedSong?.id === song.id ||
+                    (Boolean(attachedSong?.url) && attachedSong?.url === song.url);
+                  return (
+                    <div
+                      key={song.id}
+                      className="p-2.5 rounded-2xl bg-zinc-100/90 hover:bg-zinc-200/70 dark:bg-zinc-900 dark:hover:bg-zinc-800/90 border border-zinc-200/70 dark:border-white/5 flex items-center gap-3 transition-colors"
+                    >
+                      {song.coverUrl ? (
                         <img
                           src={song.coverUrl}
                           alt={song.title}
                           referrerPolicy="no-referrer"
                           onError={(e) => {
-                            e.currentTarget.src = deepShopLogoFallback;
+                            e.currentTarget.classList.add("hidden");
                           }}
-                          className="w-12 h-12 rounded-xl object-cover shrink-0 bg-zinc-800"
+                          className="w-12 h-12 rounded-xl object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
                         />
-                        <div
-                          onClick={() => {
-                            setAttachedSong(song);
-                            setAudioMuted(false);
-                            setPreviewingSongId(null);
-                            setMusicSheetOpen(false);
-                            triggerHaptic();
-                          }}
-                          className="min-w-0 flex-1 cursor-pointer"
-                        >
-                          <p className="text-xs font-bold text-white truncate">{song.title}</p>
-                          <p className="text-[11px] text-zinc-400 truncate">{song.artist}</p>
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                          <Music className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPreviewingSongId((prev) => (prev === song.id ? null : song.id))
-                          }
-                          className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white cursor-pointer shrink-0"
-                          aria-label={isPlaying ? "Pause preview" : "Play preview"}
-                        >
-                          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAttachedSong(song);
-                            setAudioMuted(false);
-                            setPreviewingSongId(null);
-                            setMusicSheetOpen(false);
-                            triggerHaptic();
-                          }}
-                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer shrink-0 ${
-                            isAttached ? "bg-green-500 text-white" : "bg-[#1877F2] text-white"
-                          }`}
-                        >
-                          {isAttached ? "Added" : "Use"}
-                        </button>
+                      )}
+                      <div
+                        onClick={() => {
+                          setAttachedSong(song);
+                          setAudioMuted(false);
+                          setPreviewingSongId(null);
+                          setMusicSheetOpen(false);
+                          triggerHaptic();
+                        }}
+                        className="min-w-0 flex-1 cursor-pointer"
+                      >
+                        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                          {song.title}
+                        </p>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                          {song.artist}
+                        </p>
                       </div>
-                    );
-                  })}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreviewingSongId((prev) => (prev === song.id ? null : song.id))
+                        }
+                        className="w-9 h-9 rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-transparent flex items-center justify-center text-zinc-900 dark:text-white cursor-pointer shrink-0"
+                        aria-label={isPlaying ? "Pause preview" : "Play preview"}
+                      >
+                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachedSong(song);
+                          setAudioMuted(false);
+                          setPreviewingSongId(null);
+                          setMusicSheetOpen(false);
+                          triggerHaptic();
+                        }}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer shrink-0 ${
+                          isAttached ? "bg-green-500 text-white" : "bg-[#1877F2] text-white"
+                        }`}
+                      >
+                        {isAttached ? "Added" : "Use"}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* ===================================================================
-         * OVERLAY 4: CLOSE FRIENDS SHEET (IMG_4852)
+         * OVERLAY 4: CLOSE FRIENDS SHEET (Light + Dark Mode)
          * ================================================================= */}
         <AnimatePresence>
           {closeFriendsOpen && (
@@ -4501,21 +4913,23 @@ export default function AddStory() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-50 bg-zinc-950 flex flex-col p-4"
+              className="absolute inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col p-4 text-zinc-900 dark:text-white"
             >
-              <header className="flex items-center justify-between pb-3 border-b border-white/10">
+              <header className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setCloseFriendsOpen(false)}
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-zinc-900 dark:text-white" />
                 </button>
                 <div className="flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
                     <Star className="w-3.5 h-3.5 text-white fill-white" />
                   </span>
-                  <h3 className="text-sm font-bold text-white">Close Friends</h3>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                    Close Friends
+                  </h3>
                 </div>
                 <button
                   type="button"
@@ -4526,21 +4940,21 @@ export default function AddStory() {
                 </button>
               </header>
 
-              <p className="text-xs text-zinc-400 py-2.5 leading-relaxed">
-                We don't send notifications when you edit your Close Friends list.{" "}
-                <span className="text-white font-semibold tabular-nums">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 py-2.5 leading-relaxed">
+                We don&apos;t send notifications when you edit your Close Friends list.{" "}
+                <span className="text-zinc-900 dark:text-white font-semibold tabular-nums">
                   {closeFriendIds.length} selected
                 </span>
               </p>
 
-              <div className="h-10 rounded-xl bg-zinc-900 px-3 flex items-center gap-2 mb-3 border border-white/10 shrink-0">
+              <div className="h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 px-3 flex items-center gap-2 mb-3 border border-zinc-200 dark:border-white/10 shrink-0">
                 <Search className="w-4 h-4 text-zinc-400" />
                 <input
                   type="text"
                   value={closeFriendsSearch}
                   onChange={(e) => setCloseFriendsSearch(e.target.value)}
                   placeholder="Search followers or following"
-                  className="w-full bg-transparent text-xs text-white placeholder-zinc-400 outline-none"
+                  className="w-full bg-transparent text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none"
                 />
               </div>
 
@@ -4556,7 +4970,7 @@ export default function AddStory() {
                   if (filteredCf.length === 0) {
                     return (
                       <div className="py-10 px-4 text-center space-y-1.5">
-                        <p className="text-xs font-semibold text-zinc-300">
+                        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                           {closeFriendCandidates.length === 0
                             ? "No followers or following yet"
                             : "No matching followers or following"}
@@ -4574,18 +4988,20 @@ export default function AddStory() {
                         key={u.uid}
                         type="button"
                         onClick={() => toggleCloseFriendMember(u.uid)}
-                        className="w-full p-2.5 rounded-2xl hover:bg-zinc-900 flex items-center justify-between cursor-pointer"
+                        className="w-full p-2.5 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 flex items-center justify-between cursor-pointer"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img
                             src={u.avatar}
                             alt={u.name}
                             referrerPolicy="no-referrer"
-                            className="w-10 h-10 rounded-full object-cover shrink-0 bg-zinc-800"
+                            className="w-10 h-10 rounded-full object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
                           />
                           <div className="text-left min-w-0">
-                            <p className="text-xs font-bold text-white truncate">{u.name}</p>
-                            <p className="text-[11px] text-zinc-400 truncate">
+                            <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                              {u.name}
+                            </p>
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
                               @{u.handle}
                               {u.relationLabel ? ` · ${u.relationLabel}` : ""}
                             </p>
@@ -4596,7 +5012,7 @@ export default function AddStory() {
                           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
                             checked
                               ? "story-cta-blue bg-[#1877F2] border-[#1877F2] text-white"
-                              : "border-zinc-600"
+                              : "border-zinc-300 dark:border-zinc-600"
                           }`}
                         >
                           {checked && <Check className="w-3.5 h-3.5" />}
@@ -4607,11 +5023,11 @@ export default function AddStory() {
                 })()}
               </div>
 
-              <div className="pt-2 border-t border-white/10 flex items-center gap-2.5">
+              <div className="pt-2 border-t border-zinc-200 dark:border-white/10 flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setCloseFriendsOpen(false)}
-                  className="story-pill-btn px-5 py-3 rounded-full bg-zinc-900 text-white text-xs font-bold cursor-pointer"
+                  className="story-pill-btn px-5 py-3 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white text-xs font-bold cursor-pointer"
                 >
                   Save List
                 </button>
@@ -4629,7 +5045,7 @@ export default function AddStory() {
         </AnimatePresence>
 
         {/* ===================================================================
-         * OVERLAY 5: SHARE SHEET (IMG_4854)
+         * OVERLAY 5: SHARE SHEET (Light + Dark Mode + Video Preview Support)
          * ================================================================= */}
         <AnimatePresence>
           {shareSheetOpen && (
@@ -4638,29 +5054,40 @@ export default function AddStory() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-50 bg-zinc-950 flex flex-col p-4"
+              className="absolute inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col p-4 text-zinc-900 dark:text-white"
             >
               <header className="flex items-center justify-between pb-3">
                 <button
                   type="button"
                   onClick={() => setShareSheetOpen(false)}
-                  className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-zinc-900 dark:text-white" />
                 </button>
-                <h3 className="text-sm font-bold text-white">Share story</h3>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                  Share story
+                </h3>
                 <span className="w-9" />
               </header>
 
               {/* Shrunk Story Preview Card */}
               <div className="flex justify-center py-2 shrink-0">
-                <div className="w-24 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-xl bg-zinc-900">
+                <div className="w-24 aspect-[9/16] rounded-2xl overflow-hidden border border-zinc-200 dark:border-white/20 shadow-xl bg-zinc-900">
                   {createMode || !selectedMedia ? (
                     <div className={`w-full h-full ${activeCreateGradient.bgClass} flex items-center justify-center p-2 text-center`}>
                       <span className="text-[9px] font-bold text-white line-clamp-3">
-                        {textLayers[0]?.text || caption || "DEEP SHOP"}
+                        {textLayers[0]?.text || caption || "Story"}
                       </span>
                     </div>
+                  ) : selectedMedia.type === "video" ? (
+                    <video
+                      src={toPlayableMediaUrl(selectedMedia.url)}
+                      muted
+                      playsInline
+                      autoPlay
+                      loop
+                      className={`w-full h-full object-cover ${activeEffect.filterClass}`}
+                    />
                   ) : (
                     <img
                       src={selectedMedia.url}
@@ -4673,11 +5100,11 @@ export default function AddStory() {
               </div>
 
               {/* Audience Selection Rows */}
-              <div className="space-y-2 py-3 border-b border-white/10 shrink-0">
+              <div className="space-y-2 py-3 border-b border-zinc-200 dark:border-white/10 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShareTargetAudience("story")}
-                  className="w-full p-2.5 rounded-2xl bg-zinc-900 flex items-center justify-between cursor-pointer"
+                  className="w-full p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <img
@@ -4690,22 +5117,26 @@ export default function AddStory() {
                       className="w-10 h-10 rounded-full object-cover"
                     />
                     <div className="text-left">
-                      <p className="text-xs font-bold text-white">Your story</p>
-                      <p className="text-[11px] text-zinc-400">Visible on Deep Shop Feed</p>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                        Your story
+                      </p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        Visible on Feed
+                      </p>
                     </div>
                   </div>
                   <span
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
                       shareTargetAudience === "story"
                         ? "bg-[#1877F2] border-[#1877F2] text-white"
-                        : "border-zinc-600"
+                        : "border-zinc-300 dark:border-zinc-600"
                     }`}
                   >
                     {shareTargetAudience === "story" && <Check className="w-3.5 h-3.5" />}
                   </span>
                 </button>
 
-                <div className="w-full p-2.5 rounded-2xl bg-zinc-900 flex items-center justify-between">
+                <div className="w-full p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between">
                   <button
                     type="button"
                     onClick={() => setShareTargetAudience("close_friends")}
@@ -4715,8 +5146,10 @@ export default function AddStory() {
                       <Star className="w-5 h-5 text-white fill-white" />
                     </span>
                     <div>
-                      <p className="text-xs font-bold text-white">Close Friends</p>
-                      <p className="text-[11px] text-zinc-400 tabular-nums">
+                      <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                        Close Friends
+                      </p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
                         {closeFriendIds.length} people
                       </p>
                     </div>
@@ -4739,7 +5172,7 @@ export default function AddStory() {
                       className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer ${
                         shareTargetAudience === "close_friends"
                           ? "story-cta-blue bg-[#1877F2] border-[#1877F2] text-white"
-                          : "border-zinc-600"
+                          : "border-zinc-300 dark:border-zinc-600"
                       }`}
                     >
                       {shareTargetAudience === "close_friends" && <Check className="w-3.5 h-3.5" />}
@@ -4748,22 +5181,22 @@ export default function AddStory() {
                 </div>
               </div>
 
-              {/* Send in Message Section (Strictly Real Chat Conversations Only) */}
+              {/* Send in Message Section */}
               <div className="flex-1 overflow-y-auto py-3 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
                     <Send className="w-3.5 h-3.5 text-[#1877F2]" />
                     <span>Message</span>
                   </span>
                 </div>
-                <div className="h-9 rounded-xl bg-zinc-900 px-3 flex items-center gap-2 border border-white/10">
+                <div className="h-9 rounded-xl bg-zinc-100 dark:bg-zinc-900 px-3 flex items-center gap-2 border border-zinc-200 dark:border-white/10">
                   <Search className="w-3.5 h-3.5 text-zinc-400" />
                   <input
                     type="text"
                     value={shareMessageQuery}
                     onChange={(e) => setShareMessageQuery(e.target.value)}
                     placeholder="Search recent chats..."
-                    className="w-full bg-transparent text-xs text-white placeholder-zinc-400 outline-none"
+                    className="w-full bg-transparent text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -4797,20 +5230,20 @@ export default function AddStory() {
                                 : [...prev, u.uid]
                             )
                           }
-                          className="w-full p-2 rounded-xl hover:bg-zinc-900 flex items-center justify-between cursor-pointer"
+                          className="w-full p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 flex items-center justify-between cursor-pointer"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <img
                               src={u.avatar}
                               alt={u.name}
                               referrerPolicy="no-referrer"
-                              className="w-8 h-8 rounded-full object-cover shrink-0 bg-zinc-800"
+                              className="w-8 h-8 rounded-full object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
                             />
                             <div className="text-left min-w-0">
-                              <p className="text-xs font-semibold text-white truncate">
+                              <p className="text-xs font-semibold text-zinc-900 dark:text-white truncate">
                                 {u.name}
                               </p>
-                              <p className="text-[10.5px] text-zinc-400 truncate">
+                              <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 truncate">
                                 @{u.handle}
                               </p>
                             </div>
@@ -4819,7 +5252,7 @@ export default function AddStory() {
                             className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
                               sel
                                 ? "story-cta-blue bg-[#1877F2] border-[#1877F2] text-white"
-                                : "border-zinc-600"
+                                : "border-zinc-300 dark:border-zinc-600"
                             }`}
                           >
                             {sel && <Check className="w-3 h-3" />}
@@ -4852,7 +5285,7 @@ export default function AddStory() {
         </AnimatePresence>
 
         {/* ===================================================================
-         * OVERLAY 6: STORY SETTINGS SHEET
+         * OVERLAY 6: STORY SETTINGS SHEET (Light + Dark Mode)
          * ================================================================= */}
         <AnimatePresence>
           {settingsOpen && (
@@ -4861,11 +5294,13 @@ export default function AddStory() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-50 bg-zinc-950 flex flex-col justify-between p-5"
+              className="absolute inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col justify-between p-5 text-zinc-900 dark:text-white"
             >
               <div className="space-y-5">
                 <header className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-white">Story controls</h3>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                    Story controls
+                  </h3>
                   <button
                     type="button"
                     onClick={() => setSettingsOpen(false)}
@@ -4876,7 +5311,9 @@ export default function AddStory() {
                 </header>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-bold text-zinc-300">Allow story replies</p>
+                  <p className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                    Allow story replies
+                  </p>
                   {(
                     [
                       { id: "everyone", label: "Everyone" },
@@ -4888,14 +5325,14 @@ export default function AddStory() {
                       key={opt.id}
                       type="button"
                       onClick={() => setReplyPrivacy(opt.id)}
-                      className="w-full p-3 rounded-2xl bg-zinc-900 flex items-center justify-between text-xs font-semibold text-white cursor-pointer"
+                      className="w-full p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between text-xs font-semibold text-zinc-900 dark:text-white cursor-pointer"
                     >
                       <span>{opt.label}</span>
                       <span
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                           replyPrivacy === opt.id
                             ? "bg-[#1877F2] border-[#1877F2]"
-                            : "border-zinc-600"
+                            : "border-zinc-300 dark:border-zinc-600"
                         }`}
                       >
                         {replyPrivacy === opt.id && <Check className="w-3 h-3 text-white" />}
@@ -4904,10 +5341,12 @@ export default function AddStory() {
                   ))}
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-zinc-900 flex items-center justify-between">
+                <div className="p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-white">Save story to archive</p>
-                    <p className="text-[11px] text-zinc-400">
+                    <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                      Save story to archive
+                    </p>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                       Automatically keep published stories in Recents
                     </p>
                   </div>
@@ -4915,7 +5354,7 @@ export default function AddStory() {
                     type="button"
                     onClick={() => setAutoSaveArchive((v) => !v)}
                     className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${
-                      autoSaveArchive ? "bg-[#1877F2]" : "bg-zinc-700"
+                      autoSaveArchive ? "bg-[#1877F2]" : "bg-zinc-300 dark:bg-zinc-700"
                     }`}
                   >
                     <span
@@ -4932,7 +5371,7 @@ export default function AddStory() {
                     setSettingsOpen(false);
                     setCloseFriendsOpen(true);
                   }}
-                  className="w-full p-3.5 rounded-2xl bg-zinc-900 flex items-center justify-between text-xs font-bold text-white cursor-pointer"
+                  className="w-full p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between text-xs font-bold text-zinc-900 dark:text-white cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
                     <Star className="w-4 h-4 text-green-500 fill-green-500" />
@@ -4943,7 +5382,7 @@ export default function AddStory() {
               </div>
 
               <p className="text-[11px] text-center text-zinc-500">
-                DEEP SHOP Story Studio
+                Story Studio
               </p>
             </motion.div>
           )}

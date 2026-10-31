@@ -15,6 +15,7 @@ import {
   resolveShortVideoUrl,
   getVideoPlatformMeta,
   toPlayableMediaUrl,
+  toPlayableAudioUrl,
 } from "../lib/videoEmbed";
 import { triggerHaptic } from "../lib/haptics";
 
@@ -22,6 +23,11 @@ interface NewsVideoPlayerProps {
   videoSource: ParsedVideoEmbed;
   autoPlayInView?: boolean;
   overlayBadge?: React.ReactNode;
+  bgMusicUrl?: string;
+  bgMusicVolume?: number;
+  videoVolume?: number;
+  hideBottomBar?: boolean;
+  onVideoClick?: () => void;
 }
 
 const ACTIVE_VIDEO_EVENT = "deepshop:news-active-video";
@@ -45,11 +51,17 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   videoSource,
   autoPlayInView = true,
   overlayBadge,
+  bgMusicUrl,
+  bgMusicVolume = 1.0,
+  videoVolume = 1.0,
+  hideBottomBar = false,
+  onVideoClick,
 }) => {
   const instanceId = useId();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const nativeVideoRef = useRef<HTMLVideoElement | null>(null);
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const userPausedRef = useRef(false);
 
   const [resolvedEmbed, setResolvedEmbed] =
@@ -221,6 +233,9 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
           sendTikTokCommand("pause");
           setIsPlaying(false);
         }
+        if (bgAudioRef.current) {
+          bgAudioRef.current.pause();
+        }
       }
     };
 
@@ -381,8 +396,65 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     resolvedEmbed.canonicalUrl,
   ]);
 
+  // React to external mute toggle events (sent by parent components like LoopPostCard)
+  useEffect(() => {
+    const handleExternalMute = (ev: Event) => {
+      const customEv = ev as CustomEvent<{ postId?: string }>;
+      // If event provides a postId, only react if it matches (or if no ID was provided)
+      // Since NewsVideoPlayer doesn't explicitly know its postId from props, 
+      // we assume it's for the currently active one or we just toggle.
+      // Better: we just toggle if this player is currently 'isInView'.
+      if (isInView) {
+        const nextMuted = !isMuted;
+        setIsMuted(nextMuted);
+        if (nativeVideoRef.current) {
+          nativeVideoRef.current.muted = nextMuted;
+        } else if (resolvedEmbed.platform === "youtube") {
+          sendYouTubeCommand(nextMuted ? "mute" : "unMute");
+        } else if (resolvedEmbed.platform === "tiktok") {
+          sendTikTokCommand(nextMuted ? "mute" : "unMute");
+        }
+      }
+    };
+    window.addEventListener('loops:toggle-mute', handleExternalMute);
+    return () => window.removeEventListener('loops:toggle-mute', handleExternalMute);
+  }, [isInView, isMuted, resolvedEmbed.platform]);
+
+  // Sync video volume & separate background music <audio> element
+  const rawNativeStreamUrl =
+    resolvedEmbed.directStreamUrl || resolvedEmbed.canonicalUrl || "";
+  const hasSeparateBgMusic = Boolean(
+    bgMusicUrl &&
+      bgMusicUrl.trim() &&
+      bgMusicUrl.trim() !== rawNativeStreamUrl.trim() &&
+      bgMusicUrl.trim() !== resolvedEmbed.originalUrl.trim()
+  );
+
+  useEffect(() => {
+    if (nativeVideoRef.current) {
+      const clampedVol = Math.max(0, Math.min(1, Number(videoVolume ?? 1)));
+      nativeVideoRef.current.volume = clampedVol;
+    }
+  }, [videoVolume, hasLoadedFrame]);
+
+  useEffect(() => {
+    const audioEl = bgAudioRef.current;
+    if (!audioEl || !hasSeparateBgMusic) return;
+    audioEl.volume = Math.max(0, Math.min(1, Number(bgMusicVolume ?? 1)));
+    audioEl.muted = isMuted;
+    if (isPlaying && isInView && !isMuted) {
+      audioEl.play().catch(() => {});
+    } else if (!isPlaying || !isInView) {
+      audioEl.pause();
+    }
+  }, [hasSeparateBgMusic, bgMusicUrl, bgMusicVolume, isMuted, isPlaying, isInView]);
+
   const toggleEmbedPlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (onVideoClick) {
+      onVideoClick();
+      return;
+    }
     triggerHaptic();
     if (nativeVideoRef.current) {
       const v = nativeVideoRef.current;
@@ -477,6 +549,12 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     } else if (resolvedEmbed.platform === "tiktok") {
       sendTikTokCommand(nextMuted ? "mute" : "unMute");
     }
+    if (bgAudioRef.current) {
+      bgAudioRef.current.muted = nextMuted;
+      if (!nextMuted && isPlaying && isInView) {
+        bgAudioRef.current.play().catch(() => {});
+      }
+    }
   };
 
   const stopBubble = (e: React.SyntheticEvent) => {
@@ -530,11 +608,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
       >
         <div
           onClick={toggleEmbedPlayPause}
-          className={`relative w-full bg-zinc-950 flex items-center justify-center cursor-pointer ${
-            detectedVertical
-              ? "aspect-[9/16] max-h-[540px] mx-auto max-w-[340px]"
-              : "aspect-video"
-          }`}
+          className="relative w-full bg-zinc-950 flex items-center justify-center cursor-pointer overflow-hidden"
         >
           <video
             ref={nativeVideoRef}
@@ -543,7 +617,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             preload={hasEnteredView || isInView ? "auto" : "metadata"}
             playsInline
             loop
-            muted={isMuted}
+            muted={isMuted || (hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01)}
             autoPlay={autoPlayInView && isInView}
             onPlay={() => {
               setIsPlaying(true);
@@ -566,6 +640,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               setIsBuffering(false);
               setStreamError(false);
               const v = e.currentTarget;
+              v.volume = Math.max(0, Math.min(1, Number(videoVolume ?? 1)));
               if (autoPlayInView && isInView && !userPausedRef.current && v.paused) {
                 v.play()
                   .then(() => setIsPlaying(true))
@@ -615,7 +690,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
                 setStreamError(true);
               }
             }}
-            className="w-full h-full object-contain pointer-events-none"
+            className="w-full max-h-[680px] h-auto object-contain block mx-auto pointer-events-none"
           />
 
           {/* Loading / Buffering Spinner */}
@@ -627,8 +702,8 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             </div>
           )}
 
-          {/* Center Play Button Overlay when Paused */}
-          {!isPlaying && hasLoadedFrame && !isBuffering && !streamError && (
+          {/* Center Play Button Overlay when Paused (hidden on clean feed post cards) */}
+          {!hideBottomBar && !isPlaying && hasLoadedFrame && !isBuffering && !streamError && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="w-14 h-14 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white flex items-center justify-center shadow-xl">
                 <Play className="w-6 h-6 fill-white ml-0.5" />
@@ -648,83 +723,135 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             </div>
           )}
 
+          {/* Top-Right Video Duration Badge */}
+          {duration > 0 && (
+            <div className="absolute top-3 right-3 z-20 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[12px] font-semibold tracking-wide font-mono select-none pointer-events-none drop-shadow-md">
+              {formatVideoClock(duration)}
+            </div>
+          )}
+
+          {/* Single Bottom-Right Glass Mute / Unmute Toggle Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerHaptic();
+              const nextMuted = !isMuted;
+              setIsMuted(nextMuted);
+              if (nativeVideoRef.current) {
+                nativeVideoRef.current.muted = nextMuted && !(hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01);
+                if (hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01) {
+                  nativeVideoRef.current.muted = true;
+                } else {
+                  nativeVideoRef.current.muted = nextMuted;
+                }
+              }
+              if (bgAudioRef.current) {
+                bgAudioRef.current.muted = nextMuted;
+                if (!nextMuted && isPlaying && isInView) {
+                  bgAudioRef.current.play().catch(() => {});
+                }
+              }
+            }}
+            className="absolute bottom-3 right-3 z-20 w-8.5 h-8.5 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center shadow-lg hover:bg-black/80 active:scale-90 transition cursor-pointer touch-manipulation"
+            aria-label={isMuted ? "Unmute video" : "Mute video"}
+          >
+            {isMuted ? (
+              <VolumeX className="w-4 h-4 fill-white" />
+            ) : (
+              <Volume2 className="w-4 h-4 fill-white" />
+            )}
+          </button>
+
+          {hasSeparateBgMusic && bgMusicUrl && (
+            <audio
+              ref={bgAudioRef}
+              src={toPlayableAudioUrl(bgMusicUrl)}
+              preload="auto"
+              loop
+              muted={isMuted}
+            />
+          )}
+
           {overlayBadge}
         </div>
 
-        <div className="bg-zinc-900 text-white px-3 py-2 flex items-center justify-between gap-2 border-t border-white/10">
-          <div className="flex items-center gap-1.5 shrink-0">
+        {!hideBottomBar && (
+          <div className="bg-zinc-900 text-white px-3 py-2 flex items-center justify-between gap-2 border-t border-white/10">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={toggleEmbedPlayPause}
+                className="w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 flex items-center justify-center transition cursor-pointer touch-manipulation"
+                aria-label={isPlaying ? "Pause video" : "Play video"}
+              >
+                {isPlaying ? (
+                  <Pause className="w-3.5 h-3.5 fill-current" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleEmbedSeekBy(e, -5)}
+                className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 touch-manipulation"
+              >
+                <RotateCcw className="w-3 h-3 shrink-0" />
+                <span>5s</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleEmbedSeekBy(e, 5)}
+                className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 touch-manipulation"
+              >
+                <RotateCw className="w-3 h-3 shrink-0" />
+                <span>5s</span>
+              </button>
+            </div>
+
+            {duration > 0 ? (
+              <div className="flex-1 flex items-center gap-2 min-w-0 px-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={duration}
+                  step={0.1}
+                  value={Math.min(duration, currentTime)}
+                  onChange={handleEmbedScrub}
+                  aria-label="Seek video"
+                  className="w-full h-1.5 accent-[#1877F2] cursor-pointer touch-manipulation"
+                />
+                <span className="text-[10.5px] tabular-nums text-zinc-300 shrink-0 hidden sm:inline">
+                  {formatVideoClock(currentTime)} / {formatVideoClock(duration)}
+                </span>
+              </div>
+            ) : (
+              <span className="text-[11px] font-medium text-zinc-400 truncate">
+                {meta.reelLabel}
+              </span>
+            )}
+
             <button
               type="button"
-              onClick={toggleEmbedPlayPause}
-              className="w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 flex items-center justify-center transition cursor-pointer touch-manipulation"
-              aria-label={isPlaying ? "Pause video" : "Play video"}
+              onClick={toggleEmbedMute}
+              className="px-2.5 h-8 rounded-lg bg-white/12 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 shrink-0 whitespace-nowrap transition cursor-pointer touch-manipulation"
+              aria-label={isMuted ? "Unmute" : "Mute"}
             >
-              {isPlaying ? (
-                <Pause className="w-3.5 h-3.5 fill-current" />
+              {isMuted ? (
+                <>
+                  <VolumeX className="w-3.5 h-3.5 shrink-0" />
+                  <span>Muted</span>
+                </>
               ) : (
-                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                <>
+                  <Volume2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Sound</span>
+                </>
               )}
             </button>
-            <button
-              type="button"
-              onClick={(e) => handleEmbedSeekBy(e, -5)}
-              className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 touch-manipulation"
-            >
-              <RotateCcw className="w-3 h-3 shrink-0" />
-              <span>5s</span>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => handleEmbedSeekBy(e, 5)}
-              className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0 touch-manipulation"
-            >
-              <RotateCw className="w-3 h-3 shrink-0" />
-              <span>5s</span>
-            </button>
           </div>
-
-          {duration > 0 ? (
-            <div className="flex-1 flex items-center gap-2 min-w-0 px-1">
-              <input
-                type="range"
-                min={0}
-                max={duration}
-                step={0.1}
-                value={Math.min(duration, currentTime)}
-                onChange={handleEmbedScrub}
-                aria-label="Seek video"
-                className="w-full h-1.5 accent-[#1877F2] cursor-pointer touch-manipulation"
-              />
-              <span className="text-[10.5px] tabular-nums text-zinc-300 shrink-0 hidden sm:inline">
-                {formatVideoClock(currentTime)} / {formatVideoClock(duration)}
-              </span>
-            </div>
-          ) : (
-            <span className="text-[11px] font-medium text-zinc-400 truncate">
-              {meta.reelLabel}
-            </span>
-          )}
-
-          <button
-            type="button"
-            onClick={toggleEmbedMute}
-            className="px-2.5 h-8 rounded-lg bg-white/12 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 shrink-0 whitespace-nowrap transition cursor-pointer touch-manipulation"
-            aria-label={isMuted ? "Unmute" : "Mute"}
-          >
-            {isMuted ? (
-              <>
-                <VolumeX className="w-3.5 h-3.5 shrink-0" />
-                <span>Muted</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Sound</span>
-              </>
-            )}
-          </button>
-        </div>
-        {renderSourceAttributionBar()}
+        )}
+        {!hideBottomBar && renderSourceAttributionBar()}
       </div>
     );
   }
@@ -785,86 +912,110 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             </div>
           )}
           {overlayBadge}
-        </div>
-
-        <div className="bg-zinc-900 text-white px-3 py-2 flex items-center justify-between gap-2 border-t border-white/10">
-          <div className="flex items-center gap-1.5 shrink-0">
+          {hideBottomBar && onVideoClick && (
+            <div
+              onClick={toggleEmbedPlayPause}
+              className="absolute inset-0 z-10 cursor-pointer"
+            />
+          )}
+          {hideBottomBar && (
             <button
               type="button"
-              onClick={toggleEmbedPlayPause}
-              className="w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 flex items-center justify-center transition cursor-pointer"
-              aria-label={isPlaying ? "Pause video" : "Play video"}
+              onClick={toggleEmbedMute}
+              className="absolute bottom-3 right-3 z-20 w-8 h-8 rounded-full bg-black/65 hover:bg-black/85 text-white flex items-center justify-center backdrop-blur-md transition cursor-pointer"
+              aria-label={isMuted ? "Unmute" : "Mute"}
             >
-              {isPlaying ? (
-                <Pause className="w-3.5 h-3.5 fill-current" />
+              {isMuted ? (
+                <VolumeX className="w-4 h-4" />
               ) : (
-                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                <Volume2 className="w-4 h-4" />
               )}
             </button>
-
-            <button
-              type="button"
-              onClick={(e) => handleEmbedSeekBy(e, -10)}
-              className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0"
-              title="Back 10s"
-            >
-              <RotateCcw className="w-3 h-3 shrink-0" />
-              <span>10s</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => handleEmbedSeekBy(e, 10)}
-              className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0"
-              title="Forward 10s"
-            >
-              <RotateCw className="w-3 h-3 shrink-0" />
-              <span>10s</span>
-            </button>
-          </div>
-
-          {duration > 0 ? (
-            <div className="flex-1 flex items-center gap-2 min-w-0 px-1">
-              <input
-                type="range"
-                min={0}
-                max={duration}
-                step={0.5}
-                value={Math.min(duration, currentTime)}
-                onChange={handleEmbedScrub}
-                aria-label="Seek YouTube video"
-                className="w-full h-1.5 accent-[#1877F2] cursor-pointer"
-              />
-              <span className="text-[10.5px] tabular-nums text-zinc-300 shrink-0 hidden sm:inline">
-                {formatVideoClock(currentTime)} / {formatVideoClock(duration)}
-              </span>
-            </div>
-          ) : (
-            <span className="text-[11px] font-medium text-zinc-400 truncate">
-              {meta.reelLabel}
-            </span>
           )}
-
-          <button
-            type="button"
-            onClick={toggleEmbedMute}
-            className="px-2.5 h-8 rounded-lg bg-white/12 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 shrink-0 whitespace-nowrap transition cursor-pointer"
-            aria-label={isMuted ? "Unmute" : "Mute"}
-          >
-            {isMuted ? (
-              <>
-                <VolumeX className="w-3.5 h-3.5 shrink-0" />
-                <span>Muted</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Sound</span>
-              </>
-            )}
-          </button>
         </div>
-        {renderSourceAttributionBar()}
+
+        {!hideBottomBar && (
+          <>
+            <div className="bg-zinc-900 text-white px-3 py-2 flex items-center justify-between gap-2 border-t border-white/10">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={toggleEmbedPlayPause}
+                  className="w-8 h-8 rounded-lg bg-white/12 hover:bg-white/20 flex items-center justify-center transition cursor-pointer"
+                  aria-label={isPlaying ? "Pause video" : "Play video"}
+                >
+                  {isPlaying ? (
+                    <Pause className="w-3.5 h-3.5 fill-current" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => handleEmbedSeekBy(e, -10)}
+                  className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0"
+                  title="Back 10s"
+                >
+                  <RotateCcw className="w-3 h-3 shrink-0" />
+                  <span>10s</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => handleEmbedSeekBy(e, 10)}
+                  className="px-2.5 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap shrink-0"
+                  title="Forward 10s"
+                >
+                  <RotateCw className="w-3 h-3 shrink-0" />
+                  <span>10s</span>
+                </button>
+              </div>
+
+              {duration > 0 ? (
+                <div className="flex-1 flex items-center gap-2 min-w-0 px-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={duration}
+                    step={0.5}
+                    value={Math.min(duration, currentTime)}
+                    onChange={handleEmbedScrub}
+                    aria-label="Seek YouTube video"
+                    className="w-full h-1.5 accent-[#1877F2] cursor-pointer"
+                  />
+                  <span className="text-[10.5px] tabular-nums text-zinc-300 shrink-0 hidden sm:inline">
+                    {formatVideoClock(currentTime)} / {formatVideoClock(duration)}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[11px] font-medium text-zinc-400 truncate">
+                  {meta.reelLabel}
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={toggleEmbedMute}
+                className="px-2.5 h-8 rounded-lg bg-white/12 hover:bg-white/20 text-[11px] font-semibold flex items-center gap-1 shrink-0 whitespace-nowrap transition cursor-pointer"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5 shrink-0" />
+                    <span>Muted</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>Sound</span>
+                  </>
+                )}
+              </button>
+            </div>
+            {renderSourceAttributionBar()}
+          </>
+        )}
       </div>
     );
   }
@@ -900,9 +1051,15 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               Loading Instagram Reel...
             </div>
           )}
+          {hideBottomBar && onVideoClick && (
+            <div
+              onClick={toggleEmbedPlayPause}
+              className="absolute inset-0 z-10 cursor-pointer"
+            />
+          )}
           {overlayBadge}
         </div>
-        {renderSourceAttributionBar()}
+        {!hideBottomBar && renderSourceAttributionBar()}
       </div>
     );
   }
@@ -943,10 +1100,30 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               {ttId ? "TikTok Video Ready" : "Unable to load TikTok video"}
             </div>
           )}
+          {hideBottomBar && onVideoClick && (
+            <div
+              onClick={toggleEmbedPlayPause}
+              className="absolute inset-0 z-10 cursor-pointer"
+            />
+          )}
+          {hideBottomBar && (
+            <button
+              type="button"
+              onClick={toggleEmbedMute}
+              className="absolute bottom-3 right-3 z-20 w-8.5 h-8.5 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center shadow-lg hover:bg-black/80 active:scale-90 transition cursor-pointer touch-manipulation"
+              aria-label={isMuted ? "Unmute video" : "Mute video"}
+            >
+              {isMuted ? (
+                <VolumeX className="w-4 h-4 fill-white" />
+              ) : (
+                <Volume2 className="w-4 h-4 fill-white" />
+              )}
+            </button>
+          )}
           {overlayBadge}
         </div>
 
-        {ttId && (
+        {!hideBottomBar && ttId && (
           <div className="bg-zinc-900 text-white px-3 py-2 flex items-center justify-between gap-2 border-t border-white/10">
             <div className="flex items-center gap-1.5 shrink-0">
               <button
@@ -1025,7 +1202,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             </button>
           </div>
         )}
-        {renderSourceAttributionBar()}
+        {!hideBottomBar && renderSourceAttributionBar()}
       </div>
     );
   }
@@ -1083,9 +1260,15 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               {meta.reelLabel}
             </div>
           )}
+          {hideBottomBar && onVideoClick && (
+            <div
+              onClick={toggleEmbedPlayPause}
+              className="absolute inset-0 z-10 cursor-pointer"
+            />
+          )}
           {overlayBadge}
         </div>
-        {renderSourceAttributionBar()}
+        {!hideBottomBar && renderSourceAttributionBar()}
       </div>
     );
   }
@@ -1127,6 +1310,10 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              if (onVideoClick) {
+                onVideoClick();
+                return;
+              }
               setHasEnteredView(true);
               setIsInView(true);
             }}
@@ -1140,9 +1327,15 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             </span>
           </button>
         )}
+        {hideBottomBar && onVideoClick && (
+          <div
+            onClick={toggleEmbedPlayPause}
+            className="absolute inset-0 z-10 cursor-pointer"
+          />
+        )}
         {overlayBadge}
       </div>
-      {renderSourceAttributionBar()}
+      {!hideBottomBar && renderSourceAttributionBar()}
     </div>
   );
 };

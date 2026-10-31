@@ -1,9 +1,9 @@
 import React from 'react';
-import { EyeOff } from 'lucide-react';
+import { EyeOff, Maximize2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ProgressiveImage } from './ProgressiveImage';
 
-interface MessageMediaGridProps {
+export interface MessageMediaGridProps {
   images: string[];
   thumbnailSrcs?: string[];
   messageId: string;
@@ -18,7 +18,6 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
   images,
   thumbnailSrcs,
   messageId,
-  isMe,
   dataSaverMode = false,
   loadedImages = {},
   onLoadImage,
@@ -26,42 +25,47 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
 }) => {
   if (!images || images.length === 0) return null;
 
-  // Single Image (Hero display)
+  // Single Photo Hero Frame
   if (images.length === 1) {
     const imgUrl = images[0];
     const isLoaded = !dataSaverMode || loadedImages[`${messageId}-0`];
 
     return (
-      <div className="rounded-2xl overflow-hidden relative w-[250px] sm:w-[290px] max-w-full shadow-sm select-none group/img">
+      <div className="rounded-[18px] overflow-hidden relative w-[248px] sm:w-[292px] max-w-full ring-1 ring-black/8 dark:ring-white/10 select-none group/img">
         {isLoaded ? (
           <div
             onClick={(e) => {
               e.stopPropagation();
               onImageClick(imgUrl, 0, images);
             }}
-            className="cursor-pointer overflow-hidden rounded-2xl w-full min-h-[180px] max-h-[360px] bg-zinc-100 dark:bg-zinc-900"
+            className="cursor-pointer overflow-hidden rounded-[18px] w-full min-h-[170px] max-h-[360px] bg-zinc-100 dark:bg-zinc-900 relative"
           >
             <ProgressiveImage
               src={imgUrl}
               thumbnailSrc={thumbnailSrcs?.[0]}
               alt="Photo"
-              containerClassName="w-full h-full min-h-[180px] max-h-[360px]"
-              className="max-h-[360px] transition-transform duration-300 group-hover/img:scale-[1.02]"
+              containerClassName="w-full h-full min-h-[170px] max-h-[360px]"
+              className="max-h-[360px] transition-transform duration-300 ease-out group-hover/img:scale-[1.02]"
             />
+            <div className="absolute bottom-2.5 right-2.5 w-7 h-7 rounded-full bg-black/45 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none">
+              <Maximize2 className="w-3.5 h-3.5" />
+            </div>
           </div>
         ) : (
-          <div className="w-56 h-36 bg-zinc-800/80 backdrop-blur-md flex flex-col items-center justify-center p-3 text-center gap-1.5 rounded-2xl border border-zinc-700/50">
+          <div className="w-60 h-36 bg-zinc-100 dark:bg-zinc-900 flex flex-col items-center justify-center p-4 text-center gap-2 rounded-[18px]">
             <EyeOff className="w-5 h-5 text-zinc-400" />
-            <p className="text-[10px] text-zinc-300 font-bold">Image hidden (Data Saver)</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium">
+              Photo paused by Data Saver
+            </p>
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onLoadImage?.(`${messageId}-0`);
               }}
-              className="px-2.5 py-1 rounded-full bg-[#EF8020] text-white text-[9px] font-black uppercase hover:bg-[#EF8020]/90 transition cursor-pointer"
+              className="px-3.5 py-1.5 rounded-full msg-accent-btn text-white text-xs font-semibold hover:brightness-110 transition cursor-pointer"
             >
-              Load Image
+              Load photo
             </button>
           </div>
         )}
@@ -69,16 +73,16 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
     );
   }
 
-  // 2 Images: Side-by-side grid
+  // 2 Photos: Crisp 2-Column Collage
   if (images.length === 2) {
     return (
-      <div className="grid grid-cols-2 gap-1.5 w-[250px] sm:w-[290px] max-w-full rounded-2xl overflow-hidden select-none">
+      <div className="grid grid-cols-2 gap-1 w-[248px] sm:w-[292px] max-w-full rounded-[18px] overflow-hidden ring-1 ring-black/8 dark:ring-white/10 select-none">
         {images.map((imgUrl, idx) => {
           const isLoaded = !dataSaverMode || loadedImages[`${messageId}-${idx}`];
           return (
             <div
               key={idx}
-              className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group/item bg-zinc-100 dark:bg-zinc-900"
+              className="relative aspect-square overflow-hidden cursor-pointer group/item bg-zinc-100 dark:bg-zinc-900"
               onClick={(e) => {
                 e.stopPropagation();
                 onImageClick(imgUrl, idx, images);
@@ -93,7 +97,7 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
                   className="transition-transform duration-300 group-hover/item:scale-105"
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 p-2 text-center">
+                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-900 p-2 text-center gap-1.5">
                   <EyeOff className="w-4 h-4 text-zinc-400" />
                   <button
                     type="button"
@@ -101,7 +105,7 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
                       e.stopPropagation();
                       onLoadImage?.(`${messageId}-${idx}`);
                     }}
-                    className="mt-1 px-2 py-0.5 rounded-full bg-[#EF8020] text-white text-[8px] font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-full msg-accent-btn text-white text-[10px] font-semibold cursor-pointer"
                   >
                     Load
                   </button>
@@ -114,13 +118,12 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
     );
   }
 
-  // 3 Images: 1 big on top, 2 below
+  // 3 Photos: 1 Hero + 2 Square Below
   if (images.length === 3) {
     return (
-      <div className="flex flex-col gap-1.5 w-[250px] sm:w-[290px] max-w-full rounded-2xl overflow-hidden select-none">
-        {/* Top large image */}
+      <div className="flex flex-col gap-1 w-[248px] sm:w-[292px] max-w-full rounded-[18px] overflow-hidden ring-1 ring-black/8 dark:ring-white/10 select-none">
         <div
-          className="relative aspect-[16/10] rounded-xl overflow-hidden cursor-pointer group/item bg-zinc-100 dark:bg-zinc-900"
+          className="relative aspect-[16/10] overflow-hidden cursor-pointer group/item bg-zinc-100 dark:bg-zinc-900"
           onClick={(e) => {
             e.stopPropagation();
             onImageClick(images[0], 0, images);
@@ -134,14 +137,13 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
             className="transition-transform duration-300 group-hover/item:scale-105"
           />
         </div>
-        {/* Bottom 2 images */}
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1">
           {images.slice(1).map((imgUrl, i) => {
             const idx = i + 1;
             return (
               <div
                 key={idx}
-                className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group/item bg-zinc-100 dark:bg-zinc-900"
+                className="relative aspect-square overflow-hidden cursor-pointer group/item bg-zinc-100 dark:bg-zinc-900"
                 onClick={(e) => {
                   e.stopPropagation();
                   onImageClick(imgUrl, idx, images);
@@ -162,18 +164,18 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
     );
   }
 
-  // 4 or More Images: 2x2 Grid with +N overlay on 4th item
+  // 4+ Photos: 2x2 Grid with Clean +N Overlay
   const displayImages = images.slice(0, 4);
   const remainingCount = images.length - 4;
 
   return (
-    <div className="grid grid-cols-2 gap-1.5 w-[250px] sm:w-[290px] max-w-full rounded-2xl overflow-hidden select-none">
+    <div className="grid grid-cols-2 gap-1 w-[248px] sm:w-[292px] max-w-full rounded-[18px] overflow-hidden ring-1 ring-black/8 dark:ring-white/10 select-none">
       {displayImages.map((imgUrl, idx) => {
         const isLastItem = idx === 3 && remainingCount > 0;
         return (
           <div
             key={idx}
-            className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group/item bg-zinc-100 dark:bg-zinc-900"
+            className="relative aspect-square overflow-hidden cursor-pointer group/item bg-zinc-100 dark:bg-zinc-900"
             onClick={(e) => {
               e.stopPropagation();
               onImageClick(imgUrl, idx, images);
@@ -185,13 +187,13 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
               alt={`Photo ${idx + 1}`}
               containerClassName="w-full h-full"
               className={cn(
-                "transition-transform duration-300",
-                !isLastItem && "group-hover/item:scale-105"
+                'transition-transform duration-300',
+                !isLastItem && 'group-hover/item:scale-105'
               )}
             />
             {isLastItem && (
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center transition-all group-hover/item:bg-black/70">
-                <span className="text-white text-xl font-black tracking-tight drop-shadow-md">
+              <div className="absolute inset-0 bg-black/55 backdrop-blur-xs flex items-center justify-center transition-colors group-hover/item:bg-black/65">
+                <span className="text-white text-lg font-bold tabular-nums tracking-tight">
                   +{remainingCount}
                 </span>
               </div>

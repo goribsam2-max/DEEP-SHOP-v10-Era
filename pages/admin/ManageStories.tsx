@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useNotify, useConfirm } from "../../components/Notifications";
 import { uploadToImgbb } from "../../services/imgbb";
 import Icon from "../../components/Icon";
-import { Play } from "lucide-react";
+import { Play, Pause } from "lucide-react";
+import { toPlayableAudioUrl } from "../../lib/videoEmbed";
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle, ItemActions } from "../../components/ui/item";
 import { Button } from "../../components/ui/button";
 import ReactPlayer from "react-player";
@@ -93,20 +94,157 @@ const ManageStories: React.FC = () => {
   const [selectedSongUrl, setSelectedSongUrl] = useState("");
   const [customSongUrl, setCustomSongUrl] = useState("");
   const [audioStart, setAudioStart] = useState(0);
+  const [playingSongId, setPlayingSongId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const previewSongAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    let storySongDocs: any[] = [];
+    let bgMusicDocs: any[] = [];
+    let userVideoSongDocs: any[] = [];
+
+    const emitMergedSongs = () => {
+      const byUrl = new Map<string, any>();
+      const pushSong = (s: any) => {
+        const rawUrl = String(s.url || s.audioUrl || s.mp3Url || "").trim();
+        if (!rawUrl) return;
+        const existing = byUrl.get(rawUrl);
+        if (!existing) {
+          byUrl.set(rawUrl, {
+            ...s,
+            url: rawUrl,
+            audioUrl: rawUrl,
+          });
+        } else if (s.sourceCollection === "story_songs" || s.sourceCollection === "background_music") {
+          byUrl.set(rawUrl, {
+            ...existing,
+            ...s,
+            url: rawUrl,
+            audioUrl: rawUrl,
+          });
+        }
+      };
+
+      storySongDocs.forEach(pushSong);
+      bgMusicDocs.forEach(pushSong);
+      userVideoSongDocs.forEach(pushSong);
+
+      const merged = Array.from(byUrl.values()).sort(
+        (a, b) => (Number(b.updatedAt || b.createdAt || 0)) - (Number(a.updatedAt || a.createdAt || 0))
+      );
+      setDbSongs(merged);
+    };
+
     const unsubscribe = onSnapshot(collection(db, "stories"), (snap) => {
       setStories(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
-    const unsubSongs = onSnapshot(collection(db, "story_songs"), (snap) => {
-      setDbSongs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsubSongs = onSnapshot(
+      collection(db, "story_songs"),
+      (snap) => {
+        storySongDocs = snap.docs.map((d) => ({
+          id: d.id,
+          sourceCollection: "story_songs",
+          ...d.data(),
+        }));
+        emitMergedSongs();
+      },
+      () => emitMergedSongs()
+    );
+    const unsubBgMusic = onSnapshot(
+      collection(db, "background_music"),
+      (snap) => {
+        bgMusicDocs = snap.docs.map((d) => ({
+          id: d.id,
+          sourceCollection: "background_music",
+          ...d.data(),
+        }));
+        emitMergedSongs();
+      },
+      () => emitMergedSongs()
+    );
+    const unsubVideoPosts = onSnapshot(
+      collection(db, "scam_posts"),
+      (snap) => {
+        const tracks: any[] = [];
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const audioCandidate = String(
+            data.music?.audioUrl || data.videoUrl || ""
+          ).trim();
+          if (
+            !audioCandidate ||
+            !/^https?:\/\//i.test(audioCandidate) ||
+            /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com/i.test(
+              audioCandidate
+            )
+          ) {
+            return;
+          }
+          tracks.push({
+            id: `vid_${d.id}`,
+            sourceCollection: "scam_posts",
+            title:
+              data.music?.title ||
+              String(data.description || data.title || "Original Video Audio")
+                .replace(/\s+/g, " ")
+                .trim()
+                .slice(0, 40) ||
+              "Original Video Audio",
+            artist: data.music?.artist || data.reporterName || "Community Creator",
+            coverUrl:
+              data.music?.cover ||
+              data.music?.coverUrl ||
+              (Array.isArray(data.images) && data.images[0]) ||
+              data.reporterAvatar ||
+              "",
+            url: audioCandidate,
+            audioUrl: audioCandidate,
+            createdAt: data.createdAt || 0,
+          });
+        });
+        userVideoSongDocs = tracks;
+        emitMergedSongs();
+      },
+      () => emitMergedSongs()
+    );
+
     return () => {
       unsubscribe();
       unsubSongs();
+      unsubBgMusic();
+      unsubVideoPosts();
+      if (previewSongAudioRef.current) {
+        previewSongAudioRef.current.pause();
+        previewSongAudioRef.current = null;
+      }
     };
   }, []);
+
+  const togglePlayAdminSong = (song: any) => {
+    const rawUrl = String(song.url || song.audioUrl || "").trim();
+    if (!rawUrl) return;
+    if (playingSongId === song.id) {
+      previewSongAudioRef.current?.pause();
+      setPlayingSongId(null);
+      return;
+    }
+    if (previewSongAudioRef.current) {
+      previewSongAudioRef.current.pause();
+    }
+    const playable = toPlayableAudioUrl(rawUrl);
+    const audio = new Audio(playable);
+    previewSongAudioRef.current = audio;
+    audio.onended = () => setPlayingSongId(null);
+    audio.onerror = () => {
+      setPlayingSongId(null);
+      notify("Could not play this audio stream.", "error");
+    };
+    setPlayingSongId(song.id);
+    audio.play().catch(() => {
+      setPlayingSongId(null);
+      notify("Browser blocked audio playback — tap Play again.", "info");
+    });
+  };
 
   const [songAudioUploading, setSongAudioUploading] = useState(false);
 
@@ -262,7 +400,12 @@ const ManageStories: React.FC = () => {
 
     setLoading(true);
     try {
-      const storyData = {
+      const selectedSong = 
+        songSource === "preset" 
+          ? PRESET_SONGS.find(s => s.url === selectedSongUrl)
+          : null;
+
+      const storyData: Record<string, any> = {
         type,
         category: category.trim(),
         mediaUrl: type === "image" ? previewUrl : videoUrl,
@@ -270,6 +413,20 @@ const ManageStories: React.FC = () => {
         duration: type === "image" ? 10 : 15,
         audioUrl: finalAudioUrl || null,
         audioStart: Number(audioStart) || 0,
+        songTitle: selectedSong ? selectedSong.name : (customSongUrl ? "Custom Audio" : ""),
+        music: selectedSong ? {
+          id: `preset_${selectedSong.name.toLowerCase().replace(/\s+/g, '_')}`,
+          title: selectedSong.name,
+          artist: "Deep Shop Studio",
+          url: selectedSong.url,
+          coverUrl: ""
+        } : (customSongUrl ? {
+          id: `custom_${Date.now()}`,
+          title: "Custom Audio",
+          artist: "Admin",
+          url: customSongUrl,
+          coverUrl: ""
+        } : null),
         updatedAt: new Date().toISOString(),
       };
 
@@ -588,19 +745,33 @@ const ManageStories: React.FC = () => {
       <div className="max-w-5xl mx-auto relative z-10">
         {activeTab === "songs" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {dbSongs.map((song) => (
+            {dbSongs.map((song) => {
+              const isPlayingThis = playingSongId === song.id;
+              return (
               <div
                 key={song.id}
                 className="flex items-center justify-between gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:border-pink-500/50 transition-all"
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-12 h-12 bg-pink-500/10 text-pink-600 dark:text-pink-400 rounded-xl flex items-center justify-center shrink-0 border border-pink-500/20 font-black text-sm overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => togglePlayAdminSong(song)}
+                    className="relative w-12 h-12 bg-pink-500/10 text-pink-600 dark:text-pink-400 rounded-xl flex items-center justify-center shrink-0 border border-pink-500/20 font-black text-sm overflow-hidden cursor-pointer group"
+                    title={isPlayingThis ? "Pause preview" : "Play preview"}
+                  >
                     {song.coverUrl ? (
                       <img src={song.coverUrl} className="w-full h-full object-cover" alt="" />
                     ) : (
-                      "🎵"
+                      <span>🎵</span>
                     )}
-                  </div>
+                    <span className="absolute inset-0 bg-black/45 flex items-center justify-center text-white">
+                      {isPlayingThis ? (
+                        <Pause className="size-4 fill-white" />
+                      ) : (
+                        <Play className="size-4 fill-white ml-0.5" />
+                      )}
+                    </span>
+                  </button>
                   <div className="overflow-hidden">
                     <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{song.title}</h3>
                     <p className="text-xs text-zinc-400 truncate">{song.artist || "Unknown Artist"}</p>
@@ -617,6 +788,18 @@ const ManageStories: React.FC = () => {
 
                 <div className="flex items-center gap-2 shrink-0">
                   <button
+                    type="button"
+                    onClick={() => togglePlayAdminSong(song)}
+                    className="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all cursor-pointer"
+                    title={isPlayingThis ? "Pause Audio" : "Play Audio"}
+                  >
+                    {isPlayingThis ? (
+                      <Pause className="size-4" />
+                    ) : (
+                      <Play className="size-4" />
+                    )}
+                  </button>
+                  <button
                     onClick={() => handleEditSong(song)}
                     className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition-all"
                     title="Edit Song Details"
@@ -632,7 +815,8 @@ const ManageStories: React.FC = () => {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {dbSongs.length === 0 && (
               <div className="col-span-full py-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl">
@@ -655,9 +839,9 @@ const ManageStories: React.FC = () => {
                     <ItemMedia variant="image" className="size-12 shrink-0 border border-border p-1 bg-muted relative">
                       {story.type === "video" ? (
                         <>
-                          <div className="w-full h-full pointer-events-none">
+                          <div className="w-full h-full pointer-events-none [&_video]:object-cover">
                             {/* @ts-ignore */}
-                            <Player url={story.mediaUrl} width="100%" height="100%" playing={false} controls={false} light={true} style={{objectFit: 'cover'}} />
+                            <Player url={story.mediaUrl} width="100%" height="100%" playing={false} controls={false} light={true} />
                           </div>
                           <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                             <Play className="size-4 text-white" />

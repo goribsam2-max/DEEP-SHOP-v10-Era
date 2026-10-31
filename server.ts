@@ -1034,21 +1034,30 @@ app.use(async (req, res, next) => {
     }
   );
 
-  // 🎬 Same-Origin Byte-Range Media Stream Proxy (Fixes ISP blocks, IPv6 socket drops & iOS MIME checks)
-  const ALLOWED_STREAM_MEDIA_HOSTS = [
-    "files.catbox.moe",
-    "litter.catbox.moe",
-    "catbox.moe",
-    "pomf2.lain.la",
-    "uguu.se",
-    "tmpfiles.org",
-  ];
-
-  const isAllowedStreamHost = (hostname: string): boolean => {
-    const clean = hostname.toLowerCase().replace(/^www\./, "");
-    return ALLOWED_STREAM_MEDIA_HOSTS.some(
-      (allowed) => clean === allowed || clean.endsWith(`.${allowed}`)
-    );
+  // 🎬 Same-Origin Byte-Range Media Stream Proxy (Fixes ISP blocks, CORS, IPv6 socket drops & iOS MIME checks)
+  const isSafeStreamHost = (hostname: string): boolean => {
+    const clean = hostname.toLowerCase().trim().replace(/^\[|\]$/g, "");
+    if (!clean) return false;
+    if (
+      clean === "localhost" ||
+      clean === "0.0.0.0" ||
+      clean === "::1" ||
+      clean.endsWith(".local") ||
+      clean.endsWith(".internal") ||
+      clean.endsWith(".localhost")
+    ) {
+      return false;
+    }
+    if (/^127\./.test(clean)) return false;
+    if (/^10\./.test(clean)) return false;
+    if (/^192\.168\./.test(clean)) return false;
+    if (/^169\.254\./.test(clean)) return false;
+    const priv172 = clean.match(/^172\.(\d{1,3})\./);
+    if (priv172 && Number(priv172[1]) >= 16 && Number(priv172[1]) <= 31) {
+      return false;
+    }
+    if (/^(fc|fd|fe80):/i.test(clean)) return false;
+    return clean.includes(".");
   };
 
   const inferMediaContentType = (targetUrl: string, upstreamType?: string): string => {
@@ -1064,11 +1073,16 @@ app.use(async (req, res, next) => {
     const lowerPath = targetUrl.split("?")[0].toLowerCase();
     if (lowerPath.endsWith(".webm")) return "video/webm";
     if (lowerPath.endsWith(".mov")) return "video/quicktime";
-    if (lowerPath.endsWith(".ogv") || lowerPath.endsWith(".ogg")) return "video/ogg";
+    if (lowerPath.endsWith(".ogv") || lowerPath.endsWith(".ogg")) return "audio/ogg";
     if (lowerPath.endsWith(".mp3")) return "audio/mpeg";
     if (lowerPath.endsWith(".wav")) return "audio/wav";
     if (lowerPath.endsWith(".m4a")) return "audio/mp4";
     if (lowerPath.endsWith(".aac")) return "audio/aac";
+    if (lowerPath.endsWith(".flac")) return "audio/flac";
+    if (lowerPath.endsWith(".opus")) return "audio/opus";
+    if (targetUrl.includes("/audio/") || targetUrl.includes("dzcdn.net")) {
+      return "audio/mpeg";
+    }
     return "video/mp4";
   };
 
@@ -1095,7 +1109,10 @@ app.use(async (req, res, next) => {
       return res.status(400).json({ error: "Invalid media URL" });
     }
 
-    if (!isAllowedStreamHost(parsedInitial.hostname)) {
+    if (
+      (parsedInitial.protocol !== "https:" && parsedInitial.protocol !== "http:") ||
+      !isSafeStreamHost(parsedInitial.hostname)
+    ) {
       return res.status(403).json({ error: "Media host not permitted" });
     }
 
@@ -1126,18 +1143,24 @@ app.use(async (req, res, next) => {
         return;
       }
 
-      if (!isAllowedStreamHost(target.hostname)) {
+      if (!isSafeStreamHost(target.hostname)) {
         if (!res.headersSent) res.status(403).end("Redirect host not permitted");
         return;
       }
 
       const isHttps = target.protocol === "https:";
       const client = isHttps ? https : http;
+      const hostLower = target.hostname.toLowerCase();
       const forwardHeaders: Record<string, string> = {
         "User-Agent": browserUA,
         Accept: "*/*",
         Connection: "keep-alive",
       };
+      if (hostLower.endsWith("pixabay.com")) {
+        forwardHeaders.Referer = "https://pixabay.com/";
+      } else if (hostLower.endsWith("dzcdn.net") || hostLower.endsWith("deezer.com")) {
+        forwardHeaders.Referer = "https://www.deezer.com/";
+      }
       if (typeof req.headers.range === "string" && req.headers.range.trim()) {
         forwardHeaders.Range = req.headers.range.trim();
       }
@@ -1235,6 +1258,37 @@ app.use(async (req, res, next) => {
     };
 
     streamFromUrl(parsedInitial.toString(), 4, true);
+  });
+
+  // 🎵 Server-Side Deezer Music Search Proxy (Eliminates flaky client CORS proxies)
+  app.get("/api/deezer-search", async (req, res) => {
+    const q = String(req.query.q || "Lofi").trim();
+    if (!q) {
+      return res.json({ data: [] });
+    }
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const upstream = await fetch(
+        `https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=25`,
+        {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36",
+            Accept: "application/json",
+          },
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeout);
+      if (!upstream.ok) {
+        return res.status(upstream.status).json({ data: [] });
+      }
+      const data = await upstream.json();
+      return res.json(data);
+    } catch {
+      return res.status(502).json({ data: [] });
+    }
   });
 
   // 📦 JSON Base64 Media Proxy (Upload MP4, WebM, MP3, WAV, images)

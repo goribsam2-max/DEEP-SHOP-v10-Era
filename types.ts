@@ -362,9 +362,13 @@ export interface ScamPost {
   privacy?: 'public' | 'followers' | 'only_me';
   music?: {
     audioUrl: string;
+    url?: string;
     title: string;
     artist: string;
     cover: string;
+    coverUrl?: string;
+    videoVolume?: number;
+    bgMusicVolume?: number;
   } | null;
   themes?: string[];
   contentType?: 'text' | 'image' | 'voice' | 'video' | 'affirmation' | 'scam' | 'poll' | 'gif';

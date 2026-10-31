@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Plus,
@@ -47,6 +47,7 @@ import {
   resolvePostVideoSource,
   resolveShortVideoUrl,
   toPlayableMediaUrl,
+  toPlayableAudioUrl,
 } from "../lib/videoEmbed";
 import {
   CURATED_SUGGESTED_TOPICS,
@@ -64,6 +65,7 @@ import { GiphyBottomSheet } from "./ComposerLiquidGlassSheets";
 import {
   VerifiedLoopBadge,
   formatLoopCompactTime,
+  formatLoopCount,
 } from "./LoopPostCard";
 import { processCleanImage } from "../lib/watermark";
 import { uploadDataUrlToImgbb } from "../services/imgbb";
@@ -280,6 +282,24 @@ const GifSquareBadgeIcon: React.FC<{ className?: string }> = ({
   </svg>
 );
 
+const ReelViewEyeIcon: React.FC<{ className?: string }> = ({
+  className = "w-[26px] h-[26px]",
+}) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.15"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M2.5 12.1c0 0 4.5-7.8 9.5-7.8s9.5 7.8 9.5 7.8-4.5 7.8-9.5 7.8-9.5-7.8-9.5-7.8z" />
+    <circle cx="12" cy="12.1" r="3.2" fill="currentColor" fillOpacity="0.12" />
+    <circle cx="12" cy="12.1" r="1" fill="currentColor" />
+  </svg>
+);
+
 const GiftRibbonOutlineIcon: React.FC<{ className?: string }> = ({
   className = "w-6 h-6",
 }) => (
@@ -395,6 +415,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
 }) => {
   const playerId = useId();
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const [resolved, setResolved] = useState<ParsedVideoEmbed>(videoSource);
@@ -498,19 +519,49 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     win.postMessage(payload, "*");
   };
 
+  const rawStreamCandidate = resolved.directStreamUrl || resolved.canonicalUrl || "";
+  const rawMusicAudioUrl = (post.music?.audioUrl || "").trim();
+  const hasSeparateReelMusic = Boolean(
+    rawMusicAudioUrl &&
+      rawMusicAudioUrl !== rawStreamCandidate.trim() &&
+      rawMusicAudioUrl !== resolved.originalUrl.trim() &&
+      rawMusicAudioUrl !== (post.videoUrl || "").trim()
+  );
+  const reelVideoVolume = Math.max(
+    0,
+    Math.min(1, Number(post.music?.videoVolume ?? 1))
+  );
+  const reelMusicVolume = Math.max(
+    0,
+    Math.min(1, Number(post.music?.bgMusicVolume ?? 1))
+  );
+
   // Sync active autoplay / pause
   useEffect(() => {
     if (!isActive) {
       autoMuteNotifiedRef.current = false;
     }
+    const audioEl = bgAudioRef.current;
+    if (audioEl && hasSeparateReelMusic) {
+      audioEl.volume = reelMusicVolume;
+      audioEl.muted = isMuted;
+      if (isActive && !isPaused && !isMuted) {
+        audioEl.play().catch(() => {});
+      } else {
+        audioEl.pause();
+      }
+    }
+
     if (usesNativeVideo && videoRef.current) {
       const v = videoRef.current;
-      v.muted = isMuted;
+      v.volume = reelVideoVolume;
+      v.muted = isMuted || (hasSeparateReelMusic && reelVideoVolume <= 0.01);
       v.playbackRate = playbackSpeed;
       if (isActive && !isPaused) {
         v.play().catch(() => {
           // Browser blocked unmuted autoplay before first click gesture: mute temporarily once
           v.muted = true;
+          if (audioEl) audioEl.pause();
           if (!autoMuteNotifiedRef.current) {
             autoMuteNotifiedRef.current = true;
             onAutoMuted?.();
@@ -547,6 +598,9 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     usesNativeVideo,
     useRawOriginFallback,
     resolved.platform,
+    hasSeparateReelMusic,
+    reelVideoVolume,
+    reelMusicVolume,
   ]);
 
   // Listen to YouTube & TikTok telemetry for real progress bar updates
@@ -911,8 +965,18 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     resolved.platform === "tiktok";
 
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden select-none touch-manipulation">
+    <div className="relative w-full h-full bg-black overflow-hidden select-none">
       {renderMediaElement()}
+      {hasSeparateReelMusic && rawMusicAudioUrl && (
+        <audio
+          ref={bgAudioRef}
+          data-active-reel-audio={isActive ? "true" : undefined}
+          src={toPlayableAudioUrl(rawMusicAudioUrl)}
+          preload={isActive ? "auto" : "none"}
+          loop
+          muted={isMuted}
+        />
+      )}
 
       {/* Buffering Indicator for Active Native Reel */}
       {isActive && usesNativeVideo && (!hasLoadedFrame || isBuffering) && !directFailed && (
@@ -927,7 +991,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       {supportsTapOverlay && !isDocked && (
         <div
           onClick={handleTapStage}
-          className="absolute inset-0 z-10 cursor-pointer touch-manipulation"
+          className="absolute inset-0 z-10 cursor-pointer"
         />
       )}
 
@@ -2734,6 +2798,7 @@ export interface LoopsReelsViewProps {
   onDismissPost: (postId: string) => void;
   onCommentCountDelta: (postId: string, delta: number) => void;
   onOverlayOpenChange?: (anySheetOpen: boolean) => void;
+  onOpenCreate?: () => void;
 }
 
 export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
@@ -2756,11 +2821,15 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
   onDismissPost,
   onCommentCountDelta,
   onOverlayOpenChange,
+  onOpenCreate,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const notify = useNotify();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const viewedIdsRef = useRef<Set<string>>(new Set());
+  const programmaticScrollUntilRef = useRef<number>(0);
+  const lastJumpedPostIdRef = useRef<string>("");
 
   const [reelsSubTab, setReelsSubTab] = useState<"reels" | "friends">("reels");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -2791,6 +2860,13 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
           activeVid.play().catch(() => {});
         }
       }
+      const activeAudio = document.querySelector<HTMLAudioElement>(
+        'audio[data-active-reel-audio="true"]'
+      );
+      if (activeAudio) {
+        activeAudio.muted = false;
+        activeAudio.play().catch(() => {});
+      }
       // Defer React state sync until after the current click's target onClick finishes cleanly
       window.setTimeout(() => {
         setBrowserAutoMuted(false);
@@ -2816,6 +2892,17 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       activeVid.muted = nextMuted;
       if (!nextMuted && activeVid.paused && !activeVid.dataset.reelUserPaused) {
         activeVid.play().catch(() => {});
+      }
+    }
+    const activeAudio = document.querySelector<HTMLAudioElement>(
+      'audio[data-active-reel-audio="true"]'
+    );
+    if (activeAudio) {
+      activeAudio.muted = nextMuted;
+      if (!nextMuted) {
+        activeAudio.play().catch(() => {});
+      } else {
+        activeAudio.pause();
       }
     }
     setIsMuted(nextMuted);
@@ -2872,10 +2959,35 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
   }, [posts, reelsSubTab, followedIds, currentUser?.uid]);
 
   useEffect(() => {
-    if (activeIndex >= reelItems.length && reelItems.length > 0) {
+    const searchParams = new URLSearchParams(location.search);
+    const targetPostId = (searchParams.get("postId") || "").trim();
+    if (targetPostId && reelItems.length > 0) {
+      const idx = reelItems.findIndex((item) => item.post.id === targetPostId);
+      if (idx !== -1 && lastJumpedPostIdRef.current !== `${targetPostId}:${idx}`) {
+        lastJumpedPostIdRef.current = `${targetPostId}:${idx}`;
+        programmaticScrollUntilRef.current = Date.now() + 550;
+        setActiveIndex(idx);
+        requestAnimationFrame(() => {
+          const container = scrollContainerRef.current;
+          if (!container) return;
+          const slideEl = container.querySelector<HTMLElement>(
+            `[data-reel-index="${idx}"]`
+          );
+          if (slideEl) {
+            slideEl.scrollIntoView({ behavior: "auto", block: "start" });
+          } else {
+            const slideHeight = container.clientHeight || window.innerHeight;
+            container.scrollTo({
+              top: idx * slideHeight,
+              behavior: "auto",
+            });
+          }
+        });
+      }
+    } else if (activeIndex >= reelItems.length && reelItems.length > 0) {
       setActiveIndex(0);
     }
-  }, [reelItems.length, activeIndex]);
+  }, [reelItems, location.search]);
 
   const activeItem = reelItems[activeIndex] || null;
 
@@ -2940,6 +3052,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
 
     const observer = new IntersectionObserver(
       (entries) => {
+        if (Date.now() < programmaticScrollUntilRef.current) return;
         entries.forEach((entry) => {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.58) {
             const idx = Number(
@@ -3046,7 +3159,11 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
               type="button"
               onClick={() => {
                 triggerHaptic();
-                navigate("/loops/create?tab=video");
+                if (onOpenCreate) {
+                  onOpenCreate();
+                } else {
+                  navigate("/create-reel");
+                }
               }}
               aria-label="Upload Reel or Loop"
               className="pointer-events-auto w-11 h-11 -ml-1.5 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition cursor-pointer touch-manipulation"
@@ -3130,7 +3247,14 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
               )}
               <button
                 type="button"
-                onClick={() => navigate("/loops/create?tab=video")}
+                onClick={() => {
+                  triggerHaptic();
+                  if (onOpenCreate) {
+                    onOpenCreate();
+                  } else {
+                    navigate("/create-reel");
+                  }
+                }}
                 className="px-5 py-2.5 rounded-full bg-white text-zinc-950 text-xs font-bold cursor-pointer"
               >
                 Upload a Reel
@@ -3484,7 +3608,23 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                           )}
                         </button>
 
-                        {/* 6. More / About This Reel Square Audio Tile (Exact IMG_5142 bottom-right square) */}
+                        {/* 6. View Insights (IMG_5259 requested) */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setAboutOpenPostId(post.id);
+                          }}
+                          aria-label="View insights"
+                          className="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1 text-white active:scale-90 transition cursor-pointer"
+                        >
+                          <ReelViewEyeIcon className="w-[26px] h-[26px] drop-shadow" />
+                          <span className="text-[12px] font-semibold tabular-nums drop-shadow">
+                            {formatCompactNumber(post.views || 68)}
+                          </span>
+                        </button>
+
+                        {/* 7. More / About This Reel Square Audio Tile (Exact IMG_5142 bottom-right square) */}
                         <button
                           type="button"
                           onClick={() => {
@@ -3495,10 +3635,14 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                           title="About this reel"
                           className="mt-1 w-9 h-9 rounded-[10px] border-2 border-white/90 overflow-hidden bg-zinc-900 flex items-center justify-center shadow-lg active:scale-90 transition cursor-pointer"
                         >
-                          {creator.avatar ? (
+                          {post.music?.cover || (post.music as any)?.coverUrl || creator.avatar ? (
                             <img
-                              src={creator.avatar}
-                              alt={creator.handle}
+                              src={
+                                post.music?.cover ||
+                                (post.music as any)?.coverUrl ||
+                                creator.avatar
+                              }
+                              alt={post.music?.title || creator.handle}
                               referrerPolicy="no-referrer"
                               className="w-full h-full object-cover"
                             />
@@ -3606,11 +3750,15 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                             <button
                               type="button"
                               onClick={() => setAboutOpenPostId(post.id)}
-                              className="inline-flex items-center gap-1.5 text-white/85 hover:text-white font-medium cursor-pointer"
+                              className="inline-flex items-center gap-1.5 text-white/85 hover:text-white font-medium cursor-pointer max-w-full"
                             >
                               <Music2 className="w-3.5 h-3.5 shrink-0" />
                               <span className="truncate">
-                                Original audio · {creator.handle}
+                                {post.music?.title
+                                  ? post.music.artist
+                                    ? `${post.music.title} · ${post.music.artist}`
+                                    : post.music.title
+                                  : `Original audio · ${creator.handle}`}
                               </span>
                             </button>
                           )}
@@ -3637,21 +3785,28 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                             </p>
                           </div>
                         )}
+
+                        {/* View Count Badge for Public Reels (requested by user "cokh ar icon ta svg icon use koro") */}
+                        {!showSlideDocked && (
+                          <div className="flex items-center gap-1.5 text-white/90 text-xs font-semibold drop-shadow mt-1">
+                            <ReelViewEyeIcon className="w-4 h-4" />
+                            <span>{formatLoopCount(post.views || 68)} views</span>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Thin White Progress Bar right above Bottom Dock (Exact IMG_5142) */}
+                      {/* Thin White Progress Bar right above Bottom Dock (Exact IMG_5142 — zero inline styles) */}
                       <div className="pointer-events-none absolute inset-x-3.5 bottom-[84px] z-20 h-[2.5px] rounded-full bg-white/30 overflow-hidden">
-                        <div
-                          className="h-full bg-white rounded-full transition-all duration-150"
-                          style={{
-                            width: `${
-                              isSlideActive
-                                ? progressPct > 0
-                                  ? progressPct
-                                  : 18
-                                : 0
-                            }%`,
-                          }}
+                        <progress
+                          max={100}
+                          value={
+                            isSlideActive
+                              ? progressPct > 0
+                                ? Math.min(100, progressPct)
+                                : 18
+                              : 0
+                          }
+                          className="w-full h-full block appearance-none bg-transparent [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-white [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-white"
                         />
                       </div>
                     </>

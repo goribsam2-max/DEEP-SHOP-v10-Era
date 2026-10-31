@@ -279,6 +279,8 @@ export const Zap = c(["M13 2L3 14h9l-1 8 10-12h-9z"]);
 export const ZoomIn = c(["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.35-4.35", "M11 8v6", "M8 11h6"]);
 export const ZoomOut = c(["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.35-4.35", "M8 11h6"]);
 export const Repeat2 = Repeat;
+export const Type = c(["M4 7V4h16v3", "M9 20h6", "M12 4v16"]);
+export const TypeIcon = Type;
 
 // Add fallbacks and aliases for all possible package naming variants
 export const MessageCircleShare = MessageSquareShare;

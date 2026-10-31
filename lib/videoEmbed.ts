@@ -157,6 +157,8 @@ const PROXY_MEDIA_HOSTS = [
   "pomf2.lain.la",
   "uguu.se",
   "tmpfiles.org",
+  "pixabay.com",
+  "dzcdn.net",
 ];
 
 export function toPlayableMediaUrl(rawUrl?: string | null): string {
@@ -182,6 +184,32 @@ export function toPlayableMediaUrl(rawUrl?: string | null): string {
       return `/api/stream-media?url=${encodeURIComponent(normalized)}`;
     }
     return normalized;
+  } catch {
+    return trimmed;
+  }
+}
+
+export function toPlayableAudioUrl(rawUrl?: string | null): string {
+  if (!rawUrl || !rawUrl.trim()) return "";
+  const trimmed = rawUrl.trim();
+  if (
+    trimmed.startsWith("/api/stream-media") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("/")
+  ) {
+    return trimmed;
+  }
+  try {
+    const normalized = ensureProtocol(trimmed).replace(/^http:\/\//i, "https://");
+    const parsed = new URL(normalized);
+    if (
+      typeof window !== "undefined" &&
+      parsed.origin === window.location.origin
+    ) {
+      return normalized;
+    }
+    return `/api/stream-media?url=${encodeURIComponent(normalized)}`;
   } catch {
     return trimmed;
   }

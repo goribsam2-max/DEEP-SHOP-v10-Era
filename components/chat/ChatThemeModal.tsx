@@ -14,9 +14,9 @@ export const CHAT_THEMES: ChatTheme[] = [
   {
     id: 'default',
     name: 'Default',
-    gradient: 'from-indigo-500 to-blue-600',
-    bubbleClass: 'bg-[#5B51D8] text-white shadow-sm',
-    bgClass: 'bg-[#F2F4F7] dark:bg-[#0E0F12]',
+    gradient: 'from-[#1877F2] to-[#1364d6]',
+    bubbleClass: 'msg-bubble-sent shadow-xs',
+    bgClass: 'msg-stream-default',
   },
   {
     id: 'cyberpunk',

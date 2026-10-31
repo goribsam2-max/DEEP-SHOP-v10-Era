@@ -1003,12 +1003,13 @@ html.dark .dark\:text-slate-400 {
 }
 
 /* ==========================================================================
-   STORY STUDIO DARK IMMERSIVE PROTECTION
-   Prevents global light/dark rules (e.g. html:not(.dark) footer -> #ffffff)
-   from turning the "Your story" & "Close Friends" bar white or recoloring
-   Story Studio's native dark controls, Close Friends green star, or #1877F2 CTA.
+   STORY STUDIO LIGHT + DARK THEME PROTECTION
    ========================================================================== */
-html:not(.dark) .story-studio-shell,
+html:not(.dark) .story-studio-shell {
+  background-color: #f4f4f5 !important;
+  color: #09090b !important;
+}
+
 html.dark .story-studio-shell {
   background-color: #09090b !important;
   color: #ffffff !important;
@@ -1021,13 +1022,21 @@ html.dark .story-studio-shell footer {
   background-color: transparent !important;
 }
 
-html:not(.dark) .story-studio-shell .story-pill-btn,
+html:not(.dark) .story-studio-shell .story-pill-btn {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .story-studio-shell .story-pill-btn:hover {
+  background-color: #f4f4f5 !important;
+}
+
 html.dark .story-studio-shell .story-pill-btn {
   background-color: #1c1c1e !important;
   color: #ffffff !important;
 }
 
-html:not(.dark) .story-studio-shell .story-pill-btn:hover,
 html.dark .story-studio-shell .story-pill-btn:hover {
   background-color: #27272a !important;
 }
@@ -1044,6 +1053,8 @@ html.dark .story-studio-shell .story-cta-blue {
   color: #ffffff !important;
 }
 
+html:not(.dark) .story-studio-shell input.bg-transparent,
+html:not(.dark) .story-studio-shell textarea.bg-transparent,
 html.dark .story-studio-shell input.bg-transparent,
 html.dark .story-studio-shell textarea.bg-transparent {
   background-color: transparent !important;
@@ -2131,5 +2142,117 @@ html.dark .loops-reels-dock-active-pill {
   color: #ffffff !important;
   box-shadow: none !important;
 }
+
+/* ==========================================================================
+   MESSAGES, INBOX & CHAT BUBBLES LIGHT + DARK THEME PROTECTION
+   ========================================================================== */
+html:not(.dark) .msg-shell {
+  background-color: #f6f7f9 !important;
+  color: #09090b !important;
+}
+
+html.dark .msg-shell {
+  background-color: #0b0c10 !important;
+  color: #f4f4f5 !important;
+}
+
+html:not(.dark) .msg-sidebar {
+  background-color: #ffffff !important;
+  border-color: #eceef2 !important;
+}
+
+html.dark .msg-sidebar {
+  background-color: #111217 !important;
+  border-color: #22242e !important;
+}
+
+html:not(.dark) .msg-inbox-header {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+  border-color: #eceef2 !important;
+}
+
+html.dark .msg-inbox-header {
+  background-color: rgba(17, 18, 23, 0.88) !important;
+  border-color: #22242e !important;
+}
+
+html:not(.dark) .msg-stream-default {
+  background-color: #f4f6f9 !important;
+}
+
+html.dark .msg-stream-default {
+  background-color: #0d0e13 !important;
+}
+
+html:not(.dark) .msg-composer-dock {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: #eceef2 !important;
+}
+
+html.dark .msg-composer-dock {
+  background-color: rgba(17, 18, 23, 0.94) !important;
+  border-color: #22242e !important;
+}
+
+html:not(.dark) .msg-composer-capsule {
+  background-color: #f3f4f6 !important;
+  border-color: #e4e6eb !important;
+}
+
+html.dark .msg-composer-capsule {
+  background-color: #1a1c24 !important;
+  border-color: #2a2d3a !important;
+}
+
+html:not(.dark) .msg-clean-input,
+html.dark .msg-clean-input {
+  background-color: transparent !important;
+}
+
+html:not(.dark) .msg-clean-input {
+  color: #09090b !important;
+}
+
+html.dark .msg-clean-input {
+  color: #f4f4f5 !important;
+}
+
+html:not(.dark) .msg-bubble-sent,
+html.dark .msg-bubble-sent {
+  background: linear-gradient(135deg, #1877F2 0%, #1364d6 100%) !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .msg-bubble-sent *,
+html.dark .msg-bubble-sent * {
+  color: inherit;
+}
+
+html:not(.dark) .msg-bubble-received {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid rgba(15, 23, 42, 0.07) !important;
+}
+
+html.dark .msg-bubble-received {
+  background-color: #1b1d26 !important;
+  color: #f4f4f5 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html:not(.dark) .msg-accent-btn,
+html.dark .msg-accent-btn {
+  background-color: #1877F2 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .msg-chat-row-active {
+  background-color: #eef4ff !important;
+}
+
+html.dark .msg-chat-row-active {
+  background-color: #1b2030 !important;
+}
+
 
 

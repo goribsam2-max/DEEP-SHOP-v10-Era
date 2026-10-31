@@ -37,6 +37,7 @@ import {
   Star,
   Users,
 } from "lucide-react";
+import { CreateChooserModal } from "../components/CreateChooserModal";
 import { DottedGhostCatIcon } from "../components/ComposerLiquidGlassSheets";
 import {
   LiquidGlassShareModal,
@@ -247,11 +248,22 @@ export const NewsHub: React.FC = () => {
     loadLocalAlgorithmPrefs()
   );
   const [reelsOverlayOpen, setReelsOverlayOpen] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
   const feedMenuRef = useRef<HTMLDivElement | null>(null);
 
   const activeFeedFilter = React.useMemo(() => {
-    const f = new URLSearchParams(location.search).get("filter") || "";
-    return f.trim().toLowerCase();
+    const sp = new URLSearchParams(location.search);
+    const f = (sp.get("filter") || "").trim().toLowerCase();
+    const tab = (sp.get("tab") || "").trim().toLowerCase();
+    if (f === "video" || f === "reels" || tab === "reels") {
+      return "video";
+    }
+    return f;
+  }, [location.search]);
+
+  const targetReelPostId = React.useMemo(() => {
+    const sp = new URLSearchParams(location.search);
+    return (sp.get("postId") || "").trim();
   }, [location.search]);
 
   useEffect(() => {
@@ -505,7 +517,11 @@ export const NewsHub: React.FC = () => {
           data.userAvatar ||
           data.sellerLogo ||
           data.sellerAvatar ||
-          data.mediaUrl ||
+          (data.type !== "video" &&
+          data.mediaType !== "video" &&
+          !/\.(?:mp4|webm|mov|m4v)(?:$|[?#])/i.test(String(data.mediaUrl || ""))
+            ? data.mediaUrl
+            : "") ||
           defaultAvatarImg,
         isCloseFriends: Boolean(data.isCloseFriends),
         closeFriendIds: Array.isArray(data.closeFriendIds)
@@ -620,6 +636,10 @@ export const NewsHub: React.FC = () => {
     const nowMs = Date.now();
 
     return allPosts.filter((post) => {
+      if (targetReelPostId && post.id === targetReelPostId) {
+        return true;
+      }
+
       // Hide expired 24-hour Ghost posts automatically
       if (post.expiresAt && post.expiresAt <= nowMs) {
         return false;
@@ -725,24 +745,42 @@ export const NewsHub: React.FC = () => {
     followedIds,
     savedIds,
     currentUser?.uid,
+    targetReelPostId,
   ]);
 
   const visiblePosts = React.useMemo(() => {
+    const effectiveDismissed = targetReelPostId
+      ? dismissedPostIds.filter((id) => id !== targetReelPostId)
+      : dismissedPostIds;
     const ranked = rankFeedPostsSmart(filteredPosts, {
       currentUid: currentUser?.uid,
       followedIds,
       sessionSeed,
-      dismissedPostIds,
+      dismissedPostIds: effectiveDismissed,
     });
-    return applyUserAlgorithmToPosts(ranked, algorithmPrefs);
+    const algoPosts = applyUserAlgorithmToPosts(ranked, algorithmPrefs);
+    if (targetReelPostId) {
+      const targetPost =
+        algoPosts.find((p) => p.id === targetReelPostId) ||
+        allPosts.find((p) => p.id === targetReelPostId);
+      if (targetPost) {
+        return [
+          targetPost,
+          ...algoPosts.filter((p) => p.id !== targetReelPostId),
+        ];
+      }
+    }
+    return algoPosts;
   }, [
     filteredPosts,
+    allPosts,
     currentUser?.uid,
     followedIds,
     sessionSeed,
     dismissedPostIds,
     moderationTick,
     algorithmPrefs,
+    targetReelPostId,
   ]);
 
   const communityUserMap = React.useMemo(() => {
@@ -1260,10 +1298,11 @@ export const NewsHub: React.FC = () => {
             onDismissPost={handleDismissReelPost}
             onCommentCountDelta={handleCommentCountDelta}
             onOverlayOpenChange={setReelsOverlayOpen}
+            onOpenCreate={() => setChooserOpen(true)}
           />
         )}
 
-        {!reelsOverlayOpen && !shareModalPost && (
+        {!reelsOverlayOpen && !shareModalPost && !chooserOpen && (
           <NewsBottomDock variant="reels" />
         )}
 
@@ -1282,6 +1321,11 @@ export const NewsHub: React.FC = () => {
               navigate(`/loops/create?quotePostId=${shareModalPost.id}`);
             }
           }}
+        />
+
+        <CreateChooserModal
+          isOpen={chooserOpen}
+          onClose={() => setChooserOpen(false)}
         />
       </>
     );
@@ -1335,7 +1379,10 @@ export const NewsHub: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate("/loops/create")}
+                  onClick={() => {
+                    triggerHaptic();
+                    setChooserOpen(true);
+                  }}
                   className="w-full py-2.5 px-4 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-sm font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4 shrink-0" />
@@ -1591,10 +1638,10 @@ export const NewsHub: React.FC = () => {
                     type="button"
                     onClick={() => {
                       triggerHaptic();
-                      navigate("/loops/create");
+                      setChooserOpen(true);
                     }}
-                    title="New Loop"
-                    aria-label="New Loop"
+                    title="Create"
+                    aria-label="Create"
                     className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-95 transition cursor-pointer"
                   >
                     <Plus className="w-[23px] h-[23px] stroke-[2]" />
@@ -1807,7 +1854,7 @@ export const NewsHub: React.FC = () => {
                 type="button"
                 onClick={() => {
                   triggerHaptic();
-                  navigate("/loops/create");
+                  setChooserOpen(true);
                 }}
                 className="flex-1 text-left cursor-pointer min-w-0"
               >
@@ -1824,10 +1871,10 @@ export const NewsHub: React.FC = () => {
                 type="button"
                 onClick={() => {
                   triggerHaptic();
-                  navigate("/loops/create?tab=video");
+                  navigate("/create-reel");
                 }}
-                title="Upload Video / Reel"
-                aria-label="Upload Video or Reel"
+                title="Create Reel"
+                aria-label="Create Reel"
                 className="w-9 h-9 rounded-full border loops-divider flex items-center justify-center text-zinc-700 dark:text-zinc-200 hover:text-[#1877F2] dark:hover:text-[#58A6FF] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition shrink-0 cursor-pointer"
               >
                 <Video className="w-4 h-4" />
@@ -1837,11 +1884,11 @@ export const NewsHub: React.FC = () => {
                 type="button"
                 onClick={() => {
                   triggerHaptic();
-                  navigate("/loops/create");
+                  setChooserOpen(true);
                 }}
                 className="px-4 py-1.5 rounded-full border loops-divider text-[13.5px] font-semibold text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition shrink-0 cursor-pointer"
               >
-                Post
+                Create
               </button>
             </section>
 
@@ -1900,7 +1947,10 @@ export const NewsHub: React.FC = () => {
                   )}
                   <button
                     type="button"
-                    onClick={() => navigate("/loops/create")}
+                    onClick={() => {
+                      triggerHaptic();
+                      setChooserOpen(true);
+                    }}
                     className="px-5 py-2 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-semibold cursor-pointer"
                   >
                     Create a Loop
@@ -2230,6 +2280,10 @@ export const NewsHub: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+      <CreateChooserModal
+        isOpen={chooserOpen}
+        onClose={() => setChooserOpen(false)}
+      />
     </>
   );
 };

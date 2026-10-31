@@ -45,10 +45,10 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     };
     updateCart();
     window.addEventListener('storage', updateCart);
-    const interval = setInterval(updateCart, 1000);
+    window.addEventListener('cartUpdated', updateCart);
     return () => {
       window.removeEventListener('storage', updateCart);
-      clearInterval(interval);
+      window.removeEventListener('cartUpdated', updateCart);
     };
   }, []);
 
@@ -80,6 +80,9 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     isAuthPage ||
     location.pathname === '/help-center' ||
     location.pathname === '/messages' ||
+    location.pathname.startsWith('/create-reel') ||
+    location.pathname.startsWith('/add-story') ||
+    location.pathname.startsWith('/seller/add-story') ||
     location.pathname.startsWith('/loops') ||
     location.pathname.startsWith('/news-hub') ||
     location.pathname.startsWith('/news') ||

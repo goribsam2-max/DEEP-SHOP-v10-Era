@@ -211,10 +211,16 @@ service cloud.firestore {
       allow read, write: if isSignedIn() || isAdmin();
     }
 
-    // Story Songs Library
+    // Story & Background Music Library
     match /story_songs/{songId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+    match /background_music/{songId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
   }
 }

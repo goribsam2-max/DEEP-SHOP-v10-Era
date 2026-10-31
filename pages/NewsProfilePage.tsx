@@ -3099,26 +3099,54 @@ export const NewsProfilePage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                {userMedia.map((mPost) => (
-                  <div
-                    key={mPost.id}
-                    onClick={() => navigate(`/loops/post/${mPost.id}`)}
-                    className="relative aspect-square rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer group"
-                  >
-                    {mPost.images?.[0] ? (
-                      <SmoothImage
-                        src={mPost.images[0]}
-                        alt=""
-                        wrapperClassName="w-full h-full min-h-0 rounded-none"
-                        className="w-full h-full object-cover rounded-none group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400">
-                        <ImageIcon className="w-8 h-8" />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {userMedia.map((mPost) => {
+                  const isVideoMedia = Boolean(
+                    mPost.videoUrl || (mPost as any).type === "reel"
+                  );
+                  return (
+                    <div
+                      key={mPost.id}
+                      onClick={() => {
+                        if (isVideoMedia) {
+                          navigate(
+                            `/loops?filter=video&postId=${encodeURIComponent(
+                              mPost.id
+                            )}`
+                          );
+                        } else {
+                          navigate(`/loops/post/${mPost.id}`);
+                        }
+                      }}
+                      className="relative aspect-square rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer group"
+                    >
+                      {mPost.images?.[0] ? (
+                        <SmoothImage
+                          src={mPost.images[0]}
+                          alt=""
+                          wrapperClassName="w-full h-full min-h-0 rounded-none"
+                          className="w-full h-full object-cover rounded-none group-hover:scale-105 transition-transform"
+                        />
+                      ) : mPost.videoUrl ? (
+                        <video
+                          src={mPost.videoUrl}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                          <ImageIcon className="w-8 h-8" />
+                        </div>
+                      )}
+                      {isVideoMedia && (
+                        <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/65 text-white text-[10px] font-bold">
+                          REEL
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )
           )}

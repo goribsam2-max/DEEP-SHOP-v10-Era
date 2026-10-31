@@ -85,6 +85,7 @@ import {
   StoryStickerItem,
 } from "./seller/AddStory";
 import { ScamPost, StoryHighlightItem, StoryHighlightSnapshot } from "../types";
+import { toPlayableAudioUrl, toPlayableMediaUrl } from "../lib/videoEmbed";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
 import {
   NewsRichText,
@@ -2665,10 +2666,18 @@ export const NewsStoryViewerPage: React.FC = () => {
           data.sellerAvatar ||
           "",
         mediaUrl: data.mediaUrl || data.imageUrl || "",
-        mediaType: data.mediaType || data.type || "image",
+        mediaType:
+          data.mediaType ||
+          data.type ||
+          (/\.(?:mp4|webm|mov|m4v)(?:$|[?#])/i.test(
+            String(data.mediaUrl || data.imageUrl || "")
+          )
+            ? "video"
+            : "image"),
         linkUrl: data.linkUrl || "",
         caption: data.caption || "",
         songTitle: data.songTitle || "",
+        audioUrl: data.audioUrl || data.music?.url || "",
         music: data.music || null,
         textLayers: Array.isArray(data.textLayers) ? data.textLayers : [],
         stickers: Array.isArray(data.stickers) ? data.stickers : [],
@@ -2680,6 +2689,7 @@ export const NewsStoryViewerPage: React.FC = () => {
           ? data.closeFriendIds
           : [],
         isBoomerang: Boolean(data.isBoomerang),
+        isCreateMode: Boolean(data.isCreateMode),
         pollVotes: data.pollVotes || {},
         sliderVotes: data.sliderVotes || {},
         likedBy: Array.isArray(data.likedBy) ? data.likedBy : [],
@@ -3055,17 +3065,25 @@ export const NewsStoryViewerPage: React.FC = () => {
     }
   };
 
-  // Sync story background music playback
+  // Sync story background music playback via stream proxy
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.loop = true;
     }
     const audio = audioRef.current;
-    const songUrl = story?.music?.url || "";
-    if (songUrl && !audioMuted) {
-      if (audio.src !== songUrl) {
-        audio.src = songUrl;
+    const rawSongUrl = story?.audioUrl || story?.music?.url || "";
+    const playableSongUrl = toPlayableAudioUrl(rawSongUrl);
+    if (playableSongUrl && !audioMuted) {
+      if (audio.src !== playableSongUrl && audio.src !== rawSongUrl) {
+        audio.onerror = () => {
+          if (rawSongUrl && audio.src !== rawSongUrl) {
+            audio.onerror = null;
+            audio.src = rawSongUrl;
+            audio.play().catch(() => {});
+          }
+        };
+        audio.src = playableSongUrl;
       }
       audio.muted = false;
       audio.play().catch(() => {});
@@ -3075,7 +3093,16 @@ export const NewsStoryViewerPage: React.FC = () => {
     return () => {
       audio.pause();
     };
-  }, [story?.id, story?.music?.url, audioMuted]);
+  }, [story?.id, story?.audioUrl, story?.music?.url, audioMuted]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+    };
+  }, []);
 
   const handleCloseViewer = () => {
     triggerHaptic();
@@ -4337,8 +4364,27 @@ export const NewsStoryViewerPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Right Controls: Own Story -> X | Peer Story -> Follow + ... + X */}
+              {/* Right Controls: Audio toggle + Own Story -> X | Peer Story -> Follow + ... + X */}
               <div className="flex items-center gap-2 shrink-0">
+                {(Boolean(story.audioUrl || story.music?.url) ||
+                  story.mediaType === "video") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setAudioMuted((m) => !m);
+                    }}
+                    className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white cursor-pointer"
+                    aria-label={audioMuted ? "Unmute story" : "Mute story"}
+                  >
+                    {audioMuted ? (
+                      <VolumeX className="w-4 h-4" />
+                    ) : (
+                      <Volume2 className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
+
                 {!isOwnStory && story.userId && (
                   <button
                     type="button"
@@ -4421,13 +4467,15 @@ export const NewsStoryViewerPage: React.FC = () => {
 
               {story.mediaType === "video" ? (
                 <video
-                  src={story.mediaUrl}
+                  key={story.mediaUrl}
+                  src={toPlayableMediaUrl(story.mediaUrl)}
                   autoPlay
                   playsInline
-                  muted={audioMuted}
+                  muted={audioMuted || Boolean(story.audioUrl || story.music?.url)}
                   loop
                   onLoadedData={() => setStoryMediaReady(true)}
                   onCanPlay={() => setStoryMediaReady(true)}
+                  onError={() => setStoryMediaReady(true)}
                   className={`w-full h-full object-contain bg-black transition-opacity duration-200 ease-out ${
                     storyMediaReady ? "opacity-100" : "opacity-0"
                   }`}
@@ -4464,6 +4512,39 @@ export const NewsStoryViewerPage: React.FC = () => {
                   } ${story.isBoomerang ? "animate-pulse" : ""}`}
                 />
               )}
+
+              {/* Centered Music Card for Create-Mode Music Stories */}
+              {story.isCreateMode &&
+                story.music?.title &&
+                (!story.textLayers || story.textLayers.length === 0) &&
+                (!story.stickers || story.stickers.length === 0) && (
+                  <div className="absolute inset-0 z-20 flex items-center justify-center p-6 pointer-events-none">
+                    <div className="px-5 py-4 rounded-3xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-2xl flex items-center gap-3.5 max-w-[280px]">
+                      {story.music.coverUrl ? (
+                        <img
+                          src={story.music.coverUrl}
+                          alt={story.music.title}
+                          referrerPolicy="no-referrer"
+                          className="w-14 h-14 rounded-2xl object-cover shrink-0 shadow-lg"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+                          <Music className="w-6 h-6 text-white" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-extrabold text-white truncate">
+                          {story.music.title}
+                        </p>
+                        {story.music.artist && (
+                          <p className="text-xs text-white/75 truncate mt-0.5">
+                            {story.music.artist}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
               {/* Left / Right Invisible Tap Zones for Fast Story Stepping */}
               {activeIdx > 0 && (
