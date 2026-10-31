@@ -8,6 +8,7 @@
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/custom-sw.js", "destination": "/custom-sw.js" },
     { "source": "/manifest.webmanifest", "destination": "/manifest.webmanifest" },
+    { "source": "/0f6cbbdfe0864710868cb5500f5b8e54.txt", "destination": "/0f6cbbdfe0864710868cb5500f5b8e54.txt" },
     { "source": "/api/(.*)", "destination": "/api/index?__pathname=/api/$1" },
     { "source": "/(.*)", "destination": "/api/index?__pathname=/$1" }
   ]

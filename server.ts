@@ -2435,6 +2435,259 @@ export async function initializeAppAsync() {
     }
   });
 
+  // Bing IndexNow static verification key file
+  const BING_INDEXNOW_VERIFICATION_KEY = "0f6cbbdfe0864710868cb5500f5b8e54";
+
+  app.get(`/${BING_INDEXNOW_VERIFICATION_KEY}.txt`, (_req, res) => {
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.status(200).send(BING_INDEXNOW_VERIFICATION_KEY);
+  });
+
+  // Bing IndexNow URL submission endpoint
+  app.post("/api/seo/indexnow", async (req, res) => {
+    try {
+      const forwardedHost = String(
+        req.headers["x-forwarded-host"] || req.headers.host || "www.deepshop.top"
+      )
+        .split(",")[0]
+        .trim();
+      const rawHost =
+        typeof req.body?.host === "string" && req.body.host.trim()
+          ? req.body.host
+              .trim()
+              .replace(/^https?:\/\//i, "")
+              .replace(/\/.*$/, "")
+          : forwardedHost;
+      const protocol =
+        rawHost.startsWith("localhost") || rawHost.startsWith("127.0.0.1")
+          ? "http"
+          : "https";
+      const baseOrigin = `${protocol}://${rawHost}`;
+
+      const incomingUrls: string[] = Array.isArray(req.body?.urls)
+        ? req.body.urls
+            .map((u: unknown) => String(u || "").trim())
+            .filter(Boolean)
+        : [];
+
+      const defaultPaths = [
+        "/",
+        "/loops",
+        "/loops?filter=video",
+        "/all-products",
+        "/flash-sale",
+        "/blog",
+        "/sitemap.xml",
+      ];
+
+      const rawList = incomingUrls.length > 0 ? incomingUrls : defaultPaths;
+      const urlList = Array.from(
+        new Set(
+          rawList.map((u) => {
+            if (/^https?:\/\//i.test(u)) return u;
+            return `${baseOrigin}${u.startsWith("/") ? u : `/${u}`}`;
+          })
+        )
+      ).slice(0, 100);
+
+      const payload = {
+        host: rawHost,
+        key: BING_INDEXNOW_VERIFICATION_KEY,
+        keyLocation: `${baseOrigin}/${BING_INDEXNOW_VERIFICATION_KEY}.txt`,
+        urlList,
+      };
+
+      const endpoints = [
+        "https://api.indexnow.org/indexnow",
+        "https://www.bing.com/indexnow",
+      ];
+
+      let lastStatus = 200;
+      let anyAccepted = false;
+
+      await Promise.all(
+        endpoints.map(async (endpoint) => {
+          try {
+            const resp = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json; charset=utf-8",
+              },
+              body: JSON.stringify(payload),
+            });
+            lastStatus = resp.status;
+            if (resp.status >= 200 && resp.status < 300) {
+              anyAccepted = true;
+            }
+          } catch (err) {
+            console.warn("IndexNow ping warning:", endpoint, err);
+          }
+        })
+      );
+
+      return res.status(200).json({
+        ok: true,
+        accepted: anyAccepted,
+        status: lastStatus,
+        submittedCount: urlList.length,
+        keyLocation: payload.keyLocation,
+        urlList,
+      });
+    } catch (err: any) {
+      console.error("IndexNow route error:", err);
+      return res.status(500).json({
+        ok: false,
+        message: err?.message || "Failed to submit URLs to IndexNow",
+      });
+    }
+  });
+
+  // Server-side Sitemap Ping (replaces legacy client window.open)
+  app.post("/api/seo/ping-sitemap", async (req, res) => {
+    try {
+      const forwardedHost = String(
+        req.headers["x-forwarded-host"] || req.headers.host || "www.deepshop.top"
+      )
+        .split(",")[0]
+        .trim();
+      const baseOrigin =
+        forwardedHost.startsWith("localhost") ||
+        forwardedHost.startsWith("127.0.0.1")
+          ? `http://${forwardedHost}`
+          : `https://${forwardedHost}`;
+      const sitemapUrl = `${baseOrigin}/sitemap.xml`;
+
+      await Promise.allSettled([
+        fetch(
+          `https://www.bing.com/indexnow?url=${encodeURIComponent(
+            sitemapUrl
+          )}&key=${BING_INDEXNOW_VERIFICATION_KEY}`
+        ),
+        fetch(
+          `https://api.indexnow.org/indexnow?url=${encodeURIComponent(
+            sitemapUrl
+          )}&key=${BING_INDEXNOW_VERIFICATION_KEY}`
+        ),
+      ]);
+
+      return res.status(200).json({ ok: true, sitemapUrl });
+    } catch (err: any) {
+      return res
+        .status(500)
+        .json({ ok: false, message: err?.message || "Sitemap ping failed" });
+    }
+  });
+
+  // Physical SVG Registry File Replacer — permanently removes old SVG code from lib/loopsSvgRegistry.ts and replaces with new SVG
+  app.post("/api/admin/loops-icons", async (req, res) => {
+    try {
+      const rawKey = typeof req.body?.key === "string" ? req.body.key.trim().toLowerCase() : "";
+      const rawSvg = typeof req.body?.svg === "string" ? req.body.svg.trim() : "";
+
+      if (!rawKey || !/^[a-z0-9_-]+$/.test(rawKey)) {
+        return res.status(400).json({ ok: false, message: "Invalid icon key." });
+      }
+
+      if (rawSvg && (!rawSvg.toLowerCase().includes("<svg") || !rawSvg.toLowerCase().includes("</svg>"))) {
+        return res.status(400).json({ ok: false, message: "Invalid SVG markup." });
+      }
+
+      const registryPath = path.resolve(process.cwd(), "lib", "loopsSvgRegistry.ts");
+      let updatedRegistryFile = false;
+
+      if (fs.existsSync(registryPath) && rawSvg) {
+        const fileContent = fs.readFileSync(registryPath, "utf-8");
+        const startMarker = "// __LOOPS_SVG_MAP_START__";
+        const endMarker = "// __LOOPS_SVG_MAP_END__";
+        const startIdx = fileContent.indexOf(startMarker);
+        const endIdx = fileContent.indexOf(endMarker);
+
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          const mapSection = fileContent.slice(
+            startIdx + startMarker.length,
+            endIdx
+          );
+          const entries: Record<string, string> = {};
+          const orderedKeys: string[] = [];
+
+          const entryRegex = /"([a-z0-9_-]+)"\s*:\s*`([\s\S]*?)`\s*,?/gi;
+          let match: RegExpExecArray | null;
+          while ((match = entryRegex.exec(mapSection)) !== null) {
+            const k = match[1].toLowerCase();
+            if (!orderedKeys.includes(k)) orderedKeys.push(k);
+            entries[k] = match[2];
+          }
+
+          const sanitizedForTemplateLiteral = rawSvg
+            .replace(/\\/g, "\\\\")
+            .replace(/`/g, "\\`")
+            .replace(/\$\{/g, "\\${")
+            .replace(/\r?\n\s*/g, " ")
+            .trim();
+
+          if (!orderedKeys.includes(rawKey)) {
+            orderedKeys.push(rawKey);
+          }
+          // Overwrite key entry so the previous SVG string is completely removed from the file
+          entries[rawKey] = sanitizedForTemplateLiteral;
+
+          const rebuiltLines = orderedKeys.map(
+            (k) => `  "${k}": \`${entries[k]}\`,`
+          );
+          const rebuiltBlock = [
+            startMarker,
+            "export const LOOPS_SVG_MAP: Record<string, string> = {",
+            ...rebuiltLines,
+            "};",
+            endMarker,
+          ].join("\n");
+
+          const nextFileContent =
+            fileContent.slice(0, startIdx) +
+            rebuiltBlock +
+            fileContent.slice(endIdx + endMarker.length);
+
+          fs.writeFileSync(registryPath, nextFileContent, "utf-8");
+          updatedRegistryFile = true;
+        }
+      }
+
+      // Also sync public/icons.json or root icons.json if present for non-loops keys
+      const iconJsonCandidates = [
+        path.resolve(process.cwd(), "public", "icons.json"),
+        path.resolve(process.cwd(), "icons.json"),
+      ];
+      for (const jsonPath of iconJsonCandidates) {
+        if (fs.existsSync(jsonPath)) {
+          try {
+            const parsed = JSON.parse(fs.readFileSync(jsonPath, "utf-8") || "{}");
+            if (parsed && typeof parsed === "object") {
+              if (rawSvg) {
+                parsed[rawKey] = rawSvg;
+              } else {
+                delete parsed[rawKey];
+              }
+              fs.writeFileSync(jsonPath, JSON.stringify(parsed, null, 2), "utf-8");
+            }
+          } catch {}
+        }
+      }
+
+      return res.status(200).json({
+        ok: true,
+        key: rawKey,
+        updatedRegistryFile,
+      });
+    } catch (err: any) {
+      console.error("Failed to rewrite Loops SVG registry on disk:", err);
+      return res.status(500).json({
+        ok: false,
+        message: err?.message || "Failed to update SVG registry file",
+      });
+    }
+  });
+
   app.get("*all", async (req, res) => {
     try {
       const rawQueryPath =
@@ -2455,6 +2708,12 @@ export async function initializeAppAsync() {
       const reqPath = candidatePath.startsWith("/")
         ? candidatePath
         : `/${candidatePath}`;
+
+      if (reqPath === `/${BING_INDEXNOW_VERIFICATION_KEY}.txt`) {
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        return res.status(200).send(BING_INDEXNOW_VERIFICATION_KEY);
+      }
 
       // Do not serve HTML fallback for missing static assets
       const isStaticAssetExt = /\.(?:js|mjs|cjs|ts|tsx|jsx|css|map|json|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|mp4|webm|mp3|wav)$/i.test(

@@ -54,6 +54,8 @@ import {
   DeezerMusicPickerModal,
   AttachedMusic,
 } from "../components/DeezerMusicPickerModal";
+import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
+import { pingBingIndexNow } from "../lib/indexNowClient";
 
 export const CreateReelStudio: React.FC = () => {
   const navigate = useNavigate();
@@ -115,8 +117,35 @@ export const CreateReelStudio: React.FC = () => {
   const [turnOffCommenting, setTurnOffCommenting] = useState<boolean>(false);
   const [allowDownload, setAllowDownload] = useState<boolean>(true);
 
+  // Inline editors (replaces browser prompt())
+  const [showTagInput, setShowTagInput] = useState<boolean>(false);
+  const [showLocationInput, setShowLocationInput] = useState<boolean>(false);
+
   // Submitting
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Auto-attach preselected background music when arriving from "Use audio" on Audio Details Page
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("loops_preselected_reel_audio");
+      if (!raw) return;
+      sessionStorage.removeItem("loops_preselected_reel_audio");
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.audioUrl) {
+        setAttachedMusic({
+          title: parsed.title || "Original audio",
+          artist: parsed.artist || "Loops Creator",
+          audioUrl: parsed.audioUrl,
+          cover: parsed.cover || parsed.coverUrl || "",
+          coverUrl: parsed.coverUrl || parsed.cover || "",
+        });
+        if (parsed.title) {
+          setAudioTitle(parsed.title);
+        }
+        notify(`Audio "${parsed.title || "Original audio"}" attached!`, "success");
+      }
+    } catch {}
+  }, []);
 
   // Handle direct video file selection with instant local preview + background upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,8 +316,14 @@ export const CreateReelStudio: React.FC = () => {
         addDoc(collection(db, "story_songs"), musicDoc).catch(() => {}),
       ]);
 
+      pingBingIndexNow([
+        `/loops/post/${postRef.id}`,
+        "/loops",
+        "/loops?filter=video",
+      ]).catch(() => {});
+
       notify("Your Reel is now live!", "success");
-      navigate(`/loops?tab=reels&postId=${postRef.id}`);
+      navigate(`/loops?filter=video&postId=${postRef.id}`);
     } catch (err: any) {
       notify(err.message || "Failed to post reel.", "error");
     } finally {
@@ -325,10 +360,13 @@ export const CreateReelStudio: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setStep("more_options")}
-                    className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+                    className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition-colors text-zinc-900 dark:text-white"
                     aria-label="Reel settings"
                   >
-                    <Settings className="w-4 h-4 text-zinc-900 dark:text-white" />
+                    <LoopsSvgIcon
+                      name="loops-reel-studio-settings"
+                      className="w-4 h-4"
+                    />
                   </button>
                 )}
                 <button
@@ -340,6 +378,28 @@ export const CreateReelStudio: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {attachedMusic && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl bg-[#4150F7]/10 border border-[#4150F7]/25 text-xs">
+                <div className="flex items-center gap-2 min-w-0 text-[#4150F7] dark:text-indigo-300 font-semibold">
+                  <LoopsSvgIcon
+                    name="loops-reel-studio-music"
+                    className="w-4 h-4 shrink-0"
+                  />
+                  <span className="truncate">
+                    Using audio: {attachedMusic.title} · {attachedMusic.artist}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachedMusic(null)}
+                  aria-label="Remove preselected audio"
+                  className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <button
@@ -377,7 +437,12 @@ export const CreateReelStudio: React.FC = () => {
               onClick={() => videoInputRef.current?.click()}
               className="aspect-[9/16] rounded-2xl bg-zinc-100 dark:bg-zinc-900 border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:border-[#1877F2] transition cursor-pointer"
             >
-              <Video className="w-7 h-7 text-[#1877F2]" />
+              <span className="text-[#1877F2]">
+                <LoopsSvgIcon
+                  name="loops-reel-studio-video"
+                  className="w-7 h-7"
+                />
+              </span>
               <span className="text-xs font-bold text-center px-2">
                 Select Video
               </span>
@@ -516,14 +581,19 @@ export const CreateReelStudio: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Suggested Audio Button (Exact IMG_5258) */}
+            {/* Suggested Audio Button */}
             <button
               type="button"
               onClick={() => setMusicPickerOpen(true)}
               className="px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs font-semibold flex items-center gap-2 hover:bg-black/80 transition cursor-pointer"
             >
-              <Music className="w-3.5 h-3.5 text-[#0095F6]" />
-              <span>
+              <span className="text-[#0095F6]">
+                <LoopsSvgIcon
+                  name="loops-reel-studio-music"
+                  className="w-3.5 h-3.5"
+                />
+              </span>
+              <span className="truncate max-w-[200px]">
                 {attachedMusic
                   ? `${attachedMusic.title} · ${attachedMusic.artist}`
                   : "Suggested audio > Tap to apply"}
@@ -535,11 +605,10 @@ export const CreateReelStudio: React.FC = () => {
               onClick={() => setIsMuted(!isMuted)}
               className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 transition cursor-pointer"
             >
-              {isMuted ? (
-                <VolumeX className="w-5 h-5" />
-              ) : (
-                <Volume2 className="w-5 h-5" />
-              )}
+              <LoopsSvgIcon
+                name={isMuted ? "loops-reel-mute" : "loops-reel-unmute"}
+                className="w-5 h-5"
+              />
             </button>
           </div>
 
@@ -552,7 +621,10 @@ export const CreateReelStudio: React.FC = () => {
                 className="flex flex-col items-center gap-1.5 text-xs text-white hover:text-[#0095F6] transition cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <Music className="w-5 h-5" />
+                  <LoopsSvgIcon
+                    name="loops-reel-studio-music"
+                    className="w-5 h-5"
+                  />
                 </div>
                 <span className="font-medium">Audio</span>
               </button>
@@ -563,7 +635,10 @@ export const CreateReelStudio: React.FC = () => {
                 className="flex flex-col items-center gap-1.5 text-xs text-white hover:text-[#0095F6] transition cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <Edit3 className="w-5 h-5" />
+                  <LoopsSvgIcon
+                    name="loops-reel-studio-text"
+                    className="w-5 h-5"
+                  />
                 </div>
                 <span className="font-medium">Text</span>
               </button>
@@ -577,7 +652,10 @@ export const CreateReelStudio: React.FC = () => {
                 className="flex flex-col items-center gap-1.5 text-xs text-white hover:text-[#0095F6] transition cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <Mic className="w-5 h-5" />
+                  <LoopsSvgIcon
+                    name="loops-reel-studio-voice"
+                    className="w-5 h-5"
+                  />
                 </div>
                 <span className="font-medium">Voice</span>
               </button>
@@ -586,12 +664,18 @@ export const CreateReelStudio: React.FC = () => {
                 type="button"
                 onClick={() => {
                   triggerHaptic();
-                  notify("Auto captions enabled!", "success");
+                  try {
+                    localStorage.setItem("loops_reels_cc", "1");
+                  } catch {}
+                  notify("Closed captions enabled for your Reel!", "success");
                 }}
                 className="flex flex-col items-center gap-1.5 text-xs text-white hover:text-[#0095F6] transition cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <FileText className="w-5 h-5" />
+                  <LoopsSvgIcon
+                    name="loops-reel-studio-captions"
+                    className="w-5 h-5"
+                  />
                 </div>
                 <span className="font-medium">Captions</span>
               </button>
@@ -605,7 +689,10 @@ export const CreateReelStudio: React.FC = () => {
                 className="flex flex-col items-center gap-1.5 text-xs text-white hover:text-[#0095F6] transition cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <Layers className="w-5 h-5" />
+                  <LoopsSvgIcon
+                    name="loops-reel-studio-overlay"
+                    className="w-5 h-5"
+                  />
                 </div>
                 <span className="font-medium">Overlay</span>
               </button>
@@ -797,38 +884,54 @@ export const CreateReelStudio: React.FC = () => {
 
             {/* Option List */}
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800 border-y border-zinc-100 dark:border-zinc-800 text-sm">
-              <div
-                onClick={() => {
-                  const tag = prompt("Tag people (username):");
-                  if (tag) setTaggedPeople(tag);
-                }}
-                className="py-3.5 flex items-center justify-between cursor-pointer hover:opacity-80"
-              >
-                <div className="flex items-center gap-3">
-                  <Tag className="w-5 h-5 text-zinc-500" />
-                  <span className="font-medium">Tag people</span>
+              <div className="py-3.5 space-y-2">
+                <div
+                  onClick={() => setShowTagInput((prev) => !prev)}
+                  className="flex items-center justify-between cursor-pointer hover:opacity-80"
+                >
+                  <div className="flex items-center gap-3">
+                    <Tag className="w-5 h-5 text-zinc-500" />
+                    <span className="font-medium">Tag people</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-zinc-400">
+                    <span>{taggedPeople || ""}</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-zinc-400">
-                  <span>{taggedPeople || ""}</span>
-                  <ChevronRight className="w-4 h-4" />
-                </div>
+                {showTagInput && (
+                  <input
+                    type="text"
+                    value={taggedPeople}
+                    onChange={(e) => setTaggedPeople(e.target.value)}
+                    placeholder="Enter @username..."
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs outline-none focus:border-[#1877F2]"
+                  />
+                )}
               </div>
 
-              <div
-                onClick={() => {
-                  const loc = prompt("Add location:");
-                  if (loc) setLocationTag(loc);
-                }}
-                className="py-3.5 flex items-center justify-between cursor-pointer hover:opacity-80"
-              >
-                <div className="flex items-center gap-3">
-                  <MapPin className="w-5 h-5 text-zinc-500" />
-                  <span className="font-medium">Add location</span>
+              <div className="py-3.5 space-y-2">
+                <div
+                  onClick={() => setShowLocationInput((prev) => !prev)}
+                  className="flex items-center justify-between cursor-pointer hover:opacity-80"
+                >
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-5 h-5 text-zinc-500" />
+                    <span className="font-medium">Add location</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-zinc-400">
+                    <span>{locationTag || ""}</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-zinc-400">
-                  <span>{locationTag || ""}</span>
-                  <ChevronRight className="w-4 h-4" />
-                </div>
+                {showLocationInput && (
+                  <input
+                    type="text"
+                    value={locationTag}
+                    onChange={(e) => setLocationTag(e.target.value)}
+                    placeholder="Enter city or place..."
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs outline-none focus:border-[#1877F2]"
+                  />
+                )}
               </div>
 
               <div

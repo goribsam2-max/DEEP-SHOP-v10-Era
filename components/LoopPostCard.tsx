@@ -24,25 +24,12 @@ import { triggerHaptic } from "../lib/haptics";
 import { toggleFollowUser } from "../lib/follow";
 import { getSafePublicUsername, getSafeDisplayName } from "../lib/utils";
 import { SmoothImage, preloadImageUrl } from "./SmoothImage";
+import { LoopsSvgIcon } from "./LoopsSvgIcon";
 
 /* Exact custom 'Cokh' Eye SVG Icon matching IMG_5259 */
 export const LoopViewEyeIcon: React.FC<{ className?: string }> = ({
   className = "w-4 h-4",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M2.5 12.1c0 0 4.5-7.8 9.5-7.8s9.5 7.8 9.5 7.8-4.5 7.8-9.5 7.8-9.5-7.8-9.5-7.8z" />
-    <circle cx="12" cy="12.1" r="3.2" fill="currentColor" fillOpacity="0.12" />
-    <circle cx="12" cy="12.1" r="1" fill="currentColor" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-post-views" className={className} />;
 
 export function formatLoopCompactTime(timestamp?: number | null): string {
   if (!timestamp || Number.isNaN(Number(timestamp))) return "now";
@@ -107,112 +94,46 @@ export const VerifiedLoopBadge: React.FC<{ className?: string }> = ({
   </svg>
 );
 
-/* Exact IMG_5126 & IMG_5123 Post Header Asymmetric Two-Line Menu Icon (replaces 3 dots) */
+/* Post Header Asymmetric Two-Line Menu Icon */
 export const LoopPostMenuLinesIcon: React.FC<{ className?: string }> = ({
   className = "w-[22px] h-[22px]",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.05"
-    strokeLinecap="round"
-  >
-    <line x1="3" y1="8.5" x2="21" y2="8.5" />
-    <line x1="3" y1="15.5" x2="13.8" y2="15.5" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-post-more" className={className} />;
 
-/* Exact IMG_5126 Heart Icon */
+/* Heart Icon */
 export const LoopHeartIcon: React.FC<{
   className?: string;
   filled?: boolean;
 }> = ({ className = "w-[23px] h-[23px]", filled = false }) => (
-  <svg
+  <LoopsSvgIcon
+    name={filled ? "loops-post-like-active" : "loops-post-like"}
     className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? "currentColor" : "none"}
-    stroke="currentColor"
-    strokeWidth={filled ? "1.6" : "1.95"}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z" />
-  </svg>
+  />
 );
 
-/* Exact IMG_5126 Circular Speech Bubble Icon */
+/* Circular Speech Bubble Icon */
 export const LoopCommentIcon: React.FC<{ className?: string }> = ({
   className = "w-[23px] h-[23px]",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.95"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-post-comment" className={className} />;
 
-/* Exact IMG_5126 Vertical Rounded-Loop Repost Icon */
+/* Vertical Rounded-Loop Repost Icon */
 export const LoopRepeatIcon: React.FC<{ className?: string }> = ({
   className = "w-[23px] h-[23px]",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.95"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M7 17.5V7a3 3 0 0 1 3-3h6.2" />
-    <polyline points="13.4 1.5 16.4 4 13.4 6.5" />
-    <path d="M17 6.5V17a3 3 0 0 1-3 3H7.8" />
-    <polyline points="10.6 17.5 7.6 20 10.6 22.5" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-post-repost" className={className} />;
 
-/* Exact IMG_5126 & IMG_5123 Horizontal-Top Paper Plane Send Icon */
+/* Paper Plane Send Icon */
 export const LoopSendIcon: React.FC<{ className?: string }> = ({
   className = "w-[23px] h-[23px]",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.95"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21.4 3.8H2.8L9.5 10.6L12.2 20.2L21.4 3.8Z" />
-    <path d="M21.4 3.8L9.5 10.6" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-post-share" className={className} />;
 
-/* Exact IMG_5126 Right-Aligned Bookmark Save Ribbon Icon */
+/* Bookmark Save Ribbon Icon */
 export const LoopBookmarkIcon: React.FC<{
   className?: string;
   filled?: boolean;
 }> = ({ className = "w-[23px] h-[23px]", filled = false }) => (
-  <svg
+  <LoopsSvgIcon
+    name={filled ? "loops-post-save-active" : "loops-post-save"}
     className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? "currentColor" : "none"}
-    stroke="currentColor"
-    strokeWidth="1.95"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M19 21l-7-4.8L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16Z" />
-  </svg>
+  />
 );
 
 export const LoopStarIcon: React.FC<{

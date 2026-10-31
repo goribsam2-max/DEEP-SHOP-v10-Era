@@ -44,14 +44,10 @@ import {
 } from "../components/LiquidGlassPostInteractions";
 import { AdPlacementSlot } from "../components/AdPlacementSlot";
 import { preloadImageUrl } from "../components/SmoothImage";
+import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
 
 const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 2l4 4-4 4"></path>
-    <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
-    <path d="M7 22l-4-4 4-4"></path>
-    <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
-  </svg>
+  <LoopsSvgIcon name="loops-post-repost" className={className} />
 );
 import { auth, db } from "../firebase";
 import {
@@ -137,19 +133,7 @@ const deepShopLogoFallback = "";
 
 const TwoLineMenuIcon: React.FC<{ className?: string }> = ({
   className = "w-6 h-6",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.1"
-    strokeLinecap="round"
-  >
-    <line x1="4" y1="8.5" x2="20" y2="8.5" />
-    <line x1="4" y1="15.5" x2="14.5" y2="15.5" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-header-menu" className={className} />;
 
 const formatCompactCount = (n: number): string => {
   return formatCompactNumber(n);
@@ -1527,11 +1511,16 @@ export const NewsHub: React.FC = () => {
                       <span className="loops-script-logo text-[34px] sm:text-[36px] text-zinc-950 dark:text-white">
                         Loops
                       </span>
-                      <ChevronDown
-                        className={`w-4 h-4 text-zinc-900 dark:text-zinc-200 stroke-[2.3] mt-1 transition-transform duration-200 ${
+                      <span
+                        className={`inline-flex mt-1 text-zinc-900 dark:text-zinc-200 transition-transform duration-200 ${
                           feedMenuOpen ? "rotate-180" : ""
                         }`}
-                      />
+                      >
+                        <LoopsSvgIcon
+                          name="loops-header-chevron"
+                          className="w-4 h-4"
+                        />
+                      </span>
                     </span>
                     {(activeFeedFilter || scamOnlyMode) && (
                       <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 -mt-1">
@@ -1643,7 +1632,10 @@ export const NewsHub: React.FC = () => {
                     aria-label="Create"
                     className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-95 transition cursor-pointer"
                   >
-                    <Plus className="w-[23px] h-[23px] stroke-[2]" />
+                    <LoopsSvgIcon
+                      name="loops-header-create"
+                      className="w-[23px] h-[23px]"
+                    />
                   </button>
                   <button
                     type="button"
@@ -1655,7 +1647,10 @@ export const NewsHub: React.FC = () => {
                     aria-label="Activity"
                     className="relative w-9 h-9 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-95 transition cursor-pointer"
                   >
-                    <LoopHeartIcon className="w-[22px] h-[22px]" />
+                    <LoopsSvgIcon
+                      name="loops-header-activity"
+                      className="w-[22px] h-[22px]"
+                    />
                     {unreadNewsNotifications > 0 && (
                       <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#FF3040] ring-2 ring-white dark:ring-[#101010]" />
                     )}
@@ -1741,7 +1736,10 @@ export const NewsHub: React.FC = () => {
                         className="loops-plus-badge absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer z-10"
                         aria-label="Add to your story"
                       >
-                        <Plus className="w-3 h-3 stroke-[3]" />
+                        <LoopsSvgIcon
+                          name="loops-story-add"
+                          className="w-3 h-3"
+                        />
                       </button>
                     </div>
                     <button

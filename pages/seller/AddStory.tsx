@@ -26,6 +26,7 @@ import { triggerHaptic } from "../../lib/haptics";
 import { getLocalFollowedIds } from "../../lib/follow";
 import { detectAiGeneratedFiles } from "../../lib/aiImageDetector";
 import { motion, AnimatePresence } from "framer-motion";
+import { LoopsSvgIcon } from "../../components/LoopsSvgIcon";
 import {
   X,
   ChevronDown,
@@ -2800,10 +2801,10 @@ export default function AddStory() {
               <button
                 type="button"
                 onClick={() => navigate("/loops")}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer text-zinc-900 dark:text-white"
                 aria-label="Close"
               >
-                <X className="w-6 h-6 text-zinc-900 dark:text-white" />
+                <LoopsSvgIcon name="loops-story-close" className="w-6 h-6" />
               </button>
               <h1 className="text-base font-bold tracking-tight text-zinc-900 dark:text-white">
                 Add to story
@@ -2811,10 +2812,10 @@ export default function AddStory() {
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer text-zinc-900 dark:text-white"
                 aria-label="Story settings"
               >
-                <Settings className="w-5 h-5 text-zinc-900 dark:text-white" />
+                <LoopsSvgIcon name="loops-story-settings" className="w-5 h-5" />
               </button>
             </header>
 
@@ -2829,8 +2830,8 @@ export default function AddStory() {
                 }}
                 className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center">
-                  <Camera className="w-4 h-4 text-zinc-900 dark:text-white" />
+                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white">
+                  <LoopsSvgIcon name="loops-story-camera" className="w-4 h-4" />
                 </div>
                 <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
                   Add yours
@@ -2845,8 +2846,8 @@ export default function AddStory() {
                 }}
                 className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-[#1877F2]/15 dark:bg-[#1877F2]/20 flex items-center justify-center">
-                  <Play className="w-4 h-4 text-[#1877F2]" />
+                <div className="w-8 h-8 rounded-full bg-[#1877F2]/15 dark:bg-[#1877F2]/20 flex items-center justify-center text-[#1877F2]">
+                  <LoopsSvgIcon name="loops-story-video" className="w-4 h-4" />
                 </div>
                 <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
                   Video
@@ -2862,8 +2863,8 @@ export default function AddStory() {
                 }}
                 className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center">
-                  <Music className="w-4 h-4 text-zinc-900 dark:text-white" />
+                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white">
+                  <LoopsSvgIcon name="loops-story-music" className="w-4 h-4" />
                 </div>
                 <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
                   Music
@@ -2879,8 +2880,8 @@ export default function AddStory() {
                 }}
                 className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center">
-                  <LayoutGrid className="w-4 h-4 text-zinc-900 dark:text-white" />
+                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white">
+                  <LoopsSvgIcon name="loops-story-collage" className="w-4 h-4" />
                 </div>
                 <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
                   Collage
@@ -2967,8 +2968,8 @@ export default function AddStory() {
                   }}
                   className="aspect-[9/16] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 flex flex-col items-center justify-center gap-2 border border-zinc-200/80 dark:border-white/10 cursor-pointer transition-colors"
                 >
-                  <div className="w-11 h-11 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center">
-                    <Camera className="w-5 h-5 text-zinc-900 dark:text-white" />
+                  <div className="w-11 h-11 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white">
+                    <LoopsSvgIcon name="loops-story-camera" className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
                     Camera

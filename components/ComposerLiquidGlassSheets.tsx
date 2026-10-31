@@ -20,6 +20,7 @@ import {
   RefreshCw,
   Loader2,
 } from "lucide-react";
+import { LoopsSvgIcon } from "./LoopsSvgIcon";
 
 const PartyPopperIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
@@ -153,122 +154,27 @@ export const DraftsDocIcon: React.FC<{ className?: string }> = ({
 
 export const MoreCircleDotsIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="9" />
-    <circle cx="8.5" cy="12" r="1" fill="currentColor" stroke="none" />
-    <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-    <circle cx="15.5" cy="12" r="1" fill="currentColor" stroke="none" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-composer-more" className={className} />;
 
 export const StickerPeelSmileIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.85"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M15.5 3H7a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h10a4 4 0 0 0 4-4V8.5L15.5 3Z" />
-    <path d="M15 3v4a2 2 0 0 0 2 2h4" />
-    <circle cx="9" cy="11.5" r="0.9" fill="currentColor" stroke="none" />
-    <path d="M9.5 15.2c1.1 1 2.9 1 4 0" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-composer-sticker" className={className} />;
 
 export const GifBadgeOutlineIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.85"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="4" width="18" height="16" rx="4" />
-    <path d="M9.5 10H7.8a1.3 1.3 0 0 0-1.3 1.3v1.4A1.3 1.3 0 0 0 7.8 14h1.7v-1.8H8.4" />
-    <line x1="12" y1="10" x2="12" y2="14" />
-    <path d="M14.5 14v-4h2.7" />
-    <line x1="14.5" y1="12" x2="16.5" y2="12" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-composer-gif" className={className} />;
 
 export const MusicNotesOutlineIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.85"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M9 18V6l11-2v12" />
-    <path d="M9 10l11-2" />
-    <circle cx="6.5" cy="18" r="2.5" />
-    <circle cx="17.5" cy="16" r="2.5" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-reel-music" className={className} />;
 
 export const SlidersSquareIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.85"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="3" width="18" height="18" rx="4" />
-    <line x1="9" y1="7.5" x2="9" y2="16.5" />
-    <line x1="7" y1="10.5" x2="11" y2="10.5" />
-    <line x1="15" y1="7.5" x2="15" y2="16.5" />
-    <line x1="13" y1="13.5" x2="17" y2="13.5" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-composer-options" className={className} />;
 
 export const DottedGhostCatIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path
-      d="M6.5 9.5L5.8 5.8l3.4 1.6a7.5 7.5 0 0 1 5.6 0l3.4-1.6-.7 3.7a6.8 6.8 0 1 1-11 0Z"
-      strokeDasharray="2.4 2.3"
-    />
-    <circle cx="9.6" cy="12" r="0.9" fill="currentColor" stroke="none" />
-    <circle cx="14.4" cy="12" r="0.9" fill="currentColor" stroke="none" />
-    <path d="M10.6 14.3c.8.6 2 .6 2.8 0" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-composer-ghost" className={className} />;
 
 export const SnippetLinesIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",

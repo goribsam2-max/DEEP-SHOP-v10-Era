@@ -2,17 +2,41 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
-import { useNotify } from "../../components/Notifications";
+import { useNotify, useConfirm } from "../../components/Notifications";
 import Icon from "../../components/Icon";
+import {
+  LOOPS_ICON_CATALOG,
+  LOOPS_SVG_MAP,
+} from "../../lib/loopsSvgRegistry";
+import {
+  LoopsSvgIcon,
+  broadcastLoopsIconUpdate,
+} from "../../components/LoopsSvgIcon";
 
 interface IconConfig {
   key: string;
   name: string;
   description: string;
-  category: "navigation" | "profile" | "commerce" | "dashboard" | "chat" | "social" | "custom";
+  category:
+    | "loops"
+    | "navigation"
+    | "profile"
+    | "commerce"
+    | "dashboard"
+    | "chat"
+    | "social"
+    | "custom";
 }
 
+const LOOPS_PREDEFINED_ICONS: IconConfig[] = LOOPS_ICON_CATALOG.map((item) => ({
+  key: item.key,
+  name: item.name,
+  description: `[${item.section}] ${item.description}`,
+  category: "loops",
+}));
+
 const PREDEFINED_ICONS: IconConfig[] = [
+  ...LOOPS_PREDEFINED_ICONS,
   // Navigation & General UI
   { key: "home", name: "Home Navigation", description: "Bottom tab and main redirect redirects", category: "navigation" },
   { key: "search", name: "Global Search", description: "Header search and search panel navigations", category: "navigation" },
@@ -162,10 +186,11 @@ const PREDEFINED_ICONS: IconConfig[] = [
 const ManageIcons: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const confirmModal = useConfirm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<IconConfig["category"] | "all">("all");
+  const [activeTab, setActiveTab] = useState<IconConfig["category"] | "all">("loops");
   const [autoConvertColors, setAutoConvertColors] = useState(true);
 
   // New Custom Key Registration
@@ -183,6 +208,10 @@ const ManageIcons: React.FC = () => {
   useEffect(() => {
     const fetchIcons = async () => {
       setLoading(true);
+      const baseLoopsDefaults: Record<string, string> = {};
+      Object.keys(LOOPS_SVG_MAP).forEach((k) => {
+        baseLoopsDefaults[k] = LOOPS_SVG_MAP[k];
+      });
       try {
         const snap = await getDoc(doc(db, "settings", "custom_icons"));
         if (snap.exists()) {
@@ -195,7 +224,7 @@ const ManageIcons: React.FC = () => {
             }
           });
           setCustomIcons(iconsData);
-          setInputs(iconsData);
+          setInputs({ ...baseLoopsDefaults, ...iconsData });
 
           // Build dynamic keys that are NOT in PREDEFINED_ICONS but exist in Firestore
           const predefinedKeys = new Set(PREDEFINED_ICONS.map((i) => i.key));
@@ -203,7 +232,6 @@ const ManageIcons: React.FC = () => {
           
           Object.keys(iconsData).forEach((key) => {
             if (!predefinedKeys.has(key)) {
-              // Create readable title
               const formattedName = key
                 .split("-")
                 .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -218,9 +246,12 @@ const ManageIcons: React.FC = () => {
             }
           });
           setDynamicKeys(loadedDynamics);
+        } else {
+          setInputs(baseLoopsDefaults);
         }
       } catch (err) {
         console.error("Error loading custom icons", err);
+        setInputs(baseLoopsDefaults);
         notify("Failed to load icon settings", "error");
       }
       setLoading(false);
@@ -309,10 +340,27 @@ const ManageIcons: React.FC = () => {
       try {
         localStorage.setItem("custom_icons_cache", JSON.stringify(updatedIcons));
       } catch (e) {}
-      
+
+      // Physically replace the SVG inside lib/loopsSvgRegistry.ts on disk so the old SVG is completely removed from the site file
+      if (code) {
+        LOOPS_SVG_MAP[key] = code;
+      }
+      await fetch("/api/admin/loops-icons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, svg: code }),
+      }).catch(() => {});
+
+      broadcastLoopsIconUpdate(updatedIcons);
       setCustomIcons(updatedIcons);
-      setInputs((prev) => ({ ...prev, [key]: code }));
-      notify(`Icon override for "${key}" updated successfully!`, "success");
+      setInputs((prev) => ({
+        ...prev,
+        [key]: code || LOOPS_SVG_MAP[key] || "",
+      }));
+      notify(
+        `SVG icon "${key}" updated and previous SVG removed from site registry!`,
+        "success"
+      );
     } catch (err) {
       console.error(err);
       notify("Failed to save icon override", "error");
@@ -321,7 +369,13 @@ const ManageIcons: React.FC = () => {
   };
 
   const handleResetIcon = async (key: string) => {
-    if (!window.confirm(`Are you sure you want to revert the "${key}" icon back to its original site default?`)) return;
+    const confirmed = await confirmModal({
+      title: "Reset Icon Override",
+      message: `Are you sure you want to clear the custom override for "${key}"?`,
+      confirmText: "Reset",
+      cancelText: "Cancel",
+    });
+    if (!confirmed) return;
     
     setSaving(key);
     try {
@@ -332,15 +386,19 @@ const ManageIcons: React.FC = () => {
       try {
         localStorage.setItem("custom_icons_cache", JSON.stringify(updatedIcons));
       } catch (e) {}
+      broadcastLoopsIconUpdate(updatedIcons);
       
       setCustomIcons(updatedIcons);
       setInputs((prev) => {
         const copy = { ...prev };
-        delete copy[key];
+        if (LOOPS_SVG_MAP[key]) {
+          copy[key] = LOOPS_SVG_MAP[key];
+        } else {
+          delete copy[key];
+        }
         return copy;
       });
 
-      // If it was a dynamically registered custom key, remove from UI if empty
       const isPredefined = PREDEFINED_ICONS.some((p) => p.key === key);
       if (!isPredefined) {
         setDynamicKeys((prev) => prev.filter((d) => d.key !== key));
@@ -355,7 +413,14 @@ const ManageIcons: React.FC = () => {
   };
 
   const handleResetAll = async () => {
-    if (!window.confirm("WARNING: This will delete ALL custom icon overrides on the entire website, returning everything back to default Lucide styles. Do you wish to proceed?")) return;
+    const confirmed = await confirmModal({
+      title: "Reset All Overrides",
+      message:
+        "This will clear all custom Firestore icon overrides across the site. Do you wish to proceed?",
+      confirmText: "Reset All",
+      cancelText: "Cancel",
+    });
+    if (!confirmed) return;
     
     setLoading(true);
     try {
@@ -363,8 +428,13 @@ const ManageIcons: React.FC = () => {
       try {
         localStorage.removeItem("custom_icons_cache");
       } catch (e) {}
+      broadcastLoopsIconUpdate({});
       setCustomIcons({});
-      setInputs({});
+      const baseLoopsDefaults: Record<string, string> = {};
+      Object.keys(LOOPS_SVG_MAP).forEach((k) => {
+        baseLoopsDefaults[k] = LOOPS_SVG_MAP[k];
+      });
+      setInputs(baseLoopsDefaults);
       setDynamicKeys([]);
       notify("All icon overrides cleared!", "success");
     } catch (err) {
@@ -389,6 +459,7 @@ const ManageIcons: React.FC = () => {
   });
 
   const categories = [
+    { id: "loops", label: `Loops & Reels (${LOOPS_PREDEFINED_ICONS.length})` },
     { id: "all", label: "All Overrides" },
     { id: "navigation", label: "Navigation" },
     { id: "profile", label: "Profile" },
@@ -599,7 +670,15 @@ const ManageIcons: React.FC = () => {
                     <div className="flex flex-col items-center shrink-0">
                       <span className="text-[9px] font-bold text-zinc-400 mb-1">Preview</span>
                       <div className="w-10 h-10 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-zinc-900 dark:text-zinc-50">
-                        <Icon name={icon.key} className="w-5 h-5" />
+                        {icon.category === "loops" ? (
+                          <LoopsSvgIcon
+                            name={icon.key}
+                            previewOverrideSvg={inputs[icon.key]}
+                            className="w-5 h-5"
+                          />
+                        ) : (
+                          <Icon name={icon.key} className="w-5 h-5" />
+                        )}
                       </div>
                     </div>
                   </div>

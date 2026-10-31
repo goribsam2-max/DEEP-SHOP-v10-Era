@@ -1,7 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { X, FileText, Video, Sparkles, Plus, Image as ImageIcon, Camera } from "lucide-react";
+import { X } from "lucide-react";
 import { triggerHaptic } from "../lib/haptics";
+import { LoopsSvgIcon } from "./LoopsSvgIcon";
 
 interface CreateChooserModalProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ export const CreateChooserModal: React.FC<CreateChooserModalProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-full bg-[#0095F6]/15 text-[#0095F6] flex items-center justify-center">
-              <Plus className="w-5 h-5" />
+              <LoopsSvgIcon name="loops-header-create" className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-zinc-950 dark:text-white leading-tight">
@@ -61,7 +62,7 @@ export const CreateChooserModal: React.FC<CreateChooserModalProps> = ({
             className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-[#0095F6] transition flex flex-col items-center justify-center gap-2.5 text-center group cursor-pointer"
           >
             <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-[#0095F6] flex items-center justify-center group-hover:scale-105 transition-transform">
-              <FileText className="w-6 h-6" />
+              <LoopsSvgIcon name="loops-chooser-post" className="w-6 h-6" />
             </div>
             <div>
               <p className="text-sm font-bold text-zinc-900 dark:text-white">
@@ -84,7 +85,7 @@ export const CreateChooserModal: React.FC<CreateChooserModalProps> = ({
             className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 hover:border-[#0095F6] transition flex flex-col items-center justify-center gap-2.5 text-center group cursor-pointer"
           >
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-[#3B5BDB] dark:text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Video className="w-6 h-6" />
+              <LoopsSvgIcon name="loops-chooser-reel" className="w-6 h-6" />
             </div>
             <div>
               <p className="text-sm font-bold text-zinc-900 dark:text-white">

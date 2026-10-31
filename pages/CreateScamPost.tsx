@@ -29,6 +29,8 @@ import {
   Volume2,
   Loader2,
 } from "lucide-react";
+import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
+import { pingBingIndexNow } from "../lib/indexNowClient";
 import { auth, db } from "../firebase";
 import {
   collection,
@@ -1692,6 +1694,9 @@ function cleanPayload<T>(obj: T): T {
       const ref = await addDoc(collection(db, "scam_posts"), fullNewDoc);
       const createdId = ref.id;
 
+      // Notify Bing IndexNow for instant search indexing
+      pingBingIndexNow([`/loops/post/${createdId}`, "/loops"]).catch(() => {});
+
       // Handle "Also share on..." options from PostOptionsBottomSheet
       if (alsoShareOn.includes("copy_link")) {
         try {
@@ -2212,7 +2217,10 @@ function cleanPayload<T>(obj: T): T {
                     title="Attach photos"
                     aria-label="Attach photos"
                   >
-                    <ImageIcon className="w-[21px] h-[21px] stroke-[1.85]" />
+                    <LoopsSvgIcon
+                      name="loops-composer-photo"
+                      className="w-[21px] h-[21px]"
+                    />
                   </button>
 
                   <button
@@ -3353,7 +3361,10 @@ function cleanPayload<T>(obj: T): T {
                   aria-label="Voice note studio"
                   className="w-14 h-14 rounded-full bg-gradient-to-b from-[#55AAFF] via-[#227BF3] to-[#125ED6] text-white flex items-center justify-center shadow-[0_10px_26px_rgba(24,119,242,0.48)] ring-4 ring-blue-400/20 active:scale-90 transition cursor-pointer shrink-0"
                 >
-                  <Mic className="w-5 h-5 stroke-[2.2]" />
+                  <LoopsSvgIcon
+                    name="loops-composer-mic"
+                    className="w-5 h-5"
+                  />
                 </button>
               </div>
 

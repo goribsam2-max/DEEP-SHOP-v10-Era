@@ -5,12 +5,22 @@ import { db } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
 import Icon from "../../components/Icon";
 import { uploadToImgbb } from "../../services/imgbb";
+import {
+  BING_INDEXNOW_KEY,
+  BING_INDEXNOW_KEY_PATH,
+  pingBingIndexNow,
+} from "../../lib/indexNowClient";
 
 const ManageSEO: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pingingSearch, setPingingSearch] = useState(false);
+  const [submittingIndexNow, setSubmittingIndexNow] = useState(false);
+  const [indexNowUrlsInput, setIndexNowUrlsInput] = useState(
+    "/\n/loops\n/loops?filter=video\n/all-products\n/flash-sale\n/blog"
+  );
 
   const [seoData, setSeoData] = useState({
     metaTitle: "",
@@ -106,10 +116,117 @@ const ManageSEO: React.FC = () => {
                <li><b>User Engagement:</b> If users click your site and leave immediately, Google drops your rank. Keep them engaged!</li>
                <li><b>Consistent Updates:</b> Regularly adding new products and blogs shows Google your site is alive.</li>
             </ul>
-            <button type="button" onClick={() => window.open('https://www.google.com/ping?sitemap=https://www.deepshop.top/sitemap.xml', '_blank')} className="text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-full transition-colors inline-block">
-               Ping Google (Force Recrawl)
+            <button
+              type="button"
+              disabled={pingingSearch}
+              onClick={async () => {
+                setPingingSearch(true);
+                try {
+                  await Promise.all([
+                    fetch("/api/seo/ping-sitemap", { method: "POST" }),
+                    pingBingIndexNow(),
+                  ]);
+                  notify(
+                    "Sitemap & Bing IndexNow recrawl request sent!",
+                    "success"
+                  );
+                } catch {
+                  notify("Failed to ping search engines", "error");
+                } finally {
+                  setPingingSearch(false);
+                }
+              }}
+              className="text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2 rounded-full transition-colors inline-block cursor-pointer"
+            >
+              {pingingSearch ? "Pinging Search Engines..." : "Ping Search Engines (Force Recrawl)"}
             </button>
          </div>
+      </div>
+
+      {/* Bing IndexNow Instant Indexing Integration */}
+      <div className="bg-white dark:bg-zinc-900 border border-sky-200/80 dark:border-sky-900/50 p-6 md:p-7 rounded-2xl mb-8 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+              Bing IndexNow Instant Indexing
+            </h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Verified ownership key integrated at{" "}
+              <a
+                href={BING_INDEXNOW_KEY_PATH}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono font-semibold text-sky-600 dark:text-sky-400 underline underline-offset-2"
+              >
+                {BING_INDEXNOW_KEY_PATH}
+              </a>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(BING_INDEXNOW_KEY);
+                notify("Copied Bing IndexNow key!", "success");
+              } catch {
+                notify("Could not copy key", "error");
+              }
+            }}
+            className="px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-mono font-semibold text-zinc-800 dark:text-zinc-200 transition-colors cursor-pointer self-start sm:self-center"
+          >
+            Key: {BING_INDEXNOW_KEY}
+          </button>
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mb-1.5">
+            URLs to Submit Instantly (one path or full URL per line)
+          </label>
+          <textarea
+            rows={4}
+            value={indexNowUrlsInput}
+            onChange={(e) => setIndexNowUrlsInput(e.target.value)}
+            placeholder="/loops&#10;/all-products"
+            className="w-full rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-3 text-xs font-mono text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+            New Loops posts &amp; Reels also notify Bing IndexNow automatically when published.
+          </p>
+          <button
+            type="button"
+            disabled={submittingIndexNow}
+            onClick={async () => {
+              setSubmittingIndexNow(true);
+              try {
+                const urls = indexNowUrlsInput
+                  .split(/\r?\n/)
+                  .map((line) => line.trim())
+                  .filter(Boolean);
+                const result = await pingBingIndexNow(urls);
+                if (result.ok) {
+                  notify(
+                    `Submitted ${result.submittedCount || urls.length} URLs to Bing IndexNow!`,
+                    "success"
+                  );
+                } else {
+                  notify("IndexNow submission returned an error", "error");
+                }
+              } catch {
+                notify("Failed to submit URLs to Bing IndexNow", "error");
+              } finally {
+                setSubmittingIndexNow(false);
+              }
+            }}
+            className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
+          >
+            {submittingIndexNow
+              ? "Submitting to Bing..."
+              : "Submit URLs to Bing IndexNow"}
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-8">

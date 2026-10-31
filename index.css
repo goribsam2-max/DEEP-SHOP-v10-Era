@@ -2125,22 +2125,47 @@ html.dark .loops-highlight-inner span {
   color: #ffffff !important;
 }
 
-/* Reels Cinema Smoked-Glass Bottom Dock (IMG_5142) */
+/* Reels Cinema Compact Smoked-Glass Bottom Dock (IMG_5297 & IMG_5298) */
 html:not(.dark) .loops-reels-dock-pill,
 html.dark .loops-reels-dock-pill {
-  background: rgba(34, 34, 38, 0.78) !important;
-  backdrop-filter: blur(28px) saturate(185%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(185%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 0 14px 38px -6px rgba(0, 0, 0, 0.65) !important;
+  background: rgba(38, 39, 44, 0.84) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
+  box-shadow: 0 12px 34px -6px rgba(0, 0, 0, 0.68) !important;
   color: #ffffff !important;
 }
 
 html:not(.dark) .loops-reels-dock-active-pill,
 html.dark .loops-reels-dock-active-pill {
-  background-color: rgba(255, 255, 255, 0.22) !important;
+  background-color: rgba(255, 255, 255, 0.24) !important;
   color: #ffffff !important;
   box-shadow: none !important;
+}
+
+/* Scrubbable Ultra-Thin Reel Progress Bar (IMG_5298 — zero inline styles) */
+.loops-reel-progress {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: rgba(255, 255, 255, 0.32);
+  border: none;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.loops-reel-progress::-webkit-progress-bar {
+  background-color: transparent;
+}
+
+.loops-reel-progress::-webkit-progress-value {
+  background-color: #ffffff;
+  border-radius: 9999px;
+  transition: width 120ms linear;
+}
+
+.loops-reel-progress::-moz-progress-bar {
+  background-color: #ffffff;
+  border-radius: 9999px;
 }
 
 /* ==========================================================================

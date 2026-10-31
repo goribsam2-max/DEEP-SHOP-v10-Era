@@ -80,106 +80,43 @@ import {
   getTotalPostReactions,
   hasUserReactedToPost,
 } from "../lib/feedAlgorithm";
+import { LoopsSvgIcon } from "./LoopsSvgIcon";
+import {
+  ReelAudioDetailsModal,
+  ReelPlaybackSheet,
+  ReelsSuggestedProfilesSlide,
+  SuggestedReelProfileItem,
+} from "./LoopsReelsOverlays";
 
 /* ============================================================================
- * CRISP CUSTOM VECTOR ICONS (Matching IMG_5142, IMG_5143, IMG_5144, IMG_5145)
+ * CRISP CUSTOM VECTOR ICONS (Delegated to Admin-Editable LoopsSvgIcon Registry)
  * ========================================================================== */
 
-/** Top-right Algorithm Sliders Icon with mini heart/circle thumbs (IMG_5142) */
+/** Top-right Algorithm Sliders Icon */
 export const ReelsTuneAlgorithmIcon: React.FC<{ className?: string }> = ({
   className = "w-6 h-6",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="3.5" y1="8" x2="8.2" y2="8" />
-    <line x1="14.8" y1="8" x2="20.5" y2="8" />
-    <path
-      d="M11.5 10.3C11.5 10.3 8.8 8.6 8.8 6.9C8.8 5.9 9.6 5.2 10.5 5.2C11.1 5.2 11.5 5.6 11.5 5.6C11.5 5.6 11.9 5.2 12.5 5.2C13.4 5.2 14.2 5.9 14.2 6.9C14.2 8.6 11.5 10.3 11.5 10.3Z"
-      fill="none"
-    />
-    <line x1="3.5" y1="16.5" x2="10.2" y2="16.5" />
-    <line x1="16.8" y1="16.5" x2="20.5" y2="16.5" />
-    <path
-      d="M13.5 18.8C13.5 18.8 10.8 17.1 10.8 15.4C10.8 14.4 11.6 13.7 12.5 13.7C13.1 13.7 13.5 14.1 13.5 14.1C13.5 14.1 13.9 13.7 14.5 13.7C15.4 13.7 16.2 14.4 16.2 15.4C16.2 17.1 13.5 18.8 13.5 18.8Z"
-      fill="none"
-    />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-reel-algorithm" className={className} />;
 
 const ReelCommentBubbleIcon: React.FC<{ className?: string }> = ({
   className = "w-7 h-7",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-reel-comment" className={className} />;
 
 const ReelRepostLoopIcon: React.FC<{ className?: string }> = ({
   className = "w-7 h-7",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M17 2l3.5 3.5L17 9" />
-    <path d="M5 11V8.5A3 3 0 0 1 8 5.5h12.5" />
-    <path d="M7 22l-3.5-3.5L7 15" />
-    <path d="M19 13v2.5a3 3 0 0 1-3 3H3.5" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-reel-repost" className={className} />;
 
 const ReelSharePlaneIcon: React.FC<{ className?: string }> = ({
   className = "w-7 h-7",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21.5 3.8H2.8L9.6 10.7L12.3 20.3L21.5 3.8Z" />
-    <path d="M21.5 3.8L9.6 10.7" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-reel-share" className={className} />;
 
 const ReelBookmarkRibbonIcon: React.FC<{
   className?: string;
   filled?: boolean;
 }> = ({ className = "w-7 h-7", filled = false }) => (
-  <svg
+  <LoopsSvgIcon
+    name={filled ? "loops-reel-save-active" : "loops-reel-save"}
     className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? "currentColor" : "none"}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-  </svg>
+  />
 );
 
 const UseReferenceIcon: React.FC<{ className?: string }> = ({
@@ -284,21 +221,7 @@ const GifSquareBadgeIcon: React.FC<{ className?: string }> = ({
 
 const ReelViewEyeIcon: React.FC<{ className?: string }> = ({
   className = "w-[26px] h-[26px]",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.15"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M2.5 12.1c0 0 4.5-7.8 9.5-7.8s9.5 7.8 9.5 7.8-4.5 7.8-9.5 7.8-9.5-7.8-9.5-7.8z" />
-    <circle cx="12" cy="12.1" r="3.2" fill="currentColor" fillOpacity="0.12" />
-    <circle cx="12" cy="12.1" r="1" fill="currentColor" />
-  </svg>
-);
+}) => <LoopsSvgIcon name="loops-reel-views" className={className} />;
 
 const GiftRibbonOutlineIcon: React.FC<{ className?: string }> = ({
   className = "w-6 h-6",
@@ -1017,11 +940,10 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
               aria-label={isMuted ? "Unmute reel" : "Mute reel"}
               className="pointer-events-auto w-12 h-12 rounded-full bg-black/45 backdrop-blur-md border border-white/15 text-white flex items-center justify-center active:scale-90 transition cursor-pointer shadow-lg touch-manipulation"
             >
-              {isMuted ? (
-                <VolumeX className="w-5 h-5" />
-              ) : (
-                <Volume2 className="w-5 h-5" />
-              )}
+              <LoopsSvgIcon
+                name={isMuted ? "loops-reel-mute" : "loops-reel-unmute"}
+                className="w-5 h-5"
+              />
             </button>
 
             <button
@@ -1053,7 +975,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
           aria-label="Unmute audio"
           className="absolute right-3.5 top-[62px] z-20 w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white flex items-center justify-center active:scale-90 transition cursor-pointer touch-manipulation"
         >
-          <VolumeX className="w-4 h-4" />
+          <LoopsSvgIcon name="loops-reel-mute" className="w-4 h-4" />
         </button>
       )}
     </div>
@@ -1510,6 +1432,8 @@ const AboutThisReelSheet: React.FC<{
   onMarkInterested: (post: ScamPost) => void;
   onMarkNotInterested: (post: ScamPost) => void;
   onOpenAlgorithm: () => void;
+  onOpenAudioDetails?: () => void;
+  onOpenPlaybackSheet?: () => void;
   onClose: () => void;
 }> = ({
   isOpen,
@@ -1525,6 +1449,8 @@ const AboutThisReelSheet: React.FC<{
   onMarkInterested,
   onMarkNotInterested,
   onOpenAlgorithm,
+  onOpenAudioDetails,
+  onOpenPlaybackSheet,
   onClose,
 }) => {
   const navigate = useNavigate();
@@ -1712,22 +1638,31 @@ const AboutThisReelSheet: React.FC<{
                 onClick={() => {
                   triggerHaptic();
                   onClose();
-                  if (post.reporterId) {
+                  if (onOpenAudioDetails) {
+                    onOpenAudioDetails();
+                  } else if (post.reporterId) {
                     navigate(`/loops/profile/${post.reporterId}`);
                   }
                 }}
                 className="w-full px-4 py-3.5 flex items-center gap-3.5 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition cursor-pointer"
               >
-                {creatorAvatar ? (
+                {post.music?.cover || post.music?.coverUrl || creatorAvatar ? (
                   <img
-                    src={creatorAvatar}
-                    alt={creatorHandle}
+                    src={
+                      post.music?.cover ||
+                      post.music?.coverUrl ||
+                      creatorAvatar
+                    }
+                    alt={audioTitle}
                     referrerPolicy="no-referrer"
                     className="w-10 h-10 rounded-xl object-cover shrink-0"
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                    <Music2 className="w-5 h-5 text-zinc-500" />
+                    <LoopsSvgIcon
+                      name="loops-reel-music"
+                      className="w-5 h-5 text-zinc-500"
+                    />
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
@@ -1781,32 +1716,28 @@ const AboutThisReelSheet: React.FC<{
                 type="button"
                 onClick={() => {
                   triggerHaptic();
-                  setShowPlaybackPanel((prev) => !prev);
+                  if (onOpenPlaybackSheet) {
+                    onClose();
+                    onOpenPlaybackSheet();
+                  } else {
+                    setShowPlaybackPanel((prev) => !prev);
+                  }
                 }}
                 className="w-full px-4 py-3.5 flex items-center justify-between gap-3.5 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition cursor-pointer"
               >
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 flex items-center justify-center shrink-0 text-zinc-900 dark:text-white">
-                    <svg
+                    <LoopsSvgIcon
+                      name="loops-reel-autoscroll"
                       className="w-[22px] h-[22px]"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <circle cx="12" cy="12" r="9.5" />
-                      <polygon
-                        points="10.2 8.6 15.8 12 10.2 15.4 10.2 8.6"
-                        fill="none"
-                      />
-                    </svg>
+                    />
                   </div>
                   <span className="text-[15.5px] font-medium text-zinc-950 dark:text-white">
                     Playback
                   </span>
                 </div>
                 <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 tabular-nums">
-                  {playbackSpeed}x
+                  {autoAdvance ? "Auto-scroll" : `${playbackSpeed}x`}
                 </span>
               </button>
 
@@ -2837,7 +2768,32 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
   const [browserAutoMuted, setBrowserAutoMuted] = useState(false);
   const effectiveMuted = isMuted || browserAutoMuted;
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("loops_reels_autoscroll") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [closedCaptions, setClosedCaptions] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("loops_reels_cc") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [isFullScreenMode, setIsFullScreenMode] = useState(false);
+  const [playbackSheetOpen, setPlaybackSheetOpen] = useState(false);
+  const [audioDetailsPost, setAudioDetailsPost] = useState<ScamPost | null>(
+    null
+  );
+  const [isSuggestedSlideActive, setIsSuggestedSlideActive] = useState(false);
+  const [dismissedSuggestedUids, setDismissedSuggestedUids] = useState<
+    Record<string, boolean>
+  >({});
+  const [sessionFollowedSuggestedUids, setSessionFollowedSuggestedUids] =
+    useState<Record<string, boolean>>({});
+  const reelFrameRef = useRef<HTMLDivElement | null>(null);
   const [progressPct, setProgressPct] = useState(0);
   const [expandedCaptionId, setExpandedCaptionId] = useState<string | null>(
     null
@@ -2845,6 +2801,63 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
   const [resolvedMap, setResolvedMap] = useState<
     Record<string, ParsedVideoEmbed>
   >({});
+
+  const handleToggleAutoAdvance = () => {
+    setAutoAdvance((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("loops_reels_autoscroll", next ? "1" : "0");
+      } catch {}
+      notify(
+        next ? "Auto-scroll enabled" : "Auto-scroll turned off",
+        "info"
+      );
+      return next;
+    });
+  };
+
+  const handleToggleClosedCaptions = () => {
+    setClosedCaptions((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("loops_reels_cc", next ? "1" : "0");
+      } catch {}
+      notify(
+        next ? "Closed captions enabled" : "Closed captions turned off",
+        "info"
+      );
+      return next;
+    });
+  };
+
+  const handleEnterFullScreen = () => {
+    setIsFullScreenMode(true);
+    try {
+      const el = reelFrameRef.current;
+      if (el && typeof el.requestFullscreen === "function" && !document.fullscreenElement) {
+        el.requestFullscreen().catch(() => {});
+      }
+    } catch {}
+  };
+
+  const handleExitFullScreen = () => {
+    setIsFullScreenMode(false);
+    try {
+      if (document.fullscreenElement && typeof document.exitFullscreen === "function") {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement) {
+        setIsFullScreenMode(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
 
   // Unlock Reel audio inside a real click user-activation gesture (NEVER on touchstart/pointerdown,
   // which previously triggered mid-tap re-renders and swallowed first taps on mobile buttons!)
@@ -2927,8 +2940,14 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     Record<string, boolean>
   >({});
 
+  // Keep anySheetOpen false on Suggested Profiles slide so compact Reels dock remains visible (IMG_5297)
   const anySheetOpen = Boolean(
-    commentsOpenPostId || aboutOpenPostId || algorithmModalOpen
+    commentsOpenPostId ||
+      aboutOpenPostId ||
+      algorithmModalOpen ||
+      playbackSheetOpen ||
+      audioDetailsPost ||
+      isFullScreenMode
   );
 
   useEffect(() => {
@@ -2957,6 +2976,76 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
 
     return base;
   }, [posts, reelsSubTab, followedIds, currentUser?.uid]);
+
+  // Real Suggested Profiles for Reels Interstitial Slide (IMG_5297 — 100% real Firestore users)
+  const suggestedProfiles = useMemo<SuggestedReelProfileItem[]>(() => {
+    const seen = new Set<string>();
+    const list: SuggestedReelProfileItem[] = [];
+    const viewerUid = currentUser?.uid || "";
+
+    communityUserMap.forEach((uDoc, uidKey) => {
+      const uid = String(uDoc?.uid || uDoc?.id || uidKey || "").trim();
+      if (!uid || uid === viewerUid || seen.has(uid)) return;
+      if (dismissedSuggestedUids[uid]) return;
+      if (followedIds.includes(uid) && !sessionFollowedSuggestedUids[uid]) {
+        return;
+      }
+      const displayName = getSafeDisplayName(
+        uDoc?.shopName || uDoc?.displayName || uDoc?.username || ""
+      );
+      if (!displayName || displayName === "User") return;
+      const handle =
+        getSafePublicUsername(uDoc) ||
+        displayName.toLowerCase().replace(/\s+/g, "_");
+      const avatar = String(uDoc?.shopLogo || uDoc?.photoURL || "").trim();
+      const followsViewer = Boolean(
+        viewerUid &&
+          Array.isArray(uDoc?.following) &&
+          uDoc.following.includes(viewerUid)
+      );
+      seen.add(uid);
+      list.push({ uid, displayName, handle, avatar, followsViewer });
+    });
+
+    const sourcePool = allPosts.length > 0 ? allPosts : posts;
+    sourcePool.forEach((p) => {
+      const uid = (p.reporterId || "").trim();
+      if (!uid || uid === viewerUid || seen.has(uid)) return;
+      if (dismissedSuggestedUids[uid]) return;
+      if (followedIds.includes(uid) && !sessionFollowedSuggestedUids[uid]) {
+        return;
+      }
+      const displayName = getSafeDisplayName(p.reporterName || "");
+      if (!displayName || displayName === "User") return;
+      const avatar = (p.reporterAvatar || "").trim();
+      seen.add(uid);
+      list.push({
+        uid,
+        displayName,
+        handle: displayName.toLowerCase().replace(/\s+/g, "_"),
+        avatar,
+        followsViewer: false,
+      });
+    });
+
+    return list.sort((a, b) => {
+      if (a.followsViewer !== b.followsViewer) {
+        return a.followsViewer ? -1 : 1;
+      }
+      if (Boolean(a.avatar) !== Boolean(b.avatar)) {
+        return a.avatar ? -1 : 1;
+      }
+      return 0;
+    });
+  }, [
+    communityUserMap,
+    allPosts,
+    posts,
+    currentUser?.uid,
+    followedIds,
+    dismissedSuggestedUids,
+    sessionFollowedSuggestedUids,
+  ]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -3040,13 +3129,15 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     return () => unsub();
   }, [activeItem?.post.id]);
 
-  // Observe snap slides to update activeIndex
+  // Observe snap slides (both Reel slides and Suggested Profiles slides)
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || typeof IntersectionObserver === "undefined") return;
 
     const slides = Array.from(
-      container.querySelectorAll<HTMLElement>("[data-reel-index]")
+      container.querySelectorAll<HTMLElement>(
+        "[data-reel-index], [data-suggested-slide]"
+      )
     );
     if (!slides.length) return;
 
@@ -3055,10 +3146,14 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
         if (Date.now() < programmaticScrollUntilRef.current) return;
         entries.forEach((entry) => {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.58) {
-            const idx = Number(
-              (entry.target as HTMLElement).dataset.reelIndex || 0
-            );
+            const targetEl = entry.target as HTMLElement;
+            if (targetEl.dataset.suggestedSlide === "true") {
+              setIsSuggestedSlideActive(true);
+              return;
+            }
+            const idx = Number(targetEl.dataset.reelIndex || 0);
             if (!Number.isNaN(idx)) {
+              setIsSuggestedSlideActive(false);
               setActiveIndex(idx);
             }
           }
@@ -3072,7 +3167,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
 
     slides.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [reelItems.length, reelsSubTab]);
+  }, [reelItems.length, reelsSubTab, suggestedProfiles.length]);
 
   const jumpToReelIndex = (targetIdx: number) => {
     const clamped = Math.max(0, Math.min(reelItems.length - 1, targetIdx));
@@ -3081,8 +3176,27 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       `[data-reel-index="${clamped}"]`
     );
     if (el) {
+      programmaticScrollUntilRef.current = Date.now() + 500;
+      setIsSuggestedSlideActive(false);
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       setActiveIndex(clamped);
+    }
+  };
+
+  const handleScrubProgress = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+    const ratio = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / rect.width)
+    );
+    const activeVid = document.querySelector<HTMLVideoElement>(
+      'video[data-active-reel-video="true"]'
+    );
+    if (activeVid && Number.isFinite(activeVid.duration) && activeVid.duration > 0) {
+      activeVid.currentTime = ratio * activeVid.duration;
+      setProgressPct(ratio * 100);
     }
   };
 
@@ -3146,11 +3260,32 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
   const isCommentsDockedMode = Boolean(commentsOpenPostId && activeItem);
 
   return (
-    <div className="fixed inset-0 z-40 bg-black text-white flex justify-center overflow-hidden select-none touch-manipulation">
+    <div
+      ref={reelFrameRef}
+      className="fixed inset-0 z-40 bg-black text-white flex justify-center overflow-hidden select-none touch-manipulation"
+    >
       {/* Main Centered Reels Column (Full-bleed on Mobile, Cinema Frame on Desktop) */}
       <div className="relative w-full max-w-[480px] h-[100dvh] bg-black overflow-hidden md:border-x md:border-white/10">
-        {/* TOP OVERLAY HEADER: + | Reels · Friends | Algorithm Sliders (Exact IMG_5142) */}
-        {!isCommentsDockedMode && (
+        {/* EXIT FULL-SCREEN PILL (Visible when View full-screen from IMG_5299 Playback sheet is active) */}
+        {isFullScreenMode && (
+          <div className="absolute top-0 inset-x-0 z-40 pt-[max(0.75rem,env(safe-area-inset-top))] px-4 flex items-center justify-between pointer-events-none">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                handleExitFullScreen();
+              }}
+              aria-label="Exit full-screen"
+              className="pointer-events-auto h-10 px-3.5 rounded-full bg-black/55 backdrop-blur-md border border-white/20 text-white text-[13px] font-semibold inline-flex items-center gap-1.5 active:scale-95 transition cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Exit full-screen</span>
+            </button>
+          </div>
+        )}
+
+        {/* TOP OVERLAY HEADER: + | Reels · Friends | Algorithm Sliders */}
+        {!isCommentsDockedMode && !isFullScreenMode && (
           <header
             onTouchStart={(e) => e.stopPropagation()}
             className="absolute top-0 inset-x-0 z-30 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 px-4 flex items-center justify-between bg-gradient-to-b from-black/70 via-black/25 to-transparent pointer-events-none"
@@ -3168,7 +3303,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
               aria-label="Upload Reel or Loop"
               className="pointer-events-auto w-11 h-11 -ml-1.5 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition cursor-pointer touch-manipulation"
             >
-              <Plus className="w-7 h-7 stroke-[2]" />
+              <LoopsSvgIcon name="loops-reel-create" className="w-7 h-7" />
             </button>
 
             <div className="pointer-events-auto flex items-center gap-5">
@@ -3315,7 +3450,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
               const showSlideDocked =
                 isSlideActive && commentsOpenPostId === post.id;
 
-              return (
+              const reelSection = (
                 <section
                   key={post.id}
                   data-reel-index={idx}
@@ -3346,7 +3481,11 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                       <SingleReelMediaStage
                         post={post}
                         videoSource={videoSource}
-                        isActive={isSlideActive}
+                        isActive={
+                          isSlideActive &&
+                          !isSuggestedSlideActive &&
+                          !audioDetailsPost
+                        }
                         isMuted={effectiveMuted}
                         playbackSpeed={playbackSpeed}
                         isDocked={showSlideDocked}
@@ -3384,7 +3523,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                       )}
                     </div>
 
-                    {/* Bottom-Right Speaker Toggle on Upper Docked Stage (Exact IMG_5145) */}
+                    {/* Bottom-Right Speaker Toggle on Upper Docked Stage */}
                     {showSlideDocked && (
                       <button
                         type="button"
@@ -3396,11 +3535,14 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                         aria-label={effectiveMuted ? "Unmute" : "Mute"}
                         className="absolute right-4 bottom-3 z-40 w-9 h-9 rounded-full bg-zinc-800/85 hover:bg-zinc-700 text-white flex items-center justify-center shadow-lg cursor-pointer"
                       >
-                        {effectiveMuted ? (
-                          <VolumeX className="w-4 h-4" />
-                        ) : (
-                          <Volume2 className="w-4 h-4" />
-                        )}
+                        <LoopsSvgIcon
+                          name={
+                            effectiveMuted
+                              ? "loops-reel-mute"
+                              : "loops-reel-unmute"
+                          }
+                          className="w-4 h-4"
+                        />
                       </button>
                     )}
                   </div>
@@ -3422,11 +3564,12 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                     />
                   )}
 
-                  {/* FULL-SCREEN OVERLAYS (Hidden while split-screen comments sheet is open) */}
-                  {!showSlideDocked && (
+                  {/* FULL-SCREEN OVERLAYS (Hidden while split-screen comments sheet or full-screen mode is active) */}
+                  {!showSlideDocked && !isFullScreenMode && (
                     <>
-                      {/* Optional Top Featured Real Comment Card (Exact IMG_5142 — only when real comment exists) */}
+                      {/* Optional Top Featured Real Comment Card (only when real comment exists) */}
                       {isSlideActive &&
+                        !isSuggestedSlideActive &&
                         topFeaturedComment &&
                         !dismissedFeaturedBanner[post.id] && (
                           <div
@@ -3493,7 +3636,10 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                                 >
                                   <X className="w-3.5 h-3.5" />
                                 </button>
-                                <Heart className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 mt-0.5" />
+                                <LoopsSvgIcon
+                                  name="loops-reel-like"
+                                  className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 mt-0.5"
+                                />
                                 {getTotalCommentLikes(topFeaturedComment) >
                                   0 && (
                                   <span className="text-[10.5px] font-semibold text-zinc-600 dark:text-zinc-300 tabular-nums">
@@ -3508,12 +3654,12 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                         )}
 
                       {/* Bottom Gradient Scrim for Guaranteed Legibility */}
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-gradient-to-t from-black/90 via-black/45 to-transparent z-10" />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/85 via-black/40 to-transparent z-10" />
 
-                      {/* RIGHT VERTICAL ACTION RAIL (Exact IMG_5142) */}
+                      {/* RIGHT VERTICAL ACTION RAIL (Exact IMG_5298) */}
                       <div
                         onTouchStart={(e) => e.stopPropagation()}
-                        className="absolute right-3 bottom-[108px] z-20 flex flex-col items-center gap-4 touch-manipulation"
+                        className="absolute right-3 bottom-[76px] z-20 flex flex-col items-center gap-3.5 touch-manipulation"
                       >
                         {/* 1. Like */}
                         <button
@@ -3522,11 +3668,14 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                           aria-label="Like reel"
                           className="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1 text-white active:scale-90 transition cursor-pointer"
                         >
-                          <Heart
-                            className={`w-[28px] h-[28px] drop-shadow ${
+                          <LoopsSvgIcon
+                            name={
                               isLiked
-                                ? "text-[#FF3040] fill-[#FF3040]"
-                                : "text-white"
+                                ? "loops-reel-like-active"
+                                : "loops-reel-like"
+                            }
+                            className={`w-[28px] h-[28px] drop-shadow ${
+                              isLiked ? "text-[#FF3040]" : "text-white"
                             }`}
                           />
                           <span className="text-[12px] font-semibold tabular-nums drop-shadow">
@@ -3549,9 +3698,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                         >
                           <ReelCommentBubbleIcon className="w-[27px] h-[27px] drop-shadow" />
                           <span className="text-[12px] font-semibold tabular-nums drop-shadow">
-                            {(post.commentsCount || 0) > 0
-                              ? formatCompactNumber(post.commentsCount || 0)
-                              : "0"}
+                            {formatCompactNumber(post.commentsCount || 0)}
                           </span>
                         </button>
 
@@ -3608,58 +3755,54 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                           )}
                         </button>
 
-                        {/* 6. View Insights (IMG_5259 requested) */}
+                        {/* 6. Asymmetric Two-Line Menu (Exact IMG_5298 Bottom-Right Trigger) */}
                         <button
                           type="button"
                           onClick={() => {
                             triggerHaptic();
                             setAboutOpenPostId(post.id);
                           }}
-                          aria-label="View insights"
-                          className="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1 text-white active:scale-90 transition cursor-pointer"
+                          aria-label="Reel options and playback"
+                          title="Reel options and playback"
+                          className="min-w-[44px] min-h-[38px] flex items-center justify-center text-white/95 hover:text-white active:scale-90 transition cursor-pointer"
                         >
-                          <ReelViewEyeIcon className="w-[26px] h-[26px] drop-shadow" />
-                          <span className="text-[12px] font-semibold tabular-nums drop-shadow">
-                            {formatCompactNumber(post.views || 68)}
-                          </span>
-                        </button>
-
-                        {/* 7. More / About This Reel Square Audio Tile (Exact IMG_5142 bottom-right square) */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic();
-                            setAboutOpenPostId(post.id);
-                          }}
-                          aria-label="About this reel"
-                          title="About this reel"
-                          className="mt-1 w-9 h-9 rounded-[10px] border-2 border-white/90 overflow-hidden bg-zinc-900 flex items-center justify-center shadow-lg active:scale-90 transition cursor-pointer"
-                        >
-                          {post.music?.cover || (post.music as any)?.coverUrl || creator.avatar ? (
-                            <img
-                              src={
-                                post.music?.cover ||
-                                (post.music as any)?.coverUrl ||
-                                creator.avatar
-                              }
-                              alt={post.music?.title || creator.handle}
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <SocialPlatformBrandIcon
-                              platform={platformMeta.platform}
-                              className="w-4 h-4 text-white"
-                            />
-                          )}
+                          <LoopsSvgIcon
+                            name="loops-reel-menu"
+                            className="w-[25px] h-[25px] drop-shadow"
+                          />
                         </button>
                       </div>
 
-                      {/* BOTTOM-LEFT CREATOR + FOLLOW + SOCIAL SOURCE + CAPTION (Exact IMG_5142) */}
+                      {/* BOTTOM-LEFT CREATOR + FOLLOW + CLICKABLE AUDIO + CAPTION (Exact IMG_5298) */}
                       <div
                         onTouchStart={(e) => e.stopPropagation()}
-                        className="absolute left-3.5 right-[72px] bottom-[96px] z-20 space-y-2 touch-manipulation"
+                        className="absolute left-3.5 right-[68px] bottom-[78px] z-20 space-y-2 touch-manipulation"
                       >
+                        {/* Live Closed Captions Overlay when CC is active from IMG_5299 Playback sheet */}
+                        {closedCaptions && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setPlaybackSheetOpen(true);
+                            }}
+                            className="inline-flex items-center gap-2 max-w-full rounded-xl bg-black/75 backdrop-blur-md border border-white/15 px-3 py-1.5 text-left text-[13px] font-medium leading-snug text-white shadow-md cursor-pointer"
+                          >
+                            <LoopsSvgIcon
+                              name="loops-reel-cc"
+                              className="w-4 h-4 shrink-0 text-white/90"
+                            />
+                            <span className="line-clamp-2">
+                              {cleanCaption ||
+                                (post.music?.title
+                                  ? `${post.music.title} · ${
+                                      post.music.artist || creator.handle
+                                    }`
+                                  : `Original audio by @${creator.handle}`)}
+                            </span>
+                          </button>
+                        )}
+
                         {/* Creator Row */}
                         <div className="flex items-center gap-2.5">
                           <button
@@ -3703,68 +3846,53 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                               }
                               className={`px-3 py-1 rounded-[9px] text-[12.5px] font-semibold transition cursor-pointer shrink-0 whitespace-nowrap ${
                                 isCreatorFollowed
-                                  ? "bg-white/15 border border-white/40 text-white"
+                                  ? "bg-white/15 border border-white/45 text-white"
                                   : "bg-transparent border border-white/85 text-white hover:bg-white/10"
                               }`}
                             >
                               {isCreatorFollowed ? "Following" : "Follow"}
                             </button>
                           )}
+                        </div>
 
+                        {/* Clickable Background Music / Audio Row -> Opens ReelAudioDetailsModal (IMG_5300) */}
+                        <div className="flex items-center gap-2 text-[12.5px] text-white/90">
                           <button
                             type="button"
                             onClick={() => {
                               triggerHaptic();
-                              setAboutOpenPostId(post.id);
+                              setAudioDetailsPost(post);
                             }}
-                            aria-label="More options about this reel"
-                            className="p-1 text-white/80 hover:text-white cursor-pointer shrink-0"
+                            className="inline-flex items-center gap-1.5 text-white/90 hover:text-white font-medium cursor-pointer max-w-full min-w-0 drop-shadow"
                           >
-                            <MoreHorizontal className="w-4 h-4" />
+                            <LoopsSvgIcon
+                              name="loops-reel-music"
+                              className="w-3.5 h-3.5 shrink-0"
+                            />
+                            <span className="truncate">
+                              {post.music?.title
+                                ? post.music.artist
+                                  ? `${post.music.title} · ${post.music.artist}`
+                                  : post.music.title
+                                : `Original audio · ${creator.handle}`}
+                            </span>
                           </button>
-                        </div>
 
-                        {/* Embedded Social Media Source Indicator ("social media kothay theke asce ta dekhabe") */}
-                        <div className="flex items-center gap-2 text-[12px] text-white/90">
-                          {effectiveEmbed.platform !== "direct" ? (
+                          {effectiveEmbed.platform !== "direct" && (
                             <a
                               href={effectiveEmbed.originalUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-white/90 hover:text-white font-medium drop-shadow max-w-full"
+                              className="inline-flex items-center gap-1 text-white/80 hover:text-white underline underline-offset-2 shrink-0 whitespace-nowrap"
                             >
-                              <SocialPlatformBrandIcon
-                                platform={platformMeta.platform}
-                                className="w-3.5 h-3.5 shrink-0"
-                              />
-                              <span className="truncate">
-                                Shared from {platformMeta.reelLabel}
-                              </span>
                               <span aria-hidden="true">·</span>
-                              <span className="underline underline-offset-2 shrink-0 inline-flex items-center gap-0.5">
-                                Source
-                                <ExternalLink className="w-3 h-3" />
-                              </span>
+                              <span>{platformMeta.shortName}</span>
+                              <ExternalLink className="w-3 h-3" />
                             </a>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setAboutOpenPostId(post.id)}
-                              className="inline-flex items-center gap-1.5 text-white/85 hover:text-white font-medium cursor-pointer max-w-full"
-                            >
-                              <Music2 className="w-3.5 h-3.5 shrink-0" />
-                              <span className="truncate">
-                                {post.music?.title
-                                  ? post.music.artist
-                                    ? `${post.music.title} · ${post.music.artist}`
-                                    : post.music.title
-                                  : `Original audio · ${creator.handle}`}
-                              </span>
-                            </button>
                           )}
                         </div>
 
-                        {/* Expandable Caption */}
+                        {/* Expandable Caption (Exact IMG_5298 single-line default) */}
                         {cleanCaption && (
                           <div
                             onClick={() =>
@@ -3785,33 +3913,66 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                             </p>
                           </div>
                         )}
-
-                        {/* View Count Badge for Public Reels (requested by user "cokh ar icon ta svg icon use koro") */}
-                        {!showSlideDocked && (
-                          <div className="flex items-center gap-1.5 text-white/90 text-xs font-semibold drop-shadow mt-1">
-                            <ReelViewEyeIcon className="w-4 h-4" />
-                            <span>{formatLoopCount(post.views || 68)} views</span>
-                          </div>
-                        )}
                       </div>
 
-                      {/* Thin White Progress Bar right above Bottom Dock (Exact IMG_5142 — zero inline styles) */}
-                      <div className="pointer-events-none absolute inset-x-3.5 bottom-[84px] z-20 h-[2.5px] rounded-full bg-white/30 overflow-hidden">
-                        <progress
-                          max={100}
-                          value={
-                            isSlideActive
-                              ? progressPct > 0
-                                ? Math.min(100, progressPct)
-                                : 18
-                              : 0
-                          }
-                          className="w-full h-full block appearance-none bg-transparent [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-white [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-white"
-                        />
+                      {/* Scrubbable Ultra-Thin White Progress Bar right above Compact Reels Dock (Exact IMG_5298 — zero inline styles) */}
+                      <div
+                        onClick={handleScrubProgress}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        className="absolute inset-x-3.5 bottom-[64px] z-20 py-2 -my-2 cursor-pointer"
+                      >
+                        <div className="h-[2.5px] rounded-full bg-white/30 overflow-hidden">
+                          <progress
+                            max={100}
+                            value={
+                              isSlideActive
+                                ? progressPct > 0
+                                  ? Math.min(100, progressPct)
+                                  : 15
+                                : 0
+                            }
+                            className="loops-reel-progress w-full h-full block appearance-none bg-transparent [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-white [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-white"
+                          />
+                        </div>
                       </div>
                     </>
                   )}
                 </section>
+              );
+
+              const shouldInsertSuggestedAfter =
+                reelsSubTab === "reels" &&
+                suggestedProfiles.length >= 2 &&
+                ((reelItems.length === 1 && idx === 0) ||
+                  idx === 1 ||
+                  (idx > 1 && (idx - 1) % 5 === 0));
+
+              if (!shouldInsertSuggestedAfter) {
+                return reelSection;
+              }
+
+              return (
+                <React.Fragment key={`${post.id}_with_suggested`}>
+                  {reelSection}
+                  <ReelsSuggestedProfilesSlide
+                    slideKey={`suggested_after_${idx}`}
+                    profiles={suggestedProfiles}
+                    followedIds={followedIds}
+                    onToggleFollow={(targetUid, targetName) => {
+                      setSessionFollowedSuggestedUids((prev) => ({
+                        ...prev,
+                        [targetUid]: true,
+                      }));
+                      onToggleFollowCreator(targetUid, targetName);
+                    }}
+                    onDismissProfile={(targetUid) =>
+                      setDismissedSuggestedUids((prev) => ({
+                        ...prev,
+                        [targetUid]: true,
+                      }))
+                    }
+                  />
+                </React.Fragment>
               );
             })}
           </div>
@@ -3842,7 +4003,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
         </div>
       )}
 
-      {/* "ABOUT THIS REEL" SHEET (IMG_5143 — White in Light Mode, Dark in Dark Mode) */}
+      {/* "ABOUT THIS REEL" SHEET */}
       <AboutThisReelSheet
         isOpen={Boolean(aboutOpenPostId && activeItem)}
         post={activeItem?.post || null}
@@ -3864,14 +4025,55 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
         playbackSpeed={playbackSpeed}
         autoAdvance={autoAdvance}
         onChangePlaybackSpeed={setPlaybackSpeed}
-        onToggleAutoAdvance={() => setAutoAdvance((v) => !v)}
+        onToggleAutoAdvance={handleToggleAutoAdvance}
         onMarkInterested={handleMarkInterested}
         onMarkNotInterested={handleMarkNotInterested}
         onOpenAlgorithm={() => setAlgorithmModalOpen(true)}
+        onOpenAudioDetails={() => {
+          if (activeItem?.post) {
+            setAudioDetailsPost(activeItem.post);
+          }
+        }}
+        onOpenPlaybackSheet={() => setPlaybackSheetOpen(true)}
         onClose={() => setAboutOpenPostId(null)}
       />
 
-      {/* "YOUR ALGORITHM" MODAL (IMG_5144 — White in Light Mode, Black in Dark Mode) */}
+      {/* STANDALONE "PLAYBACK" BOTTOM SHEET (Exact IMG_5299) */}
+      <ReelPlaybackSheet
+        isOpen={playbackSheetOpen}
+        onClose={() => setPlaybackSheetOpen(false)}
+        autoScroll={autoAdvance}
+        onToggleAutoScroll={handleToggleAutoAdvance}
+        closedCaptions={closedCaptions}
+        onToggleClosedCaptions={handleToggleClosedCaptions}
+        onEnterFullScreen={handleEnterFullScreen}
+      />
+
+      {/* FULL-SCREEN "AUDIO DETAILS" MODAL (Exact IMG_5300) */}
+      <ReelAudioDetailsModal
+        isOpen={Boolean(audioDetailsPost)}
+        sourcePost={audioDetailsPost}
+        allPosts={allPosts.length ? allPosts : posts}
+        communityUserMap={communityUserMap}
+        currentUser={currentUser}
+        followedIds={followedIds}
+        onToggleFollowCreator={onToggleFollowCreator}
+        onSelectReelPost={(chosenPost) => {
+          setAudioDetailsPost(null);
+          const idx = reelItems.findIndex((r) => r.post.id === chosenPost.id);
+          if (idx !== -1) {
+            jumpToReelIndex(idx);
+          } else {
+            navigate(
+              `/loops?filter=video&postId=${encodeURIComponent(chosenPost.id)}`
+            );
+          }
+        }}
+        onOpenShareModal={onOpenShareModal}
+        onClose={() => setAudioDetailsPost(null)}
+      />
+
+      {/* "YOUR ALGORITHM" MODAL */}
       <YourAlgorithmModal
         isOpen={algorithmModalOpen}
         onClose={() => setAlgorithmModalOpen(false)}
