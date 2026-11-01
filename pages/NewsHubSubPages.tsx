@@ -126,6 +126,7 @@ import {
   StorySettingsSheet,
   StoryReplyItem,
 } from "../components/LoopsStoryViewerModals";
+import { useSavedCollections } from "../lib/loopsSavedAndTranslation";
 
 export const resolvePostById = async (
   postId: string
@@ -1457,10 +1458,34 @@ export const NewsSavedAndSearchPage: React.FC = () => {
   const suggestedAccounts = React.useMemo(
     () =>
       allUsers
-        .filter((u) => u.uid !== uid && (u.displayName || u.shopName || u.username))
+        .filter((u) => {
+          if (u.uid === uid) return false;
+          const realName =
+            getSafeDisplayName(u, "") ||
+            String(u.displayName || u.shopName || (u as any).name || "").trim();
+          const handle = getSafePublicUsername(u);
+          return Boolean(
+            (realName &&
+              realName !== "User" &&
+              realName.toLowerCase() !== "member" &&
+              realName.toLowerCase() !== "creator") ||
+              handle
+          );
+        })
         .slice(0, 14),
     [allUsers, uid]
   );
+
+  const {
+    collections: savedCollections,
+    createCollection: createSavedCollection,
+    deleteCollection: deleteSavedCollection,
+  } = useSavedCollections();
+  const [selectedCollectionId, setSelectedCollectionId] =
+    useState<string>("all");
+  const [creatingCollectionInline, setCreatingCollectionInline] =
+    useState(false);
+  const [inlineCollectionName, setInlineCollectionName] = useState("");
 
   const handleDeletePost = async (post: ScamPost) => {
     triggerHaptic();
@@ -1574,7 +1599,9 @@ export const NewsSavedAndSearchPage: React.FC = () => {
     triggerHaptic();
     const next = await toggleSavePostHelper(target, uid);
     setSavedIds(getSavedPostIdsLocal());
-    notify(next ? "Saved to your bookmarks" : "Removed from saved", "info");
+    if (!next) {
+      notify("Removed from saved", "info");
+    }
   };
 
   const handleCopyPostLink = async (postId: string) => {
@@ -1755,27 +1782,153 @@ export const NewsSavedAndSearchPage: React.FC = () => {
 
   // STANDALONE SAVED PAGE (/loops/saved)
   if (isSavedRoute) {
+    const activeCollection =
+      selectedCollectionId === "all"
+        ? null
+        : savedCollections.find((c) => c.id === selectedCollectionId) || null;
+    const displayedSavedPosts = activeCollection
+      ? posts.filter(
+          (p) =>
+            activeCollection.postIds.includes(p.id) ||
+            (isSaved(p) && activeCollection.postIds.includes(p.id))
+        )
+      : savedPosts;
+
     return (
       <div className="min-h-screen loops-surface text-zinc-900 dark:text-zinc-100 pb-28">
-        <SEO title="Saved — Loops" description="View your saved community loops." />
+        <SEO title="Saved — Loops" description="View your saved community loops and collections." />
         <div className="max-w-[620px] mx-auto pt-3 sm:pt-5">
-          <header className="flex items-center gap-2 px-4 pb-3 border-b loops-divider">
+          <header className="flex items-center justify-between gap-2 px-4 pb-3 border-b loops-divider">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="w-9 h-9 -ml-2 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08] flex items-center justify-center cursor-pointer shrink-0 transition"
+                aria-label="Back"
+              >
+                <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+              </button>
+              <h1 className="text-[22px] font-bold tracking-tight">Saved</h1>
+            </div>
+
             <button
               type="button"
-              onClick={() => navigate(-1)}
-              className="w-9 h-9 -ml-2 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08] flex items-center justify-center cursor-pointer shrink-0 transition"
-              aria-label="Back"
+              onClick={() => {
+                triggerHaptic();
+                setCreatingCollectionInline((v) => !v);
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-[#4150F7] hover:bg-[#3442E6] text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition"
             >
-              <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+              <Plus className="w-3.5 h-3.5 stroke-[2.4]" />
+              <span>New collection</span>
             </button>
-            <h1 className="text-[22px] font-bold tracking-tight">Saved</h1>
           </header>
+
+          {/* Inline Create Collection Input */}
+          {creatingCollectionInline && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const trimmed = inlineCollectionName.trim();
+                if (!trimmed) return;
+                const created = createSavedCollection(trimmed);
+                setInlineCollectionName("");
+                setCreatingCollectionInline(false);
+                setSelectedCollectionId(created.id);
+                notify(`Collection "${created.name}" created`, "success");
+              }}
+              className="px-4 py-3 border-b loops-divider flex items-center gap-2"
+            >
+              <input
+                type="text"
+                value={inlineCollectionName}
+                onChange={(e) => setInlineCollectionName(e.target.value)}
+                placeholder="Collection name..."
+                autoFocus
+                className="flex-1 h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 border loops-divider text-sm outline-none"
+              />
+              <button
+                type="submit"
+                disabled={!inlineCollectionName.trim()}
+                className="h-10 px-4 rounded-xl bg-[#4150F7] disabled:opacity-45 text-white text-xs font-semibold cursor-pointer"
+              >
+                Create
+              </button>
+            </form>
+          )}
+
+          {/* Collections Selector Strip */}
+          {savedCollections.length > 0 && (
+            <div className="px-4 py-3 border-b loops-divider flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setSelectedCollectionId("all");
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap cursor-pointer transition ${
+                  selectedCollectionId === "all"
+                    ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
+                    : "bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                All saved ({savedPosts.length})
+              </button>
+
+              {savedCollections.map((col) => (
+                <button
+                  key={col.id}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setSelectedCollectionId(col.id);
+                  }}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap inline-flex items-center gap-2 cursor-pointer transition ${
+                    selectedCollectionId === col.id
+                      ? "bg-[#4150F7] text-white"
+                      : "bg-zinc-100 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300"
+                  }`}
+                >
+                  {col.coverThumbnail && (
+                    <img
+                      src={col.coverThumbnail}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="w-4 h-4 rounded object-cover shrink-0"
+                    />
+                  )}
+                  <span>
+                    {col.name} ({col.postIds.length})
+                  </span>
+                </button>
+              ))}
+
+              {activeCollection && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    deleteSavedCollection(activeCollection.id);
+                    setSelectedCollectionId("all");
+                    notify(`Deleted "${activeCollection.name}"`, "info");
+                  }}
+                  className="ml-auto px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 whitespace-nowrap cursor-pointer shrink-0"
+                >
+                  Delete collection
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="px-0 sm:px-4 sm:pt-3">
             {renderPostStream(
-              savedPosts,
-              "No saved loops yet",
-              "Save any loop from its menu to keep it bookmarked here."
+              displayedSavedPosts,
+              activeCollection
+                ? `No posts in "${activeCollection.name}" yet`
+                : "No saved loops yet",
+              activeCollection
+                ? "Tap the bookmark icon on any post or reel to add it to this collection."
+                : "Save any loop from its bookmark button to keep it organized here."
             )}
           </div>
         </div>
@@ -2107,8 +2260,24 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                           })
                           .slice(0, 12)
                           .map((u) => {
-                            const h = getSafePublicUsername(u) || "member";
-                            const n = getSafeDisplayName(u, h);
+                            const realName =
+                              getSafeDisplayName(u, "") ||
+                              String(
+                                u.displayName ||
+                                  u.shopName ||
+                                  (u as any).name ||
+                                  ""
+                              ).trim();
+                            const publicHandle = getSafePublicUsername(u);
+                            const primaryLabel =
+                              publicHandle || realName || "User";
+                            const secondaryLabel =
+                              publicHandle &&
+                              realName &&
+                              realName.toLowerCase() !==
+                                publicHandle.toLowerCase()
+                                ? realName
+                                : "";
                             const av = u.photoURL || u.shopLogo || "";
                             return (
                               <button
@@ -2117,7 +2286,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                                 onClick={() => {
                                   triggerHaptic();
                                   setFromProfileUid(u.uid);
-                                  setFromProfileHandle(h);
+                                  setFromProfileHandle(primaryLabel);
                                   setFromMeOnly(false);
                                   setHasCommittedSearch(true);
                                   setIsSearchFocused(false);
@@ -2130,19 +2299,25 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                                   {av ? (
                                     <img
                                       src={av}
-                                      alt={n}
+                                      alt={primaryLabel}
                                       referrerPolicy="no-referrer"
                                       className="w-full h-full object-cover"
                                     />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center text-xs font-bold">
-                                      {n.charAt(0).toUpperCase()}
+                                      {primaryLabel.charAt(0).toUpperCase()}
                                     </div>
                                   )}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-bold truncate">{h}</p>
-                                  <p className="text-[11px] text-zinc-500 truncate">{n}</p>
+                                  <p className="text-xs font-bold truncate">
+                                    {primaryLabel}
+                                  </p>
+                                  {secondaryLabel && (
+                                    <p className="text-[11px] text-zinc-500 truncate">
+                                      {secondaryLabel}
+                                    </p>
+                                  )}
                                 </div>
                               </button>
                             );
@@ -2167,8 +2342,23 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                 const isFollowing = Boolean(
                   account.uid && followedIds.includes(account.uid)
                 );
-                const handle = getSafePublicUsername(account) || "creator";
-                const name = getSafeDisplayName(account, handle);
+                const realName =
+                  getSafeDisplayName(account, "") ||
+                  String(
+                    account.displayName ||
+                      account.shopName ||
+                      (account as any).name ||
+                      ""
+                  ).trim();
+                const publicHandle = getSafePublicUsername(account);
+                const name = realName || publicHandle || "User";
+                const primaryTitle = publicHandle || name;
+                const secondarySubtitle =
+                  publicHandle &&
+                  realName &&
+                  realName.toLowerCase() !== publicHandle.toLowerCase()
+                    ? realName
+                    : "";
                 const avatar = account.photoURL || account.shopLogo || "";
                 const isVerified = Boolean(
                   account.isVerifiedBadge ||
@@ -2201,15 +2391,17 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1">
                           <span className="font-semibold text-[15px] text-zinc-950 dark:text-white truncate">
-                            {handle}
+                            {primaryTitle}
                           </span>
                           {isVerified && (
                             <VerifiedLoopBadge className="w-3.5 h-3.5 shrink-0" />
                           )}
                         </div>
-                        <p className="text-[14.5px] text-zinc-400 dark:text-zinc-500 truncate leading-snug">
-                          {name}
-                        </p>
+                        {secondarySubtitle && (
+                          <p className="text-[14.5px] text-zinc-400 dark:text-zinc-500 truncate leading-snug">
+                            {secondarySubtitle}
+                          </p>
+                        )}
                         <p className="mt-1.5 text-[14.5px] font-normal text-zinc-950 dark:text-zinc-100 tabular-nums">
                           {formatCompactNumber(fCount)} followers
                         </p>
@@ -2319,8 +2511,23 @@ export const NewsSavedAndSearchPage: React.FC = () => {
 
                 {/* 3. Matching User Profile Rows */}
                 {matchingUserSuggestions.map((account) => {
-                  const handle = getSafePublicUsername(account) || "creator";
-                  const name = getSafeDisplayName(account, handle);
+                  const realName =
+                    getSafeDisplayName(account, "") ||
+                    String(
+                      account.displayName ||
+                        account.shopName ||
+                        (account as any).name ||
+                        ""
+                    ).trim();
+                  const publicHandle = getSafePublicUsername(account);
+                  const name = realName || publicHandle || "User";
+                  const primaryTitle = publicHandle || name;
+                  const secondarySubtitle =
+                    publicHandle &&
+                    realName &&
+                    realName.toLowerCase() !== publicHandle.toLowerCase()
+                      ? realName
+                      : "";
                   const avatar = account.photoURL || account.shopLogo || "";
                   const isVerified = Boolean(
                     account.isVerifiedBadge ||
@@ -2352,15 +2559,17 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1">
                           <span className="text-[15.5px] font-semibold text-zinc-950 dark:text-white truncate">
-                            {handle}
+                            {primaryTitle}
                           </span>
                           {isVerified && (
                             <VerifiedLoopBadge className="w-3.5 h-3.5 shrink-0" />
                           )}
                         </div>
-                        <p className="text-[14.5px] text-zinc-400 dark:text-zinc-500 truncate">
-                          {name}
-                        </p>
+                        {secondarySubtitle && (
+                          <p className="text-[14.5px] text-zinc-400 dark:text-zinc-500 truncate">
+                            {secondarySubtitle}
+                          </p>
+                        )}
                       </div>
                     </button>
                   );
@@ -2374,8 +2583,23 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                 </h2>
                 <div className="divide-y loops-divider">
                   {suggestedAccounts.slice(0, 8).map((account) => {
-                    const handle = getSafePublicUsername(account) || "creator";
-                    const name = getSafeDisplayName(account, handle);
+                    const realName =
+                      getSafeDisplayName(account, "") ||
+                      String(
+                        account.displayName ||
+                          account.shopName ||
+                          (account as any).name ||
+                          ""
+                      ).trim();
+                    const publicHandle = getSafePublicUsername(account);
+                    const name = realName || publicHandle || "User";
+                    const primaryTitle = publicHandle || name;
+                    const secondarySubtitle =
+                      publicHandle &&
+                      realName &&
+                      realName.toLowerCase() !== publicHandle.toLowerCase()
+                        ? realName
+                        : "";
                     const avatar = account.photoURL || account.shopLogo || "";
                     const isVerified = Boolean(
                       account.isVerifiedBadge ||
@@ -2406,15 +2630,17 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1">
                             <span className="text-[15px] font-semibold truncate">
-                              {handle}
+                              {primaryTitle}
                             </span>
                             {isVerified && (
                               <VerifiedLoopBadge className="w-3.5 h-3.5 shrink-0" />
                             )}
                           </div>
-                          <p className="text-[14px] text-zinc-400 truncate">
-                            {name}
-                          </p>
+                          {secondarySubtitle && (
+                            <p className="text-[14px] text-zinc-400 truncate">
+                              {secondarySubtitle}
+                            </p>
+                          )}
                         </div>
                       </button>
                     );

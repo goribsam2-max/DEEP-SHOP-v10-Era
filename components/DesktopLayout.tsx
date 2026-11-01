@@ -105,7 +105,7 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {isHomePage && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-gradient-to-b from-[#6BB2F8]/85 via-[#DCEEFF]/60 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent z-0"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-gradient-to-b from-[#1877F2]/30 via-[#60A5FA]/15 to-transparent dark:from-[#1E1B4B]/30 dark:via-[#0F172A]/10 dark:to-transparent z-0 transition-opacity duration-300"
         />
       )}
 

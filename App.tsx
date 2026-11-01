@@ -39,27 +39,60 @@ const FingerprintIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
 );
 import { LumaSpin } from './components/ui/luma-spin';
 import { RoutePageSkeleton } from './components/PageSkeletons';
-import OnboardingOffersModal from './components/OnboardingOffersModal';
-import { CartAbandonmentPopup } from './components/CartAbandonmentPopup';
-import { NotificationPermissionModal } from './components/ui/NotificationPermissionModal';
 import BanOverlay from './components/BanOverlay';
-import { AdManager } from './components/AdManager';
 import { AdPlacementSlot } from './components/AdPlacementSlot';
-import { GlobalCallReceiver } from './components/GlobalCallReceiver';
-import { CustomContextMenu } from './components/CustomContextMenu';
-import { FeedPersonalization } from './pages/FeedPersonalization';
-import { NewsProfilePage } from './pages/NewsProfilePage';
-import { LoopActivityPage } from './pages/LoopActivityPage';
-import { LoopsAlgorithmPage } from './components/LoopsReelsView';
-import {
-  NewsPhotoViewerPage,
-  NewsSharePage,
-  NewsSavedAndSearchPage,
-  NewsStoryViewerPage,
-} from './pages/NewsHubSubPages';
-import { CreateReelStudio } from './pages/CreateReelStudio';
 import { initGlobalHaptics } from './lib/haptics';
 import { hasImmediateAdminOrStaffRole } from './lib/admin';
+
+const OnboardingOffersModal = lazy(() => import('./components/OnboardingOffersModal'));
+const CartAbandonmentPopup = lazy(() =>
+  import('./components/CartAbandonmentPopup').then((m) => ({ default: m.CartAbandonmentPopup }))
+);
+const NotificationPermissionModal = lazy(() =>
+  import('./components/ui/NotificationPermissionModal').then((m) => ({
+    default: m.NotificationPermissionModal,
+  }))
+);
+const AdManager = lazy(() =>
+  import('./components/AdManager').then((m) => ({ default: m.AdManager }))
+);
+const GlobalCallReceiver = lazy(() =>
+  import('./components/GlobalCallReceiver').then((m) => ({ default: m.GlobalCallReceiver }))
+);
+const CustomContextMenu = lazy(() =>
+  import('./components/CustomContextMenu').then((m) => ({ default: m.CustomContextMenu }))
+);
+
+const FeedPersonalization = lazy(() =>
+  import('./pages/FeedPersonalization').then((m) => ({ default: m.FeedPersonalization }))
+);
+const NewsProfilePage = lazy(() =>
+  import('./pages/NewsProfilePage').then((m) => ({ default: m.NewsProfilePage }))
+);
+const LoopActivityPage = lazy(() =>
+  import('./pages/LoopActivityPage').then((m) => ({ default: m.LoopActivityPage }))
+);
+const LoopsAlgorithmPage = lazy(() =>
+  import('./components/LoopsReelsView').then((m) => ({ default: m.LoopsAlgorithmPage }))
+);
+const PreferredLanguagesPage = lazy(() =>
+  import('./components/LoopsReelsOverlays').then((m) => ({ default: m.PreferredLanguagesPage }))
+);
+const NewsPhotoViewerPage = lazy(() =>
+  import('./pages/NewsHubSubPages').then((m) => ({ default: m.NewsPhotoViewerPage }))
+);
+const NewsSharePage = lazy(() =>
+  import('./pages/NewsHubSubPages').then((m) => ({ default: m.NewsSharePage }))
+);
+const NewsSavedAndSearchPage = lazy(() =>
+  import('./pages/NewsHubSubPages').then((m) => ({ default: m.NewsSavedAndSearchPage }))
+);
+const NewsStoryViewerPage = lazy(() =>
+  import('./pages/NewsHubSubPages').then((m) => ({ default: m.NewsStoryViewerPage }))
+);
+const CreateReelStudio = lazy(() =>
+  import('./pages/CreateReelStudio').then((m) => ({ default: m.CreateReelStudio }))
+);
 
 const SEOProvider = () => {
   const location = useLocation();
@@ -68,11 +101,15 @@ const SEOProvider = () => {
   useEffect(() => {
     initGlobalHaptics();
 
-    const unsub = onSnapshot(doc(db, 'settings', 'seo'), (snap) => {
-      if (snap.exists()) {
-        setSeoData(snap.data());
-      }
-    });
+    const unsub = onSnapshot(
+      doc(db, 'settings', 'seo'),
+      (snap) => {
+        if (snap.exists()) {
+          setSeoData(snap.data());
+        }
+      },
+      () => {}
+    );
 
     return () => unsub();
   }, []);
@@ -234,56 +271,61 @@ const SEOProvider = () => {
   return null;
 };
 
-// Page Imports
-import AuthSelector from './pages/AuthSelector';
-import SavedAccountsPage from './pages/SavedAccountsPage';
-import SignIn from './pages/SignIn';
-import SignUp from './pages/SignUp';
-import {
-  FindAccountPage,
-  ChooseAccountPage,
-  ReviewAccountPage,
-} from './pages/FindAccountFlow';
-import { syncCurrentUserToSavedAccounts } from './lib/savedAccounts';
+// Page Imports (Home kept eager for instant LCP; all secondary routes lazy-split)
 import Home from './pages/Home';
-import ProductDetails from './pages/ProductDetails';
-import StoreProfile from './pages/StoreProfile';
-import ProductReviews from './pages/ProductReviews';
-import Cart from './pages/Cart';
-import Profile from './pages/Profile';
+import { syncCurrentUserToSavedAccounts } from './lib/savedAccounts';
+
+const AuthSelector = lazy(() => import('./pages/AuthSelector'));
+const SavedAccountsPage = lazy(() => import('./pages/SavedAccountsPage'));
+const SignIn = lazy(() => import('./pages/SignIn'));
+const SignUp = lazy(() => import('./pages/SignUp'));
+const FindAccountPage = lazy(() =>
+  import('./pages/FindAccountFlow').then((m) => ({ default: m.FindAccountPage }))
+);
+const ChooseAccountPage = lazy(() =>
+  import('./pages/FindAccountFlow').then((m) => ({ default: m.ChooseAccountPage }))
+);
+const ReviewAccountPage = lazy(() =>
+  import('./pages/FindAccountFlow').then((m) => ({ default: m.ReviewAccountPage }))
+);
+const ProductDetails = lazy(() => import('./pages/ProductDetails'));
+const StoreProfile = lazy(() => import('./pages/StoreProfile'));
+const ProductReviews = lazy(() => import('./pages/ProductReviews'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Profile = lazy(() => import('./pages/Profile'));
 const AffiliatePage = lazy(() => import('./pages/Affiliate'));
-import MyOrders from './pages/MyOrders';
-import CustomPay from './pages/CustomPay';
-import ExchangeRequest from './pages/ExchangeRequest';
-import OrderActionPage from './pages/OrderActionPage';
-import NotificationsPage from './pages/Notifications';
-import Onboarding from './pages/Onboarding';
-import VerifyCode from './pages/VerifyCode';
-import LocationAccess from './pages/LocationAccess';
-import CheckoutPage from './pages/Checkout';
-import PaymentPage from './pages/Payment';
-import OrderSuccess from './pages/OrderSuccess';
-import CompleteProfile from './pages/CompleteProfile';
-import Messages from './pages/Messages';
-import KycVerification from './pages/KycVerification';
-import EditProfile from './pages/EditProfile';
-import NewPassword from './pages/NewPassword';
-import ForgotPassword from './pages/ForgotPassword';
-import Wishlist from './pages/Wishlist';
-import SubscriptionPage from './pages/Subscription';
-import ShippingAddress from './pages/ShippingAddress';
-import Coupon from './pages/Coupon';
-import PaymentMethods from './pages/PaymentMethods';
-import AddCard from './pages/AddCard';
-import Search from './pages/Search';
-import TrackOrder from './pages/TrackOrder';
-import LeaveReview from './pages/LeaveReview';
-import EReceipt from './pages/EReceipt';
-import Settings from './pages/Settings';
-import HelpCenter from './pages/HelpCenter';
-import MyTickets from './pages/MyTickets';
-import FAQPage from './pages/FAQ';
-import TicketDetails from './pages/TicketDetails';
+const MyOrders = lazy(() => import('./pages/MyOrders'));
+const CustomPay = lazy(() => import('./pages/CustomPay'));
+const ExchangeRequest = lazy(() => import('./pages/ExchangeRequest'));
+const OrderActionPage = lazy(() => import('./pages/OrderActionPage'));
+const NotificationsPage = lazy(() => import('./pages/Notifications'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const VerifyCode = lazy(() => import('./pages/VerifyCode'));
+const LocationAccess = lazy(() => import('./pages/LocationAccess'));
+const CheckoutPage = lazy(() => import('./pages/Checkout'));
+const PaymentPage = lazy(() => import('./pages/Payment'));
+const OrderSuccess = lazy(() => import('./pages/OrderSuccess'));
+const CompleteProfile = lazy(() => import('./pages/CompleteProfile'));
+const Messages = lazy(() => import('./pages/Messages'));
+const KycVerification = lazy(() => import('./pages/KycVerification'));
+const EditProfile = lazy(() => import('./pages/EditProfile'));
+const NewPassword = lazy(() => import('./pages/NewPassword'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
+const SubscriptionPage = lazy(() => import('./pages/Subscription'));
+const ShippingAddress = lazy(() => import('./pages/ShippingAddress'));
+const Coupon = lazy(() => import('./pages/Coupon'));
+const PaymentMethods = lazy(() => import('./pages/PaymentMethods'));
+const AddCard = lazy(() => import('./pages/AddCard'));
+const Search = lazy(() => import('./pages/Search'));
+const TrackOrder = lazy(() => import('./pages/TrackOrder'));
+const LeaveReview = lazy(() => import('./pages/LeaveReview'));
+const EReceipt = lazy(() => import('./pages/EReceipt'));
+const Settings = lazy(() => import('./pages/Settings'));
+const HelpCenter = lazy(() => import('./pages/HelpCenter'));
+const MyTickets = lazy(() => import('./pages/MyTickets'));
+const FAQPage = lazy(() => import('./pages/FAQ'));
+const TicketDetails = lazy(() => import('./pages/TicketDetails'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const AboutUs = lazy(() => import('./pages/AboutUs'));
 const Terms = lazy(() => import('./pages/Terms'));
@@ -293,29 +335,29 @@ const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
 const ShippingPolicy = lazy(() => import('./pages/ShippingPolicy'));
 const Disclaimer = lazy(() => import('./pages/Disclaimer'));
 const SitemapPage = lazy(() => import('./pages/SitemapPage'));
-import PasswordManager from './pages/PasswordManager';
-import AllProducts from './pages/AllProducts';
-import FlashSale from './pages/FlashSale';
-import WithdrawPage from './pages/Withdraw';
+const PasswordManager = lazy(() => import('./pages/PasswordManager'));
+const AllProducts = lazy(() => import('./pages/AllProducts'));
+const FlashSale = lazy(() => import('./pages/FlashSale'));
+const WithdrawPage = lazy(() => import('./pages/Withdraw'));
 const BlogList = lazy(() => import('./pages/BlogList'));
 const BlogDetails = lazy(() => import('./pages/BlogDetails'));
 const CreateBlog = lazy(() => import('./pages/CreateBlog'));
-import NotFound from './pages/NotFound';
-import NewsHub from './pages/NewsHub';
-import CreateScamPost from './pages/CreateScamPost';
-import NewsDetails from './pages/NewsDetails';
+const NotFound = lazy(() => import('./pages/NotFound'));
+const NewsHub = lazy(() => import('./pages/NewsHub'));
+const CreateScamPost = lazy(() => import('./pages/CreateScamPost'));
+const NewsDetails = lazy(() => import('./pages/NewsDetails'));
 const CreatorDashboard = lazy(() => import('./pages/CreatorDashboard'));
-import AuthorProfile from './pages/AuthorProfile';
-import BuyStars from './pages/BuyStars';
-import SponsorCreator from './pages/SponsorCreator';
-import GiftStarsPage from './pages/GiftStarsPage';
-import CreatorSubscriptionSetup from './pages/CreatorSubscriptionSetup';
-import NewsHubNotifications from './pages/NewsHubNotifications';
-import RegionSelect from './pages/RegionSelect';
+const AuthorProfile = lazy(() => import('./pages/AuthorProfile'));
+const BuyStars = lazy(() => import('./pages/BuyStars'));
+const SponsorCreator = lazy(() => import('./pages/SponsorCreator'));
+const GiftStarsPage = lazy(() => import('./pages/GiftStarsPage'));
+const CreatorSubscriptionSetup = lazy(() => import('./pages/CreatorSubscriptionSetup'));
+const NewsHubNotifications = lazy(() => import('./pages/NewsHubNotifications'));
+const RegionSelect = lazy(() => import('./pages/RegionSelect'));
 const SellerDashboard = lazy(() => import('./pages/seller/Dashboard'));
-import AddStory from './pages/seller/AddStory';
-import LoginDevices from './pages/LoginDevices';
-import BiometricSetup from './pages/BiometricSetup';
+const AddStory = lazy(() => import('./pages/seller/AddStory'));
+const LoginDevices = lazy(() => import('./pages/LoginDevices'));
+const BiometricSetup = lazy(() => import('./pages/BiometricSetup'));
 
 // Admin Pages (Lazy-loaded so regular users never download Admin bundles)
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -338,21 +380,19 @@ const ManageEngagement = lazy(() => import('./pages/admin/ManageEngagement'));
 
 // Components
 import BottomMenu from './components/ui/BottomMenu';
-import ScrollToTop from './components/ScrollToTop';
-import Logo from './components/Logo';
 import DesktopLayout from './components/DesktopLayout';
 const AdminLayout = lazy(() => import('./components/AdminLayout'));
 
 const ManageFakeOrders = lazy(() => import('./pages/admin/ManageFakeOrders'));
-import Deposit from './pages/Deposit';
+const Deposit = lazy(() => import('./pages/Deposit'));
 const ManageDeposits = lazy(() => import('./pages/admin/ManageDeposits'));
 const ManageSubscriptions = lazy(() => import('./pages/admin/ManageSubscriptions'));
-import BonusProducts from './pages/BonusProducts';
-import ShoppingCredits from './pages/ShoppingCredits';
-import BundleDeals from './pages/BundleDeals';
-import BundleBuilder from './pages/BundleBuilder';
-import MyCoupons from './pages/MyCoupons';
-import MyCoins from './pages/MyCoins';
+const BonusProducts = lazy(() => import('./pages/BonusProducts'));
+const ShoppingCredits = lazy(() => import('./pages/ShoppingCredits'));
+const BundleDeals = lazy(() => import('./pages/BundleDeals'));
+const BundleBuilder = lazy(() => import('./pages/BundleBuilder'));
+const MyCoupons = lazy(() => import('./pages/MyCoupons'));
+const MyCoins = lazy(() => import('./pages/MyCoins'));
 const GenericAdminMock = lazy(() => import('./pages/admin/GenericAdminMock'));
 const ManageCoupons = lazy(() => import('./pages/admin/ManageCoupons'));
 const ManageHelpDesk = lazy(() => import('./pages/admin/ManageHelpDesk'));
@@ -840,6 +880,7 @@ const AppContent: React.FC = () => {
   return (
     <DesktopLayout>
       <SEOProvider />
+      {isAdminOrStaff && <MigrationHelper />}
       <AnimatePresence>
         {isPageLoading && (
           <motion.div
@@ -853,7 +894,7 @@ const AppContent: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="min-h-screen selection:bg-zinc-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
+      <main id="main-content" tabIndex={-1} className="min-h-screen selection:bg-zinc-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
         <Suspense fallback={null}>
         <Routes location={location} key={location.pathname}>
             <Route path="/" element={<PageWrapper><Home userData={userData} /></PageWrapper>} />
@@ -917,6 +958,7 @@ const AppContent: React.FC = () => {
           <Route path="/loops/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/loops/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
           <Route path="/loops/algorithm" element={<PageWrapper><LoopsAlgorithmPage /></PageWrapper>} />
+          <Route path="/loops/preferred-languages" element={<PageWrapper><PreferredLanguagesPage /></PageWrapper>} />
           <Route path="/loops/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/loops/post/:id/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
           <Route path="/loops/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
@@ -939,6 +981,7 @@ const AppContent: React.FC = () => {
           <Route path="/news-hub/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/news-hub/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
           <Route path="/news-hub/algorithm" element={<PageWrapper><LoopsAlgorithmPage /></PageWrapper>} />
+          <Route path="/news-hub/preferred-languages" element={<PageWrapper><PreferredLanguagesPage /></PageWrapper>} />
           <Route path="/news-hub/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/news-hub/post/:id/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
           <Route path="/news-hub/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />
@@ -1047,7 +1090,7 @@ const AppContent: React.FC = () => {
           <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
         </Routes>
         </Suspense>
-      </div>
+      </main>
       {showNav && !isPageLoading && <BottomMenu />}
       <div className="stwRainbow" />
       <div className="stwBlurRainbow" />
@@ -1206,7 +1249,7 @@ const AUTH_MODAL_EXCLUDED_PREFIXES = [
   '/auth/action',
 ];
 
-const GlobalRouteAwareOverlays: React.FC = () => {
+const GlobalRouteAwareOverlays: React.FC<{ deferredReady: boolean }> = ({ deferredReady }) => {
   const location = useLocation();
   const isAuthScreen = AUTH_MODAL_EXCLUDED_PREFIXES.some(
     (prefix) =>
@@ -1235,11 +1278,15 @@ const GlobalRouteAwareOverlays: React.FC = () => {
   return (
     <>
       <NetworkStatus />
-      <OnboardingOffersModal />
-      <CartAbandonmentPopup />
-      <NotificationPermissionModal />
-      <AdManager />
-      {!isReelsFullscreen && (
+      {deferredReady && (
+        <Suspense fallback={null}>
+          <OnboardingOffersModal />
+          <CartAbandonmentPopup />
+          <NotificationPermissionModal />
+          <AdManager />
+        </Suspense>
+      )}
+      {deferredReady && !isReelsFullscreen && (
         <AdPlacementSlot
           slot="bottom_fixed"
           className="fixed bottom-0 inset-x-0 z-[90] bg-white/95 dark:bg-zinc-950/95 border-t border-slate-200/80 dark:border-zinc-800 p-2 shadow-2xl"
@@ -1253,14 +1300,25 @@ const GlobalRouteAwareOverlays: React.FC = () => {
 const App: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isPageLoading, setIsPageLoading] = useState(false);
+  const [deferredReady, setDeferredReady] = useState(false);
 
   useEffect(() => {
-    // Auto subscribe if they already granted permission in the past
-    // This restores push subscriptions for returning users
+    const timer = setTimeout(() => {
+      setDeferredReady(true);
+    }, 3200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-        if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'granted') {
-           subscribeToWebPush(user?.uid).catch(console.error);
-        }
+      if (
+        typeof window !== 'undefined' &&
+        'Notification' in window &&
+        window.Notification &&
+        window.Notification.permission === 'granted'
+      ) {
+        subscribeToWebPush(user?.uid).catch(() => {});
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -1268,21 +1326,30 @@ const App: React.FC = () => {
   return (
     <LanguageProvider>
       <ThemeProvider>
-      <BanOverlay />
+        <BanOverlay />
         <PageLoadingContext.Provider value={{ isPageLoading, setIsPageLoading }}>
           <ToastProvider>
-            <CustomContextMenu />
+            {deferredReady && (
+              <Suspense fallback={null}>
+                <CustomContextMenu />
+              </Suspense>
+            )}
             <DynamicIsland />
-            <MigrationHelper />
             <Router>
-              <PullToRefresh onRefresh={async () => {
-                 await new Promise(r => setTimeout(r, 600));
-                 setRefreshKey(prev => prev + 1);
-              }}>
+              <PullToRefresh
+                onRefresh={async () => {
+                  await new Promise((r) => setTimeout(r, 600));
+                  setRefreshKey((prev) => prev + 1);
+                }}
+              >
                 <AppContent />
               </PullToRefresh>
-              <GlobalCallReceiver />
-              {!isPageLoading && <GlobalRouteAwareOverlays />}
+              {deferredReady && (
+                <Suspense fallback={null}>
+                  <GlobalCallReceiver />
+                </Suspense>
+              )}
+              {!isPageLoading && <GlobalRouteAwareOverlays deferredReady={deferredReady} />}
             </Router>
           </ToastProvider>
         </PageLoadingContext.Provider>

@@ -365,7 +365,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   <button
                     type="button"
                     onClick={handleSellerVisit}
-                    className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-1.5 py-0.5 text-[10.5px] font-semibold cursor-pointer"
+                    aria-label={`Visit seller ${sellerMeta.name}`}
+                    className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-2 py-1 text-[10.5px] font-semibold cursor-pointer"
                   >
                     <span className="truncate">{sellerMeta.name}</span>
                     {sellerMeta.isVerified && (
@@ -375,7 +376,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </div>
 
                 {/* Product Meta Description Excerpt */}
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug line-clamp-2">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug line-clamp-2">
                   {metaDescription}
                 </p>
               </div>
@@ -387,12 +388,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                       {formatPrice(displayPrice)}
                     </span>
                     {hasDiscount && (
-                      <span className="text-[11px] text-slate-400 line-through whitespace-nowrap">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 line-through whitespace-nowrap">
                         {formatPrice(product.price)}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 tabular-nums">
+                  <div className="flex items-center gap-1 text-[10px] text-slate-600 dark:text-slate-400 tabular-nums">
                     <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400 shrink-0" />
                     <span>{ratingLabel}</span>
                     <span>({reviewCount})</span>
@@ -456,7 +457,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <button
                   type="button"
                   onClick={handleSellerVisit}
-                  className="ds-seller-highlight inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold cursor-pointer max-w-[240px]"
+                  aria-label={`Visit seller ${sellerMeta.name}`}
+                  className="ds-seller-highlight inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold cursor-pointer max-w-[240px]"
                 >
                   <span className="truncate">{sellerMeta.name}</span>
                   {sellerMeta.isVerified && (
@@ -467,7 +469,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <span className="inline-flex items-center gap-1 tabular-nums text-slate-700 dark:text-slate-200 font-semibold whitespace-nowrap">
                   <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
                   {ratingLabel}
-                  <span className="font-normal text-slate-400">
+                  <span className="font-normal text-slate-500 dark:text-slate-400">
                     ({reviewCount} রিভিউ)
                   </span>
                 </span>
@@ -614,8 +616,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               type="button"
               onClick={toggleWishlist}
-              aria-label="Save to wishlist"
-              className="absolute top-2 right-2 z-20 ds-liquid-icon-btn w-8 h-8 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200 cursor-pointer"
+              aria-label={`Save ${product.name} to wishlist`}
+              className="absolute top-2 right-2 z-20 ds-liquid-icon-btn w-9 h-9 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200 cursor-pointer"
             >
               <Heart
                 className={`w-3.5 h-3.5 stroke-[2px] ${
@@ -629,7 +631,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex-1 flex flex-col justify-between p-2.5 gap-2">
             <div className="space-y-1.5">
               {/* Unboxed Kicker Row: Category · Rating */}
-              <div className="flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+              <div className="flex items-center justify-between gap-1 text-[10px] text-slate-600 dark:text-slate-400">
                 <span className="truncate font-medium">{cleanCategory}</span>
                 <span className="inline-flex items-center gap-0.5 font-semibold text-slate-700 dark:text-slate-200 tabular-nums shrink-0 whitespace-nowrap">
                   <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400 shrink-0" />
@@ -647,7 +649,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <button
                   type="button"
                   onClick={handleSellerVisit}
-                  className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-1.5 py-0.5 text-[10.5px] font-semibold cursor-pointer"
+                  aria-label={`Visit seller ${sellerMeta.name}`}
+                  className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-2 py-1 text-[10.5px] font-semibold cursor-pointer"
                 >
                   <span className="truncate">{sellerMeta.name}</span>
                   {sellerMeta.isVerified && (
@@ -657,7 +660,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               </div>
 
               {/* Product Meta Description Excerpt */}
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug line-clamp-2">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug line-clamp-2">
                 {metaDescription}
               </p>
             </div>
@@ -669,7 +672,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   {formatPrice(displayPrice)}
                 </div>
                 {hasDiscount && (
-                  <div className="text-[10px] text-slate-400 line-through leading-none mt-0.5 truncate">
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 line-through leading-none mt-0.5 truncate">
                     {formatPrice(product.price)}
                   </div>
                 )}
@@ -679,13 +682,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 type="button"
                 onClick={handleQuickAdd}
                 disabled={isOutOfStock}
-                aria-label="Quick add to cart"
-                className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 ${
+                aria-label={`Add ${product.name} to cart`}
+                className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 ${
                   isOutOfStock
                     ? "ds-liquid-icon-btn opacity-40 cursor-not-allowed"
                     : justAdded
                     ? "bg-emerald-500 text-white shadow-sm"
-                    : "ds-liquid-icon-btn text-sky-600 dark:text-sky-400"
+                    : "ds-liquid-icon-btn text-sky-700 dark:text-sky-400"
                 }`}
               >
                 {justAdded ? (
@@ -804,7 +807,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <button
                   type="button"
                   onClick={handleSellerVisit}
-                  className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-2 py-0.5 text-[11.5px] font-semibold cursor-pointer"
+                  aria-label={`Visit seller ${sellerMeta.name}`}
+                  className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-2.5 py-1 text-[11.5px] font-semibold cursor-pointer"
                 >
                   <span className="truncate">{sellerMeta.name}</span>
                   {sellerMeta.isVerified && (
@@ -814,7 +818,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               </div>
 
               {/* Product Meta Description Excerpt */}
-              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed pt-0.5">
+              <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed pt-0.5">
                 {metaDescription}
               </p>
             </div>
@@ -823,7 +827,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div className="pt-2.5 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-end justify-between gap-2">
               <div className="min-w-0 tabular-nums">
                 {hasDiscount && (
-                  <div className="text-[11px] text-slate-400 line-through leading-none mb-1 whitespace-nowrap">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 line-through leading-none mb-1 whitespace-nowrap">
                     {formatPrice(product.price)}
                   </div>
                 )}

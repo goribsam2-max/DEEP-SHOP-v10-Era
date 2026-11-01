@@ -160,6 +160,40 @@ app.use(async (req, res, next) => {
 
   const PORT = 3000;
 
+  // 🌐 Loops Post & Reel Live Translation Proxy
+  app.post("/api/translate", express.json(), async (req, res) => {
+    try {
+      const { text, targetLang = "en" } = req.body || {};
+      const cleanText = String(text || "").trim();
+      if (!cleanText) {
+        return res.status(400).json({ error: "Missing text" });
+      }
+      const tl = String(targetLang || "en").trim();
+      const gtxUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(
+        tl
+      )}&dt=t&q=${encodeURIComponent(cleanText)}`;
+      const upstream = await fetch(gtxUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+        },
+      });
+      if (!upstream.ok) {
+        return res.status(502).json({ error: "Translation upstream unavailable" });
+      }
+      const json: any = await upstream.json();
+      const translatedText = Array.isArray(json?.[0])
+        ? json[0]
+            .map((seg: any) => (Array.isArray(seg) && seg[0] ? String(seg[0]) : ""))
+            .join("")
+            .trim()
+        : cleanText;
+      const detectedLang = typeof json?.[2] === "string" ? json[2] : "auto";
+      return res.json({ translatedText: translatedText || cleanText, detectedLang, targetLang: tl });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || "Translation failed" });
+    }
+  });
+
   // 🤖 Stealth AI Auto-Reply Proxy for Support (Hides sk-bl API Key)
   app.post("/api/chat-auto-reply", express.json(), async (req, res) => {
     try {

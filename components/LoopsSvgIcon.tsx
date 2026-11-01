@@ -137,7 +137,7 @@ export const LoopsSvgIcon: React.FC<LoopsSvgIconProps> = ({
   return (
     <span
       aria-hidden="true"
-      className="inline-flex items-center justify-center shrink-0 leading-none"
+      className="inline-flex items-center justify-center shrink-0 leading-none [&>svg]:block"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

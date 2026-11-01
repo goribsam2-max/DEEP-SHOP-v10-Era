@@ -31,6 +31,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Star,
+  Languages,
 } from "lucide-react";
 import { ScamPost, ScamComment, ReactionType } from "../types";
 import { auth, db } from "../firebase";
@@ -319,6 +320,9 @@ export const LoopPostOptionsSheet: React.FC<{
   onEditPost?: () => void;
   onDeletePost?: () => void;
   onPostHidden?: (postId: string) => void;
+  onTranslatePost?: () => void;
+  onOpenTranslationSettings?: () => void;
+  isTranslated?: boolean;
 }> = ({
   isOpen,
   post,
@@ -333,6 +337,9 @@ export const LoopPostOptionsSheet: React.FC<{
   onEditPost,
   onDeletePost,
   onPostHidden,
+  onTranslatePost,
+  onOpenTranslationSettings,
+  isTranslated = false,
 }) => {
   const navigate = useNavigate();
   const notify = useNotify();
@@ -761,6 +768,36 @@ export const LoopPostOptionsSheet: React.FC<{
                     >
                       <ShareUploadIcon className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
                       <span>Share</span>
+                    </button>
+                  )}
+
+                  {onTranslatePost && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        onClose();
+                        onTranslatePost();
+                      }}
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    >
+                      <Languages className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <span>{isTranslated ? "See original" : "Translate post"}</span>
+                    </button>
+                  )}
+
+                  {onOpenTranslationSettings && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        onClose();
+                        onOpenTranslationSettings();
+                      }}
+                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    >
+                      <SlidersHorizontal className="w-[21px] h-[21px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <span>Translation settings</span>
                     </button>
                   )}
 

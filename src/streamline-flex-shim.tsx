@@ -470,6 +470,16 @@ export const BellRing = c(["M18 8a6 6 0 0 0-12 0v6l-2 3h16l-2-3V8z", "M9 19a3 3 
 export const PartyPopper = c(["M5.8 11.3L2 22l10.7-3.8", "M4 3h.01", "M22 8h.01", "M15 2h.01", "M22 20h.01", "M22 2l-2.24.75a2.9 2.9 0 0 0-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10", "M22 13l-.82-.33c-.86-.34-1.82.2-1.98 1.11v0c-.11.7-.72 1.22-1.43 1.22H17", "M11 2l.33.82c.34.86-.2 1.82-1.11 1.98v0C9.52 4.9 9 5.52 9 6.23V7", "M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"]);
 export const Navigation = c(["M3 11l19-9-9 19-2-8-8-2z"]);
 export const Compass = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"]);
+export const Languages = c(["m5 8 6 6", "m4 14 6-6 2-3", "M2 5h12", "M7 2h1", "m22 22-5-10-5 10", "M14 18h6"]);
+export const LanguagesIcon = Languages;
+export const BadgeCheck = c(["M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z", "m9 12 2 2 4-4"]);
+export const BadgeCheckIcon = BadgeCheck;
+export const Folder = c(["M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"]);
+export const FolderIcon = Folder;
+export const FolderPlus = c(["M12 10v6", "M9 13h6", "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"]);
+export const FolderPlusIcon = FolderPlus;
+export const CalendarClock = c(["M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5", "M16 2v4", "M8 2v4", "M3 10h5", "M17.5 17.5 16 16.3V14", "M16 22a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"]);
+export const CalendarClockIcon = CalendarClock;
 
 export type LucideProps = React.SVGProps<SVGSVGElement> & {
   size?: number | string;
@@ -478,3 +488,4 @@ export type LucideProps = React.SVGProps<SVGSVGElement> & {
 export type LucideIcon = React.ForwardRefExoticComponent<
   LucideProps & React.RefAttributes<SVGSVGElement>
 >;
+

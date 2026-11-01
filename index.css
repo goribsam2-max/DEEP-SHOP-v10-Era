@@ -2279,5 +2279,23 @@ html.dark .msg-chat-row-active {
   background-color: #1b2030 !important;
 }
 
+/* Accessibility: Ensure small buttons & touch targets like .ds-seller-highlight meet touch target criteria (min 44px touch area) */
+.ds-seller-highlight,
+.touch-target-expand {
+  position: relative;
+  min-height: 36px;
+  padding: 6px 12px;
+}
+.ds-seller-highlight::before,
+.touch-target-expand::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: -6px;
+  right: -6px;
+}
+
+
 
 

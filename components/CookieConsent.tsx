@@ -212,9 +212,10 @@ export const CookieConsent: React.FC = () => {
             className="ckB"
             href="/cookie-policy"
             onClick={handleMoreDetails}
-            title="Cookie Policy"
+            title="Read Cookie Policy"
+            aria-label="Read our complete Cookie Policy"
           >
-            Learn More
+            Read Cookie Policy
           </a>
         </div>
       </div>

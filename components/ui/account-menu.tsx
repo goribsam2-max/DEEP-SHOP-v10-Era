@@ -134,6 +134,8 @@ export default function AccountMenu({
           variant="outline"
           className={triggerClass}
           onClick={() => triggerHaptic()}
+          aria-label={user ? `Account menu for ${displayName}` : "Sign in or Account menu"}
+          title={user ? displayName : "Sign in or Account menu"}
         >
           {user ? (
             <div className="relative w-fit shrink-0 p-[2px]">

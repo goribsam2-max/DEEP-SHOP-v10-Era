@@ -5,17 +5,31 @@ import {
   ChevronRight,
   ShieldAlert,
   Eye,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Loader2,
 } from "lucide-react";
 import { ScamPost, UserProfile } from "../types";
 import {
   isScamPostRecord,
   VoiceNoteCard,
 } from "./NewsPostMedia";
-import { resolvePostVideoSource } from "../lib/videoEmbed";
+import { resolvePostVideoSource, toPlayableAudioUrl } from "../lib/videoEmbed";
 import { NewsVideoPlayer } from "./NewsVideoPlayer";
 import { NewsRichText, NewsLinkPreviewCards } from "./NewsRichText";
 import { DottedGhostCatIcon } from "./ComposerLiquidGlassSheets";
 import { LoopPostOptionsSheet } from "./LiquidGlassPostInteractions";
+import {
+  SavedPopupSheet,
+  ReelTranslationModal,
+  TranslationSettingsSheet,
+} from "./LoopsReelsOverlays";
+import {
+  translateLoopsText,
+  useTranslationPrefs,
+} from "../lib/loopsSavedAndTranslation";
 import {
   getTotalPostReactions,
   hasUserReactedToPost,
@@ -201,10 +215,29 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
     null
   );
   const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null);
+  const [savedSheetOpen, setSavedSheetOpen] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [hiddenLocally, setHiddenLocally] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+
+  // Post Translation state
+  const { prefs: translationPrefs } = useTranslationPrefs();
+  const primaryTargetLangId =
+    translationPrefs.preferredLanguages[0]?.id || "en";
+  const secondaryTargetLangId =
+    translationPrefs.preferredLanguages[1]?.id || "";
+  const [translatedCaption, setTranslatedCaption] = useState<string | null>(
+    null
+  );
+  const [showTranslated, setShowTranslated] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationInfoOpen, setTranslationInfoOpen] = useState(false);
+  const [translationSettingsOpen, setTranslationSettingsOpen] = useState(false);
+
+  // Normal Post Background Music state
+  const cardMusicAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [cardMusicPlaying, setCardMusicPlaying] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
 
@@ -215,6 +248,26 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
   useEffect(() => {
     setOptimisticSaved(null);
   }, [isSaved, post.id]);
+
+  useEffect(() => {
+    setTranslatedCaption(null);
+    setShowTranslated(false);
+  }, [post.id]);
+
+  useEffect(() => {
+    const onOtherVideoActive = (ev: Event) => {
+      const customEv = ev as CustomEvent<{ id?: string }>;
+      if (customEv.detail?.id && customEv.detail.id !== `card-music-${post.id}`) {
+        if (cardMusicAudioRef.current) {
+          cardMusicAudioRef.current.pause();
+          setCardMusicPlaying(false);
+        }
+      }
+    };
+    window.addEventListener("deepshop:news-active-video", onOtherVideoActive);
+    return () =>
+      window.removeEventListener("deepshop:news-active-video", onOtherVideoActive);
+  }, [post.id]);
 
   const effectiveFollowing =
     optimisticFollowing !== null ? optimisticFollowing : isFollowingAuthor;
@@ -340,6 +393,34 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
     return cleanDescription || (showDistinctTitle ? cleanTitle : "");
   }, [showDistinctTitle, cleanTitle, cleanDescription]);
 
+  const rawCardBgMusicUrl =
+    !resolvedVideo && (post.music?.audioUrl || post.music?.url)
+      ? String(post.music?.audioUrl || post.music?.url).trim()
+      : "";
+  const playableCardBgMusicUrl = useMemo(
+    () => (rawCardBgMusicUrl ? toPlayableAudioUrl(rawCardBgMusicUrl) : ""),
+    [rawCardBgMusicUrl]
+  );
+
+  // Re-translate automatically if preferred language changes while translation is visible
+  useEffect(() => {
+    if (!showTranslated || !combinedCaption) return;
+    let active = true;
+    setIsTranslating(true);
+    translateLoopsText(combinedCaption)
+      .then((res) => {
+        if (active && res.translatedText) {
+          setTranslatedCaption(res.translatedText);
+        }
+      })
+      .finally(() => {
+        if (active) setIsTranslating(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [primaryTargetLangId, secondaryTargetLangId, combinedCaption]);
+
   const headerSubtitle = useMemo(() => {
     if (post.locationTag && String(post.locationTag).trim()) {
       return String(post.locationTag).trim();
@@ -406,24 +487,87 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
     }
   };
 
-  const handleBookmarkClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    triggerHaptic();
+  const performToggleSave = () => {
     const next = !effectiveSaved;
     setOptimisticSaved(next);
     if (onToggleSave) {
       onToggleSave(post.id);
+    } else {
+      try {
+        const key = "deep_saved_scam_posts";
+        const list: string[] = JSON.parse(localStorage.getItem(key) || "[]");
+        const updated = next
+          ? Array.from(new Set([post.id, ...list]))
+          : list.filter((id) => id !== post.id);
+        localStorage.setItem(key, JSON.stringify(updated));
+      } catch {}
+    }
+    return next;
+  };
+
+  const handleBookmarkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic();
+    const next = performToggleSave();
+    if (next) {
+      setSavedSheetOpen(true);
+    }
+  };
+
+  const handleToggleTranslate = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    triggerHaptic();
+    if (!combinedCaption) return;
+    if (showTranslated) {
+      setShowTranslated(false);
       return;
     }
+    if (translatedCaption) {
+      setShowTranslated(true);
+      setCaptionExpanded(true);
+      return;
+    }
+    setIsTranslating(true);
+    setCaptionExpanded(true);
     try {
-      const key = "deep_saved_scam_posts";
-      const list: string[] = JSON.parse(localStorage.getItem(key) || "[]");
-      const updated = next
-        ? Array.from(new Set([post.id, ...list]))
-        : list.filter((id) => id !== post.id);
-      localStorage.setItem(key, JSON.stringify(updated));
-    } catch {}
+      const res = await translateLoopsText(combinedCaption);
+      setTranslatedCaption(res.translatedText || combinedCaption);
+      setShowTranslated(true);
+    } finally {
+      setIsTranslating(false);
+    }
   };
+
+  const handleToggleCardBgMusic = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic();
+    const el = cardMusicAudioRef.current;
+    if (!el || !playableCardBgMusicUrl) return;
+    if (cardMusicPlaying) {
+      el.pause();
+      setCardMusicPlaying(false);
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("deepshop:news-active-video", {
+          detail: { id: `card-music-${post.id}` },
+        })
+      );
+      el.volume = Math.max(0, Math.min(1, Number(post.music?.bgMusicVolume ?? 1)));
+      el.play()
+        .then(() => setCardMusicPlaying(true))
+        .catch(() => setCardMusicPlaying(false));
+    }
+  };
+
+  const savedItemPreview = {
+    id: post.id,
+    thumbnail:
+      images[0] || resolvedVideo?.thumbnailUrl || post.gifUrl || avatarUrl,
+    title: cleanTitle || displayUsername,
+  };
+
+  const displayedCaption =
+    showTranslated && translatedCaption ? translatedCaption : combinedCaption;
 
   const openPostDetails = () => {
     triggerHaptic();
@@ -495,13 +639,40 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             </div>
 
             {combinedCaption && (
-              <div className="mt-1.5 inline-block max-w-full rounded-[24px] rounded-tl-[8px] border-[1.6px] border-dashed border-zinc-400/80 dark:border-zinc-600 bg-zinc-50/90 dark:bg-zinc-900/70 px-4 py-3 text-[15px] leading-[1.45] text-[#0f0f0f] dark:text-[#f3f4f6] whitespace-pre-wrap break-words">
-                <NewsRichText
-                  text={combinedCaption}
-                  onHashtagClick={(tag) =>
-                    navigate(`/loops/search?tag=${encodeURIComponent(tag)}`)
-                  }
-                />
+              <div className="mt-1.5">
+                <div className="inline-block max-w-full rounded-[24px] rounded-tl-[8px] border-[1.6px] border-dashed border-zinc-400/80 dark:border-zinc-600 bg-zinc-50/90 dark:bg-zinc-900/70 px-4 py-3 text-[15px] leading-[1.45] text-[#0f0f0f] dark:text-[#f3f4f6] whitespace-pre-wrap break-words">
+                  <NewsRichText
+                    text={displayedCaption}
+                    onHashtagClick={(tag) =>
+                      navigate(`/loops/search?tag=${encodeURIComponent(tag)}`)
+                    }
+                  />
+                </div>
+                <div
+                  className="mt-1.5 flex items-center gap-2 text-[12px] text-[#737373] dark:text-zinc-400"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={handleToggleTranslate}
+                    className="font-semibold text-zinc-700 dark:text-zinc-300 hover:underline cursor-pointer inline-flex items-center gap-1"
+                  >
+                    {isTranslating && <Loader2 className="w-3 h-3 animate-spin" />}
+                    <span>{showTranslated ? "See original" : "See translation"}</span>
+                  </button>
+                  {showTranslated && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setTranslationInfoOpen(true)}
+                        className="text-[#384DF5] dark:text-indigo-400 font-medium hover:underline cursor-pointer"
+                      >
+                        Auto-translated
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
@@ -556,12 +727,37 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             canManage={canManage || isOwnPost}
             isFollowingAuthor={effectiveFollowing}
             onClose={() => setMoreMenuOpen(false)}
-            onToggleSave={onToggleSave ? () => onToggleSave(post.id) : undefined}
+            onToggleSave={() => {
+              const saved = performToggleSave();
+              if (saved) setSavedSheetOpen(true);
+            }}
             onCopyLink={onCopyLink ? () => onCopyLink(post.id) : undefined}
             onOpenShare={() => onOpenShare(post)}
             onEditPost={onEditPost ? () => onEditPost(post) : undefined}
             onDeletePost={onDeletePost ? () => onDeletePost(post) : undefined}
             onPostHidden={() => setHiddenLocally(true)}
+            onTranslatePost={combinedCaption ? () => handleToggleTranslate() : undefined}
+            onOpenTranslationSettings={() => setTranslationSettingsOpen(true)}
+            isTranslated={showTranslated}
+          />
+          <SavedPopupSheet
+            isOpen={savedSheetOpen}
+            onClose={() => setSavedSheetOpen(false)}
+            savedItem={savedItemPreview}
+            isSaved={effectiveSaved}
+            onToggleSaveState={performToggleSave}
+          />
+          <ReelTranslationModal
+            isOpen={translationInfoOpen}
+            onClose={() => setTranslationInfoOpen(false)}
+            onOpenSettings={() => setTranslationSettingsOpen(true)}
+            onToggleOriginal={() => handleToggleTranslate()}
+            isTranslated={showTranslated}
+            itemType="post"
+          />
+          <TranslationSettingsSheet
+            isOpen={translationSettingsOpen}
+            onClose={() => setTranslationSettingsOpen(false)}
           />
         </div>
       </article>
@@ -677,6 +873,16 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
         </div>
       )}
 
+      {playableCardBgMusicUrl && (
+        <audio
+          ref={cardMusicAudioRef}
+          src={playableCardBgMusicUrl}
+          preload="none"
+          loop
+          onEnded={() => setCardMusicPlaying(false)}
+        />
+      )}
+
       {/* 2A. Full-Bleed Edge-to-Edge Visual Media (Photos, Carousel, Video, GIF — Zero Radius) */}
       {!resolvedVideo && images.length === 1 && (
         <div
@@ -684,7 +890,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             triggerHaptic();
             navigate(`/loops/photo/${post.id}/0`);
           }}
-          className="loops-edge-media w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
+          className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
         >
           <SmoothImage
             src={images[0]}
@@ -693,6 +899,27 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             skeletonClassName="rounded-none"
             className="w-full max-h-[640px] object-cover block rounded-none"
           />
+          {playableCardBgMusicUrl && (
+            <button
+              type="button"
+              onClick={handleToggleCardBgMusic}
+              aria-label={
+                cardMusicPlaying
+                  ? "Mute background music"
+                  : "Play background music"
+              }
+              className="absolute bottom-3 right-3 z-20 h-8.5 px-3 rounded-full bg-black/65 backdrop-blur-md text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-lg hover:bg-black/80 active:scale-95 transition cursor-pointer"
+            >
+              {cardMusicPlaying ? (
+                <Volume2 className="w-4 h-4 shrink-0" />
+              ) : (
+                <VolumeX className="w-4 h-4 shrink-0" />
+              )}
+              <span className="max-w-[140px] truncate">
+                {post.music?.title || "Audio"}
+              </span>
+            </button>
+          )}
         </div>
       )}
 
@@ -765,6 +992,28 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
                 <ChevronRight className="w-4 h-4" />
               </button>
             )}
+
+            {playableCardBgMusicUrl && (
+              <button
+                type="button"
+                onClick={handleToggleCardBgMusic}
+                aria-label={
+                  cardMusicPlaying
+                    ? "Mute background music"
+                    : "Play background music"
+                }
+                className="absolute bottom-3 right-3 z-20 h-8.5 px-3 rounded-full bg-black/65 backdrop-blur-md text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-lg hover:bg-black/80 active:scale-95 transition cursor-pointer"
+              >
+                {cardMusicPlaying ? (
+                  <Volume2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <VolumeX className="w-4 h-4 shrink-0" />
+                )}
+                <span className="max-w-[140px] truncate">
+                  {post.music?.title || "Audio"}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Centered Carousel Pagination Dots BELOW Media matching IMG_5126 */}
@@ -802,11 +1051,31 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
         >
           <NewsVideoPlayer
             videoSource={resolvedVideo}
-            bgMusicUrl={post.music?.audioUrl}
+            bgMusicUrl={post.music?.audioUrl || post.music?.url}
             bgMusicVolume={post.music?.bgMusicVolume ?? 1.0}
             videoVolume={post.music?.videoVolume ?? 1.0}
             hideBottomBar={true}
             onVideoClick={openPostDetails}
+            enableFeedEndScreen={true}
+            endScreenMeta={{
+              authorName: displayUsername,
+              authorAvatar: avatarUrl,
+              audioTitle: post.music?.title
+                ? post.music.artist
+                  ? `${post.music.title} · ${post.music.artist}`
+                  : post.music.title
+                : `${displayUsername} · Original audio`,
+              isFollowing: effectiveFollowing,
+              showFollow: !isOwnPost && Boolean(post.reporterId),
+              onFollow: handleFollowAction,
+              onOpenMore: (e) => {
+                e.stopPropagation();
+                triggerHaptic();
+                setMoreMenuOpen(true);
+              },
+              onOpenAuthor: (e) => openAuthorProfile(e),
+            }}
+            onWatchMoreReels={() => navigate("/loops?filter=video")}
           />
         </div>
       )}
@@ -846,27 +1115,105 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
           <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-bold tracking-wider">
             GIF
           </span>
+          {playableCardBgMusicUrl && (
+            <button
+              type="button"
+              onClick={handleToggleCardBgMusic}
+              aria-label={
+                cardMusicPlaying
+                  ? "Mute background music"
+                  : "Play background music"
+              }
+              className="absolute bottom-3 right-3 z-20 h-8.5 px-3 rounded-full bg-black/65 backdrop-blur-md text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-lg hover:bg-black/80 active:scale-95 transition cursor-pointer"
+            >
+              {cardMusicPlaying ? (
+                <Volume2 className="w-4 h-4 shrink-0" />
+              ) : (
+                <VolumeX className="w-4 h-4 shrink-0" />
+              )}
+              <span className="max-w-[140px] truncate">
+                {post.music?.title || "Audio"}
+              </span>
+            </button>
+          )}
         </div>
       )}
 
       {/* 2B. Text-Only Body (when post has no primary image/video/gif) */}
       {!hasPrimaryVisualMedia && combinedCaption && (
-        <div
-          onClick={openPostDetails}
-          className={`px-3.5 pt-1 pb-2 text-[#0f0f0f] dark:text-[#f3f4f6] whitespace-pre-wrap break-words cursor-pointer ${
-            post.textStyle === "large"
-              ? "text-[18px] font-medium leading-[1.42]"
-              : post.textStyle === "quote"
-              ? "text-[16px] italic pl-6 border-l-2 border-zinc-300 dark:border-zinc-700 leading-[1.48]"
-              : "text-[15px] font-normal leading-[1.46]"
-          }`}
-        >
-          <NewsRichText
-            text={combinedCaption}
-            onHashtagClick={(tag) =>
-              navigate(`/loops/search?tag=${encodeURIComponent(tag)}`)
-            }
-          />
+        <div className="px-3.5 pt-1 pb-2">
+          <div
+            onClick={openPostDetails}
+            className={`text-[#0f0f0f] dark:text-[#f3f4f6] whitespace-pre-wrap break-words cursor-pointer ${
+              post.textStyle === "large"
+                ? "text-[18px] font-medium leading-[1.42]"
+                : post.textStyle === "quote"
+                ? "text-[16px] italic pl-6 border-l-2 border-zinc-300 dark:border-zinc-700 leading-[1.48]"
+                : "text-[15px] font-normal leading-[1.46]"
+            }`}
+          >
+            <NewsRichText
+              text={displayedCaption}
+              onHashtagClick={(tag) =>
+                navigate(`/loops/search?tag=${encodeURIComponent(tag)}`)
+              }
+            />
+          </div>
+
+          <div
+            className="mt-1.5 flex items-center gap-2 text-[12px] text-[#737373] dark:text-zinc-400"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={handleToggleTranslate}
+              className="font-semibold text-zinc-700 dark:text-zinc-300 hover:underline cursor-pointer inline-flex items-center gap-1"
+            >
+              {isTranslating && <Loader2 className="w-3 h-3 animate-spin" />}
+              <span>{showTranslated ? "See original" : "See translation"}</span>
+            </button>
+            {showTranslated && (
+              <>
+                <span aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  onClick={() => setTranslationInfoOpen(true)}
+                  className="text-[#384DF5] dark:text-indigo-400 font-medium hover:underline cursor-pointer"
+                >
+                  Auto-translated
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Text-Only Attached Background Music Player Pill */}
+      {!hasPrimaryVisualMedia && playableCardBgMusicUrl && (
+        <div className="px-3.5 pb-1.5" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={handleToggleCardBgMusic}
+            className="inline-flex items-center gap-2.5 max-w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-left hover:bg-zinc-200/70 dark:hover:bg-zinc-800/80 active:scale-[0.99] transition cursor-pointer"
+          >
+            <span className="w-7 h-7 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center shrink-0">
+              {cardMusicPlaying ? (
+                <Pause className="w-3.5 h-3.5 fill-current" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+              )}
+            </span>
+            <div className="min-w-0 pr-1">
+              <p className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate leading-tight">
+                {post.music?.title || "Background music"}
+              </p>
+              {post.music?.artist && (
+                <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 truncate leading-tight">
+                  {post.music.artist}
+                </p>
+              )}
+            </div>
+          </button>
         </div>
       )}
 
@@ -1045,7 +1392,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
           >
             {displayUsername}
           </button>
-          {shouldTruncateCaption ? (
+          {shouldTruncateCaption && !showTranslated ? (
             <>
               <span>{cleanSingleLinePreview.slice(0, 52).trimEnd()}... </span>
               <button
@@ -1063,7 +1410,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
           ) : (
             <span className="whitespace-pre-wrap">
               <NewsRichText
-                text={combinedCaption}
+                text={displayedCaption}
                 onHashtagClick={(tag) =>
                   navigate(`/loops/search?tag=${encodeURIComponent(tag)}`)
                 }
@@ -1073,13 +1420,44 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
         </div>
       )}
 
-      {/* 5. Relative Timestamp Footer matching IMG_5126 ("3 days ago") */}
+      {/* 5. Relative Timestamp + Inline Translation Action Footer */}
       <div
         onClick={openPostDetails}
-        className="px-3.5 pb-3.5 pt-0.5 text-[12px] text-[#737373] dark:text-zinc-400 font-normal cursor-pointer"
+        className="px-3.5 pb-3.5 pt-0.5 text-[12px] text-[#737373] dark:text-zinc-400 font-normal flex items-center flex-wrap gap-1.5 cursor-pointer"
       >
-        {formatLoopRelativeTime(post.createdAt)}
-        {post.isEdited ? " · Edited" : ""}
+        <span>
+          {formatLoopRelativeTime(post.createdAt)}
+          {post.isEdited ? " · Edited" : ""}
+        </span>
+        {hasPrimaryVisualMedia && combinedCaption && (
+          <>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={handleToggleTranslate}
+              className="font-semibold text-zinc-900 dark:text-zinc-200 hover:underline cursor-pointer inline-flex items-center gap-1"
+            >
+              {isTranslating && <Loader2 className="w-3 h-3 animate-spin" />}
+              <span>{showTranslated ? "See original" : "See translation"}</span>
+            </button>
+            {showTranslated && (
+              <>
+                <span aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic();
+                    setTranslationInfoOpen(true);
+                  }}
+                  className="text-[#384DF5] dark:text-indigo-400 font-medium hover:underline cursor-pointer"
+                >
+                  Auto-translated
+                </button>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       {/* Shared "About this post" Options Sheet (IMG_5127) */}
@@ -1090,12 +1468,42 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
         canManage={canManage || isOwnPost}
         isFollowingAuthor={effectiveFollowing}
         onClose={() => setMoreMenuOpen(false)}
-        onToggleSave={onToggleSave ? () => onToggleSave(post.id) : undefined}
+        onToggleSave={() => {
+          const saved = performToggleSave();
+          if (saved) setSavedSheetOpen(true);
+        }}
         onCopyLink={onCopyLink ? () => onCopyLink(post.id) : undefined}
         onOpenShare={() => onOpenShare(post)}
         onEditPost={onEditPost ? () => onEditPost(post) : undefined}
         onDeletePost={onDeletePost ? () => onDeletePost(post) : undefined}
         onPostHidden={() => setHiddenLocally(true)}
+        onTranslatePost={combinedCaption ? () => handleToggleTranslate() : undefined}
+        onOpenTranslationSettings={() => setTranslationSettingsOpen(true)}
+        isTranslated={showTranslated}
+      />
+
+      {/* Saved Popup Sheet (IMG_5302) */}
+      <SavedPopupSheet
+        isOpen={savedSheetOpen}
+        onClose={() => setSavedSheetOpen(false)}
+        savedItem={savedItemPreview}
+        isSaved={effectiveSaved}
+        onToggleSaveState={performToggleSave}
+      />
+
+      {/* Auto-Translated Info Dialog (IMG_5304) & Settings Sheet (IMG_5305 -> IMG_5306) */}
+      <ReelTranslationModal
+        isOpen={translationInfoOpen}
+        onClose={() => setTranslationInfoOpen(false)}
+        onOpenSettings={() => setTranslationSettingsOpen(true)}
+        onToggleOriginal={() => handleToggleTranslate()}
+        isTranslated={showTranslated}
+        itemType="post"
+      />
+
+      <TranslationSettingsSheet
+        isOpen={translationSettingsOpen}
+        onClose={() => setTranslationSettingsOpen(false)}
       />
     </article>
   );

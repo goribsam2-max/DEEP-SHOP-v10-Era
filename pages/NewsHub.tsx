@@ -45,6 +45,7 @@ import {
 import { AdPlacementSlot } from "../components/AdPlacementSlot";
 import { preloadImageUrl } from "../components/SmoothImage";
 import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
+import { LiquidGlassButton } from "../components/LoopsReelsOverlays";
 
 const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <LoopsSvgIcon name="loops-post-repost" className={className} />
@@ -248,6 +249,16 @@ export const NewsHub: React.FC = () => {
     const sp = new URLSearchParams(location.search);
     return (sp.get("postId") || "").trim();
   }, [location.search]);
+
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 80);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (activeFeedFilter !== "video") {
@@ -1123,10 +1134,9 @@ export const NewsHub: React.FC = () => {
     triggerHaptic();
     const next = await toggleSavePostHelper(post, currentUser?.uid);
     setSavedIds(getSavedPostIdsLocal());
-    notify(
-      next ? "Saved to Loops" : "Removed from saved",
-      "info"
-    );
+    if (!next) {
+      notify("Removed from saved", "info");
+    }
   };
 
   const handleDeletePost = async (post: ScamPost) => {
@@ -1620,44 +1630,57 @@ export const NewsHub: React.FC = () => {
                   </AnimatePresence>
                 </div>
 
-                {/* Right: Create (+) & Heart Activity Icons */}
-                <div className="flex items-center gap-0.5 -mr-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setChooserOpen(true);
-                    }}
+                {/* Right: Create (+) & Heart Activity Icons (Liquid Glass Style IMG_5303) */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <LiquidGlassButton
+                    onClick={() => setChooserOpen(true)}
                     title="Create"
-                    aria-label="Create"
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-95 transition cursor-pointer"
+                    ariaLabel="Create post or story"
                   >
-                    <LoopsSvgIcon
-                      name="loops-header-create"
-                      className="w-[23px] h-[23px]"
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      navigate("/loops/activity");
-                    }}
+                    <Plus className="w-5 h-5 stroke-[2.4]" />
+                  </LiquidGlassButton>
+
+                  <LiquidGlassButton
+                    onClick={() => navigate("/loops/activity")}
                     title="Activity"
-                    aria-label="Activity"
-                    className="relative w-9 h-9 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-95 transition cursor-pointer"
+                    ariaLabel="Activity notifications"
+                    badge={unreadNewsNotifications > 0}
                   >
-                    <LoopsSvgIcon
-                      name="loops-header-activity"
-                      className="w-[22px] h-[22px]"
-                    />
-                    {unreadNewsNotifications > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#FF3040] ring-2 ring-white dark:ring-[#101010]" />
-                    )}
-                  </button>
+                    <Heart className="w-5 h-5 stroke-[2.2] fill-transparent" />
+                  </LiquidGlassButton>
                 </div>
               </header>
             )}
+
+            {/* Floating Top-Right Liquid Glass Controls on Scroll (Exact IMG_5303 standalone orbs) */}
+            <AnimatePresence>
+              {isScrolled && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85, y: -8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.85, y: -8 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                  className="fixed top-3 right-3.5 z-50 flex items-center gap-2.5"
+                >
+                  <LiquidGlassButton
+                    onClick={() => setChooserOpen(true)}
+                    title="Create"
+                    ariaLabel="Create post or story"
+                  >
+                    <Plus className="w-5 h-5 stroke-[2.4]" />
+                  </LiquidGlassButton>
+
+                  <LiquidGlassButton
+                    onClick={() => navigate("/loops/activity")}
+                    title="Activity"
+                    ariaLabel="Activity notifications"
+                    badge={unreadNewsNotifications > 0}
+                  >
+                    <Heart className="w-5 h-5 stroke-[2.2] fill-transparent" />
+                  </LiquidGlassButton>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Top Banner Ad Placement Slot */}
             <AdPlacementSlot slot="header_top" />

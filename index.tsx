@@ -31,10 +31,14 @@ const isBenignDevClientNoise = (msg: string, stack: string, filename = ""): bool
   const combined = `${msg} ${stack} ${filename}`.toLowerCase();
   return (
     combined.includes("@vite/client") ||
-    combined.includes("vite") && combined.includes("websocket") ||
+    (combined.includes("vite") && combined.includes("websocket")) ||
     combined.includes("waitforsuccessfulping") ||
     combined.includes("failed to register a serviceworker") ||
-    combined.includes("resizeobserver loop")
+    combined.includes("resizeobserver loop") ||
+    combined.includes("resource-exhausted") ||
+    combined.includes("quota exceeded") ||
+    combined.includes("maximum backoff delay") ||
+    combined.includes("overloading the backend")
   );
 };
 

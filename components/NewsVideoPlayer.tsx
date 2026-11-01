@@ -19,6 +19,17 @@ import {
 } from "../lib/videoEmbed";
 import { triggerHaptic } from "../lib/haptics";
 
+export interface FeedVideoEndScreenMeta {
+  authorName?: string;
+  authorAvatar?: string;
+  audioTitle?: string;
+  isFollowing?: boolean;
+  showFollow?: boolean;
+  onFollow?: (e: React.MouseEvent) => void;
+  onOpenMore?: (e: React.MouseEvent) => void;
+  onOpenAuthor?: (e: React.MouseEvent) => void;
+}
+
 interface NewsVideoPlayerProps {
   videoSource: ParsedVideoEmbed;
   autoPlayInView?: boolean;
@@ -28,6 +39,9 @@ interface NewsVideoPlayerProps {
   videoVolume?: number;
   hideBottomBar?: boolean;
   onVideoClick?: () => void;
+  enableFeedEndScreen?: boolean;
+  endScreenMeta?: FeedVideoEndScreenMeta;
+  onWatchMoreReels?: () => void;
 }
 
 const ACTIVE_VIDEO_EVENT = "deepshop:news-active-video";
@@ -56,6 +70,9 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   videoVolume = 1.0,
   hideBottomBar = false,
   onVideoClick,
+  enableFeedEndScreen = false,
+  endScreenMeta,
+  onWatchMoreReels,
 }) => {
   const instanceId = useId();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -75,6 +92,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   const [hasLoadedFrame, setHasLoadedFrame] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
   const [streamError, setStreamError] = useState<boolean>(false);
+  const [isVideoEnded, setIsVideoEnded] = useState<boolean>(false);
 
   // Viewport & activation state
   const [hasEnteredView, setHasEnteredView] = useState<boolean>(!autoPlayInView);
@@ -98,6 +116,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     setDuration(0);
     setDirectStreamFailed(false);
     setUseRawOriginFallback(false);
+    setIsVideoEnded(false);
     setHasLoadedFrame(false);
     setIsBuffering(false);
     setStreamError(false);
@@ -280,11 +299,16 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               setDuration(data.info.duration);
             }
             if (typeof data.info.playerState === "number") {
-              if (data.info.playerState === 1) setIsPlaying(true);
-              else if (
-                data.info.playerState === 2 ||
-                data.info.playerState === 0
-              ) {
+              if (data.info.playerState === 1) {
+                setIsPlaying(true);
+                setIsVideoEnded(false);
+              } else if (data.info.playerState === 0) {
+                setIsPlaying(false);
+                if (enableFeedEndScreen) {
+                  userPausedRef.current = true;
+                  setIsVideoEnded(true);
+                }
+              } else if (data.info.playerState === 2) {
                 setIsPlaying(false);
               }
             }
@@ -317,7 +341,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [resolvedEmbed.platform, usesNativeStream]);
+  }, [resolvedEmbed.platform, usesNativeStream, enableFeedEndScreen]);
 
   // Viewport IntersectionObserver for Feed Autoplay & Off-Screen Autopause
   useEffect(() => {
@@ -587,6 +611,167 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     );
   };
 
+  const handleReplayFromEndScreen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    triggerHaptic();
+    userPausedRef.current = false;
+    setIsVideoEnded(false);
+    announceActivePlayback();
+
+    if (nativeVideoRef.current) {
+      const v = nativeVideoRef.current;
+      try {
+        v.currentTime = 0;
+      } catch {}
+      v.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          v.muted = true;
+          setIsMuted(true);
+          v.play()
+            .then(() => setIsPlaying(true))
+            .catch(() => {});
+        });
+    } else if (resolvedEmbed.platform === "youtube") {
+      sendYouTubeCommand("seekTo", [0, true]);
+      sendYouTubeCommand("playVideo");
+      setIsPlaying(true);
+    } else if (resolvedEmbed.platform === "tiktok") {
+      sendTikTokCommand("seekTo", 0);
+      sendTikTokCommand("play");
+      setIsPlaying(true);
+    }
+
+    if (bgAudioRef.current) {
+      try {
+        bgAudioRef.current.currentTime = 0;
+      } catch {}
+      if (!isMuted) {
+        bgAudioRef.current.play().catch(() => {});
+      }
+    }
+  };
+
+  const renderFeedEndScreenOverlay = () => {
+    if (!enableFeedEndScreen || !isVideoEnded) return null;
+    const creatorName = endScreenMeta?.authorName || "Creator";
+    const creatorAvatar = endScreenMeta?.authorAvatar || "";
+    const audioSubtitle =
+      endScreenMeta?.audioTitle || `${creatorName} · Original audio`;
+
+    return (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute inset-0 z-30 bg-black/55 backdrop-blur-[2px] flex flex-col justify-between p-3.5 text-white cursor-default"
+      >
+        {/* Top Creator + Follow + Menu Row matching IMG_5307 */}
+        <div className="flex items-center justify-between gap-2.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              endScreenMeta?.onOpenAuthor?.(e);
+            }}
+            className="flex items-center gap-2.5 min-w-0 text-left cursor-pointer"
+          >
+            <div className="w-9 h-9 rounded-full overflow-hidden bg-white/20 border border-white/30 flex items-center justify-center shrink-0">
+              {creatorAvatar ? (
+                <img
+                  src={creatorAvatar}
+                  alt={creatorName}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-bold text-white">
+                  {creatorName.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+
+            <div className="min-w-0 leading-tight">
+              <p className="text-[14px] font-bold text-white truncate">
+                {creatorName}
+              </p>
+              <p className="text-[12px] text-white/90 truncate flex items-center gap-1 mt-0.5">
+                <span className="text-[11px]">🎵</span>
+                <span className="truncate">{audioSubtitle}</span>
+              </p>
+            </div>
+          </button>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            {endScreenMeta?.showFollow && endScreenMeta.onFollow && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  endScreenMeta.onFollow?.(e);
+                }}
+                className="px-4 py-1.5 rounded-[10px] border border-white/80 text-white text-[13.5px] font-semibold hover:bg-white/10 active:scale-95 transition cursor-pointer whitespace-nowrap"
+              >
+                {endScreenMeta.isFollowing ? "Following" : "Follow"}
+              </button>
+            )}
+
+            {endScreenMeta?.onOpenMore && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  endScreenMeta.onOpenMore?.(e);
+                }}
+                aria-label="More options"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition cursor-pointer"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-[22px] h-[22px]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.1"
+                  strokeLinecap="round"
+                >
+                  <line x1="4" y1="9" x2="20" y2="9" />
+                  <line x1="4" y1="15" x2="14" y2="15" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Center CTA Stack matching IMG_5307 */}
+        <div className="my-auto flex flex-col items-center text-center">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerHaptic();
+              onWatchMoreReels?.();
+            }}
+            className="px-5 py-3 rounded-[16px] bg-white text-zinc-950 font-semibold text-[15px] flex items-center gap-2.5 shadow-xl hover:bg-zinc-100 active:scale-95 transition cursor-pointer whitespace-nowrap"
+          >
+            <span className="w-[22px] h-[22px] rounded-[6px] bg-zinc-950 text-white flex items-center justify-center shrink-0">
+              <Play className="w-3 h-3 fill-current ml-0.5" />
+            </span>
+            <span>Watch more reels</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleReplayFromEndScreen}
+            className="mt-4 text-[14.5px] font-semibold text-white hover:opacity-85 active:scale-95 transition cursor-pointer whitespace-nowrap"
+          >
+            Watch again
+          </button>
+        </div>
+
+        <div className="h-7" />
+      </div>
+    );
+  };
+
   // 0. DIRECT VIDEO STREAM (or resolved og:video stream)
   if (usesNativeStream) {
     const rawCandidate =
@@ -616,20 +801,32 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             poster={resolvedEmbed.thumbnailUrl}
             preload={hasEnteredView || isInView ? "auto" : "metadata"}
             playsInline
-            loop
+            loop={!enableFeedEndScreen}
             muted={isMuted || (hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01)}
             autoPlay={autoPlayInView && isInView}
             onPlay={() => {
               setIsPlaying(true);
+              setIsVideoEnded(false);
               setStreamError(false);
             }}
             onPlaying={() => {
               setIsPlaying(true);
+              setIsVideoEnded(false);
               setHasLoadedFrame(true);
               setIsBuffering(false);
               setStreamError(false);
             }}
             onPause={() => setIsPlaying(false)}
+            onEnded={() => {
+              if (enableFeedEndScreen) {
+                userPausedRef.current = true;
+                setIsPlaying(false);
+                setIsVideoEnded(true);
+                if (bgAudioRef.current) {
+                  bgAudioRef.current.pause();
+                }
+              }
+            }}
             onWaiting={() => setIsBuffering(true)}
             onCanPlay={() => {
               setHasLoadedFrame(true);
@@ -724,44 +921,45 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
           )}
 
           {/* Top-Right Video Duration Badge */}
-          {duration > 0 && (
+          {duration > 0 && !isVideoEnded && (
             <div className="absolute top-3 right-3 z-20 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-white text-[12px] font-semibold tracking-wide font-mono select-none pointer-events-none drop-shadow-md">
               {formatVideoClock(duration)}
             </div>
           )}
 
           {/* Single Bottom-Right Glass Mute / Unmute Toggle Button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              triggerHaptic();
-              const nextMuted = !isMuted;
-              setIsMuted(nextMuted);
-              if (nativeVideoRef.current) {
-                nativeVideoRef.current.muted = nextMuted && !(hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01);
-                if (hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01) {
-                  nativeVideoRef.current.muted = true;
-                } else {
-                  nativeVideoRef.current.muted = nextMuted;
+          {!isVideoEnded && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic();
+                const nextMuted = !isMuted;
+                setIsMuted(nextMuted);
+                if (nativeVideoRef.current) {
+                  if (hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01) {
+                    nativeVideoRef.current.muted = true;
+                  } else {
+                    nativeVideoRef.current.muted = nextMuted;
+                  }
                 }
-              }
-              if (bgAudioRef.current) {
-                bgAudioRef.current.muted = nextMuted;
-                if (!nextMuted && isPlaying && isInView) {
-                  bgAudioRef.current.play().catch(() => {});
+                if (bgAudioRef.current) {
+                  bgAudioRef.current.muted = nextMuted;
+                  if (!nextMuted && isPlaying && isInView) {
+                    bgAudioRef.current.play().catch(() => {});
+                  }
                 }
-              }
-            }}
-            className="absolute bottom-3 right-3 z-20 w-8.5 h-8.5 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center shadow-lg hover:bg-black/80 active:scale-90 transition cursor-pointer touch-manipulation"
-            aria-label={isMuted ? "Unmute video" : "Mute video"}
-          >
-            {isMuted ? (
-              <VolumeX className="w-4 h-4 fill-white" />
-            ) : (
-              <Volume2 className="w-4 h-4 fill-white" />
-            )}
-          </button>
+              }}
+              className="absolute bottom-3 right-3 z-20 w-8.5 h-8.5 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center shadow-lg hover:bg-black/80 active:scale-90 transition cursor-pointer touch-manipulation"
+              aria-label={isMuted ? "Unmute video" : "Mute video"}
+            >
+              {isMuted ? (
+                <VolumeX className="w-4 h-4 fill-white" />
+              ) : (
+                <Volume2 className="w-4 h-4 fill-white" />
+              )}
+            </button>
+          )}
 
           {hasSeparateBgMusic && bgMusicUrl && (
             <audio
@@ -773,7 +971,8 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             />
           )}
 
-          {overlayBadge}
+          {!isVideoEnded && overlayBadge}
+          {renderFeedEndScreenOverlay()}
         </div>
 
         {!hideBottomBar && (
@@ -863,7 +1062,10 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
         ? `&origin=${encodeURIComponent(window.location.origin)}`
         : "";
     const autoParam = autoPlayInView ? "1" : "0";
-    const ytSrc = `https://www.youtube.com/embed/${resolvedEmbed.videoId}?enablejsapi=1&autoplay=${autoParam}&mute=1&controls=1&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${resolvedEmbed.videoId}${originParam}`;
+    const loopParam = enableFeedEndScreen
+      ? ""
+      : `&loop=1&playlist=${resolvedEmbed.videoId}`;
+    const ytSrc = `https://www.youtube.com/embed/${resolvedEmbed.videoId}?enablejsapi=1&autoplay=${autoParam}&mute=1&controls=1&playsinline=1&rel=0&modestbranding=1${loopParam}${originParam}`;
 
     return (
       <div
@@ -911,14 +1113,14 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               />
             </div>
           )}
-          {overlayBadge}
-          {hideBottomBar && onVideoClick && (
+          {!isVideoEnded && overlayBadge}
+          {hideBottomBar && onVideoClick && !isVideoEnded && (
             <div
               onClick={toggleEmbedPlayPause}
               className="absolute inset-0 z-10 cursor-pointer"
             />
           )}
-          {hideBottomBar && (
+          {hideBottomBar && !isVideoEnded && (
             <button
               type="button"
               onClick={toggleEmbedMute}
@@ -932,6 +1134,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               )}
             </button>
           )}
+          {renderFeedEndScreenOverlay()}
         </div>
 
         {!hideBottomBar && (

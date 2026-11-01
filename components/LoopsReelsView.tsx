@@ -23,6 +23,7 @@ import {
   Loader2,
   MoreHorizontal,
   Check,
+  Languages,
   Music as Music2,
 } from "lucide-react";
 import {
@@ -85,8 +86,18 @@ import {
   ReelAudioDetailsModal,
   ReelPlaybackSheet,
   ReelsSuggestedProfilesSlide,
+  SavedPopupSheet,
+  ReelTranslationModal,
+  TranslationSettingsSheet,
+  PreferredLanguagesModal,
+  ReelEndScreenOverlay,
   SuggestedReelProfileItem,
 } from "./LoopsReelsOverlays";
+import {
+  AVAILABLE_TRANSLATION_LANGUAGES,
+  translateLoopsText,
+  useTranslationPrefs,
+} from "../lib/loopsSavedAndTranslation";
 
 /* ============================================================================
  * CRISP CUSTOM VECTOR ICONS (Delegated to Admin-Editable LoopsSvgIcon Registry)
@@ -424,9 +435,40 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     };
   }, [videoSource.originalUrl, videoSource.platform, videoSource.needsResolution]);
 
+  const reelImages = useMemo(
+    () => (Array.isArray(post.images) ? post.images.filter(Boolean) : []),
+    [post.images]
+  );
+  const rawMusicAudioUrl = (
+    post.music?.audioUrl ||
+    post.music?.url ||
+    ""
+  ).trim();
+  const isImageMusicReel =
+    !resolvePostVideoSource(post) &&
+    reelImages.length > 0 &&
+    Boolean(rawMusicAudioUrl);
+
+  const [imageSlideIdx, setImageSlideIdx] = useState(0);
+
+  useEffect(() => {
+    setImageSlideIdx(0);
+  }, [post.id]);
+
+  useEffect(() => {
+    if (!isImageMusicReel || !isActive || isPaused || reelImages.length <= 1) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setImageSlideIdx((prev) => (prev + 1) % reelImages.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [isImageMusicReel, isActive, isPaused, reelImages.length]);
+
   const usesNativeVideo =
-    resolved.platform === "direct" ||
-    (Boolean(resolved.directStreamUrl) && !directFailed);
+    !isImageMusicReel &&
+    (resolved.platform === "direct" ||
+      (Boolean(resolved.directStreamUrl) && !directFailed));
 
   const sendYtCmd = (func: string, args: unknown[] = []) => {
     const win = iframeRef.current?.contentWindow;
@@ -443,13 +485,14 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   };
 
   const rawStreamCandidate = resolved.directStreamUrl || resolved.canonicalUrl || "";
-  const rawMusicAudioUrl = (post.music?.audioUrl || "").trim();
-  const hasSeparateReelMusic = Boolean(
-    rawMusicAudioUrl &&
-      rawMusicAudioUrl !== rawStreamCandidate.trim() &&
-      rawMusicAudioUrl !== resolved.originalUrl.trim() &&
-      rawMusicAudioUrl !== (post.videoUrl || "").trim()
-  );
+  const hasSeparateReelMusic =
+    isImageMusicReel ||
+    Boolean(
+      rawMusicAudioUrl &&
+        rawMusicAudioUrl !== rawStreamCandidate.trim() &&
+        rawMusicAudioUrl !== resolved.originalUrl.trim() &&
+        rawMusicAudioUrl !== (post.videoUrl || "").trim()
+    );
   const reelVideoVolume = Math.max(
     0,
     Math.min(1, Number(post.music?.videoVolume ?? 1))
@@ -469,10 +512,19 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       audioEl.volume = reelMusicVolume;
       audioEl.muted = isMuted;
       if (isActive && !isPaused && !isMuted) {
-        audioEl.play().catch(() => {});
+        audioEl.play().catch(() => {
+          if (isImageMusicReel && !autoMuteNotifiedRef.current) {
+            autoMuteNotifiedRef.current = true;
+            onAutoMuted?.();
+          }
+        });
       } else {
         audioEl.pause();
       }
+    }
+
+    if (isImageMusicReel) {
+      return;
     }
 
     if (usesNativeVideo && videoRef.current) {
@@ -518,6 +570,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     isPaused,
     isMuted,
     playbackSpeed,
+    isImageMusicReel,
     usesNativeVideo,
     useRawOriginFallback,
     resolved.platform,
@@ -599,6 +652,52 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       : "");
 
   const renderMediaElement = () => {
+    if (isImageMusicReel) {
+      const currentImg =
+        reelImages[imageSlideIdx % reelImages.length] || reelImages[0] || "";
+      return (
+        <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
+          {currentImg && (
+            <>
+              <img
+                src={currentImg}
+                alt=""
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-35 pointer-events-none"
+              />
+              <SmoothImage
+                src={currentImg}
+                alt={post.title || post.description || "Image Reel"}
+                className="relative z-[1] w-full h-full object-contain bg-transparent"
+              />
+            </>
+          )}
+          {reelImages.length > 1 && !isDocked && (
+            <div className="absolute top-[68px] inset-x-0 z-20 flex items-center justify-center gap-1.5 pointer-events-auto">
+              {reelImages.map((_, dotIdx) => (
+                <button
+                  key={dotIdx}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic();
+                    setImageSlideIdx(dotIdx);
+                  }}
+                  aria-label={`Slide ${dotIdx + 1}`}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    dotIdx === imageSlideIdx % reelImages.length
+                      ? "w-5 bg-white shadow"
+                      : "w-1.5 bg-white/45"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     if (usesNativeVideo) {
       const rawCandidate = resolved.directStreamUrl || resolved.canonicalUrl;
       const proxiedCandidate = toPlayableMediaUrl(rawCandidate);
@@ -883,6 +982,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   };
 
   const supportsTapOverlay =
+    isImageMusicReel ||
     usesNativeVideo ||
     resolved.platform === "youtube" ||
     resolved.platform === "tiktok";
@@ -896,8 +996,22 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
           data-active-reel-audio={isActive ? "true" : undefined}
           src={toPlayableAudioUrl(rawMusicAudioUrl)}
           preload={isActive ? "auto" : "none"}
-          loop
+          loop={!(isImageMusicReel && onVideoEnded)}
           muted={isMuted}
+          onTimeUpdate={(e) => {
+            if (!isImageMusicReel || !isActive) return;
+            const a = e.currentTarget;
+            if (a.duration > 0) {
+              onProgressUpdate?.(
+                Math.min(100, (a.currentTime / a.duration) * 100)
+              );
+            }
+          }}
+          onEnded={() => {
+            if (isImageMusicReel && onVideoEnded) {
+              onVideoEnded();
+            }
+          }}
         />
       )}
 
@@ -1434,6 +1548,9 @@ const AboutThisReelSheet: React.FC<{
   onOpenAlgorithm: () => void;
   onOpenAudioDetails?: () => void;
   onOpenPlaybackSheet?: () => void;
+  onToggleTranslate?: () => void;
+  onOpenTranslationSettings?: () => void;
+  isTranslated?: boolean;
   onClose: () => void;
 }> = ({
   isOpen,
@@ -1451,6 +1568,9 @@ const AboutThisReelSheet: React.FC<{
   onOpenAlgorithm,
   onOpenAudioDetails,
   onOpenPlaybackSheet,
+  onToggleTranslate,
+  onOpenTranslationSettings,
+  isTranslated,
   onClose,
 }) => {
   const navigate = useNavigate();
@@ -1740,6 +1860,52 @@ const AboutThisReelSheet: React.FC<{
                   {autoAdvance ? "Auto-scroll" : `${playbackSpeed}x`}
                 </span>
               </button>
+
+              {onToggleTranslate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    onClose();
+                    onToggleTranslate();
+                  }}
+                  className="w-full px-4 py-3.5 flex items-center justify-between gap-3.5 text-left border-t border-black/[0.05] dark:border-white/[0.06] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 flex items-center justify-center shrink-0 text-zinc-900 dark:text-white">
+                      <Languages className="w-[21px] h-[21px]" />
+                    </div>
+                    <span className="text-[15.5px] font-medium text-zinc-950 dark:text-white">
+                      {isTranslated ? "See original" : "Translate"}
+                    </span>
+                  </div>
+                </button>
+              )}
+
+              {onOpenTranslationSettings && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    onClose();
+                    onOpenTranslationSettings();
+                  }}
+                  className="w-full px-4 py-3.5 flex items-center justify-between gap-3.5 text-left border-t border-black/[0.05] dark:border-white/[0.06] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 flex items-center justify-center shrink-0 text-zinc-900 dark:text-white">
+                      <LoopsSvgIcon
+                        name="loops-reel-cc"
+                        className="w-[21px] h-[21px]"
+                      />
+                    </div>
+                    <span className="text-[15.5px] font-medium text-zinc-950 dark:text-white">
+                      Translation settings
+                    </span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-zinc-400" />
+                </button>
+              )}
 
               {showPlaybackPanel && (
                 <div className="px-4 pb-4 pt-1 space-y-3 border-t border-black/[0.05] dark:border-white/[0.06]">
@@ -2787,6 +2953,89 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
   const [audioDetailsPost, setAudioDetailsPost] = useState<ScamPost | null>(
     null
   );
+  const [savedPopupOpen, setSavedPopupOpen] = useState(false);
+  const [savedItemForSheet, setSavedItemForSheet] = useState<{
+    id: string;
+    thumbnail?: string;
+    title?: string;
+  } | null>(null);
+
+  const { prefs: translationPrefs } = useTranslationPrefs();
+  const [translationModalOpen, setTranslationModalOpen] = useState(false);
+  const [translationSettingsOpen, setTranslationSettingsOpen] = useState(false);
+  const [preferredLanguagesOpen, setPreferredLanguagesOpen] = useState(false);
+  const [translatedPosts, setTranslatedPosts] = useState<Record<string, boolean>>({});
+  const [translatedReelTexts, setTranslatedReelTexts] = useState<
+    Record<string, string>
+  >({});
+  const [translatingReelIds, setTranslatingReelIds] = useState<
+    Record<string, boolean>
+  >({});
+
+  const targetLangName =
+    AVAILABLE_TRANSLATION_LANGUAGES.find(
+      (l) => l.code === translationPrefs.targetLanguage
+    )?.name || "English";
+
+  const handleToggleTranslateReel = async (
+    post: ScamPost,
+    rawCaption: string
+  ) => {
+    const trimmed = rawCaption.trim();
+    if (!trimmed) return;
+    triggerHaptic();
+    if (translatedPosts[post.id]) {
+      setTranslatedPosts((prev) => ({ ...prev, [post.id]: false }));
+      return;
+    }
+    setTranslatingReelIds((prev) => ({ ...prev, [post.id]: true }));
+    try {
+      const res = await translateLoopsText(
+        trimmed,
+        translationPrefs.targetLanguage || "en"
+      );
+      setTranslatedReelTexts((prev) => ({
+        ...prev,
+        [post.id]: res.translatedText,
+      }));
+      setTranslatedPosts((prev) => ({ ...prev, [post.id]: true }));
+    } catch {
+      notify("Could not translate this reel right now", "error");
+    } finally {
+      setTranslatingReelIds((prev) => ({ ...prev, [post.id]: false }));
+    }
+  };
+
+  useEffect(() => {
+    const activeIds = Object.keys(translatedPosts).filter(
+      (id) => translatedPosts[id]
+    );
+    if (activeIds.length === 0) return;
+    let cancelled = false;
+    activeIds.forEach(async (postId) => {
+      const found = posts.find((p) => p.id === postId);
+      const raw = (found?.description || found?.title || "").trim();
+      if (!raw) return;
+      try {
+        const res = await translateLoopsText(
+          raw,
+          translationPrefs.targetLanguage || "en"
+        );
+        if (!cancelled) {
+          setTranslatedReelTexts((prev) => ({
+            ...prev,
+            [postId]: res.translatedText,
+          }));
+        }
+      } catch {}
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [translationPrefs.targetLanguage]);
+
+  const [endedReel, setEndedReel] = useState<ScamPost | null>(null);
+
   const [isSuggestedSlideActive, setIsSuggestedSlideActive] = useState(false);
   const [dismissedSuggestedUids, setDismissedSuggestedUids] = useState<
     Record<string, boolean>
@@ -2958,7 +3207,27 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     const base = posts
       .map((post) => {
         const videoSource = resolvePostVideoSource(post);
-        return videoSource ? { post, videoSource } : null;
+        if (videoSource) return { post, videoSource };
+        // Strictly include non-video posts ONLY when they are image posts with background music
+        const validImages = Array.isArray(post.images)
+          ? post.images.filter(Boolean)
+          : [];
+        const rawMusicUrl = (
+          post.music?.audioUrl ||
+          post.music?.url ||
+          ""
+        ).trim();
+        if (validImages.length > 0 && Boolean(rawMusicUrl)) {
+          const fallbackSource: ParsedVideoEmbed = {
+            platform: "direct",
+            originalUrl: validImages[0],
+            canonicalUrl: validImages[0],
+            thumbnailUrl: validImages[0],
+            isVertical: true,
+          };
+          return { post, videoSource: fallbackSource };
+        }
+        return null;
       })
       .filter(
         (x): x is { post: ScamPost; videoSource: ParsedVideoEmbed } =>
@@ -2977,7 +3246,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     return base;
   }, [posts, reelsSubTab, followedIds, currentUser?.uid]);
 
-  // Real Suggested Profiles for Reels Interstitial Slide (IMG_5297 — 100% real Firestore users)
+  // Real Suggested Profiles for Reels Interstitial Slide (IMG_5297 — 100% real Firestore users with real names)
   const suggestedProfiles = useMemo<SuggestedReelProfileItem[]>(() => {
     const seen = new Set<string>();
     const list: SuggestedReelProfileItem[] = [];
@@ -2990,13 +3259,25 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       if (followedIds.includes(uid) && !sessionFollowedSuggestedUids[uid]) {
         return;
       }
-      const displayName = getSafeDisplayName(
-        uDoc?.shopName || uDoc?.displayName || uDoc?.username || ""
-      );
-      if (!displayName || displayName === "User") return;
+      const rawRealName =
+        getSafeDisplayName(uDoc, "") ||
+        String(
+          uDoc?.shopName ||
+            uDoc?.displayName ||
+            (uDoc as any)?.name ||
+            uDoc?.username ||
+            ""
+        ).trim();
+      if (
+        !rawRealName ||
+        rawRealName === "User" ||
+        rawRealName.toLowerCase() === "member"
+      ) {
+        return;
+      }
       const handle =
         getSafePublicUsername(uDoc) ||
-        displayName.toLowerCase().replace(/\s+/g, "_");
+        rawRealName.toLowerCase().replace(/\s+/g, "_");
       const avatar = String(uDoc?.shopLogo || uDoc?.photoURL || "").trim();
       const followsViewer = Boolean(
         viewerUid &&
@@ -3004,7 +3285,13 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
           uDoc.following.includes(viewerUid)
       );
       seen.add(uid);
-      list.push({ uid, displayName, handle, avatar, followsViewer });
+      list.push({
+        uid,
+        displayName: rawRealName,
+        handle,
+        avatar,
+        followsViewer,
+      });
     });
 
     const sourcePool = allPosts.length > 0 ? allPosts : posts;
@@ -3015,14 +3302,22 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       if (followedIds.includes(uid) && !sessionFollowedSuggestedUids[uid]) {
         return;
       }
-      const displayName = getSafeDisplayName(p.reporterName || "");
-      if (!displayName || displayName === "User") return;
+      const rawPostName =
+        getSafeDisplayName({ displayName: p.reporterName }, "") ||
+        String(p.reporterName || "").trim();
+      if (
+        !rawPostName ||
+        rawPostName === "User" ||
+        rawPostName.toLowerCase() === "member"
+      ) {
+        return;
+      }
       const avatar = (p.reporterAvatar || "").trim();
       seen.add(uid);
       list.push({
         uid,
-        displayName,
-        handle: displayName.toLowerCase().replace(/\s+/g, "_"),
+        displayName: rawPostName,
+        handle: rawPostName.toLowerCase().replace(/\s+/g, "_"),
         avatar,
         followsViewer: false,
       });
@@ -3196,6 +3491,18 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     );
     if (activeVid && Number.isFinite(activeVid.duration) && activeVid.duration > 0) {
       activeVid.currentTime = ratio * activeVid.duration;
+      setProgressPct(ratio * 100);
+      return;
+    }
+    const activeAudio = document.querySelector<HTMLAudioElement>(
+      'audio[data-active-reel-audio="true"]'
+    );
+    if (
+      activeAudio &&
+      Number.isFinite(activeAudio.duration) &&
+      activeAudio.duration > 0
+    ) {
+      activeAudio.currentTime = ratio * activeAudio.duration;
       setProgressPct(ratio * 100);
     }
   };
@@ -3740,7 +4047,23 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                         {/* 5. Bookmark / Save */}
                         <button
                           type="button"
-                          onClick={() => onToggleSave(post)}
+                          onClick={() => {
+                            triggerHaptic();
+                            const wasSaved = isSaved;
+                            onToggleSave(post);
+                            if (!wasSaved) {
+                              setSavedItemForSheet({
+                                id: post.id,
+                                thumbnail:
+                                  post.images?.[0] ||
+                                  effectiveEmbed.thumbnailUrl ||
+                                  creator.avatar ||
+                                  "",
+                                title: cleanCaption || post.title || "Saved Reel",
+                              });
+                              setSavedPopupOpen(true);
+                            }
+                          }}
                           aria-label="Save reel"
                           className="min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-1 text-white active:scale-90 transition cursor-pointer"
                         >
@@ -3892,25 +4215,68 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                           )}
                         </div>
 
-                        {/* Expandable Caption (Exact IMG_5298 single-line default) */}
+                        {/* Expandable Caption + Live Translation Trigger (IMG_5298 + IMG_5304) */}
                         {cleanCaption && (
-                          <div
-                            onClick={() =>
-                              setExpandedCaptionId(
-                                isCaptionExpanded ? null : post.id
-                              )
-                            }
-                            className="cursor-pointer"
-                          >
-                            <p
-                              className={`text-[14px] leading-snug text-white/95 drop-shadow ${
-                                isCaptionExpanded
-                                  ? "max-h-[140px] overflow-y-auto pr-1"
-                                  : "line-clamp-1"
-                              }`}
+                          <div className="space-y-1">
+                            <div
+                              onClick={() =>
+                                setExpandedCaptionId(
+                                  isCaptionExpanded ? null : post.id
+                                )
+                              }
+                              className="cursor-pointer"
                             >
-                              {cleanCaption}
-                            </p>
+                              <p
+                                className={`text-[14px] leading-snug text-white/95 drop-shadow ${
+                                  isCaptionExpanded
+                                    ? "max-h-[140px] overflow-y-auto pr-1"
+                                    : "line-clamp-1"
+                                }`}
+                              >
+                                {translatedPosts[post.id] &&
+                                translatedReelTexts[post.id]
+                                  ? translatedReelTexts[post.id]
+                                  : cleanCaption}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[12px] text-white/75">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleTranslateReel(post, cleanCaption);
+                                }}
+                                disabled={Boolean(translatingReelIds[post.id])}
+                                className="inline-flex items-center gap-1 font-semibold hover:text-white transition cursor-pointer"
+                              >
+                                <Languages className="w-3.5 h-3.5 shrink-0" />
+                                <span>
+                                  {translatingReelIds[post.id]
+                                    ? "Translating..."
+                                    : translatedPosts[post.id]
+                                    ? "See original"
+                                    : "See translation"}
+                                </span>
+                              </button>
+
+                              {translatedPosts[post.id] && (
+                                <>
+                                  <span aria-hidden="true">·</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      triggerHaptic();
+                                      setTranslationModalOpen(true);
+                                    }}
+                                    className="font-medium text-white/80 hover:text-white underline underline-offset-2 cursor-pointer"
+                                  >
+                                    Translated to {targetLangName}
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -4035,6 +4401,24 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
           }
         }}
         onOpenPlaybackSheet={() => setPlaybackSheetOpen(true)}
+        onToggleTranslate={
+          activeItem
+            ? () => {
+                const cap =
+                  stripVideoUrlFromCaption(
+                    activeItem.post.description,
+                    activeItem.videoSource.originalUrl
+                  ) ||
+                  activeItem.post.title ||
+                  "";
+                handleToggleTranslateReel(activeItem.post, cap);
+              }
+            : undefined
+        }
+        onOpenTranslationSettings={() => setTranslationSettingsOpen(true)}
+        isTranslated={Boolean(
+          activeItem && translatedPosts[activeItem.post.id]
+        )}
         onClose={() => setAboutOpenPostId(null)}
       />
 
@@ -4080,6 +4464,62 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
         allPosts={allPosts.length ? allPosts : posts}
         prefs={algorithmPrefs}
         onChangePrefs={onChangeAlgorithmPrefs}
+      />
+
+      {/* SAVED POPUP SHEET (Exact IMG_5302) */}
+      <SavedPopupSheet
+        isOpen={savedPopupOpen}
+        onClose={() => setSavedPopupOpen(false)}
+        savedItem={savedItemForSheet}
+        isSaved={Boolean(
+          savedItemForSheet && savedIds.includes(savedItemForSheet.id)
+        )}
+        onToggleSaveState={() => {
+          if (!savedItemForSheet) return;
+          const target =
+            posts.find((p) => p.id === savedItemForSheet.id) ||
+            allPosts.find((p) => p.id === savedItemForSheet.id);
+          if (target) {
+            onToggleSave(target);
+          }
+        }}
+      />
+
+      {/* REEL TRANSLATION MODAL (Exact IMG_5304) */}
+      <ReelTranslationModal
+        isOpen={translationModalOpen}
+        onClose={() => setTranslationModalOpen(false)}
+        onOpenSettings={() => setTranslationSettingsOpen(true)}
+        onToggleOriginal={() => {
+          if (activeItem) {
+            const cap =
+              stripVideoUrlFromCaption(
+                activeItem.post.description,
+                activeItem.videoSource.originalUrl
+              ) ||
+              activeItem.post.title ||
+              "";
+            handleToggleTranslateReel(activeItem.post, cap);
+          }
+        }}
+        isTranslated={Boolean(activeItem && translatedPosts[activeItem.post.id])}
+        subjectLabel="reel"
+      />
+
+      {/* TRANSLATION SETTINGS SHEET (Exact IMG_5305) */}
+      <TranslationSettingsSheet
+        isOpen={translationSettingsOpen}
+        onClose={() => setTranslationSettingsOpen(false)}
+        onOpenPreferredLanguages={() => {
+          setTranslationSettingsOpen(false);
+          navigate("/loops/preferred-languages");
+        }}
+      />
+
+      {/* PREFERRED LANGUAGES MODAL PAGE (Exact IMG_5306) */}
+      <PreferredLanguagesModal
+        isOpen={preferredLanguagesOpen}
+        onClose={() => setPreferredLanguagesOpen(false)}
       />
     </div>
   );

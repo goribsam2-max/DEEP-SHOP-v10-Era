@@ -25,7 +25,34 @@ export default defineConfig(({ mode }) => {
         includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png"],
         workbox: {
           maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15 MB limit
-          importScripts: ["/custom-sw.js"]
+          importScripts: ["/custom-sw.js"],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|api\.fontshare\.com|cdnjs\.cloudflare\.com)\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "external-static-resources",
+                expiration: {
+                  maxEntries: 30,
+                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|woff|woff2)$/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "static-images-fonts",
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                },
+              },
+            },
+          ],
         },
         manifest: {
           name: "DEEP SHOP",
@@ -78,18 +105,10 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (!id.includes("node_modules")) return undefined;
             if (id.includes("firebase")) return "vendor-firebase";
+            if (id.includes("framer-motion")) return "vendor-motion";
+            if (id.includes("lucide-react")) return "vendor-lucide";
             if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
             if (id.includes("jspdf") || id.includes("html2canvas")) return "vendor-pdf";
-            if (
-              id.includes("@hugeicons") ||
-              id.includes("@phosphor-icons") ||
-              id.includes("@remixicon")
-            ) {
-              return "vendor-icons";
-            }
-            if (id.includes("framer-motion") || id.includes("/motion/")) {
-              return "vendor-motion";
-            }
             return undefined;
           },
         },

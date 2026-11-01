@@ -280,7 +280,8 @@ export function Header() {
                 doc(db, "users", u.uid),
                 (snap) => {
                   if (snap.exists()) setUserProfile(snap.data());
-                }
+                },
+                () => {}
               );
 
               const q = query(
@@ -303,9 +304,7 @@ export function Header() {
                   });
                   setUnreadMessagesCount(count);
                 },
-                (err) => {
-                  console.error("Error listening to chats:", err);
-                }
+                () => {}
               );
             }
           );
@@ -314,25 +313,49 @@ export function Header() {
           setUnreadMessagesCount(0);
         }
       });
-
-      import("firebase/firestore").then(({ collection, getDocs, query }) => {
-        const fetchCategories = async () => {
-          try {
-            const q = query(collection(db, "products"));
-            const snapshot = await getDocs(q);
-            const allCategories = new Set<string>();
-            snapshot.forEach((d) => {
-              const data = d.data();
-              if (data.category) allCategories.add(data.category);
-            });
-            setCategories(Array.from(allCategories).slice(0, 8));
-          } catch (error) {
-            console.error("Failed to fetch categories:", error);
-          }
-        };
-        fetchCategories();
-      });
     });
+
+    return () => {
+      if (unsubscribeAuth) unsubscribeAuth();
+      if (unsubscribeChats) unsubscribeChats();
+      if (unsubscribeUserDoc) unsubscribeUserDoc();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (open && categories.length === 0) {
+      try {
+        const cached = localStorage.getItem("ds_home_products_v1");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const cats = Array.from(
+              new Set(parsed.map((p: any) => p?.category).filter(Boolean))
+            ) as string[];
+            if (cats.length > 0) {
+              setCategories(cats.slice(0, 8));
+            }
+          }
+        }
+      } catch {}
+
+      import("@/firebase").then(({ db }) => {
+        import("firebase/firestore").then(({ collection, getDocs, query, limit }) => {
+          getDocs(query(collection(db, "products"), limit(40)))
+            .then((snapshot) => {
+              const allCategories = new Set<string>();
+              snapshot.forEach((d) => {
+                const data = d.data();
+                if (data.category) allCategories.add(data.category);
+              });
+              if (allCategories.size > 0) {
+                setCategories(Array.from(allCategories).slice(0, 8));
+              }
+            })
+            .catch(() => {});
+        });
+      });
+    }
 
     if (open && typeof window !== "undefined" && window.innerWidth < 768) {
       document.body.style.overflow = "hidden";
@@ -344,14 +367,11 @@ export function Header() {
       document.documentElement.style.overflowX = "";
     }
     return () => {
-      if (unsubscribeAuth) unsubscribeAuth();
-      if (unsubscribeChats) unsubscribeChats();
-      if (unsubscribeUserDoc) unsubscribeUserDoc();
       document.body.style.overflow = "";
       document.body.style.overflowX = "";
       document.documentElement.style.overflowX = "";
     };
-  }, [open]);
+  }, [open, categories.length]);
 
   useEffect(() => {
     let active = true;
@@ -386,12 +406,10 @@ export function Header() {
   return (
     <header
       className={cn(
-        "fixed top-0 z-[120] w-full transition-all duration-300 ease-in-out pointer-events-auto",
+        "fixed top-0 z-[120] w-full transition-all duration-300 ease-in-out pointer-events-auto border-none",
         scrolled || open
-          ? isHomePage
-            ? "bg-white/85 dark:bg-zinc-900/90 backdrop-blur-xl border-b border-white/60 dark:border-zinc-800 shadow-[0_4px_20px_rgba(15,23,42,0.06)]"
-            : "bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm"
-          : "bg-transparent border-transparent"
+          ? "bg-gradient-to-b from-[#1877F2]/90 via-[#3b82f6]/30 via-75% to-white dark:from-[#0f172a] dark:via-[#181826]/90 dark:to-black backdrop-blur-xl shadow-[0_12px_24px_-10px_rgba(24,119,242,0.08)]"
+          : "bg-gradient-to-b from-[#1877F2]/35 via-[#3b82f6]/10 via-70% to-white dark:from-[#1e1b4b]/40 dark:via-[#0f172a]/20 dark:to-black"
       )}
     >
       <nav
@@ -451,6 +469,7 @@ export function Header() {
           {isAdminRoute ? (
             <NavLink
               to="/admin"
+              aria-label="DEEP SHOP Admin Dashboard"
               className={cn(
                 "flex items-center gap-2.5 shrink-0 rounded-3xl border-none ring-0 shadow-none bg-transparent transition-all duration-300",
                 isIslandActive

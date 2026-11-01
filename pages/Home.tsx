@@ -8,6 +8,9 @@ import {
   query,
   orderBy,
   doc,
+  getDocs,
+  where,
+  limit,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { Product } from "../types";
@@ -139,18 +142,58 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     userData?.sellerStatus !== "pending"
   );
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [banners, setBanners] = useState<any[]>([]);
-  const [isLoadingBanners, setIsLoadingBanners] = useState(true);
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const raw = localStorage.getItem("ds_home_products_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [isLoadingProducts, setIsLoadingProducts] = useState(() => {
+    try {
+      const raw = localStorage.getItem("ds_home_products_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return !(Array.isArray(parsed) && parsed.length > 0);
+      }
+    } catch {}
+    return true;
+  });
+  const [banners, setBanners] = useState<any[]>(() => {
+    try {
+      const raw = localStorage.getItem("ds_home_banners_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+  const [isLoadingBanners, setIsLoadingBanners] = useState(() => {
+    try {
+      const raw = localStorage.getItem("ds_home_banners_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return !(Array.isArray(parsed) && parsed.length > 0);
+      }
+    } catch {}
+    return true;
+  });
   const [settings, setSettings] = useState<any>({});
   const [seoConfig, setSeoConfig] = useState<any>({});
   const [activeBanner, setActiveBanner] = useState(0);
 
   useEffect(() => {
-    const unsubSeo = onSnapshot(doc(db, "settings", "seo"), (snap) => {
-      if (snap.exists()) setSeoConfig(snap.data() || {});
-    });
+    const unsubSeo = onSnapshot(
+      doc(db, "settings", "seo"),
+      (snap) => {
+        if (snap.exists()) setSeoConfig(snap.data() || {});
+      },
+      () => {}
+    );
     return () => unsubSeo();
   }, []);
   const [activeCategoryBanner, setActiveCategoryBanner] = useState(0);
@@ -158,19 +201,16 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [displayedCount, setDisplayedCount] = useState(8);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [stories, setStories] = useState<any[]>([]);
-  const [sellers, setSellers] = useState<any[]>([]);
-
-  const hasStories = useMemo(() => {
-    if (!stories || stories.length === 0) return false;
-    const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
-    const now = Date.now();
-    return stories.some(story => {
-      if (!story.createdAt) return true;
-      const createdTime = new Date(story.createdAt).getTime();
-      return !isNaN(createdTime) && (now - createdTime) < FORTY_EIGHT_HOURS;
-    });
-  }, [stories]);
+  const [sellers, setSellers] = useState<any[]>(() => {
+    try {
+      const raw = sessionStorage.getItem("ds_home_sellers_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
+  });
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => activeCategory === "All" || p.category === activeCategory);
@@ -228,15 +268,19 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     const unsubscribeProds = onSnapshot(
       qProds,
       (snapshot) => {
-        setProducts(
-          snapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() }) as Product,
-          ),
+        const nextProducts = snapshot.docs.map(
+          (d) => ({ id: d.id, ...d.data() }) as Product,
         );
+        setProducts(nextProducts);
         setIsLoadingProducts(false);
+        try {
+          localStorage.setItem(
+            "ds_home_products_v1",
+            JSON.stringify(nextProducts.slice(0, 48))
+          );
+        } catch {}
       },
-      (err) => {
-        console.warn("Products fetch error:", err.message);
+      () => {
         setIsLoadingProducts(false);
       },
     );
@@ -248,8 +292,18 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     const unsubscribeBanners = onSnapshot(
       qBanners,
       (snapshot) => {
-        setBanners(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        const nextBanners = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        setBanners(nextBanners);
         setIsLoadingBanners(false);
+        try {
+          localStorage.setItem(
+            "ds_home_banners_v1",
+            JSON.stringify(nextBanners.slice(0, 16))
+          );
+        } catch {}
       },
       () => {
         setIsLoadingBanners(false);
@@ -261,75 +315,29 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       (snap) => {
         if (snap.exists()) setSettings(snap.data());
       },
+      () => {}
     );
 
-    let mainStoryDocs: Record<string, any> = {};
-    let communityStoryDocs: Record<string, any> = {};
-
-    const syncCombinedStories = () => {
-      const merged = new Map<string, any>();
-      Object.entries(mainStoryDocs).forEach(([id, data]) => {
-        merged.set(id, {
-          id,
-          ...data,
-          category: data.userName || data.sellerName || data.category || "Deep Shop",
-        });
-      });
-      Object.entries(communityStoryDocs).forEach(([id, data]) => {
-        const prev = merged.get(id) || {};
-        merged.set(id, {
-          ...prev,
-          ...data,
-          id,
-          category: data.userName || data.sellerName || data.category || "Community",
-        });
-      });
-
-      const uid = auth.currentUser?.uid || "";
-      const visible = Array.from(merged.values()).filter((s: any) => {
-        if (s.isCloseFriends && Array.isArray(s.closeFriendIds) && s.closeFriendIds.length > 0) {
-          return isAdmin || s.userId === uid || s.closeFriendIds.includes(uid);
-        }
-        return true;
-      });
-      setStories(visible);
-    };
-
-    const unsubscribeStories = onSnapshot(collection(db, "stories"), (snap) => {
-      const next: Record<string, any> = {};
-      snap.docs.forEach((d) => {
-        next[d.id] = d.data();
-      });
-      mainStoryDocs = next;
-      syncCombinedStories();
-    });
-
-    const unsubscribeCommStories = onSnapshot(collection(db, "creator_videos"), (snap) => {
-      const next: Record<string, any> = {};
-      snap.docs.forEach((d) => {
-        const data = d.data();
-        if (data?.kind === "news_story") {
-          next[d.id] = data;
-        }
-      });
-      communityStoryDocs = next;
-      syncCombinedStories();
-    });
-
-    const unsubscribeSellers = onSnapshot(collection(db, "users"), (snap) => {
-      const list = snap.docs.map(doc => doc.data()).filter((u: any) => u.role === "seller");
-      setSellers(list);
-    });
+    // Lightweight deferred seller fetch (avoids streaming full users collection on Home)
+    const sellerTimer = setTimeout(async () => {
+      try {
+        if (sessionStorage.getItem("ds_home_sellers_v1")) return;
+        const sellerSnap = await getDocs(
+          query(collection(db, "users"), where("role", "==", "seller"), limit(24))
+        );
+        const list = sellerSnap.docs.map((d) => d.data());
+        setSellers(list);
+        sessionStorage.setItem("ds_home_sellers_v1", JSON.stringify(list));
+      } catch {}
+    }, 1800);
 
     return () => {
       unsubscribeProds();
       unsubscribeBanners();
       unsubscribeSettings();
-      unsubscribeStories();
-      unsubscribeCommStories();
-      unsubscribeSellers();
+      clearTimeout(sellerTimer);
     };
-  }, [isAdmin]);
+  }, []);
 
   const brandLogos = useMemo(() => {
     const uniqueBrands = Array.from(
@@ -455,8 +463,11 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
               >
                 <img
                   src={heroBanners[activeBanner]?.imageUrl}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
                   className="w-full h-full object-cover"
-                  alt={heroBanners[activeBanner]?.title || "Banner"}
+                  alt={heroBanners[activeBanner]?.title || "Featured Deal Banner"}
                 />
               </motion.div>
             </AnimatePresence>
@@ -540,7 +551,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
               <p className="text-xs font-bold text-zinc-900 dark:text-white">
                 DEEP SHOP Reseller Hub
               </p>
-              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <p className="text-[11px] text-zinc-700 dark:text-zinc-300 mt-0.5 font-medium">
                 Official Certification &amp; VIP Support
               </p>
             </div>
@@ -892,7 +903,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             </h2>
             <button
               onClick={() => navigate("/all-products")}
-              className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+              className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white transition-colors"
             >
               See All
             </button>

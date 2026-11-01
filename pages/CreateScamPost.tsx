@@ -2202,8 +2202,8 @@ function cleanPayload<T>(obj: T): T {
                   />
                 </div>
 
-                {/* Quick Attachment Row (Photo, Stickers, GIF, More -> Snippet/Quote/Camera/Poll/Location) */}
-                <div className="relative flex items-center gap-4 pt-0.5 px-0.5 text-zinc-400 dark:text-zinc-500">
+                {/* Quick Attachment Row (Photo, Stickers, GIF, Music, More -> Snippet/Quote/Camera/Poll/Location) */}
+                <div className="relative flex items-center gap-3.5 py-1 px-0.5 text-zinc-400 dark:text-zinc-500">
                   <button
                     type="button"
                     onClick={() => {
@@ -2211,7 +2211,7 @@ function cleanPayload<T>(obj: T): T {
                       setActiveInlinePanel("media");
                       fileInputRef.current?.click();
                     }}
-                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
+                    className={`w-8 h-8 inline-flex items-center justify-center leading-none shrink-0 hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
                       processedImages.length > 0 ? "text-[#1877F2] dark:text-[#58A6FF]" : ""
                     }`}
                     title="Attach photos"
@@ -2229,7 +2229,7 @@ function cleanPayload<T>(obj: T): T {
                       triggerHaptic();
                       setShowStickersSheet(true);
                     }}
-                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
+                    className={`w-8 h-8 inline-flex items-center justify-center leading-none shrink-0 hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
                       stickers.length > 0
                         ? "text-[#1877F2] dark:text-[#58A6FF]"
                         : ""
@@ -2246,7 +2246,7 @@ function cleanPayload<T>(obj: T): T {
                       triggerHaptic();
                       setShowGiphySheet(true);
                     }}
-                    className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
+                    className={`w-8 h-8 inline-flex items-center justify-center leading-none shrink-0 hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
                       gifUrl ? "text-[#1877F2] dark:text-[#58A6FF]" : ""
                     }`}
                     title="Attach GIF"
@@ -2255,14 +2255,29 @@ function cleanPayload<T>(obj: T): T {
                     <GifBadgeOutlineIcon className="w-[21px] h-[21px]" />
                   </button>
 
-                  <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowMusicModal(true);
+                    }}
+                    className={`w-8 h-8 inline-flex items-center justify-center leading-none shrink-0 hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
+                      attachedMusic ? "text-[#1877F2] dark:text-[#58A6FF]" : ""
+                    }`}
+                    title="Attach Background Music"
+                    aria-label="Attach background music"
+                  >
+                    <MusicNotesOutlineIcon className="w-[21px] h-[21px]" />
+                  </button>
+
+                  <div className="relative w-8 h-8 inline-flex items-center justify-center leading-none shrink-0">
                     <button
                       type="button"
                       onClick={() => {
                         triggerHaptic();
                         setShowMoreAttachPopover((prev) => !prev);
                       }}
-                      className={`hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer flex items-center justify-center ${
+                      className={`w-8 h-8 inline-flex items-center justify-center leading-none shrink-0 hover:text-zinc-900 dark:hover:text-white active:scale-90 transition cursor-pointer ${
                         showMoreAttachPopover
                           ? "text-zinc-900 dark:text-white"
                           : ""
@@ -2402,11 +2417,15 @@ function cleanPayload<T>(obj: T): T {
                         </button>
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#1877F2]">
-                          <Music className="w-3 h-3" />
-                          <span>Attached Music</span>
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#1877F2] dark:text-[#58A6FF]">
+                          <Music className="w-3 h-3 shrink-0" />
+                          <span className="truncate">
+                            {processedImages.length > 0
+                              ? "Background Music · Also shown in Reels"
+                              : "Background Music"}
+                          </span>
                           {playingAttachedMusic && (
-                            <Volume2 className="w-3 h-3 animate-pulse" />
+                            <Volume2 className="w-3 h-3 animate-pulse shrink-0" />
                           )}
                         </div>
                         <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">

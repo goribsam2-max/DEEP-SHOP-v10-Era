@@ -360,7 +360,7 @@ export const Profile: React.FC<ProfileProps> = ({
         title: "Admin Control Panel",
         subtitle: "Manage products, orders, users, banners, chats & settings",
         badge: "ADMIN",
-        icon: <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />,
+        icon: <Shield className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/admin"),
         keywords: "admin dashboard control panel staff manage orders products users",
       });
@@ -372,7 +372,7 @@ export const Profile: React.FC<ProfileProps> = ({
         title: "Seller Dashboard",
         subtitle: "Manage your shop products & sales",
         badge: "SELLER",
-        icon: <Store className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
+        icon: <Store className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/seller/dashboard"),
         keywords: "seller shop store dashboard vendor",
       });
@@ -382,7 +382,7 @@ export const Profile: React.FC<ProfileProps> = ({
       id: "creator-dashboard",
       title: "Creator Studio & Analytics",
       subtitle: "Audience insights, star earnings & payout numbers",
-      icon: <LayoutDashboard className="w-5 h-5 text-emerald-500" />,
+      icon: <LayoutDashboard className="w-[22px] h-[22px] stroke-[2]" />,
       onClick: () => navigate("/creator-dashboard"),
       keywords: "creator studio analytics earnings bkash nagad",
     });
@@ -392,7 +392,7 @@ export const Profile: React.FC<ProfileProps> = ({
         id: "creator-sub-setup",
         title: "Creator Subscription Setup",
         subtitle: "Configure fan tiers & monthly supporter perks",
-        icon: <Crown className="w-5 h-5 text-amber-500" />,
+        icon: <Crown className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/creator/subscription-setup"),
         keywords: "creator subscription tiers setup",
       });
@@ -403,7 +403,7 @@ export const Profile: React.FC<ProfileProps> = ({
         id: "news-hub",
         title: "News Hub & Scam Defense Feed",
         subtitle: "Community updates, voice notes & verified scam alerts",
-        icon: <Newspaper className="w-5 h-5 text-[#1877F2]" />,
+        icon: <Newspaper className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/news-hub"),
         keywords: "news hub feed scam alert community",
       },
@@ -411,7 +411,7 @@ export const Profile: React.FC<ProfileProps> = ({
         id: "create-post",
         title: "Create Feed Post / Report Scam",
         subtitle: "Share photos, voice notes, links or expose a scammer",
-        icon: <ShieldAlert className="w-5 h-5 text-rose-500" />,
+        icon: <ShieldAlert className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/news-hub/create"),
         keywords: "create post scam report voice",
       },
@@ -419,7 +419,7 @@ export const Profile: React.FC<ProfileProps> = ({
         id: "saved-posts",
         title: "Saved Feed Posts",
         subtitle: "Bookmarked posts & scam reports",
-        icon: <Bookmark className="w-5 h-5 text-blue-500" />,
+        icon: <Bookmark className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/news-hub/saved"),
         keywords: "saved posts bookmarks feed",
       },
@@ -427,7 +427,7 @@ export const Profile: React.FC<ProfileProps> = ({
         id: "feed-personalization",
         title: "Feed Personalization",
         subtitle: "Customize feed themes & content preferences",
-        icon: <Palette className="w-5 h-5 text-indigo-500" />,
+        icon: <Palette className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/news-hub/personalization"),
         keywords: "feed personalization customize themes",
       },
@@ -435,7 +435,7 @@ export const Profile: React.FC<ProfileProps> = ({
         id: "news-notifications",
         title: "News Hub Activity",
         subtitle: "Reactions, comments & mentions on your posts",
-        icon: <Bell className="w-5 h-5 text-sky-500" />,
+        icon: <Bell className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/news-hub/notifications"),
         keywords: "news hub notifications comments reactions",
       },
@@ -443,7 +443,7 @@ export const Profile: React.FC<ProfileProps> = ({
         id: "blogs",
         title: "Tech Blogs & Buying Guides",
         subtitle: "Read mobile reviews, tips & platform guides",
-        icon: <BookOpen className="w-5 h-5 text-emerald-600" />,
+        icon: <BookOpen className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/blog"),
         keywords: "blog articles tech news guides",
       },
@@ -454,7 +454,7 @@ export const Profile: React.FC<ProfileProps> = ({
         id: "create-blog",
         title: "Write a Blog Article",
         subtitle: "Publish a guide or review to the blog",
-        icon: <Pencil className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />,
+        icon: <Pencil className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/blog/create"),
         keywords: "write create blog article",
       });
@@ -466,7 +466,7 @@ export const Profile: React.FC<ProfileProps> = ({
         title: "Inbox & Live Messages",
         subtitle: "Chat with sellers, community & support",
         badge: unreadMessages > 0 ? String(unreadMessages) : undefined,
-        icon: <MessageSquare className="w-5 h-5 text-blue-600" />,
+        icon: <MessageSquare className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/messages"),
         keywords: "messages inbox chat live",
       },
@@ -476,7 +476,7 @@ export const Profile: React.FC<ProfileProps> = ({
         subtitle: "Order updates, alerts & announcements",
         badge:
           unreadNotifications > 0 ? String(unreadNotifications) : undefined,
-        icon: <Bell className="w-5 h-5 text-amber-500" />,
+        icon: <Bell className="w-[22px] h-[22px] stroke-[2]" />,
         onClick: () => navigate("/notifications"),
         keywords: "notifications alerts updates",
       }
@@ -496,7 +496,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "orders",
             title: "My Orders & E-Receipts",
             subtitle: "Track parcels, delivery status & download receipts",
-            icon: <Package className="w-5 h-5 text-indigo-500" />,
+            icon: <Package className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/orders"),
             keywords: "orders track parcel shipping receipt history",
           },
@@ -505,7 +505,7 @@ export const Profile: React.FC<ProfileProps> = ({
             title: "Shopping Cart",
             subtitle: "View items ready for checkout",
             badge: cartCount > 0 ? String(cartCount) : undefined,
-            icon: <ShoppingCart className="w-5 h-5 text-blue-500" />,
+            icon: <ShoppingCart className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/cart"),
             keywords: "cart bag checkout buy",
           },
@@ -513,7 +513,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "wishlist",
             title: "My Wishlist",
             subtitle: "Saved phones, gadgets & favorite deals",
-            icon: <Heart className="w-5 h-5 text-rose-500" />,
+            icon: <Heart className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/wishlist"),
             keywords: "wishlist favorites saved products",
           },
@@ -521,7 +521,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "exchange-request",
             title: "Return & Exchange Request",
             subtitle: "Submit device replacement or return claims",
-            icon: <ArrowLeftRight className="w-5 h-5 text-orange-500" />,
+            icon: <ArrowLeftRight className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/exchange-request"),
             keywords: "return exchange refund replace warranty",
           },
@@ -529,7 +529,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "leave-review",
             title: "Leave a Review",
             subtitle: "Share feedback & photos on delivered orders",
-            icon: <Star className="w-5 h-5 text-amber-500" />,
+            icon: <Star className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/leave-review"),
             keywords: "review rating feedback",
           },
@@ -537,7 +537,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "all-products",
             title: "All Products Catalog",
             subtitle: "Browse every border cross phone & accessory",
-            icon: <ShoppingBag className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />,
+            icon: <ShoppingBag className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/all-products"),
             keywords: "catalog all products shop phones",
           },
@@ -545,7 +545,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "flash-sale",
             title: "Flash Sale Deals",
             subtitle: "Limited-time markdowns & special drops",
-            icon: <Zap className="w-5 h-5 text-amber-500" />,
+            icon: <Zap className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/flash-sale"),
             keywords: "flash sale deals discount offer",
           },
@@ -553,7 +553,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "bundles",
             title: "Bundle Deals",
             subtitle: "Save extra with curated combo packs",
-            icon: <Boxes className="w-5 h-5 text-purple-500" />,
+            icon: <Boxes className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/bundles"),
             keywords: "bundle combo deals",
           },
@@ -561,7 +561,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "build-box",
             title: "Build Your Custom Box",
             subtitle: "Pick devices & accessories for custom bundle pricing",
-            icon: <Box className="w-5 h-5 text-sky-500" />,
+            icon: <Box className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/build-box"),
             keywords: "build box custom bundle",
           },
@@ -569,7 +569,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "bonus-products",
             title: "Bonus & Freebie Products",
             subtitle: "Exclusive member bonus items & perks",
-            icon: <Gift className="w-5 h-5 text-pink-500" />,
+            icon: <Gift className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/bonus"),
             keywords: "bonus gift freebie perks",
           },
@@ -583,7 +583,8 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "deposit",
             title: "Wallet & Add Balance",
             subtitle: `Available balance: ${formatPrice(walletBalance)}`,
-            icon: <Wallet className="w-5 h-5 text-emerald-600" />,
+            badge: walletBalance > 0 ? formatPrice(walletBalance) : undefined,
+            icon: <Wallet className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/deposit"),
             keywords: "wallet deposit topup balance qr",
           },
@@ -591,7 +592,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "withdraw",
             title: "Withdraw Earnings",
             subtitle: "Cash out affiliate & coin balance to bKash / Nagad",
-            icon: <ArrowLeftRight className="w-5 h-5 text-teal-600" />,
+            icon: <ArrowLeftRight className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/withdraw"),
             keywords: "withdraw payout bkash nagad cashout",
           },
@@ -599,7 +600,8 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "my-coins",
             title: "My Coins & Daily Rewards",
             subtitle: `${coins.toLocaleString()} coins available`,
-            icon: <Coins className="w-5 h-5 text-amber-500" />,
+            badge: coins > 0 ? `${coins.toLocaleString()}` : undefined,
+            icon: <Coins className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/my-coins"),
             keywords: "coins points spin rewards",
           },
@@ -607,7 +609,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "shopping-credits",
             title: "Shopping Credits",
             subtitle: "Store credit balance & promotional vouchers",
-            icon: <CreditCard className="w-5 h-5 text-indigo-500" />,
+            icon: <CreditCard className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/credits"),
             keywords: "shopping credits store credit",
           },
@@ -615,7 +617,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "my-coupons",
             title: "My Coupons",
             subtitle: "View active discount coupons on your account",
-            icon: <Ticket className="w-5 h-5 text-orange-500" />,
+            icon: <Ticket className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/my-coupons"),
             keywords: "my coupons discount",
           },
@@ -623,7 +625,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "redeem-coupon",
             title: "Redeem Promo / Coupon Code",
             subtitle: "Apply a promo code to unlock instant savings",
-            icon: <Sparkles className="w-5 h-5 text-violet-500" />,
+            icon: <Sparkles className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/coupon"),
             keywords: "coupon promo code redeem",
           },
@@ -631,7 +633,8 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "buy-stars",
             title: "Buy Stars",
             subtitle: `Support creators · ${stars.toLocaleString()} stars owned`,
-            icon: <Star className="w-5 h-5 text-yellow-500" />,
+            badge: stars > 0 ? `${stars.toLocaleString()}` : undefined,
+            icon: <Star className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/buy-stars"),
             keywords: "stars gift creator support",
           },
@@ -639,7 +642,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "payment-methods",
             title: "Saved Payment Methods",
             subtitle: "Manage bKash, Nagad & card payment options",
-            icon: <CreditCard className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />,
+            icon: <CreditCard className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/payment-methods"),
             keywords: "payment methods bkash nagad cards",
           },
@@ -647,7 +650,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "add-card",
             title: "Add New Card",
             subtitle: "Link a debit or credit card for fast checkout",
-            icon: <Plus className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />,
+            icon: <Plus className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/add-card"),
             keywords: "add card visa mastercard",
           },
@@ -655,7 +658,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "subscription",
             title: "VIP & Reseller Subscription",
             subtitle: "Zero-advance COD perks & Reseller Masterclass",
-            icon: <Crown className="w-5 h-5 text-amber-500" />,
+            icon: <Crown className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/subscription"),
             keywords: "vip subscription reseller pro plan",
           },
@@ -663,7 +666,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "affiliate",
             title: "Affiliate & Refer Rewards",
             subtitle: "Invite friends & earn commission on every order",
-            icon: <Sparkles className="w-5 h-5 text-amber-600" />,
+            icon: <Sparkles className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/affiliate"),
             keywords: "affiliate refer earn commission",
           },
@@ -682,7 +685,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "edit-profile",
             title: "Edit Profile",
             subtitle: "Update name, bio, phone & social links",
-            icon: <User className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />,
+            icon: <User className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/profile/edit"),
             keywords: "edit profile name photo bio",
           },
@@ -697,7 +700,7 @@ export const Profile: React.FC<ProfileProps> = ({
                 : effectiveProfile?.kycStatus === "pending"
                 ? "PENDING"
                 : undefined,
-            icon: <ShieldCheck className="w-5 h-5 text-emerald-600" />,
+            icon: <ShieldCheck className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/kyc-verification"),
             keywords: "kyc verification nid identity badge",
           },
@@ -705,7 +708,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "shipping-address",
             title: "Shipping Addresses",
             subtitle: "Manage home, office & recipient delivery addresses",
-            icon: <MapPin className="w-5 h-5 text-rose-500" />,
+            icon: <MapPin className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/shipping-address"),
             keywords: "shipping address delivery location",
           },
@@ -713,7 +716,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "account-settings",
             title: "Account Settings",
             subtitle: "General preferences, push alerts & account controls",
-            icon: <Settings className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />,
+            icon: <Settings className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/settings"),
             keywords: "settings account preferences",
           },
@@ -721,7 +724,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "password-manager",
             title: "Security & Password Manager",
             subtitle: "Change password or send recovery reset",
-            icon: <KeyRound className="w-5 h-5 text-blue-600" />,
+            icon: <KeyRound className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/settings/password"),
             keywords: "password security change reset",
           },
@@ -729,7 +732,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "biometrics",
             title: "Biometric & PIN App Lock",
             subtitle: "Protect app access with fingerprint, Face ID or PIN",
-            icon: <Lock className="w-5 h-5 text-indigo-600" />,
+            icon: <Lock className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/settings/biometrics"),
             keywords: "biometric fingerprint pin lock security",
           },
@@ -737,7 +740,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "devices",
             title: "Logged-in Devices",
             subtitle: "Review active sessions & device security",
-            icon: <Smartphone className="w-5 h-5 text-sky-600" />,
+            icon: <Smartphone className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/devices"),
             keywords: "devices sessions active login",
           },
@@ -745,7 +748,8 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "region",
             title: "Region & Currency",
             subtitle: `Current region: ${effectiveProfile?.region || "BD"}`,
-            icon: <Globe className="w-5 h-5 text-teal-600" />,
+            badge: effectiveProfile?.region || "BD",
+            icon: <Globe className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/region"),
             keywords: "region language currency country",
           },
@@ -753,7 +757,8 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "appearance",
             title: "Appearance",
             subtitle: isDark ? "Dark Theme Active (Tap to switch)" : "Light Theme Active (Tap to switch)",
-            icon: <Palette className="w-5 h-5 text-purple-500" />,
+            badge: isDark ? "Dark" : "Light",
+            icon: <Palette className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: toggleTheme,
             keywords: "appearance dark light mode theme",
           },
@@ -761,7 +766,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "switch-account",
             title: "Saved Accounts & Switch Profile",
             subtitle: "View saved accounts on this device or add another profile",
-            icon: <User className="w-5 h-5 text-blue-500" />,
+            icon: <User className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/accounts"),
             keywords: "switch account multi login saved accounts",
           },
@@ -775,7 +780,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "help-center",
             title: "Help Center & Live Support",
             subtitle: "24/7 customer support & order assistance",
-            icon: <Headset className="w-5 h-5 text-[#1877F2]" />,
+            icon: <Headset className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/help-center"),
             keywords: "help center support customer care",
           },
@@ -783,7 +788,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "my-tickets",
             title: "My Support Tickets",
             subtitle: "Check replies & status on submitted tickets",
-            icon: <FileText className="w-5 h-5 text-indigo-500" />,
+            icon: <FileText className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/my-tickets"),
             keywords: "tickets support helpdesk",
           },
@@ -791,7 +796,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "faq",
             title: "Frequently Asked Questions (FAQ)",
             subtitle: "Quick answers about border cross phones & COD",
-            icon: <HelpCircle className="w-5 h-5 text-amber-500" />,
+            icon: <HelpCircle className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/faq"),
             keywords: "faq questions answers",
           },
@@ -799,7 +804,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "contact",
             title: "Contact Us",
             subtitle: "Store address, phone hotline & official channels",
-            icon: <PhoneCall className="w-5 h-5 text-emerald-600" />,
+            icon: <PhoneCall className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/contact"),
             keywords: "contact phone address email",
           },
@@ -807,7 +812,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "about",
             title: "About DEEP SHOP",
             subtitle: "Our mission, authenticity guarantee & story",
-            icon: <Info className="w-5 h-5 text-blue-500" />,
+            icon: <Info className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/about"),
             keywords: "about deep shop company",
           },
@@ -815,7 +820,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "privacy",
             title: "Privacy Policy",
             subtitle: "How we protect your personal data",
-            icon: <Eye className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />,
+            icon: <Eye className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/privacy"),
             keywords: "privacy policy data",
           },
@@ -823,7 +828,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "terms",
             title: "Terms & Conditions",
             subtitle: "Platform rules, buyer & seller agreements",
-            icon: <FileText className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />,
+            icon: <FileText className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/terms"),
             keywords: "terms conditions rules",
           },
@@ -831,7 +836,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "refund-policy",
             title: "Refund & Return Policy",
             subtitle: "Eligibility, timelines & replacement guidelines",
-            icon: <FileText className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />,
+            icon: <FileText className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/refund-policy"),
             keywords: "refund return policy",
           },
@@ -839,7 +844,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "shipping-policy",
             title: "Shipping & Delivery Policy",
             subtitle: "Nationwide courier coverage & delivery times",
-            icon: <Package className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />,
+            icon: <Package className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/shipping-policy"),
             keywords: "shipping delivery courier policy",
           },
@@ -847,7 +852,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "cookie-policy",
             title: "Cookie Policy",
             subtitle: "Session & storage preferences",
-            icon: <Shield className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />,
+            icon: <Shield className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/cookie-policy"),
             keywords: "cookie policy",
           },
@@ -855,7 +860,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "disclaimer",
             title: "Disclaimer",
             subtitle: "Important product & marketplace notices",
-            icon: <ShieldAlert className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />,
+            icon: <ShieldAlert className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/disclaimer"),
             keywords: "disclaimer legal notice",
           },
@@ -863,7 +868,7 @@ export const Profile: React.FC<ProfileProps> = ({
             id: "sitemap",
             title: "Sitemap & All Pages Directory",
             subtitle: "Complete index of every page on DEEP SHOP",
-            icon: <Globe className="w-5 h-5 text-blue-500" />,
+            icon: <Globe className="w-[22px] h-[22px] stroke-[2]" />,
             onClick: () => navigate("/sitemap-page"),
             keywords: "sitemap directory all pages links",
           },
@@ -945,16 +950,16 @@ export const Profile: React.FC<ProfileProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#6BB2F8]/65 via-[#DCEEFF]/45 via-18% to-transparent dark:from-black dark:via-zinc-950 dark:to-zinc-900 text-zinc-900 dark:text-zinc-100 font-sans pb-32 pt-4 sm:pt-6">
+    <div className="min-h-screen bg-[#F2F3F5] dark:bg-[#0B0B0E] text-zinc-950 dark:text-zinc-100 font-sans pb-32 pt-4 sm:pt-6">
       <SEO
         title={`${displayName} • DEEP SHOP`}
         description="Account dashboard, orders, wallet, settings, and all pages."
       />
 
       {/* Uses <div> instead of <main> so global CSS never forces a solid white rectangle */}
-      <div className="max-w-2xl mx-auto px-4 space-y-6 bg-transparent">
+      <div className="max-w-2xl mx-auto px-3.5 sm:px-5 space-y-5 bg-transparent">
         {/* TOP PROFILE HEADER */}
-        <div className="relative bg-white/85 dark:bg-zinc-900/85 backdrop-blur-2xl rounded-[32px] p-5 sm:p-6 border border-white/80 dark:border-zinc-800 shadow-[0_10px_35px_rgba(15,23,42,0.06)]">
+        <div className="relative bg-white dark:bg-[#16161A] rounded-[24px] p-5 sm:p-6 border border-zinc-200/60 dark:border-zinc-800/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4 min-w-0">
               <AvatarUploader onUpload={handleAvatarUpload}>
@@ -1170,21 +1175,21 @@ export const Profile: React.FC<ProfileProps> = ({
           )}
         </div>
 
-        {/* ALL RESTORED APPLICATION SECTIONS & PAGES */}
-        <div className="space-y-6">
+        {/* ALL EXISTING APPLICATION SECTIONS & PAGES (Exact 1:1 IMG_5308 Card & Row Design) */}
+        <div className="space-y-5">
           {filteredSections.map((section) => (
             <div key={section.id} className="space-y-2">
-              <h2 className="px-3 text-xs font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <h2 className="px-2 text-[13px] font-semibold text-[#65676B] dark:text-zinc-400 tracking-[-0.005em]">
                 {section.heading}
               </h2>
-              <div className="bg-white/85 dark:bg-zinc-900/85 backdrop-blur-2xl rounded-[28px] p-1.5 border border-white/80 dark:border-zinc-800/80 shadow-[0_8px_28px_rgba(15,23,42,0.05)] overflow-hidden divide-y divide-slate-100 dark:divide-zinc-800/70">
-                {section.items.map((item) => (
+              <div className="w-full rounded-[20px] bg-white dark:bg-[#16161A] shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border dark:border-zinc-800/80 overflow-hidden">
+                {section.items.map((item, idx) => (
                   <ProfileRow
                     key={item.id}
                     icon={item.icon}
                     title={item.title}
-                    subtitle={item.subtitle}
                     badge={item.badge}
+                    isLast={idx === section.items.length - 1}
                     onClick={item.onClick}
                   />
                 ))}
@@ -1193,8 +1198,8 @@ export const Profile: React.FC<ProfileProps> = ({
           ))}
 
           {filteredSections.length === 0 && (
-            <div className="rounded-[28px] bg-white dark:bg-zinc-900 p-8 text-center border border-slate-200/70 dark:border-zinc-800">
-              <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+            <div className="rounded-[20px] bg-white dark:bg-[#16161A] p-8 text-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border dark:border-zinc-800/80">
+              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                 No pages matched “{searchQuery}”
               </p>
               <button
@@ -1207,22 +1212,25 @@ export const Profile: React.FC<ProfileProps> = ({
             </div>
           )}
 
-          {/* LOGOUT CARD */}
-          <div className="bg-white/85 dark:bg-zinc-900/85 backdrop-blur-2xl rounded-[28px] p-1.5 border border-white/80 dark:border-zinc-800/80 shadow-[0_8px_28px_rgba(15,23,42,0.05)] overflow-hidden">
+          {/* LOGOUT CARD (Exact IMG_5308 Row Geometry) */}
+          <div className="w-full rounded-[20px] bg-white dark:bg-[#16161A] shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border dark:border-zinc-800/80 overflow-hidden">
             <button
               type="button"
-              onClick={() => setShowLogoutModal(true)}
-              className="w-full flex items-center justify-between p-3.5 rounded-[22px] hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 transition cursor-pointer group"
+              onClick={() => {
+                triggerHaptic();
+                setShowLogoutModal(true);
+              }}
+              className="w-full pl-5 pr-4 py-[17px] flex items-center justify-between hover:bg-black/[0.025] dark:hover:bg-white/[0.04] active:bg-black/[0.045] transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-2xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center shrink-0">
-                  <LogOut className="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                </div>
-                <span className="font-black text-sm uppercase tracking-wider">
+              <div className="flex items-center min-w-0">
+                <span className="w-6 h-6 flex items-center justify-center text-[#E11D48] dark:text-rose-400 shrink-0">
+                  <LogOut className="w-[22px] h-[22px] stroke-[2]" />
+                </span>
+                <span className="pl-4 text-[16.5px] leading-[1.3] font-normal text-[#E11D48] dark:text-rose-400 tracking-[-0.01em] truncate">
                   Log Out
                 </span>
               </div>
-              <ChevronRight className="w-5 h-5 opacity-40 group-hover:translate-x-0.5 transition-transform" />
+              <ChevronRight className="w-[20px] h-[20px] text-[#65676B] dark:text-zinc-400 stroke-[2] shrink-0" />
             </button>
           </div>
         </div>
@@ -1296,58 +1304,64 @@ export const Profile: React.FC<ProfileProps> = ({
 function ProfileRow({
   icon,
   title,
-  subtitle,
   badge,
+  isLast,
   onClick,
 }: {
   icon: React.ReactNode;
   title: string;
-  subtitle?: string;
   badge?: string;
+  isLast?: boolean;
   onClick: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        triggerHaptic();
-        onClick();
-      }}
-      className="w-full flex items-center justify-between p-3.5 text-left cursor-pointer hover:bg-slate-50/90 dark:hover:bg-zinc-800/50 transition-colors group rounded-[20px]"
-    >
-      <div className="flex items-center gap-3.5 min-w-0">
-        <div className="w-11 h-11 rounded-[16px] bg-[#F4F6FA] dark:bg-zinc-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight truncate">
-            {title}
-          </p>
-          {subtitle && (
-            <p className="text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </div>
+  const isNumericAlert = Boolean(badge && /^\d+$/.test(badge));
+  const isStatusChip =
+    badge === "ADMIN" ||
+    badge === "SELLER" ||
+    badge === "VERIFIED" ||
+    badge === "PENDING";
 
-      <div className="flex items-center gap-2.5 shrink-0 pl-2">
-        {badge && (
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-white text-[10px] font-black uppercase tracking-wider shadow-xs ${
-              badge === "ADMIN"
-                ? "bg-indigo-600"
-                : badge === "VERIFIED" || badge === "SELLER"
-                ? "bg-emerald-600"
-                : "bg-rose-500"
-            }`}
-          >
-            {badge}
+  return (
+    <div className="w-full">
+      <button
+        type="button"
+        onClick={() => {
+          triggerHaptic();
+          onClick();
+        }}
+        className="w-full pl-5 pr-4 py-[17px] flex items-center justify-between hover:bg-black/[0.025] dark:hover:bg-white/[0.04] active:bg-black/[0.045] dark:active:bg-white/[0.07] transition-colors cursor-pointer text-left"
+      >
+        <div className="flex items-center min-w-0 pr-3">
+          <span className="w-6 h-6 flex items-center justify-center text-zinc-950 dark:text-white shrink-0">
+            {icon}
           </span>
-        )}
-        <ChevronRight className="w-4.5 h-4.5 text-zinc-400 dark:text-zinc-600 group-hover:text-zinc-900 dark:group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-      </div>
-    </button>
+          <span className="pl-4 text-[16.5px] leading-[1.3] font-normal text-zinc-950 dark:text-white tracking-[-0.01em] truncate">
+            {title}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {badge &&
+            (isNumericAlert ? (
+              <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#FF3040] text-white text-[11.5px] font-bold flex items-center justify-center tabular-nums">
+                {badge}
+              </span>
+            ) : isStatusChip ? (
+              <span className="text-[11.5px] font-semibold tracking-wide uppercase text-[#65676B] dark:text-zinc-400">
+                {badge}
+              </span>
+            ) : (
+              <span className="text-[13.5px] font-normal text-[#65676B] dark:text-zinc-400 tabular-nums">
+                {badge}
+              </span>
+            ))}
+          <ChevronRight className="w-[20px] h-[20px] text-[#65676B] dark:text-zinc-400 stroke-[2] shrink-0" />
+        </div>
+      </button>
+      {!isLast && (
+        <div className="ml-[60px] border-b border-[#E5E7EB] dark:border-zinc-800/90" />
+      )}
+    </div>
   );
 }
 
