@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { auth } from "../../firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "../../firebase";
 import {
   Home,
   FileText,
@@ -15,12 +16,36 @@ const BottomMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
+  const [customSvgs, setCustomSvgs] = useState<{
+    home?: string;
+    doc?: string;
+    search?: string;
+    profile?: string;
+  }>({});
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
     });
-    return () => unsubscribe();
+    const unsubConfig = onSnapshot(
+      doc(db, "settings", "platform"),
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          setCustomSvgs({
+            home: d.bottomNavHomeSvg,
+            doc: d.bottomNavDocSvg,
+            search: d.bottomNavSearchSvg,
+            profile: d.bottomNavProfileSvg,
+          });
+        }
+      },
+      () => {}
+    );
+    return () => {
+      unsubscribe();
+      unsubConfig();
+    };
   }, []);
 
   const path = location.pathname;
@@ -31,6 +56,7 @@ const BottomMenu = () => {
       label: "Shop Home",
       path: "/",
       icon: Home,
+      customSvg: customSvgs.home,
       isActive: path === "/",
     },
     {
@@ -38,6 +64,7 @@ const BottomMenu = () => {
       label: "Loops",
       path: "/loops",
       icon: FileText,
+      customSvg: customSvgs.doc,
       isActive: path.startsWith("/loops") || path.startsWith("/news-hub"),
     },
     {
@@ -45,6 +72,7 @@ const BottomMenu = () => {
       label: "Search",
       path: "/search",
       icon: Search,
+      customSvg: customSvgs.search,
       isActive: path === "/search" || path === "/all-products",
     },
     {
@@ -52,6 +80,7 @@ const BottomMenu = () => {
       label: user ? "Profile" : "Sign In",
       path: user ? "/profile" : "/auth-selector",
       icon: UserIcon,
+      customSvg: customSvgs.profile,
       isActive: path === "/profile" || path === "/auth-selector",
     },
   ];
@@ -80,11 +109,18 @@ const BottomMenu = () => {
                   : "bg-white/65 dark:bg-zinc-800/75 text-zinc-900 dark:text-zinc-100 border border-white/80 dark:border-zinc-700/60 hover:bg-white dark:hover:bg-zinc-800"
               }`}
             >
-              <IconComp
-                className={`w-5 h-5 ${
-                  item.isActive ? "stroke-[2.2]" : "stroke-[1.9]"
-                }`}
-              />
+              {item.customSvg && item.customSvg.trim() ? (
+                <div
+                  className="w-5 h-5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:fill-current"
+                  dangerouslySetInnerHTML={{ __html: item.customSvg }}
+                />
+              ) : (
+                <IconComp
+                  className={`w-5 h-5 ${
+                    item.isActive ? "stroke-[2.2]" : "stroke-[1.9]"
+                  }`}
+                />
+              )}
             </button>
           );
         })}

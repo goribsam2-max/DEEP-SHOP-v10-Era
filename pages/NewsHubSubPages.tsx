@@ -3296,6 +3296,7 @@ export const NewsStoryViewerPage: React.FC = () => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.loop = true;
+      audioRef.current.preload = "auto";
     }
     const audio = audioRef.current;
     const rawSongUrl = story?.audioUrl || story?.music?.url || "";
@@ -3312,7 +3313,10 @@ export const NewsStoryViewerPage: React.FC = () => {
         audio.src = playableSongUrl;
       }
       audio.muted = false;
-      audio.play().catch(() => {});
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {});
+      }
     } else {
       audio.pause();
     }
@@ -3325,13 +3329,20 @@ export const NewsStoryViewerPage: React.FC = () => {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.currentTime = 0;
         audioRef.current.src = "";
+        audioRef.current = null;
       }
     };
   }, []);
 
   const handleCloseViewer = () => {
     triggerHaptic();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = "";
+    }
     if (highlightIdParam && highlightOwnerUid) {
       navigate(`/loops/profile/${highlightOwnerUid}`);
     } else {

@@ -1,5 +1,7 @@
 import React from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
 import {
   Home,
   Activity,
@@ -15,6 +17,31 @@ const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [cartCount, setCartCount] = React.useState(0);
+  const [customSvgs, setCustomSvgs] = React.useState<{
+    home?: string;
+    doc?: string;
+    search?: string;
+    profile?: string;
+  }>({});
+
+  React.useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, "settings", "platform"),
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          setCustomSvgs({
+            home: d.bottomNavHomeSvg,
+            doc: d.bottomNavDocSvg,
+            search: d.bottomNavSearchSvg,
+            profile: d.bottomNavProfileSvg,
+          });
+        }
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, []);
 
   React.useEffect(() => {
     const updateCount = () => {
@@ -53,11 +80,11 @@ const BottomNav: React.FC = () => {
   }
 
   const navItems = [
-    { to: "/", label: "Home", icon: Home },
-    { to: "/orders", label: "Activity", icon: Activity },
+    { to: "/", label: "Home", icon: Home, customSvg: customSvgs.home },
+    { to: "/orders", label: "Activity", icon: Activity, customSvg: customSvgs.doc },
     { to: "/loops/create", label: "Create", icon: Plus, isCreate: true },
-    { to: "/loops", label: "Loops", icon: Compass },
-    { to: "/profile", label: "Profile", icon: User },
+    { to: "/loops", label: "Loops", icon: Compass, customSvg: customSvgs.search },
+    { to: "/profile", label: "Profile", icon: User, customSvg: customSvgs.profile },
   ];
 
   return (
@@ -103,7 +130,14 @@ const BottomNav: React.FC = () => {
                       : "text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200"
                   }`}
                 >
-                  <IconComp className={`w-4 h-4 transition-transform duration-300 ${isActive ? "scale-110" : ""}`} />
+                  {item.customSvg && item.customSvg.trim() ? (
+                    <div
+                      className="w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:fill-current"
+                      dangerouslySetInnerHTML={{ __html: item.customSvg }}
+                    />
+                  ) : (
+                    <IconComp className={`w-4 h-4 transition-transform duration-300 ${isActive ? "scale-110" : ""}`} />
+                  )}
                 </div>
               </div>
 

@@ -1017,9 +1017,9 @@ export const Profile: React.FC<ProfileProps> = ({
                   triggerHaptic();
                   navigate("/deposit");
                 }}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-[#F4F6FA] dark:bg-zinc-800 hover:bg-slate-200/70 dark:hover:bg-zinc-700 text-xs font-bold text-zinc-900 dark:text-white transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 text-xs font-semibold text-zinc-900 dark:text-zinc-100 transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200/60 dark:border-zinc-700/60"
               >
-                <QrCode className="w-4 h-4 text-[#1877F2]" />
+                <QrCode className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>Deposit / QR</span>
               </button>
 
@@ -1029,57 +1029,57 @@ export const Profile: React.FC<ProfileProps> = ({
                   triggerHaptic();
                   navigate("/subscription");
                 }}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-[#1877F2] hover:bg-[#1465D8] text-white text-xs font-bold shadow-md shadow-blue-500/25 transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Crown className="w-4 h-4" />
+                <Crown className="w-3.5 h-3.5" />
                 <span>VIP Plan</span>
               </button>
             </div>
           </div>
 
-          {/* STATS ROW */}
-          <div className="grid grid-cols-4 gap-2.5 mt-5 pt-4 border-t border-slate-100 dark:border-zinc-800">
+          {/* STATS ROW - MINIMAL RESPONSIVE GRID */}
+          <div className="grid grid-cols-4 gap-2 mt-4 pt-3.5 border-t border-zinc-100 dark:border-zinc-800/70">
             <button
               type="button"
               onClick={() => navigate("/deposit")}
-              className="rounded-2xl bg-[#F6F8FC] dark:bg-zinc-800/70 p-2.5 text-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 p-2 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer border border-zinc-100 dark:border-zinc-800/50"
             >
-              <span className="text-[10px] font-bold uppercase text-zinc-400 block">
+              <span className="text-[9.5px] font-semibold uppercase text-zinc-400 block tracking-tight">
                 Wallet
               </span>
-              <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums truncate block">
+              <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums truncate block mt-0.5">
                 {formatPrice(walletBalance)}
               </span>
             </button>
             <button
               type="button"
               onClick={() => navigate("/my-coins")}
-              className="rounded-2xl bg-[#F6F8FC] dark:bg-zinc-800/70 p-2.5 text-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 p-2 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer border border-zinc-100 dark:border-zinc-800/50"
             >
-              <span className="text-[10px] font-bold uppercase text-zinc-400 block">
+              <span className="text-[9.5px] font-semibold uppercase text-zinc-400 block tracking-tight">
                 Coins
               </span>
-              <span className="text-sm sm:text-base font-black text-amber-500 tabular-nums block">
+              <span className="text-xs sm:text-sm font-bold text-amber-500 tabular-nums block mt-0.5">
                 {coins.toLocaleString()}
               </span>
             </button>
             <button
               type="button"
               onClick={() => navigate("/buy-stars")}
-              className="rounded-2xl bg-[#F6F8FC] dark:bg-zinc-800/70 p-2.5 text-center hover:bg-slate-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 p-2 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer border border-zinc-100 dark:border-zinc-800/50"
             >
-              <span className="text-[10px] font-bold uppercase text-zinc-400 block">
+              <span className="text-[9.5px] font-semibold uppercase text-zinc-400 block tracking-tight">
                 Stars
               </span>
-              <span className="text-sm sm:text-base font-black text-indigo-500 tabular-nums block">
+              <span className="text-xs sm:text-sm font-bold text-indigo-500 tabular-nums block mt-0.5">
                 {stars.toLocaleString()}
               </span>
             </button>
-            <div className="rounded-2xl bg-[#F6F8FC] dark:bg-zinc-800/70 p-2.5 text-center">
-              <span className="text-[10px] font-bold uppercase text-zinc-400 block">
+            <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 p-2 text-center border border-zinc-100 dark:border-zinc-800/50">
+              <span className="text-[9.5px] font-semibold uppercase text-zinc-400 block tracking-tight">
                 Followers
               </span>
-              <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white tabular-nums block">
+              <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 tabular-nums block mt-0.5">
                 {followers > 0 ? followers.toLocaleString() : xp.toLocaleString()}
               </span>
             </div>
@@ -1094,61 +1094,58 @@ export const Profile: React.FC<ProfileProps> = ({
               triggerHaptic();
               navigate("/admin");
             }}
-            className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-indigo-600 via-[#1877F2] to-blue-700 text-white p-5 shadow-[0_14px_34px_rgba(24,119,242,0.32)] cursor-pointer group"
+            className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-indigo-600 via-blue-600 to-blue-700 text-white p-4 shadow-sm cursor-pointer group"
           >
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/25">
-                  <Shield className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/25">
+                  <Shield className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base sm:text-lg font-black tracking-tight text-white truncate">
+                    <h2 className="text-sm sm:text-base font-bold tracking-tight text-white truncate">
                       Admin Control Panel
                     </h2>
-                    <span className="px-2 py-0.5 rounded-full bg-white text-indigo-700 text-[10px] font-black uppercase tracking-wider shrink-0">
-                      Full Access
+                    <span className="px-1.5 py-0.5 rounded bg-white/20 text-white text-[9px] font-extrabold uppercase tracking-wider shrink-0">
+                      Admin
                     </span>
                   </div>
-                  <p className="text-xs text-blue-100 font-medium truncate mt-0.5">
-                    Manage Products, Orders, Users, Deposits, Banners, Stories & Settings
+                  <p className="text-[11px] text-blue-100 font-medium truncate mt-0.5">
+                    Manage Products, Orders, Users, Deposits, Banners & Settings
                   </p>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
-                <ChevronRight className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
+                <ChevronRight className="w-4 h-4 text-white" />
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* MEMBERSHIP BANNER */}
+        {/* MINIMAL MEMBERSHIP BANNER */}
         <motion.div
           whileTap={{ scale: 0.985 }}
           onClick={() => navigate("/subscription")}
-          className="relative overflow-hidden rounded-[28px] bg-zinc-900 dark:bg-zinc-950 text-white p-5 border border-zinc-800 shadow-[0_14px_36px_rgba(15,23,42,0.18)] cursor-pointer group"
+          className="relative overflow-hidden rounded-[20px] bg-white dark:bg-[#16161A] text-zinc-900 dark:text-white p-4 border border-zinc-200/70 dark:border-zinc-800 shadow-2xs cursor-pointer group"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-12 rounded-2xl bg-gradient-to-r from-zinc-700 via-zinc-600 to-zinc-800 p-2 shadow-inner border border-zinc-500/30 flex flex-col justify-between shrink-0">
-              <div className="w-5 h-3.5 rounded bg-amber-400/90" />
-              <span className="text-[9px] font-black tracking-[0.2em] text-zinc-300 uppercase">
-                DEEP
-              </span>
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-white shrink-0 shadow-xs">
+              <Crown className="w-5 h-5" />
             </div>
 
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm sm:text-base font-black text-white tracking-wide truncate">
+              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white tracking-wide truncate">
                 {effectiveProfile.hasActiveSubscription
                   ? "VIP Reseller Member"
                   : "Starter Plan · Upgrade to VIP"}
               </h3>
-              <p className="text-xs text-zinc-400 font-medium mt-0.5 truncate">
-                Unlock 0৳ advance Cash on Delivery & exclusive wholesale perks
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 truncate">
+                Unlock 0৳ advance Cash on Delivery & wholesale perks
               </p>
             </div>
 
-            <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-              <ChevronRight className="w-5 h-5 text-zinc-300 group-hover:text-white transition-colors" />
+            <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+              <ChevronRight className="w-4 h-4 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors" />
             </div>
           </div>
         </motion.div>

@@ -723,7 +723,10 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
             setHasLoadedFrame(true);
             setIsBuffering(false);
           }}
-          onWaiting={() => setIsBuffering(true)}
+          onWaiting={() => {
+            setIsBuffering(true);
+            setTimeout(() => setIsBuffering(false), 2000);
+          }}
           onCanPlay={() => {
             setHasLoadedFrame(true);
             setIsBuffering(false);
@@ -4131,6 +4134,9 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                           <button
                             type="button"
                             onClick={() => {
+                              if (videoRef.current) {
+                                try { videoRef.current.pause(); } catch {}
+                              }
                               if (post.reporterId) {
                                 navigate(`/loops/profile/${post.reporterId}`);
                               }

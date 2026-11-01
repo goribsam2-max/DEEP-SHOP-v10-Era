@@ -73,6 +73,10 @@ const ManageConfig: React.FC = () => {
     notificationBannerBtnEnabled: true,
     notificationBannerBtnText: "Buy now!",
     notificationBannerBtnUrl: "",
+    bottomNavHomeSvg: "",
+    bottomNavDocSvg: "",
+    bottomNavSearchSvg: "",
+    bottomNavProfileSvg: "",
   });
 
   const [voiceBotOptions, setVoiceBotOptions] = useState<any[]>([
@@ -296,6 +300,80 @@ const ManageConfig: React.FC = () => {
                   />
                 </div>
               )}
+            </div>
+          </div>
+        </AccordionSection>
+
+        <AccordionSection
+          id="bottomNavIcons"
+          title="Bottom Navigation Custom SVG Icons"
+          icon="palette"
+          expanded={expandedSection === "bottomNavIcons"}
+          onToggle={() =>
+            setExpandedSection(
+              expandedSection === "bottomNavIcons" ? null : "bottomNavIcons",
+            )
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-zinc-500 font-medium">
+              Paste raw SVG code strings below for the Shop Bottom Navigation icons. Custom SVGs completely replace the default website icons.
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                Home Icon SVG Code
+              </label>
+              <textarea
+                value={configs.bottomNavHomeSvg || ""}
+                onChange={(e) =>
+                  setConfigs({ ...configs, bottomNavHomeSvg: e.target.value })
+                }
+                rows={3}
+                placeholder="<svg viewBox='0 0 24 24'>...</svg>"
+                className="w-full p-3 text-xs font-mono rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white outline-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                Document / Orders Icon SVG Code
+              </label>
+              <textarea
+                value={configs.bottomNavDocSvg || ""}
+                onChange={(e) =>
+                  setConfigs({ ...configs, bottomNavDocSvg: e.target.value })
+                }
+                rows={3}
+                placeholder="<svg viewBox='0 0 24 24'>...</svg>"
+                className="w-full p-3 text-xs font-mono rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white outline-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                Search Icon SVG Code
+              </label>
+              <textarea
+                value={configs.bottomNavSearchSvg || ""}
+                onChange={(e) =>
+                  setConfigs({ ...configs, bottomNavSearchSvg: e.target.value })
+                }
+                rows={3}
+                placeholder="<svg viewBox='0 0 24 24'>...</svg>"
+                className="w-full p-3 text-xs font-mono rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white outline-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                Profile Icon SVG Code
+              </label>
+              <textarea
+                value={configs.bottomNavProfileSvg || ""}
+                onChange={(e) =>
+                  setConfigs({ ...configs, bottomNavProfileSvg: e.target.value })
+                }
+                rows={3}
+                placeholder="<svg viewBox='0 0 24 24'>...</svg>"
+                className="w-full p-3 text-xs font-mono rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white outline-none"
+              />
             </div>
           </div>
         </AccordionSection>

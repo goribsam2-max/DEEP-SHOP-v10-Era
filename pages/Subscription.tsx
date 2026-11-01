@@ -394,17 +394,7 @@ export default function SubscriptionPage() {
 
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10">
         {/* 1. Responsive Top Utility & Navigation Bar */}
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            aria-label="Go back"
-            className="min-h-[42px] px-4 py-2 rounded-xl bg-white dark:bg-[#12151E] border border-zinc-200/85 dark:border-zinc-800/90 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap"
-          >
-            <ChevronLeft className="w-4 h-4 shrink-0" />
-            <span>ফিরে যান</span>
-          </button>
-
+        <div className="flex items-center justify-end gap-3">
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="hidden sm:flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
               <span>Deep Shop Official</span>

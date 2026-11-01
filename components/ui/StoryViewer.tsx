@@ -361,7 +361,22 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current.src = "";
+      }
+    };
+  }, []);
+
   const closeViewer = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = "";
+    }
     setActiveStoryIndex(null);
     setCurrentSubIndex(0);
     setProgress(0);
