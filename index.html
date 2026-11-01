@@ -13,8 +13,13 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="DEEP SHOP" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta
       name="google-site-verification"
       content="ZzsNPzIZ_KcG-ga94KzD5XFr7ltgAYyhlOy72R5pTpg"
@@ -498,6 +503,17 @@
 
       .animate-color-cycle-hover:hover {
         color: #5F2CFF !important;
+      }
+      html {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+      @media (display-mode: standalone), (display-mode: fullscreen) {
+        html,
+        body {
+          overscroll-behavior-y: contain;
+          -webkit-overflow-scrolling: touch;
+        }
       }
       @media print {
         html,

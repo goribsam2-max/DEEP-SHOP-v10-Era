@@ -19,14 +19,42 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: "autoUpdate",
+        injectRegister: "script-defer",
         devOptions: {
           enabled: false,
         },
-        includeAssets: ["favicon.ico", "robots.txt", "apple-touch-icon.png"],
+        includeAssets: ["favicon.ico", "favicon.png", "robots.txt", "apple-touch-icon.png"],
         workbox: {
-          maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15 MB limit
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+          globPatterns: ["**/*.{css,html,ico,woff2}"],
+          globIgnores: [
+            "**/assets/aistudio/**",
+            "**/vendor-pdf-*.js",
+            "**/vendor-charts-*.js",
+            "**/Manage*.js",
+          ],
+          navigateFallbackDenylist: [
+            /^\/api\//,
+            /^\/llms\.txt$/,
+            /^\/robots\.txt$/,
+            /^\/sitemap\.xml$/,
+          ],
           importScripts: ["/custom-sw.js"],
           runtimeCaching: [
+            {
+              urlPattern: /\/assets\/.*\.js$/i,
+              handler: "StaleWhileRevalidate",
+              options: {
+                cacheName: "app-js-chunks",
+                expiration: {
+                  maxEntries: 80,
+                  maxAgeSeconds: 60 * 60 * 24 * 14,
+                },
+              },
+            },
             {
               urlPattern: /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|api\.fontshare\.com|cdnjs\.cloudflare\.com)\/.*/i,
               handler: "CacheFirst",
@@ -34,7 +62,7 @@ export default defineConfig(({ mode }) => {
                 cacheName: "external-static-resources",
                 expiration: {
                   maxEntries: 30,
-                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
@@ -43,37 +71,49 @@ export default defineConfig(({ mode }) => {
             },
             {
               urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|woff|woff2)$/i,
-              handler: "CacheFirst",
+              handler: "StaleWhileRevalidate",
               options: {
                 cacheName: "static-images-fonts",
                 expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                  maxEntries: 120,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
                 },
               },
             },
           ],
         },
         manifest: {
+          id: "/",
           name: "DEEP SHOP",
           short_name: "DEEP SHOP",
-          description: "Premium border cross phones, original mobiles and tech products in BD",
+          description: "Premium border cross phones, original mobiles, and community Loops in BD",
           theme_color: "#ffffff",
           background_color: "#ffffff",
           display: "standalone",
-          start_url: ".",
+          orientation: "portrait",
+          start_url: "/",
+          scope: "/",
           icons: [
             {
               src: "/favicon.png",
               sizes: "192x192",
               type: "image/png",
-              purpose: "any maskable"
+              purpose: "any",
             },
             {
               src: "/favicon.png",
               sizes: "512x512",
               type: "image/png",
-              purpose: "any maskable"
+              purpose: "any",
+            },
+            {
+              src: "/favicon.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
             },
           ],
         },

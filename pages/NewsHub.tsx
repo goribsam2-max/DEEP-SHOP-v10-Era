@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -251,14 +252,56 @@ export const NewsHub: React.FC = () => {
   }, [location.search]);
 
   const [isScrolled, setIsScrolled] = useState(false);
+  const headerScrollSentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 80);
+    const computeScrolled = () => {
+      const mainEl = document.getElementById("main-content");
+      const sentinelRect = headerScrollSentinelRef.current?.getBoundingClientRect();
+      const sentinelPastTop = sentinelRect ? sentinelRect.top < 4 : false;
+      const scrollOffset = Math.max(
+        window.scrollY || 0,
+        document.documentElement?.scrollTop || 0,
+        document.body?.scrollTop || 0,
+        mainEl?.scrollTop || 0
+      );
+      setIsScrolled(sentinelPastTop || scrollOffset > 44);
     };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+
+    computeScrolled();
+
+    let observer: IntersectionObserver | null = null;
+    if (
+      typeof IntersectionObserver !== "undefined" &&
+      headerScrollSentinelRef.current
+    ) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (entry) {
+            if (!entry.isIntersecting && entry.boundingClientRect.top < 12) {
+              setIsScrolled(true);
+            } else {
+              computeScrolled();
+            }
+          }
+        },
+        { threshold: [0, 1] }
+      );
+      observer.observe(headerScrollSentinelRef.current);
+    }
+
+    window.addEventListener("scroll", computeScrolled, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("resize", computeScrolled, { passive: true });
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("scroll", computeScrolled, true);
+      window.removeEventListener("resize", computeScrolled);
+    };
+  }, [activeFeedFilter]);
 
   useEffect(() => {
     if (activeFeedFilter !== "video") {
@@ -1333,14 +1376,16 @@ export const NewsHub: React.FC = () => {
         userData={userProfile}
       />
 
-      {/* Shifting Main Feed Container — pure Framer Motion x transform for zero-lag push-drawer */}
+      {/* Shifting Main Feed Container — only promote transform layer when drawer is open */}
       <motion.div
         animate={{ x: drawerOpen ? 300 : 0 }}
         transition={{ type: "spring", damping: 32, stiffness: 340, mass: 0.85 }}
         onClick={() => {
           if (drawerOpen) setDrawerOpen(false);
         }}
-        className="min-h-screen loops-surface sm:bg-[#F8F9FA] sm:dark:bg-[#08090C] text-zinc-950 dark:text-zinc-100 font-sans pb-32 overflow-x-hidden will-change-transform"
+        className={`min-h-screen loops-surface sm:bg-[#F8F9FA] sm:dark:bg-[#08090C] text-zinc-950 dark:text-zinc-100 font-sans pb-32 overflow-x-hidden ${
+          drawerOpen ? "will-change-transform" : ""
+        }`}
       >
         <SEO
           title="Loops — Community & Conversations"
@@ -1630,57 +1675,98 @@ export const NewsHub: React.FC = () => {
                   </AnimatePresence>
                 </div>
 
-                {/* Right: Create (+) & Heart Activity Icons (Liquid Glass Style IMG_5303) */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <LiquidGlassButton
-                    onClick={() => setChooserOpen(true)}
+                {/* Right: Plain borderless/shadowless Create (+) & Heart icons when resting at top */}
+                <div
+                  className={`flex items-center gap-1 shrink-0 transition-opacity duration-150 ${
+                    isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setChooserOpen(true);
+                    }}
                     title="Create"
-                    ariaLabel="Create post or story"
+                    aria-label="Create post or story"
+                    className="w-10 h-10 rounded-full bg-transparent border-0 shadow-none flex items-center justify-center text-zinc-950 dark:text-white active:scale-90 transition cursor-pointer"
                   >
-                    <Plus className="w-5 h-5 stroke-[2.4]" />
-                  </LiquidGlassButton>
+                    <Plus className="w-[23px] h-[23px] stroke-[2.25]" />
+                  </button>
 
-                  <LiquidGlassButton
-                    onClick={() => navigate("/loops/activity")}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      navigate("/loops/activity");
+                    }}
                     title="Activity"
-                    ariaLabel="Activity notifications"
-                    badge={unreadNewsNotifications > 0}
+                    aria-label="Activity notifications"
+                    className="relative w-10 h-10 rounded-full bg-transparent border-0 shadow-none flex items-center justify-center text-zinc-950 dark:text-white active:scale-90 transition cursor-pointer"
                   >
-                    <Heart className="w-5 h-5 stroke-[2.2] fill-transparent" />
-                  </LiquidGlassButton>
+                    <Heart className="w-[22px] h-[22px] stroke-[2.15] fill-transparent" />
+                    {unreadNewsNotifications > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-2 right-2 w-[8.5px] h-[8.5px] rounded-full bg-[#FF2938] ring-[1.5px] ring-white dark:ring-zinc-950"
+                      />
+                    )}
+                  </button>
                 </div>
               </header>
             )}
 
-            {/* Floating Top-Right Liquid Glass Controls on Scroll (Exact IMG_5303 standalone orbs) */}
-            <AnimatePresence>
-              {isScrolled && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.85, y: -8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.85, y: -8 }}
-                  transition={{ type: "spring", stiffness: 420, damping: 28 }}
-                  className="fixed top-3 right-3.5 z-50 flex items-center gap-2.5"
-                >
-                  <LiquidGlassButton
-                    onClick={() => setChooserOpen(true)}
-                    title="Create"
-                    ariaLabel="Create post or story"
-                  >
-                    <Plus className="w-5 h-5 stroke-[2.4]" />
-                  </LiquidGlassButton>
+            {/* Top Scroll Sentinel for instant sticky Liquid Glass activation */}
+            <div
+              ref={headerScrollSentinelRef}
+              aria-hidden="true"
+              className="h-px w-full pointer-events-none"
+            />
 
-                  <LiquidGlassButton
-                    onClick={() => navigate("/loops/activity")}
-                    title="Activity"
-                    ariaLabel="Activity notifications"
-                    badge={unreadNewsNotifications > 0}
-                  >
-                    <Heart className="w-5 h-5 stroke-[2.2] fill-transparent" />
-                  </LiquidGlassButton>
-                </motion.div>
+            {/* Portaled Sticky Top-Right Liquid Glass Controls ONLY when scrolled (never trapped by parent transforms) */}
+            {typeof document !== "undefined" &&
+              createPortal(
+                <AnimatePresence>
+                  {isScrolled &&
+                    !drawerOpen &&
+                    !reelsOverlayOpen &&
+                    activeFeedFilter !== "video" &&
+                    activeFeedFilter !== "ghost" && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.86, y: -8 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.86, y: -8 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 420,
+                          damping: 28,
+                        }}
+                        style={{
+                          top: "max(10px, env(safe-area-inset-top, 10px))",
+                        }}
+                        className="fixed right-3.5 lg:right-[max(24px,calc(50%-302px))] z-[95] flex items-center gap-2 pointer-events-auto"
+                      >
+                        <LiquidGlassButton
+                          onClick={() => setChooserOpen(true)}
+                          title="Create"
+                          ariaLabel="Create post or story"
+                        >
+                          <Plus className="w-5 h-5 stroke-[2.4]" />
+                        </LiquidGlassButton>
+
+                        <LiquidGlassButton
+                          onClick={() => navigate("/loops/activity")}
+                          title="Activity"
+                          ariaLabel="Activity notifications"
+                          badge={unreadNewsNotifications > 0}
+                        >
+                          <Heart className="w-5 h-5 stroke-[2.2] fill-transparent" />
+                        </LiquidGlassButton>
+                      </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
               )}
-            </AnimatePresence>
 
             {/* Top Banner Ad Placement Slot */}
             <AdPlacementSlot slot="header_top" />

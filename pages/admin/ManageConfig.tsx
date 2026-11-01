@@ -56,6 +56,11 @@ const ManageConfig: React.FC = () => {
     affiliateTier4Commission: 200,
     pwaPopupStyle: "style1",
     pwaPopupIcon: "",
+    androidApkEnabled: true,
+    androidApkUrl: "",
+    androidApkVersion: "v2.5",
+    androidApkFileName: "DEEP-SHOP.apk",
+    iosInstallGuideEnabled: true,
     customerHotline: "+1 (724) 764-8185",
     whatsappNumber: "+1 (724) 764-8185",
     facebookPageUrl: "https://facebook.com/deepshop.top",
@@ -745,7 +750,7 @@ const ManageConfig: React.FC = () => {
 
         <AccordionSection
           id="pwa"
-          title="PWA Popup Settings"
+          title="Mobile App (Android APK & iOS Install Guide)"
           icon="download"
           expanded={expandedSection === "pwa"}
           onToggle={() =>
@@ -753,14 +758,100 @@ const ManageConfig: React.FC = () => {
           }
         >
           <div className="space-y-6">
+            <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-900/50 space-y-1.5">
+              <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                Smart Android APK &amp; iOS Home Screen Detection
+              </p>
+              <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                • <strong>Android visitors</strong> in Chrome/mobile browsers see an Android APK download prompt that auto-downloads your GitHub APK URL directly.<br />
+                • <strong>Inside your Website-to-APK app</strong> (Android WebView / TWA, or if you set your APK start URL to <code className="px-1 py-0.5 rounded bg-white dark:bg-zinc-800">https://www.deepshop.top/?source=apk</code>), the popup is automatically hidden permanently.<br />
+                • <strong>iOS visitors</strong> see an animated step-by-step Safari <em>Share → Add to Home Screen</em> guide (hidden automatically once opened from Home Screen).
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700">
+                <div>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                    Android APK Prompt
+                  </p>
+                  <p className="text-[11px] text-zinc-500">
+                    Suggest APK download on Android browsers
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={configs.androidApkEnabled !== false}
+                  onChange={(e) =>
+                    setConfigs({
+                      ...configs,
+                      androidApkEnabled: e.target.checked,
+                    })
+                  }
+                  className="w-5 h-5 accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700">
+                <div>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                    iOS Home Screen Guide
+                  </p>
+                  <p className="text-[11px] text-zinc-500">
+                    Animated Share → Add to Home Screen steps
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={configs.iosInstallGuideEnabled !== false}
+                  onChange={(e) =>
+                    setConfigs({
+                      ...configs,
+                      iosInstallGuideEnabled: e.target.checked,
+                    })
+                  }
+                  className="w-5 h-5 accent-blue-600 cursor-pointer"
+                />
+              </div>
+            </div>
+
             <Field
-              label="App Icon URL (Leave blank for default 'V' logo)"
+              label="Android APK GitHub Release / Direct Download URL"
+              value={configs.androidApkUrl || ""}
+              onChange={(v: string) =>
+                setConfigs({ ...configs, androidApkUrl: v })
+              }
+              placeholder="https://github.com/username/repo/releases/download/v1.0/DEEP-SHOP.apk"
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field
+                label="Android APK Version Badge"
+                value={configs.androidApkVersion || ""}
+                onChange={(v: string) =>
+                  setConfigs({ ...configs, androidApkVersion: v })
+                }
+                placeholder="v2.5"
+              />
+              <Field
+                label="Downloaded APK File Name"
+                value={configs.androidApkFileName || ""}
+                onChange={(v: string) =>
+                  setConfigs({ ...configs, androidApkFileName: v })
+                }
+                placeholder="DEEP-SHOP.apk"
+              />
+            </div>
+
+            <Field
+              label="App Icon URL (Leave blank for default DEEP SHOP logo)"
               value={configs.pwaPopupIcon}
               onChange={(v: string) =>
                 setConfigs({ ...configs, pwaPopupIcon: v })
               }
               placeholder="https://example.com/icon.png"
             />
+
             <div>
               <label className="text-[10px] font-bold text-zinc-400 mb-2 block tracking-normal">
                 Popup Style Template

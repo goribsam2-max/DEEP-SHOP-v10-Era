@@ -150,22 +150,40 @@ export const LoopBookmarkIcon: React.FC<{
   />
 );
 
-export const LoopStarIcon: React.FC<{
+export const LoopGiftIcon: React.FC<{
   className?: string;
   filled?: boolean;
 }> = ({ className = "w-[22px] h-[22px]", filled = false }) => (
   <svg
     className={className}
     viewBox="0 0 24 24"
-    fill={filled ? "currentColor" : "none"}
+    fill="none"
     stroke="currentColor"
     strokeWidth="1.95"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    <rect
+      x="3"
+      y="8"
+      width="18"
+      height="4"
+      rx="1.2"
+      fill={filled ? "currentColor" : "none"}
+      fillOpacity={filled ? 0.18 : 0}
+    />
+    <path
+      d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"
+      fill={filled ? "currentColor" : "none"}
+      fillOpacity={filled ? 0.14 : 0}
+    />
+    <path d="M12 8v13" />
+    <path d="M12 8H7.5a2.5 2.5 0 0 1 0-5C10.5 3 12 8 12 8Z" />
+    <path d="M12 8h4.5a2.5 2.5 0 0 0 0-5C13.5 3 12 8 12 8Z" />
   </svg>
 );
+
+export const LoopStarIcon = LoopGiftIcon;
 
 export interface LoopPostCardProps {
   post: ScamPost;
@@ -1344,16 +1362,16 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
                   )}?postId=${encodeURIComponent(post.id)}`
                 );
               }}
-              aria-label="Gift Stars"
-              title="Gift Stars"
+              aria-label="Send Gift"
+              title="Send Gift"
               className={`inline-flex items-center gap-1.5 transition active:scale-90 cursor-pointer ${
                 giftedStarsCount > 0
-                  ? "text-amber-500"
-                  : "text-[#0f0f0f] dark:text-[#f5f5f5] hover:text-amber-500"
+                  ? "text-rose-500 dark:text-rose-400"
+                  : "text-[#0f0f0f] dark:text-[#f5f5f5] hover:text-rose-500"
               }`}
             >
-              <LoopStarIcon
-                className="w-[22px] h-[22px]"
+              <LoopGiftIcon
+                className="w-[21.5px] h-[21.5px]"
                 filled={giftedStarsCount > 0}
               />
               {giftedStarsCount > 0 && (

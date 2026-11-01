@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -464,17 +465,67 @@ export const AttachmentMorePopover: React.FC<{
     action: "snippet" | "quote" | "camera" | "poll" | "location"
   ) => void;
 }> = ({ open, onClose, onSelectAction }) => {
+  const anchorProbeRef = useRef<HTMLSpanElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [coords, setCoords] = useState<{
+    top: number;
+    left: number;
+    openUpward: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    const handleOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
+
+    const updatePosition = () => {
+      const anchorEl = anchorProbeRef.current?.parentElement;
+      if (!anchorEl) return;
+      const rect = anchorEl.getBoundingClientRect();
+      const popoverWidth = 216;
+      const popoverHeight = 256;
+      const margin = 12;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // Prefer aligning nicely near the trigger while clamping strictly inside [12px, vw - popoverWidth - 12px]
+      let nextLeft = rect.left;
+      if (nextLeft + popoverWidth > vw - margin) {
+        nextLeft = Math.min(rect.right - popoverWidth, vw - popoverWidth - margin);
       }
+      nextLeft = Math.max(margin, nextLeft);
+
+      const spaceBelow = vh - rect.bottom;
+      const openUpward = spaceBelow < popoverHeight + 16 && rect.top > popoverHeight + 16;
+      const nextTop = openUpward
+        ? Math.max(margin, rect.top - popoverHeight - 8)
+        : Math.min(vh - popoverHeight - margin, rect.bottom + 8);
+
+      setCoords({
+        top: nextTop,
+        left: nextLeft,
+        openUpward,
+      });
     };
+
+    updatePosition();
+
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (menuRef.current?.contains(target)) return;
+      if (anchorProbeRef.current?.parentElement?.contains(target)) return;
+      onClose();
+    };
+
+    window.addEventListener("resize", updatePosition, { passive: true });
+    window.addEventListener("scroll", updatePosition, { passive: true, capture: true });
     document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside, { passive: true });
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
   }, [open, onClose]);
 
   const rows: {
@@ -485,68 +536,91 @@ export const AttachmentMorePopover: React.FC<{
     {
       id: "snippet",
       label: "Snippet",
-      icon: <SnippetLinesIcon className="w-[21px] h-[21px]" />,
+      icon: <SnippetLinesIcon className="w-[20px] h-[20px]" />,
     },
     {
       id: "quote",
       label: "Quote",
-      icon: <QuoteBubbleIcon className="w-[21px] h-[21px]" />,
+      icon: <QuoteBubbleIcon className="w-[20px] h-[20px]" />,
     },
     {
       id: "camera",
       label: "Camera",
-      icon: <Camera className="w-[21px] h-[21px] stroke-[1.9]" />,
+      icon: <Camera className="w-[20px] h-[20px] stroke-[1.9]" />,
     },
     {
       id: "poll",
       label: "Poll",
-      icon: <PollBarsIcon className="w-[21px] h-[21px]" />,
+      icon: <PollBarsIcon className="w-[20px] h-[20px]" />,
     },
     {
       id: "location",
       label: "Location",
-      icon: <MapPin className="w-[21px] h-[21px] stroke-[1.9]" />,
+      icon: <MapPin className="w-[20px] h-[20px] stroke-[1.9]" />,
     },
   ];
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          ref={menuRef}
-          initial={{ opacity: 0, scale: 0.25, y: -10, filter: "blur(10px)" }}
-          animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scale: 0.22, y: -8, filter: "blur(8px)" }}
-          transition={{
-            type: "spring",
-            stiffness: 460,
-            damping: 29,
-            mass: 0.72,
-          }}
-          className="absolute left-0 top-11 w-56 origin-top-left rounded-[30px] bg-white/84 dark:bg-zinc-900/86 backdrop-blur-2xl border border-white/95 dark:border-white/15 shadow-[0_24px_60px_rgba(15,23,42,0.16),inset_0_1.5px_2px_rgba(255,255,255,0.95)] py-2.5 z-50"
-        >
-          {rows.map((row) => (
-            <button
-              key={row.id}
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                onSelectAction(row.id);
-                onClose();
-              }}
-              className="w-full px-5 py-3 flex items-center gap-3.5 text-left text-zinc-900 dark:text-zinc-100 hover:bg-black/[0.045] dark:hover:bg-white/[0.07] active:scale-[0.985] transition cursor-pointer"
-            >
-              <span className="text-zinc-900 dark:text-zinc-100 shrink-0">
-                {row.icon}
-              </span>
-              <span className="text-[15.5px] font-medium tracking-tight">
-                {row.label}
-              </span>
-            </button>
-          ))}
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <>
+      <span ref={anchorProbeRef} className="hidden" aria-hidden="true" />
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {open && coords && (
+              <motion.div
+                ref={menuRef}
+                initial={{
+                  opacity: 0,
+                  scale: 0.88,
+                  y: coords.openUpward ? 8 : -8,
+                }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{
+                  opacity: 0,
+                  scale: 0.9,
+                  y: coords.openUpward ? 6 : -6,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 460,
+                  damping: 30,
+                  mass: 0.72,
+                }}
+                style={{
+                  position: "fixed",
+                  top: `${coords.top}px`,
+                  left: `${coords.left}px`,
+                  width: "216px",
+                }}
+                className={`z-[260] ${
+                  coords.openUpward ? "origin-bottom-right" : "origin-top-right"
+                } rounded-[28px] bg-white/92 dark:bg-zinc-900/92 backdrop-blur-2xl border border-zinc-200/80 dark:border-white/15 shadow-[0_22px_54px_rgba(15,23,42,0.18),inset_0_1.5px_2px_rgba(255,255,255,0.95)] py-2 overflow-hidden`}
+              >
+                {rows.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      onSelectAction(row.id);
+                      onClose();
+                    }}
+                    className="w-full px-4 py-2.5 flex items-center gap-3.5 text-left text-zinc-900 dark:text-zinc-100 hover:bg-black/[0.045] dark:hover:bg-white/[0.07] active:scale-[0.985] transition cursor-pointer"
+                  >
+                    <span className="text-zinc-900 dark:text-zinc-100 shrink-0">
+                      {row.icon}
+                    </span>
+                    <span className="text-[15px] font-medium tracking-tight">
+                      {row.label}
+                    </span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+    </>
   );
 };
 

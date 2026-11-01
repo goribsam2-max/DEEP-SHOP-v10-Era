@@ -56,6 +56,13 @@ import {
 } from "../components/DeezerMusicPickerModal";
 import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
 import { pingBingIndexNow } from "../lib/indexNowClient";
+import {
+  startReelBackgroundUpload,
+  publishOrArmReelBackgroundJob,
+  dismissReelUploadJob,
+  retryReelUploadJob,
+  useReelUploadJobs,
+} from "../lib/reelBackgroundPublisher";
 
 export const CreateReelStudio: React.FC = () => {
   const navigate = useNavigate();
@@ -77,8 +84,14 @@ export const CreateReelStudio: React.FC = () => {
   >([]);
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<string>("");
+  const [activeUploadJobId, setActiveUploadJobId] = useState<string | null>(
+    null
+  );
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const pendingUploadRef = useRef<Promise<string> | null>(null);
+  const uploadJobs = useReelUploadJobs();
+  const activeUploadJob =
+    uploadJobs.find((j) => j.id === activeUploadJobId) || null;
 
   // Editor states
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
@@ -147,7 +160,36 @@ export const CreateReelStudio: React.FC = () => {
     } catch {}
   }, []);
 
-  // Handle direct video file selection with instant local preview + background upload
+  // Sync hostedUrl into local studio state when background upload finishes
+  useEffect(() => {
+    if (!activeUploadJob) return;
+    if (activeUploadJob.status === "uploading") {
+      setUploading(true);
+      setUploadProgress(`Uploading ${activeUploadJob.progress}%`);
+    } else if (activeUploadJob.status === "uploaded") {
+      setUploading(false);
+      setUploadProgress("");
+      if (activeUploadJob.hostedUrl) {
+        setUploadedClips((prev) =>
+          prev.map((c) =>
+            c.url === activeUploadJob.localPreviewUrl
+              ? { ...c, url: activeUploadJob.hostedUrl }
+              : c
+          )
+        );
+      }
+    } else if (activeUploadJob.status === "error") {
+      setUploading(false);
+      setUploadProgress("");
+    }
+  }, [
+    activeUploadJob?.status,
+    activeUploadJob?.progress,
+    activeUploadJob?.hostedUrl,
+    activeUploadJob?.localPreviewUrl,
+  ]);
+
+  // Handle direct video file selection with instant local video preview + background upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -161,39 +203,20 @@ export const CreateReelStudio: React.FC = () => {
       return;
     }
 
-    const localPreviewUrl = URL.createObjectURL(file);
+    triggerHaptic();
+    const job = startReelBackgroundUpload(file, activeUploadJobId);
     const clipId = `clip_${Date.now()}`;
 
+    setActiveUploadJobId(job.id);
     setSelectedVideoFile(file);
-    setSelectedVideoUrl(localPreviewUrl);
+    // Keep local blob preview URL for zero-buffering instant playback while background upload runs
+    setSelectedVideoUrl(job.localPreviewUrl);
     setUploadedClips((prev) => [
-      { id: clipId, url: localPreviewUrl, name: file.name },
+      { id: clipId, url: job.localPreviewUrl, name: file.name },
       ...prev,
     ]);
-    triggerHaptic();
-    setUploading(true);
-    setUploadProgress("Uploading in background...");
-
-    const uploadTask = uploadFileToCatbox(file);
-    pendingUploadRef.current = uploadTask;
-
-    try {
-      const hostedUrl = await uploadTask;
-      setSelectedVideoUrl((curr) =>
-        curr === localPreviewUrl ? hostedUrl : curr
-      );
-      setUploadedClips((prev) =>
-        prev.map((c) => (c.id === clipId ? { ...c, url: hostedUrl } : c))
-      );
-    } catch (err: any) {
-      notify(err.message || "Video upload failed. Try again.", "error");
-    } finally {
-      if (pendingUploadRef.current === uploadTask) {
-        pendingUploadRef.current = null;
-      }
-      setUploading(false);
-      setUploadProgress("");
-    }
+    // Immediately switch to full playable video preview!
+    setStep("editor");
   };
 
   const handleShareReel = async () => {
@@ -211,6 +234,61 @@ export const CreateReelStudio: React.FC = () => {
     triggerHaptic();
     setIsSubmitting(true);
 
+    const authorName =
+      currentUser.displayName ||
+      currentUser.email?.split("@")[0] ||
+      "Creator";
+    const authorAvatar = currentUser.photoURL || "";
+
+    // If managed by our background upload engine, publish immediately if 100% uploaded OR arm auto-publish & return user to feed!
+    if (activeUploadJobId && activeUploadJob) {
+      try {
+        const result = await publishOrArmReelBackgroundJob(activeUploadJobId, {
+          uid: currentUser.uid,
+          authorName,
+          authorAvatar,
+          caption,
+          locationTag,
+          addAiLabel,
+          audience: audience === "Close Friends" ? "Close Friends" : "Everyone",
+          uploadHighestQuality,
+          disableTemplate,
+          hideLikeCount,
+          hideShareCount,
+          turnOffCommenting,
+          allowDownload,
+          audioTitle,
+          bgMusicVolume,
+          videoVolume,
+          attachedMusic: attachedMusic
+            ? {
+                title: attachedMusic.title,
+                artist: attachedMusic.artist,
+                audioUrl: attachedMusic.audioUrl,
+                coverUrl: attachedMusic.coverUrl || attachedMusic.cover || "",
+                cover: attachedMusic.cover || attachedMusic.coverUrl || "",
+              }
+            : null,
+        });
+
+        if (result.immediatePostId) {
+          notify("Your Reel is now live!", "success");
+          navigate(`/loops?filter=video&postId=${result.immediatePostId}`);
+        } else {
+          notify(
+            "Uploading in background — your Reel will publish automatically!",
+            "success"
+          );
+          navigate("/loops?filter=video");
+        }
+        return;
+      } catch (err: any) {
+        notify(err?.message || "Failed to queue Reel publish.", "error");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
       let hostedVideoUrl = selectedVideoUrl;
       if (hostedVideoUrl.startsWith("blob:") && pendingUploadRef.current) {
@@ -220,12 +298,6 @@ export const CreateReelStudio: React.FC = () => {
         hostedVideoUrl = await uploadFileToCatbox(selectedVideoFile);
         setSelectedVideoUrl(hostedVideoUrl);
       }
-
-      const authorName =
-        currentUser.displayName ||
-        currentUser.email?.split("@")[0] ||
-        "Creator";
-      const authorAvatar = currentUser.photoURL || "";
 
       // 1. Create Reel Post in Firestore `scam_posts`
       const postRef = await addDoc(collection(db, "scam_posts"), {
@@ -548,7 +620,8 @@ export const CreateReelStudio: React.FC = () => {
        * STEP 2: REEL EDITOR PREVIEW SCREEN (Exact IMG_5258)
        * ========================================================================= */}
       {step === "editor" && (
-        <div className="relative h-screen w-full bg-black text-white flex flex-col justify-between overflow-hidden">
+        <div className="min-h-screen w-full bg-zinc-950 flex items-center justify-center sm:p-6">
+        <div className="relative h-screen sm:h-[calc(100vh-3rem)] sm:max-h-[860px] w-full sm:max-w-[430px] sm:rounded-[32px] sm:border sm:border-white/15 sm:shadow-[0_28px_80px_rgba(0,0,0,0.65)] bg-black text-white flex flex-col justify-between overflow-hidden">
           {/* Background Video Viewport */}
           {selectedVideoUrl && (
             <video
@@ -558,58 +631,130 @@ export const CreateReelStudio: React.FC = () => {
               loop
               playsInline
               muted={isMuted}
-              className="absolute inset-0 w-full h-full object-contain bg-black"
+              onClick={() => {
+                const el = videoPreviewRef.current;
+                if (!el) return;
+                if (el.paused) {
+                  el.play().catch(() => {});
+                  setIsPlaying(true);
+                } else {
+                  el.pause();
+                  setIsPlaying(false);
+                }
+              }}
+              className="absolute inset-0 w-full h-full object-contain bg-black cursor-pointer"
             />
           )}
 
           {/* Overlay Text Preview */}
           {overlayText && (
-            <div className="absolute inset-x-6 top-1/3 z-20 text-center">
+            <div className="absolute inset-x-6 top-1/3 z-20 text-center pointer-events-none">
               <span className="inline-block px-4 py-2 rounded-xl bg-black/75 text-white font-extrabold text-lg shadow-2xl backdrop-blur-md">
                 {overlayText}
               </span>
             </div>
           )}
 
-          {/* Top Controls Overlay */}
-          <div className="relative z-30 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
-            <button
-              type="button"
-              onClick={() => setShowExitConfirm(true)}
-              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 transition cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          {/* Top Controls Overlay + Live Background Upload Progress Pill */}
+          <div className="relative z-30 p-4 space-y-2.5 bg-gradient-to-b from-black/85 via-black/40 to-transparent">
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setShowExitConfirm(true)}
+                className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 transition cursor-pointer shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            {/* Suggested Audio Button */}
-            <button
-              type="button"
-              onClick={() => setMusicPickerOpen(true)}
-              className="px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs font-semibold flex items-center gap-2 hover:bg-black/80 transition cursor-pointer"
-            >
-              <span className="text-[#0095F6]">
+              {/* Suggested Audio Button */}
+              <button
+                type="button"
+                onClick={() => setMusicPickerOpen(true)}
+                className="px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs font-semibold flex items-center gap-2 hover:bg-black/80 transition cursor-pointer min-w-0"
+              >
+                <span className="text-[#0095F6] shrink-0">
+                  <LoopsSvgIcon
+                    name="loops-reel-studio-music"
+                    className="w-3.5 h-3.5"
+                  />
+                </span>
+                <span className="truncate max-w-[180px]">
+                  {attachedMusic
+                    ? `${attachedMusic.title} · ${attachedMusic.artist}`
+                    : "Suggested audio > Tap to apply"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsMuted(!isMuted)}
+                className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 transition cursor-pointer shrink-0"
+              >
                 <LoopsSvgIcon
-                  name="loops-reel-studio-music"
-                  className="w-3.5 h-3.5"
+                  name={isMuted ? "loops-reel-mute" : "loops-reel-unmute"}
+                  className="w-5 h-5"
                 />
-              </span>
-              <span className="truncate max-w-[200px]">
-                {attachedMusic
-                  ? `${attachedMusic.title} · ${attachedMusic.artist}`
-                  : "Suggested audio > Tap to apply"}
-              </span>
-            </button>
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setIsMuted(!isMuted)}
-              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 transition cursor-pointer"
-            >
-              <LoopsSvgIcon
-                name={isMuted ? "loops-reel-mute" : "loops-reel-unmute"}
-                className="w-5 h-5"
-              />
-            </button>
+            {/* Live Non-Blocking Background Upload Status Bar */}
+            {activeUploadJob && (
+              <div className="rounded-2xl bg-black/65 backdrop-blur-xl border border-white/15 px-3.5 py-2 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between text-[11.5px] font-semibold">
+                    <span className="flex items-center gap-1.5 truncate text-white/95">
+                      {activeUploadJob.status === "uploaded" ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>Uploaded in background · Ready to publish</span>
+                        </>
+                      ) : activeUploadJob.status === "error" ? (
+                        <span className="text-rose-400 truncate">
+                          Upload paused · Tap Retry
+                        </span>
+                      ) : (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin text-[#38BDF8] shrink-0" />
+                          <span>Uploading in background...</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="tabular-nums font-bold text-[#38BDF8] ml-2 shrink-0">
+                      {activeUploadJob.status === "uploaded"
+                        ? "100%"
+                        : `${activeUploadJob.progress}%`}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-1 w-full rounded-full bg-white/15 overflow-hidden">
+                    <div
+                      style={{
+                        width: `${
+                          activeUploadJob.status === "uploaded"
+                            ? 100
+                            : Math.max(4, activeUploadJob.progress)
+                        }%`,
+                      }}
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        activeUploadJob.status === "uploaded"
+                          ? "bg-emerald-400"
+                          : activeUploadJob.status === "error"
+                          ? "bg-rose-500"
+                          : "bg-gradient-to-r from-[#1877F2] to-[#38BDF8]"
+                      }`}
+                    />
+                  </div>
+                </div>
+                {activeUploadJob.status === "error" && (
+                  <button
+                    type="button"
+                    onClick={() => retryReelUploadJob(activeUploadJob.id)}
+                    className="px-2.5 py-1 rounded-lg bg-[#1877F2] text-white text-[11px] font-bold shrink-0 cursor-pointer"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Bottom Floating Editing Toolbar (Audio, Text, Voice, Captions, Overlay) */}
@@ -759,6 +904,10 @@ export const CreateReelStudio: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
+                      if (activeUploadJobId) {
+                        dismissReelUploadJob(activeUploadJobId);
+                        setActiveUploadJobId(null);
+                      }
                       setShowExitConfirm(false);
                       setSelectedVideoUrl("");
                       setStep("picker");
@@ -792,6 +941,7 @@ export const CreateReelStudio: React.FC = () => {
             </div>
           )}
         </div>
+        </div>
       )}
 
       {/* =========================================================================
@@ -821,22 +971,79 @@ export const CreateReelStudio: React.FC = () => {
           </div>
 
           <div className="flex-1 p-4 space-y-6 overflow-y-auto">
-            {/* Top Cover & Caption Card */}
+            {/* Responsive Background Upload & Auto-Publish Status Card */}
+            {activeUploadJob && (
+              <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-3.5 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {activeUploadJob.status === "uploaded" ? (
+                      <span className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      </span>
+                    ) : (
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1877F2] shrink-0" />
+                    )}
+                    <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                      {activeUploadJob.status === "uploaded"
+                        ? "Video uploaded · Ready for instant publish"
+                        : activeUploadJob.status === "error"
+                        ? "Upload paused — tap Share or Retry to resume"
+                        : "Uploading in background — tap Share anytime to auto-publish"}
+                    </span>
+                  </div>
+                  <span className="text-xs font-extrabold tabular-nums text-[#1877F2] shrink-0">
+                    {activeUploadJob.status === "uploaded"
+                      ? "100%"
+                      : `${activeUploadJob.progress}%`}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-zinc-200/80 dark:bg-zinc-800 overflow-hidden">
+                  <div
+                    style={{
+                      width: `${
+                        activeUploadJob.status === "uploaded"
+                          ? 100
+                          : Math.max(4, activeUploadJob.progress)
+                      }%`,
+                    }}
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      activeUploadJob.status === "uploaded"
+                        ? "bg-emerald-500"
+                        : activeUploadJob.status === "error"
+                        ? "bg-rose-500"
+                        : "bg-gradient-to-r from-[#1877F2] to-[#0095F6]"
+                    }`}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Top Cover & Caption Card with Live Video Preview */}
             <div className="flex gap-4">
-              <div className="relative w-28 h-40 rounded-2xl bg-black overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-800 shadow-md">
+              <div
+                onClick={() => setStep("editor")}
+                className="relative w-28 h-40 rounded-2xl bg-black overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-800 shadow-md cursor-pointer"
+              >
                 {selectedVideoUrl && (
                   <video
                     src={toPlayableMediaUrl(selectedVideoUrl)}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
                     className="w-full h-full object-cover"
                   />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-center p-2">
                   <button
                     type="button"
-                    onClick={() => notify("Edit cover ready!", "info")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStep("editor");
+                    }}
                     className="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold cursor-pointer"
                   >
-                    Edit cover
+                    Preview
                   </button>
                 </div>
               </div>
@@ -1033,10 +1240,12 @@ export const CreateReelStudio: React.FC = () => {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sharing...</span>
+                  <span>Publishing...</span>
                 </>
+              ) : activeUploadJob && activeUploadJob.status === "uploading" ? (
+                <span>Publish (Auto when uploaded)</span>
               ) : (
-                <span>Share</span>
+                <span>Publish</span>
               )}
             </button>
           </div>

@@ -1,119 +1,173 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, useAnimation } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 
 export const PullToRefresh: React.FC<{
   children: React.ReactNode;
   onRefresh: () => Promise<void>;
 }> = ({ children, onRefresh }) => {
-  const [startY, setStartY] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const pullHeight = useRef(0);
-  const controls = useAnimation();
-  const maxPull = 120;
-  const triggerHeight = 60;
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
+
+  const indicatorRef = useRef<HTMLDivElement | null>(null);
+  const iconWrapRef = useRef<HTMLDivElement | null>(null);
+  const startYRef = useRef(0);
+  const startXRef = useRef(0);
+  const pullingRef = useRef(false);
+  const refreshingRef = useRef(false);
+  const pullHeightRef = useRef(0);
+  const rafIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      let target = e.target as HTMLElement | null;
-      let isAtTop = true;
-      let hasScrollableParent = false;
+    const maxPull = 108;
+    const triggerHeight = 64;
 
-      while (target && target !== document.documentElement && target !== document.body) {
-        const style = window.getComputedStyle(target);
-        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-          hasScrollableParent = true;
-          if (target.scrollTop > 0) {
-            isAtTop = false;
-            break;
-          }
+    const applyIndicatorTransform = (y: number, animate: boolean) => {
+      const el = indicatorRef.current;
+      const iconEl = iconWrapRef.current;
+      if (!el) return;
+      el.style.transition = animate
+        ? 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease'
+        : 'none';
+      el.style.transform = `translate3d(0, ${y}px, 0)`;
+      el.style.opacity = y > 4 ? String(Math.min(1, y / 36)) : '0';
+      if (iconEl && !refreshingRef.current) {
+        iconEl.style.transform = `rotate(${Math.round(y * 3.2)}deg)`;
+      }
+    };
+
+    const canStartPullFromTarget = (rawTarget: EventTarget | null): boolean => {
+      if ((window.scrollY || document.documentElement.scrollTop || 0) > 1) {
+        return false;
+      }
+      const path = window.location.pathname;
+      if (
+        path.startsWith('/create-reel') ||
+        path.startsWith('/add-story') ||
+        path.startsWith('/messages')
+      ) {
+        return false;
+      }
+
+      let el = rawTarget as HTMLElement | null;
+      while (el && el !== document.body && el !== document.documentElement) {
+        if (
+          el.scrollTop > 0 ||
+          el.getAttribute('role') === 'dialog' ||
+          el.dataset?.noPullRefresh === 'true'
+        ) {
+          return false;
         }
-        target = target.parentElement;
+        el = el.parentElement;
       }
+      return true;
+    };
 
-      // Do not trigger pull-to-refresh if we are inside a scrollable modal/popup
-      // that is handled separately, but if we do, insist it must be at the very top.
-      // Easiest is to only allow it if we are at the top of the page.
-      if (window.scrollY <= 0 && isAtTop && !hasScrollableParent) {
-        setStartY(e.touches[0].clientY);
-        setIsPulling(true);
+    const handleTouchStart = (e: TouchEvent) => {
+      if (refreshingRef.current || e.touches.length !== 1) return;
+      if (!canStartPullFromTarget(e.target)) {
+        pullingRef.current = false;
+        return;
       }
+      startYRef.current = e.touches[0].clientY;
+      startXRef.current = e.touches[0].clientX;
+      pullHeightRef.current = 0;
+      pullingRef.current = true;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isPulling || isRefreshing) return;
-      
-      const currentY = window.scrollY;
-      if (currentY > 0) {
-          setIsPulling(false);
-          return;
+      if (!pullingRef.current || refreshingRef.current || e.touches.length !== 1) {
+        return;
+      }
+      if ((window.scrollY || document.documentElement.scrollTop || 0) > 1) {
+        pullingRef.current = false;
+        pullHeightRef.current = 0;
+        applyIndicatorTransform(0, true);
+        return;
       }
 
-      const y = e.touches[0].clientY;
-      const dy = y - startY;
+      const dy = e.touches[0].clientY - startYRef.current;
+      const dx = e.touches[0].clientX - startXRef.current;
 
-      if (dy > 0) {
-        // Prevent default scrolling when pulling down at top
-        if (e.cancelable) e.preventDefault();
-        pullHeight.current = Math.min(dy * 0.5, maxPull);
-        controls.set({ y: pullHeight.current });
+      if (dy <= 0 || Math.abs(dx) > dy * 0.85) {
+        if (dy < -4 || Math.abs(dx) > 18) {
+          pullingRef.current = false;
+          pullHeightRef.current = 0;
+          applyIndicatorTransform(0, true);
+        }
+        return;
       }
+
+      if (dy < 12) return;
+
+      const damped = Math.min((dy - 12) * 0.45, maxPull);
+      pullHeightRef.current = damped;
+      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = requestAnimationFrame(() => {
+        applyIndicatorTransform(damped, false);
+      });
     };
 
     const handleTouchEnd = async () => {
-      if (!isPulling || isRefreshing) return;
-      setIsPulling(false);
+      if (!pullingRef.current || refreshingRef.current) return;
+      pullingRef.current = false;
 
-      if (pullHeight.current >= triggerHeight) {
+      if (pullHeightRef.current >= triggerHeight) {
+        refreshingRef.current = true;
         setIsRefreshing(true);
-        controls.start({ y: 50, transition: { type: 'spring', bounce: 0, duration: 0.3 } });
-        
-        try {
-          await onRefresh();
-        } finally {
-          setIsRefreshing(false);
-          pullHeight.current = 0;
-          controls.start({ y: 0, transition: { type: 'spring', bounce: 0, duration: 0.3 } });
+        if (iconWrapRef.current) {
+          iconWrapRef.current.style.transform = '';
         }
-      } else {
-        pullHeight.current = 0;
-        controls.start({ y: 0, transition: { type: 'spring', bounce: 0, duration: 0.3 } });
+        applyIndicatorTransform(58, true);
+
+        try {
+          await onRefreshRef.current();
+        } finally {
+          refreshingRef.current = false;
+          setIsRefreshing(false);
+          pullHeightRef.current = 0;
+          applyIndicatorTransform(0, true);
+        }
+      } else if (pullHeightRef.current > 0) {
+        pullHeightRef.current = 0;
+        applyIndicatorTransform(0, true);
       }
     };
 
+    // Pure passive listeners so mobile/PWA compositor scrolling never blocks on JS
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    // Use non-passive for move so we can preventDefault
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
+      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [startY, isPulling, isRefreshing, onRefresh, controls]);
+  }, []);
 
   return (
-    <div className="relative w-full h-full min-h-screen">
-      <motion.div
-        className="fixed top-safe left-0 right-0 flex justify-center items-center z-[99999] pointer-events-none"
-        style={{ height: '50px', top: '-60px' }}
-        animate={controls}
+    <div className="relative w-full min-h-screen">
+      <div
+        ref={indicatorRef}
+        aria-hidden="true"
+        className="fixed left-0 right-0 flex justify-center items-center z-[99999] pointer-events-none opacity-0 will-change-transform"
+        style={{ height: '50px', top: '-54px', transform: 'translate3d(0, 0, 0)' }}
       >
-        <div className="bg-white dark:bg-zinc-800 shadow-md rounded-full w-12 h-12 flex items-center justify-center transform-gpu">
-          <RefreshCw 
-            size={24} 
-            className={`text-indigo-500 ${isRefreshing ? 'animate-spin' : ''}`} 
-            style={{
-               transform: isRefreshing ? 'none' : `rotate(${pullHeight.current * 3}deg)`
-            }}
-          />
+        <div className="bg-white dark:bg-zinc-800 shadow-lg border border-zinc-200/70 dark:border-zinc-700/70 rounded-full w-11 h-11 flex items-center justify-center">
+          <div ref={iconWrapRef} className="flex items-center justify-center">
+            <RefreshCw
+              size={20}
+              className={`text-[#1877F2] ${isRefreshing ? 'animate-spin' : ''}`}
+            />
+          </div>
         </div>
-      </motion.div>
-      <div className="w-full h-full min-h-screen">
-        {children}
       </div>
+      <div className="w-full min-h-screen">{children}</div>
     </div>
   );
 };
+

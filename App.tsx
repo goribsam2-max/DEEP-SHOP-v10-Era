@@ -43,6 +43,8 @@ import BanOverlay from './components/BanOverlay';
 import { AdPlacementSlot } from './components/AdPlacementSlot';
 import { initGlobalHaptics } from './lib/haptics';
 import { hasImmediateAdminOrStaffRole } from './lib/admin';
+import { ReelUploadProgressOverlay } from './components/ReelUploadProgressOverlay';
+import { MobileAppInstallExperience } from './components/MobileAppInstallExperience';
 
 const OnboardingOffersModal = lazy(() => import('./components/OnboardingOffersModal'));
 const CartAbandonmentPopup = lazy(() =>
@@ -224,29 +226,6 @@ const SEOProvider = () => {
       }
     }
 
-    // Inject Dynamic Manifest for PWA (Add to Home Screen)
-    const manifest = {
-      short_name: data.metaTitle || "DEEP SHOP",
-      name: data.metaTitle || "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site",
-      description: data.metaDescription || "border cross devices, border cross products, illegal products buy sell site",
-      icons: data.appIconUrl ? [
-         { src: data.appIconUrl, type: "image/png", sizes: "192x192", purpose: "any maskable" },
-         { src: data.appIconUrl, type: "image/png", sizes: "512x512", purpose: "any maskable" }
-      ] : [],
-      start_url: "/",
-      display: "standalone",
-      theme_color: "#06331e",
-      background_color: "#ffffff"
-    };
-    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
-    let manifestLink = document.querySelector('link[rel="manifest"]');
-    if (!manifestLink) {
-      manifestLink = document.createElement('link');
-      manifestLink.setAttribute('rel', 'manifest');
-      document.head.appendChild(manifestLink);
-    }
-    manifestLink.setAttribute('href', manifestURL);
     if (data.fbPixelId) {
       if (!(window as any).fbq) {
         // @ts-ignore
@@ -262,10 +241,6 @@ const SEOProvider = () => {
         (window as any).fbq('track', 'PageView');
       }
     }
-
-    return () => {
-      URL.revokeObjectURL(manifestURL);
-    };
   }, [seoData, location.pathname]);
 
   return null;
@@ -669,7 +644,15 @@ const AppContent: React.FC = () => {
         const unsubProfile = onSnapshot(doc(db, 'users', currentUser.uid), async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
-            setUserData(data);
+            setUserData((prev) => {
+              if (!prev) return data;
+              const { lastActive: _a, isOnline: _b, ...prevRest } = prev as any;
+              const { lastActive: _c, isOnline: _d, ...nextRest } = data as any;
+              if (JSON.stringify(prevRest) === JSON.stringify(nextRest)) {
+                return prev;
+              }
+              return data;
+            });
             syncCurrentUserToSavedAccounts(currentUser, data);
 
             // Instant Real-time Session Revocation Check
@@ -829,12 +812,12 @@ const AppContent: React.FC = () => {
     // Initially online
     setOnline(true);
 
-    // Heartbeat every 18 seconds
+    // Heartbeat every 120 seconds (prevents excessive Firestore writes & battery drain in Web App mode)
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible' && navigator.onLine) {
         setOnline(true);
       }
-    }, 18000);
+    }, 120000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && navigator.onLine) {
@@ -896,7 +879,7 @@ const AppContent: React.FC = () => {
       </AnimatePresence>
       <main id="main-content" tabIndex={-1} className="min-h-screen selection:bg-zinc-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
         <Suspense fallback={null}>
-        <Routes location={location} key={location.pathname}>
+        <Routes location={location}>
             <Route path="/" element={<PageWrapper><Home userData={userData} /></PageWrapper>} />
           <Route path="/onboarding" element={<PageWrapper><Onboarding onFinish={() => {}} /></PageWrapper>} />
           <Route path="/auth-selector" element={<PageWrapper><AuthSelector /></PageWrapper>} />
@@ -1344,6 +1327,8 @@ const App: React.FC = () => {
               >
                 <AppContent />
               </PullToRefresh>
+              <ReelUploadProgressOverlay />
+              <MobileAppInstallExperience />
               {deferredReady && (
                 <Suspense fallback={null}>
                   <GlobalCallReceiver />
