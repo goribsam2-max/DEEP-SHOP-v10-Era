@@ -99,3 +99,22 @@ root.render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener(
+    'load',
+    () => {
+      const registerIdleSw = () => {
+        navigator.serviceWorker
+          .register('/sw.js', { scope: '/' })
+          .catch(() => {});
+      };
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(registerIdleSw, { timeout: 3500 });
+      } else {
+        setTimeout(registerIdleSw, 2200);
+      }
+    },
+    { once: true }
+  );
+}

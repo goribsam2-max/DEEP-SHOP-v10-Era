@@ -236,7 +236,20 @@ export const Profile: React.FC<ProfileProps> = ({
       unsubNotifs = onSnapshot(
         qNotifs,
         (snapshot) => {
-          setUnreadNotifications(snapshot.docs.length);
+          const shopOnly = snapshot.docs.filter((docSnap) => {
+            const d = docSnap.data();
+            return (
+              !d.fromUserId &&
+              !d.postId &&
+              !d.storyId &&
+              !String(d.link || "").startsWith("/loops") &&
+              !String(d.link || "").startsWith("/news") &&
+              !["follow", "like", "story_like", "comment", "repost", "story", "loop", "loop_post_report", "social", "star_gift"].includes(
+                String(d.type || "").toLowerCase()
+              )
+            );
+          });
+          setUnreadNotifications(shopOnly.length);
         },
         () => {}
       );

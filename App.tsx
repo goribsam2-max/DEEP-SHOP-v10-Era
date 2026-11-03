@@ -612,6 +612,51 @@ const AppContent: React.FC = () => {
     }
   }, [location.pathname, navigate]);
 
+  // Track last active primary app section (Shop Home '/' vs Loops Home '/loops') for Messages back navigation
+  useEffect(() => {
+    const p = location.pathname;
+    const sp = new URLSearchParams(location.search);
+    const fromParam = (sp.get('from') || '').trim().toLowerCase();
+
+    if (
+      p.startsWith('/messages') ||
+      fromParam === 'messages' ||
+      p.startsWith('/auth') ||
+      p === '/signin' ||
+      p === '/signup' ||
+      p.startsWith('/signup/') ||
+      p === '/accounts' ||
+      p === '/saved-accounts' ||
+      p === '/find-account' ||
+      p === '/choose-account' ||
+      p === '/review-account' ||
+      p === '/verify'
+    ) {
+      return;
+    }
+
+    const isLoopsSection =
+      p === '/loops' ||
+      p.startsWith('/loops/') ||
+      p === '/news-hub' ||
+      p.startsWith('/news-hub/') ||
+      p === '/scam-alert' ||
+      p.startsWith('/scam/') ||
+      p.startsWith('/news/') ||
+      p.startsWith('/create-reel') ||
+      p.startsWith('/author/') ||
+      p.startsWith('/creator') ||
+      p.startsWith('/buy-stars') ||
+      p.startsWith('/gift-stars') ||
+      p.startsWith('/sponsor');
+
+    const resolvedHome = isLoopsSection ? '/loops' : '/';
+    try {
+      sessionStorage.setItem('deepshop_last_section_home', resolvedHome);
+      localStorage.setItem('deepshop_last_section_home', resolvedHome);
+    } catch {}
+  }, [location.pathname, location.search]);
+
   // Redirect any legacy openAccountCenter event directly to the dedicated /accounts page
   useEffect(() => {
     const handleOpen = () => {
@@ -1016,6 +1061,7 @@ const AppContent: React.FC = () => {
           <Route path="/add-card" element={<PageWrapper><AddCard /></PageWrapper>} />
           <Route path="/new-password" element={<PageWrapper><NewPassword /></PageWrapper>} />
           <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
+          <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
           <Route path="/seller/dashboard" element={<PageWrapper><SellerDashboard /></PageWrapper>} />
           <Route path="/add-story" element={<PageWrapper><AddStory /></PageWrapper>} />
           <Route path="/seller/add-story" element={<PageWrapper><AddStory /></PageWrapper>} />
@@ -1254,6 +1300,8 @@ const GlobalRouteAwareOverlays: React.FC<{ deferredReady: boolean }> = ({ deferr
       location.pathname.startsWith('/news-hub')) &&
       (filterParam === 'video' || filterParam === 'reels' || tabParam === 'reels'));
 
+  const isMessagesRoute = location.pathname.startsWith('/messages');
+
   if (isAuthScreen) {
     return <NetworkStatus />;
   }
@@ -1269,7 +1317,7 @@ const GlobalRouteAwareOverlays: React.FC<{ deferredReady: boolean }> = ({ deferr
           <AdManager />
         </Suspense>
       )}
-      {deferredReady && !isReelsFullscreen && (
+      {deferredReady && !isReelsFullscreen && !isMessagesRoute && (
         <AdPlacementSlot
           slot="bottom_fixed"
           className="fixed bottom-0 inset-x-0 z-[90] bg-white/95 dark:bg-zinc-950/95 border-t border-slate-200/80 dark:border-zinc-800 p-2 shadow-2xl"

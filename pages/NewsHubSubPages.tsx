@@ -2749,6 +2749,7 @@ export const NewsStoryViewerPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const highlightIdParam = searchParams.get("highlightId") || "";
   const highlightOwnerUid = searchParams.get("uid") || "";
+  const fromMessages = searchParams.get("from") === "messages";
 
   const navigate = useNavigate();
   const notify = useNotify();
@@ -3343,7 +3344,9 @@ export const NewsStoryViewerPage: React.FC = () => {
       audioRef.current.currentTime = 0;
       audioRef.current.src = "";
     }
-    if (highlightIdParam && highlightOwnerUid) {
+    if (fromMessages) {
+      navigate("/messages");
+    } else if (highlightIdParam && highlightOwnerUid) {
       navigate(`/loops/profile/${highlightOwnerUid}`);
     } else {
       navigate("/loops");
@@ -4175,7 +4178,7 @@ export const NewsStoryViewerPage: React.FC = () => {
               onClick={() =>
                 navigate(
                   isSignedIn
-                    ? `/loops/create-story?from=loops&prompt=${encodeURIComponent(
+                    ? `/loops/create-story?from=${fromMessages ? "messages" : "loops"}&prompt=${encodeURIComponent(
                         stk.title
                       )}`
                     : "/signin"
@@ -4503,7 +4506,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         triggerHaptic();
-                        navigate("/loops/create-story?from=loops");
+                        navigate(`/loops/create-story?from=${fromMessages ? "messages" : "loops"}`);
                       }}
                       className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 text-white flex items-center justify-center shadow cursor-pointer"
                       aria-label="Add to your story"

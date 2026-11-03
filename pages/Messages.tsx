@@ -2,9 +2,9 @@ import { uploadToImgbb, generateMicroThumb } from '../services/imgbb';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle, Archive } from 'lucide-react';
+import { Home, Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle, Archive } from 'lucide-react';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { subscribeToWebPush } from '../lib/push';
 import SEO from '../components/SEO';
 import { audioHelper } from '../lib/AudioHelper';
@@ -24,14 +24,34 @@ import { ChatThemeModal, CHAT_THEMES, ChatTheme } from '../components/chat/ChatT
 import { ChatUserProfileModal } from '../components/chat/ChatUserProfileModal';
 import { EmptyChatState } from '../components/chat/EmptyChatState';
 import { GroupDetailsModal } from '../components/chat/GroupDetailsModal';
-import { InstagramNotesBar } from '../components/chat/InstagramNotesBar';
 import { ChatBottomBar } from '../components/chat/ChatBottomBar';
-import { NewMessageModal } from '../components/chat/NewMessageModal';
+import { NewMessageModal, ModalStep, SuggestedContact } from '../components/chat/NewMessageModal';
+import { MessagesStoriesStrip } from '../components/chat/MessagesStoriesStrip';
+import { NewChatActionPopup, NewChatPopupMode } from '../components/chat/NewChatActionPopup';
+import { MessageHoldPopup } from '../components/chat/MessageHoldPopup';
 import { MessageReplyPreview } from '../components/chat/MessageReplyPreview';
 import { MessageMediaGrid } from '../components/chat/MessageMediaGrid';
 import { ProgressiveImage } from '../components/chat/ProgressiveImage';
 import { ChatMediaGalleryModal } from '../components/chat/ChatMediaGalleryModal';
 import { ChatTypingIndicator } from '../components/chat/ChatTypingIndicator';
+import {
+  MsgSearchIcon,
+  MsgPlusIcon,
+  MsgDotsHorizontalIcon,
+  MsgCheckDoubleIcon,
+  MsgHomeIcon,
+  MsgUserIcon,
+  MsgBackChevronIcon,
+  MsgVideoCallIcon,
+  MsgPhoneCallIcon,
+  MsgCommunityIcon,
+  MsgChatBubbleIcon,
+  MsgSettingsIcon,
+  MsgReplyIcon,
+  MsgForwardIcon,
+  MsgTrashIcon,
+  MsgCloseIcon,
+} from '../components/chat/MessagesSvgIcons';
 
 const isOnlyEmojis = (str: string) => {
     if (!str) return false;
@@ -366,7 +386,52 @@ export default function Messages() {
     }
   }, [currentUserProfile]);
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [originHomePath] = useState<'/loops' | '/'>(() => {
+    const fromQuery = (searchParams.get('from') || '').trim().toLowerCase();
+    if (fromQuery === 'loops' || fromQuery.startsWith('/loops') || fromQuery.startsWith('/news-hub')) {
+      try {
+        sessionStorage.setItem('deepshop_last_section_home', '/loops');
+        localStorage.setItem('deepshop_last_section_home', '/loops');
+      } catch {}
+      return '/loops';
+    }
+    if (fromQuery === 'shop' || fromQuery === '/') {
+      try {
+        sessionStorage.setItem('deepshop_last_section_home', '/');
+        localStorage.setItem('deepshop_last_section_home', '/');
+      } catch {}
+      return '/';
+    }
+    const stateFrom = String((location.state as any)?.fromSection || (location.state as any)?.from || '')
+      .trim()
+      .toLowerCase();
+    if (stateFrom === 'loops' || stateFrom.startsWith('/loops') || stateFrom.startsWith('/news-hub')) {
+      try {
+        sessionStorage.setItem('deepshop_last_section_home', '/loops');
+        localStorage.setItem('deepshop_last_section_home', '/loops');
+      } catch {}
+      return '/loops';
+    }
+    if (stateFrom === 'shop' || stateFrom === '/') {
+      try {
+        sessionStorage.setItem('deepshop_last_section_home', '/');
+        localStorage.setItem('deepshop_last_section_home', '/');
+      } catch {}
+      return '/';
+    }
+    try {
+      const stored =
+        sessionStorage.getItem('deepshop_last_section_home') ||
+        localStorage.getItem('deepshop_last_section_home') ||
+        '/';
+      if (stored === '/loops' || stored.startsWith('/loops')) {
+        return '/loops';
+      }
+    } catch {}
+    return '/';
+  });
   const chatIdParam = searchParams.get('chatId') || searchParams.get('uid') || searchParams.get('sellerId');
   const activeMessagesTab = searchParams.get('tab') === 'settings' ? 'settings' : 'chats';
   const setActiveMessagesTab = (tab: 'chats' | 'settings') => {
@@ -538,6 +603,13 @@ export default function Messages() {
   const [p2pSearchQuery, setP2pSearchQuery] = useState('');
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [newMessageInitialStep, setNewMessageInitialStep] = useState<ModalStep>('new_message');
+  const [newMessageInitialGroupType, setNewMessageInitialGroupType] = useState<'group' | 'community'>('group');
+  const [showNewChatPopup, setShowNewChatPopup] = useState(false);
+  const [newChatPopupMode, setNewChatPopupMode] = useState<NewChatPopupMode>('menu');
+  const [showInboxSearch, setShowInboxSearch] = useState(false);
+  const [showChatsMoreMenu, setShowChatsMoreMenu] = useState(false);
+  const [savedContacts, setSavedContacts] = useState<SuggestedContact[]>([]);
   const [newChatInput, setNewChatInput] = useState('');
   const [isSearchingUser, setIsSearchingUser] = useState(false);
   const [otherUserTrust, setOtherUserTrust] = useState<{ score: number; count: number; avgRating: number; hasScamWarning: boolean }>({ score: 100, count: 0, avgRating: 5, hasScamWarning: false });
@@ -557,6 +629,130 @@ export default function Messages() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Message Long-Press / Hold Context Popup State & Refs (IMG_5359 right)
+  const msgHoldTimerRef = useRef<any>(null);
+  const msgHoldTouchPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const triggerOpenMsgHoldPopup = (msgId: string) => {
+    if (!msgId) return;
+    if (privacySettings.hapticTouchFeedback && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate(15); } catch {}
+    }
+    setActiveMessageMenuId(msgId);
+  };
+
+  const getMsgHoldHandlers = (msgId: string) => ({
+    onContextMenu: (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerOpenMsgHoldPopup(msgId);
+    },
+    onTouchStart: (e: React.TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      msgHoldTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
+      if (msgHoldTimerRef.current) clearTimeout(msgHoldTimerRef.current);
+      msgHoldTimerRef.current = setTimeout(() => {
+        triggerOpenMsgHoldPopup(msgId);
+        msgHoldTouchPosRef.current = null;
+      }, 380);
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      if (!msgHoldTouchPosRef.current) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      const dx = Math.abs(touch.clientX - msgHoldTouchPosRef.current.x);
+      const dy = Math.abs(touch.clientY - msgHoldTouchPosRef.current.y);
+      if (dx > 10 || dy > 10) {
+        if (msgHoldTimerRef.current) clearTimeout(msgHoldTimerRef.current);
+        msgHoldTouchPosRef.current = null;
+      }
+    },
+    onTouchEnd: () => {
+      if (msgHoldTimerRef.current) clearTimeout(msgHoldTimerRef.current);
+      msgHoldTouchPosRef.current = null;
+    },
+    onTouchCancel: () => {
+      if (msgHoldTimerRef.current) clearTimeout(msgHoldTimerRef.current);
+      msgHoldTouchPosRef.current = null;
+    },
+  });
+
+  const formatInboxTime24h = (ms: number) => {
+    if (!ms || isNaN(ms)) return '';
+    const d = new Date(ms);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const markAllChatsAsRead = async () => {
+    if (!user?.uid) return;
+    const unread = chats.filter(
+      (c) => c.id && c.lastMessage && c.lastSenderId !== user.uid && (!c.seenBy || !c.seenBy.includes(user.uid))
+    );
+    if (unread.length === 0) {
+      notify('All conversations are already read', 'info');
+      return;
+    }
+    try {
+      await Promise.all(
+        unread.map((c) =>
+          updateDoc(doc(db, 'p2p_chats', c.id), {
+            seenBy: arrayUnion(user.uid),
+          }).catch(() => {})
+        )
+      );
+      notify('Marked all chats as read', 'success');
+    } catch {
+      notify('Could not mark chats as read', 'error');
+    }
+  };
+
+  // Hydrate saved contacts from localStorage + Firestore user profile
+  useEffect(() => {
+    if (!user?.uid) {
+      setSavedContacts([]);
+      return;
+    }
+    const map = new Map<string, SuggestedContact>();
+    try {
+      const localList: SuggestedContact[] = JSON.parse(
+        localStorage.getItem(`deepshop_saved_contacts_${user.uid}`) || '[]'
+      );
+      if (Array.isArray(localList)) {
+        localList.forEach((c) => {
+          if (c?.id && c.id !== user.uid) map.set(c.id, c);
+        });
+      }
+    } catch {}
+
+    if (Array.isArray(currentUserProfile?.savedContacts)) {
+      currentUserProfile.savedContacts.forEach((c: any) => {
+        if (c?.id && c.id !== user.uid && !map.has(c.id)) {
+          map.set(c.id, {
+            id: c.id,
+            displayName: c.displayName || 'Contact',
+            username: c.username || '',
+            email: c.email || '',
+            phoneNumber: c.phoneNumber || '',
+            photoURL: c.photoURL || '',
+          });
+        }
+      });
+    }
+    setSavedContacts(Array.from(map.values()));
+  }, [user?.uid, currentUserProfile?.savedContacts]);
+
   // New Design Modal States (Images 1-6)
   const [showSavedRepliesModal, setShowSavedRepliesModal] = useState(false);
   const [showDrawModal, setShowDrawModal] = useState(false);
@@ -573,13 +769,13 @@ export default function Messages() {
     }
   });
 
-  // Recent chat partners to pass as suggested contacts to NewMessageModal
+  // Recent chat partners + saved contacts to pass to NewMessageModal & Stories strip
   const recentChatUsers = React.useMemo(() => {
-    if (!chats || !user) return [];
-    const list: any[] = [];
+    if (!user) return [];
+    const list: SuggestedContact[] = [];
     const seen = new Set<string>();
 
-    for (const c of chats) {
+    for (const c of (chats || [])) {
       if (!c.isGroup && c.type !== 'group' && c.otherUser && c.otherUser.id && c.otherUser.id !== 'system' && c.otherUser.id !== user.uid) {
         if (!seen.has(c.otherUser.id)) {
           seen.add(c.otherUser.id);
@@ -590,13 +786,23 @@ export default function Messages() {
             email: c.otherUser.email || '',
             phoneNumber: c.otherUser.phoneNumber || c.otherUser.phone || '',
             photoURL: c.otherUser.photoURL || '',
-            isOnline: Boolean(c.otherUser.isOnline)
+            isOnline: Boolean(chatUsersPresence[c.otherUser.id]?.isOnline || c.otherUser.isOnline)
           });
         }
       }
     }
+
+    for (const sc of savedContacts) {
+      if (sc.id && sc.id !== user.uid && !seen.has(sc.id)) {
+        seen.add(sc.id);
+        list.push({
+          ...sc,
+          isOnline: Boolean(chatUsersPresence[sc.id]?.isOnline || sc.isOnline),
+        });
+      }
+    }
     return list;
-  }, [chats, user]);
+  }, [chats, savedContacts, chatUsersPresence, user]);
 
   // Listen to custom nickname updates
   const [nicknameVersion, setNicknameVersion] = useState(0);
@@ -3833,627 +4039,840 @@ const handleCreateChannel = async () => {
     ? messages.filter(m => m.text?.toLowerCase().includes(p2pSearchQuery.toLowerCase())) 
     : messages;
 
+  const totalUnreadChatsCount = chats.filter((c) => {
+    const cId = c.id || c.otherUser?.id || c.otherUser?.uid;
+    if (archivedChatIds.includes(cId) || mutedChatIds.includes(cId)) return false;
+    return Boolean(c.lastMessage && c.lastSenderId !== user.uid && (!c.seenBy || !c.seenBy.includes(user.uid)));
+  }).length;
+
+  const allStripContacts = (() => {
+    const seen = new Set<string>();
+    const list: Array<{ id: string; uid?: string; displayName?: string; photoURL?: string; isOnline?: boolean }> = [];
+    for (const u of onlineUsersList) {
+      if (u.id && !seen.has(u.id)) {
+        seen.add(u.id);
+        list.push(u);
+      }
+    }
+    for (const sc of savedContacts) {
+      if (sc.id && !seen.has(sc.id)) {
+        seen.add(sc.id);
+        list.push({
+          id: sc.id,
+          uid: sc.id,
+          displayName: sc.displayName,
+          photoURL: sc.photoURL,
+          isOnline: Boolean(chatUsersPresence[sc.id]?.isOnline),
+        });
+      }
+    }
+    return list;
+  })();
+
+  const renderSettingsWorkspace = () => (
+    <div className="flex-1 overflow-y-auto p-5 pb-28 md:pb-8 space-y-6 md:max-w-4xl md:mx-auto md:w-full">
+      {/* User Card in Settings */}
+      <div className="bg-zinc-50 dark:bg-zinc-800/25 border border-zinc-200/60 dark:border-zinc-700/30 rounded-3xl p-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-[#2F80ED]/20 shrink-0 bg-zinc-200 dark:bg-zinc-800">
+            <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'User'}`} alt="Avatar" className="w-full h-full object-cover" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold text-zinc-950 dark:text-white text-base truncate leading-tight">{user?.displayName || 'User'}</h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">@{user?.displayName?.toLowerCase().replace(/ /g, '') || 'username'}</p>
+            <span className="inline-block mt-1.5 text-[10px] font-bold text-[#2F80ED] bg-[#2F80ED]/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              {userRole}
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/profile')}
+          className="px-3.5 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition shrink-0 cursor-pointer"
+        >
+          View Profile
+        </button>
+      </div>
+
+      {/* Settings Sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="space-y-4">
+          <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
+            Privacy & Security
+          </h3>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Allow Direct Messages
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Anyone can send you a message. If turned off, users will see a privacy notice.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.allowDirectMessages', !privacySettings.allowDirectMessages)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.allowDirectMessages ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.allowDirectMessages ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Online Status
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Show others when you are online in chats.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.showOnlineStatus', !privacySettings.showOnlineStatus)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.showOnlineStatus ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.showOnlineStatus ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Push Notifications
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Receive alerts for new messages and calls.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.pushNotifications', !privacySettings.pushNotifications)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.pushNotifications ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.pushNotifications ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1 pt-3">
+            Advanced Security
+          </h3>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Biometric / PIN Lock
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Require device PIN or biometric verification to view chat histories.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.biometricLock', !privacySettings.biometricLock)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.biometricLock ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.biometricLock ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Disappearing Messages (24h)
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Automatically erase chat histories and attachments older than 24 hours.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.disappearingMessages', !privacySettings.disappearingMessages)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.disappearingMessages ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.disappearingMessages ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
+            Visual & Chat Controls
+          </h3>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                High Contrast Typography
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Bold fonts and high contrast labels for optimal readability.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.highContrastFonts', !privacySettings.highContrastFonts)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.highContrastFonts ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.highContrastFonts ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Minimalist Chat Bubbles
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Hide secondary timestamp labels below active message bubbles.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.minimalistBubbles', !privacySettings.minimalistBubbles)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.minimalistBubbles ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.minimalistBubbles ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Tactile Haptic Feedback
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Subtle vibration when holding messages, starting calls, or recording audio.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.hapticTouchFeedback', !privacySettings.hapticTouchFeedback)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.hapticTouchFeedback ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.hapticTouchFeedback ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Auto-play Voice Messages
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Automatically play incoming voice notes consecutively.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.autoPlayVoice', !privacySettings.autoPlayVoice)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.autoPlayVoice ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.autoPlayVoice ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Data Saver Mode
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Minimize media preloading on cellular networks.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.dataSaverMode', !privacySettings.dataSaverMode)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.dataSaverMode ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.dataSaverMode ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+            <div className="space-y-0.5 max-w-[75%]">
+              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Do Not Disturb
+              </label>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Silence message chimes and incoming ring alerts.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleUpdatePrivacySetting('privacy.doNotDisturb', !privacySettings.doNotDisturb)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.doNotDisturb ? 'bg-[#2F80ED]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.doNotDisturb ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="msg-shell flex h-[100dvh] font-inter overflow-hidden transition-colors duration-200">
+    <div className="msg-shell flex h-[100dvh] w-full font-inter overflow-hidden transition-colors duration-200">
       <SEO title="Messages" description="Chat with sellers and support" noindex />
 
-      {/* Desktop Left Navigation Rail */}
-      <div className="hidden md:flex flex-col items-center justify-between py-5 w-[68px] shrink-0 z-20 msg-sidebar border-r">
-          <div className="flex flex-col items-center gap-3 w-full px-2">
-              {/* Chats Tab */}
-              <button 
+      {/* =====================================================================
+          COLUMN 1 (DESKTOP ONLY): Left Navigation Rail mirroring Bottom Nav + Power Tools
+          ===================================================================== */}
+      <aside className="hidden md:flex flex-col items-center justify-between py-5 w-[76px] lg:w-[82px] shrink-0 z-30 bg-[#FAFAFC] dark:bg-[#0B0D12] border-r border-zinc-200/70 dark:border-white/[0.06]">
+        <div className="flex flex-col items-center gap-2.5 w-full px-2.5">
+          {/* Messages Home (Stays inside Messages Home — does NOT go to Shop) */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowNewChatPopup(false);
+              setActiveMessagesTab('chats');
+              setSidebarTab('messages');
+              setShowArchivedOnly(false);
+              setShowInboxSearch(false);
+              setChatSearchQuery('');
+              setSearchParams({}, { replace: true });
+            }}
+            className={cn(
+              'w-11 h-11 rounded-2xl flex items-center justify-center transition active:scale-95 cursor-pointer',
+              activeMessagesTab === 'chats' && sidebarTab === 'messages' && !activeChat && !activeChannel && !showArchivedOnly
+                ? 'text-zinc-950 dark:text-white bg-zinc-200/70 dark:bg-white/[0.08]'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/[0.07]'
+            )}
+            title="Messages Home"
+          >
+            <MsgHomeIcon className="w-[22px] h-[22px]" />
+          </button>
+
+          <div className="w-7 h-px bg-zinc-200 dark:bg-white/10 my-1" />
+
+          {/* All Chats */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowNewChatPopup(false);
+              setActiveMessagesTab('chats');
+              setSidebarTab('messages');
+              setShowArchivedOnly(false);
+            }}
+            className={cn(
+              'w-11 h-11 rounded-2xl flex items-center justify-center transition relative active:scale-95 cursor-pointer',
+              activeMessagesTab === 'chats' && sidebarTab === 'messages'
+                ? 'bg-[#2F80ED] text-white shadow-sm'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/[0.07]'
+            )}
+            title="Chats"
+          >
+            <MsgChatBubbleIcon className="w-[21px] h-[21px]" />
+            {totalUnreadChatsCount > 0 && !(activeMessagesTab === 'chats' && sidebarTab === 'messages') && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#2F80ED] ring-2 ring-[#FAFAFC] dark:ring-[#0B0D12]" />
+            )}
+          </button>
+
+          {/* Communities */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowNewChatPopup(false);
+              setActiveMessagesTab('chats');
+              setSidebarTab('community');
+            }}
+            className={cn(
+              'w-11 h-11 rounded-2xl flex items-center justify-center transition relative active:scale-95 cursor-pointer',
+              activeMessagesTab === 'chats' && sidebarTab === 'community'
+                ? 'bg-[#2F80ED] text-white shadow-sm'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/[0.07]'
+            )}
+            title="Communities"
+          >
+            <MsgCommunityIcon className="w-[21px] h-[21px]" />
+          </button>
+
+          {/* Call History */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowNewChatPopup(false);
+              setActiveMessagesTab('chats');
+              setSidebarTab('calls');
+            }}
+            className={cn(
+              'w-11 h-11 rounded-2xl flex items-center justify-center transition relative active:scale-95 cursor-pointer',
+              activeMessagesTab === 'chats' && sidebarTab === 'calls'
+                ? 'bg-[#2F80ED] text-white shadow-sm'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/[0.07]'
+            )}
+            title="Calls"
+          >
+            <MsgPhoneCallIcon className="w-[20px] h-[20px]" />
+          </button>
+
+          {/* Desktop "+ New Chat" Trigger (opens the 3-option popup anchored beside the rail) */}
+          <button
+            type="button"
+            onClick={() => {
+              setNewChatPopupMode('menu');
+              setShowNewChatPopup((prev) => !prev);
+            }}
+            className={cn(
+              'mt-2 w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer',
+              showNewChatPopup ? 'msg-cancel-pill' : 'msg-new-chat-pill'
+            )}
+            title={showNewChatPopup ? 'Cancel' : 'New Chat / Contact / Community'}
+          >
+            {showNewChatPopup ? <MsgCloseIcon className="w-4 h-4" /> : <MsgPlusIcon className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {/* Bottom Rail: Settings & User Profile */}
+        <div className="flex flex-col items-center gap-3 w-full px-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              setShowNewChatPopup(false);
+              setActiveMessagesTab(activeMessagesTab === 'settings' ? 'chats' : 'settings');
+            }}
+            className={cn(
+              'w-11 h-11 rounded-2xl flex items-center justify-center transition active:scale-95 cursor-pointer',
+              activeMessagesTab === 'settings'
+                ? 'bg-[#2F80ED] text-white shadow-sm'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/[0.07]'
+            )}
+            title="Chat Settings"
+          >
+            <MsgSettingsIcon className="w-[20px] h-[20px]" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-zinc-200 dark:ring-white/15 shrink-0 cursor-pointer hover:opacity-85 transition-opacity"
+            title="Your Profile"
+          >
+            <img
+              src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'User'}`}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          </button>
+        </div>
+      </aside>
+
+      {/* =====================================================================
+          COLUMN 2: Persistent Left Inbox Column on Desktop / Main Inbox Screen on Mobile
+          ===================================================================== */}
+      <div
+        className={cn(
+          'w-full md:w-[350px] lg:w-[385px] xl:w-[415px] shrink-0 border-r flex flex-col relative msg-sidebar h-full',
+          activeChat || activeChannel ? 'hidden md:flex' : 'flex'
+        )}
+      >
+        {/* Mobile-only Settings View when User taps Profile/Settings icon on mobile bottom bar */}
+        {activeMessagesTab === 'settings' && (
+          <div className="flex md:hidden flex-col h-full overflow-hidden">
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between border-b border-zinc-100 dark:border-white/[0.06] shrink-0">
+              <div className="flex items-center gap-2">
+                <button
                   type="button"
                   onClick={() => setActiveMessagesTab('chats')}
-                  className={cn(
-                      "w-11 h-11 rounded-2xl flex items-center justify-center transition-all relative active:scale-95 cursor-pointer",
-                      activeMessagesTab === 'chats' 
-                          ? "msg-accent-btn text-white shadow-sm" 
-                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-                  )}
-                  title="Messages"
-              >
-                  <MessageCircle className="w-5 h-5" />
-              </button>
+                  className="w-9 h-9 -ml-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white transition cursor-pointer"
+                >
+                  <MsgBackChevronIcon className="w-5 h-5" />
+                </button>
+                <h1 className="text-[22px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                  Chat Settings
+                </h1>
+              </div>
+            </div>
+            {renderSettingsWorkspace()}
+          </div>
+        )}
 
-              {/* Settings Tab */}
-              <button 
+        {/* Inbox Content (Always visible on Desktop; visible on Mobile when not in mobile settings) */}
+        <div
+          className={cn(
+            'flex-col h-full overflow-hidden',
+            activeMessagesTab === 'settings' ? 'hidden md:flex' : 'flex'
+          )}
+        >
+          {/* Top Header matching IMG_5359 & IMG_5360: Bold "Messages" left + Search icon right */}
+          <div className="px-5 pt-5 pb-2 flex flex-col gap-2.5 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 min-w-0">
+                <button
                   type="button"
-                  onClick={() => setActiveMessagesTab('settings')}
-                  className={cn(
-                      "w-11 h-11 rounded-2xl flex items-center justify-center transition-all relative active:scale-95 cursor-pointer",
-                      activeMessagesTab === 'settings' 
-                          ? "msg-accent-btn text-white shadow-sm" 
-                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-                  )}
-                  title="Chat Settings"
+                  onClick={() => navigate(originHomePath)}
+                  className="w-11 h-11 -ml-2.5 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.08] active:scale-95 transition cursor-pointer shrink-0"
+                  title={originHomePath === '/loops' ? 'Back to Loops' : 'Back to Shop'}
+                  aria-label={originHomePath === '/loops' ? 'Back to Loops Home' : 'Back to Shop Home'}
+                >
+                  <MsgBackChevronIcon className="w-[22px] h-[22px]" />
+                </button>
+                <h1 className="text-[24px] font-bold text-zinc-950 dark:text-white tracking-tight leading-none whitespace-nowrap">
+                  Messages
+                </h1>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (showInboxSearch) {
+                    setShowInboxSearch(false);
+                    setChatSearchQuery('');
+                  } else {
+                    setShowInboxSearch(true);
+                  }
+                }}
+                className={cn(
+                  'w-10 h-10 -mr-1.5 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer',
+                  showInboxSearch || chatSearchQuery
+                    ? 'bg-zinc-100 dark:bg-white/10 text-zinc-950 dark:text-white'
+                    : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06]'
+                )}
+                title="Search conversations"
+                aria-label="Search conversations"
               >
-                  <Settings className="w-5 h-5" />
+                <MsgSearchIcon className="w-[22px] h-[22px]" />
               </button>
-          </div>
+            </div>
 
-          {/* User Profile Avatar at Bottom */}
-          <div
-              className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-zinc-200 dark:ring-zinc-800 shrink-0 cursor-pointer hover:opacity-85 transition-opacity"
-              onClick={() => navigate('/profile')}
-              title="Your Profile"
-          >
-              <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'User'}`} alt="Avatar" className="w-full h-full object-cover" />
-          </div>
-      </div>
-      
-      {/* Sidebar: Conversation List */}
-      <div className={cn(
-          activeMessagesTab === 'settings' 
-            ? "w-full md:w-full border-r flex flex-col relative msg-sidebar" 
-            : "w-full md:w-[370px] lg:w-[390px] shrink-0 border-r flex flex-col relative msg-sidebar",
-          activeChat || activeChannel ? 'hidden md:flex' : 'flex'
-      )}>
-         {/* Sidebar Top Header & Always-Visible Search */}
-         <div className="px-4 pt-4 pb-2.5 flex flex-col gap-3 shrink-0">
-             <div className="flex items-center justify-between gap-2">
-                 <div className="flex items-center gap-1.5 min-w-0">
-                      <button 
-                          type="button"
-                          onClick={() => {
-                              if (activeMessagesTab === 'settings') {
-                                  setActiveMessagesTab('chats');
-                              } else {
-                                  navigate('/');
-                              }
-                          }} 
-                          className="md:hidden w-9 h-9 -ml-1 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-zinc-900 dark:text-zinc-100 transition shrink-0 active:scale-95 cursor-pointer"
-                          title="Back"
-                      >
-                         <ChevronLeft className="w-5 h-5" />
-                     </button>
-                     <h1 className="text-[22px] font-bold text-zinc-950 dark:text-white tracking-tight truncate">
-                         {activeMessagesTab === 'settings' ? 'Chat Settings' : 'Messages'}
-                     </h1>
-                 </div>
-
-                 <div className="flex items-center gap-2 shrink-0">
-                     <button
-                         type="button"
-                         onClick={() => setActiveMessagesTab(activeMessagesTab === 'settings' ? 'chats' : 'settings')}
-                         className="md:hidden w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition active:scale-95 cursor-pointer"
-                         title="Chat Settings"
-                     >
-                         <Settings className="w-4.5 h-4.5" />
-                     </button>
-
-                     {activeMessagesTab === 'chats' && (
-                         <button 
-                             type="button"
-                             onClick={() => setShowNewMessageModal(true)} 
-                             className="w-9 h-9 rounded-full msg-accent-btn hover:brightness-110 flex items-center justify-center transition-all shadow-xs text-white active:scale-95 cursor-pointer"
-                             title="New Message"
-                         >
-                             <Edit3 className="w-4 h-4 stroke-[2.2]" />
-                         </button>
-                     )}
-                 </div>
-             </div>
-
-             {/* Always-Visible Clean Search Bar in Chats Mode */}
-             {activeMessagesTab === 'chats' && (
-                 <div className="relative w-full">
-                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                     <input 
-                         type="text" 
-                         value={chatSearchQuery}
-                         onChange={(e) => setChatSearchQuery(e.target.value)}
-                         placeholder="Search conversations or people..." 
-                         className="ds-liquid-input msg-clean-input w-full msg-composer-capsule border rounded-2xl py-2.5 pl-10 pr-9 text-[13.5px] font-medium outline-none focus:ring-2 focus:ring-[#1877F2]/25 placeholder:text-zinc-400 dark:placeholder:text-zinc-500" 
-                     />
-                     {chatSearchQuery && (
-                         <button 
-                             type="button"
-                             onClick={() => setChatSearchQuery('')}
-                             className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:opacity-80 transition cursor-pointer"
-                             title="Clear search"
-                         >
-                             <X className="w-3 h-3" />
-                         </button>
-                     )}
-                 </div>
-             )}
-         </div>
-
-         {/* Active Stories Row */}
-                  {activeMessagesTab === 'settings' ? (
-             <div className="flex-1 overflow-y-auto p-5 space-y-6 md:max-w-4xl md:mx-auto md:w-full">
-                 {/* Premium User Card in Settings */}
-                 <div className="bg-zinc-50 dark:bg-zinc-800/20 border border-zinc-200/50 dark:border-zinc-700/30 rounded-3xl p-5 flex items-center gap-4">
-                     <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-indigo-100 shadow-sm shrink-0">
-                         <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'Jaden'}`} alt="Avatar" className="w-full h-full object-cover" />
-                     </div>
-                     <div className="min-w-0 flex-1">
-                         <h2 className="font-extrabold text-zinc-900 dark:text-white text-base truncate leading-none mb-1">{user?.displayName || 'User'}</h2>
-                         <p className="text-xs text-zinc-400 truncate">@{user?.displayName?.toLowerCase().replace(/ /g, '') || 'username'}</p>
-                         <span className="inline-block mt-1.5 text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                             {userRole}
-                         </span>
-                     </div>
-                 </div>
-
-                                   {/* Settings Sections */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 space-y-0 items-start">
-                      <div className="space-y-4">
-                     <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
-                         Privacy & Security
-                     </h3>
-
-                     {/* Allow DM Toggle */}
-                     <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                       <div className="space-y-0.5 max-w-[75%]">
-                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                           Allow Direct Messages
-                         </label>
-                         <p className="text-[10px] text-zinc-500 leading-tight">
-                           Anyone can send you a message. If turned off, users will see a privacy notice.
-                         </p>
-                       </div>
-                       <button
-                         type="button"
-                         onClick={() => handleUpdatePrivacySetting('privacy.allowDirectMessages', !privacySettings.allowDirectMessages)}
-                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.allowDirectMessages ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                       >
-                         <span
-                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.allowDirectMessages ? 'translate-x-5' : 'translate-x-0'}`}
-                         />
-                       </button>
-                     </div>
-
-                     {/* Online Status Toggle */}
-                     <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                       <div className="space-y-0.5 max-w-[75%]">
-                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                           Online Status
-                         </label>
-                         <p className="text-[10px] text-zinc-500 leading-tight">
-                           Show others when you are online in chats.
-                         </p>
-                       </div>
-                       <button
-                         type="button"
-                         onClick={() => handleUpdatePrivacySetting('privacy.showOnlineStatus', !privacySettings.showOnlineStatus)}
-                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.showOnlineStatus ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                       >
-                         <span
-                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.showOnlineStatus ? 'translate-x-5' : 'translate-x-0'}`}
-                         />
-                       </button>
-                     </div>
-
-                     {/* Push Notifications Toggle */}
-                     <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                       <div className="space-y-0.5 max-w-[75%]">
-                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                           Push Notifications
-                         </label>
-                         <p className="text-[10px] text-zinc-500 leading-tight">
-                           Receive alerts for new messages and calls.
-                         </p>
-                       </div>
-                       <button
-                         type="button"
-                         onClick={() => handleUpdatePrivacySetting('privacy.pushNotifications', !privacySettings.pushNotifications)}
-                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.pushNotifications ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                       >
-                         <span
-                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.pushNotifications ? 'translate-x-5' : 'translate-x-0'}`}
-                         />
-                       </button>
-                     </div>
-
-                      {/* --- MORE SECURITY --- */}
-                      <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1 pt-4">
-                          Advanced Security
-                      </h3>
-
-                      {/* Biometric Lock Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Biometric / PIN Lock
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Require device PIN or biometric verification to view chat histories.
-                          </p>
-                        </div>
+            {/* Expandable Search Input */}
+            <AnimatePresence initial={false}>
+              {(showInboxSearch || chatSearchQuery.trim() !== '') && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="overflow-hidden"
+                >
+                  <div className="relative flex items-center gap-2 pt-0.5">
+                    <div className="relative flex-1">
+                      <MsgSearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={chatSearchQuery}
+                        onChange={(e) => setChatSearchQuery(e.target.value)}
+                        placeholder="Search chats or people..."
+                        autoFocus
+                        className="ds-liquid-input msg-clean-input w-full msg-composer-capsule border rounded-full py-2.5 pl-10 pr-8 text-[13.5px] font-medium outline-none focus:ring-2 focus:ring-[#2F80ED]/25 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                      />
+                      {chatSearchQuery && (
                         <button
                           type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.biometricLock', !privacySettings.biometricLock)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.biometricLock ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                          onClick={() => setChatSearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-600 dark:text-zinc-300 cursor-pointer"
                         >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.biometricLock ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
+                          <MsgCloseIcon className="w-3 h-3" />
                         </button>
-                      </div>
-
-                      {/* Disappearing Messages Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Disappearing Messages (Incognito)
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Automatically erase chat histories and attachments older than 24 hours.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.disappearingMessages', !privacySettings.disappearingMessages)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.disappearingMessages ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.disappearingMessages ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-
-                      </div>
-
-                      <div className="space-y-4">
-                          {/* --- MORE DESIGN --- */}
-                          <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1 pt-4 md:pt-0">
-                              Visual Design Settings
-                      </h3>
-
-                      {/* Liquid Glass Mode Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Liquid Glass Panels
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Apply translucent, glossy glass-morphism panels with smooth motion background filters.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.liquidGlassMode', !privacySettings.liquidGlassMode)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.liquidGlassMode ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.liquidGlassMode ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* High Contrast Fonts Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            High Contrast Typography
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Bold fonts and ultra high contrast labels for optimal visibility and readability.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.highContrastFonts', !privacySettings.highContrastFonts)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.highContrastFonts ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.highContrastFonts ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Minimalist Chat Bubbles Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Minimalist Chat Bubbles
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Hide secondary badges, avatars and timestamp labels inside active message bubbles.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.minimalistBubbles', !privacySettings.minimalistBubbles)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.minimalistBubbles ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.minimalistBubbles ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* --- MORE CHAT FEATURES --- */}
-                      <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1 pt-4">
-                          Interactive Chat Features
-                      </h3>
-
-                      {/* Smart Quick Replies Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Smart Quick Replies
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Generate context-aware, predictive quick message templates near your text inputs.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.smartQuickReplies', !privacySettings.smartQuickReplies)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.smartQuickReplies ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.smartQuickReplies ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Haptic Touch Feedback Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Tactile Haptic Feedback
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Vibrate slightly when clicking message inputs, starting calls or holding the microphone.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.hapticTouchFeedback', !privacySettings.hapticTouchFeedback)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.hapticTouchFeedback ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.hapticTouchFeedback ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Auto-play Voice Messages Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Auto-play Voice Messages
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Automatically play incoming audio notes consecutively as they arrive.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.autoPlayVoice', !privacySettings.autoPlayVoice)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.autoPlayVoice ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.autoPlayVoice ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* --- MORE OTHER FEATURES --- */}
-                      <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1 pt-4">
-                          Other Features
-                      </h3>
-
-                      {/* Data Saver Mode Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Data Saver Mode
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Compress images, voice recordings, and video calls to minimize network utilization.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.dataSaverMode', !privacySettings.dataSaverMode)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.dataSaverMode ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.dataSaverMode ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Do Not Disturb Toggle */}
-                      <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
-                        <div className="space-y-0.5 max-w-[75%]">
-                          <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                            Do Not Disturb
-                          </label>
-                          <p className="text-[10px] text-zinc-500 leading-tight">
-                            Mute and silence all sounds, call rings, and vibration alerts from direct chats.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdatePrivacySetting('privacy.doNotDisturb', !privacySettings.doNotDisturb)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.doNotDisturb ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.doNotDisturb ? 'translate-x-5' : 'translate-x-0'}`}
-                          />
-                        </button>
-                      </div>
-                  </div>
-                  </div>
-
-                  {/* App Version Info */}
-                  <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800/60 text-center space-y-1">
-                     <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Marketplace Chat v2.4.0</p>
-                     <p className="text-[9px] text-zinc-400">All chats are securely encrypted and verified</p>
-                 </div>
-             </div>
-         ) : (
-             <>
-         {/* Clean Segmented Filter Control (Chats / Community / Calls) */}
-         <div className="px-4 pb-2.5 shrink-0">
-             <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-zinc-100 dark:bg-white/[0.05]">
-                 {[
-                   { id: 'messages', label: 'Chats' },
-                   { id: 'community', label: 'Community' },
-                   { id: 'calls', label: 'Calls' }
-                 ].map((tab) => {
-                   const isActive = sidebarTab === tab.id;
-                   return (
-                     <button
-                       key={tab.id}
-                       type="button"
-                       onClick={() => setSidebarTab(tab.id as any)}
-                       className={cn(
-                         "py-2 px-3 rounded-xl text-center text-[13px] font-semibold transition-all cursor-pointer",
-                         isActive
-                           ? "bg-white dark:bg-[#1E202B] text-zinc-950 dark:text-white shadow-xs"
-                           : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
-                       )}
-                     >
-                       {tab.label}
-                     </button>
-                   );
-                 })}
-             </div>
-         </div>
-
-         {chatSearchQuery.trim() ? (
-             <div className="flex-1 overflow-y-auto px-2.5 py-1 space-y-1">
-                 {/* Instant local conversation matches */}
-                 {(() => {
-                     const qLower = chatSearchQuery.trim().toLowerCase();
-                     const localMatches = chats.filter((c) => {
-                         const name = getChatDisplayName(c)?.toLowerCase() || '';
-                         const snippet = (c.lastMessage || '')?.toLowerCase();
-                         return name.includes(qLower) || snippet.includes(qLower);
-                     });
-                     if (localMatches.length === 0) return null;
-                     return (
-                         <div className="mb-3">
-                             <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 px-3 py-1.5">Conversations</p>
-                             {localMatches.map((chat, mIdx) => {
-                                 const cId = chat.id || chat.otherUser?.id || `match-${mIdx}`;
-                                 return (
-                                     <div
-                                         key={`local-match-${cId}`}
-                                         onClick={() => {
-                                             setChatSearchQuery('');
-                                             setSearchParams({ chatId: chat.id || chat.otherUser?.id || '' }, { replace: true });
-                                         }}
-                                         className="flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer hover:bg-zinc-100/80 dark:hover:bg-white/[0.05] transition"
-                                     >
-                                         <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0">
-                                             {chat.otherUser?.photoURL ? (
-                                                 <img src={chat.otherUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
-                                             ) : (
-                                                 <div className="w-full h-full flex items-center justify-center font-semibold text-sm bg-[#1877F2]/12 text-[#1877F2]">
-                                                     {(getChatDisplayName(chat) || 'U')[0].toUpperCase()}
-                                                 </div>
-                                             )}
-                                         </div>
-                                         <div className="min-w-0 flex-1">
-                                             <p className="font-semibold text-zinc-900 dark:text-white text-sm truncate">{getChatDisplayName(chat)}</p>
-                                             {chat.lastMessage && (
-                                                 <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">{chat.lastMessage}</p>
-                                             )}
-                                         </div>
-                                     </div>
-                                 );
-                             })}
-                         </div>
-                     );
-                 })()}
-
-                 <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 px-3 py-1.5">People</p>
-                 {isSearchingChats ? (
-                     <div className="flex justify-center p-6 text-zinc-400 text-xs">Searching people...</div>
-                 ) : chatSearchResults.length === 0 ? (
-                     <div className="flex justify-center p-6 text-zinc-400 text-xs">No matching people found</div>
-                 ) : (
-                     chatSearchResults.map((foundUser, fIdx) => (
-                         <div 
-                             key={`found-user-${foundUser.id || fIdx}-${fIdx}`}
-                             onClick={() => {
-                                 setChatSearchQuery('');
-                                 setSearchParams({ chatId: foundUser.id });
-                             }}
-                             className="flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer hover:bg-zinc-100/80 dark:hover:bg-white/[0.05] transition"
-                         >
-                             <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0">
-                                 {foundUser.photoURL ? (
-                                     <img src={foundUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
-                                 ) : (
-                                     <div className="w-full h-full flex items-center justify-center font-semibold text-sm bg-[#1877F2]/12 text-[#1877F2]">
-                                         {(foundUser.displayName || 'U')[0].toUpperCase()}
-                                     </div>
-                                 )}
-                             </div>
-                             <div className="min-w-0">
-                                 <p className="font-semibold text-zinc-900 dark:text-white text-sm truncate">{foundUser.displayName || 'User'}</p>
-                                 <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">@{foundUser.username || foundUser.displayName?.toLowerCase().replace(/ /g, '') || 'user'}</p>
-                             </div>
-                         </div>
-                     ))
-                 )}
-             </div>
-         ) : (
-             <div className="flex-1 overflow-y-auto pb-4" onScroll={handleSidebarScroll}>
-             {sidebarTab === 'messages' ? (
-                <>
-                  <InstagramNotesBar
-                    currentUser={user}
-                    onlineUsers={onlineUsersList}
-                    onOpenChatWithUser={(u) => {
-                      if (u?.id || u?.uid) {
-                        setSearchParams({ chatId: u.id || u.uid });
-                      }
-                    }}
-                    notify={notify}
-                  />
-
-                  {/* Archived Chats Folder Banner */}
-                  {archivedChatIds.length > 0 && (
-                    <div 
-                      onClick={() => setShowArchivedOnly(!showArchivedOnly)}
-                      className="flex items-center justify-between px-3.5 py-2.5 mx-3 my-1.5 bg-zinc-100/90 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/10 rounded-2xl cursor-pointer hover:bg-zinc-200/60 dark:hover:bg-white/[0.07] transition select-none"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-xl msg-accent-btn text-white flex items-center justify-center shrink-0">
-                          <Archive className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-semibold text-zinc-900 dark:text-white truncate">
-                            Archived Chats · {archivedChatIds.length}
-                          </h4>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                            {showArchivedOnly ? "Viewing archived conversations" : "Muted conversations"}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-semibold text-[#1877F2] shrink-0">
-                        {showArchivedOnly ? "Back" : "View"}
-                      </span>
+                      )}
                     </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChatSearchQuery('');
+                        setShowInboxSearch(false);
+                      }}
+                      className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white px-1.5 py-1 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
+          {/* Search Results View vs Main Stories + Chats List */}
+          {chatSearchQuery.trim() ? (
+            <div className="flex-1 overflow-y-auto px-3 py-1 pb-32 md:pb-6 space-y-1">
+              {(() => {
+                const qLower = chatSearchQuery.trim().toLowerCase();
+                const localMatches = chats.filter((c) => {
+                  const name = getChatDisplayName(c)?.toLowerCase() || '';
+                  const snippet = (c.lastMessage || '')?.toLowerCase();
+                  return name.includes(qLower) || snippet.includes(qLower);
+                });
+                if (localMatches.length === 0) return null;
+                return (
+                  <div className="mb-3">
+                    <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 px-3 py-1.5">
+                      Conversations
+                    </p>
+                    {localMatches.map((chat, mIdx) => {
+                      const cId = chat.id || chat.otherUser?.id || `match-${mIdx}`;
+                      return (
+                        <div
+                          key={`local-match-${cId}`}
+                          onClick={() => {
+                            setChatSearchQuery('');
+                            setShowInboxSearch(false);
+                            setActiveMessagesTab('chats');
+                            setSearchParams({ chatId: chat.id || chat.otherUser?.id || '' }, { replace: true });
+                          }}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer hover:bg-zinc-100/80 dark:hover:bg-white/[0.05] transition"
+                        >
+                          <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0">
+                            {chat.otherUser?.photoURL ? (
+                              <img src={chat.otherUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center font-semibold text-sm bg-[#2F80ED]/12 text-[#2F80ED]">
+                                {(getChatDisplayName(chat) || 'U')[0].toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-zinc-900 dark:text-white text-sm truncate">
+                              {getChatDisplayName(chat)}
+                            </p>
+                            {chat.lastMessage && (
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                                {chat.lastMessage}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 px-3 py-1.5">
+                People
+              </p>
+              {isSearchingChats ? (
+                <div className="flex justify-center p-6 text-zinc-400 text-xs">Searching people...</div>
+              ) : chatSearchResults.length === 0 ? (
+                <div className="flex justify-center p-6 text-zinc-400 text-xs">No matching people found</div>
+              ) : (
+                chatSearchResults.map((foundUser, fIdx) => (
+                  <div
+                    key={`found-user-${foundUser.id || fIdx}-${fIdx}`}
+                    onClick={() => {
+                      setChatSearchQuery('');
+                      setShowInboxSearch(false);
+                      setActiveMessagesTab('chats');
+                      setSearchParams({ chatId: foundUser.id });
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer hover:bg-zinc-100/80 dark:hover:bg-white/[0.05] transition"
+                  >
+                    <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0">
+                      {foundUser.photoURL ? (
+                        <img src={foundUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center font-semibold text-sm bg-[#2F80ED]/12 text-[#2F80ED]">
+                          {(foundUser.displayName || 'U')[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-zinc-900 dark:text-white text-sm truncate">
+                        {foundUser.displayName || 'User'}
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                        @{foundUser.username || foundUser.displayName?.toLowerCase().replace(/ /g, '') || 'user'}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto pb-32 md:pb-6 no-scrollbar" onScroll={handleSidebarScroll}>
+              {/* Stories & Active Contacts Strip matching IMG_5359 & IMG_5360 */}
+              {sidebarTab === 'messages' && (
+                <MessagesStoriesStrip
+                  currentUser={user}
+                  contacts={allStripContacts}
+                  onOpenChatWithUser={(u) => {
+                    if (u?.id || u?.uid) {
+                      setActiveMessagesTab('chats');
+                      setSearchParams({ chatId: u.id || u.uid || '' });
+                    }
+                  }}
+                />
+              )}
+
+              {/* "Chats" Section Header + "..." Menu matching IMG_5359 & IMG_5360 */}
+              <div className="px-5 pt-2.5 pb-2 flex items-center justify-between relative shrink-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[19px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                    {sidebarTab === 'community'
+                      ? 'Communities'
+                      : sidebarTab === 'calls'
+                      ? 'Calls'
+                      : showArchivedOnly
+                      ? 'Archived Chats'
+                      : 'Chats'}
+                  </h2>
+
+                  {(sidebarTab !== 'messages' || showArchivedOnly) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidebarTab('messages');
+                        setShowArchivedOnly(false);
+                      }}
+                      className="text-xs font-semibold text-[#2F80ED] hover:underline px-1.5 py-0.5 transition cursor-pointer"
+                    >
+                      · All Chats
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowChatsMoreMenu((prev) => !prev)}
+                    className="w-9 h-9 -mr-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center text-zinc-900 dark:text-zinc-200 transition cursor-pointer"
+                    title="Chats options"
+                    aria-label="Chats options"
+                  >
+                    <MsgDotsHorizontalIcon className="w-5 h-5" />
+                  </button>
+
+                  <AnimatePresence>
+                    {showChatsMoreMenu && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setShowChatsMoreMenu(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                          transition={{ duration: 0.14 }}
+                          className="absolute right-0 top-10 w-52 bg-white dark:bg-[#1A1C24] border border-zinc-200/80 dark:border-white/10 shadow-2xl rounded-2xl p-1.5 z-50 text-left"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSidebarTab('messages');
+                              setShowArchivedOnly(false);
+                              setShowChatsMoreMenu(false);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <MessageCircle className="w-4 h-4 text-zinc-500" />
+                              All Chats
+                            </span>
+                            {sidebarTab === 'messages' && !showArchivedOnly && (
+                              <span className="w-2 h-2 rounded-full bg-[#2F80ED]" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSidebarTab('community');
+                              setShowChatsMoreMenu(false);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <Users className="w-4 h-4 text-zinc-500" />
+                              Communities
+                            </span>
+                            {sidebarTab === 'community' && (
+                              <span className="w-2 h-2 rounded-full bg-[#2F80ED]" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSidebarTab('calls');
+                              setShowChatsMoreMenu(false);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <Phone className="w-4 h-4 text-zinc-500" />
+                              Call History
+                            </span>
+                            {sidebarTab === 'calls' && (
+                              <span className="w-2 h-2 rounded-full bg-[#2F80ED]" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSidebarTab('messages');
+                              setShowArchivedOnly((prev) => !prev);
+                              setShowChatsMoreMenu(false);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <Archive className="w-4 h-4 text-zinc-500" />
+                              {showArchivedOnly ? 'Exit Archived' : 'Archived Chats'}
+                            </span>
+                            {archivedChatIds.length > 0 && (
+                              <span className="text-[11px] font-bold text-zinc-400">
+                                {archivedChatIds.length}
+                              </span>
+                            )}
+                          </button>
+
+                          <div className="border-t border-zinc-100 dark:border-white/[0.07] my-1" />
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowChatsMoreMenu(false);
+                              markAllChatsAsRead();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                          >
+                            <CheckCheck className="w-4 h-4 text-[#2F80ED]" />
+                            <span>Mark all as read</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowChatsMoreMenu(false);
+                              setActiveMessagesTab('settings');
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                          >
+                            <Settings className="w-4 h-4 text-zinc-500" />
+                            <span>Chat Settings</span>
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {sidebarTab === 'messages' ? (
+                <>
                   {chats.length === 0 && !chatIdParam ? (
-                     <div className="flex flex-col items-center justify-center h-64 text-zinc-400 px-6 text-center">
-                         {illustrations.emptyMessages ? (
-                              <div className="w-28 h-28 mx-auto mb-3 rounded-2xl overflow-hidden">
-                                  <img src={illustrations.emptyMessages} alt="No messages" className="w-full h-full object-cover" />
-                              </div>
-                          ) : (
-                              <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-white/[0.05] flex items-center justify-center mb-3">
-                                  <MessageSquareShare className="w-6 h-6 text-zinc-400" />
-                              </div>
-                          )}
-                          <p className="font-semibold text-sm text-zinc-800 dark:text-zinc-200">No conversations yet</p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Message a seller or tap compose to start chatting.</p>
-                      </div>
-                 ) : (
-                      <div className="px-2 space-y-0.5 mt-1">
+                    <div className="flex flex-col items-center justify-center h-60 text-zinc-400 px-6 text-center">
+                      {illustrations.emptyMessages ? (
+                        <div className="w-28 h-28 mx-auto mb-3 rounded-2xl overflow-hidden">
+                          <img src={illustrations.emptyMessages} alt="No messages" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-white/[0.05] flex items-center justify-center mb-3">
+                          <MessageSquareShare className="w-6 h-6 text-zinc-400" />
+                        </div>
+                      )}
+                      <p className="font-semibold text-sm text-zinc-800 dark:text-zinc-200">No conversations yet</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                        Tap + New Chat below to start messaging a contact or join a community.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="px-2 space-y-0.5">
                       {chats
-                        .filter(chat => {
+                        .filter((chat) => {
                           const cId = chat.id || chat.otherUser?.id || chat.otherUser?.uid;
                           if (showArchivedOnly) return archivedChatIds.includes(cId);
                           return !archivedChatIds.includes(cId);
@@ -4466,508 +4885,571 @@ const handleCreateChannel = async () => {
                           return bPinned - aPinned;
                         })
                         .map((chat, idx) => {
-                           const cId = chat.id || chat.otherUser?.id || chat.otherUser?.uid || `chat-${idx}`;
-                           const isPinned = pinnedChatIds.includes(cId);
-                           const isArchived = archivedChatIds.includes(cId);
-                           const isBlocked = blockedUserIds.includes(cId);
-                           const isMuted = mutedChatIds.includes(cId);
-                           const isUnread = !isMuted && chat.lastMessage && chat.lastSenderId !== user.uid && (!chat.seenBy || !chat.seenBy.includes(user.uid));
-                           const chatOtherUid = chat.otherUser?.id || chat.otherUser?.uid;
-                           const isChatUserOnline = chatOtherUid ? chatUsersPresence[chatOtherUid]?.isOnline : false;
-                           const chatTypingData = chat.typingState?.[chatOtherUid];
-                           const isChatOtherTyping = chatTypingData?.status === 'typing' && (Date.now() - (chatTypingData?.updatedAt || 0) < 5000);
-                           const isChatOtherRecording = chatTypingData?.status === 'recording' && (Date.now() - (chatTypingData?.updatedAt || 0) < 12000);
-                           const isMenuOpen = activeContextMenuChatId === cId;
-                           const isSwiped = swipedChatId === cId;
-                           const isSelected = activeChat?.id === chat.id;
-                           const rawUpdatedMs = chat.updatedAt?.toMillis
-                             ? chat.updatedAt.toMillis()
-                             : chat.updatedAt?.seconds
-                             ? chat.updatedAt.seconds * 1000
-                             : typeof chat.updatedAt === 'number'
-                             ? chat.updatedAt
-                             : 0;
+                          const cId = chat.id || chat.otherUser?.id || chat.otherUser?.uid || `chat-${idx}`;
+                          const isPinned = pinnedChatIds.includes(cId);
+                          const isArchived = archivedChatIds.includes(cId);
+                          const isBlocked = blockedUserIds.includes(cId);
+                          const isMuted = mutedChatIds.includes(cId);
+                          const isUnread = Boolean(
+                            !isMuted &&
+                              chat.lastMessage &&
+                              chat.lastSenderId !== user.uid &&
+                              (!chat.seenBy || !chat.seenBy.includes(user.uid))
+                          );
+                          const unreadCountNum = Number(chat.unreadCount?.[user.uid]) || 1;
+                          const chatOtherUid = chat.otherUser?.id || chat.otherUser?.uid;
+                          const isSeenByOtherInList = Boolean(
+                            chatOtherUid && Array.isArray(chat.seenBy) && chat.seenBy.includes(chatOtherUid)
+                          );
+                          const isChatUserOnline = chatOtherUid ? chatUsersPresence[chatOtherUid]?.isOnline : false;
+                          const chatTypingData = chat.typingState?.[chatOtherUid];
+                          const isChatOtherTyping =
+                            chatTypingData?.status === 'typing' && Date.now() - (chatTypingData?.updatedAt || 0) < 5000;
+                          const isChatOtherRecording =
+                            chatTypingData?.status === 'recording' && Date.now() - (chatTypingData?.updatedAt || 0) < 12000;
+                          const isMenuOpen = activeContextMenuChatId === cId;
+                          const isSwiped = swipedChatId === cId;
+                          const isSelected = activeMessagesTab !== 'settings' && activeChat?.id === chat.id;
+                          const rawUpdatedMs = chat.updatedAt?.toMillis
+                            ? chat.updatedAt.toMillis()
+                            : chat.updatedAt?.seconds
+                            ? chat.updatedAt.seconds * 1000
+                            : typeof chat.updatedAt === 'number'
+                            ? chat.updatedAt
+                            : 0;
 
-                           return (
-                              <div
-                                key={`chat-item-${cId}`}
-                                className="relative overflow-hidden rounded-2xl select-none"
-                                onContextMenu={(e) => {
-                                  e.preventDefault();
+                          return (
+                            <div
+                              key={`chat-item-${cId}`}
+                              className="relative overflow-hidden rounded-2xl select-none"
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setActiveContextMenuChatId(cId);
+                                setSwipedChatId(null);
+                              }}
+                              onTouchStart={(e) => {
+                                touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, cId };
+                                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                longPressTimerRef.current = setTimeout(() => {
                                   setActiveContextMenuChatId(cId);
                                   setSwipedChatId(null);
-                                }}
-                                onTouchStart={(e) => {
-                                  touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, cId };
-                                  if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                                  longPressTimerRef.current = setTimeout(() => {
-                                    setActiveContextMenuChatId(cId);
-                                    setSwipedChatId(null);
-                                    touchStartRef.current = null;
-                                  }, 450);
-                                }}
-                                onTouchMove={(e) => {
-                                  if (!touchStartRef.current || touchStartRef.current.cId !== cId) return;
-                                  const dx = touchStartRef.current.x - e.touches[0].clientX;
-                                  const dy = touchStartRef.current.y - e.touches[0].clientY;
-                                  if (Math.abs(dy) > 10 || Math.abs(dx) > 15) {
-                                    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                                  }
-                                  if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-                                    setSwipedChatId(cId);
-                                  } else if (dx < -30 && isSwiped) {
-                                    setSwipedChatId(null);
-                                  }
-                                }}
-                                onTouchEnd={() => {
-                                  if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
                                   touchStartRef.current = null;
+                                }, 450);
+                              }}
+                              onTouchMove={(e) => {
+                                if (!touchStartRef.current || touchStartRef.current.cId !== cId) return;
+                                const dx = touchStartRef.current.x - e.touches[0].clientX;
+                                const dy = touchStartRef.current.y - e.touches[0].clientY;
+                                if (Math.abs(dy) > 10 || Math.abs(dx) > 15) {
+                                  if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                }
+                                if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                                  setSwipedChatId(cId);
+                                } else if (dx < -30 && isSwiped) {
+                                  setSwipedChatId(null);
+                                }
+                              }}
+                              onTouchEnd={() => {
+                                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                                touchStartRef.current = null;
+                              }}
+                            >
+                              {/* Swipe Quick Actions */}
+                              <div className="absolute right-0 top-0 bottom-0 w-[198px] flex items-center z-0 overflow-hidden rounded-r-2xl">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    togglePinChat(cId);
+                                    setSwipedChatId(null);
+                                  }}
+                                  className="h-full w-[66px] msg-accent-btn text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                >
+                                  <Pin className="w-4 h-4" />
+                                  <span className="text-[10px] whitespace-nowrap">{isPinned ? 'Unpin' : 'Pin'}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    toggleArchiveChat(cId);
+                                    setSwipedChatId(null);
+                                  }}
+                                  className="h-full w-[66px] bg-zinc-700 hover:bg-zinc-600 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                >
+                                  <Archive className="w-4 h-4" />
+                                  <span className="text-[10px] whitespace-nowrap">{isArchived ? 'Restore' : 'Archive'}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setShowClearChatModal(true);
+                                    setSwipedChatId(null);
+                                  }}
+                                  className="h-full w-[66px] bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span className="text-[10px] whitespace-nowrap">Delete</span>
+                                </button>
+                              </div>
+
+                              {/* Conversation Row matching IMG_5359 & IMG_5360 */}
+                              <div
+                                onClick={() => {
+                                  if (isSwiped) {
+                                    setSwipedChatId(null);
+                                    return;
+                                  }
+                                  setActiveMessagesTab('chats');
+                                  setSearchParams({ chatId: chat.id || chat.otherUser?.id || '' }, { replace: true });
                                 }}
+                                className={cn(
+                                  'flex items-center gap-3.5 px-3 py-3 rounded-2xl cursor-pointer transition-all duration-200 relative group/chat z-10 msg-sidebar',
+                                  isSelected ? 'msg-chat-row-active' : 'hover:bg-zinc-50 dark:hover:bg-white/[0.04]',
+                                  isSwiped && '-translate-x-[198px]'
+                                )}
                               >
-                                  {/* Swipe Quick Actions */}
-                                  <div className="absolute right-0 top-0 bottom-0 w-[198px] flex items-center z-0 overflow-hidden rounded-r-2xl">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        togglePinChat(cId);
-                                        setSwipedChatId(null);
-                                      }}
-                                      className="h-full w-[66px] msg-accent-btn text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                    >
-                                      <Pin className="w-4 h-4" />
-                                      <span className="text-[10px] whitespace-nowrap">{isPinned ? "Unpin" : "Pin"}</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        toggleArchiveChat(cId);
-                                        setSwipedChatId(null);
-                                      }}
-                                      className="h-full w-[66px] bg-zinc-700 hover:bg-zinc-600 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                    >
-                                      <Archive className="w-4 h-4" />
-                                      <span className="text-[10px] whitespace-nowrap">{isArchived ? "Restore" : "Archive"}</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setShowClearChatModal(true);
-                                        setSwipedChatId(null);
-                                      }}
-                                      className="h-full w-[66px] bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                      <span className="text-[10px] whitespace-nowrap">Delete</span>
-                                    </button>
-                                  </div>
-
-                                  <div 
-                                     onClick={() => {
-                                       if (isSwiped) { setSwipedChatId(null); return; }
-                                       setSearchParams({ chatId: chat.id || chat.otherUser?.id || "" }, { replace: true });
-                                     }}
-                                     className={cn(
-                                          "flex items-center gap-3.5 px-3 py-3 rounded-2xl cursor-pointer transition-all duration-200 relative group/chat z-10 msg-sidebar",
-                                          isSelected
-                                            ? "msg-chat-row-active"
-                                            : "hover:bg-zinc-100/80 dark:hover:bg-white/[0.04]",
-                                          isSwiped && "-translate-x-[198px]"
-                                     )}
-                                  >
-                                  <div className="relative shrink-0">
-                                      <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 ring-1 ring-black/6 dark:ring-white/10">
-                                          {chat.otherUser?.photoURL ? (
-                                              <img src={chat.otherUser.photoURL} alt={chat.otherUser.displayName} className="w-full h-full object-cover" />
-                                          ) : (
-                                              <div className="w-full h-full flex items-center justify-center bg-[#1877F2]/12 text-[#1877F2] font-semibold text-base">
-                                                  {(chat.otherUser?.displayName || chat.otherUser?.shopName || 'U')[0].toUpperCase()}
-                                              </div>
-                                          )}
+                                {/* Avatar */}
+                                <div className="relative shrink-0">
+                                  <div className="w-[54px] h-[54px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                                    {chat.otherUser?.photoURL ? (
+                                      <img
+                                        src={chat.otherUser.photoURL}
+                                        alt={chat.otherUser.displayName}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center bg-[#2F80ED]/12 text-[#2F80ED] font-bold text-base">
+                                        {(getChatDisplayName(chat) || 'U')[0].toUpperCase()}
                                       </div>
-                                      {isChatUserOnline && (
-                                          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111217]" />
-                                      )}
-                                  </div>
-                                  
-                                  <div className="flex-1 min-w-0">
-                                      <div className="flex justify-between items-center gap-2 mb-0.5">
-                                          <h4 className={cn(
-                                              "text-[14.5px] truncate flex items-center gap-1.5",
-                                              isUnread ? "font-bold text-zinc-950 dark:text-white" : "font-semibold text-zinc-900 dark:text-zinc-100"
-                                          )}>
-                                              <span className="truncate">{getChatDisplayName(chat)}</span>
-                                              {(chat.otherUser?.kycStatus === "verified" || chat.otherUser?.verified) && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                                              {isMuted && <VolumeX className="w-3.5 h-3.5 text-zinc-400 shrink-0" />}
-                                              {isBlocked && <span className="text-[10px] font-medium text-rose-500 shrink-0">· Blocked</span>}
-                                          </h4>
-
-                                          <div className="flex items-center gap-1.5 shrink-0">
-                                              {isPinned && (
-                                                  <Pin className="w-3 h-3 text-zinc-400 rotate-45 shrink-0" />
-                                              )}
-                                              {rawUpdatedMs > 0 && (
-                                                  <span className={cn(
-                                                      "text-[11px] tabular-nums shrink-0",
-                                                      isUnread ? "font-semibold text-[#1877F2]" : "font-normal text-zinc-400 dark:text-zinc-500"
-                                                  )}>
-                                                      {new Date(rawUpdatedMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                                                  </span>
-                                              )}
-                                          </div>
-                                      </div>
-
-                                      <div className="flex justify-between items-center gap-2">
-                                          {isChatOtherTyping ? (
-                                              <p className="text-[13px] font-medium text-[#1877F2] truncate">
-                                                  typing...
-                                              </p>
-                                          ) : isChatOtherRecording ? (
-                                              <p className="text-[13px] font-medium text-rose-500 truncate flex items-center gap-1">
-                                                  <Mic className="w-3 h-3 text-rose-500 shrink-0" />
-                                                  <span>recording voice...</span>
-                                              </p>
-                                          ) : (
-                                              <p className={cn(
-                                                  "text-[13px] truncate pr-2",
-                                                  isUnread ? "font-semibold text-zinc-900 dark:text-zinc-100" : "font-normal text-zinc-500 dark:text-zinc-400"
-                                              )}>
-                                                  {chat.lastSenderId === user?.uid && chat.lastMessage ? `You: ${chat.lastMessage}` : (chat.lastMessage || 'Tap to chat')}
-                                              </p>
-                                          )}
-                                          
-                                          <div className="flex items-center gap-1 shrink-0">
-                                            {isUnread && (
-                                                <span className="min-w-[20px] h-5 px-1.5 rounded-full msg-accent-btn flex items-center justify-center shrink-0 text-white text-[10.5px] font-bold tabular-nums">
-                                                    1
-                                                </span>
-                                            )}
-
-                                            <button 
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setActiveContextMenuChatId(isMenuOpen ? null : cId);
-                                              }}
-                                              className="w-7 h-7 rounded-full opacity-0 group-hover/chat:opacity-100 hover:bg-zinc-200/80 dark:hover:bg-white/10 flex items-center justify-center text-zinc-500 transition cursor-pointer"
-                                              title="Conversation options"
-                                            >
-                                              <MoreHorizontal className="w-4 h-4" />
-                                            </button>
-                                          </div>
-                                      </div>
-                                  </div>
-
-                                  {/* Context Menu Popover */}
-                                  <AnimatePresence>
-                                    {isMenuOpen && (
-                                      <>
-                                        <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setActiveContextMenuChatId(null); }} />
-                                        <motion.div 
-                                          initial={{ opacity: 0, scale: 0.94, y: 4 }}
-                                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                                          exit={{ opacity: 0, scale: 0.94, y: 4 }}
-                                          className="absolute right-3 top-12 w-48 bg-white dark:bg-[#1A1C24] border border-zinc-200/90 dark:border-zinc-800 shadow-2xl rounded-2xl p-1.5 z-50 text-left"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <button 
-                                            type="button"
-                                            onClick={() => { togglePinChat(cId); setActiveContextMenuChatId(null); }}
-                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
-                                          >
-                                            <Pin className="w-3.5 h-3.5 text-zinc-500" />
-                                            <span>{isPinned ? "Unpin Chat" : "Pin Chat"}</span>
-                                          </button>
-
-                                          <button 
-                                            type="button"
-                                            onClick={() => { toggleArchiveChat(cId); setActiveContextMenuChatId(null); }}
-                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
-                                          >
-                                            <Archive className="w-3.5 h-3.5 text-zinc-500" />
-                                            <span>{isArchived ? "Unarchive Chat" : "Archive Chat"}</span>
-                                          </button>
-
-                                          <button 
-                                            type="button"
-                                            onClick={() => { toggleMuteChat(cId); setActiveContextMenuChatId(null); }}
-                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
-                                          >
-                                            <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
-                                            <span>{isMuted ? "Unmute Notifications" : "Mute Notifications"}</span>
-                                          </button>
-
-                                          <button 
-                                            type="button"
-                                            onClick={() => { toggleBlockUser(cId); setActiveContextMenuChatId(null); }}
-                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
-                                          >
-                                            <UserX className="w-3.5 h-3.5 text-zinc-500" />
-                                            <span>{isBlocked ? "Unblock User" : "Block User"}</span>
-                                          </button>
-
-                                          <div className="border-t border-zinc-100 dark:border-zinc-800 my-1" />
-
-                                          <button 
-                                            type="button"
-                                            onClick={() => { 
-                                              setActiveContextMenuChatId(null); 
-                                              setShowClearChatModal(true); 
-                                            }}
-                                            className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition cursor-pointer"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                            <span>Delete Chat History</span>
-                                          </button>
-                                        </motion.div>
-                                      </>
                                     )}
-                                  </AnimatePresence>
-                              </div>
-                              </div>
-                           );
-                       })}
-                      </div>
-                 )}
-                </>
-             ) : sidebarTab === 'community' ? (
-                 <div className="flex flex-col">
+                                  </div>
+                                  {isChatUserOnline && (
+                                    <span className="msg-online-dot absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#0E1015]" />
+                                  )}
+                                </div>
 
-                   {channels.length === 0 ? (
-                     <div className="flex flex-col items-center justify-center h-64 text-zinc-400 p-6 text-center">
-                       <Users className="w-12 h-12 mb-3 text-zinc-300 dark:text-zinc-700" />
-                       <p className="font-medium text-sm">No community channels yet</p>
-                       <p className="text-xs mt-1">Sellers can create a new channel to post updates!</p>
-                       {(userRole === 'seller' || userRole === 'admin') && (
-                         <button
-                           onClick={() => setShowCreateChannelModal(true)}
-                           className="mt-4 px-4 py-2 bg-emerald-600 text-zinc-900 dark:text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition"
-                         >
-                           Create Channel
-                         </button>
-                       )}
-                     </div>
-                   ) : (
-                     channels.filter(channel => {
+                                {/* Center Name + Message Snippet with Checkmarks */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <h4 className="text-[16px] font-semibold text-zinc-950 dark:text-white truncate leading-snug">
+                                      {getChatDisplayName(chat)}
+                                    </h4>
+                                    {(chat.otherUser?.kycStatus === 'verified' || chat.otherUser?.verified) && (
+                                      <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                    )}
+                                    {isMuted && <VolumeX className="w-3.5 h-3.5 text-zinc-400 shrink-0" />}
+                                    {isBlocked && (
+                                      <span className="text-[10px] font-medium text-rose-500 shrink-0">· Blocked</span>
+                                    )}
+                                  </div>
+
+                                  <div className="mt-0.5 flex items-center gap-1 min-w-0">
+                                    {isChatOtherTyping ? (
+                                      <p className="text-[13.5px] font-medium text-[#2F80ED] truncate">typing...</p>
+                                    ) : isChatOtherRecording ? (
+                                      <p className="text-[13.5px] font-medium text-rose-500 truncate flex items-center gap-1">
+                                        <Mic className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                        <span>recording voice...</span>
+                                      </p>
+                                    ) : chat.lastSenderId === user?.uid && chat.lastMessage ? (
+                                      <div className="flex items-center gap-1 min-w-0">
+                                        <MsgCheckDoubleIcon
+                                          className={cn(
+                                            'w-[16px] h-[16px] shrink-0',
+                                            isSeenByOtherInList ? 'text-[#2F80ED]' : 'text-zinc-400 dark:text-zinc-500'
+                                          )}
+                                        />
+                                        <p className="text-[13.5px] text-zinc-500 dark:text-zinc-400 truncate">
+                                          {chat.lastMessage}
+                                        </p>
+                                      </div>
+                                    ) : (chat.isGroup || chat.type === 'group') && chat.lastSenderName && chat.lastMessage ? (
+                                      <p className="text-[13.5px] text-zinc-500 dark:text-zinc-400 truncate">
+                                        {String(chat.lastSenderName).split(' ')[0]}: {chat.lastMessage}
+                                      </p>
+                                    ) : (
+                                      <p
+                                        className={cn(
+                                          'text-[13.5px] truncate',
+                                          isUnread
+                                            ? 'text-zinc-700 dark:text-zinc-200 font-medium'
+                                            : 'text-zinc-500 dark:text-zinc-400'
+                                        )}
+                                      >
+                                        {chat.lastMessage || 'Tap to chat'}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Right Column: Time on top + Circular Blue Unread Badge below (IMG_5359 & IMG_5360) */}
+                                <div className="flex flex-col items-end justify-between self-stretch py-0.5 shrink-0 ml-2 gap-1.5">
+                                  <span className="text-[12px] text-zinc-400 dark:text-zinc-500 tabular-nums leading-none">
+                                    {rawUpdatedMs > 0 ? formatInboxTime24h(rawUpdatedMs) : ''}
+                                  </span>
+
+                                  <div className="flex items-center gap-1 min-h-[22px]">
+                                    {isPinned && !isUnread && (
+                                      <Pin className="w-3.5 h-3.5 text-zinc-400 rotate-45 shrink-0" />
+                                    )}
+                                    {isUnread && (
+                                      <span className="msg-unread-badge min-w-[22px] h-[22px] px-1.5 rounded-full text-[11.5px] font-semibold flex items-center justify-center tabular-nums">
+                                        {unreadCountNum}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Context Menu Popover */}
+                                <AnimatePresence>
+                                  {isMenuOpen && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActiveContextMenuChatId(null);
+                                        }}
+                                      />
+                                      <motion.div
+                                        initial={{ opacity: 0, scale: 0.94, y: 4 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.94, y: 4 }}
+                                        className="absolute right-3 top-12 w-48 bg-white dark:bg-[#1A1C24] border border-zinc-200/90 dark:border-zinc-800 shadow-2xl rounded-2xl p-1.5 z-50 text-left"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            togglePinChat(cId);
+                                            setActiveContextMenuChatId(null);
+                                          }}
+                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                                        >
+                                          <Pin className="w-3.5 h-3.5 text-zinc-500" />
+                                          <span>{isPinned ? 'Unpin Chat' : 'Pin Chat'}</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            toggleArchiveChat(cId);
+                                            setActiveContextMenuChatId(null);
+                                          }}
+                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                                        >
+                                          <Archive className="w-3.5 h-3.5 text-zinc-500" />
+                                          <span>{isArchived ? 'Unarchive Chat' : 'Archive Chat'}</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            toggleMuteChat(cId);
+                                            setActiveContextMenuChatId(null);
+                                          }}
+                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                                        >
+                                          <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
+                                          <span>{isMuted ? 'Unmute Notifications' : 'Mute Notifications'}</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            toggleBlockUser(cId);
+                                            setActiveContextMenuChatId(null);
+                                          }}
+                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                                        >
+                                          <UserX className="w-3.5 h-3.5 text-zinc-500" />
+                                          <span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
+                                        </button>
+
+                                        <div className="border-t border-zinc-100 dark:border-zinc-800 my-1" />
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveContextMenuChatId(null);
+                                            setShowClearChatModal(true);
+                                          }}
+                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition cursor-pointer"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          <span>Delete Chat History</span>
+                                        </button>
+                                      </motion.div>
+                                    </>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </>
+              ) : sidebarTab === 'community' ? (
+                <div className="flex flex-col px-2">
+                  {channels.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-zinc-400 p-6 text-center">
+                      <Users className="w-12 h-12 mb-3 text-zinc-300 dark:text-zinc-700" />
+                      <p className="font-medium text-sm">No community channels yet</p>
+                      <p className="text-xs mt-1">Start a community to broadcast updates and connect!</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateChannelModal(true)}
+                        className="mt-4 px-5 py-2.5 bg-[#16181D] dark:bg-white text-white dark:text-zinc-950 rounded-full font-semibold text-xs hover:opacity-90 transition cursor-pointer"
+                      >
+                        + Create Community
+                      </button>
+                    </div>
+                  ) : (
+                    channels
+                      .filter((channel) => {
                         if (!channel.isPrivate) return true;
                         return channel.creatorId === user?.uid || channelIdParam === channel.id;
-                     }).map(channel => {
-                       const isSelected = channelIdParam === channel.id;
-                       return (
-                         <div
-                           key={channel.id}
-                           onClick={() => setSearchParams({ channelId: channel.id })}
-                           className={cn(
-                             "flex items-center gap-3 p-4 cursor-pointer transition-all hover:bg-[#F8F9FB] dark:hover:bg-zinc-800/50 relative border-b border-zinc-50 dark:border-zinc-800/20",
-                             isSelected ? "bg-[#F8F9FB] dark:bg-zinc-800 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-[#4E4AEB] before:rounded-r-full" : ""
-                           )}
-                         >
-                           <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-200 dark:bg-zinc-800 shrink-0 border border-zinc-200 dark:border-zinc-300 dark:border-zinc-700 relative">
-                             <ProgressiveImage src={channel.imageUrl} alt={channel.name} containerClassName="w-full h-full rounded-full min-h-0" showShimmerIcon={false} className="w-full h-full object-cover" />
-                             <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center">
-                               <Sparkles className="w-2 h-2 text-zinc-900 dark:text-white fill-white" />
-                             </div>
-                           </div>
-                           <div className="flex-1 min-w-0">
-                             <div className="flex justify-between items-center mb-0.5">
-                               <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px] truncate">
-                                 {channel.name}
-                               </h4>
-                               <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 dark:bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded-full">
-                                 @{channel.customLink}
-                               </span>
-                             </div>
-                             <p className="text-[12px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                               {channel.description || "Welcome to our community!"}
-                             </p>
-                             <div className="flex items-center gap-1.5 mt-1">
-                               <span className="text-[9.5px] font-semibold text-emerald-600 dark:text-emerald-400">
-                                 {channel.subscriberCount || 1} subscribers
-                               </span>
-                             </div>
-                           </div>
-                         </div>
-                       );
-                     })
-                   )}
-                 </div>
-             ) : (
-                 /* Calls Tab Renderer */
-                 <div className="flex flex-col">
-                     {chats.length === 0 ? (
-                         <div className="flex flex-col items-center justify-center h-64 text-zinc-400 p-6 text-center">
-                             <Icon name="phone" className="w-12 h-12 mb-3 text-zinc-300 dark:text-zinc-700 animate-pulse" />
-                             <p className="font-medium text-sm">No call history yet</p>
-                             <p className="text-xs mt-1">Start voice or video calls with your contacts!</p>
-                         </div>
-                     ) : (
-                         chats.map((chat, idx) => {
-                             const callType = idx % 2 === 0 ? 'Voice' : 'Video';
-                             const status = idx % 3 === 0 ? 'Incoming' : idx % 3 === 1 ? 'Outgoing' : 'Missed';
-                             const time = idx === 0 ? '10 mins ago' : idx === 1 ? '2 hours ago' : 'Yesterday';
-                             
-                             return (
-                                 <div 
-                                     key={`call-${chat.id || idx}-${idx}`} 
-                                     className="flex items-center justify-between p-4 border-b border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition"
-                                 >
-                                     <div className="flex items-center gap-3.5 min-w-0">
-                                         <div className="relative shrink-0">
-                                             <img 
-                                                 src={chat.otherUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.otherUser?.id || chat.id}`} 
-                                                 alt="User" 
-                                                 className="w-11 h-11 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
-                                             />
-                                             <span className={cn(
-                                                 "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-zinc-900",
-                                                 status === 'Missed' ? 'bg-rose-500' : 'bg-emerald-500'
-                                             )} />
-                                         </div>
-                                         <div className="text-left min-w-0">
-                                             <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                                                 {chat.otherUser?.shopName || chat.otherUser?.displayName || "User"}
-                                             </h4>
-                                             <p className="text-xs text-zinc-400 mt-0.5 flex items-center gap-1 font-semibold">
-                                                 {status === 'Missed' ? (
-                                                     <Icon name="phone-off" className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                                                 ) : (
-                                                     <Icon name="phone" className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                                 )}
-                                                 <span>{status} • {callType} ({time})</span>
-                                             </p>
-                                         </div>
-                                     </div>
-                                     <div className="flex items-center gap-2">
-                                         <button 
-                                             onClick={() => {
-                                                 setSearchParams({ chatId: chat.otherUser?.id || "" });
-                                                 setTimeout(() => { startCall("audio"); }, 300);
-                                             }}
-                                             className="p-2 rounded-full bg-zinc-50 hover:bg-emerald-50 dark:bg-zinc-800 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 hover:scale-105 active:scale-95 transition-all"
-                                             title="Call again (Voice)"
-                                         >
-                                             <Icon name="phone" className="w-3.5 h-3.5" />
-                                         </button>
-                                         <button 
-                                             onClick={() => {
-                                                 setSearchParams({ chatId: chat.otherUser?.id || "" });
-                                                 setTimeout(() => { startCall("video"); }, 300);
-                                             }}
-                                             className="p-2 rounded-full bg-zinc-50 hover:bg-indigo-50 dark:bg-zinc-800 dark:hover:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:scale-105 active:scale-95 transition-all"
-                                             title="Call again (Video)"
-                                         >
-                                             <Icon name="video" className="w-3.5 h-3.5" />
-                                         </button>
-                                     </div>
-                                 </div>
-                             );
-                         })
-                     )}
-                 </div>
-             )}
-         </div>
-         )}
+                      })
+                      .map((channel) => {
+                        const isSelected = activeMessagesTab !== 'settings' && channelIdParam === channel.id;
+                        return (
+                          <div
+                            key={channel.id}
+                            onClick={() => {
+                              setActiveMessagesTab('chats');
+                              setSearchParams({ channelId: channel.id });
+                            }}
+                            className={cn(
+                              'flex items-center gap-3.5 px-3 py-3 rounded-2xl cursor-pointer transition-all relative',
+                              isSelected ? 'msg-chat-row-active' : 'hover:bg-zinc-50 dark:hover:bg-white/[0.04]'
+                            )}
+                          >
+                            <div className="w-[52px] h-[52px] rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0 ring-1 ring-black/[0.05] dark:ring-white/10 relative">
+                              <ProgressiveImage
+                                src={channel.imageUrl}
+                                alt={channel.name}
+                                containerClassName="w-full h-full rounded-full min-h-0"
+                                showShimmerIcon={false}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-center gap-2">
+                                <h4 className="font-bold text-zinc-950 dark:text-white text-[15px] truncate">
+                                  {channel.name}
+                                </h4>
+                                <span className="text-[11px] font-medium text-zinc-400">
+                                  @{channel.customLink}
+                                </span>
+                              </div>
+                              <p className="text-[13px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                                {channel.description || 'Welcome to our community!'}
+                              </p>
+                              <span className="text-[11px] font-medium text-[#2F80ED] mt-0.5 inline-block">
+                                {channel.subscriberCount || 1} members
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+              ) : (
+                /* Calls Tab Renderer */
+                <div className="flex flex-col px-2">
+                  {chats.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-zinc-400 p-6 text-center">
+                      <Icon name="phone" className="w-12 h-12 mb-3 text-zinc-300 dark:text-zinc-700 animate-pulse" />
+                      <p className="font-medium text-sm">No call history yet</p>
+                      <p className="text-xs mt-1">Start voice or video calls with your contacts!</p>
+                    </div>
+                  ) : (
+                    chats.map((chat, idx) => {
+                      const callTypeLabel = idx % 2 === 0 ? 'Voice' : 'Video';
+                      const rawMs = chat.updatedAt?.toMillis
+                        ? chat.updatedAt.toMillis()
+                        : typeof chat.updatedAt === 'number'
+                        ? chat.updatedAt
+                        : 0;
+                      const timeLabel = rawMs ? formatInboxTime24h(rawMs) : '';
 
-         </>
+                      return (
+                        <div
+                          key={`call-${chat.id || idx}-${idx}`}
+                          className="flex items-center justify-between px-3 py-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-white/[0.04] transition"
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <img
+                              src={
+                                chat.otherUser?.photoURL ||
+                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.otherUser?.id || chat.id}`
+                              }
+                              alt="User"
+                              className="w-12 h-12 rounded-full object-cover ring-1 ring-black/[0.06] dark:ring-white/10 shrink-0"
+                            />
+                            <div className="text-left min-w-0">
+                              <h4 className="font-bold text-[15px] text-zinc-950 dark:text-white truncate">
+                                {getChatDisplayName(chat)}
+                              </h4>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5">
+                                <Phone className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                <span>
+                                  {callTypeLabel} call {timeLabel ? `· ${timeLabel}` : ''}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveMessagesTab('chats');
+                                setSearchParams({ chatId: chat.id || chat.otherUser?.id || '' });
+                                setTimeout(() => {
+                                  startCall('audio');
+                                }, 300);
+                              }}
+                              className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer"
+                              title="Voice Call"
+                            >
+                              <Phone className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveMessagesTab('chats');
+                                setSearchParams({ chatId: chat.id || chat.otherUser?.id || '' });
+                                setTimeout(() => {
+                                  startCall('video');
+                                }, 300);
+                              }}
+                              className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer"
+                              title="Video Call"
+                            >
+                              <Video className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
           )}
+        </div>
 
+        {/* ===================================================================
+            MOBILE BOTTOM NAVIGATION BAR (IMG_5359 left & IMG_5360 left/right)
+            Seamless frosted gradient fade | Home (Messages Home) | "+ New Chat" / "Cancel" pill | User icon
+            =================================================================== */}
+        {!activeChat && !activeChannel && (
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 msg-bottom-nav-bar px-9 pt-7 pb-[max(1.1rem,env(safe-area-inset-bottom,16px))] flex items-center justify-between pointer-events-none">
+            {/* Left: Messages Home Outline Icon (stays inside Messages Home, never goes to Shop) */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowNewChatPopup(false);
+                setActiveMessagesTab('chats');
+                setSidebarTab('messages');
+                setShowArchivedOnly(false);
+                setShowInboxSearch(false);
+                setChatSearchQuery('');
+                setSearchParams({}, { replace: true });
+              }}
+              className={cn(
+                'pointer-events-auto w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition cursor-pointer',
+                activeMessagesTab === 'chats' && sidebarTab === 'messages' && !showNewChatPopup
+                  ? 'text-zinc-950 dark:text-white'
+                  : 'text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
+              )}
+              title="Messages Home"
+              aria-label="Messages Home"
+            >
+              <MsgHomeIcon className="w-[24px] h-[24px]" />
+            </button>
 
+            {/* Center: "+ New Chat" Dark Pill -> Morphs to Elevated White "Cancel" Pill when open (IMG_5359 & IMG_5360) */}
+            <button
+              type="button"
+              onClick={() => {
+                setNewChatPopupMode('menu');
+                setShowNewChatPopup((prev) => !prev);
+              }}
+              className={cn(
+                'pointer-events-auto h-[50px] min-w-[180px] rounded-full font-medium text-[15px] flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 cursor-pointer select-none',
+                showNewChatPopup ? 'px-9 msg-cancel-pill' : 'px-7 msg-new-chat-pill'
+              )}
+            >
+              {showNewChatPopup ? (
+                <span>Cancel</span>
+              ) : (
+                <>
+                  <MsgPlusIcon className="w-[18px] h-[18px]" />
+                  <span>New Chat</span>
+                </>
+              )}
+            </button>
 
-			{/* Floating Bottom Navigation Bar */}
-			{(!activeChat && !activeChannel) && (
-				<>
-					{/* Centered Floating Capsule (Comfortable height matching BottomMenu) */}
-					<div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 pointer-events-auto h-[54px] flex items-center justify-between gap-1.5 px-2.5 rounded-full bg-white/85 dark:bg-[#141518]/85 backdrop-blur-md shadow-[0_4px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_22px_rgba(0,0,0,0.4)] transition-all mb-[env(safe-area-inset-bottom)]">
-						{/* Tab 1: Chats (with active capsule pill) */}
-						<button 
-							type="button"
-							onClick={() => {
-								setActiveMessagesTab('chats');
-								setSidebarTab('messages');
-							}}
-							className={cn(
-								"h-10 flex items-center justify-center transition-all duration-300 rounded-full",
-								activeMessagesTab === 'chats' && sidebarTab !== 'community'
-									? "bg-[#E8EAEE]/90 dark:bg-[#2D2E33]/90 text-zinc-950 dark:text-white px-5 shadow-xs" 
-									: "px-3.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-							)}
-							title="Chats"
-						>
-							{/* Exact Chat Bubble with 2 lines as in IMG_3972/3973 */}
-							<svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-								<path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5 8H9c-.55 0-1-.45-1-1s.45-1 1-1h6c.55 0 1 .45 1 1s-.45 1-1 1zm-3 4H9c-.55 0-1-.45-1-1s.45-1 1-1h3c.55 0 1 .45 1 1s-.45 1-1 1z" />
-							</svg>
-						</button>
-
-						{/* Tab 2: Contacts / Community (matching person + 3 lines in IMG_3972/3973) */}
-						<button 
-							type="button"
-							onClick={() => {
-								setActiveMessagesTab('chats');
-								setSidebarTab('community');
-							}}
-							className={cn(
-								"h-10 flex items-center justify-center transition-all duration-300 rounded-full",
-								activeMessagesTab === 'chats' && sidebarTab === 'community'
-									? "bg-[#E8EAEE]/90 dark:bg-[#2D2E33]/90 text-zinc-950 dark:text-white px-5 shadow-xs" 
-									: "px-3.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-							)}
-							title="Contacts & Channels"
-						>
-							{/* Exact Person Outline with 3 lines SVG from reference image */}
-							<svg className="w-5 h-5 stroke-current fill-none stroke-[2.2] stroke-linecap-round stroke-linejoin-round" viewBox="0 0 24 24">
-								<path d="M14 19a5 5 0 0 0-10 0" />
-								<circle cx="9" cy="8" r="4" />
-								<line x1="16" y1="9" x2="21" y2="9" />
-								<line x1="16" y1="13" x2="21" y2="13" />
-								<line x1="16" y1="17" x2="19" y2="17" />
-							</svg>
-						</button>
-
-						{/* Tab 3: Avatar / Profile / Settings (matching avatar in IMG_3972/3973) */}
-						<button 
-							type="button"
-							onClick={() => setActiveMessagesTab('settings')}
-							className={cn(
-								"h-10 flex items-center justify-center transition-all duration-300 rounded-full",
-								activeMessagesTab === 'settings' 
-									? "bg-[#E8EAEE]/90 dark:bg-[#2D2E33]/90 px-4 shadow-xs" 
-									: "px-2 hover:opacity-80"
-							)}
-							title="Profile & Settings"
-						>
-							<div className="w-8 h-8 rounded-full overflow-hidden shadow-xs bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
-								{auth.currentUser?.photoURL ? (
-									<img src={auth.currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
-								) : (
-									<img
-										src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-										alt="Profile"
-										className="w-full h-full object-cover"
-									/>
-								)}
-							</div>
-						</button>
-					</div>
-				</>
-			)}
-
+            {/* Right: User / Profile Outline Icon (IMG_5359 bottom-right) */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowNewChatPopup(false);
+                setActiveMessagesTab(activeMessagesTab === 'settings' ? 'chats' : 'settings');
+              }}
+              className={cn(
+                'pointer-events-auto w-11 h-11 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer',
+                activeMessagesTab === 'settings'
+                  ? 'text-[#2F80ED]'
+                  : 'text-zinc-800 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white'
+              )}
+              title="Profile & Chat Settings"
+              aria-label="Profile & Chat Settings"
+            >
+              <MsgUserIcon className="w-[24px] h-[24px]" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Main Chat Area */}
-      <div className={cn(
-          "flex-1 flex-col h-full overflow-hidden transition-all duration-300",
-          privacySettings.liquidGlassMode 
-            ? "bg-white/10 dark:bg-black/25 backdrop-blur-md" 
-            : "bg-[#F0F2F5] dark:bg-[#0a0a0a]",
-          activeMessagesTab === 'settings' ? 'hidden' : (!activeChat && !activeChannel ? 'hidden md:flex' : 'flex')
-      )}>
-         {activeChannel ? (
+      {/* =====================================================================
+          COLUMN 3: Right Active Chat / Community / Settings Workspace
+          ===================================================================== */}
+      <div
+        className={cn(
+          'flex-1 flex-col h-full overflow-hidden transition-all duration-200 msg-stream-default',
+          activeMessagesTab === 'settings'
+            ? 'hidden md:flex'
+            : !activeChat && !activeChannel
+            ? 'hidden md:flex'
+            : 'flex'
+        )}
+      >
+         {activeMessagesTab === 'settings' ? (
+           <div className="hidden md:flex flex-col h-full w-full overflow-hidden bg-white dark:bg-[#0B0D12]">
+             <div className="px-6 py-4 border-b border-zinc-100 dark:border-white/[0.06] flex items-center justify-between shrink-0">
+               <div>
+                 <h2 className="text-lg font-bold text-zinc-950 dark:text-white">Chat & Privacy Settings</h2>
+                 <p className="text-xs text-zinc-500 dark:text-zinc-400">Manage messaging preferences, security, and appearance</p>
+               </div>
+               <button
+                 type="button"
+                 onClick={() => setActiveMessagesTab('chats')}
+                 className="px-4 py-2 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+               >
+                 Done
+               </button>
+             </div>
+             {renderSettingsWorkspace()}
+           </div>
+         ) : activeChannel ? (
              isUserBanned ? (
                  <div className="flex-1 flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-6 text-center h-full">
                      <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500 mb-6 border border-rose-500/20 shadow-md">
@@ -5844,70 +6326,62 @@ const handleCreateChannel = async () => {
              ) : (
                  <>
                       {/* Active Community Channel Header */}
-                      <div className="bg-white dark:bg-zinc-900 px-4 sm:px-6 py-4 flex items-center justify-between shrink-0 z-10 shadow-[0_2px_10px_rgba(0,0,0,0.02)] cursor-pointer" onClick={() => setShowChannelDetailsModal(true)}>
-                          <div className="flex items-center gap-4 min-w-0">
-                              <button 
+                      <div className="msg-inbox-header px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between shrink-0 z-10 cursor-pointer" onClick={() => setShowChannelDetailsModal(true)}>
+                          <div className="flex items-center gap-3 min-w-0">
+                              <button
                                 type="button"
-                                onClick={(e) => { e.stopPropagation(); setSearchParams({}); }} 
-                                className="md:hidden p-1 transition shrink-0"
+                                onClick={(e) => { e.stopPropagation(); setSearchParams({}); }}
+                                className="md:hidden w-9 h-9 -ml-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-zinc-900 dark:text-zinc-100 transition shrink-0 cursor-pointer"
                                 title="Back to Communities"
                               >
-                                  <ArrowLeft className="w-6 h-6 text-zinc-900 dark:text-zinc-100" />
+                                  <MsgBackChevronIcon className="w-[22px] h-[22px]" />
                               </button>
-                              <button 
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setSearchParams({}); }} 
-                                className="hidden md:block p-1 transition shrink-0 hover:opacity-70"
-                                title="Back to Communities"
-                              >
-                                  <ArrowLeft className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
-                              </button>
-                              
-                              <div className="relative w-10 h-10 shrink-0">
+
+                              <div className="relative w-11 h-11 shrink-0">
                                   <div className="w-full h-full rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
                                       <ProgressiveImage src={activeChannel.imageUrl} alt={activeChannel.name} containerClassName="w-full h-full rounded-full min-h-0" showShimmerIcon={false} className="w-full h-full object-cover" />
                                   </div>
                               </div>
-                              
+
                               <div className="min-w-0 flex flex-col justify-center">
-                                  <h3 className="font-bold text-[15px] text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
+                                  <h3 className="font-bold text-[16px] text-zinc-950 dark:text-white truncate flex items-center gap-1.5 leading-tight">
                                       <span>{activeChannel.name}</span>
                                       {activeChannel.verified && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                   </h3>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                      <p className="text-[12px] font-medium text-emerald-600 dark:text-emerald-400">
+                                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                                      <p className="text-[12.5px] text-zinc-400 dark:text-zinc-400">
                                           {activeChannel.subscriberCount || 1} subscribers
                                       </p>
                                   </div>
                               </div>
                           </div>
 
-                          <div className="flex items-center gap-3 shrink-0 relative ml-4">
-                              <button 
+                          <div className="flex items-center gap-2 shrink-0 relative ml-4">
+                              <button
                                 type="button"
-                                onClick={() => setShowP2pSearch(!showP2pSearch)}
-                                className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition hidden sm:flex" 
+                                onClick={(e) => { e.stopPropagation(); setShowP2pSearch(!showP2pSearch); }}
+                                className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 items-center justify-center transition hidden sm:flex cursor-pointer"
                                 title="Search Chat"
                               >
-                                  <Search className="w-5 h-5" />
+                                  <MsgSearchIcon className="w-5 h-5" />
                               </button>
                               {isChannelAdmin && !activeLiveCall && (
                                   <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); handleStartLiveCall(); }}
-                                      className="w-9 h-9 rounded-full bg-amber-400 flex items-center justify-center text-white shadow-sm hover:scale-105 active:scale-95 transition"
+                                      className="w-9 h-9 rounded-full bg-amber-400 flex items-center justify-center text-white shadow-sm hover:scale-105 active:scale-95 transition cursor-pointer"
                                       title="Start Live Audio"
                                   >
                                       <Radio className="w-4 h-4 fill-current animate-pulse" />
                                   </button>
                               )}
-                              <button 
+                              <button
                                 type="button"
-                                onClick={(e) => { e.stopPropagation(); setShowChannelDetailsModal(true); }} 
-                                className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition" 
+                                onClick={(e) => { e.stopPropagation(); setShowChannelDetailsModal(true); }}
+                                className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
                                 title="More Options"
                               >
-                                  <MoreVertical className="w-5 h-5" />
+                                  <MsgDotsHorizontalIcon className="w-5 h-5" />
                               </button>
                           </div>
                       </div>
@@ -6116,7 +6590,10 @@ const handleCreateChannel = async () => {
                                         </div>
                                       )}
                                                                    
-                                      <div className={cn("max-w-[80%] sm:max-w-[70%] flex flex-col relative group/bubble", isMe ? "items-end" : "items-start")}>
+                                      <div
+                                        {...getMsgHoldHandlers(msg.id)}
+                                        className={cn("max-w-[80%] sm:max-w-[70%] flex flex-col relative group/bubble", isMe ? "items-end" : "items-start")}
+                                      >
                                           {/* Sender Label and Role Badge (Shown on incoming messages in group) */}
                                           {!isMe && (
                                             <div className="flex items-center gap-1.5 mb-1 ml-1">
@@ -6196,12 +6673,12 @@ const handleCreateChannel = async () => {
                                           {/* Post / Message Bubble text */}
                                           {msg.text && (
                                               <div 
-                                                  onClick={(e) => { e.stopPropagation(); setActiveMessageMenuId(isMenuOpen ? null : msg.id); }}
+                                                  onDoubleClick={(e) => { e.stopPropagation(); handleReactToChannelMessage(msg.id, '❤️'); }}
                                                   className={cn(
-                                                    "px-3.5 py-2 rounded-[20px] shadow-sm cursor-pointer select-none relative flex flex-col transition-all",
+                                                    "px-3.5 py-2 rounded-[20px] shadow-xs select-none relative flex flex-col transition-all",
                                                     isMe 
-                                                      ? "bg-emerald-600 dark:bg-emerald-600 text-white rounded-br-xs" 
-                                                      : "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-xs border border-zinc-200/80 dark:border-zinc-700"
+                                                      ? "bg-[#2F80ED] text-white rounded-br-[6px]" 
+                                                      : "bg-[#F2F4F7] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-[6px]"
                                                   )}
                                               >
                                                   <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words pr-10">
@@ -6432,38 +6909,80 @@ const handleCreateChannel = async () => {
                  </>
              )
          ) : !activeChat ? (
-             <div className="flex-1 flex flex-col items-center justify-center msg-stream-default px-6 text-center select-none">
-                 <div className="w-16 h-16 rounded-3xl msg-sidebar border flex items-center justify-center mb-4 shadow-xs">
-                     <MessageCircle className="w-7 h-7 text-[#1877F2]" />
+             /* Desktop Split-Screen Empty Workspace */
+             <div className="flex-1 flex flex-col items-center justify-center msg-stream-default px-8 text-center select-none">
+                 <div className="max-w-md w-full flex flex-col items-center">
+                     <div className="w-16 h-16 rounded-[24px] bg-[#F4F6FA] dark:bg-white/[0.05] border border-zinc-200/70 dark:border-white/10 flex items-center justify-center mb-5">
+                         <MessageCircle className="w-7 h-7 text-[#2F80ED]" />
+                     </div>
+                     <h2 className="font-bold text-[22px] text-zinc-950 dark:text-white tracking-tight">
+                         Select a conversation
+                     </h2>
+                     <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-sm leading-relaxed">
+                         Choose an existing chat on the left, or start a new conversation, add a contact, or explore communities.
+                     </p>
+
+                     <div className="grid grid-cols-3 gap-3 w-full mt-7">
+                         <button
+                             type="button"
+                             onClick={() => {
+                               setNewMessageInitialStep('new_message');
+                               setShowNewMessageModal(true);
+                             }}
+                             className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#F7F8FA] hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200/60 dark:border-white/10 transition cursor-pointer"
+                         >
+                             <div className="w-10 h-10 rounded-full bg-[#16181D] dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center">
+                                 <Plus className="w-5 h-5" />
+                             </div>
+                             <span className="text-xs font-bold text-zinc-900 dark:text-white">New Chat</span>
+                         </button>
+
+                         <button
+                             type="button"
+                             onClick={() => {
+                               setNewChatPopupMode('new_contact');
+                               setShowNewChatPopup(true);
+                             }}
+                             className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#F7F8FA] hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200/60 dark:border-white/10 transition cursor-pointer"
+                         >
+                             <div className="w-10 h-10 rounded-full bg-[#2F80ED]/12 text-[#2F80ED] flex items-center justify-center">
+                                 <UserPlus className="w-5 h-5" />
+                             </div>
+                             <span className="text-xs font-bold text-zinc-900 dark:text-white">New Contact</span>
+                         </button>
+
+                         <button
+                             type="button"
+                             onClick={() => {
+                               setNewChatPopupMode('new_community');
+                               setShowNewChatPopup(true);
+                             }}
+                             className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#F7F8FA] hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200/60 dark:border-white/10 transition cursor-pointer"
+                         >
+                             <div className="w-10 h-10 rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                 <Users className="w-5 h-5" />
+                             </div>
+                             <span className="text-xs font-bold text-zinc-900 dark:text-white">Community</span>
+                         </button>
+                     </div>
                  </div>
-                 <h2 className="font-bold text-xl text-zinc-900 dark:text-white tracking-tight">Your Inbox</h2>
-                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-xs leading-relaxed">
-                     Select a conversation from the sidebar or start a new chat with any seller or member.
-                 </p>
-                 <button
-                     type="button"
-                     onClick={() => setShowNewMessageModal(true)}
-                     className="mt-5 px-5 py-2.5 rounded-full msg-accent-btn text-white text-sm font-semibold hover:brightness-110 active:scale-95 transition shadow-sm cursor-pointer"
-                 >
-                     New Message
-                 </button>
              </div>
          ) : (
              <>
-                 {/* Redesigned Sticky Frosted Inbox Header */}
-                 <div className="msg-inbox-header backdrop-blur-xl px-3 sm:px-5 py-3 flex items-center justify-between shrink-0 z-20 gap-3 border-b">
+                 {/* Active Chat / DM Header matching IMG_5359 right: < Back | 44px Avatar + Name + "Online" | Video + Voice */}
+                 <div className="msg-inbox-header px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between shrink-0 z-20 gap-3">
                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                         <button 
+                         <button
                            type="button"
                            onClick={() => setSearchParams({}, { replace: true })}
-                           className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-zinc-700 dark:text-zinc-200 active:scale-95 transition shrink-0 cursor-pointer"
-                           title="Back to Conversations"
+                           className="md:hidden w-9 h-9 -ml-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-zinc-900 dark:text-zinc-100 active:scale-95 transition shrink-0 cursor-pointer"
+                           title="Back to Messages"
                          >
-                             <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+                             <MsgBackChevronIcon className="w-[22px] h-[22px]" />
                          </button>
-                         
-                         <div 
-                           className="relative w-10 h-10 rounded-full shrink-0 cursor-pointer"
+
+                         <div
+                           className="relative w-11 h-11 rounded-full shrink-0 cursor-pointer"
                            onClick={() => {
                                 if (activeChat?.isGroup || activeChat?.type === 'group') {
                                     setShowGroupDetailsModal(true);
@@ -6472,63 +6991,60 @@ const handleCreateChannel = async () => {
                                 }
                             }}
                          >
-                             <div className="w-full h-full rounded-full overflow-hidden ring-1 ring-black/8 dark:ring-white/10 bg-zinc-100 dark:bg-zinc-800">
+                             <div className="w-full h-full rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                                  {activeChat?.otherUser?.photoURL ? (
                                      <img src={activeChat?.otherUser?.photoURL} alt={activeChat?.otherUser?.displayName} className="w-full h-full object-cover" />
                                  ) : (
-                                     <div className="w-full h-full flex items-center justify-center bg-[#1877F2]/12 text-[#1877F2] font-semibold text-sm">
-                                         {(activeChat?.otherUser?.displayName || activeChat?.otherUser?.shopName || 'U')[0].toUpperCase()}
+                                     <div className="w-full h-full flex items-center justify-center bg-[#2F80ED]/12 text-[#2F80ED] font-semibold text-sm">
+                                         {(getChatDisplayName(activeChat) || 'U')[0].toUpperCase()}
                                      </div>
                                  )}
                              </div>
-                             {!(activeChat?.isGroup || activeChat?.type === 'group') && otherUserPresence?.isOnline && (
-                                 <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111217]" />
-                             )}
                          </div>
-                         
-                         <div className="min-w-0 flex flex-col justify-center flex-1">
-                             <h3 
-                               className="font-bold text-[15px] sm:text-[15.5px] text-zinc-950 dark:text-white truncate cursor-pointer flex items-center gap-1.5 leading-tight group" 
-                               onClick={() => {
+
+                         <div
+                           className="min-w-0 flex flex-col justify-center flex-1 cursor-pointer"
+                           onClick={() => {
                                 if (activeChat?.isGroup || activeChat?.type === 'group') {
                                     setShowGroupDetailsModal(true);
                                 } else {
                                     setShowUserInfoModal(true);
                                 }
                             }}
-                             >
+                         >
+                             <h3 className="font-bold text-[16px] text-zinc-950 dark:text-white truncate flex items-center gap-1.5 leading-tight">
                                  <span className="truncate">{getChatDisplayName(activeChat)}</span>
                                  {(activeChat?.otherUser?.kycStatus === "verified" || activeChat?.otherUser?.verified) && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                              </h3>
                              <div className="flex items-center gap-1.5 truncate mt-0.5">
                                   {activeChat?.isGroup || activeChat?.type === 'group' ? (
-                                      <p className="text-[12px] text-zinc-500 dark:text-zinc-400 truncate">
+                                      <p className="text-[12.5px] text-zinc-400 dark:text-zinc-400 truncate">
                                           {otherActivity ? "Someone is typing..." : `${activeChat?.participants?.length || 2} members`}
                                       </p>
                                   ) : otherActivity === 'typing' ? (
-                                     <p className="text-[12px] font-medium text-[#1877F2] truncate">
+                                     <p className="text-[12.5px] font-medium text-[#2F80ED] truncate">
                                          typing...
                                      </p>
                                  ) : otherActivity === 'recording' ? (
-                                     <p className="text-[12px] font-medium text-rose-500 flex items-center gap-1 truncate">
+                                     <p className="text-[12.5px] font-medium text-rose-500 flex items-center gap-1 truncate">
                                          <Mic className="w-3 h-3 text-rose-500 shrink-0" />
                                          <span>recording voice...</span>
                                      </p>
                                  ) : otherActivity === 'uploading_photo' ? (
-                                     <p className="text-[12px] font-medium text-[#1877F2] flex items-center gap-1 truncate">
+                                     <p className="text-[12.5px] font-medium text-[#2F80ED] flex items-center gap-1 truncate">
                                          <ImageIcon className="w-3 h-3 shrink-0" />
                                          <span>sending photo...</span>
                                      </p>
                                  ) : otherActivity === 'choosing_gif' ? (
-                                     <p className="text-[12px] font-medium text-[#1877F2] truncate">
+                                     <p className="text-[12.5px] font-medium text-[#2F80ED] truncate">
                                          choosing a GIF...
                                      </p>
                                  ) : otherUserPresence?.isOnline ? (
-                                     <p className="text-[12px] font-medium text-emerald-600 dark:text-emerald-400 truncate">
-                                         Active now
+                                     <p className="text-[12.5px] text-zinc-400 dark:text-zinc-400 truncate">
+                                         Online
                                      </p>
                                  ) : (
-                                     <p className="text-[12px] text-zinc-500 dark:text-zinc-400 truncate">
+                                     <p className="text-[12.5px] text-zinc-400 dark:text-zinc-400 truncate">
                                          {getLastActiveText(otherUserPresence)}
                                      </p>
                                  )}
@@ -6545,176 +7061,34 @@ const handleCreateChannel = async () => {
                           </div>
                      </div>
 
-                     {/* Header Call, Search & Options Actions */}
-                     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 relative">
-                         <button 
+                     {/* Header Actions matching IMG_5359 right 1:1: Video Call + Voice Call */}
+                     <div className="flex items-center gap-2 shrink-0 relative">
+                         <button
                            type="button"
-                           onClick={() => startCall('audio')} 
-                           className="w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-200 flex items-center justify-center transition active:scale-95 cursor-pointer" 
-                           title="Audio Call"
-                         >
-                             <Phone className="w-4.5 h-4.5 stroke-[2]" />
-                         </button>
-
-                         <button 
-                           type="button"
-                           onClick={() => startCall('video')} 
-                           className="w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-200 flex items-center justify-center transition active:scale-95 cursor-pointer" 
+                           onClick={() => startCall('video')}
+                           className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-900 dark:text-zinc-100 flex items-center justify-center transition active:scale-95 cursor-pointer"
                            title="Video Call"
+                           aria-label="Video Call"
                          >
-                             <Video className="w-4.5 h-4.5 stroke-[2]" />
+                             <MsgVideoCallIcon className="w-[23px] h-[23px]" />
                          </button>
 
-                         <button 
+                         <button
                            type="button"
-                           onClick={() => setShowP2pSearch(!showP2pSearch)} 
-                           className={cn(
-                             "hidden sm:flex w-10 h-10 rounded-full items-center justify-center transition active:scale-95 cursor-pointer",
-                             showP2pSearch
-                               ? "msg-accent-btn text-white"
-                               : "hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-700 dark:text-zinc-200"
-                           )}
-                           title="Search in conversation"
+                           onClick={() => startCall('audio')}
+                           className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-900 dark:text-zinc-100 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                           title="Voice Call"
+                           aria-label="Voice Call"
                          >
-                             <Search className="w-4.5 h-4.5 stroke-[2]" />
+                             <MsgPhoneCallIcon className="w-[21px] h-[21px]" />
                          </button>
-
-                         <button 
-                           type="button"
-                           onClick={() => setShowPrivateChatMenu(!showPrivateChatMenu)} 
-                           className="w-9 h-9 sm:w-10 sm:h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-zinc-700 dark:text-zinc-200 active:scale-95 transition shrink-0 cursor-pointer" 
-                           title="Conversation menu"
-                         >
-                             <MoreHorizontal className="w-5 h-5" />
-                         </button>
-
-                         <AnimatePresence>
-                           {showPrivateChatMenu && (
-                             <>
-                               <div className="fixed inset-0 z-40" onClick={() => setShowPrivateChatMenu(false)} />
-                               <motion.div 
-                                 initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                 exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                                 className="absolute right-0 top-12 w-52 bg-white dark:bg-[#1A1C24] border border-zinc-200/90 dark:border-zinc-800 shadow-2xl rounded-2xl p-1.5 z-50 text-left"
-                               >
-                                 <button 
-                                   type="button"
-                                   onClick={() => {
-                                     setShowPrivateChatMenu(false);
-                                     const isCurrentlyMuted = localStorage.getItem(`chat_muted_${activeChat?.id}`) === 'true';
-                                     localStorage.setItem(`chat_muted_${activeChat?.id}`, (!isCurrentlyMuted).toString());
-                                     notify(isCurrentlyMuted ? "Chat unmuted" : "Chat muted", "info");
-                                   }}
-                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer"
-                                 >
-                                   <VolumeX className="w-4 h-4 text-zinc-400" />
-                                   <span>{localStorage.getItem(`chat_muted_${activeChat?.id}`) === 'true' ? 'Unmute Notifications' : 'Mute Notifications'}</span>
-                                 </button>
-
-                                 <button 
-                                   type="button"
-                                   onClick={() => {
-                                     setShowPrivateChatMenu(false);
-                                     setShowThemeModal(true);
-                                   }}
-                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer"
-                                 >
-                                   <Sparkles className="w-4 h-4 text-zinc-400" />
-                                   <span>Chat Theme</span>
-                                 </button>
-
-                                 <button 
-                                   type="button"
-                                   onClick={() => {
-                                     setShowPrivateChatMenu(false);
-                                     setShowP2pSearch(!showP2pSearch);
-                                   }}
-                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer"
-                                 >
-                                   <Search className="w-4 h-4 text-zinc-400" />
-                                   <span>Search Messages</span>
-                                 </button>
-
-                                 <button 
-                                   type="button"
-                                   onClick={() => {
-                                     setShowPrivateChatMenu(false);
-                                     setShowWallpaperModal(true);
-                                   }}
-                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition-colors cursor-pointer"
-                                 >
-                                   <ImageIcon className="w-4 h-4 text-zinc-400" />
-                                   <span>Change Wallpaper</span>
-                                 </button>
-
-                                 <div className="border-t border-zinc-100 dark:border-zinc-800 my-1" />
-
-                                 <button 
-                                   type="button"
-                                   onClick={() => {
-                                     setShowPrivateChatMenu(false);
-                                     setShowClearChatModal(true);
-                                   }}
-                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-xl transition-colors cursor-pointer"
-                                 >
-                                   <Clock className="w-4 h-4" />
-                                   <span>Clear History</span>
-                                 </button>
-
-                                 <button 
-                                   type="button"
-                                   onClick={() => {
-                                     setShowPrivateChatMenu(false);
-                                     setShowClearChatModal(true);
-                                   }}
-                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-colors cursor-pointer"
-                                 >
-                                   <Trash2 className="w-4 h-4" />
-                                   <span>Delete Chat</span>
-                                 </button>
-                               </motion.div>
-                             </>
-                           )}
-                         </AnimatePresence>
                      </div>
                  </div>
 
-                 {/* Direct Messages Safety Warning Banner */}
-                 {!safetyNoticeDismissed && (
-                   <div className="mx-3 sm:mx-5 mt-2.5 p-3 bg-amber-500/10 dark:bg-amber-500/12 border border-amber-500/25 rounded-2xl flex items-center justify-between gap-3 text-left shrink-0">
-                     <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                       <div className="p-1.5 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5">
-                         <ShieldAlert className="w-4 h-4" />
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <h5 className="font-semibold text-xs text-amber-900 dark:text-amber-300">
-                           নিরাপত্তা সতর্কতা ও লেনদেন নির্দেশিকা
-                         </h5>
-                         <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80 mt-0.5 leading-relaxed">
-                           গ্রুপে বা কারো পার্সোনাল ইনবক্সে অগ্রিম টাকা লেনদেন করার ক্ষেত্রে নিজ দায়িত্বে করবেন। প্ল্যাটফর্মের অফিশিয়াল চেকআউট ছাড়া যেকোনো ব্যক্তিগত লেনদেনের জন্য DEEP SHOP কর্তৃপক্ষ কোনোভাবেই দায়ী থাকবে না।
-                         </p>
-                       </div>
-                     </div>
-                     <button 
-                       type="button" 
-                       onClick={() => {
-                         localStorage.setItem('deepshop_safety_notice_dismissed', 'true');
-                         setSafetyNoticeDismissed(true);
-                       }}
-                       className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-[11px] shrink-0 self-center transition active:scale-95 flex items-center gap-1 cursor-pointer"
-                       title="Dismiss Safety Notice"
-                     >
-                       <span>বুঝেছি</span>
-                       <X className="w-3 h-3" />
-                     </button>
-                   </div>
-                 )}
-
                  {showP2pSearch && (
-                   <div className="msg-inbox-header px-4 py-2.5 border-b flex items-center gap-2.5 shrink-0 z-10">
-                     <Search className="w-4 h-4 text-zinc-400 shrink-0" />
-                     <input 
+                   <div className="msg-inbox-header px-4 py-2.5 border-b border-zinc-100 dark:border-white/[0.06] flex items-center gap-2.5 shrink-0 z-10">
+                     <MsgSearchIcon className="w-4 h-4 text-zinc-400 shrink-0" />
+                     <input
                        type="text"
                        placeholder="Find messages in this chat..."
                        value={p2pSearchQuery}
@@ -6724,67 +7098,26 @@ const handleCreateChannel = async () => {
                      />
                      {p2pSearchQuery && (
                        <button type="button" onClick={() => setP2pSearchQuery('')} className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-zinc-400 cursor-pointer">
-                         <X className="w-3.5 h-3.5" />
+                         <MsgCloseIcon className="w-3.5 h-3.5" />
                        </button>
                      )}
-                     <button 
+                     <button
                        type="button"
-                       onClick={() => { setShowP2pSearch(false); setP2pSearchQuery(''); }} 
-                       className="text-xs font-semibold text-[#1877F2] px-2.5 py-1 hover:bg-[#1877F2]/10 rounded-lg transition cursor-pointer"
+                       onClick={() => { setShowP2pSearch(false); setP2pSearchQuery(''); }}
+                       className="text-xs font-semibold text-[#2F80ED] px-2.5 py-1 hover:bg-[#2F80ED]/10 rounded-lg transition cursor-pointer"
                      >
                        Done
                      </button>
                    </div>
                  )}
 
-                 <div className={cn("flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-2.5 transition-colors", activeTheme?.id && activeTheme.id !== 'default' ? activeTheme.bgClass : 'msg-stream-default')}>
-                  {messages.length === 0 && !isTrustLoading && (() => {
-                    const emailLower = activeChat?.otherUser?.email?.toLowerCase().trim();
-                    const isDeepShopUser = emailLower === 'deepshop@gmail.com' || emailLower === 'deepshopbysam@gmail.com' || activeChat?.otherUser?.id === 'system';
-                    
-                    if (isDeepShopUser) {
-                      return (
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3 flex items-start gap-3 shrink-0 z-10">
-                          <Icon name="check-circle" className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-xs text-emerald-700 dark:text-emerald-400">Official Verified Support</p>
-                            <p className="text-[11.5px] text-zinc-600 dark:text-zinc-300 leading-relaxed mt-0.5">
-                              Official verified merchant account of Deep Shop.
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    }
-                    
-                    return (!otherUserTrust || otherUserTrust.count === 0 || otherUserTrust.hasScamWarning) ? (
-                      <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl px-4 py-3 flex items-start gap-3 shrink-0 z-10">
-                        <Icon name="alert-circle" className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-xs text-rose-600 dark:text-rose-400">Low Review History — Stay Cautious</p>
-                          <p className="text-[11.5px] text-zinc-600 dark:text-zinc-300 leading-relaxed mt-0.5">
-                            This account has few or zero verified reviews. Avoid sending advance payments outside official checkout.
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-4 py-3 flex items-start gap-3 shrink-0 z-10">
-                        <Icon name="check-circle" className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-xs text-emerald-700 dark:text-emerald-400">Positive Seller Reputation</p>
-                          <p className="text-[11.5px] text-zinc-600 dark:text-zinc-300 leading-relaxed mt-0.5">
-                            Rated {otherUserTrust.avgRating}★ across {otherUserTrust.count} buyer reviews.
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
+                 <div className={cn("flex-1 overflow-y-auto px-4 sm:px-6 py-3 transition-colors", activeTheme?.id && activeTheme.id !== 'default' ? activeTheme.bgClass : 'msg-stream-default')}>
                   {messages.length === 0 && (
                     <EmptyChatState otherUser={activeChat?.otherUser} />
                   )}
 
                   {activeChat?.pinnedMessage && (
-                    <div className="msg-sidebar border rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-xs shrink-0 z-10 shadow-xs">
+                    <div className="msg-sidebar border rounded-2xl px-3.5 py-2.5 mb-3 flex items-center justify-between text-xs shrink-0 z-10 shadow-xs">
                       <div className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1" onClick={() => {
                         const targetMsg = messages.find(m => m.id === activeChat?.pinnedMessage.id);
                         if (targetMsg) {
@@ -6794,34 +7127,17 @@ const handleCreateChannel = async () => {
                           notify(`Pinned: ${activeChat?.pinnedMessage.text}`, "info");
                         }
                       }}>
-                        <Pin className="w-3.5 h-3.5 text-[#1877F2] rotate-45 shrink-0" />
+                        <Pin className="w-3.5 h-3.5 text-[#2F80ED] rotate-45 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-semibold text-[11px] text-[#1877F2]">Pinned message</p>
+                          <p className="font-semibold text-[11px] text-[#2F80ED]">Pinned message</p>
                           <p className="text-zinc-600 dark:text-zinc-300 truncate max-w-full mt-0.5">
                             {activeChat?.pinnedMessage.text || "Attachment"}
                           </p>
                         </div>
                       </div>
                       <button type="button" onClick={(e) => { e.stopPropagation(); handleUnpinMessageP2P(); }} className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition text-zinc-400 shrink-0 ml-2 cursor-pointer">
-                        <X className="w-3.5 h-3.5" />
+                        <MsgCloseIcon className="w-3.5 h-3.5" />
                       </button>
-                    </div>
-                  )}
-
-                  {/* Group Chat Safety Notice */}
-                  {(activeChat?.isGroup || activeChat?.type === 'group') && (
-                    <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3.5 mb-2 flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                        <AlertCircle className="w-4.5 h-4.5 text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-xs text-amber-800 dark:text-amber-300">
-                          লেনদেন ও নিরাপত্তা সতর্কবার্তা
-                        </p>
-                        <p className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-relaxed mt-0.5">
-                          গ্রুপের কোনো মেম্বার বা ইউজারের ইনবক্সে ব্যক্তিগতভাবে অগ্রিম টাকা লেনদেন করলে নিজ দায়িত্বে করবেন। নিরাপদ থাকতে সবসময় অ্যাপের মাধ্যমে অফিসিয়াল অর্ডার করুন।
-                        </p>
-                      </div>
                     </div>
                   )}
 
@@ -6834,7 +7150,6 @@ const handleCreateChannel = async () => {
                          const nextMsg = filteredMessages[idx + 1];
                          const isLastInCluster = !nextMsg || nextMsg.senderId !== msg.senderId || formatDateSeparator(nextMsg.timestamp) !== formatDateSeparator(msg.timestamp);
                          const isSystem = !!msg.systemType;
-                         const isMenuOpen = activeMessageMenuId === msg.id;
                          const reactionEntries = Object.entries(msg.reactions || {});
                          const hasMedia = Boolean((msg.images && msg.images.length > 0) || msg.imageUrl);
                          const isMediaOnly = Boolean(hasMedia && !msg.text && !msg.replyTo && !msg.audioUrl);
@@ -6847,26 +7162,26 @@ const handleCreateChannel = async () => {
                                 <React.Fragment key={`${msg.id || idx}-${idx}`}>
                                     {showDate && (
                                         <div className="flex justify-center my-4 select-none">
-                                            <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">
+                                            <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500">
                                                 {formatDateSeparator(msg.timestamp)}
                                             </span>
                                         </div>
                                     )}
-                                    <div className={`flex w-full mb-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`flex w-full mb-2.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
                                      <div className={`flex max-w-[82%] sm:max-w-[70%] items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                                         {!isMe && (
+                                         {isGroupChat && !isMe && (
                                              <div className="w-7 h-7 shrink-0 rounded-full overflow-hidden">
                                                  {isLastInCluster ? (
-                                                     senderPhoto ? 
+                                                     senderPhoto ?
                                                          <img src={senderPhoto} alt="Avatar" className="w-full h-full object-cover rounded-full" /> :
-                                                         <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-[#1877F2] bg-[#1877F2]/12 rounded-full">
+                                                         <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-[#2F80ED] bg-[#2F80ED]/12 rounded-full">
                                                              {(senderName || 'U')[0].toUpperCase()}
                                                          </div>
                                                  ) : null}
                                              </div>
                                          )}
-                                         <div className="px-3.5 py-2 text-[13.5px] rounded-[20px] border border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 italic flex items-center gap-1.5">
-                                             <Trash className="w-3.5 h-3.5 shrink-0" />
+                                         <div className="px-4 py-2.5 text-[13.5px] rounded-[18px] border border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 italic flex items-center gap-1.5">
+                                             <MsgTrashIcon className="w-3.5 h-3.5 shrink-0" />
                                              <span>Message unsent</span>
                                          </div>
                                      </div>
@@ -6880,7 +7195,7 @@ const handleCreateChannel = async () => {
                                  <React.Fragment key={`${msg.id || idx}-${idx}`}>
                                      {showDate && (
                                          <div className="flex justify-center my-4 select-none">
-                                             <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">
+                                             <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500">
                                                  {formatDateSeparator(msg.timestamp)}
                                              </span>
                                          </div>
@@ -6895,33 +7210,30 @@ const handleCreateChannel = async () => {
                          return (
                              <React.Fragment key={`${msg.id || idx}-${idx}`}>
                                  {showDate && (
-                                     <div className="flex items-center justify-center gap-3 my-5 select-none">
-                                         <div className="h-px w-10 bg-zinc-200/80 dark:bg-white/[0.06]" />
-                                         <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500 tabular-nums">
+                                     <div className="flex items-center justify-center my-4 select-none">
+                                         <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500 tabular-nums">
                                              {formatDateSeparator(msg.timestamp)}
                                          </span>
-                                         <div className="h-px w-10 bg-zinc-200/80 dark:bg-white/[0.06]" />
                                      </div>
                                  )}
 
-                                 <div 
-                                     id={`msg-${msg.id}`} 
+                                 <div
+                                     id={`msg-${msg.id}`}
                                      className={cn(
-                                         `flex items-end gap-2.5 ${isMe ? 'justify-end' : 'justify-start'} relative group transition-all duration-300 rounded-2xl py-0.5`,
-                                         reactionEntries.length > 0 ? "mb-3.5" : "mb-0.5",
-                                         highlightedMessageId === msg.id && "bg-[#1877F2]/10 ring-1 ring-[#1877F2]/40 px-2 py-1.5"
-                                     )} 
-                                     onClick={() => setActiveMessageMenuId(null)}
+                                         `flex items-end gap-2.5 ${isMe ? 'justify-end' : 'justify-start'} relative group transition-all duration-300 rounded-2xl`,
+                                         reactionEntries.length > 0 ? "mb-5" : isLastInCluster ? "mb-3" : "mb-1.5",
+                                         highlightedMessageId === msg.id && "bg-[#2F80ED]/10 ring-1 ring-[#2F80ED]/40 px-2 py-1.5"
+                                     )}
                                  >
-                                     {/* Sender Avatar (Bottom-aligned on last message in cluster) */}
-                                     {!isMe && (
-                                         <div className="w-7 h-7 shrink-0 self-end mb-4">
+                                     {/* Sender Avatar ONLY in Multi-member Group Chats (1-on-1 DMs align cleanly to left margin like IMG_5359 right) */}
+                                     {isGroupChat && !isMe && (
+                                         <div className="w-7 h-7 shrink-0 self-end">
                                              {isLastInCluster ? (
-                                                 <div className="w-7 h-7 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 ring-1 ring-black/6 dark:ring-white/10">
+                                                 <div className="w-7 h-7 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
                                                      {senderPhoto ? (
                                                          <img src={senderPhoto} alt={senderName} className="w-full h-full object-cover" />
                                                      ) : (
-                                                         <div className="w-full h-full flex items-center justify-center font-semibold text-[11px] bg-[#1877F2]/12 text-[#1877F2]">
+                                                         <div className="w-full h-full flex items-center justify-center font-semibold text-[11px] bg-[#2F80ED]/12 text-[#2F80ED]">
                                                              {(senderName || "U")[0].toUpperCase()}
                                                          </div>
                                                      )}
@@ -6929,8 +7241,8 @@ const handleCreateChannel = async () => {
                                              ) : null}
                                          </div>
                                      )}
-                                  
-                                     <div className={`max-w-[78%] sm:max-w-[68%] ${isMe ? 'items-end' : 'items-start'} flex flex-col relative`}>
+
+                                     <div className={`max-w-[78%] sm:max-w-[66%] ${isMe ? 'items-end' : 'items-start'} flex flex-col relative`}>
                                          {/* Group Chat Sender Label */}
                                          {isGroupChat && !isMe && (idx === 0 || filteredMessages[idx - 1]?.senderId !== msg.senderId) && (
                                            <div className="flex items-center gap-1.5 mb-1 px-1">
@@ -6947,14 +7259,14 @@ const handleCreateChannel = async () => {
 
                                          {/* Forwarded Label */}
                                          {msg.forwardedFrom && (
-                                           <div className="flex items-center gap-1 text-[10.5px] text-zinc-400 dark:text-zinc-500 font-medium mb-1 px-1">
-                                             <Forward className="w-3 h-3" />
+                                           <div className="flex items-center gap-1 text-[11px] text-zinc-400 dark:text-zinc-500 font-medium mb-1 px-1">
+                                             <MsgForwardIcon className="w-3.5 h-3.5" />
                                              <span>Forwarded from {msg.forwardedFrom}</span>
                                            </div>
                                          )}
 
                                          <div className={cn("flex items-center gap-1.5 group/msg relative", isMe ? "flex-row" : "flex-row-reverse")}>
-                                           {/* Hover Quick Action Buttons (Reply & Forward) */}
+                                           {/* Desktop Hover Quick Action Buttons (Reply & More/Hold Popup) */}
                                            <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity shrink-0">
                                              <button
                                                type="button"
@@ -6972,48 +7284,43 @@ const handleCreateChannel = async () => {
                                                className="w-7 h-7 rounded-full hover:bg-black/6 dark:hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition cursor-pointer"
                                                title="Reply"
                                              >
-                                               <CornerUpLeft className="w-3.5 h-3.5" />
+                                               <MsgReplyIcon className="w-4 h-4" />
                                              </button>
-                                             {hasMedia && (
-                                               <button
-                                                 type="button"
-                                                 onClick={(e) => {
-                                                   e.stopPropagation();
-                                                   setForwardingMessage(msg);
-                                                   setShowForwardModal(true);
-                                                 }}
-                                                 className="w-7 h-7 rounded-full hover:bg-black/6 dark:hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition cursor-pointer"
-                                                 title="Forward"
-                                               >
-                                                 <Forward className="w-3.5 h-3.5" />
-                                               </button>
-                                             )}
+                                             <button
+                                               type="button"
+                                               onClick={(e) => {
+                                                 e.stopPropagation();
+                                                 triggerOpenMsgHoldPopup(msg.id);
+                                               }}
+                                               className="w-7 h-7 rounded-full hover:bg-black/6 dark:hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition cursor-pointer"
+                                               title="Message options"
+                                             >
+                                               <MsgDotsHorizontalIcon className="w-4 h-4" />
+                                             </button>
                                            </div>
 
-                                           {/* Redesigned Message Bubble */}
-                                           <div 
+                                           {/* Redesigned Message Bubble matching IMG_5359 right 1:1 (Hold on mobile or Right-Click on desktop opens MessageHoldPopup) */}
+                                           <div
+                                               {...getMsgHoldHandlers(msg.id)}
                                                onDoubleClick={(e) => { e.stopPropagation(); handleReactToMessage(msg.id, '❤️'); }}
-                                               onClick={(e) => { e.stopPropagation(); setActiveMessageMenuId(isMenuOpen ? null : msg.id); }}
+                                               title={formatTime12h(msg.timestamp)}
                                                className={cn(
-                                                 "cursor-pointer select-none relative flex flex-col max-w-[330px] sm:max-w-[380px] transition-all",
+                                                 "select-none relative flex flex-col max-w-[330px] sm:max-w-[390px] transition-all",
                                                  isEmojiOnly
                                                    ? "bg-transparent shadow-none p-0.5"
                                                    : isMediaOnly
                                                    ? "bg-transparent shadow-none p-0"
                                                    : privacySettings.minimalistBubbles
-                                                   ? cn(
-                                                       "px-3.5 py-2.5 rounded-[22px] border border-zinc-200 dark:border-zinc-700 bg-white/70 dark:bg-white/[0.04] text-zinc-900 dark:text-zinc-100",
-                                                       isMe ? "rounded-br-[6px]" : "rounded-bl-[6px]"
-                                                     )
+                                                   ? "px-4 py-3 rounded-[18px] border border-zinc-200 dark:border-zinc-700 bg-white/70 dark:bg-white/[0.04] text-zinc-900 dark:text-zinc-100"
                                                    : isMe
                                                    ? cn(
-                                                       hasMedia ? "p-1.5" : "px-4 py-2.5",
-                                                       "rounded-[22px] rounded-br-[6px] shadow-[0_2px_8px_rgba(24,119,242,0.18)]",
+                                                       hasMedia ? "p-1.5" : "px-4 py-3",
+                                                       "rounded-[18px]",
                                                        isCustomTheme ? activeTheme.bubbleClass : "msg-bubble-sent"
                                                      )
                                                    : cn(
-                                                       hasMedia ? "p-1.5" : "px-4 py-2.5",
-                                                       "msg-bubble-received rounded-[22px] rounded-bl-[6px] shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+                                                       hasMedia ? "p-1.5" : "px-4 py-3",
+                                                       "msg-bubble-received rounded-[18px]"
                                                      )
                                                )}
                                            >
@@ -7035,11 +7342,11 @@ const handleCreateChannel = async () => {
                                               {/* Voice Message */}
                                               {msg.audioUrl && (
                                                   <div className={cn("px-1 py-1", msg.text ? "mb-1" : "")}>
-                                                      <VoiceMessageBubble 
-                                                          audioSrc={msg.audioUrl} 
-                                                          duration={msg.audioDuration || 15} 
+                                                      <VoiceMessageBubble
+                                                          audioSrc={msg.audioUrl}
+                                                          duration={msg.audioDuration || 15}
                                                           isMe={isMe && !privacySettings.minimalistBubbles}
-                                                          waveColor={isMe && !privacySettings.minimalistBubbles ? '#ffffff' : '#1877F2'}
+                                                          waveColor={isMe && !privacySettings.minimalistBubbles ? '#ffffff' : '#2F80ED'}
                                                           autoPlay={currentlyPlayingVoiceId === msg.id}
                                                           onEnded={() => {
                                                               if (privacySettings.autoPlayVoice) {
@@ -7074,15 +7381,15 @@ const handleCreateChannel = async () => {
                                                   />
                                                 </div>
                                               )}
-                                            
+
                                               {/* Text & Link Preview */}
                                               {msg.text && (
                                                  <div className={cn(hasMedia ? "px-2.5 pb-1.5 pt-0.5" : "")}>
                                                     <p className={cn(
-                                                        "leading-[1.45] whitespace-pre-wrap break-words",
+                                                        "leading-[1.48] whitespace-pre-wrap break-words",
                                                         isEmojiOnly ? "text-5xl ios-emoji leading-none" : "text-[14.5px]",
                                                         privacySettings.highContrastFonts && !isEmojiOnly
-                                                          ? "font-bold" 
+                                                          ? "font-bold"
                                                           : "font-normal"
                                                     )}>
                                                         {renderTextWithLinks(msg.text, isMe && !privacySettings.minimalistBubbles)}
@@ -7093,12 +7400,12 @@ const handleCreateChannel = async () => {
 
                                               {/* Floating Reaction Badge */}
                                               {reactionEntries.length > 0 && (
-                                                  <div 
+                                                  <div
                                                       className={cn(
                                                           "absolute -bottom-3 flex items-center gap-1 bg-white dark:bg-[#232530] border border-zinc-200/90 dark:border-white/10 shadow-sm rounded-full px-2 py-0.5 z-10 hover:scale-105 transition cursor-pointer",
                                                           isMe ? "right-2" : "left-2"
                                                       )}
-                                                      onClick={(e) => { e.stopPropagation(); setActiveMessageMenuId(msg.id); }}
+                                                      onClick={(e) => { e.stopPropagation(); triggerOpenMsgHoldPopup(msg.id); }}
                                                   >
                                                       {Array.from(new Set(reactionEntries.map(([, emoji]) => emoji))).map((emoji: any, emIdx: number) => (
                                                           <span key={`dm-react-${emoji}-${emIdx}`} className="text-[12px] leading-none">{emoji}</span>
@@ -7111,24 +7418,19 @@ const handleCreateChannel = async () => {
                                            </div>
                                          </div>
 
-                                         {/* Subtle Timestamp & Read Receipt Row */}
-                                         {!privacySettings.minimalistBubbles && isLastInCluster && (
+                                         {/* Quiet Read Receipt on Final Outgoing Message Only (Keeps bubble stream clean like IMG_5359 right) */}
+                                         {!privacySettings.minimalistBubbles && isMe && idx === filteredMessages.length - 1 && (
                                              <div className={cn(
-                                                 "flex items-center gap-1.5 px-1 select-none",
+                                                 "flex items-center gap-1 px-1 select-none",
                                                  reactionEntries.length > 0 ? "mt-3.5" : "mt-1"
                                              )}>
-                                                 <span className="text-[10.5px] text-zinc-400 dark:text-zinc-500 tabular-nums">
-                                                     {formatTime12h(msg.timestamp)}
+                                                 <span className={cn(
+                                                     "inline-flex items-center gap-1 text-[11px] font-medium",
+                                                     isSeenByOther ? "text-[#2F80ED]" : "text-zinc-400 dark:text-zinc-500"
+                                                 )}>
+                                                     <MsgCheckDoubleIcon className="w-3.5 h-3.5" />
+                                                     <span>{isSeenByOther ? "Seen" : (otherUserPresence?.isOnline ? "Delivered" : "Sent")}</span>
                                                  </span>
-                                                 {isMe && idx === filteredMessages.length - 1 && (
-                                                     <span className={cn(
-                                                         "inline-flex items-center gap-0.5 text-[10.5px] font-medium",
-                                                         isSeenByOther ? "text-[#1877F2]" : "text-zinc-400 dark:text-zinc-500"
-                                                     )}>
-                                                         <CheckCheck className="w-3.5 h-3.5" />
-                                                         <span>{isSeenByOther ? "Seen" : (otherUserPresence?.isOnline ? "Delivered" : "Sent")}</span>
-                                                     </span>
-                                                 )}
                                              </div>
                                          )}
                                      </div>
@@ -7138,12 +7440,12 @@ const handleCreateChannel = async () => {
                      })}
                      {!hasReviewed && activeChat?.otherUser?.id && activeChat?.otherUser?.id !== "system" && (!reviewDismissedAt || (Date.now() - reviewDismissedAt >= 24 * 60 * 60 * 1000)) && (messages.length >= 4 || (messages.length > 0 && (Date.now() - messages[messages.length - 1].timestamp) > 3600000)) && (
                        <div className="flex justify-center my-6">
-                         <div 
-                           className="msg-sidebar border rounded-2xl p-4 max-w-sm w-full text-center shadow-sm hover:shadow-md transition cursor-pointer relative" 
+                         <div
+                           className="msg-sidebar border rounded-2xl p-4 max-w-sm w-full text-center shadow-sm hover:shadow-md transition cursor-pointer relative"
                            onClick={() => { setShowReviewModal(true); }}
                          >
-                           <button 
-                             type="button" 
+                           <button
+                             type="button"
                              onClick={(e) => {
                                e.stopPropagation();
                                const now = Date.now();
@@ -7153,7 +7455,7 @@ const handleCreateChannel = async () => {
                              className="absolute top-2.5 right-2.5 p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition cursor-pointer"
                              title="Dismiss for 24h"
                            >
-                             <X className="w-3.5 h-3.5" />
+                             <MsgCloseIcon className="w-3.5 h-3.5" />
                            </button>
                            <div className="flex items-center justify-center gap-1 mb-2 text-amber-500">
                              <Star className="w-4 h-4 fill-amber-500" />
@@ -7181,18 +7483,18 @@ const handleCreateChannel = async () => {
                      <div ref={messagesEndRef} />
                  </div>
 
-                 {/* Redesigned Composer Dock & Clean Replying-To Banner */}
-                 <div className="msg-composer-dock backdrop-blur-xl border-t px-3 sm:px-5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom,12px))] shrink-0 z-20 transition-all">
+                 {/* Clean Borderless Composer Dock & Replying-To Banner */}
+                 <div className="msg-composer-dock px-3.5 sm:px-6 pt-2 pb-[max(0.85rem,env(safe-area-inset-bottom,14px))] shrink-0 z-20 transition-all">
                      <AnimatePresence>
                          {replyingTo && (
-                             <motion.div 
-                                 initial={{ opacity: 0, y: 8 }} 
-                                 animate={{ opacity: 1, y: 0 }} 
-                                 exit={{ opacity: 0, y: 8 }} 
+                             <motion.div
+                                 initial={{ opacity: 0, y: 8 }}
+                                 animate={{ opacity: 1, y: 0 }}
+                                 exit={{ opacity: 0, y: 8 }}
                                  className="mb-2 px-3.5 py-2.5 msg-composer-capsule border rounded-2xl flex items-center justify-between gap-3 text-left w-full min-w-0 overflow-hidden"
                              >
-                                 <div className="w-7 h-7 rounded-full bg-[#1877F2]/12 text-[#1877F2] flex items-center justify-center shrink-0">
-                                     <CornerUpLeft className="w-3.5 h-3.5" />
+                                 <div className="w-7 h-7 rounded-full bg-[#2F80ED]/12 text-[#2F80ED] flex items-center justify-center shrink-0">
+                                     <MsgReplyIcon className="w-4 h-4" />
                                  </div>
                                  <div className="flex-1 min-w-0 overflow-hidden">
                                      <p className="text-[11.5px] font-semibold text-[#1877F2] truncate">
@@ -7340,266 +7642,106 @@ const handleCreateChannel = async () => {
         )}
       </AnimatePresence>
 
-      {/* Message Options Modal */}
-      <AnimatePresence>
-        {activeMessageMenuId !== null && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:p-4" onClick={() => setActiveMessageMenuId(null)}>
-            <motion.div
-              initial={{ opacity: 0, y: "100%" }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: "100%" }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-zinc-900 w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
-            >
-              <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                <h3 className="font-bold text-zinc-900 dark:text-zinc-100">Message Options</h3>
-                <button onClick={() => setActiveMessageMenuId(null)} className="p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-4">
-                {showAllReactions ? (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-bold text-zinc-500">React with...</span>
-                        <button onClick={() => setShowAllReactions(false)} className="text-xs text-[#4E4AEB] font-bold">Back</button>
-                    </div>
-                    <div className="grid grid-cols-6 gap-2 max-h-[140px] overflow-y-auto no-scrollbar py-1">
-                      {ALL_EMOJIS.map(emoji => (
-                        <button 
-                          key={emoji} 
-                          onClick={() => {
-                            if (activeChannel) {
-                              handleReactToChannelMessage(activeMessageMenuId, emoji);
-                            } else {
-                              handleReactToMessage(activeMessageMenuId, emoji);
-                            }
-                            setShowAllReactions(false);
-                            setActiveMessageMenuId(null);
-                          }} 
-                          className="hover:scale-125 transition-transform text-2xl p-1"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between w-full">
-                    {['👍', '❤️', '😂', '🥰', '😡'].map(emoji => (
-                        <button 
-                            key={emoji} 
-                            onClick={() => {
-                              if (activeChannel) {
-                                handleReactToChannelMessage(activeMessageMenuId, emoji);
-                              } else {
-                                handleReactToMessage(activeMessageMenuId, emoji);
-                              }
-                              setActiveMessageMenuId(null);
-                            }} 
-                            className="hover:scale-125 transition-transform text-3xl duration-150"
-                        >
-                            {emoji}
-                        </button>
-                    ))}
-                    <button 
-                      onClick={() => setShowAllReactions(true)}
-                      className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-500 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
-                    >
-                        <Plus className="w-5 h-5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              {/* Menu Actions */}
-              <div className="flex flex-col p-2 border-b border-zinc-200 dark:border-zinc-800">
-                  <button 
-                      onClick={() => {
-                          const msg = activeChannel 
-                            ? channelMessages.find(m => m.id === activeMessageMenuId)
-                            : messages.find(m => m.id === activeMessageMenuId);
-                          if (msg) {
-                            const senderName = msg.senderName || (msg.senderId === user?.uid ? 'You' : (participantProfiles[msg.senderId]?.displayName || chatUsersData[msg.senderId]?.displayName || activeChat?.otherUser?.displayName || activeChat?.otherUser?.shopName || 'User'));
-                            setReplyingTo({ 
-                              id: msg.id, 
-                              text: msg.text || (msg.images?.length || msg.imageUrl ? 'Photo' : msg.audioUrl ? 'Voice Message' : 'Attachment'), 
-                              senderId: msg.senderId,
-                              senderName: senderName,
-                              imageUrl: msg.images?.[0] || msg.imageUrl || null,
-                              audioUrl: msg.audioUrl || null
-                            });
-                          }
-                          setActiveMessageMenuId(null);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition font-semibold text-[15px]"
-                  >
-                      <CornerUpLeft className="w-5 h-5 text-zinc-500" />
-                      Reply
-                  </button>
+      {/* Message Hold / Long-Press Context Popup matching IMG_5359 right */}
+      {(() => {
+        const heldMsg =
+          activeMessageMenuId !== null
+            ? activeChannel
+              ? channelMessages.find((m) => m.id === activeMessageMenuId)
+              : messages.find((m) => m.id === activeMessageMenuId)
+            : null;
+        const canPinMsg = Boolean(
+          heldMsg &&
+            (!activeChannel ||
+              userRole === 'admin' ||
+              userRole === 'owner' ||
+              activeChannel.creatorId === user?.uid)
+        );
+        const isMsgPinned = Boolean(
+          heldMsg &&
+            (activeChannel
+              ? (activeChannel.pinnedMessages || []).some((p: any) => p.id === heldMsg.id) ||
+                activeChannel.pinnedMessage?.id === heldMsg.id
+              : activeChat?.pinnedMessage?.id === heldMsg.id)
+        );
 
-                  <button 
-                      onClick={() => {
-                          const msg = activeChannel 
-                            ? channelMessages.find(m => m.id === activeMessageMenuId)
-                            : messages.find(m => m.id === activeMessageMenuId);
-                          if (msg) {
-                              setForwardingMessage(msg);
-                              setShowForwardModal(true);
-                          }
-                          setActiveMessageMenuId(null);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition font-semibold text-[15px]"
-                  >
-                      <Forward className="w-5 h-5 text-zinc-500" />
-                      Forward
-                  </button>
-
-                  {/* Copy Text Option */}
-                  {(() => {
-                      const msg = activeChannel 
-                        ? channelMessages.find(m => m.id === activeMessageMenuId)
-                        : messages.find(m => m.id === activeMessageMenuId);
-                      if (msg && msg.text) {
-                          return (
-                              <button 
-                                  onClick={() => {
-                                      navigator.clipboard.writeText(msg.text);
-                                      notify("Copied to clipboard", "success");
-                                      setActiveMessageMenuId(null);
-                                  }}
-                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition font-semibold text-[15px]"
-                              >
-                                  <Copy className="w-5 h-5 text-zinc-500" />
-                                  Copy Text
-                              </button>
-                          );
-                      }
-                      return null;
-                  })()}
-
-                  {/* Pin Option (Channel Admin / Owner only for channel, both for P2P) */}
-                  {(() => {
-                      const msg = activeChannel 
-                        ? channelMessages.find(m => m.id === activeMessageMenuId)
-                        : messages.find(m => m.id === activeMessageMenuId);
-                      const isChannelAdmin = activeChannel && (userRole === 'admin' || userRole === 'owner' || activeChannel.creatorId === user?.uid);
-                      const isP2PChat = !activeChannel;
-                      
-                      if (msg && (isChannelAdmin || isP2PChat)) {
-                          return (
-                              <button 
-                                  onClick={() => {
-                                      if (activeChannel) {
-                                          handlePinMessage(msg);
-                                      } else {
-                                          handlePinMessageP2P(msg);
-                                      }
-                                      setActiveMessageMenuId(null);
-                                  }}
-                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition font-semibold text-[15px]"
-                              >
-                                  <Pin className="w-5 h-5 text-zinc-500" />
-                                  {((activeChannel?.pinnedMessages || []).some((p: any) => p.id === msg.id) || activeChannel?.pinnedMessage?.id === msg.id) ? "Unpin Message" : "Pin Message"}
-                              </button>
-                          );
-                      }
-                      return null;
-                  })()}
-
-                  {/* Delete Option */}
-                  {(() => {
-                      const msg = activeChannel 
-                        ? channelMessages.find(m => m.id === activeMessageMenuId)
-                        : messages.find(m => m.id === activeMessageMenuId);
-                      const isMsgSender = msg && msg.senderId === user?.uid;
-                      const isChannelAdmin = activeChannel && (userRole === 'admin' || userRole === 'owner' || activeChannel.creatorId === user?.uid);
-                      
-                      if (msg && (isMsgSender || isChannelAdmin)) {
-                          return (
-                              <button 
-                                  onClick={() => {
-                                      setDeleteMessageId(msg.id);
-                                      setActiveMessageMenuId(null);
-                                  }}
-                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition text-rose-600 font-semibold text-[15px]"
-                              >
-                                  <Trash2 className="w-5 h-5" />
-                                  Delete Message
-                              </button>
-                          );
-                      }
-                      return null;
-                  })()}
-              </div>
-
-              {/* Reactions Breakdown Panel with Strict Privacy */}
-              {(() => {
-                  const msg = activeChannel 
-                    ? channelMessages.find(m => m.id === activeMessageMenuId)
-                    : messages.find(m => m.id === activeMessageMenuId);
-                  if (!msg || !msg.reactions || Object.keys(msg.reactions).length === 0) return null;
-                  
-                  const rEntries = Object.entries(msg.reactions);
-                  const isChannelAdmin = activeChannel && (userRole === 'admin' || userRole === 'owner' || activeChannel.creatorId === user?.uid);
-                  const isP2P = !activeChannel;
-                  const showDetailedUserIds = isP2P || isChannelAdmin;
-
-                  // Group by emoji
-                  const groupedReactions = {};
-                  rEntries.forEach(([uid, emoji]) => {
-                      groupedReactions[emoji] = (groupedReactions[emoji] || 0) + 1;
-                  });
-
-                  return (
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-950 text-xs">
-                          <p className="font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2.5">Reactions Summary</p>
-                          
-                          {/* Emoji counts badges */}
-                          <div className="flex flex-wrap gap-2 mb-3">
-                              {Object.entries(groupedReactions).map(([emoji, count]) => (
-                                  <span key={emoji} className="inline-flex items-center gap-1.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-full font-bold">
-                                      <span>{emoji}</span>
-                                      <span className="text-zinc-500">{count}</span>
-                                  </span>
-                              ))}
-                          </div>
-
-                          {/* Detail view based on user permission level */}
-                          {showDetailedUserIds ? (
-                              <div className="space-y-1 max-h-[140px] overflow-y-auto no-scrollbar">
-                                  {rEntries.map(([uid, emoji], rIdx) => {
-                                      let name = uid === user?.uid ? "You" : "Member";
-                                      if (chatUsersData[uid]?.displayName) name = chatUsersData[uid].displayName;
-                                      else if (chatUsersData[uid]?.shopName) name = chatUsersData[uid].shopName;
-                                      else if (activeChat?.otherUser?.id === uid || activeChat?.otherUser?.uid === uid) {
-                                        name = activeChat.otherUser.displayName || activeChat.otherUser.shopName || "Member";
-                                      } else if (msg.senderId === uid && msg.senderName) {
-                                        name = msg.senderName;
-                                      }
-                                      return (
-                                          <div key={`${uid}-${rIdx}`} className="flex items-center justify-between text-zinc-700 dark:text-zinc-200 font-semibold py-1 border-b border-zinc-100 dark:border-zinc-800/40">
-                                              <span className="truncate flex items-center gap-1.5">
-                                                <User className="w-3.5 h-3.5 text-indigo-500" />
-                                                <span>{name}</span>
-                                              </span>
-                                              <span className="text-sm font-bold">{emoji}</span>
-                                          </div>
-                                      );
-                                  })}
-                              </div>
-                          ) : (
-                              <p className="text-zinc-400 dark:text-zinc-500 italic mt-1">
-                                  In community channels, individual reaction details are strictly reserved for channel admins.
-                              </p>
-                          )}
-                      </div>
-                  );
-              })()}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+        return (
+          <MessageHoldPopup
+            isOpen={activeMessageMenuId !== null && Boolean(heldMsg)}
+            message={heldMsg}
+            currentUserId={user?.uid}
+            canPin={canPinMsg}
+            isPinned={isMsgPinned}
+            onClose={() => setActiveMessageMenuId(null)}
+            onReact={(emoji) => {
+              if (!activeMessageMenuId) return;
+              if (activeChannel) {
+                handleReactToChannelMessage(activeMessageMenuId, emoji);
+              } else {
+                handleReactToMessage(activeMessageMenuId, emoji);
+              }
+            }}
+            onCopy={async () => {
+              if (!heldMsg) return;
+              const copyTarget =
+                heldMsg.text || heldMsg.images?.[0] || heldMsg.imageUrl || heldMsg.audioUrl || '';
+              if (!copyTarget) {
+                notify('Nothing to copy', 'info');
+                return;
+              }
+              try {
+                await navigator.clipboard.writeText(copyTarget);
+                notify('Copied to clipboard', 'success');
+              } catch {
+                notify('Failed to copy', 'error');
+              }
+            }}
+            onReply={() => {
+              if (!heldMsg) return;
+              const resolvedSender =
+                heldMsg.senderName ||
+                (heldMsg.senderId === user?.uid
+                  ? 'You'
+                  : participantProfiles[heldMsg.senderId]?.displayName ||
+                    chatUsersData[heldMsg.senderId]?.displayName ||
+                    activeChat?.otherUser?.displayName ||
+                    activeChat?.otherUser?.shopName ||
+                    'User');
+              setReplyingTo({
+                id: heldMsg.id,
+                text:
+                  heldMsg.text ||
+                  (heldMsg.images?.length || heldMsg.imageUrl
+                    ? 'Photo'
+                    : heldMsg.audioUrl
+                    ? 'Voice Message'
+                    : 'Attachment'),
+                senderId: heldMsg.senderId,
+                senderName: resolvedSender,
+                imageUrl: heldMsg.images?.[0] || heldMsg.imageUrl || undefined,
+                audioUrl: heldMsg.audioUrl || undefined,
+              });
+            }}
+            onForward={() => {
+              if (!heldMsg) return;
+              setForwardingMessage(heldMsg);
+              setShowForwardModal(true);
+            }}
+            onDelete={() => {
+              if (!heldMsg) return;
+              setDeleteMessageId(heldMsg.id);
+            }}
+            onTogglePin={() => {
+              if (!heldMsg) return;
+              if (activeChannel) {
+                handlePinMessage(heldMsg);
+              } else {
+                handlePinMessageP2P(heldMsg);
+              }
+            }}
+          />
+        );
+      })()}
 
       {/* Review Dialog Modal */}
       <AnimatePresence>
@@ -7891,6 +8033,8 @@ const handleCreateChannel = async () => {
         }}
         currentAutoDeleteDuration={activeChat?.autoDeleteTimer?.duration || null}
         onOpenGroupModal={() => setShowCreateGroupModal(true)}
+        onOpenWallpaperModal={() => setShowWallpaperModal(true)}
+        onOpenClearChatModal={() => setShowClearChatModal(true)}
         notify={notify}
       />
 
@@ -8895,20 +9039,63 @@ const handleCreateChannel = async () => {
         }}
       />
 
-      {/* Dynamic New Message & Group Creation Modal matching iOS screenshots */}
+      {/* "+ New Chat" Floating Action Popup (New Chat / New Contact / New Community — IMG_5360 right) */}
+      <NewChatActionPopup
+        isOpen={showNewChatPopup}
+        initialMode={newChatPopupMode}
+        onClose={() => setShowNewChatPopup(false)}
+        currentUser={user}
+        channels={channels}
+        onStartNewChat={() => {
+          setNewMessageInitialStep('new_message');
+          setNewMessageInitialGroupType('group');
+          setShowNewMessageModal(true);
+        }}
+        onSelectContactForChat={(contact) => {
+          setActiveMessagesTab('chats');
+          setSidebarTab('messages');
+          setSearchParams({ chatId: contact.id }, { replace: true });
+        }}
+        onContactSaved={(contact) => {
+          setSavedContacts((prev) => [contact, ...prev.filter((c) => c.id !== contact.id)]);
+        }}
+        onOpenChannel={(chId) => {
+          setActiveMessagesTab('chats');
+          setSidebarTab('community');
+          setSearchParams({ channelId: chId }, { replace: true });
+        }}
+        onCreateCommunity={() => {
+          setIsEditingChannel(false);
+          setChanName('');
+          setChanLink('');
+          setChanDesc('');
+          setChanImageFile(null);
+          setChanImagePreview('');
+          setShowCreateChannelModal(true);
+        }}
+        notify={notify}
+      />
+
+      {/* Dynamic New Message & Group Creation Modal */}
       <NewMessageModal
         isOpen={showNewMessageModal || showNewChatModal}
         suggestedUsers={recentChatUsers}
+        initialStep={newMessageInitialStep}
+        initialGroupType={newMessageInitialGroupType}
         onClose={() => {
           setShowNewMessageModal(false);
           setShowNewChatModal(false);
+          setNewMessageInitialStep('new_message');
+          setNewMessageInitialGroupType('group');
         }}
         currentUser={user}
         notify={notify}
         onSelectUser={(selectedUser) => {
+          setActiveMessagesTab('chats');
           setSearchParams({ chatId: selectedUser.id }, { replace: true });
         }}
         onGroupCreated={(id, isCommunity) => {
+          setActiveMessagesTab('chats');
           if (isCommunity) {
             setSidebarTab('community');
             setSearchParams({ channelId: id }, { replace: true });

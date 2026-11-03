@@ -145,6 +145,14 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
     if (isCustomizing) return;
     triggerHaptic();
     onClose();
+    if (path.startsWith("/messages")) {
+      try {
+        sessionStorage.setItem("deepshop_last_section_home", "/loops");
+        localStorage.setItem("deepshop_last_section_home", "/loops");
+      } catch {}
+      navigate(path, { state: { fromSection: "loops" } });
+      return;
+    }
     navigate(path);
   };
 

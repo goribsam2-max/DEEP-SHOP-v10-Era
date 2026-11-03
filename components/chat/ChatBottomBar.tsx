@@ -1,18 +1,14 @@
 import React, { useState, useRef } from 'react';
-import {
-  Camera,
-  Mic,
-  Image as ImageIcon,
-  MessageSquareMore,
-  Plus,
-  X,
-  Send,
-  Bookmark,
-  Pencil,
-  Smile,
-  Check,
-} from 'lucide-react';
+import { Bookmark, Check, Pencil, Smile } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  MsgCameraIcon,
+  MsgCloseIcon,
+  MsgImageIcon,
+  MsgMicIcon,
+  MsgPlusIcon,
+  MsgSendIcon,
+} from './MessagesSvgIcons';
 
 export interface ChatBottomBarProps {
   newMessage: string;
@@ -64,13 +60,21 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
 
   if (isBlocked) {
     return (
-      <div className="w-full py-3 px-4 bg-zinc-100 dark:bg-zinc-900/90 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 text-center text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+      <div className="w-full py-3 px-4 msg-composer-capsule rounded-2xl text-center text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-medium">
         {blockedMessage || 'You cannot send messages to this conversation.'}
       </div>
     );
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && window.innerWidth >= 768) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (newMessage.trim() || previewUrls.length > 0) {
+        onSendMessage();
+      }
+      return;
+    }
     if (e.key === 'Enter') {
       e.stopPropagation();
     }
@@ -91,7 +95,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
     <div className="w-full relative select-none">
       {/* Attachments Preview Tray */}
       {previewUrls.length > 0 && (
-        <div className="flex items-center gap-2.5 mb-2.5 p-2.5 msg-composer-capsule rounded-2xl overflow-x-auto no-scrollbar border">
+        <div className="flex items-center gap-2.5 mb-2.5 p-2.5 msg-composer-capsule rounded-2xl overflow-x-auto no-scrollbar">
           {previewUrls.map((url, idx) => (
             <div
               key={idx}
@@ -110,7 +114,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                   className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 hover:bg-rose-500 text-white flex items-center justify-center shadow-md cursor-pointer transition"
                   title="Remove photo"
                 >
-                  <X className="w-3 h-3" />
+                  <MsgCloseIcon className="w-3 h-3" />
                 </button>
               )}
             </div>
@@ -118,7 +122,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         </div>
       )}
 
-      {/* Floating More Tools Popover */}
+      {/* Floating More Tools Popover (anchored to left "+" button) */}
       <AnimatePresence>
         {showPlusMenu && (
           <>
@@ -131,8 +135,20 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 8 }}
               transition={{ type: 'spring', damping: 26, stiffness: 340 }}
-              className="absolute right-1 bottom-14 sm:bottom-15 z-50 w-52 bg-white dark:bg-[#1A1C24] rounded-3xl shadow-[0_16px_44px_rgba(0,0,0,0.22)] border border-zinc-200/90 dark:border-zinc-800 p-2 space-y-0.5"
+              className="msg-v2-popup absolute left-0 bottom-14 z-50 w-52 bg-white dark:bg-[#1A1C24] rounded-3xl shadow-[0_16px_44px_rgba(15,23,42,0.16)] border border-black/[0.05] dark:border-white/10 p-2 space-y-0.5"
             >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPlusMenu(false);
+                  handleCameraClick();
+                }}
+                className="w-full px-3.5 py-2.5 rounded-2xl flex items-center gap-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition text-left cursor-pointer"
+              >
+                <MsgCameraIcon className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+                <span>Camera</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -187,125 +203,103 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Main Composer Capsule */}
-      <div className="w-full flex items-end msg-composer-capsule border rounded-[26px] p-1.5 gap-1.5 transition-all focus-within:ring-2 focus-within:ring-[#1877F2]/25">
-        {/* Camera Action */}
+      {/* Clean Modern Composer Row matching IMG_5359 Active Chat aesthetic */}
+      <div className="w-full flex items-end gap-2.5">
+        {/* Left "+" Tools Button */}
         <button
           type="button"
-          onClick={handleCameraClick}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full msg-accent-btn flex items-center justify-center text-white shrink-0 hover:brightness-110 active:scale-95 transition-all shadow-xs cursor-pointer mb-0.5"
-          title="Camera or Photo"
+          onClick={() => setShowPlusMenu((prev) => !prev)}
+          className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+            showPlusMenu
+              ? 'msg-new-chat-pill rotate-45'
+              : 'msg-composer-capsule text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-95'
+          }`}
+          title="More tools & attachments"
         >
-          <Camera className="w-4.5 h-4.5 text-white stroke-[2.2]" />
+          <MsgPlusIcon className="w-5 h-5" />
         </button>
 
-        {/* Recording Status OR Clean Multi-line Input */}
-        {isRecording ? (
-          <div className="flex-1 min-w-0 flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
-              <span className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-rose-500 truncate">
-                Recording {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={cancelRecording}
-                className="text-xs text-zinc-500 hover:text-rose-500 transition px-2.5 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => stopRecording(true)}
-                className="w-8 h-8 rounded-full msg-accent-btn text-white flex items-center justify-center shadow-sm active:scale-95 transition cursor-pointer"
-                title="Send voice message"
-              >
-                <Check className="w-4 h-4 stroke-[2.5]" />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <textarea
-            ref={textareaRef}
-            value={newMessage}
-            rows={computedRows}
-            onChange={(e) => {
-              if (onInputChange) {
-                onInputChange(e);
-              } else {
-                setNewMessage(e.target.value);
-              }
-              if (showPlusMenu) setShowPlusMenu(false);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="Write a message..."
-            className="ds-liquid-input msg-clean-input flex-1 min-w-0 bg-transparent border-0 px-2.5 py-2 text-[15px] placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-0 resize-none leading-relaxed overflow-y-auto min-h-[38px] max-h-[128px]"
-          />
-        )}
-
-        {/* Right Controls */}
-        {!isRecording && (
-          <div className="flex items-center shrink-0 pr-0.5 gap-0.5 sm:gap-1 mb-0.5">
-            {hasContent ? (
-              <button
-                type="button"
-                onClick={onSendMessage}
-                disabled={isUploading}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full msg-accent-btn text-white flex items-center justify-center hover:brightness-110 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50 shrink-0"
-                title="Send message"
-              >
-                <Send className="w-4 h-4 ml-0.5" />
-              </button>
-            ) : (
-              <div className="flex items-center gap-0.5">
+        {/* Center Soft Pill Input Capsule */}
+        <div className="flex-1 min-w-0 flex items-end msg-composer-capsule rounded-[24px] px-4 py-1.5 transition-all focus-within:ring-2 focus-within:ring-[#2F80ED]/20">
+          {isRecording ? (
+            <div className="flex-1 min-w-0 flex items-center justify-between py-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+                <span className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-rose-500 truncate">
+                  Recording {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
-                  onClick={startRecording}
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/[0.08] active:scale-95 transition cursor-pointer"
-                  title="Record voice message"
+                  onClick={cancelRecording}
+                  className="text-xs text-zinc-500 hover:text-rose-500 transition px-2.5 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer font-semibold"
                 >
-                  <Mic className="w-4.5 h-4.5 stroke-[2]" />
+                  Cancel
                 </button>
-
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/[0.08] active:scale-95 transition cursor-pointer"
-                  title="Send photo"
+                  onClick={() => stopRecording(true)}
+                  className="w-8 h-8 rounded-full msg-accent-btn text-white flex items-center justify-center shadow-sm active:scale-95 transition cursor-pointer"
+                  title="Send voice message"
                 >
-                  <ImageIcon className="w-4.5 h-4.5 stroke-[2]" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onOpenSavedReplies}
-                  className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/[0.08] active:scale-95 transition cursor-pointer"
-                  title="Quick replies"
-                >
-                  <MessageSquareMore className="w-4.5 h-4.5 stroke-[2]" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowPlusMenu(!showPlusMenu)}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                    showPlusMenu
-                      ? 'msg-accent-btn text-white shadow-sm rotate-90'
-                      : 'text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/[0.08] active:scale-95'
-                  }`}
-                  title="More tools"
-                >
-                  {showPlusMenu ? (
-                    <X className="w-4 h-4 stroke-[2.4]" />
-                  ) : (
-                    <Plus className="w-5 h-5 stroke-[2.1]" />
-                  )}
+                  <Check className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              <textarea
+                ref={textareaRef}
+                value={newMessage}
+                rows={computedRows}
+                onChange={(e) => {
+                  if (onInputChange) {
+                    onInputChange(e);
+                  } else {
+                    setNewMessage(e.target.value);
+                  }
+                  if (showPlusMenu) setShowPlusMenu(false);
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Message..."
+                className="ds-liquid-input msg-clean-input flex-1 min-w-0 bg-transparent border-0 py-2 text-[14.5px] placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-0 resize-none leading-relaxed overflow-y-auto min-h-[36px] max-h-[124px]"
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-8 h-8 mb-0.5 ml-1 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white active:scale-95 transition shrink-0 cursor-pointer"
+                title="Send photo"
+              >
+                <MsgImageIcon className="w-[19px] h-[19px]" />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Right Primary Button: Voice Mic when empty, #2F80ED Send Paper-plane when typing/attached */}
+        {!isRecording && (
+          hasContent ? (
+            <button
+              type="button"
+              onClick={onSendMessage}
+              disabled={isUploading}
+              className="w-11 h-11 rounded-full msg-accent-btn text-white flex items-center justify-center hover:brightness-105 active:scale-95 transition-all shadow-[0_6px_18px_rgba(47,128,237,0.3)] cursor-pointer disabled:opacity-50 shrink-0"
+              title="Send message"
+            >
+              <MsgSendIcon className="w-[18px] h-[18px] mr-0.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={startRecording}
+              className="w-11 h-11 rounded-full msg-composer-capsule flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-95 transition shrink-0 cursor-pointer"
+              title="Record voice message"
+            >
+              <MsgMicIcon className="w-[19px] h-[19px]" />
+            </button>
+          )
         )}
       </div>
     </div>

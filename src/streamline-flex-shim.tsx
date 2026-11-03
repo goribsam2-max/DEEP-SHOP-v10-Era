@@ -480,6 +480,8 @@ export const FolderPlus = c(["M12 10v6", "M9 13h6", "M20 20a2 2 0 0 0 2-2V8a2 2 
 export const FolderPlusIcon = FolderPlus;
 export const CalendarClock = c(["M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5", "M16 2v4", "M8 2v4", "M3 10h5", "M17.5 17.5 16 16.3V14", "M16 22a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"]);
 export const CalendarClockIcon = CalendarClock;
+export const PenLine = Pencil;
+export const Quote = c(["M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z", "M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"]);
 
 export type LucideProps = React.SVGProps<SVGSVGElement> & {
   size?: number | string;

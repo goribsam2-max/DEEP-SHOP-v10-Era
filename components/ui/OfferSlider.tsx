@@ -3,32 +3,19 @@ import { ChevronLeft, ChevronRight, Star, Heart, ShoppingCart } from "lucide-rea
 import { useNavigate } from "react-router-dom";
 import { Product } from "../../types";
 import { useRegion } from "../RegionContext";
-import { auth, db } from "../../firebase";
-import { doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+import { auth } from "../../firebase";
 import { useNotify } from "../Notifications";
 import { cn } from "../../lib/utils";
 import useEmblaCarousel from "embla-carousel-react";
 import { PixelImage } from "./PixelImage";
 import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
+import { useIsWishlisted, toggleWishlistItem } from "../../lib/wishlistStore";
 
 function OfferProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
   const { formatPrice } = useRegion();
   const notify = useNotify();
-  const [isWishlisted, setIsWishlisted] = useState(false);
-
-  useEffect(() => {
-    let unsubscribe = () => {};
-    if (auth.currentUser && product.id) {
-      const wishlistRef = doc(db, "users", auth.currentUser.uid, "wishlist", product.id);
-      unsubscribe = onSnapshot(
-        wishlistRef,
-        (snap) => setIsWishlisted(snap.exists()),
-        (err) => {}
-      );
-    }
-    return () => unsubscribe();
-  }, [product.id]);
+  const isWishlisted = useIsWishlisted(product.id);
 
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -40,16 +27,11 @@ function OfferProductCard({ product }: { product: Product }) {
     }
     if (!product.id) return;
 
-    const wishlistRef = doc(db, "users", auth.currentUser.uid, "wishlist", product.id);
     try {
-      if (isWishlisted) {
-        await deleteDoc(wishlistRef);
+      const res = await toggleWishlistItem(product.id);
+      if (res === "removed") {
         notify("Removed from wishlist");
-      } else {
-        await setDoc(wishlistRef, {
-          productId: product.id,
-          addedAt: new Date().toISOString(),
-        });
+      } else if (res === "added") {
         notify("Added to wishlist", "success");
       }
     } catch (error) {

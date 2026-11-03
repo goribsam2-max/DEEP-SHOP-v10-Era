@@ -185,7 +185,15 @@ export const NewsBottomDock: React.FC<{
             type="button"
             onClick={() => {
               triggerHaptic();
-              navigate(item.path);
+              if (item.id === "messages") {
+                try {
+                  sessionStorage.setItem("deepshop_last_section_home", "/loops");
+                  localStorage.setItem("deepshop_last_section_home", "/loops");
+                } catch {}
+                navigate(item.path, { state: { fromSection: "loops" } });
+              } else {
+                navigate(item.path);
+              }
             }}
             title={item.label}
             aria-label={item.label}

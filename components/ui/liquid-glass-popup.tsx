@@ -28,6 +28,7 @@ export interface LiquidGlassPopupProps {
   showCloseButton?: boolean;
   closeOnBackdrop?: boolean;
   zIndexClass?: string;
+  pureGlass?: boolean;
 }
 
 export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
@@ -42,11 +43,12 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
   onPrimary,
   secondaryText,
   onSecondary,
-  maxWidthClass = 'max-w-[360px] sm:max-w-[390px]',
+  maxWidthClass = 'max-w-[350px] sm:max-w-[375px]',
   className = '',
   showCloseButton = false,
   closeOnBackdrop = true,
   zIndexClass = 'z-[9999]',
+  pureGlass = false,
 }) => {
   useEffect(() => {
     if (!open) return;
@@ -71,6 +73,8 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
       ? { label: secondaryText, onClick: onSecondary }
       : undefined);
 
+  const hasBothActions = Boolean(effectivePrimary && effectiveSecondary);
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -89,17 +93,19 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ opacity: 0, scale: 0.92, y: 14 }}
+            initial={{ opacity: 0, scale: 0.93, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 10 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{
               type: 'spring',
-              stiffness: 380,
-              damping: 28,
+              stiffness: 400,
+              damping: 30,
               mass: 0.85,
             }}
             onClick={(e) => e.stopPropagation()}
-            className={`relative w-full ${maxWidthClass} ds-liquid-glass-popup px-6 pt-7 pb-6 my-auto ${className}`}
+            className={`relative w-full ${maxWidthClass} ds-liquid-glass-popup ${
+              pureGlass ? 'ds-modal-pure-glass' : ''
+            } px-6 pt-6 pb-6 my-auto ${className}`}
           >
             {showCloseButton && onClose && (
               <button
@@ -119,7 +125,7 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
             )}
 
             {description && (
-              <div className="ds-liquid-popup-desc text-left mt-2.5">
+              <div className="ds-liquid-popup-desc text-left mt-2">
                 {description}
               </div>
             )}
@@ -131,16 +137,22 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
             )}
 
             {(effectivePrimary || effectiveSecondary) && (
-              <div className="mt-6 flex flex-col gap-2.5">
+              <div
+                className={`mt-5 ${
+                  hasBothActions
+                    ? 'grid grid-cols-2 gap-3'
+                    : 'flex flex-col gap-2.5'
+                }`}
+              >
                 {effectivePrimary && (
                   <button
                     type={effectivePrimary.type || 'button'}
                     onClick={effectivePrimary.onClick}
                     disabled={effectivePrimary.disabled || effectivePrimary.loading}
-                    className="w-full px-6 py-3 ds-liquid-btn-primary flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap"
+                    className="w-full px-4 py-2.5 ds-liquid-btn-primary flex items-center justify-center gap-1.5 disabled:opacity-60 text-center leading-tight cursor-pointer"
                   >
                     {effectivePrimary.loading ? (
-                      <span className="w-24 h-4 rounded-full ds-skeleton inline-block" />
+                      <span className="w-16 h-4 rounded-full ds-skeleton inline-block" />
                     ) : (
                       effectivePrimary.label
                     )}
@@ -152,7 +164,7 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
                     type={effectiveSecondary.type || 'button'}
                     onClick={effectiveSecondary.onClick}
                     disabled={effectiveSecondary.disabled}
-                    className="w-full px-6 py-3 ds-liquid-btn-secondary flex items-center justify-center gap-2 disabled:opacity-60 whitespace-nowrap"
+                    className="w-full px-4 py-2.5 ds-liquid-btn-secondary flex items-center justify-center gap-1.5 disabled:opacity-60 text-center leading-tight cursor-pointer"
                   >
                     {effectiveSecondary.label}
                   </button>

@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -1120,98 +1119,109 @@ html.dark .ds-skeleton::after {
 }
 
 /* ==========================================================================
-   LIQUID GLASS LENS POPUP SYSTEM (MATCHING IMG_5029.png)
-   Frosted refractive glass card + soft dimmed backdrop + stacked pill buttons
+   NOTIFY & CONFIRM MODAL SYSTEM (MATCHING IMG_5390 — Liquid Glass / Dark / Light)
+   Rounded 28px card + left-aligned title/desc + side-by-side Yes/No pill buttons
    ========================================================================== */
 .ds-liquid-backdrop {
-  background-color: rgba(15, 20, 28, 0.28) !important;
-  backdrop-filter: blur(4px) saturate(120%);
-  -webkit-backdrop-filter: blur(4px) saturate(120%);
+  background-color: rgba(12, 18, 28, 0.34) !important;
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
 }
 
 html.dark .ds-liquid-backdrop {
-  background-color: rgba(0, 0, 0, 0.54) !important;
+  background-color: rgba(0, 0, 0, 0.62) !important;
 }
 
 html:not(.dark) .ds-liquid-glass-popup {
   background: linear-gradient(
-    155deg,
-    rgba(255, 255, 255, 0.84) 0%,
-    rgba(247, 249, 253, 0.76) 52%,
-    rgba(240, 244, 250, 0.82) 100%
+    160deg,
+    rgba(244, 245, 248, 0.92) 0%,
+    rgba(236, 238, 242, 0.88) 100%
   ) !important;
-  backdrop-filter: blur(30px) saturate(195%) !important;
-  -webkit-backdrop-filter: blur(30px) saturate(195%) !important;
+  backdrop-filter: blur(34px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(190%) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.92) !important;
-  border-radius: 32px !important;
+  border-radius: 28px !important;
   box-shadow:
-    0 24px 64px -12px rgba(15, 23, 42, 0.22),
-    0 6px 20px -4px rgba(15, 23, 42, 0.08),
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.96),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.45) !important;
-  color: #0a0a0c !important;
+    0 24px 60px -12px rgba(15, 23, 42, 0.22),
+    0 4px 16px -4px rgba(15, 23, 42, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.96) !important;
+  color: #0b0c10 !important;
 }
 
 html.dark .ds-liquid-glass-popup {
   background: linear-gradient(
-    155deg,
-    rgba(36, 36, 46, 0.82) 0%,
-    rgba(24, 24, 34, 0.76) 52%,
-    rgba(20, 20, 28, 0.84) 100%
+    160deg,
+    rgba(36, 37, 40, 0.92) 0%,
+    rgba(28, 29, 32, 0.94) 100%
   ) !important;
-  backdrop-filter: blur(30px) saturate(195%) !important;
-  -webkit-backdrop-filter: blur(30px) saturate(195%) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.16) !important;
-  border-radius: 32px !important;
+  backdrop-filter: blur(34px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(190%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 28px !important;
   box-shadow:
-    0 28px 70px -12px rgba(0, 0, 0, 0.68),
-    0 8px 24px -4px rgba(0, 0, 0, 0.42),
-    inset 0 1px 1px rgba(255, 255, 255, 0.22),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.06) !important;
-  color: #f8fafc !important;
+    0 28px 68px -12px rgba(0, 0, 0, 0.72),
+    0 8px 24px -4px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .ds-liquid-glass-popup.ds-modal-pure-glass,
+html.dark .ds-liquid-glass-popup.ds-modal-pure-glass {
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(215, 232, 238, 0.22) 100%
+  ) !important;
+  backdrop-filter: blur(36px) saturate(195%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(195%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.48) !important;
+  color: #ffffff !important;
 }
 
 html:not(.dark) .ds-liquid-popup-title {
-  color: #090a0f !important;
-  font-size: 1.25rem;
-  line-height: 1.32;
+  color: #0b0c10 !important;
+  font-size: 1.2rem;
+  line-height: 1.3;
   font-weight: 700;
   letter-spacing: -0.015em;
 }
 
-html.dark .ds-liquid-popup-title {
+html.dark .ds-liquid-popup-title,
+.ds-modal-pure-glass .ds-liquid-popup-title {
   color: #ffffff !important;
-  font-size: 1.25rem;
-  line-height: 1.32;
+  font-size: 1.2rem;
+  line-height: 1.3;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 html:not(.dark) .ds-liquid-popup-desc {
-  color: #5c626e !important;
-  font-size: 0.96875rem;
-  line-height: 1.45;
+  color: #687078 !important;
+  font-size: 0.9375rem;
+  line-height: 1.48;
   font-weight: 400;
 }
 
-html.dark .ds-liquid-popup-desc {
-  color: rgba(226, 232, 240, 0.76) !important;
-  font-size: 0.96875rem;
-  line-height: 1.45;
+html.dark .ds-liquid-popup-desc,
+.ds-modal-pure-glass .ds-liquid-popup-desc {
+  color: rgba(212, 216, 224, 0.78) !important;
+  font-size: 0.9375rem;
+  line-height: 1.48;
   font-weight: 400;
 }
 
-/* Primary vibrant solid blue pill button matching IMG_5029.png */
+/* Primary vibrant iOS Blue pill button matching IMG_5390 */
 html:not(.dark) .ds-liquid-btn-primary,
 html.dark .ds-liquid-btn-primary {
-  background: linear-gradient(180deg, #0d82ff 0%, #006be6 100%) !important;
+  background: #0a84ff !important;
   color: #ffffff !important;
   border-radius: 9999px !important;
-  min-height: 48px;
-  font-size: 1rem;
+  min-height: 46px;
+  font-size: 0.9375rem;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  box-shadow: 0 6px 18px -4px rgba(0, 107, 230, 0.42) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 4px 14px -3px rgba(10, 132, 255, 0.38) !important;
   transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), filter 0.16s ease;
 }
 
@@ -1221,54 +1231,65 @@ html.dark .ds-liquid-btn-primary * {
 }
 
 .ds-liquid-btn-primary:hover:not(:disabled) {
-  filter: brightness(1.05);
+  filter: brightness(1.06);
 }
 
 .ds-liquid-btn-primary:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
-/* Secondary frosted gray pill button matching IMG_5029.png */
+/* Secondary neutral pill button matching IMG_5390 */
 html:not(.dark) .ds-liquid-btn-secondary {
-  background-color: rgba(15, 23, 42, 0.085) !important;
-  color: #0b0c10 !important;
+  background-color: #cfd2d7 !important;
+  color: #111216 !important;
   border-radius: 9999px !important;
-  min-height: 48px;
-  font-size: 1rem;
+  min-height: 46px;
+  font-size: 0.9375rem;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: none !important;
   transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
 }
 
 html:not(.dark) .ds-liquid-btn-secondary * {
-  color: #0b0c10 !important;
+  color: #111216 !important;
 }
 
 html:not(.dark) .ds-liquid-btn-secondary:hover:not(:disabled) {
-  background-color: rgba(15, 23, 42, 0.13) !important;
+  background-color: #c2c6cc !important;
 }
 
 html.dark .ds-liquid-btn-secondary {
-  background-color: rgba(255, 255, 255, 0.11) !important;
-  color: #f8fafc !important;
+  background-color: #6b6d72 !important;
+  color: #ffffff !important;
   border-radius: 9999px !important;
-  min-height: 48px;
-  font-size: 1rem;
+  min-height: 46px;
+  font-size: 0.9375rem;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
   transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
 }
 
 html.dark .ds-liquid-btn-secondary * {
-  color: #f8fafc !important;
+  color: #ffffff !important;
 }
 
 html.dark .ds-liquid-btn-secondary:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.16) !important;
+  background-color: #787b81 !important;
+}
+
+.ds-modal-pure-glass .ds-liquid-btn-secondary {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+.ds-modal-pure-glass .ds-liquid-btn-secondary * {
+  color: #ffffff !important;
 }
 
 .ds-liquid-btn-secondary:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 /* Refractive inner section & input inside Liquid Glass Popups */
@@ -1781,17 +1802,73 @@ html.dark .ds-seller-highlight:hover {
    LOOPS — THREADS-STYLE TYPOGRAPHY, SURFACES & FROSTED LIQUID GLASS POPOVERS
    ========================================================================== */
 .loops-wordmark {
-  font-family: "Satoshi", "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.048em !important;
-  line-height: 1.05 !important;
+  font-family: "Outfit", "Plus Jakarta Sans", "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.032em !important;
+  line-height: 1.06 !important;
 }
 
-.loops-script-logo {
-  font-family: "Grand Hotel", cursive !important;
-  font-weight: 400 !important;
-  letter-spacing: 0.01em !important;
-  line-height: 1.05 !important;
+.loops-script-logo,
+.loops-header-wordmark {
+  font-family: "Outfit", "Plus Jakarta Sans", "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.028em !important;
+  line-height: 1.06 !important;
+}
+
+html.dark .loops-script-logo,
+html.dark .loops-header-wordmark {
+  letter-spacing: -0.022em !important;
+}
+
+/* Progressive Top Frosted Blur Scrim & Circular Glass Pills for Sticky Scroll-Up Loops Header (IMG_5391) */
+html:not(.dark) .loops-sticky-top-scrim {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(255, 255, 255, 0.62) 56%,
+    rgba(255, 255, 255, 0) 100%
+  ) !important;
+  backdrop-filter: blur(14px) saturate(165%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(165%) !important;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%);
+}
+
+html.dark .loops-sticky-top-scrim {
+  background: linear-gradient(
+    to bottom,
+    rgba(10, 10, 12, 0.90) 0%,
+    rgba(10, 10, 12, 0.64) 56%,
+    rgba(10, 10, 12, 0) 100%
+  ) !important;
+  backdrop-filter: blur(14px) saturate(165%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(165%) !important;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%);
+}
+
+html:not(.dark) .loops-sticky-glass-circle {
+  background: rgba(255, 255, 255, 0.84) !important;
+  backdrop-filter: blur(22px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(190%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.96) !important;
+  box-shadow:
+    0 4px 18px rgba(15, 23, 42, 0.08),
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.98) !important;
+  color: #0b0d12 !important;
+}
+
+html.dark .loops-sticky-glass-circle {
+  background: rgba(28, 28, 32, 0.84) !important;
+  backdrop-filter: blur(22px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    0 6px 22px rgba(0, 0, 0, 0.48),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
 }
 
 html:not(.dark) .loops-surface {
@@ -2172,79 +2249,216 @@ html.dark .loops-reels-dock-active-pill {
    MESSAGES, INBOX & CHAT BUBBLES LIGHT + DARK THEME PROTECTION
    ========================================================================== */
 html:not(.dark) .msg-shell {
-  background-color: #f6f7f9 !important;
+  background-color: #ffffff !important;
   color: #09090b !important;
 }
 
+html:not(.dark) .msg-shell {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
 html.dark .msg-shell {
-  background-color: #0b0c10 !important;
+  background-color: #0b0d12 !important;
   color: #f4f4f5 !important;
+}
+
+/* Protect neutral typography & icons inside Messages V2 from global purple tint */
+html:not(.dark) .msg-shell .text-zinc-950,
+html:not(.dark) .msg-shell .text-zinc-900,
+html:not(.dark) .msg-shell .text-zinc-800,
+html:not(.dark) .msg-v2-popup .text-zinc-950,
+html:not(.dark) .msg-v2-popup .text-zinc-900,
+html:not(.dark) .msg-v2-popup .text-zinc-800 {
+  color: #12141a !important;
+}
+
+html:not(.dark) .msg-shell .text-zinc-700,
+html:not(.dark) .msg-v2-popup .text-zinc-700 {
+  color: #2c313a !important;
+}
+
+html:not(.dark) .msg-shell .text-zinc-600,
+html:not(.dark) .msg-shell .text-zinc-500,
+html:not(.dark) .msg-v2-popup .text-zinc-600,
+html:not(.dark) .msg-v2-popup .text-zinc-500 {
+  color: #767d89 !important;
+}
+
+html:not(.dark) .msg-shell .text-zinc-400,
+html:not(.dark) .msg-v2-popup .text-zinc-400 {
+  color: #98a0ab !important;
+}
+
+html.dark .msg-shell .dark\:text-zinc-300,
+html.dark .msg-shell .dark\:text-zinc-400,
+html.dark .msg-v2-popup .dark\:text-zinc-300,
+html.dark .msg-v2-popup .dark\:text-zinc-400 {
+  color: #9ca3af !important;
+}
+
+html.dark .msg-shell .dark\:text-zinc-500,
+html.dark .msg-v2-popup .dark\:text-zinc-500 {
+  color: #6b7280 !important;
 }
 
 html:not(.dark) .msg-sidebar {
   background-color: #ffffff !important;
-  border-color: #eceef2 !important;
+  border-color: #f1f2f5 !important;
 }
 
 html.dark .msg-sidebar {
-  background-color: #111217 !important;
-  border-color: #22242e !important;
+  background-color: #0e1015 !important;
+  border-color: #1c1f29 !important;
 }
 
 html:not(.dark) .msg-inbox-header {
-  background-color: rgba(255, 255, 255, 0.88) !important;
-  border-color: #eceef2 !important;
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: transparent !important;
 }
 
 html.dark .msg-inbox-header {
-  background-color: rgba(17, 18, 23, 0.88) !important;
-  border-color: #22242e !important;
+  background-color: rgba(14, 16, 21, 0.96) !important;
+  border-color: transparent !important;
 }
 
 html:not(.dark) .msg-stream-default {
-  background-color: #f4f6f9 !important;
+  background-color: #ffffff !important;
 }
 
 html.dark .msg-stream-default {
-  background-color: #0d0e13 !important;
+  background-color: #0e1015 !important;
 }
 
 html:not(.dark) .msg-composer-dock {
-  background-color: rgba(255, 255, 255, 0.94) !important;
-  border-color: #eceef2 !important;
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border-color: transparent !important;
 }
 
 html.dark .msg-composer-dock {
-  background-color: rgba(17, 18, 23, 0.94) !important;
-  border-color: #22242e !important;
+  background-color: rgba(14, 16, 21, 0.98) !important;
+  border-color: transparent !important;
 }
 
 html:not(.dark) .msg-composer-capsule {
-  background-color: #f3f4f6 !important;
-  border-color: #e4e6eb !important;
+  background-color: #f2f4f7 !important;
+  border-color: transparent !important;
 }
 
 html.dark .msg-composer-capsule {
-  background-color: #1a1c24 !important;
-  border-color: #2a2d3a !important;
+  background-color: #1b1e26 !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
 html:not(.dark) .msg-clean-input,
 html.dark .msg-clean-input {
   background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 html:not(.dark) .msg-clean-input {
-  color: #09090b !important;
+  color: #111827 !important;
 }
 
 html.dark .msg-clean-input {
   color: #f4f4f5 !important;
 }
 
+/* Exact Story "+" Dashed Circle (IMG_5359 top-left) */
+html:not(.dark) .msg-story-add-ring {
+  border: 1.4px dashed #c8cdd5 !important;
+  background-color: transparent !important;
+  color: #1f242d !important;
+}
+
+html.dark .msg-story-add-ring {
+  border: 1.4px dashed rgba(255, 255, 255, 0.28) !important;
+  background-color: transparent !important;
+  color: #f3f4f6 !important;
+}
+
+/* Exact Seamless Frosted Bottom Navigation Bar (IMG_5359 bottom-left) */
+html:not(.dark) .msg-bottom-nav-bar {
+  background: linear-gradient(
+    to top,
+    #ffffff 55%,
+    rgba(255, 255, 255, 0.92) 78%,
+    rgba(255, 255, 255, 0) 100%
+  ) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html.dark .msg-bottom-nav-bar {
+  background: linear-gradient(
+    to top,
+    #0e1015 55%,
+    rgba(14, 16, 21, 0.92) 78%,
+    rgba(14, 16, 21, 0) 100%
+  ) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Exact "+ New Chat" Dark Pill & "Cancel" White Pill (IMG_5359 & IMG_5360) */
+html:not(.dark) .msg-new-chat-pill {
+  background-color: #191a1f !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(20, 22, 28, 0.2) !important;
+}
+
+html:not(.dark) .msg-new-chat-pill * {
+  color: #ffffff !important;
+}
+
+html.dark .msg-new-chat-pill {
+  background-color: #ffffff !important;
+  color: #12141a !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45) !important;
+}
+
+html.dark .msg-new-chat-pill * {
+  color: #12141a !important;
+}
+
+html:not(.dark) .msg-cancel-pill {
+  background-color: #ffffff !important;
+  color: #191a1f !important;
+  border: 1px solid rgba(15, 23, 42, 0.06) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12) !important;
+}
+
+html:not(.dark) .msg-cancel-pill * {
+  color: #191a1f !important;
+}
+
+html.dark .msg-cancel-pill {
+  background-color: #222530 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .msg-cancel-pill * {
+  color: #ffffff !important;
+}
+
+/* True Green Online Dot & #2F80ED Unread Badge */
+html:not(.dark) .msg-online-dot,
+html.dark .msg-online-dot {
+  background-color: #22c55e !important;
+}
+
+html:not(.dark) .msg-unread-badge,
+html.dark .msg-unread-badge {
+  background-color: #2f80ed !important;
+  color: #ffffff !important;
+}
+
 html:not(.dark) .msg-bubble-sent,
 html.dark .msg-bubble-sent {
-  background: linear-gradient(135deg, #1877F2 0%, #1364d6 100%) !important;
+  background: #2f80ed !important;
   color: #ffffff !important;
 }
 
@@ -2254,29 +2468,34 @@ html.dark .msg-bubble-sent * {
 }
 
 html:not(.dark) .msg-bubble-received {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  border: 1px solid rgba(15, 23, 42, 0.07) !important;
+  background-color: #f2f4f7 !important;
+  color: #1e232c !important;
+  border: 0 !important;
 }
 
 html.dark .msg-bubble-received {
-  background-color: #1b1d26 !important;
-  color: #f4f4f5 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: #1b1e26 !important;
+  color: #f3f4f6 !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 html:not(.dark) .msg-accent-btn,
 html.dark .msg-accent-btn {
-  background-color: #1877F2 !important;
+  background-color: #2f80ed !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .msg-accent-btn *,
+html.dark .msg-accent-btn * {
   color: #ffffff !important;
 }
 
 html:not(.dark) .msg-chat-row-active {
-  background-color: #eef4ff !important;
+  background-color: #f4f7fc !important;
 }
 
 html.dark .msg-chat-row-active {
-  background-color: #1b2030 !important;
+  background-color: #171b26 !important;
 }
 
 /* Accessibility: Ensure small buttons & touch targets like .ds-seller-highlight meet touch target criteria (min 44px touch area) */
@@ -2294,6 +2513,309 @@ html.dark .msg-chat-row-active {
   bottom: -6px;
   left: -6px;
   right: -6px;
+}
+
+/* ==========================================================================
+   ORDERS V2, SELLER ORDERS V2 & NOTIFICATIONS V2 SCOPED DESIGN TOKENS
+   Protected from legacy global color-grade overrides for exact fidelity
+   ========================================================================== */
+html:not(.dark) .orders-v2-shell,
+html:not(.dark) .notif-v2-shell {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+html.dark .orders-v2-shell,
+html.dark .notif-v2-shell {
+  background-color: #090a0f !important;
+  color: #f9fafb !important;
+}
+
+html:not(.dark) .orders-v2-track {
+  background-color: #f2f3f6 !important;
+}
+
+html.dark .orders-v2-track {
+  background-color: #181920 !important;
+}
+
+html:not(.dark) .orders-v2-tab-active {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+html.dark .orders-v2-tab-active {
+  background-color: #262833 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35) !important;
+}
+
+html:not(.dark) .orders-v2-search {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+html.dark .orders-v2-search {
+  background-color: #181920 !important;
+  color: #f9fafb !important;
+}
+
+html:not(.dark) .orders-v2-search input,
+html.dark .orders-v2-search input {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .orders-v2-card {
+  background-color: #ffffff !important;
+  border: 1px solid #eceef2 !important;
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.035) !important;
+}
+
+html.dark .orders-v2-card {
+  background-color: #13141b !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+html:not(.dark) .orders-v2-seller-box {
+  background-color: #f6f7f9 !important;
+  border: 1px solid rgba(15, 23, 42, 0.03) !important;
+}
+
+html.dark .orders-v2-seller-box {
+  background-color: #1b1d26 !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+html:not(.dark) .orders-v2-btn-soft-blue {
+  background-color: #ecf3ff !important;
+  color: #0d6efd !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .orders-v2-btn-soft-blue * {
+  color: #0d6efd !important;
+}
+
+html:not(.dark) .orders-v2-btn-soft-blue:hover {
+  background-color: #dce9ff !important;
+}
+
+html.dark .orders-v2-btn-soft-blue {
+  background-color: rgba(13, 110, 253, 0.16) !important;
+  color: #60a5fa !important;
+  box-shadow: none !important;
+}
+
+html.dark .orders-v2-btn-soft-blue * {
+  color: #60a5fa !important;
+}
+
+html:not(.dark) .orders-v2-btn-explore,
+html.dark .orders-v2-btn-explore {
+  background-color: #0d6efd !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 18px -4px rgba(13, 110, 253, 0.38) !important;
+}
+
+html:not(.dark) .orders-v2-btn-explore *,
+html.dark .orders-v2-btn-explore * {
+  color: #ffffff !important;
+}
+
+html:not(.dark) .orders-v2-status-pill {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+}
+
+html.dark .orders-v2-status-pill {
+  background-color: #22242e !important;
+  color: #e5e7eb !important;
+}
+
+/* Seller Orders V2 (IMG_5388) */
+html:not(.dark) .seller-v2-outline-blue {
+  background-color: #ffffff !important;
+  border: 1px solid #1d4ed8 !important;
+  color: #1d4ed8 !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .seller-v2-outline-blue * {
+  color: #1d4ed8 !important;
+}
+
+html.dark .seller-v2-outline-blue {
+  background-color: rgba(29, 78, 216, 0.12) !important;
+  border: 1px solid #60a5fa !important;
+  color: #60a5fa !important;
+  box-shadow: none !important;
+}
+
+html.dark .seller-v2-outline-blue * {
+  color: #60a5fa !important;
+}
+
+html:not(.dark) .seller-v2-banner-blue {
+  background-color: #edf5ff !important;
+  color: #111827 !important;
+}
+
+html.dark .seller-v2-banner-blue {
+  background-color: rgba(37, 99, 235, 0.18) !important;
+  color: #f9fafb !important;
+}
+
+html:not(.dark) .seller-v2-id-strip {
+  background-color: #f7f8fa !important;
+  color: #374151 !important;
+}
+
+html.dark .seller-v2-id-strip {
+  background-color: #181a22 !important;
+  color: #d1d5db !important;
+}
+
+html:not(.dark) .seller-v2-icon-blue {
+  background-color: #ebf3ff !important;
+  color: #2563eb !important;
+}
+html:not(.dark) .seller-v2-icon-blue * {
+  color: #2563eb !important;
+}
+html.dark .seller-v2-icon-blue {
+  background-color: rgba(37, 99, 235, 0.2) !important;
+  color: #60a5fa !important;
+}
+html.dark .seller-v2-icon-blue * {
+  color: #60a5fa !important;
+}
+
+html:not(.dark) .seller-v2-icon-red {
+  background-color: #ffefef !important;
+  color: #ef4444 !important;
+}
+html:not(.dark) .seller-v2-icon-red * {
+  color: #ef4444 !important;
+}
+html.dark .seller-v2-icon-red {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+}
+html.dark .seller-v2-icon-red * {
+  color: #f87171 !important;
+}
+
+html:not(.dark) .seller-v2-icon-green {
+  background-color: #e8fbf0 !important;
+  color: #10b981 !important;
+}
+html:not(.dark) .seller-v2-icon-green * {
+  color: #10b981 !important;
+}
+html.dark .seller-v2-icon-green {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  color: #34d399 !important;
+}
+html.dark .seller-v2-icon-green * {
+  color: #34d399 !important;
+}
+
+/* Notifications V2 (IMG_5389) */
+html:not(.dark) .notif-v2-info-banner {
+  background-color: #fff0f1 !important;
+  border: 1px solid #ffe0e3 !important;
+}
+
+html.dark .notif-v2-info-banner {
+  background-color: rgba(242, 59, 47, 0.12) !important;
+  border: 1px solid rgba(242, 59, 47, 0.26) !important;
+}
+
+html:not(.dark) .notif-v2-bell-badge,
+html.dark .notif-v2-bell-badge {
+  background-color: #f23b2f !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .notif-v2-bell-badge *,
+html.dark .notif-v2-bell-badge * {
+  color: #ffffff !important;
+}
+
+html:not(.dark) .notif-v2-coral-text {
+  color: #db3b2e !important;
+}
+
+html.dark .notif-v2-coral-text {
+  color: #ff7b70 !important;
+}
+
+html:not(.dark) .notif-v2-avatar-red {
+  background-color: #ffebeb !important;
+  color: #e53935 !important;
+}
+html:not(.dark) .notif-v2-avatar-red * {
+  color: #e53935 !important;
+}
+html.dark .notif-v2-avatar-red {
+  background-color: rgba(229, 57, 53, 0.18) !important;
+  color: #ff7b70 !important;
+}
+
+html:not(.dark) .notif-v2-avatar-green {
+  background-color: #e7f9ed !important;
+  color: #1ea956 !important;
+}
+html:not(.dark) .notif-v2-avatar-green * {
+  color: #1ea956 !important;
+}
+html.dark .notif-v2-avatar-green {
+  background-color: rgba(30, 169, 86, 0.18) !important;
+  color: #4ade80 !important;
+}
+
+html:not(.dark) .notif-v2-avatar-amber {
+  background-color: #fff6df !important;
+  color: #f59e0b !important;
+}
+html:not(.dark) .notif-v2-avatar-amber * {
+  color: #f59e0b !important;
+}
+html.dark .notif-v2-avatar-amber {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+}
+
+html:not(.dark) .notif-v2-switch-on {
+  background-color: #fadbd8 !important;
+}
+
+html.dark .notif-v2-switch-on {
+  background-color: rgba(242, 59, 47, 0.32) !important;
+}
+
+html:not(.dark) .notif-v2-switch-off {
+  background-color: #f1f3f5 !important;
+}
+
+html.dark .notif-v2-switch-off {
+  background-color: #27272f !important;
+}
+
+html:not(.dark) .notif-v2-thumb-on,
+html.dark .notif-v2-thumb-on {
+  background-color: #f23b2f !important;
+}
+
+html:not(.dark) .notif-v2-thumb-off {
+  background-color: #cfd4dc !important;
+}
+
+html.dark .notif-v2-thumb-off {
+  background-color: #6b7280 !important;
 }
 
 

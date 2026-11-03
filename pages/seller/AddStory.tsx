@@ -419,7 +419,12 @@ export default function AddStory() {
   const notify = useNotify();
   const footerLogo = useFooterLogo();
 
+  const fromMessages =
+    searchParams.get("from") === "messages" ||
+    (location.state as any)?.from === "/messages";
+  const storyReturnPath = fromMessages ? "/messages" : "/loops";
   const fromNewsHub =
+    fromMessages ||
     searchParams.get("from") === "loops" ||
     searchParams.get("from") === "news-hub" ||
     location.pathname.startsWith("/loops") ||
@@ -2187,14 +2192,21 @@ export default function AddStory() {
               }).catch(() => {});
             }
 
-            await addDoc(collection(db, "notifications"), {
+            await addDoc(collection(db, "news_hub_notifications"), {
               userId: targetUid,
+              fromUserId: currentUser.uid,
+              fromUserName: authorName,
+              fromUserAvatar: authorAvatar || "",
               title: `${authorName} shared a story with you`,
+              body: caption.trim() || "shared a story with you on Loops.",
               message: caption.trim() || "Tap to view story on Loops",
-              type: "social",
+              type: "story",
+              storyId,
+              targetId: storyId,
               link: `/loops/story/${storyId}`,
               read: false,
-              createdAt: new Date().toISOString(),
+              isRead: false,
+              createdAt: Date.now(),
             }).catch(() => {});
           })
         );
@@ -2208,7 +2220,7 @@ export default function AddStory() {
           : "Your story is now live!",
         "success"
       );
-      navigate("/loops");
+      navigate(storyReturnPath);
     } catch (err) {
       console.error("Failed to publish story:", err);
       notify("Could not publish story. Please try again.", "error");
@@ -2800,7 +2812,7 @@ export default function AddStory() {
             <header className="px-4 pt-3 pb-2.5 flex items-center justify-between shrink-0">
               <button
                 type="button"
-                onClick={() => navigate("/loops")}
+                onClick={() => navigate(storyReturnPath)}
                 className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer text-zinc-900 dark:text-white"
                 aria-label="Close"
               >

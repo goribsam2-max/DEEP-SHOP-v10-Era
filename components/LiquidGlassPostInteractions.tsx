@@ -487,7 +487,7 @@ export const LoopPostOptionsSheet: React.FC<{
     triggerHaptic();
     setSubmittingReport(true);
     try {
-      await addDoc(collection(db, "notifications"), {
+      await addDoc(collection(db, "news_hub_notifications"), {
         type: "loop_post_report",
         title: "Loop Reported",
         message: `Post ${post.id} by ${authorLabel} reported for: ${reason}`,

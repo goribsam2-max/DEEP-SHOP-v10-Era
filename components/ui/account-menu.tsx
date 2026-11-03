@@ -96,7 +96,20 @@ export default function AccountMenu({
       where("isRead", "==", false)
     );
     const unsub = onSnapshot(q, (snap) => {
-      setUnreadCount(snap.docs.length);
+      const shopOnlyCount = snap.docs.filter((docSnap) => {
+        const d = docSnap.data();
+        return (
+          !d.fromUserId &&
+          !d.postId &&
+          !d.storyId &&
+          !String(d.link || "").startsWith("/loops") &&
+          !String(d.link || "").startsWith("/news") &&
+          !["follow", "like", "story_like", "comment", "repost", "story", "loop", "loop_post_report", "social", "star_gift"].includes(
+            String(d.type || "").toLowerCase()
+          )
+        );
+      }).length;
+      setUnreadCount(shopOnlyCount);
     });
     return () => unsub();
   }, [user]);

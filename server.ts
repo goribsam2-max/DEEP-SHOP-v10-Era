@@ -2382,7 +2382,20 @@ export async function initializeAppAsync() {
   // because on Vercel, static files are handled by vercel static routing if present.
   if (isProd && !process.env.VERCEL) {
     if (fs.existsSync(distPath)) {
-      app.use(express.static(distPath, { index: false }));
+      app.use(
+        "/assets",
+        express.static(path.join(distPath, "assets"), {
+          index: false,
+          maxAge: "365d",
+          immutable: true,
+        })
+      );
+      app.use(
+        express.static(distPath, {
+          index: false,
+          maxAge: "30d",
+        })
+      );
     }
   }
 
@@ -2400,7 +2413,7 @@ export async function initializeAppAsync() {
     } catch (viteErr) {
       console.warn("Vite dev server failed to start, falling back to static serving:", viteErr);
       if (fs.existsSync(distPath)) {
-        app.use(express.static(distPath, { index: false }));
+        app.use(express.static(distPath, { index: false, maxAge: "30d" }));
       }
     }
   }
@@ -2410,12 +2423,13 @@ export async function initializeAppAsync() {
     const icoPath = path.join(process.cwd(), "public", "favicon.ico");
     if (fs.existsSync(icoPath)) {
       res.setHeader("Content-Type", "image/x-icon");
-      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("Cache-Control", "public, max-age=2592000, stale-while-revalidate=86400");
       return res.sendFile(icoPath);
     }
     const pngPath = path.join(process.cwd(), "public", "favicon.png");
     if (fs.existsSync(pngPath)) {
       res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "public, max-age=2592000, stale-while-revalidate=86400");
       return res.sendFile(pngPath);
     }
     res.status(204).end();

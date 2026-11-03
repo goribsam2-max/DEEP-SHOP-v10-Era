@@ -46,7 +46,6 @@ import {
 import { AdPlacementSlot } from "../components/AdPlacementSlot";
 import { preloadImageUrl } from "../components/SmoothImage";
 import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
-import { LiquidGlassButton } from "../components/LoopsReelsOverlays";
 
 const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <LoopsSvgIcon name="loops-post-repost" className={className} />
@@ -252,56 +251,127 @@ export const NewsHub: React.FC = () => {
   }, [location.search]);
 
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showStickyUpHeader, setShowStickyUpHeader] = useState(false);
+  const [stickyFeedMenuOpen, setStickyFeedMenuOpen] = useState(false);
   const headerScrollSentinelRef = useRef<HTMLDivElement | null>(null);
+  const stickyFeedMenuRef = useRef<HTMLDivElement | null>(null);
+  const lastVerticalScrollYRef = useRef<number>(0);
+  const directionalDeltaRef = useRef<number>(0);
 
   useEffect(() => {
-    const computeScrolled = () => {
+    const getVerticalScrollOffset = (): number => {
       const mainEl = document.getElementById("main-content");
-      const sentinelRect = headerScrollSentinelRef.current?.getBoundingClientRect();
-      const sentinelPastTop = sentinelRect ? sentinelRect.top < 4 : false;
-      const scrollOffset = Math.max(
+      const docScroll = Math.max(
         window.scrollY || 0,
+        window.pageYOffset || 0,
         document.documentElement?.scrollTop || 0,
         document.body?.scrollTop || 0,
         mainEl?.scrollTop || 0
       );
-      setIsScrolled(sentinelPastTop || scrollOffset > 44);
+      if (docScroll > 0) return docScroll;
+      const sentinelRect = headerScrollSentinelRef.current?.getBoundingClientRect();
+      if (sentinelRect && sentinelRect.top < 0) {
+        return Math.abs(sentinelRect.top) + 48;
+      }
+      return 0;
     };
 
-    computeScrolled();
+    const initialY = Math.max(0, getVerticalScrollOffset());
+    lastVerticalScrollYRef.current = initialY;
+    directionalDeltaRef.current = 0;
+    setIsScrolled(initialY > 44);
+    setShowStickyUpHeader(false);
+    setStickyFeedMenuOpen(false);
 
-    let observer: IntersectionObserver | null = null;
-    if (
-      typeof IntersectionObserver !== "undefined" &&
-      headerScrollSentinelRef.current
-    ) {
-      observer = new IntersectionObserver(
-        (entries) => {
-          const entry = entries[0];
-          if (entry) {
-            if (!entry.isIntersecting && entry.boundingClientRect.top < 12) {
-              setIsScrolled(true);
-            } else {
-              computeScrolled();
-            }
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        ticking = false;
+        const currentY = Math.max(0, getVerticalScrollOffset());
+        const prevY = lastVerticalScrollYRef.current;
+        const delta = currentY - prevY;
+
+        // Ignore horizontal swipes (e.g., Stories strip or multi-photo carousels)
+        if (Math.abs(delta) < 0.5) {
+          return;
+        }
+
+        lastVerticalScrollYRef.current = currentY;
+
+        // Resting at top of Loops feed -> show inline top header, hide sticky bar
+        if (currentY <= 44) {
+          directionalDeltaRef.current = 0;
+          setIsScrolled(false);
+          setShowStickyUpHeader(false);
+          setStickyFeedMenuOpen(false);
+          return;
+        }
+
+        setIsScrolled(true);
+
+        // Ignore bottom rubber-band bounce so hitting bottom doesn't trigger scroll-up bar
+        const maxScroll = Math.max(
+          0,
+          (document.documentElement?.scrollHeight || 0) - window.innerHeight
+        );
+        if (maxScroll > 0 && currentY >= maxScroll - 4 && delta < 0) {
+          return;
+        }
+
+        if (delta > 0) {
+          // Scrolling DOWN -> show nothing at all
+          if (directionalDeltaRef.current < 0) {
+            directionalDeltaRef.current = 0;
           }
-        },
-        { threshold: [0, 1] }
-      );
-      observer.observe(headerScrollSentinelRef.current);
-    }
+          directionalDeltaRef.current += delta;
+          if (directionalDeltaRef.current >= 6) {
+            setShowStickyUpHeader(false);
+            setStickyFeedMenuOpen(false);
+            setFeedMenuOpen(false);
+          }
+        } else if (delta < 0) {
+          // Scrolling UP -> reveal sticky '+' + 'Loops ⌄' + '♡' bar
+          if (directionalDeltaRef.current > 0) {
+            directionalDeltaRef.current = 0;
+          }
+          directionalDeltaRef.current += delta;
+          if (directionalDeltaRef.current <= -7) {
+            setShowStickyUpHeader(true);
+          }
+        }
+      });
+    };
 
-    window.addEventListener("scroll", computeScrolled, {
+    window.addEventListener("scroll", onScroll, {
       passive: true,
       capture: true,
     });
-    window.addEventListener("resize", computeScrolled, { passive: true });
     return () => {
-      observer?.disconnect();
-      window.removeEventListener("scroll", computeScrolled, true);
-      window.removeEventListener("resize", computeScrolled);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [activeFeedFilter]);
+
+  useEffect(() => {
+    if (!stickyFeedMenuOpen) return;
+    const onPointerDown = (ev: MouseEvent | TouchEvent) => {
+      const target = ev.target as Node | null;
+      if (
+        stickyFeedMenuRef.current &&
+        target &&
+        !stickyFeedMenuRef.current.contains(target)
+      ) {
+        setStickyFeedMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [stickyFeedMenuOpen]);
 
   useEffect(() => {
     if (activeFeedFilter !== "video") {
@@ -1533,7 +1603,13 @@ export const NewsHub: React.FC = () => {
                 </button>
               </header>
             ) : (
-              <header className="relative flex items-center justify-between px-4 sm:px-2 py-1.5 bg-transparent">
+              <header
+                className={`relative flex items-center justify-between px-4 sm:px-2 py-1.5 bg-transparent transition-opacity duration-150 ${
+                  isScrolled && showStickyUpHeader
+                    ? "opacity-0 pointer-events-none"
+                    : "opacity-100"
+                }`}
+              >
                 {/* Left: Clean Two-Line Menu Button */}
                 <button
                   type="button"
@@ -1543,14 +1619,14 @@ export const NewsHub: React.FC = () => {
                     setFeedMenuOpen(false);
                     setDrawerOpen((prev) => !prev);
                   }}
-                  className="w-10 h-10 -ml-1.5 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-95 transition cursor-pointer shrink-0"
+                  className="w-11 h-11 -ml-2 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-95 transition cursor-pointer shrink-0"
                   aria-label="Open Feeds Menu"
                   title="Feeds Menu"
                 >
                   <TwoLineMenuIcon className="w-[23px] h-[23px]" />
                 </button>
 
-                {/* Center: Cursive "Loops ⌄" Wordmark + Liquid Popover Dropdown (IMG_5123 & IMG_5124) */}
+                {/* Center: Bold Geometric Sans "Loops ⌄" Wordmark + Liquid Popover Dropdown (IMG_5391) */}
                 <div className="relative" ref={feedMenuRef}>
                   <button
                     type="button"
@@ -1559,26 +1635,23 @@ export const NewsHub: React.FC = () => {
                       triggerHaptic();
                       setFeedMenuOpen((prev) => !prev);
                     }}
-                    className="inline-flex flex-col items-center justify-center px-3 py-0.5 rounded-2xl hover:bg-black/[0.03] dark:hover:bg-white/[0.05] active:scale-95 transition cursor-pointer select-none"
+                    className="inline-flex flex-col items-center justify-center min-h-[44px] px-3 py-0.5 rounded-2xl hover:bg-black/[0.03] dark:hover:bg-white/[0.05] active:scale-95 transition cursor-pointer select-none"
                     aria-label="Choose feed or visit shop"
                   >
-                    <span className="inline-flex items-center gap-1">
-                      <span className="loops-script-logo text-[34px] sm:text-[36px] text-zinc-950 dark:text-white">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="loops-header-wordmark text-[26px] sm:text-[27px] text-zinc-950 dark:text-white whitespace-nowrap">
                         Loops
                       </span>
                       <span
-                        className={`inline-flex mt-1 text-zinc-900 dark:text-zinc-200 transition-transform duration-200 ${
+                        className={`inline-flex translate-y-[1px] text-zinc-950 dark:text-white transition-transform duration-200 ${
                           feedMenuOpen ? "rotate-180" : ""
                         }`}
                       >
-                        <LoopsSvgIcon
-                          name="loops-header-chevron"
-                          className="w-4 h-4"
-                        />
+                        <ChevronDown className="w-[16px] h-[16px] stroke-[2.35]" />
                       </span>
                     </span>
                     {(activeFeedFilter || scamOnlyMode) && (
-                      <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 -mt-1">
+                      <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 -mt-0.5">
                         {scamOnlyMode || activeFeedFilter === "scam"
                           ? "Scam Alerts"
                           : activeFeedFilter === "following"
@@ -1676,11 +1749,7 @@ export const NewsHub: React.FC = () => {
                 </div>
 
                 {/* Right: Plain borderless/shadowless Create (+) & Heart icons when resting at top */}
-                <div
-                  className={`flex items-center gap-1 shrink-0 transition-opacity duration-150 ${
-                    isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
-                  }`}
-                >
+                <div className="flex items-center gap-0.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -1689,9 +1758,18 @@ export const NewsHub: React.FC = () => {
                     }}
                     title="Create"
                     aria-label="Create post or story"
-                    className="w-10 h-10 rounded-full bg-transparent border-0 shadow-none flex items-center justify-center text-zinc-950 dark:text-white active:scale-90 transition cursor-pointer"
+                    className="w-11 h-11 rounded-full bg-transparent border-0 shadow-none flex items-center justify-center text-zinc-950 dark:text-white active:scale-90 transition cursor-pointer"
                   >
-                    <Plus className="w-[23px] h-[23px] stroke-[2.25]" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.15"
+                      strokeLinecap="round"
+                      className="w-[23px] h-[23px]"
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
                   </button>
 
                   <button
@@ -1702,13 +1780,23 @@ export const NewsHub: React.FC = () => {
                     }}
                     title="Activity"
                     aria-label="Activity notifications"
-                    className="relative w-10 h-10 rounded-full bg-transparent border-0 shadow-none flex items-center justify-center text-zinc-950 dark:text-white active:scale-90 transition cursor-pointer"
+                    className="relative w-11 h-11 -mr-1.5 rounded-full bg-transparent border-0 shadow-none flex items-center justify-center text-zinc-950 dark:text-white active:scale-90 transition cursor-pointer"
                   >
-                    <Heart className="w-[22px] h-[22px] stroke-[2.15] fill-transparent" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.15"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-[23px] h-[23px]"
+                    >
+                      <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z" />
+                    </svg>
                     {unreadNewsNotifications > 0 && (
                       <span
                         aria-hidden="true"
-                        className="absolute top-2 right-2 w-[8.5px] h-[8.5px] rounded-full bg-[#FF2938] ring-[1.5px] ring-white dark:ring-zinc-950"
+                        className="absolute top-2.5 right-2 w-[8.5px] h-[8.5px] rounded-full bg-[#FF2938] ring-[1.5px] ring-white dark:ring-zinc-950"
                       />
                     )}
                   </button>
@@ -1716,52 +1804,211 @@ export const NewsHub: React.FC = () => {
               </header>
             )}
 
-            {/* Top Scroll Sentinel for instant sticky Liquid Glass activation */}
+            {/* Top Scroll Sentinel */}
             <div
               ref={headerScrollSentinelRef}
               aria-hidden="true"
               className="h-px w-full pointer-events-none"
             />
 
-            {/* Portaled Sticky Top-Right Liquid Glass Controls ONLY when scrolled (never trapped by parent transforms) */}
+            {/* Portaled Sticky Scroll-Up Header matching IMG_5391:
+                Hidden completely while scrolling down; revealed when scrolling up with
+                Left (+) frosted circle, Center bold "Loops ⌄", Right (♡) frosted circle */}
             {typeof document !== "undefined" &&
               createPortal(
                 <AnimatePresence>
                   {isScrolled &&
+                    showStickyUpHeader &&
                     !drawerOpen &&
                     !reelsOverlayOpen &&
                     activeFeedFilter !== "video" &&
                     activeFeedFilter !== "ghost" && (
                       <motion.div
-                        initial={{ opacity: 0, scale: 0.86, y: -8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.86, y: -8 }}
+                        initial={{ opacity: 0, y: -18 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -18 }}
                         transition={{
-                          type: "spring",
-                          stiffness: 420,
-                          damping: 28,
+                          duration: 0.18,
+                          ease: [0.16, 1, 0.3, 1],
                         }}
-                        style={{
-                          top: "max(10px, env(safe-area-inset-top, 10px))",
-                        }}
-                        className="fixed right-3.5 lg:right-[max(24px,calc(50%-302px))] z-[95] flex items-center gap-2 pointer-events-auto"
+                        className="fixed top-0 inset-x-0 z-[95] pointer-events-none"
                       >
-                        <LiquidGlassButton
-                          onClick={() => setChooserOpen(true)}
-                          title="Create"
-                          ariaLabel="Create post or story"
-                        >
-                          <Plus className="w-5 h-5 stroke-[2.4]" />
-                        </LiquidGlassButton>
+                        {/* Progressive Frosted Blur Scrim (scoped to mobile full width & center column on lg) */}
+                        <div
+                          aria-hidden="true"
+                          className="loops-sticky-top-scrim absolute inset-x-0 top-0 h-[78px] lg:max-w-[640px] lg:mx-auto pointer-events-none"
+                        />
 
-                        <LiquidGlassButton
-                          onClick={() => navigate("/loops/activity")}
-                          title="Activity"
-                          ariaLabel="Activity notifications"
-                          badge={unreadNewsNotifications > 0}
-                        >
-                          <Heart className="w-5 h-5 stroke-[2.2] fill-transparent" />
-                        </LiquidGlassButton>
+                        <div className="relative w-full max-w-[620px] mx-auto px-3.5 sm:px-3 pt-[max(10px,env(safe-area-inset-top,10px))] pb-2 flex items-center justify-between">
+                          {/* Left: Circular Frosted White/Glass Plus (+) Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setStickyFeedMenuOpen(false);
+                              setChooserOpen(true);
+                            }}
+                            title="Create"
+                            aria-label="Create post or story"
+                            className="loops-sticky-glass-circle pointer-events-auto w-[46px] h-[46px] rounded-full flex items-center justify-center active:scale-92 transition-transform duration-150 cursor-pointer shrink-0"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.15"
+                              strokeLinecap="round"
+                              className="w-[22px] h-[22px]"
+                            >
+                              <path d="M12 5v14M5 12h14" />
+                            </svg>
+                          </button>
+
+                          {/* Center: Bold "Loops ⌄" Wordmark + Feed Switcher Popover */}
+                          <div
+                            className="relative pointer-events-auto"
+                            ref={stickyFeedMenuRef}
+                          >
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerHaptic();
+                                setStickyFeedMenuOpen((prev) => !prev);
+                              }}
+                              aria-label="Choose feed or visit shop"
+                              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 py-1 rounded-2xl active:scale-95 transition-transform duration-150 cursor-pointer select-none"
+                            >
+                              <span className="loops-header-wordmark text-[26px] sm:text-[27px] text-zinc-950 dark:text-white whitespace-nowrap">
+                                Loops
+                              </span>
+                              <span
+                                className={`inline-flex translate-y-[1px] text-zinc-950 dark:text-white transition-transform duration-200 ${
+                                  stickyFeedMenuOpen ? "rotate-180" : ""
+                                }`}
+                              >
+                                <ChevronDown className="w-[16px] h-[16px] stroke-[2.35]" />
+                              </span>
+                            </button>
+
+                            <AnimatePresence>
+                              {stickyFeedMenuOpen && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.94, y: -6 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.94, y: -6 }}
+                                  transition={{
+                                    type: "spring",
+                                    stiffness: 430,
+                                    damping: 30,
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="loops-liquid-popover absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-50 w-[224px] rounded-[26px] py-2 px-1.5 space-y-0.5"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      triggerHaptic();
+                                      setStickyFeedMenuOpen(false);
+                                      setScamOnlyMode(false);
+                                      navigate("/loops");
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
+                                  >
+                                    <span>For you</span>
+                                    {!activeFeedFilter && !scamOnlyMode ? (
+                                      <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                                    ) : (
+                                      <Globe className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                                    )}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      triggerHaptic();
+                                      setStickyFeedMenuOpen(false);
+                                      setScamOnlyMode(false);
+                                      navigate("/loops?filter=following");
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
+                                  >
+                                    <span>Following</span>
+                                    {activeFeedFilter === "following" ? (
+                                      <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                                    ) : (
+                                      <Users className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                                    )}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      triggerHaptic();
+                                      setStickyFeedMenuOpen(false);
+                                      setScamOnlyMode(false);
+                                      navigate("/loops?filter=favourites");
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
+                                  >
+                                    <span>Favourites</span>
+                                    {activeFeedFilter === "favourites" ? (
+                                      <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                                    ) : (
+                                      <Star className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                                    )}
+                                  </button>
+
+                                  <div className="my-1 border-t loops-divider mx-2" />
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      triggerHaptic();
+                                      setStickyFeedMenuOpen(false);
+                                      navigate("/");
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
+                                  >
+                                    <span>Visit Shop</span>
+                                    <ShoppingBag className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+
+                          {/* Right: Circular Frosted White/Glass Love/Heart (♡) Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic();
+                              setStickyFeedMenuOpen(false);
+                              navigate("/loops/activity");
+                            }}
+                            title="Activity"
+                            aria-label="Activity notifications"
+                            className="loops-sticky-glass-circle pointer-events-auto relative w-[46px] h-[46px] rounded-full flex items-center justify-center active:scale-92 transition-transform duration-150 cursor-pointer shrink-0"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.15"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="w-[23px] h-[23px]"
+                            >
+                              <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z" />
+                            </svg>
+                            {unreadNewsNotifications > 0 && (
+                              <span
+                                aria-hidden="true"
+                                className="absolute top-[9px] right-[9px] z-20 w-[8.5px] h-[8.5px] rounded-full bg-[#FF2938] ring-[1.5px] ring-white dark:ring-zinc-900"
+                              />
+                            )}
+                          </button>
+                        </div>
                       </motion.div>
                     )}
                 </AnimatePresence>,

@@ -12,7 +12,7 @@ export function NotificationPermissionModal() {
     if (typeof window !== 'undefined' && 'Notification' in window && window.Notification) {
       const permission = window.Notification.permission;
       const hasDismissed = localStorage.getItem('notificationPromptDismissed');
-      
+
       if (permission === 'granted') {
         const ensureSubscribed = async () => {
           if (localStorage.getItem('vibe_push_enabled') !== 'true') {
@@ -46,13 +46,17 @@ export function NotificationPermissionModal() {
       if (result && !result.error) {
         localStorage.setItem('vibe_push_enabled', 'true');
         notify('Push notifications enabled!', 'success');
-        fetch('/api/send-welcome-push', { 
+        fetch('/api/send-welcome-push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subscription: result })
-        }).catch(e => console.error("Welcome push error:", e));
+          body: JSON.stringify({ subscription: result }),
+        }).catch((e) => console.error('Welcome push error:', e));
       } else {
-        notify(result?.error || 'Permission denied or failed to setup. You can change this in your browser settings.', 'error');
+        notify(
+          result?.error ||
+            'Permission denied or failed to setup. You can change this in your browser settings.',
+          'error'
+        );
         localStorage.setItem('notificationPromptDismissed', 'true');
       }
     } catch (err) {
@@ -72,11 +76,11 @@ export function NotificationPermissionModal() {
       open={open}
       onClose={handleDismiss}
       zIndexClass="z-[100000]"
-      title="Enable notifications?"
-      description="Get real-time updates about your orders, messages, and exclusive offers directly on your device."
-      primaryText="Allow notifications"
+      title="Notification"
+      description="Allow instant updates for your orders, messages, and exclusive deals directly on your device."
+      primaryText="Yes"
       onPrimary={handleAllow}
-      secondaryText="Not now"
+      secondaryText="No"
       onSecondary={handleDismiss}
     />
   );

@@ -101,7 +101,20 @@ const SavedAccountsPage: React.FC = () => {
           );
           const notifSnap = await getDocs(notifQ);
           if (active) {
-            counts[acc.uid] = notifSnap.size;
+            const shopCount = notifSnap.docs.filter((docSnap) => {
+              const d = docSnap.data();
+              return (
+                !d.fromUserId &&
+                !d.postId &&
+                !d.storyId &&
+                !String(d.link || "").startsWith("/loops") &&
+                !String(d.link || "").startsWith("/news") &&
+                !["follow", "like", "story_like", "comment", "repost", "story", "loop", "loop_post_report", "social", "star_gift"].includes(
+                  String(d.type || "").toLowerCase()
+                )
+              );
+            }).length;
+            counts[acc.uid] = shopCount;
           }
         } catch {
           // Ignore notification count error

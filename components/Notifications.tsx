@@ -173,11 +173,11 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       <LiquidGlassPopup
         open={!!confirmModal}
         zIndexClass="z-[200000]"
-        title={confirmModal?.title}
+        title={confirmModal?.title || 'Notification'}
         description={confirmModal?.message}
-        primaryText={confirmModal?.confirmText || 'Confirm'}
+        primaryText={confirmModal?.confirmText || 'Yes'}
         onPrimary={handleAcceptConfirm}
-        secondaryText={confirmModal?.cancelText || 'Cancel'}
+        secondaryText={confirmModal?.cancelText || 'No'}
         onSecondary={handleCancelConfirm}
         onClose={handleCancelConfirm}
       />

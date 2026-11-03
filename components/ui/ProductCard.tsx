@@ -4,13 +4,14 @@ import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { Product } from "../../types";
 import { auth, db } from "../../firebase";
-import { doc, getDoc, setDoc, deleteDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { PixelImage } from "./PixelImage";
 import { triggerHaptic } from "../../lib/haptics";
 import { Heart, Star, ShoppingBag, Check, ArrowUpRight } from "lucide-react";
 import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
 import { useNotify } from "../Notifications";
 import { VerifiedIcon } from "../SellerBadge";
+import { useIsWishlisted, toggleWishlistItem } from "../../lib/wishlistStore";
 
 export interface ProductCardProps {
   product: Product;
@@ -62,7 +63,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const notify = useNotify();
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const isWishlisted = useIsWishlisted(product.id);
   const [justAdded, setJustAdded] = useState(false);
   const [sellerMeta, setSellerMeta] = useState<ResolvedSellerMeta>(() =>
     getInitialSellerMeta(product)
@@ -177,27 +178,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     };
   }, [product]);
 
-  useEffect(() => {
-    let unsubscribe = () => {};
-    if (auth.currentUser && product.id) {
-      const wishlistRef = doc(
-        db,
-        "users",
-        auth.currentUser.uid,
-        "wishlist",
-        product.id
-      );
-      unsubscribe = onSnapshot(
-        wishlistRef,
-        (snap) => {
-          setIsWishlisted(snap.exists());
-        },
-        () => {}
-      );
-    }
-    return () => unsubscribe();
-  }, [product.id]);
-
   const toggleWishlist = async (e: React.MouseEvent) => {
     triggerHaptic();
     e.preventDefault();
@@ -209,22 +189,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
     if (!product.id) return;
 
-    const wishlistRef = doc(
-      db,
-      "users",
-      auth.currentUser.uid,
-      "wishlist",
-      product.id
-    );
     try {
-      if (isWishlisted) {
-        await deleteDoc(wishlistRef);
-      } else {
-        await setDoc(wishlistRef, {
-          productId: product.id,
-          addedAt: new Date().toISOString(),
-        });
-      }
+      await toggleWishlistItem(product.id);
     } catch (error) {
       console.error("Error toggling wishlist:", error);
     }

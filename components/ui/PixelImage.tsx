@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Image as ImageIcon } from "lucide-react";
+import { optimizeImageUrl } from "../../lib/imageOptimize";
 
 export interface PixelImageProps {
   src?: string;
@@ -14,54 +15,10 @@ export interface PixelImageProps {
   className?: string;
   imgClassName?: string;
   loading?: "lazy" | "eager";
+  maxWidth?: number;
   fallbackSrc?: string;
   onClick?: (e: React.MouseEvent) => void;
   style?: React.CSSProperties;
-}
-
-function optimizeImageSrc(rawSrc?: string, maxWidth = 640): string {
-  if (!rawSrc) return "";
-  const trimmed = rawSrc.trim();
-  if (!trimmed || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
-    return trimmed;
-  }
-
-  try {
-    if (trimmed.includes("images.unsplash.com/")) {
-      const url = new URL(trimmed);
-      if (!url.searchParams.has("w")) {
-        url.searchParams.set("w", String(maxWidth));
-      }
-      if (!url.searchParams.has("q")) {
-        url.searchParams.set("q", "75");
-      }
-      if (!url.searchParams.has("auto")) {
-        url.searchParams.set("auto", "format");
-      }
-      return url.toString();
-    }
-
-    if (
-      trimmed.includes("res.cloudinary.com/") &&
-      trimmed.includes("/image/upload/") &&
-      !trimmed.includes("/f_auto") &&
-      !trimmed.includes("/q_auto")
-    ) {
-      return trimmed.replace(
-        "/image/upload/",
-        `/image/upload/f_auto,q_auto:good,w_${maxWidth}/`
-      );
-    }
-
-    if (trimmed.includes("images.pexels.com/") && !trimmed.includes("w=")) {
-      const sep = trimmed.includes("?") ? "&" : "?";
-      return `${trimmed}${sep}auto=compress&cs=tinysrgb&w=${maxWidth}`;
-    }
-  } catch {
-    return trimmed;
-  }
-
-  return trimmed;
 }
 
 export const PixelImage: React.FC<PixelImageProps> = ({
@@ -70,25 +27,31 @@ export const PixelImage: React.FC<PixelImageProps> = ({
   className,
   imgClassName,
   loading = "lazy",
+  maxWidth,
+  fallbackSrc,
   onClick,
   style,
 }) => {
+  const targetWidth = maxWidth || (loading === "eager" ? 960 : 420);
   const optimizedSrc = useMemo(
-    () => optimizeImageSrc(src, loading === "eager" ? 1080 : 600),
-    [src, loading]
+    () => optimizeImageUrl(src, targetWidth, 75),
+    [src, targetWidth]
   );
+
+  const [activeSrc, setActiveSrc] = useState<string>(optimizedSrc);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  // Respect native browser lazy-loading instead of eagerly creating new Image() for offscreen cards
   useEffect(() => {
     if (!optimizedSrc) {
+      setActiveSrc("");
       setIsLoaded(false);
       setHasError(true);
       return;
     }
 
+    setActiveSrc(optimizedSrc);
     setHasError(false);
     const el = imgRef.current;
     if (el && el.complete && el.naturalWidth > 0) {
@@ -103,6 +66,14 @@ export const PixelImage: React.FC<PixelImageProps> = ({
   };
 
   const handleImageError = () => {
+    if (src && activeSrc !== src) {
+      setActiveSrc(src);
+      return;
+    }
+    if (fallbackSrc && activeSrc !== fallbackSrc) {
+      setActiveSrc(fallbackSrc);
+      return;
+    }
     setHasError(true);
   };
 
@@ -115,7 +86,6 @@ export const PixelImage: React.FC<PixelImageProps> = ({
         className
       )}
     >
-      {/* Sleek animated shimmer skeleton placeholder */}
       {!isLoaded && !hasError && (
         <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-zinc-200/60 dark:bg-zinc-800/80">
           <div className="flex flex-col items-center justify-center gap-1.5 opacity-40 scale-90">
@@ -126,7 +96,6 @@ export const PixelImage: React.FC<PixelImageProps> = ({
         </div>
       )}
 
-      {/* Error fallback */}
       {hasError && (
         <div className="absolute inset-0 z-0 flex flex-col items-center justify-center p-3 text-center bg-zinc-100 dark:bg-zinc-800/60">
           <div className="w-9 h-9 rounded-full bg-zinc-200/80 dark:bg-zinc-700/80 flex items-center justify-center mb-1">
@@ -138,11 +107,10 @@ export const PixelImage: React.FC<PixelImageProps> = ({
         </div>
       )}
 
-      {/* Main Image with native lazy loading & zero-reflow opacity transition */}
-      {Boolean(optimizedSrc && !hasError) && (
+      {Boolean(activeSrc && !hasError) && (
         <img
           ref={imgRef}
-          src={optimizedSrc}
+          src={activeSrc}
           alt={alt}
           loading={loading}
           decoding="async"
@@ -151,7 +119,7 @@ export const PixelImage: React.FC<PixelImageProps> = ({
           onError={handleImageError}
           draggable={false}
           className={cn(
-            "w-full h-full object-contain transition-opacity duration-300 ease-out",
+            "w-full h-full object-contain transition-opacity duration-200 ease-out",
             isLoaded ? "opacity-100" : "opacity-0 pointer-events-none",
             imgClassName
           )}

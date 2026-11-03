@@ -15,7 +15,16 @@
       ]
     },
     {
-      "source": "/(favicon\\.ico|favicon\\.png|apple-touch-icon\\.png|llms\\.txt|robots\\.txt|sitemap\\.xml)",
+      "source": "/(favicon\\.ico|favicon\\.png|favicon\\.jpg|logo\\.jpg|apple-touch-icon\\.png|pwa-512x512\\.png|pwa-maskable-512x512\\.png)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(llms\\.txt|robots\\.txt|sitemap\\.xml)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -31,7 +40,11 @@
     { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
     { "source": "/favicon.ico", "destination": "/favicon.ico" },
     { "source": "/favicon.png", "destination": "/favicon.png" },
+    { "source": "/favicon.jpg", "destination": "/favicon.jpg" },
+    { "source": "/logo.jpg", "destination": "/logo.jpg" },
     { "source": "/apple-touch-icon.png", "destination": "/apple-touch-icon.png" },
+    { "source": "/pwa-512x512.png", "destination": "/pwa-512x512.png" },
+    { "source": "/pwa-maskable-512x512.png", "destination": "/pwa-maskable-512x512.png" },
     { "source": "/registerSW.js", "destination": "/registerSW.js" },
     { "source": "/sw.js", "destination": "/sw.js" },
     { "source": "/workbox-(.*)", "destination": "/workbox-$1" },

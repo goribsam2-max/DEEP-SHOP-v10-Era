@@ -16,13 +16,8 @@ import { db } from "../firebase";
 import { Product } from "../types";
 import { getReadableAddress } from "../services/location";
 import { useNotify } from "../components/Notifications";
-import {
-  motion,
-  AnimatePresence,
-  useScroll,
-  useTransform,
-  useSpring,
-} from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { optimizeImageUrl } from "../lib/imageOptimize";
 import Logo from "../components/Logo";
 import Icon from "../components/Icon";
 import SEO from "../components/SEO";
@@ -74,7 +69,7 @@ const ThinBanner = ({ banner, navigate }: { banner: any; navigate: any }) => {
       className="relative overflow-hidden rounded-2xl cursor-pointer hover-tilt w-full mb-10 border border-zinc-100 dark:border-zinc-800 shadow-sm"
       onClick={() => banner.link && navigate(banner.link)}
     >
-      <PixelImage src={banner.imageUrl} alt="banner" grid="8x3" />
+      <PixelImage src={banner.imageUrl} alt="banner" maxWidth={920} />
 
       <div
         className="absolute top-3 right-3 z-20 flex items-center justify-end"
@@ -83,32 +78,17 @@ const ThinBanner = ({ banner, navigate }: { banner: any; navigate: any }) => {
           setShowAdLabel(!showAdLabel);
         }}
       >
-        <motion.div
-          layout
-          className="bg-zinc-900 dark:bg-white/60 backdrop-blur-md rounded-full flex items-center justify-center text-white overflow-hidden shadow-lg border border-white/20"
-          initial={{ borderRadius: 999 }}
-        >
-          <AnimatePresence mode="wait">
-            {showAdLabel ? (
-              <motion.span
-                key="text"
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                className="pl-3 pr-4 py-1.5 text-[10px] font-bold  tracking-normal whitespace-nowrap"
-              >
-                Sponsored Ad
-              </motion.span>
-            ) : (
-              <motion.div
-                key="icon"
-                className="w-8 h-8 flex items-center justify-center font-serif text-sm font-bold"
-              >
-                i
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+        <div className="bg-zinc-900 dark:bg-white/60 backdrop-blur-md rounded-full flex items-center justify-center text-white overflow-hidden shadow-lg border border-white/20 transition-all duration-200">
+          {showAdLabel ? (
+            <span className="pl-3 pr-4 py-1.5 text-[10px] font-bold tracking-normal whitespace-nowrap">
+              Sponsored Ad
+            </span>
+          ) : (
+            <div className="w-8 h-8 flex items-center justify-center font-serif text-sm font-bold">
+              i
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -399,13 +379,19 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       const rowNum = (idx % numRows) + 1;
       const rowIndex = Math.floor(idx / numRows);
       const name = seller.shopName || seller.displayName || "Premium Seller";
-      const avatarUrl = seller.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&rounded=true&font-size=0.4`;
+      const avatarUrl = seller.photoURL
+        ? optimizeImageUrl(seller.photoURL, 80, 72)
+        : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&rounded=true&font-size=0.4`;
 
       return {
         label: name,
         icon: (
           <img
             src={avatarUrl}
+            width={28}
+            height={28}
+            loading="lazy"
+            decoding="async"
             className="w-7 h-7 rounded-full object-cover border border-emerald-500/20 shadow-sm shrink-0 bg-zinc-100"
             alt={name}
             referrerPolicy="no-referrer"
@@ -445,27 +431,33 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           <div className="ds-skeleton w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px]" />
         </div>
       ) : heroBanners.length > 0 && (
-        <div className="mb-8 w-full animate-fade-in group">
+        <div className="mb-8 w-full group">
           <SectionHeader title="Hot Deals" />
-          <motion.div
+          <div
             id="home-hero"
             className="relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px] overflow-hidden shadow-sm cursor-pointer"
             onClick={() => heroBanners[activeBanner]?.link && navigate(heroBanners[activeBanner].link)}
           >
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={activeBanner}
-                initial={{ opacity: 0 }}
+                initial={{ opacity: 0.92 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
                 className="absolute inset-0 bg-zinc-100 dark:bg-[#1e1e1e]"
               >
                 <img
-                  src={heroBanners[activeBanner]?.imageUrl}
+                  src={optimizeImageUrl(heroBanners[activeBanner]?.imageUrl, 960, 78)}
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"
+                  onError={(e) => {
+                    const rawUrl = heroBanners[activeBanner]?.imageUrl;
+                    if (rawUrl && e.currentTarget.src !== rawUrl) {
+                      e.currentTarget.src = rawUrl;
+                    }
+                  }}
                   className="w-full h-full object-cover"
                   alt={heroBanners[activeBanner]?.title || "Featured Deal Banner"}
                 />
@@ -500,15 +492,15 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                 ))}
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       )}
 
-      {/* Reseller VIP & Masterclass Teacher Banner (News Hub Post Card Styled - Responsive Layout) */}
-      <div className="mb-8 w-full animate-fade-in px-0 md:px-0">
+      {/* Reseller VIP & Masterclass Teacher Banner (Immediate paint for zero LCP render delay) */}
+      <div className="mb-8 w-full px-0 md:px-0">
         <div
           onClick={() => navigate("/subscription")}
-          className="group relative overflow-hidden rounded-3xl bg-white dark:bg-[#141a22] border border-zinc-200/90 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer active:scale-[0.995]"
+          className="group relative overflow-hidden rounded-3xl bg-white dark:bg-[#141a22] border border-zinc-200/90 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer active:scale-[0.995]"
         >
           {/* Card Container Layout: Mobile (Vertical) / Desktop (Horizontal Grid) */}
           <div className="grid grid-cols-1 md:grid-cols-12 items-center p-5 sm:p-6 lg:p-7 gap-5 sm:gap-6">
@@ -562,7 +554,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       {/* Refer & Earn (Only if not logged in) */}
       {!userData && (
         <div
-          className="mb-8 w-full animate-fade-in flex justify-center px-0 md:px-4"
+          className="mb-8 w-full flex justify-center px-0 md:px-4"
           onMouseEnter={() => setReferState("refer-hover")}
           onMouseLeave={() => setReferState("refer-idle")}
         >
@@ -596,24 +588,24 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         </div>
       )}
 
-      {/* Auto Product Slider */}
+      {/* Auto Product Slider (Capped to top 6 featured products to eliminate multi-MB carousel payload) */}
       {isLoadingProducts ? (
         <div className="mb-10 w-full">
           <SectionShowcaseSkeleton cards={4} />
         </div>
       ) : products.length > 0 && (
-        <div id="home-products" className="mb-10 w-full animate-fade-in">
+        <div id="home-products" className="mb-10 w-full">
           <SectionHeader title="Trending Products" />
           <HeroSlider
-            autoSlideDelay={3000}
+            autoSlideDelay={3500}
             pauseDurationAfterInteract={10000}
-            cards={products.map((p) => ({
+            cards={products.slice(0, 6).map((p) => ({
               id: p.id,
               title: p.name,
               description:
                 p.description || "Discover authentic products at DEEP SHOP.",
               category: p.category,
-              image: p.image,
+              image: getProductDisplayImage(p),
               date:
                 p.isOffer && p.offerPrice
                   ? formatPrice(p.offerPrice)
@@ -624,11 +616,14 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         </div>
       )}
       
-      {/* Offfer Products Slider */}
-      {products.filter(p => p.isOffer).length > 0 && (
-        <div className="mb-10 w-full animate-fade-in group px-0 md:px-0">
+      {/* Offer Products Slider (Capped to top 8 offers) */}
+      {products.some((p) => p.isOffer) && (
+        <div className="mb-10 w-full group px-0 md:px-0">
           <SectionHeader title="Special Offers" />
-          <OfferSlider products={products.filter(p => p.isOffer)} autoSlide={true} />
+          <OfferSlider
+            products={products.filter((p) => p.isOffer).slice(0, 8)}
+            autoSlide={true}
+          />
         </div>
       )}
 
@@ -636,7 +631,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       <BorderOfferSection products={products} />
 
       {/* Categories (Single Line Scrollable) */}
-      <div className="mb-8 w-full animate-stagger-3 relative z-10 pt-2">
+      <div className="mb-8 w-full relative z-10 pt-2">
         <SectionHeader title="Categories" />
         {isLoadingProducts ? (
           <StoryRowSkeleton count={7} />
@@ -648,9 +643,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
               new Set(products.map((p) => p.category).filter(Boolean)),
             ),
           ].map((cat, i) => {
-            let imageUrl = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(cat)}&backgroundColor=f88c49`;
+            let rawCategoryImg = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(cat)}&backgroundColor=f88c49`;
             if (cat === "All") {
-              imageUrl =
+              rawCategoryImg =
                 "https://ui-avatars.com/api/?name=User&background=000&color=fff";
             } else {
               const firstProduct = products.find((p) => p.category === cat);
@@ -659,9 +654,10 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                 firstProduct.images &&
                 firstProduct.images.length > 0
               ) {
-                imageUrl = firstProduct.images[0];
+                rawCategoryImg = firstProduct.images[0];
               }
             }
+            const imageUrl = optimizeImageUrl(rawCategoryImg, 128, 72);
 
             return (
               <div
@@ -680,10 +676,16 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                   <img
                     src={imageUrl}
                     alt={cat}
+                    width={56}
+                    height={56}
                     loading="lazy"
                     decoding="async"
                     onError={(e) => {
-                      e.currentTarget.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(cat)}&backgroundColor=f88c49`;
+                      if (e.currentTarget.src !== rawCategoryImg) {
+                        e.currentTarget.src = rawCategoryImg;
+                      } else {
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(cat)}&backgroundColor=f88c49`;
+                      }
                     }}
                     className="w-full h-full rounded-full object-cover border-[1.5px] border-white dark:border-[#121212]"
                   />
@@ -705,7 +707,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             p.category?.toLowerCase().includes(word),
           ),
         ).length > 0 && (
-          <div className="mb-10 w-full animate-fade-in group">
+          <div className="mb-10 w-full group" style={{ contentVisibility: "auto", containIntrinsicSize: "0 360px" }}>
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <h2
@@ -734,7 +736,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                     p.category?.toLowerCase().includes(word),
                   ),
                 )
-                .slice(0, 10)
+                .slice(0, 8)
                 .map((product, index) => (
                   <div key={product.id ? `${product.id}-horiz-${index}` : index} className="min-w-[220px] sm:min-w-[260px] snap-center transform hover:scale-[1.02] transition-all duration-300">
                     <ProductCard product={product} index={index} />
@@ -745,7 +747,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         )}
 
         {/* Dedicated Phone & Device Replacement Parts Section */}
-        <div className="mb-8 w-full animate-fade-in group">
+        <div className="mb-8 w-full group" style={{ contentVisibility: "auto", containIntrinsicSize: "0 340px" }}>
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-2 min-w-0">
               <h2
@@ -781,7 +783,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                     (p.name || "").toLowerCase().includes(word)
                   )
                 )
-                .slice(0, 10)
+                .slice(0, 8)
                 .map((product, index) => (
                   <div key={product.id ? `${product.id}-parts-${index}` : index} className="min-w-[200px] sm:min-w-[240px] snap-center transform hover:scale-[1.02] transition-all duration-300">
                     <ProductCard product={product} index={index} />
@@ -797,7 +799,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             p.category?.toLowerCase().includes(word),
           ),
         ).length > 0 && (
-          <div className="mb-10 w-full animate-fade-in group">
+          <div className="mb-10 w-full group" style={{ contentVisibility: "auto", containIntrinsicSize: "0 320px" }}>
             <div className="flex justify-between items-center mb-5">
               <div className="flex items-center gap-2">
                 <h2
@@ -843,7 +845,8 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                       <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-2xl overflow-hidden ds-liquid-product-media shrink-0">
                         <PixelImage 
                           src={getProductDisplayImage(product)} 
-                          alt={product.name} 
+                          alt={product.name}
+                          maxWidth={160}
                           className="w-full h-full bg-transparent"
                           imgClassName="w-full h-full object-cover group-hover/row:scale-105 transition-transform duration-300" 
                         />
@@ -890,7 +893,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         )}
 
         {/* Popular Product Section */}
-        <div id="popular-products" className="mb-10 w-full animate-fade-in group">
+        <div id="popular-products" className="mb-10 w-full group" style={{ contentVisibility: "auto", containIntrinsicSize: "0 680px" }}>
           <div className="flex justify-between items-center mb-6">
             <h2
               className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"

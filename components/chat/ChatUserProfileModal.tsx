@@ -40,6 +40,8 @@ interface ChatUserProfileModalProps {
   onSetAutoDelete: (duration: number | null) => void;
   currentAutoDeleteDuration?: number | null;
   onOpenGroupModal: () => void;
+  onOpenWallpaperModal?: () => void;
+  onOpenClearChatModal?: () => void;
   notify: (msg: string, type: string) => void;
 }
 
@@ -56,6 +58,8 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
   onSetAutoDelete,
   currentAutoDeleteDuration,
   onOpenGroupModal,
+  onOpenWallpaperModal,
+  onOpenClearChatModal,
   notify,
 }) => {
   const navigate = useNavigate();
@@ -362,6 +366,34 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                       <Ban className="w-4 h-4 text-rose-500" />
                       <span>{isBlocked ? 'Unblock' : 'Block'}</span>
                     </button>
+                    {onOpenWallpaperModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowOptionsMenu(false);
+                          onClose();
+                          onOpenWallpaperModal();
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                        <span>Change Wallpaper</span>
+                      </button>
+                    )}
+                    {onOpenClearChatModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowOptionsMenu(false);
+                          onClose();
+                          onOpenClearChatModal();
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-amber-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition cursor-pointer"
+                      >
+                        <Clock className="w-4 h-4 text-amber-600" />
+                        <span>Clear / Delete Chat</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {

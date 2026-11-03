@@ -18,15 +18,17 @@ export const BorderOfferSection: React.FC<BorderOfferSectionProps> = ({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Filter products that are border offers or categorized under border/phone offers
-  const borderOffers = products.filter(
-    (p) =>
-      p.isBorderOffer ||
-      p.productType === "border_offer" ||
-      ["border offer", "border stock", "border phone"].some((term) =>
-        p.category?.toLowerCase().includes(term)
-      )
-  );
+  // Filter products that are border offers or categorized under border/phone offers (cap to 6 for fast rendering)
+  const borderOffers = products
+    .filter(
+      (p) =>
+        p.isBorderOffer ||
+        p.productType === "border_offer" ||
+        ["border offer", "border stock", "border phone"].some((term) =>
+          p.category?.toLowerCase().includes(term)
+        )
+    )
+    .slice(0, 6);
 
   if (borderOffers.length === 0) return null;
 
@@ -36,14 +38,14 @@ export const BorderOfferSection: React.FC<BorderOfferSectionProps> = ({
   };
 
   return (
-    <section className="mb-12 w-full animate-fade-in relative">
+    <section className="mb-12 w-full relative">
       {/* Section Header with Liquid Glass Styling */}
       <div className="bg-white/70 dark:bg-zinc-900/80 backdrop-blur-2xl p-4 sm:p-5 rounded-3xl border border-white/60 dark:border-zinc-700/60 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.35)] mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-amber-500/25 shrink-0">
-              <Zap className="w-5 h-5 fill-white stroke-none animate-bounce" />
+              <Zap className="w-5 h-5 fill-white stroke-none" />
             </div>
             <div>
               <div className="flex items-center gap-2">

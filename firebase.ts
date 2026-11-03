@@ -1,6 +1,11 @@
-
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
+  browserLocalPersistence,
+  type Auth,
+} from "firebase/auth";
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -15,11 +20,20 @@ const firebaseConfig = {
   storageBucket: "deep-shop-bd.firebasestorage.app",
   messagingSenderId: "771344063997",
   appId: "1:771344063997:web:f06c63b007a7369bf94d94",
-  measurementId: "G-K1LQBDQ85E"
+  measurementId: "G-K1LQBDQ85E",
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+
+let authInstance: Auth;
+try {
+  authInstance = initializeAuth(app, {
+    persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+  });
+} catch {
+  authInstance = getAuth(app);
+}
+export const auth = authInstance;
 
 let firestoreInstance: Firestore;
 try {
@@ -27,23 +41,25 @@ try {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager(),
     }),
-    experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
   });
 } catch {
   firestoreInstance = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
   });
 }
 
 export const db = firestoreInstance;
 
-import { getMessaging, isSupported } from "firebase/messaging";
 export const messaging = async () => {
-  const supported = await isSupported();
-  if (supported) {
-    return getMessaging(app);
-  }
+  try {
+    const { getMessaging, isSupported } = await import("firebase/messaging");
+    const supported = await isSupported();
+    if (supported) {
+      return getMessaging(app);
+    }
+  } catch {}
   return null;
 };

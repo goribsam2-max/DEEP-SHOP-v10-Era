@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  browserPopupRedirectResolver,
   GoogleAuthProvider,
   signInWithCredential,
   signInWithEmailAndPassword,
@@ -301,7 +302,11 @@ const SignIn: React.FC = () => {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      const res = await signInWithPopup(auth, provider);
+      const res = await signInWithPopup(
+        auth,
+        provider,
+        browserPopupRedirectResolver
+      );
       await completeUserSession(res.user, res.user.email || "", "", "google");
     } catch (err: any) {
       if (err.code !== "auth/popup-closed-by-user") {

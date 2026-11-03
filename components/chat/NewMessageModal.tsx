@@ -28,23 +28,27 @@ interface NewMessageModalProps {
   onClose: () => void;
   currentUser: any;
   suggestedUsers?: SuggestedContact[];
+  initialStep?: ModalStep;
+  initialGroupType?: 'group' | 'community';
   notify: (msg: string, type?: 'success' | 'error' | 'info') => void;
   onSelectUser: (user: SuggestedContact) => void;
   onGroupCreated: (id: string, isCommunity?: boolean) => void;
 }
 
-type ModalStep = 'new_message' | 'new_group_select' | 'new_group_details' | 'new_note';
+export type ModalStep = 'new_message' | 'new_group_select' | 'new_group_details' | 'new_note';
 
 export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   isOpen,
   onClose,
   currentUser,
   suggestedUsers = [],
+  initialStep = 'new_message',
+  initialGroupType = 'group',
   notify,
   onSelectUser,
   onGroupCreated
 }) => {
-  const [step, setStep] = useState<ModalStep>('new_message');
+  const [step, setStep] = useState<ModalStep>(initialStep);
   const [searchQuery, setSearchQuery] = useState('');
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
   const [usersList, setUsersList] = useState<SuggestedContact[]>([]);
@@ -53,7 +57,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   // Group creation state
   const [selectedUsers, setSelectedUsers] = useState<SuggestedContact[]>([]);
   const [groupName, setGroupName] = useState('');
-  const [groupType, setGroupType] = useState<'group' | 'community'>('group');
+  const [groupType, setGroupType] = useState<'group' | 'community'>(initialGroupType);
   const [groupImageFile, setGroupImageFile] = useState<File | null>(null);
   const [groupImagePreview, setGroupImagePreview] = useState<string>('');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
@@ -62,6 +66,13 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   // Note creation state
   const [noteText, setNoteText] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(initialStep);
+      setGroupType(initialGroupType);
+    }
+  }, [isOpen, initialStep, initialGroupType]);
 
   // Set users list to only people the user has interacted with (suggestedUsers)
   useEffect(() => {

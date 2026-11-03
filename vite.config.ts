@@ -19,11 +19,18 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: "autoUpdate",
-        injectRegister: "script-defer",
+        injectRegister: null,
         devOptions: {
           enabled: false,
         },
-        includeAssets: ["favicon.ico", "favicon.png", "robots.txt", "apple-touch-icon.png"],
+        includeAssets: [
+          "favicon.ico",
+          "favicon.png",
+          "apple-touch-icon.png",
+          "pwa-512x512.png",
+          "pwa-maskable-512x512.png",
+          "robots.txt",
+        ],
         workbox: {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
@@ -104,13 +111,13 @@ export default defineConfig(({ mode }) => {
               purpose: "any",
             },
             {
-              src: "/favicon.png",
+              src: "/pwa-512x512.png",
               sizes: "512x512",
               type: "image/png",
               purpose: "any",
             },
             {
-              src: "/favicon.png",
+              src: "/pwa-maskable-512x512.png",
               sizes: "512x512",
               type: "image/png",
               purpose: "maskable",
@@ -124,17 +131,18 @@ export default defineConfig(({ mode }) => {
         "firebase/app",
         "firebase/auth",
         "firebase/firestore",
-        "firebase/messaging",
         "react",
         "react-dom",
         "react-dom/client",
         "react-router-dom",
-        "framer-motion"
-      ]
+        "framer-motion",
+      ],
     },
     build: {
+      target: "es2022",
       sourcemap: false,
       minify: "esbuild",
+      cssMinify: true,
       chunkSizeWarningLimit: 3000,
       rollupOptions: {
         onwarn(warning, warn) {
@@ -155,6 +163,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     esbuild: {
+      target: "es2022",
       drop: mode === "production" ? ["console", "debugger"] : [],
     },
     define: {

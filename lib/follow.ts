@@ -395,7 +395,6 @@ export async function toggleFollowUser({
         };
 
         addDoc(collection(db, "news_hub_notifications"), notifPayload).catch(() => {});
-        addDoc(collection(db, "notifications"), notifPayload).catch(() => {});
       }
     }
   } catch {}
