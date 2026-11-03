@@ -7,6 +7,7 @@ import { auth, db } from "../../firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useNotify } from "../Notifications";
 import { triggerHaptic } from "../../lib/haptics";
+import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
 
 interface BorderOfferOrderModalProps {
   product: Product | null;
@@ -147,7 +148,7 @@ export const BorderOfferOrderModal: React.FC<BorderOfferOrderModalProps> = ({
           {/* Selected Product Summary Card */}
           <div className="bg-zinc-900/90 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
             <img
-              src={product.image}
+              src={getProductDisplayImage(product)}
               alt={product.name}
               className="w-16 h-16 object-contain bg-zinc-950 rounded-xl p-1 border border-zinc-800"
             />

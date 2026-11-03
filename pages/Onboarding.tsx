@@ -2,25 +2,26 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { DEEP_SHOP_LOGO_DATA_URI } from "../lib/useFooterLogo";
 
 const slides = [
   {
-    image: "/favicon.png",
+    image: DEEP_SHOP_LOGO_DATA_URI,
     title: "Let's find the Best & Latest Mobiles",
     desc: "Discover premium quality border cross phones and mobile accessories tailored to your tech lifestyle.",
   },
   {
-    image: "/favicon.png",
+    image: DEEP_SHOP_LOGO_DATA_URI,
     title: "Experience Seamless Delivery Monitoring",
     desc: "Track your orders in real-time and get updates instantly right at your doorstep.",
   },
   {
-    image: "/favicon.png",
+    image: DEEP_SHOP_LOGO_DATA_URI,
     title: "Explore Our Vast Mobile Products We Offer",
     desc: "Browse a huge variety of products from top brands and find the best deals every day.",
   },
   {
-    image: "/favicon.png",
+    image: DEEP_SHOP_LOGO_DATA_URI,
     title: "Build Your Exclusive Favorites List",
     desc: "Save the phones you love and create a personalized wishlist for easy shopping later.",
   },

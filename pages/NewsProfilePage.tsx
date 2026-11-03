@@ -169,7 +169,7 @@ import {
   getPublicShareOrigin,
   isPhoneLikeUsername,
 } from "../lib/utils";
-import { useFooterLogo } from "../lib/useFooterLogo";
+import { useFooterLogo, DEEP_SHOP_LOGO_DATA_URI } from "../lib/useFooterLogo";
 import {
   toggleFollowUser,
   useFollowedIds,
@@ -186,7 +186,7 @@ import { processCleanImage } from "../lib/watermark";
 import { uploadDataUrlToImgbb } from "../services/imgbb";
 import { syncCurrentUserToSavedAccounts } from "../lib/savedAccounts";
 const defaultAvatarImg = "";
-const deepShopLogoFallback = "";
+const deepShopLogoFallback = DEEP_SHOP_LOGO_DATA_URI;
 
 const TopicClusterDotsIcon: React.FC<{ className?: string }> = ({
   className = "w-3.5 h-3.5",
@@ -303,10 +303,11 @@ export const ProfileAvatar: React.FC<{
     setHasError(false);
   }, [src]);
 
-  if (src && !hasError && src !== defaultAvatarImg) {
+  const cleanSrc = typeof src === "string" ? src.trim() : "";
+  if (cleanSrc && !hasError && cleanSrc !== defaultAvatarImg) {
     return (
       <img
-        src={src}
+        src={cleanSrc}
         alt={name}
         onError={() => setHasError(true)}
         onClick={onClick}
@@ -2507,9 +2508,9 @@ export const NewsProfilePage: React.FC = () => {
                 }}
                 className="w-[76px] h-[76px] sm:w-[84px] sm:h-[84px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 ring-1 ring-black/[0.06] dark:ring-white/10 cursor-pointer flex items-center justify-center"
               >
-                {avatarUrl ? (
+                {avatarUrl?.trim() ? (
                   <img
-                    src={avatarUrl}
+                    src={avatarUrl.trim()}
                     alt={displayName}
                     className="w-full h-full object-cover rounded-full"
                   />
@@ -3126,9 +3127,9 @@ export const NewsProfilePage: React.FC = () => {
                           wrapperClassName="w-full h-full min-h-0 rounded-none"
                           className="w-full h-full object-cover rounded-none group-hover:scale-105 transition-transform"
                         />
-                      ) : mPost.videoUrl ? (
+                      ) : mPost.videoUrl?.trim() ? (
                         <video
-                          src={mPost.videoUrl}
+                          src={mPost.videoUrl.trim()}
                           muted
                           playsInline
                           preload="metadata"
@@ -3676,9 +3677,9 @@ export const NewsProfilePage: React.FC = () => {
 
                     <div className="loops-about-card rounded-[22px] p-5 flex items-center justify-center">
                       <div className="w-52 h-52 sm:w-60 sm:h-60 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 ring-1 ring-black/[0.08] dark:ring-white/10 flex items-center justify-center">
-                        {avatarUrl ? (
+                        {avatarUrl?.trim() ? (
                           <img
-                            src={avatarUrl}
+                            src={avatarUrl.trim()}
                             alt={displayName}
                             className="w-full h-full object-cover"
                           />

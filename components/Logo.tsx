@@ -59,6 +59,10 @@ const Logo: React.FC<{
     };
   }, []);
 
+  const resolvedLogoSrc = logoImg?.trim()
+    ? optimizeImageUrl(logoImg.trim(), 84, 80)
+    : "";
+
   return (
     <div
       className={`inline-flex items-center gap-2 ${className}`}
@@ -67,9 +71,9 @@ const Logo: React.FC<{
         transformOrigin: centerOrigin ? "center center" : "left center",
       }}
     >
-      {showIcon && logoImg && (
+      {showIcon && resolvedLogoSrc && (
         <img
-          src={optimizeImageUrl(logoImg, 84, 80)}
+          src={resolvedLogoSrc}
           alt="Deep Shop Logo"
           width={28}
           height={28}

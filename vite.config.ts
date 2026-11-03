@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv } from "vite";
@@ -17,51 +18,40 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      {
+        name: "exclude-chat-demo-assets",
+        closeBundle() {
+          const demoDirs = [
+            path.resolve(process.cwd(), "dist", "assets", "aistudio"),
+          ];
+          for (const dir of demoDirs) {
+            if (fs.existsSync(dir)) {
+              fs.rmSync(dir, { recursive: true, force: true });
+            }
+          }
+        },
+      },
       VitePWA({
         registerType: "autoUpdate",
         injectRegister: null,
+        includeManifestIcons: false,
         devOptions: {
           enabled: false,
         },
-        includeAssets: [
-          "favicon.ico",
-          "favicon.png",
-          "apple-touch-icon.png",
-          "pwa-512x512.png",
-          "pwa-maskable-512x512.png",
-          "robots.txt",
-        ],
+        includeAssets: [],
         workbox: {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
+          navigateFallback: null,
           maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-          globPatterns: ["**/*.{css,html,ico,woff2}"],
+          globPatterns: ["**/*.{css,ico,woff2}"],
           globIgnores: [
             "**/assets/aistudio/**",
-            "**/vendor-pdf-*.js",
-            "**/vendor-charts-*.js",
-            "**/Manage*.js",
+            "**/*.js",
+            "**/*.html",
           ],
-          navigateFallbackDenylist: [
-            /^\/api\//,
-            /^\/llms\.txt$/,
-            /^\/robots\.txt$/,
-            /^\/sitemap\.xml$/,
-          ],
-          importScripts: ["/custom-sw.js"],
           runtimeCaching: [
-            {
-              urlPattern: /\/assets\/.*\.js$/i,
-              handler: "StaleWhileRevalidate",
-              options: {
-                cacheName: "app-js-chunks",
-                expiration: {
-                  maxEntries: 80,
-                  maxAgeSeconds: 60 * 60 * 24 * 14,
-                },
-              },
-            },
             {
               urlPattern: /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|api\.fontshare\.com|cdnjs\.cloudflare\.com)\/.*/i,
               handler: "CacheFirst",
@@ -103,26 +93,7 @@ export default defineConfig(({ mode }) => {
           orientation: "portrait",
           start_url: "/",
           scope: "/",
-          icons: [
-            {
-              src: "/favicon.png",
-              sizes: "192x192",
-              type: "image/png",
-              purpose: "any",
-            },
-            {
-              src: "/pwa-512x512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "any",
-            },
-            {
-              src: "/pwa-maskable-512x512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "maskable",
-            },
-          ],
+          icons: [],
         },
       }),
     ],

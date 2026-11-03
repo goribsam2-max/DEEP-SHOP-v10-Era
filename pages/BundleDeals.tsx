@@ -5,6 +5,7 @@ import { db } from "../firebase";
 import { Product } from "../types";
 import { useNavigate } from "react-router-dom";
 import { ShoppingBag, ArrowRight, Zap, Gift, RefreshCw } from "lucide-react";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 
 export default function BundleDeals() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -92,7 +93,7 @@ export default function BundleDeals() {
                         <React.Fragment key={product.id}>
                             <div className="flex gap-6 items-center">
                                 <div className="w-24 h-24 md:w-32 md:h-32 bg-zinc-50 dark:bg-zinc-800/50 rounded-[20px] p-2 md:p-4 overflow-hidden border border-zinc-100 dark:border-zinc-800">
-                                    <img src={product.image} className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" alt={product.name}/>
+                                    <img src={getProductDisplayImage(product)} className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal" alt={product.name}/>
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="font-bold text-base md:text-lg text-zinc-900 dark:text-zinc-100 leading-tight mb-2 line-clamp-2" onClick={() => navigate(`/product/${product.id}`)}>{product.name}</h3>

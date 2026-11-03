@@ -46,10 +46,10 @@ type OrderTab = "Pending" | "Active" | "Subscription" | "Cancelled";
 type QuickFilter = "all" | "cod" | "advance" | "border" | "delivered";
 
 const EmptyOrdersGraphic: React.FC<{ customImage?: string }> = ({ customImage }) => {
-  if (customImage) {
+  if (customImage?.trim()) {
     return (
       <div className="w-40 h-40 mx-auto mb-5 rounded-[24px] overflow-hidden">
-        <img src={customImage} alt="No orders found" className="w-full h-full object-contain" />
+        <img src={customImage.trim()} alt="No orders found" className="w-full h-full object-contain" />
       </div>
     );
   }
@@ -510,12 +510,16 @@ const MyOrders: React.FC = () => {
               }}
               className="flex items-center gap-3 p-2.5 rounded-2xl orders-v2-seller-box cursor-pointer hover:opacity-90 transition"
             >
-              <div className="w-12 h-14 rounded-xl bg-white dark:bg-zinc-800 overflow-hidden border border-black/5 shrink-0">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-12 h-14 rounded-xl bg-white dark:bg-zinc-800 overflow-hidden border border-black/5 shrink-0 flex items-center justify-center">
+                {item.image?.trim() ? (
+                  <img
+                    src={item.image.trim()}
+                    alt={item.name || "Order item"}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Package className="w-4 h-4 text-zinc-400" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-1">
@@ -881,9 +885,9 @@ const MyOrders: React.FC = () => {
                   key={`${order.id}-thumb-${idx}`}
                   className="relative w-10 h-13 sm:w-11 sm:h-14 rounded-[8px] overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-black/5 dark:border-white/10 shrink-0"
                 >
-                  {item.image ? (
+                  {item.image?.trim() ? (
                     <img
-                      src={item.image}
+                      src={item.image.trim()}
                       alt={item.name || "Order item"}
                       className="w-full h-full object-cover"
                     />
@@ -907,9 +911,9 @@ const MyOrders: React.FC = () => {
         <div className="orders-v2-seller-box rounded-[16px] p-3 mt-3.5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 flex items-center justify-center shrink-0">
-              {sellerLogo ? (
+              {sellerLogo?.trim() ? (
                 <img
-                  src={sellerLogo}
+                  src={sellerLogo.trim()}
                   alt={sellerName}
                   className="w-full h-full object-cover"
                 />

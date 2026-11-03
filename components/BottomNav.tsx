@@ -25,22 +25,45 @@ const BottomNav: React.FC = () => {
   }>({});
 
   React.useEffect(() => {
-    const unsub = onSnapshot(
+    let platformData: any = {};
+    let customIconsData: any = {};
+
+    const syncSvgs = () => {
+      setCustomSvgs({
+        home: platformData.bottomNavHomeSvg || customIconsData.home || customIconsData.bottomNavHomeSvg || "",
+        doc: platformData.bottomNavDocSvg || customIconsData.doc || customIconsData.activity || customIconsData.orders || customIconsData.bottomNavDocSvg || "",
+        search: platformData.bottomNavSearchSvg || customIconsData.search || customIconsData.compass || customIconsData.loops || customIconsData.bottomNavSearchSvg || "",
+        profile: platformData.bottomNavProfileSvg || customIconsData.profile || customIconsData.user || customIconsData.bottomNavProfileSvg || "",
+      });
+    };
+
+    const unsubPlatform = onSnapshot(
       doc(db, "settings", "platform"),
       (snap) => {
         if (snap.exists()) {
-          const d = snap.data();
-          setCustomSvgs({
-            home: d.bottomNavHomeSvg,
-            doc: d.bottomNavDocSvg,
-            search: d.bottomNavSearchSvg,
-            profile: d.bottomNavProfileSvg,
-          });
+          platformData = snap.data();
+          syncSvgs();
         }
       },
       () => {}
     );
-    return () => unsub();
+
+    const unsubIcons = onSnapshot(
+      doc(db, "settings", "custom_icons"),
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          customIconsData = d?.icons || d || {};
+          syncSvgs();
+        }
+      },
+      () => {}
+    );
+
+    return () => {
+      unsubPlatform();
+      unsubIcons();
+    };
   }, []);
 
   React.useEffect(() => {
@@ -90,7 +113,7 @@ const BottomNav: React.FC = () => {
   return (
     <div className="fixed bottom-3 left-3 right-3 z-[100] md:hidden max-w-md mx-auto pointer-events-none">
       {/* FLOATING LIQUID GLASS PILL CONTAINER (Matching IMG_4760_f05ecd46.jpeg) */}
-      <nav className="pointer-events-auto bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl border border-white/60 dark:border-zinc-800/80 rounded-full shadow-2xl px-2.5 py-1.5 flex items-center justify-between transition-all">
+      <nav className="pointer-events-auto bg-zinc-900 dark:bg-zinc-100 backdrop-blur-xl border border-zinc-800 dark:border-zinc-300 rounded-full shadow-2xl px-2.5 py-1.5 flex items-center justify-between transition-all">
         {navItems.map((item) => {
           const isActive =
             location.pathname === item.to ||
@@ -105,7 +128,7 @@ const BottomNav: React.FC = () => {
                   triggerHaptic();
                   navigate(item.to);
                 }}
-                className="w-10 h-10 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-black flex items-center justify-center shadow-lg active:scale-90 transition hover:opacity-90 cursor-pointer -mt-1 mx-1 shrink-0"
+                className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-black dark:text-white flex items-center justify-center shadow-lg active:scale-90 transition hover:opacity-90 cursor-pointer -mt-1 mx-1 shrink-0"
                 title="Create Scam Report or Post"
               >
                 <Plus className="w-5 h-5 stroke-[2.5]" />
@@ -126,24 +149,39 @@ const BottomNav: React.FC = () => {
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
                     isActive
-                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60"
-                      : "text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200"
+                      ? "text-white dark:text-black bg-zinc-800 dark:bg-zinc-200 shadow-xs font-bold"
+                      : "text-white/80 dark:text-zinc-700 hover:text-white dark:hover:text-black"
                   }`}
                 >
-                  {item.customSvg && item.customSvg.trim() ? (
-                    <div
-                      className="w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:fill-current"
-                      dangerouslySetInnerHTML={{ __html: item.customSvg }}
-                    />
-                  ) : (
-                    <IconComp className={`w-4 h-4 transition-transform duration-300 ${isActive ? "scale-110" : ""}`} />
-                  )}
+                  {(() => {
+                    if (item.customSvg && item.customSvg.trim()) {
+                      const cleanSvg = item.customSvg.trim();
+                      if (cleanSvg.startsWith("http://") || cleanSvg.startsWith("https://") || cleanSvg.startsWith("data:") || cleanSvg.startsWith("/")) {
+                        return (
+                          <img
+                            src={cleanSvg}
+                            alt={item.label}
+                            className={`w-4 h-4 object-contain transition-transform duration-300 ${isActive ? "scale-110" : ""}`}
+                          />
+                        );
+                      }
+                      return (
+                        <div
+                          className={`w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-full [&>svg]:max-h-full transition-transform duration-300 ${
+                            isActive ? "scale-110" : ""
+                          }`}
+                          dangerouslySetInnerHTML={{ __html: cleanSvg }}
+                        />
+                      );
+                    }
+                    return <IconComp className={`w-4 h-4 transition-transform duration-300 ${isActive ? "scale-110" : ""}`} />;
+                  })()}
                 </div>
               </div>
 
               <span
                 className={`text-[10px] font-extrabold tracking-tight transition-colors duration-300 ${
-                  isActive ? "text-blue-600 dark:text-blue-400" : "text-zinc-400"
+                  isActive ? "text-white dark:text-black" : "text-white/70 dark:text-zinc-600"
                 }`}
               >
                 {item.label}
@@ -151,7 +189,7 @@ const BottomNav: React.FC = () => {
 
               {/* Active liquid dot indicator below label */}
               {isActive && (
-                <span className="w-1 h-1 rounded-full bg-blue-600 dark:bg-blue-400 absolute -bottom-0.5" />
+                <span className="w-1 h-1 rounded-full bg-white dark:bg-black absolute -bottom-0.5" />
               )}
             </NavLink>
           );

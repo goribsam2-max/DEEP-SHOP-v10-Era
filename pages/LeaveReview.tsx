@@ -17,6 +17,7 @@ import {
   Send,
 } from "lucide-react";
 import { StatusBadge } from "../components/ui/status-badge";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 
 const LeaveReview: React.FC = () => {
   const navigate = useNavigate();
@@ -190,7 +191,7 @@ const LeaveReview: React.FC = () => {
         <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4 shadow-2xs">
           <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-xl overflow-hidden p-2 border border-zinc-100 dark:border-zinc-700 shrink-0">
             <img
-              src={product.images?.[0] || product.image}
+              src={getProductDisplayImage(product)}
               className="w-full h-full object-contain"
               alt={product.name}
             />

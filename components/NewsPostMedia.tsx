@@ -5,7 +5,11 @@ import { auth, db } from "../firebase";
 import Icon from "./Icon";
 import { ScamPost, ImageLayoutStyle, ImageAspectMode, PostPoll } from "../types";
 import { triggerHaptic } from "../lib/haptics";
-import { resolvePostVideoSource, toPlayableMediaUrl } from "../lib/videoEmbed";
+import {
+  resolvePostVideoSource,
+  toPlayableMediaUrl,
+  toProxiedMediaStreamUrl,
+} from "../lib/videoEmbed";
 import { NewsVideoPlayer } from "./NewsVideoPlayer";
 import { NewsRichText } from "./NewsRichText";
 import { SmoothImage, preloadImageUrl } from "./SmoothImage";
@@ -244,6 +248,9 @@ export const VoiceNoteCard: React.FC<{
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
+  const resolvedVoiceAudioSrc = toPlayableMediaUrl(audioUrl);
+  if (!resolvedVoiceAudioSrc) return null;
+
   return (
     <div
       onClick={togglePlay}
@@ -251,8 +258,17 @@ export const VoiceNoteCard: React.FC<{
     >
       <audio
         ref={audioRef}
-        src={toPlayableMediaUrl(audioUrl)}
+        src={resolvedVoiceAudioSrc}
         preload="metadata"
+        onError={(e) => {
+          const a = e.currentTarget;
+          const fallback = toProxiedMediaStreamUrl(audioUrl);
+          if (fallback && !a.dataset.proxiedFallback && a.src !== fallback) {
+            a.dataset.proxiedFallback = "1";
+            a.src = fallback;
+            a.load();
+          }
+        }}
         onLoadedMetadata={(e) => {
           const d = e.currentTarget.duration;
           if (Number.isFinite(d) && d > 0) setTotalSec(Math.round(d));
@@ -347,7 +363,10 @@ const MusicPostCard: React.FC<{
     }
   };
 
-  if (!music?.audioUrl) return null;
+  const resolvedMusicAudioSrc = music?.audioUrl
+    ? toPlayableMediaUrl(music.audioUrl)
+    : "";
+  if (!resolvedMusicAudioSrc) return null;
 
   return (
     <div
@@ -356,16 +375,25 @@ const MusicPostCard: React.FC<{
     >
       <audio
         ref={audioRef}
-        src={toPlayableMediaUrl(music.audioUrl)}
+        src={resolvedMusicAudioSrc}
         preload="none"
+        onError={(e) => {
+          const a = e.currentTarget;
+          const fallback = toProxiedMediaStreamUrl(music.audioUrl);
+          if (fallback && !a.dataset.proxiedFallback && a.src !== fallback) {
+            a.dataset.proxiedFallback = "1";
+            a.src = fallback;
+            a.load();
+          }
+        }}
         onEnded={() => setPlaying(false)}
         onPause={() => setPlaying(false)}
         onPlay={() => setPlaying(true)}
       />
       <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-200 dark:bg-zinc-700 shrink-0">
-        {music.cover ? (
+        {music.cover?.trim() ? (
           <img
-            src={music.cover}
+            src={music.cover.trim()}
             alt={music.title}
             referrerPolicy="no-referrer"
             className={`w-full h-full object-cover ${
@@ -768,19 +796,22 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
   return (
     <div className="space-y-3">
       {/* Stickers Row if attached */}
-      {post.stickers && post.stickers.length > 0 && (
-        <div className="flex items-center gap-2.5 flex-wrap pt-0.5">
-          {post.stickers.map((stk, sIdx) => (
-            <img
-              key={`${stk}-${sIdx}`}
-              src={stk}
-              alt="Sticker"
-              referrerPolicy="no-referrer"
-              className="w-20 h-20 object-contain drop-shadow-sm hover:scale-105 transition-transform"
-            />
-          ))}
-        </div>
-      )}
+      {post.stickers &&
+        post.stickers.some((s) => typeof s === "string" && s.trim() !== "") && (
+          <div className="flex items-center gap-2.5 flex-wrap pt-0.5">
+            {post.stickers
+              .filter((stk) => typeof stk === "string" && stk.trim() !== "")
+              .map((stk, sIdx) => (
+                <img
+                  key={`${stk}-${sIdx}`}
+                  src={stk.trim()}
+                  alt="Sticker"
+                  referrerPolicy="no-referrer"
+                  className="w-20 h-20 object-contain drop-shadow-sm hover:scale-105 transition-transform"
+                />
+              ))}
+          </div>
+        )}
 
       {/* Quote Block Card if attached */}
       {post.quoteBlock?.text && (

@@ -12,6 +12,7 @@ import {
   LoopsSvgIcon,
   broadcastLoopsIconUpdate,
 } from "../../components/LoopsSvgIcon";
+import { normalizeCustomSvg } from "../../lib/svgNormalize";
 
 interface IconConfig {
   key: string;
@@ -37,9 +38,10 @@ const LOOPS_PREDEFINED_ICONS: IconConfig[] = LOOPS_ICON_CATALOG.map((item) => ({
 
 const PREDEFINED_ICONS: IconConfig[] = [
   ...LOOPS_PREDEFINED_ICONS,
-  // Navigation & General UI
-  { key: "home", name: "Home Navigation", description: "Bottom tab and main redirect redirects", category: "navigation" },
-  { key: "search", name: "Global Search", description: "Header search and search panel navigations", category: "navigation" },
+  // Navigation & Shop Bottom Navigation
+  { key: "home", name: "Shop Bottom Nav: Home", description: "Shop bottom navigation Home tab & global home icon", category: "navigation" },
+  { key: "doc", name: "Shop Bottom Nav: Document / Loops", description: "Shop bottom navigation Document / Loops tab icon", category: "navigation" },
+  { key: "search", name: "Shop Bottom Nav: Search & Global Search", description: "Shop bottom navigation Search tab & header search icon", category: "navigation" },
   { key: "bars", name: "Menu Bars / Drawer", description: "Header sidebar toggles & hamburger menu icons", category: "navigation" },
   { key: "times", name: "Close / Dismiss", description: "Modal closing and input clearing cross icons", category: "navigation" },
   { key: "arrow-left", name: "Back Arrow", description: "Navigation back button on headers and panels", category: "navigation" },
@@ -311,20 +313,7 @@ const ManageIcons: React.FC = () => {
       }
 
       if (autoConvertColors) {
-        // Strip strict width & height parameters to support fluid resizing
-        code = code.replace(/\bwidth="[^"]*"/g, "");
-        code = code.replace(/\bheight="[^"]*"/g, "");
-        // Strip inline style attributes which override CSS classes
-        code = code.replace(/\bstyle="[^"]*"/g, "");
-        // Strip nested style blocks
-        code = code.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, "");
-        // Remap stroke to currentColor
-        code = code.replace(/stroke="[^"]*"/g, 'stroke="currentColor"');
-        // Remap solid fills to currentColor, while maintaining fill="none"
-        code = code.replace(/fill="[^"]*"/g, (match) => {
-          if (match.includes("none")) return match;
-          return 'fill="currentColor"';
-        });
+        code = normalizeCustomSvg(code);
       }
     }
 

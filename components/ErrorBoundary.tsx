@@ -20,6 +20,30 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
+    const msg = (error?.message || '').toLowerCase();
+    const isChunkOrMimeError =
+      msg.includes('text/html') ||
+      msg.includes('dynamically imported module') ||
+      msg.includes('importing a module script failed') ||
+      msg.includes('module is not valid') ||
+      msg.includes('loading chunk') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('mime type') ||
+      msg.includes('valid javascript') ||
+      msg.includes("unexpected token '<'");
+
+    if (isChunkOrMimeError && typeof window !== 'undefined') {
+      const reloadKey = 'ds_chunk_reload_' + Math.floor(Date.now() / 20000);
+      try {
+        if (!sessionStorage.getItem(reloadKey)) {
+          sessionStorage.setItem(reloadKey, 'true');
+          if ('caches' in window) {
+            caches.delete('app-js-chunks').catch(() => {});
+          }
+          window.location.reload();
+        }
+      } catch {}
+    }
     return { hasError: true, error, reported: false };
   }
 

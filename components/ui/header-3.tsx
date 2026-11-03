@@ -396,17 +396,16 @@ export function Header() {
     window.dispatchEvent(new CustomEvent("toggleSidebar", { detail: open }));
   }, [open]);
 
-  // News Hub-matching circular white floating button style for Shop Home (/)
   const newsHubCircleBtnClass =
-    "relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer shrink-0 border-none";
+    "ds-theme-icon-btn relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer shrink-0 border-none";
 
   const standardDesktopBtnClass =
-    "transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 bg-zinc-100 dark:bg-zinc-800 border-none text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 shadow-sm rounded-full w-10 h-10";
+    "ds-theme-icon-btn transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 bg-zinc-100 dark:bg-zinc-800 border-none text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 shadow-sm rounded-full w-10 h-10 cursor-pointer";
 
   return (
     <header
       className={cn(
-        "fixed top-0 z-[120] w-full transition-all duration-300 ease-in-out pointer-events-auto border-none",
+        "fixed top-0 z-[120] w-full transition-all duration-300 ease-in-out pointer-events-none border-none",
         scrolled || open
           ? "bg-gradient-to-b from-[#1877F2]/90 via-[#3b82f6]/30 via-75% to-white dark:from-[#0f172a] dark:via-[#181826]/90 dark:to-black backdrop-blur-xl shadow-[0_12px_24px_-10px_rgba(24,119,242,0.08)]"
           : "bg-gradient-to-b from-[#1877F2]/35 via-[#3b82f6]/10 via-70% to-white dark:from-[#1e1b4b]/40 dark:via-[#0f172a]/20 dark:to-black"
@@ -586,12 +585,10 @@ export function Header() {
               triggerHaptic();
               navigate("/search");
             }}
-            className={
-              isHomePage ? newsHubCircleBtnClass : standardDesktopBtnClass
-            }
+            className={standardDesktopBtnClass}
             aria-label="Search"
           >
-            <Search fill="none" className="w-5 h-5 stroke-[1.9]" />
+            <Icon name="search" className="w-5 h-5 text-zinc-900 dark:text-white" />
           </button>
 
           <button
@@ -600,12 +597,10 @@ export function Header() {
               triggerHaptic();
               navigate("/wishlist");
             }}
-            className={
-              isHomePage ? newsHubCircleBtnClass : standardDesktopBtnClass
-            }
+            className={standardDesktopBtnClass}
             aria-label="Wishlist"
           >
-            <Heart fill="none" className="w-5 h-5 stroke-[1.9]" />
+            <Icon name="heart" className="w-5 h-5 text-zinc-900 dark:text-white" />
           </button>
 
           <button
@@ -614,15 +609,12 @@ export function Header() {
               triggerHaptic();
               navigate("/cart");
             }}
-            className={cn(
-              "relative",
-              isHomePage ? newsHubCircleBtnClass : standardDesktopBtnClass
-            )}
+            className={cn("relative", standardDesktopBtnClass)}
             aria-label="Shopping Cart"
           >
-            <ShoppingCart fill="none" className="w-5 h-5 stroke-[1.9]" />
+            <Icon name="shopping-cart" className="w-5 h-5 text-zinc-900 dark:text-white" />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#1877F2] text-white text-[10px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+              <span className="absolute -top-1 -right-1 bg-[#5F2CFF] text-white text-[10px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
                 {cartCount}
               </span>
             )}
@@ -634,14 +626,10 @@ export function Header() {
               triggerHaptic();
               navigate("/messages");
             }}
-            className={
-              isHomePage
-                ? newsHubCircleBtnClass
-                : "relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex items-center justify-center text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white cursor-pointer"
-            }
+            className="ds-theme-icon-btn relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex items-center justify-center text-zinc-900 dark:text-white cursor-pointer"
             aria-label="Messages"
           >
-            <MessageSquare fill="none" className="w-5 h-5 stroke-[1.9]" />
+            <Icon name="message-square" className="w-5 h-5 text-zinc-900 dark:text-white" />
             {unreadMessagesCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
                 {unreadMessagesCount}
@@ -649,129 +637,76 @@ export function Header() {
             )}
           </button>
 
-          <AnimatedThemeToggler
-            className={
-              isHomePage
-                ? newsHubCircleBtnClass
-                : "rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
-            }
-          />
+          <AnimatedThemeToggler className="ds-theme-icon-btn rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-900 dark:text-white" />
 
           {location.pathname !== "/profile" && (
-            <AccountMenu
-              scrolled={scrolled}
-              isPill={!isHomePage}
-              isNewsHubStyle={isHomePage}
-            />
+            <AccountMenu scrolled={scrolled} isPill />
           )}
         </div>
 
-        {/* MOBILE RIGHT ACTION BUTTONS */}
+        {/* MOBILE RIGHT ACTION BUTTONS — Unified Cart, Message, Theme & Account buttons across Home (/) and all inner pages */}
         <div
           className={cn(
-            "flex items-center gap-2 md:hidden pointer-events-auto transition-all duration-300",
+            "flex items-center gap-1 md:hidden pointer-events-auto transition-all duration-300",
             isIslandActive
               ? "opacity-0 scale-95 pointer-events-none"
               : "opacity-100 scale-100"
           )}
         >
-          {isHomePage ? (
-            /* News Hub-style crisp floating circular buttons on Shop Home */
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/cart");
-                }}
-                className={newsHubCircleBtnClass}
-                aria-label="Shopping Cart"
-              >
-                <ShoppingCart fill="none" className="w-5 h-5 stroke-[1.9]" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-[#1877F2] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/messages");
-                }}
-                className={newsHubCircleBtnClass}
-                aria-label="Messages"
-              >
-                <MessageSquare fill="none" className="w-5 h-5 stroke-[1.9]" />
-                {unreadMessagesCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
-                    {unreadMessagesCount}
-                  </span>
-                )}
-              </button>
-
-              <AnimatedThemeToggler className={newsHubCircleBtnClass} />
-
-              <AccountMenu scrolled={scrolled} isNewsHubStyle />
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 rounded-full p-1.5 bg-transparent shadow-none">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/cart");
-                }}
-                className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white"
-                aria-label="Shopping Cart"
-              >
-                <Icon name="shopping-cart" className="w-5 h-5" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-[#5F2CFF] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
-                    {cartCount}
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/messages");
-                }}
-                className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white flex"
-                aria-label="Messages"
-              >
-                <Icon name="message-square" className="w-5 h-5" />
-                {unreadMessagesCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm animate-bounce">
-                    {unreadMessagesCount}
-                  </span>
-                )}
-              </Button>
-              <AnimatedThemeToggler className="rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white" />
-
-              {location.pathname === "/profile" ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    triggerHaptic();
-                    navigate("/settings");
-                  }}
-                  className="relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white flex items-center justify-center cursor-pointer"
-                  aria-label="Settings"
-                >
-                  <Settings className="w-5 h-5" strokeWidth={1.8} />
-                </Button>
-              ) : (
-                <AccountMenu scrolled={scrolled} isPill />
+          <div className="flex items-center gap-1 rounded-full p-1.5 bg-transparent shadow-none">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/cart");
+              }}
+              className="ds-theme-icon-btn relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-900 dark:text-white cursor-pointer"
+              aria-label="Shopping Cart"
+            >
+              <Icon name="shopping-cart" className="w-5 h-5 text-zinc-900 dark:text-white" />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-[#5F2CFF] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+                  {cartCount}
+                </span>
               )}
-            </div>
-          )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/messages");
+              }}
+              className="ds-theme-icon-btn relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-900 dark:text-white flex cursor-pointer"
+              aria-label="Messages"
+            >
+              <Icon name="message-square" className="w-5 h-5 text-zinc-900 dark:text-white" />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm animate-bounce">
+                  {unreadMessagesCount}
+                </span>
+              )}
+            </Button>
+            <AnimatedThemeToggler className="ds-theme-icon-btn rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex text-zinc-900 dark:text-white" />
+
+            {location.pathname === "/profile" ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  triggerHaptic();
+                  navigate("/settings");
+                }}
+                className="ds-theme-icon-btn relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-900 dark:text-white flex items-center justify-center cursor-pointer"
+                aria-label="Settings"
+              >
+                <Settings className="w-5 h-5" strokeWidth={1.8} />
+              </Button>
+            ) : (
+              <AccountMenu scrolled={scrolled} isPill />
+            )}
+          </div>
         </div>
       </nav>
 

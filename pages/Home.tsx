@@ -40,6 +40,11 @@ import { LogoTimeline, type LogoItem } from "../components/ui/logo-timeline";
 import { Footer } from "../components/Footer";
 import { auth } from "../firebase";
 import { hasImmediateAdminOrStaffRole } from "../lib/admin";
+import {
+  DeepShopSponsoredAd,
+  isLikelyVideoUrl,
+  readHiddenAdIds,
+} from "../components/DeepShopSponsoredAd";
 
 const BrandIcon = ({ brandName }: { brandName: string }) => {
   return (
@@ -51,45 +56,45 @@ const BrandIcon = ({ brandName }: { brandName: string }) => {
   );
 };
 
-const ThinBanner = ({ banner, navigate }: { banner: any; navigate: any }) => {
-  const [showAdLabel, setShowAdLabel] = useState(false);
+const ThinBanner = ({ banner }: { banner: any; navigate?: any }) => {
+  const [hiddenTick, setHiddenTick] = useState(0);
 
   useEffect(() => {
-    let timeout: any;
-    if (showAdLabel) {
-      timeout = setTimeout(() => setShowAdLabel(false), 3000);
-    }
-    return () => clearTimeout(timeout);
-  }, [showAdLabel]);
+    const onHidden = () => setHiddenTick((v) => v + 1);
+    window.addEventListener("ds:hidden-ads-updated", onHidden);
+    return () => window.removeEventListener("ds:hidden-ads-updated", onHidden);
+  }, []);
 
-  if (!banner) return null;
+  if (!banner || !banner.imageUrl) return null;
+  const adId = String(banner.id || `home-banner-${banner.imageUrl.slice(-16)}`);
+  const hidden = readHiddenAdIds();
+  if (hidden.has("__ALL__") || hidden.has(adId)) {
+    void hiddenTick;
+    return null;
+  }
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl cursor-pointer hover-tilt w-full mb-10 border border-zinc-100 dark:border-zinc-800 shadow-sm"
-      onClick={() => banner.link && navigate(banner.link)}
-    >
-      <PixelImage src={banner.imageUrl} alt="banner" maxWidth={920} />
-
-      <div
-        className="absolute top-3 right-3 z-20 flex items-center justify-end"
-        onClick={(e) => {
-          e.stopPropagation();
-          setShowAdLabel(!showAdLabel);
+    <div className="w-full mb-10">
+      <DeepShopSponsoredAd
+        ad={{
+          id: adId,
+          sourceType: "banner",
+          media: [
+            {
+              url: banner.imageUrl,
+              type: isLikelyVideoUrl(banner.imageUrl) ? "video" : "image",
+              ratio: "auto",
+            },
+          ],
+          title: banner.title || "",
+          text: banner.subtitle || banner.description || "",
+          buttonText: banner.buttonText || "See details",
+          buttonLink: banner.link || "/all-products",
+          targetRegion: "Bangladesh",
+          isSponsored: true,
         }}
-      >
-        <div className="bg-zinc-900 dark:bg-white/60 backdrop-blur-md rounded-full flex items-center justify-center text-white overflow-hidden shadow-lg border border-white/20 transition-all duration-200">
-          {showAdLabel ? (
-            <span className="pl-3 pr-4 py-1.5 text-[10px] font-bold tracking-normal whitespace-nowrap">
-              Sponsored Ad
-            </span>
-          ) : (
-            <div className="w-8 h-8 flex items-center justify-center font-serif text-sm font-bold">
-              i
-            </div>
-          )}
-        </div>
-      </div>
+        variant="compact"
+      />
     </div>
   );
 };
@@ -208,14 +213,30 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     }, 800);
   };
 
-  const heroBanners = banners.filter(
+  const validBanners = useMemo(
+    () =>
+      banners.filter(
+        (b) => typeof b?.imageUrl === "string" && b.imageUrl.trim() !== ""
+      ),
+    [banners]
+  );
+
+  const heroBanners = validBanners.filter(
     (b) => !b.bannerType || b.bannerType === "hero",
   );
-  const gifBanners = banners.filter((b) => b.bannerType === "gif");
-  const categoryBanners = banners.filter(
+  const gifBanners = validBanners.filter((b) => b.bannerType === "gif");
+  const categoryBanners = validBanners.filter(
     (b) => b.bannerType === "category" || b.bannerType === "profile",
   );
-  const bottomBanners = banners.filter((b) => b.bannerType === "bottom");
+  const bottomBanners = validBanners.filter((b) => b.bannerType === "bottom");
+  const safeHeroIdx =
+    heroBanners.length > 0 ? activeBanner % heroBanners.length : 0;
+  const safeCategoryBannerIdx =
+    categoryBanners.length > 0
+      ? activeCategoryBanner % categoryBanners.length
+      : 0;
+  const safeBottomBannerIdx =
+    bottomBanners.length > 0 ? activeBottomBanner % bottomBanners.length : 0;
 
   useEffect(() => {
     if (heroBanners.length <= 1) return;
@@ -379,9 +400,13 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       const rowNum = (idx % numRows) + 1;
       const rowIndex = Math.floor(idx / numRows);
       const name = seller.shopName || seller.displayName || "Premium Seller";
-      const avatarUrl = seller.photoURL
-        ? optimizeImageUrl(seller.photoURL, 80, 72)
-        : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&rounded=true&font-size=0.4`;
+      const optimizedSellerAvatar =
+        typeof seller.photoURL === "string" && seller.photoURL.trim() !== ""
+          ? optimizeImageUrl(seller.photoURL.trim(), 80, 72)
+          : "";
+      const avatarUrl =
+        optimizedSellerAvatar ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&rounded=true&font-size=0.4`;
 
       return {
         label: name,
@@ -416,7 +441,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           seoConfig.metaDescription ||
           "DEEP SHOP is Bangladesh's trusted platform for Border Cross Products & genuine mobiles. Find 100% authentic and trusted global tech products."
         }
-        image={seoConfig.metaImage || seoConfig.appIconUrl || "/favicon.png"}
+        image={seoConfig.metaImage || seoConfig.appIconUrl || undefined}
         canonical="/"
         exactTitle
       />
@@ -436,31 +461,36 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           <div
             id="home-hero"
             className="relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px] overflow-hidden shadow-sm cursor-pointer"
-            onClick={() => heroBanners[activeBanner]?.link && navigate(heroBanners[activeBanner].link)}
+            onClick={() => heroBanners[safeHeroIdx]?.link && navigate(heroBanners[safeHeroIdx].link)}
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
-                key={activeBanner}
+                key={safeHeroIdx}
                 initial={{ opacity: 0.92 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
                 className="absolute inset-0 bg-zinc-100 dark:bg-[#1e1e1e]"
               >
-                <img
-                  src={optimizeImageUrl(heroBanners[activeBanner]?.imageUrl, 960, 78)}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                  onError={(e) => {
-                    const rawUrl = heroBanners[activeBanner]?.imageUrl;
-                    if (rawUrl && e.currentTarget.src !== rawUrl) {
-                      e.currentTarget.src = rawUrl;
-                    }
-                  }}
-                  className="w-full h-full object-cover"
-                  alt={heroBanners[activeBanner]?.title || "Featured Deal Banner"}
-                />
+                {(() => {
+                  const rawHeroUrl = heroBanners[safeHeroIdx]?.imageUrl?.trim() || "";
+                  const heroSrc = optimizeImageUrl(rawHeroUrl, 960, 78) || rawHeroUrl;
+                  return heroSrc ? (
+                    <img
+                      src={heroSrc}
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
+                      onError={(e) => {
+                        if (rawHeroUrl && e.currentTarget.src !== rawHeroUrl) {
+                          e.currentTarget.src = rawHeroUrl;
+                        }
+                      }}
+                      className="w-full h-full object-cover"
+                      alt={heroBanners[safeHeroIdx]?.title || "Featured Deal Banner"}
+                    />
+                  ) : null;
+                })()}
               </motion.div>
             </AnimatePresence>
 
@@ -469,7 +499,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             <div className="absolute inset-x-0 bottom-0 p-5 z-20 flex justify-between items-end">
               <div className="flex flex-col text-white max-w-[70%]">
                 <h3 className="font-semibold text-lg leading-tight mb-1 truncate">
-                  {heroBanners[activeBanner]?.title || "Discover the best products"}
+                  {heroBanners[safeHeroIdx]?.title || "Discover the best products"}
                 </h3>
                 <p className="text-xs font-medium text-white/80 shrink-0">
                   Exclusive collection
@@ -643,21 +673,29 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
               new Set(products.map((p) => p.category).filter(Boolean)),
             ),
           ].map((cat, i) => {
-            let rawCategoryImg = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(cat)}&backgroundColor=f88c49`;
+            const fallbackCategoryImg = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(cat)}&backgroundColor=f88c49`;
+            let rawCategoryImg = fallbackCategoryImg;
             if (cat === "All") {
               rawCategoryImg =
                 "https://ui-avatars.com/api/?name=User&background=000&color=fff";
             } else {
               const firstProduct = products.find((p) => p.category === cat);
-              if (
-                firstProduct &&
-                firstProduct.images &&
-                firstProduct.images.length > 0
-              ) {
-                rawCategoryImg = firstProduct.images[0];
+              const validProductImg =
+                firstProduct?.images
+                  ?.find((u) => typeof u === "string" && u.trim() !== "")
+                  ?.trim() ||
+                (typeof firstProduct?.image === "string" &&
+                firstProduct.image.trim() !== ""
+                  ? firstProduct.image.trim()
+                  : "");
+              if (validProductImg) {
+                rawCategoryImg = validProductImg;
               }
             }
-            const imageUrl = optimizeImageUrl(rawCategoryImg, 128, 72);
+            const imageUrl =
+              optimizeImageUrl(rawCategoryImg, 128, 72) ||
+              rawCategoryImg ||
+              fallbackCategoryImg;
 
             return (
               <div
@@ -681,10 +719,10 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                     loading="lazy"
                     decoding="async"
                     onError={(e) => {
-                      if (e.currentTarget.src !== rawCategoryImg) {
+                      if (rawCategoryImg && e.currentTarget.src !== rawCategoryImg) {
                         e.currentTarget.src = rawCategoryImg;
-                      } else {
-                        e.currentTarget.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(cat)}&backgroundColor=f88c49`;
+                      } else if (e.currentTarget.src !== fallbackCategoryImg) {
+                        e.currentTarget.src = fallbackCategoryImg;
                       }
                     }}
                     className="w-full h-full rounded-full object-cover border-[1.5px] border-white dark:border-[#121212]"
@@ -975,14 +1013,14 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             className="rounded-[24px] overflow-hidden shadow-sm aspect-[21/9] relative group cursor-pointer"
             onClick={() =>
               navigate(
-                categoryBanners[activeCategoryBanner]?.link || "/all-products",
+                categoryBanners[safeCategoryBannerIdx]?.link || "/all-products",
               )
             }
           >
             <div
               className="flex transition-transform duration-700 ease-[cubic-bezier(0.23, 1, 0.32, 1)] h-full"
               style={{
-                transform: `translateX(-${activeCategoryBanner * 100}%)`,
+                transform: `translateX(-${safeCategoryBannerIdx * 100}%)`,
               }}
             >
               {categoryBanners.map((banner, idx) => (
@@ -998,7 +1036,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             </div>
             {categoryBanners.length > 1 && (
               <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-semibold z-10">
-                {activeCategoryBanner + 1} / {categoryBanners.length}
+                {safeCategoryBannerIdx + 1} / {categoryBanners.length}
               </div>
             )}
           </div>
@@ -1011,13 +1049,13 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             className="rounded-[24px] overflow-hidden shadow-sm aspect-[21/9] relative group cursor-pointer"
             onClick={() =>
               navigate(
-                bottomBanners[activeBottomBanner]?.link || "/all-products",
+                bottomBanners[safeBottomBannerIdx]?.link || "/all-products",
               )
             }
           >
             <div
               className="flex transition-transform duration-700 ease-[cubic-bezier(0.23, 1, 0.32, 1)] h-full"
-              style={{ transform: `translateX(-${activeBottomBanner * 100}%)` }}
+              style={{ transform: `translateX(-${safeBottomBannerIdx * 100}%)` }}
             >
               {bottomBanners.map((banner, idx) => (
                 <div key={banner.id ? `${banner.id}-${idx}` : idx} className="min-w-full h-full relative">
@@ -1032,7 +1070,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             </div>
             {bottomBanners.length > 1 && (
               <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-semibold z-10">
-                {activeBottomBanner + 1} / {bottomBanners.length}
+                {safeBottomBannerIdx + 1} / {bottomBanners.length}
               </div>
             )}
           </div>

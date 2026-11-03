@@ -151,11 +151,15 @@ const OrderActionPage: React.FC = () => {
               
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center p-2 shrink-0 group-hover:bg-zinc-100 dark:group-hover:bg-zinc-800 transition-colors">
-                  <img
-                    src={order.items[0]?.image}
-                    className="w-full h-full object-contain group-hover:scale-110 transition-transform mix-blend-multiply dark:mix-blend-normal"
-                    alt=""
-                  />
+                  {order.items[0]?.image?.trim() ? (
+                    <img
+                      src={order.items[0].image.trim()}
+                      className="w-full h-full object-contain group-hover:scale-110 transition-transform mix-blend-multiply dark:mix-blend-normal"
+                      alt=""
+                    />
+                  ) : (
+                    <PackageOpen className="w-6 h-6 text-zinc-400" />
+                  )}
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 line-clamp-1 mb-1">

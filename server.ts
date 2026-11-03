@@ -410,6 +410,7 @@ app.use(async (req, res, next) => {
   });
 
   app.get("/api/web-push/public-key", (req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800");
     res.json({ publicKey: vapidPublicKey });
   });
 
@@ -444,6 +445,7 @@ app.use(async (req, res, next) => {
               })
               .filter(Boolean);
             if (items.length > 0) {
+              res.setHeader("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
               return res.json({ items });
             }
           }
@@ -474,6 +476,7 @@ app.use(async (req, res, next) => {
             })
             .filter(Boolean);
           if (items.length > 0) {
+            res.setHeader("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
             return res.json({ items });
           }
         }
@@ -867,6 +870,7 @@ app.use(async (req, res, next) => {
         domain = new URL(targetUrl).hostname;
       } catch(e) {}
 
+      res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800");
       return res.json({
         title: title ? title.trim() : "",
         description: description ? description.trim() : "",
@@ -1255,7 +1259,7 @@ app.use(async (req, res, next) => {
         if (upstreamRes.headers.etag) {
           res.setHeader("ETag", upstreamRes.headers.etag);
         }
-        res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+        res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800");
 
         if (req.method === "HEAD") {
           upstreamRes.resume();
@@ -1319,6 +1323,7 @@ app.use(async (req, res, next) => {
         return res.status(upstream.status).json({ data: [] });
       }
       const data = await upstream.json();
+      res.setHeader("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
       return res.json(data);
     } catch {
       return res.status(502).json({ data: [] });
@@ -1570,6 +1575,7 @@ app.use(async (req, res, next) => {
         }
       } catch {}
 
+      res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800");
       return res.json({
         resolvedUrl: finalUrl,
         tiktokVideoId,
@@ -2309,12 +2315,19 @@ const fetchNewsPostData = async (postId: string) => {
   return null;
 };
 
+let cachedSeoSettings: { data: Record<string, any> | null; expiresAt: number } | null = null;
+
 const fetchSeoSettingsData = async () => {
+  if (cachedSeoSettings && Date.now() < cachedSeoSettings.expiresAt) {
+    return cachedSeoSettings.data;
+  }
   if (hasValidFirebaseAdmin) {
     try {
       const seoSnap = await getFirestore().collection("settings").doc("seo").get();
       if (seoSnap.exists) {
-        return normalizeDocData(seoSnap.data());
+        const parsed = normalizeDocData(seoSnap.data());
+        cachedSeoSettings = { data: parsed, expiresAt: Date.now() + 5 * 60 * 1000 };
+        return parsed;
       }
     } catch (e) {}
   }
@@ -3076,7 +3089,13 @@ export async function initializeAppAsync() {
         template = injectDynamicHeadMeta(template, metaTags);
       }
 
-      res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      res
+        .status(200)
+        .set({
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=60, s-maxage=1800, stale-while-revalidate=86400",
+        })
+        .end(template);
     } catch (e: any) {
       if (!isProd && vite) {
         vite.ssrFixStacktrace(e);

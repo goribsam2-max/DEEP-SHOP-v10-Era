@@ -49,6 +49,7 @@ import {
   resolveShortVideoUrl,
   toPlayableMediaUrl,
   toPlayableAudioUrl,
+  toProxiedMediaStreamUrl,
 } from "../lib/videoEmbed";
 import {
   CURATED_SUGGESTED_TOPICS,
@@ -98,6 +99,10 @@ import {
   translateLoopsText,
   useTranslationPrefs,
 } from "../lib/loopsSavedAndTranslation";
+import {
+  DeepShopSponsoredAd,
+  useDeepShopAds,
+} from "./DeepShopSponsoredAd";
 
 /* ============================================================================
  * CRISP CUSTOM VECTOR ICONS (Delegated to Admin-Editable LoopsSvgIcon Registry)
@@ -355,6 +360,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   const [resolved, setResolved] = useState<ParsedVideoEmbed>(videoSource);
   const [directFailed, setDirectFailed] = useState(false);
   const [useRawOriginFallback, setUseRawOriginFallback] = useState(false);
+  const [useAudioProxyFallback, setUseAudioProxyFallback] = useState(false);
   const [hasLoadedFrame, setHasLoadedFrame] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -367,6 +373,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     setResolved(videoSource);
     setDirectFailed(false);
     setUseRawOriginFallback(false);
+    setUseAudioProxyFallback(false);
     setHasLoadedFrame(false);
     setIsBuffering(false);
     setIsPaused(false);
@@ -653,8 +660,11 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
 
   const renderMediaElement = () => {
     if (isImageMusicReel) {
-      const currentImg =
-        reelImages[imageSlideIdx % reelImages.length] || reelImages[0] || "";
+      const currentImg = (
+        reelImages[imageSlideIdx % reelImages.length] ||
+        reelImages[0] ||
+        ""
+      ).trim();
       return (
         <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
           {currentImg && (
@@ -700,21 +710,26 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
 
     if (usesNativeVideo) {
       const rawCandidate = resolved.directStreamUrl || resolved.canonicalUrl;
-      const proxiedCandidate = toPlayableMediaUrl(rawCandidate);
-      const src =
+      const directCandidate = toPlayableMediaUrl(rawCandidate);
+      const proxyCandidate = toProxiedMediaStreamUrl(rawCandidate);
+      const src = (
         useRawOriginFallback &&
-        resolved.originalUrl &&
-        resolved.originalUrl !== proxiedCandidate
-          ? resolved.originalUrl
-          : proxiedCandidate;
+        proxyCandidate &&
+        proxyCandidate !== directCandidate
+          ? proxyCandidate
+          : directCandidate
+      ).trim();
+      if (!src) {
+        return <div className="w-full h-full bg-black" />;
+      }
       return (
         <video
           ref={videoRef}
           data-active-reel-video={isActive ? "true" : undefined}
           data-reel-user-paused={isPaused ? "true" : undefined}
           src={src}
-          poster={posterImg || undefined}
-          preload={isActive ? "auto" : "metadata"}
+          poster={posterImg?.trim() || undefined}
+          preload={isActive ? "auto" : "none"}
           playsInline
           loop={!onVideoEnded}
           muted={isMuted}
@@ -777,9 +792,8 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
           onError={() => {
             if (
               !useRawOriginFallback &&
-              resolved.originalUrl &&
-              proxiedCandidate.startsWith("/api/stream-media") &&
-              resolved.originalUrl !== proxiedCandidate
+              proxyCandidate &&
+              proxyCandidate !== directCandidate
             ) {
               setUseRawOriginFallback(true);
               return;
@@ -993,30 +1007,44 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   return (
     <div className="relative w-full h-full bg-black overflow-hidden select-none">
       {renderMediaElement()}
-      {hasSeparateReelMusic && rawMusicAudioUrl && (
-        <audio
-          ref={bgAudioRef}
-          data-active-reel-audio={isActive ? "true" : undefined}
-          src={toPlayableAudioUrl(rawMusicAudioUrl)}
-          preload={isActive ? "auto" : "none"}
-          loop={!(isImageMusicReel && onVideoEnded)}
-          muted={isMuted}
-          onTimeUpdate={(e) => {
-            if (!isImageMusicReel || !isActive) return;
-            const a = e.currentTarget;
-            if (a.duration > 0) {
-              onProgressUpdate?.(
-                Math.min(100, (a.currentTime / a.duration) * 100)
-              );
-            }
-          }}
-          onEnded={() => {
-            if (isImageMusicReel && onVideoEnded) {
-              onVideoEnded();
-            }
-          }}
-        />
-      )}
+      {(() => {
+        if (!hasSeparateReelMusic || !rawMusicAudioUrl) return null;
+        const resolvedReelAudioSrc = (
+          useAudioProxyFallback
+            ? toProxiedMediaStreamUrl(rawMusicAudioUrl)
+            : toPlayableAudioUrl(rawMusicAudioUrl)
+        ).trim();
+        if (!resolvedReelAudioSrc) return null;
+        return (
+          <audio
+            ref={bgAudioRef}
+            data-active-reel-audio={isActive ? "true" : undefined}
+            src={resolvedReelAudioSrc}
+            preload={isActive ? "auto" : "none"}
+            loop={!(isImageMusicReel && onVideoEnded)}
+            muted={isMuted}
+            onError={() => {
+              if (!useAudioProxyFallback) {
+                setUseAudioProxyFallback(true);
+              }
+            }}
+            onTimeUpdate={(e) => {
+              if (!isImageMusicReel || !isActive) return;
+              const a = e.currentTarget;
+              if (a.duration > 0) {
+                onProgressUpdate?.(
+                  Math.min(100, (a.currentTime / a.duration) * 100)
+                );
+              }
+            }}
+            onEnded={() => {
+              if (isImageMusicReel && onVideoEnded) {
+                onVideoEnded();
+              }
+            }}
+          />
+        );
+      })()}
 
       {/* Buffering Indicator for Active Native Reel */}
       {isActive && usesNativeVideo && (!hasLoadedFrame || isBuffering) && !directFailed && (
@@ -3039,6 +3067,10 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
 
   const [endedReel, setEndedReel] = useState<ScamPost | null>(null);
 
+  const { ads: sponsoredAds } = useDeepShopAds();
+  const [activeAdSlideKey, setActiveAdSlideKey] = useState<string | null>(null);
+  const [adPopupOpen, setAdPopupOpen] = useState(false);
+
   const [isSuggestedSlideActive, setIsSuggestedSlideActive] = useState(false);
   const [dismissedSuggestedUids, setDismissedSuggestedUids] = useState<
     Record<string, boolean>
@@ -3199,7 +3231,8 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       algorithmModalOpen ||
       playbackSheetOpen ||
       audioDetailsPost ||
-      isFullScreenMode
+      isFullScreenMode ||
+      adPopupOpen
   );
 
   useEffect(() => {
@@ -3427,14 +3460,14 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     return () => unsub();
   }, [activeItem?.post.id]);
 
-  // Observe snap slides (both Reel slides and Suggested Profiles slides)
+  // Observe snap slides (Community Reels, Suggested Profiles slides, and Deep Shop Sponsored Ads)
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || typeof IntersectionObserver === "undefined") return;
 
     const slides = Array.from(
       container.querySelectorAll<HTMLElement>(
-        "[data-reel-index], [data-suggested-slide]"
+        "[data-reel-index], [data-suggested-slide], [data-ad-slide]"
       )
     );
     if (!slides.length) return;
@@ -3445,12 +3478,19 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
         entries.forEach((entry) => {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.58) {
             const targetEl = entry.target as HTMLElement;
+            if (targetEl.dataset.adSlide) {
+              setActiveAdSlideKey(targetEl.dataset.adSlide);
+              setIsSuggestedSlideActive(false);
+              return;
+            }
             if (targetEl.dataset.suggestedSlide === "true") {
+              setActiveAdSlideKey(null);
               setIsSuggestedSlideActive(true);
               return;
             }
             const idx = Number(targetEl.dataset.reelIndex || 0);
             if (!Number.isNaN(idx)) {
+              setActiveAdSlideKey(null);
               setIsSuggestedSlideActive(false);
               setActiveIndex(idx);
             }
@@ -3465,7 +3505,12 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
 
     slides.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [reelItems.length, reelsSubTab, suggestedProfiles.length]);
+  }, [
+    reelItems.length,
+    reelsSubTab,
+    suggestedProfiles.length,
+    sponsoredAds.length,
+  ]);
 
   const jumpToReelIndex = (targetIdx: number) => {
     const clamped = Math.max(0, Math.min(reelItems.length - 1, targetIdx));
@@ -3475,9 +3520,23 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     );
     if (el) {
       programmaticScrollUntilRef.current = Date.now() + 500;
+      setActiveAdSlideKey(null);
       setIsSuggestedSlideActive(false);
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       setActiveIndex(clamped);
+    }
+  };
+
+  const advanceFromAdSlide = (adSlideKey: string) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const currentSlide = container.querySelector<HTMLElement>(
+      `[data-ad-slide="${adSlideKey}"]`
+    );
+    const nextSlide = currentSlide?.nextElementSibling as HTMLElement | null;
+    if (nextSlide) {
+      programmaticScrollUntilRef.current = Date.now() + 500;
+      nextSlide.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -3662,8 +3721,9 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
           </header>
         )}
 
-        {/* EMPTY STATE */}
-        {reelItems.length === 0 ? (
+        {/* EMPTY STATE (only when no community reels AND no active Deep Shop Reels ads) */}
+        {reelItems.length === 0 &&
+        !(reelsSubTab === "reels" && sponsoredAds.length > 0) ? (
           <div className="w-full h-full flex flex-col items-center justify-center px-6 text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-white">
               <Play className="w-7 h-7 fill-white ml-0.5" />
@@ -3714,6 +3774,39 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
               isCommentsDockedMode ? "overflow-hidden" : "overflow-y-scroll"
             } snap-y snap-mandatory no-scrollbar`}
           >
+            {reelItems.length === 0 &&
+              reelsSubTab === "reels" &&
+              sponsoredAds.map((adItem, adOnlyIdx) => {
+                const adSlideKey = `ad_only_${adOnlyIdx}_${adItem.id}`;
+                return (
+                  <section
+                    key={adSlideKey}
+                    data-ad-slide={adSlideKey}
+                    className="relative w-full h-[100dvh] snap-start snap-always overflow-hidden bg-black flex flex-col"
+                  >
+                    <DeepShopSponsoredAd
+                      ad={adItem}
+                      variant="reel"
+                      isActive={
+                        (activeAdSlideKey
+                          ? activeAdSlideKey === adSlideKey
+                          : adOnlyIdx === 0) && !isFullScreenMode
+                      }
+                      isMuted={effectiveMuted}
+                      onToggleMute={handleToggleReelMute}
+                      autoScroll={autoAdvance}
+                      onToggleAutoScroll={handleToggleAutoAdvance}
+                      allLibraryAds={sponsoredAds}
+                      onPopupOpenChange={setAdPopupOpen}
+                      onAdEnded={
+                        autoAdvance
+                          ? () => advanceFromAdSlide(adSlideKey)
+                          : undefined
+                      }
+                    />
+                  </section>
+                );
+              })}
             {reelItems.map(({ post, videoSource }, idx) => {
               const isSlideActive = idx === activeIndex;
               const effectiveEmbed = resolvedMap[post.id] || videoSource;
@@ -3794,6 +3887,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                         isActive={
                           isSlideActive &&
                           !isSuggestedSlideActive &&
+                          !activeAdSlideKey &&
                           !audioDetailsPost
                         }
                         isMuted={effectiveMuted}
@@ -4319,31 +4413,74 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                   idx === 1 ||
                   (idx > 1 && (idx - 1) % 5 === 0));
 
-              if (!shouldInsertSuggestedAfter) {
+              const shouldInsertSponsoredAdAfter =
+                reelsSubTab === "reels" &&
+                sponsoredAds.length > 0 &&
+                ((idx + 1) % 3 === 0 ||
+                  (reelItems.length < 3 && idx === reelItems.length - 1));
+
+              const adSlotOrdinal = Math.max(0, Math.floor(idx / 3));
+              const sponsoredAdForSlot = shouldInsertSponsoredAdAfter
+                ? sponsoredAds[adSlotOrdinal % sponsoredAds.length]
+                : null;
+              const adSlideKey = sponsoredAdForSlot
+                ? `reel_ad_after_${idx}_${sponsoredAdForSlot.id}`
+                : "";
+
+              if (!shouldInsertSuggestedAfter && !sponsoredAdForSlot) {
                 return reelSection;
               }
 
               return (
-                <React.Fragment key={`${post.id}_with_suggested`}>
+                <React.Fragment key={`${post.id}_interleaved`}>
                   {reelSection}
-                  <ReelsSuggestedProfilesSlide
-                    slideKey={`suggested_after_${idx}`}
-                    profiles={suggestedProfiles}
-                    followedIds={followedIds}
-                    onToggleFollow={(targetUid, targetName) => {
-                      setSessionFollowedSuggestedUids((prev) => ({
-                        ...prev,
-                        [targetUid]: true,
-                      }));
-                      onToggleFollowCreator(targetUid, targetName);
-                    }}
-                    onDismissProfile={(targetUid) =>
-                      setDismissedSuggestedUids((prev) => ({
-                        ...prev,
-                        [targetUid]: true,
-                      }))
-                    }
-                  />
+                  {shouldInsertSuggestedAfter && (
+                    <ReelsSuggestedProfilesSlide
+                      slideKey={`suggested_after_${idx}`}
+                      profiles={suggestedProfiles}
+                      followedIds={followedIds}
+                      onToggleFollow={(targetUid, targetName) => {
+                        setSessionFollowedSuggestedUids((prev) => ({
+                          ...prev,
+                          [targetUid]: true,
+                        }));
+                        onToggleFollowCreator(targetUid, targetName);
+                      }}
+                      onDismissProfile={(targetUid) =>
+                        setDismissedSuggestedUids((prev) => ({
+                          ...prev,
+                          [targetUid]: true,
+                        }))
+                      }
+                    />
+                  )}
+                  {sponsoredAdForSlot && (
+                    <section
+                      data-ad-slide={adSlideKey}
+                      className="relative w-full h-[100dvh] snap-start snap-always overflow-hidden bg-black flex flex-col"
+                    >
+                      <DeepShopSponsoredAd
+                        ad={sponsoredAdForSlot}
+                        variant="reel"
+                        isActive={
+                          activeAdSlideKey === adSlideKey && !isFullScreenMode
+                        }
+                        isMuted={effectiveMuted}
+                        onToggleMute={handleToggleReelMute}
+                        autoScroll={autoAdvance}
+                        onToggleAutoScroll={handleToggleAutoAdvance}
+                        allLibraryAds={sponsoredAds}
+                        onPopupOpenChange={setAdPopupOpen}
+                        onHideAd={() => advanceFromAdSlide(adSlideKey)}
+                        onNotInterested={() => advanceFromAdSlide(adSlideKey)}
+                        onAdEnded={
+                          autoAdvance
+                            ? () => advanceFromAdSlide(adSlideKey)
+                            : undefined
+                        }
+                      />
+                    </section>
+                  )}
                 </React.Fragment>
               );
             })}

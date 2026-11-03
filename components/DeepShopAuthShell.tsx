@@ -16,73 +16,12 @@ import {
 } from "lucide-react";
 import { db } from "../firebase";
 import AuthVoiceToggle from "./AuthVoiceToggle";
+import {
+  useFooterLogo,
+  DEEP_SHOP_LOGO_DATA_URI,
+} from "../lib/useFooterLogo";
 
-const LOGO_CACHE_KEY = "deepshop_footer_logo_cache";
-
-export function useFooterLogo(): string {
-  const [logoUrl, setLogoUrl] = useState<string>(() => {
-    try {
-      return localStorage.getItem(LOGO_CACHE_KEY) || "/favicon.png";
-    } catch {
-      return "/favicon.png";
-    }
-  });
-
-  useEffect(() => {
-    let paymentsLogo = "";
-    let seoLogo = "";
-    let platformLogo = "";
-
-    const syncResolved = () => {
-      // Exact priority matching Footer.tsx: platformLogo -> paymentsLogo -> seoLogo -> /favicon.png
-      const resolved =
-        platformLogo || paymentsLogo || seoLogo || "/favicon.png";
-      setLogoUrl(resolved);
-      try {
-        localStorage.setItem(LOGO_CACHE_KEY, resolved);
-      } catch {
-        // Ignore storage quota errors
-      }
-    };
-
-    const unsubPayments = onSnapshot(doc(db, "settings", "payments"), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        paymentsLogo = data.footerLogo || data.logoUrl || "";
-        syncResolved();
-      }
-    });
-
-    const unsubSeo = onSnapshot(doc(db, "settings", "seo"), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        seoLogo =
-          data.logoUrl ||
-          data.appIconUrl ||
-          data.faviconUrl ||
-          data.metaImage ||
-          "";
-        syncResolved();
-      }
-    });
-
-    const unsubPlatform = onSnapshot(doc(db, "settings", "platform"), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        platformLogo = data.footerLogo || data.logoUrl || "";
-        syncResolved();
-      }
-    });
-
-    return () => {
-      unsubPayments();
-      unsubSeo();
-      unsubPlatform();
-    };
-  }, []);
-
-  return logoUrl || "/favicon.png";
-}
+export { useFooterLogo };
 
 export const DeepShopCircleLogo: React.FC<{
   size?: "sm" | "md" | "lg";
@@ -107,9 +46,9 @@ export const DeepShopCircleLogo: React.FC<{
       className={`relative inline-flex items-center justify-center overflow-hidden bg-white dark:bg-zinc-900 border border-[#e4e7ec] dark:border-zinc-700/80 shadow-[0_6px_20px_rgba(0,100,224,0.12)] shrink-0 ${sizeClasses} ${className}`}
     >
       <img
-        src={imgSrc || "/favicon.png"}
+        src={imgSrc || DEEP_SHOP_LOGO_DATA_URI}
         alt="DEEP SHOP"
-        onError={() => setImgSrc("/favicon.png")}
+        onError={() => setImgSrc(DEEP_SHOP_LOGO_DATA_URI)}
         className="w-full h-full object-cover"
       />
     </div>
@@ -132,9 +71,9 @@ export const DeepShopBottomBrand: React.FC<{ className?: string }> = ({
     >
       <div className="w-5 h-5 rounded-md overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/70 dark:border-zinc-700 flex items-center justify-center shrink-0">
         <img
-          src={imgSrc || "/favicon.png"}
+          src={imgSrc || DEEP_SHOP_LOGO_DATA_URI}
           alt="DEEP SHOP"
-          onError={() => setImgSrc("/favicon.png")}
+          onError={() => setImgSrc(DEEP_SHOP_LOGO_DATA_URI)}
           className="w-full h-full object-cover"
         />
       </div>
@@ -166,9 +105,9 @@ export const DeepShopEcosystemHero: React.FC = () => {
         className="relative z-20 w-24 h-24 rounded-[28px] bg-white dark:bg-zinc-900 border border-[#dfe5ec] dark:border-zinc-700 shadow-[0_16px_40px_rgba(0,100,224,0.18)] p-2 flex items-center justify-center overflow-hidden"
       >
         <img
-          src={imgSrc || "/favicon.png"}
+          src={imgSrc || DEEP_SHOP_LOGO_DATA_URI}
           alt="DEEP SHOP"
-          onError={() => setImgSrc("/favicon.png")}
+          onError={() => setImgSrc(DEEP_SHOP_LOGO_DATA_URI)}
           className="w-full h-full object-cover rounded-[20px]"
         />
       </motion.div>
@@ -544,9 +483,9 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
           >
             <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-[#dce1e7] dark:border-zinc-700 shadow-md flex items-center justify-center p-1">
               <img
-                src={imgSrc || "/favicon.png"}
+                src={imgSrc || DEEP_SHOP_LOGO_DATA_URI}
                 alt="DEEP SHOP"
-                onError={() => setImgSrc("/favicon.png")}
+                onError={() => setImgSrc(DEEP_SHOP_LOGO_DATA_URI)}
                 className="w-full h-full object-cover rounded-xl"
               />
             </div>

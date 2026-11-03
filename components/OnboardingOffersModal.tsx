@@ -93,11 +93,15 @@ export default function OnboardingOffersModal() {
         <div className="flex w-full h-full">
           {offers.map((offer) => (
             <div key={offer.id} className="relative flex-[0_0_100%] w-full h-full">
-              <img
-                src={offer.imageUrl}
-                alt="Offer"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              {offer.imageUrl?.trim() ? (
+                <img
+                  src={offer.imageUrl.trim()}
+                  alt="Offer"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black" />
+              )}
               <div className="absolute inset-0 bg-black/30" />
 
               <div className="relative z-10 w-full h-full flex flex-col p-6 pt-20">

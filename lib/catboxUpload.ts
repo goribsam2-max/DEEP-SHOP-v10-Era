@@ -158,56 +158,18 @@ export const uploadFileToCatbox = async (
 
   const isSmallEnoughForServerless = fileToUpload.size <= 4.2 * 1024 * 1024;
 
-  // Tier 1: Same-origin binary upload for <= 4.2MB files (instant on mobile browsers, zero CORS)
+  // Tier 1: Same-origin fast server-to-Catbox.moe API upload when <= 4.2 MB (safe within Vercel serverless payload limit)
   if (isSmallEnoughForServerless) {
     try {
       const url = await uploadViaSameOriginBinary(fileToUpload, onProgress, 45000);
       if (onProgress) onProgress(100);
       return url;
     } catch {
-      // Proceed seamlessly to pure client-side CORS-friendly upload tiers
+      // Fall through to client-side CORS-proxied Catbox.moe API
     }
   }
 
-  // Tier 2: Pure Client-Side Native-CORS Direct Upload (pomf2.lain.la — permanent direct HTTPS stream)
-  try {
-    const fd = new FormData();
-    fd.append("files[]", fileToUpload, fileToUpload.name);
-    const url = await uploadViaXhrFormData(
-      "https://pomf2.lain.la/upload.php",
-      fd,
-      (raw) => {
-        const parsed = JSON.parse(raw);
-        return parsed?.files?.[0]?.url || null;
-      },
-      onProgress
-    );
-    if (onProgress) onProgress(100);
-    return url;
-  } catch {
-    // Continue to next CORS-bypass method
-  }
-
-  // Tier 3: Pure Client-Side Native-CORS Direct Upload (uguu.se — fast verified 206 byte-range stream)
-  try {
-    const fd = new FormData();
-    fd.append("files[]", fileToUpload, fileToUpload.name);
-    const url = await uploadViaXhrFormData(
-      "https://uguu.se/upload",
-      fd,
-      (raw) => {
-        const parsed = JSON.parse(raw);
-        return parsed?.files?.[0]?.url || null;
-      },
-      onProgress
-    );
-    if (onProgress) onProgress(100);
-    return url;
-  } catch {
-    // Continue to Tier 4
-  }
-
-  // Tier 4: Catbox API wrapped with public CORS proxies (strictly reqtype='fileupload' & fileToUpload)
+  // Tier 2: Direct Catbox.moe API (https://catbox.moe/user/api.php) via CORS proxies (0 Vercel bandwidth for large videos)
   const catboxCorsEndpoints = [
     `https://corsproxy.io/?url=${encodeURIComponent("https://catbox.moe/user/api.php")}`,
     "https://api.codetabs.com/v1/proxy?quest=https://catbox.moe/user/api.php",
@@ -223,16 +185,16 @@ export const uploadFileToCatbox = async (
           return isValidRemoteUrl(clean) ? clean : null;
         },
         onProgress,
-        60000
+        75000
       );
       if (onProgress) onProgress(100);
       return url;
     } catch {
-      // Try next endpoint
+      // Try next Catbox endpoint
     }
   }
 
-  // Tier 5: Litterbox direct stream fallback
+  // Tier 3: Catbox Litterbox Direct API (native browser CORS — 0 Vercel bandwidth)
   try {
     const fd = new FormData();
     fd.append("reqtype", "fileupload");
@@ -246,15 +208,52 @@ export const uploadFileToCatbox = async (
         return isValidRemoteUrl(clean) ? clean : null;
       },
       onProgress,
-      60000
+      75000
     );
     if (onProgress) onProgress(100);
     return url;
   } catch {
-    // Continue to final fallback
+    // Continue to direct CORS-enabled CDN fallbacks
   }
 
-  // Tier 6: Same-origin binary stream for larger files (> 4.2MB on full Node/Express server)
+  // Tier 4: Pure Client-Side Native-CORS Direct Upload fallback (pomf2.lain.la — 0 Vercel bandwidth)
+  try {
+    const fd = new FormData();
+    fd.append("files[]", fileToUpload, fileToUpload.name);
+    const url = await uploadViaXhrFormData(
+      "https://pomf2.lain.la/upload.php",
+      fd,
+      (raw) => {
+        const parsed = JSON.parse(raw);
+        return parsed?.files?.[0]?.url || null;
+      },
+      onProgress
+    );
+    if (onProgress) onProgress(100);
+    return url;
+  } catch {
+    // Continue to next fallback
+  }
+
+  // Tier 5: Pure Client-Side Native-CORS Direct Upload fallback (uguu.se — 0 Vercel bandwidth)
+  try {
+    const fd = new FormData();
+    fd.append("files[]", fileToUpload, fileToUpload.name);
+    const url = await uploadViaXhrFormData(
+      "https://uguu.se/upload",
+      fd,
+      (raw) => {
+        const parsed = JSON.parse(raw);
+        return parsed?.files?.[0]?.url || null;
+      },
+      onProgress
+    );
+    if (onProgress) onProgress(100);
+    return url;
+  } catch {
+    // Continue to final local/dev server stream fallback
+  }
+
   if (!isSmallEnoughForServerless) {
     try {
       const url = await uploadViaSameOriginBinary(fileToUpload, onProgress, 120000);
@@ -265,5 +264,5 @@ export const uploadFileToCatbox = async (
     }
   }
 
-  throw new Error("Media upload failed. Please check your connection and try again.");
+  throw new Error("Catbox video upload failed. Please check your connection and try again.");
 };

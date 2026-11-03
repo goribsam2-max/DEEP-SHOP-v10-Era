@@ -355,7 +355,14 @@ export const MobileAppInstallExperience: React.FC = () => {
     return null;
   }
 
-  const appIconSrc = config?.pwaPopupIcon?.trim() || "/favicon.png";
+  const rawPopupIcon = config?.pwaPopupIcon?.trim() || "";
+  const appIconSrc =
+    rawPopupIcon && rawPopupIcon !== "/favicon.png"
+      ? rawPopupIcon
+      : "data:image/svg+xml;utf8," +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#090d16"/><text x="27" y="44" font-family="system-ui,-apple-system,sans-serif" font-size="34" font-weight="900" fill="#ffffff" text-anchor="middle">d</text><circle cx="45" cy="40" r="5" fill="#10b981"/></svg>'
+        );
   const apkVersion = config?.androidApkVersion?.trim() || "Latest";
 
   return createPortal(

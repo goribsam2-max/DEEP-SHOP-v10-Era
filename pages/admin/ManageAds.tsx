@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useNotify } from "../../components/Notifications";
-import { Save, Plus, Trash2, Image as ImageIcon, Film, BarChart3, TrendingUp, Users, Clock, Percent, MapPin, Tag, Terminal, Globe, LayoutGrid, CheckCircle2 } from "lucide-react";
+import { Save, Plus, Trash2, Image as ImageIcon, Film, BarChart3, TrendingUp, Users, Clock, Percent, MapPin, Tag, Terminal, Globe, LayoutGrid, CheckCircle2, Upload, Loader2 } from "lucide-react";
 import { uploadToImgbb } from "../../services/imgbb";
+import { uploadFileToCatbox } from "../../lib/catboxUpload";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 
 export interface PlacementConfig {
@@ -127,6 +128,10 @@ interface VideoAdConfig {
   id: string;
   active: boolean;
   videos: AdMedia[];
+  title?: string;
+  text?: string;
+  buttonText?: string;
+  buttonLink?: string;
   timerDuration: number;
   showCloseAfterVideos: number;
   targetCategory?: string;
@@ -167,9 +172,11 @@ const ManageAds: React.FC = () => {
   const [photoAds, setPhotoAds] = useState<PhotoAdConfig[]>([]);
   const [placements, setPlacements] = useState<PlacementConfig[]>(DEFAULT_PLACEMENTS);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'placements' | 'analytics'>('placements');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'placements' | 'analytics'>('campaigns');
   const [analyticsData, setAnalyticsData] = useState<Record<string, any>>({});
   const [selectedAdId, setSelectedAdId] = useState<string>('');
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [uploadPct, setUploadPct] = useState<number>(0);
   const notify = useNotify();
 
   useEffect(() => {
@@ -201,7 +208,9 @@ const ManageAds: React.FC = () => {
           setVideoAds([{
             id: 'legacy-video',
             active: data.videoAd.active,
-            videos: [{ url: data.videoAd.url, ratio: '16/9' }],
+            videos: [{ url: data.videoAd.url, ratio: 'auto' }],
+            buttonText: 'See details',
+            buttonLink: '/all-products',
             timerDuration: 5,
             showCloseAfterVideos: 1
           }]);
@@ -210,7 +219,7 @@ const ManageAds: React.FC = () => {
         if (data.photoAds) {
           const migrated = data.photoAds.map((ad: any) => ({
             ...ad,
-            images: ad.images || (ad.image ? [{ url: ad.image, ratio: '4/3' }] : []),
+            images: ad.images || (ad.image ? [{ url: ad.image, ratio: 'auto' }] : []),
           }));
           setPhotoAds(migrated);
         }
@@ -264,8 +273,74 @@ const ManageAds: React.FC = () => {
       const url = await uploadToImgbb(file);
       return url || null;
     } catch (error) {
-      notify("Upload failed", "error");
+      notify("ImgBB image upload failed", "error");
       return null;
+    }
+  };
+
+  const handleCatboxVideoUpload = async (
+    adIndex: number,
+    mediaIndex: number,
+    file: File
+  ) => {
+    const key = `vid-${adIndex}-${mediaIndex}`;
+    setUploadingKey(key);
+    setUploadPct(10);
+    try {
+      const url = await uploadFileToCatbox(file, file.name, (pct) => {
+        setUploadPct(pct);
+      });
+      setVideoAds((prev) => {
+        const next = [...prev];
+        if (next[adIndex] && next[adIndex].videos[mediaIndex]) {
+          const vids = [...next[adIndex].videos];
+          vids[mediaIndex] = { ...vids[mediaIndex], url, ratio: "auto" };
+          next[adIndex] = { ...next[adIndex], videos: vids };
+        }
+        return next;
+      });
+      notify("Video uploaded via Catbox.moe!", "success");
+    } catch (err: any) {
+      notify(err?.message || "Catbox video upload failed", "error");
+    } finally {
+      setUploadingKey(null);
+      setUploadPct(0);
+    }
+  };
+
+  const handlePlacementMediaUpload = async (
+    plcIndex: number,
+    file: File,
+    mode: "imgbb" | "catbox"
+  ) => {
+    const key = `plc-${plcIndex}-${mode}`;
+    setUploadingKey(key);
+    setUploadPct(12);
+    try {
+      const url =
+        mode === "catbox"
+          ? await uploadFileToCatbox(file, file.name, (pct) => setUploadPct(pct))
+          : await uploadToImgbb(file);
+      if (url) {
+        setPlacements((prev) => {
+          const next = [...prev];
+          if (next[plcIndex]) {
+            next[plcIndex] = { ...next[plcIndex], imageUrl: url };
+          }
+          return next;
+        });
+        notify(
+          mode === "catbox"
+            ? "Video uploaded via Catbox.moe!"
+            : "Image uploaded via ImgBB!",
+          "success"
+        );
+      }
+    } catch (err: any) {
+      notify(err?.message || "Media upload failed", "error");
+    } finally {
+      setUploadingKey(null);
+      setUploadPct(0);
     }
   };
 
@@ -274,10 +349,14 @@ const ManageAds: React.FC = () => {
     setVideoAds([...videoAds, {
       id: Date.now().toString(),
       active: true,
-      videos: [{ url: '', ratio: '16/9' }],
+      videos: [{ url: '', ratio: 'auto' }],
+      title: '',
+      text: '',
+      buttonText: 'See details',
+      buttonLink: '/all-products',
       timerDuration: 5,
       showCloseAfterVideos: 1,
-      isSponsored: false
+      isSponsored: true
     }]);
   };
 
@@ -295,7 +374,7 @@ const ManageAds: React.FC = () => {
 
   const addMediaToVideoAd = (adIndex: number) => {
     const newAds = [...videoAds];
-    newAds[adIndex].videos.push({ url: '', ratio: '16/9' });
+    newAds[adIndex].videos.push({ url: '', ratio: 'auto' });
     setVideoAds(newAds);
   };
 
@@ -317,11 +396,11 @@ const ManageAds: React.FC = () => {
       id: Date.now().toString(),
       active: true,
       adType: 'in_feed',
-      images: [{ url: '', ratio: '4/3' }],
+      images: [{ url: '', ratio: 'auto' }],
       title: "",
       text: "",
-      buttonText: "",
-      buttonLink: ""
+      buttonText: "See details",
+      buttonLink: "/all-products"
     }]);
   };
 
@@ -339,24 +418,32 @@ const ManageAds: React.FC = () => {
 
   const addMediaToPhotoAd = (adIndex: number) => {
     const newAds = [...photoAds];
-    newAds[adIndex].images.push({ url: '', ratio: '4/3' });
+    newAds[adIndex].images.push({ url: '', ratio: 'auto' });
     setPhotoAds(newAds);
   };
 
   const updatePhotoMedia = async (adIndex: number, mediaIndex: number, field: keyof AdMedia, value: string, file?: File) => {
-    const newAds = [...photoAds];
     if (file) {
-      newAds[adIndex].images[mediaIndex].url = "Uploading...";
-      setPhotoAds([...newAds]);
+      const key = `img-${adIndex}-${mediaIndex}`;
+      setUploadingKey(key);
       const url = await handleMediaUpload(file);
+      setUploadingKey(null);
       if (url) {
-        newAds[adIndex].images[mediaIndex].url = url;
-      } else {
-        newAds[adIndex].images[mediaIndex].url = "";
+        setPhotoAds((prev) => {
+          const next = [...prev];
+          if (next[adIndex] && next[adIndex].images[mediaIndex]) {
+            const imgs = [...next[adIndex].images];
+            imgs[mediaIndex] = { ...imgs[mediaIndex], url, ratio: "auto" };
+            next[adIndex] = { ...next[adIndex], images: imgs };
+          }
+          return next;
+        });
+        notify("Image uploaded via ImgBB!", "success");
       }
-    } else {
-      newAds[adIndex].images[mediaIndex] = { ...newAds[adIndex].images[mediaIndex], [field]: value };
+      return;
     }
+    const newAds = [...photoAds];
+    newAds[adIndex].images[mediaIndex] = { ...newAds[adIndex].images[mediaIndex], [field]: value };
     setPhotoAds(newAds);
   };
 
@@ -571,19 +658,64 @@ const ManageAds: React.FC = () => {
 
                     <div>
                       <label className="block text-xs font-bold text-zinc-500 mb-1">
-                        Image URL
+                        Media URL (ImgBB Image or Catbox.moe Video — Exact Aspect Ratio)
                       </label>
-                      <input
-                        type="text"
-                        value={plc.imageUrl || ""}
-                        onChange={(e) => {
-                          const next = [...placements];
-                          next[idx].imageUrl = e.target.value;
-                          setPlacements(next);
-                        }}
-                        placeholder="https://..."
-                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
-                      />
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          value={plc.imageUrl || ""}
+                          onChange={(e) => {
+                            const next = [...placements];
+                            next[idx].imageUrl = e.target.value;
+                            setPlacements(next);
+                          }}
+                          placeholder="https://i.ibb.co/... or https://files.catbox.moe/..."
+                          className="w-full sm:flex-1 bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                        />
+                        <div className="flex items-center gap-2 shrink-0">
+                          <label className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition">
+                            {uploadingKey === `plc-${idx}-imgbb` ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <ImageIcon className="w-3.5 h-3.5" />
+                            )}
+                            <span>ImgBB</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handlePlacementMediaUpload(idx, f, "imgbb");
+                                e.currentTarget.value = "";
+                              }}
+                            />
+                          </label>
+                          <label className="px-3 py-2 rounded-xl bg-[#5835f2] hover:bg-[#4a28df] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition">
+                            {uploadingKey === `plc-${idx}-catbox` ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>{uploadPct}%</span>
+                              </>
+                            ) : (
+                              <>
+                                <Film className="w-3.5 h-3.5" />
+                                <span>Catbox Video</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="video/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handlePlacementMediaUpload(idx, f, "catbox");
+                                e.currentTarget.value = "";
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="sm:col-span-2">
@@ -753,6 +885,50 @@ const ManageAds: React.FC = () => {
                          />
                       </div>
 
+                      <div>
+                         <label className="block text-xs font-bold mb-1 text-zinc-500">Ad Headline / Caption</label>
+                         <input
+                           type="text"
+                           value={ad.title || ''}
+                           onChange={(e) => updateVideoAd(adIndex, "title", e.target.value)}
+                           className="w-full bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none"
+                           placeholder="e.g. Authentic Border Cross Devices on Deep Shop"
+                         />
+                      </div>
+
+                      <div>
+                         <label className="block text-xs font-bold mb-1 text-zinc-500">CTA Button Text (Default: See details)</label>
+                         <input
+                           type="text"
+                           value={ad.buttonText || ''}
+                           onChange={(e) => updateVideoAd(adIndex, "buttonText", e.target.value)}
+                           className="w-full bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none"
+                           placeholder="See details"
+                         />
+                      </div>
+
+                      <div>
+                         <label className="block text-xs font-bold mb-1 text-zinc-500">CTA Destination Link</label>
+                         <input
+                           type="text"
+                           value={ad.buttonLink || ''}
+                           onChange={(e) => updateVideoAd(adIndex, "buttonLink", e.target.value)}
+                           className="w-full bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none"
+                           placeholder="/all-products or https://..."
+                         />
+                      </div>
+
+                      <div>
+                         <label className="block text-xs font-bold mb-1 text-zinc-500">Expandable Details Text (Optional)</label>
+                         <input
+                           type="text"
+                           value={ad.text || ''}
+                           onChange={(e) => updateVideoAd(adIndex, "text", e.target.value)}
+                           className="w-full bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none"
+                           placeholder="Additional campaign details..."
+                         />
+                      </div>
+
                       <div className="md:col-span-2">
                          <label className="block text-xs font-bold mb-1 text-zinc-500">Shoppable Products Inside Video (Slugs, comma-separated)</label>
                          <input
@@ -765,38 +941,81 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div className="md:col-span-2 space-y-4">
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-zinc-500">Video Playlists (Fallbacks)</label>
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                          <label className="text-xs font-bold text-zinc-500">
+                            Sponsored Video Media (Upload via Catbox.moe API — Exact Aspect Ratio Preserved)
+                          </label>
                           <button onClick={() => addMediaToVideoAd(adIndex)} className="text-xs font-bold text-[#1cdb5e] hover:underline flex items-center gap-1">
                              <Plus className="w-3 h-3" /> Add Alternative Video
                           </button>
                         </div>
 
-                        {ad.videos.map((media, mIndex) => (
-                          <div key={mIndex} className="flex flex-col sm:flex-row gap-2 sm:items-center bg-white dark:bg-zinc-900 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                             <input
-                               type="text"
-                               value={media.url}
-                               onChange={(e) => updateVideoMedia(adIndex, mIndex, "url", e.target.value)}
-                               className="w-full sm:flex-1 bg-transparent text-sm outline-none py-1 border-b sm:border-none border-zinc-100 dark:border-zinc-800"
-                               placeholder="Video File URL (e.g., direct .mp4 link)"
-                             />
-                             <div className="flex items-center justify-between sm:justify-start gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                               <select
-                                 value={media.ratio}
-                                 onChange={(e) => updateVideoMedia(adIndex, mIndex, "ratio", e.target.value)}
-                                 className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg text-xs font-bold outline-none border-none cursor-pointer"
-                               >
-                                 {RATIO_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                               </select>
-                               {ad.videos.length > 1 && (
-                                 <button onClick={() => removeVideoMedia(adIndex, mIndex)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition ml-auto sm:ml-0">
-                                   <Trash2 className="w-4 h-4" />
-                                 </button>
-                               )}
-                             </div>
-                          </div>
-                        ))}
+                        {ad.videos.map((media, mIndex) => {
+                          const isUploadingThis = uploadingKey === `vid-${adIndex}-${mIndex}`;
+                          return (
+                            <div key={mIndex} className="space-y-2.5 bg-white dark:bg-zinc-900 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                <input
+                                  type="text"
+                                  value={media.url}
+                                  onChange={(e) => updateVideoMedia(adIndex, mIndex, "url", e.target.value)}
+                                  className="w-full sm:flex-1 bg-transparent text-sm outline-none py-1 border-b sm:border-none border-zinc-100 dark:border-zinc-800"
+                                  placeholder="Catbox.moe Video URL (e.g., https://files.catbox.moe/...mp4)"
+                                />
+                                <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                                  <label className="ds-sponsored-cta px-3.5 py-2 rounded-lg cursor-pointer flex-shrink-0 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition">
+                                    {isUploadingThis ? (
+                                      <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Uploading {uploadPct}%</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Upload className="w-3.5 h-3.5" />
+                                        <span>Upload Video (Catbox.moe)</span>
+                                      </>
+                                    )}
+                                    <input
+                                      type="file"
+                                      accept="video/*"
+                                      disabled={isUploadingThis}
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) handleCatboxVideoUpload(adIndex, mIndex, f);
+                                        e.currentTarget.value = "";
+                                      }}
+                                    />
+                                  </label>
+                                  <select
+                                    value={media.ratio || "auto"}
+                                    onChange={(e) => updateVideoMedia(adIndex, mIndex, "ratio", e.target.value)}
+                                    className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg text-xs font-bold outline-none border-none cursor-pointer"
+                                  >
+                                    {RATIO_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                  </select>
+                                  {ad.videos.length > 1 && (
+                                    <button onClick={() => removeVideoMedia(adIndex, mIndex)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition ml-auto sm:ml-0">
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              {media.url && (
+                                <div className="rounded-xl overflow-hidden bg-black/90 max-w-[240px] border border-zinc-200 dark:border-zinc-800">
+                                  <video
+                                    src={media.url}
+                                    muted
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                    className="w-full h-auto max-h-[240px] object-contain block"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                    </div>
                 </div>
@@ -855,40 +1074,77 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div className="md:col-span-2 space-y-4">
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-zinc-500">Banner Images (Carousel fallbacks)</label>
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                          <label className="text-xs font-bold text-zinc-500">
+                            Sponsored Ad Images (Upload via ImgBB — Exact Aspect Ratio Preserved)
+                          </label>
                           <button onClick={() => addMediaToPhotoAd(adIndex)} className="text-xs font-bold text-[#1cdb5e] hover:underline flex items-center gap-1">
                              <Plus className="w-3 h-3" /> Add Alternative Image
                           </button>
                         </div>
 
-                        {ad.images.map((media, mediaIndex) => (
-                          <div key={mediaIndex} className="flex flex-col sm:flex-row gap-2 sm:items-center bg-white dark:bg-zinc-900 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                            <input
-                              type="text"
-                              value={media.url}
-                              onChange={(e) => updatePhotoMedia(adIndex, mediaIndex, 'url', e.target.value)}
-                              className="w-full sm:flex-1 bg-transparent text-sm outline-none py-1 border-b sm:border-none border-zinc-100 dark:border-zinc-800"
-                              placeholder="Image URL"
-                            />
-                            <div className="flex items-center justify-between sm:justify-start gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                              <label className="bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-lg cursor-pointer flex-shrink-0 text-xs font-bold flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 transition">
-                                Upload
-                                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && updatePhotoMedia(adIndex, mediaIndex, 'url', '', e.target.files[0])} />
-                              </label>
-                              <select
-                                value={media.ratio}
-                                onChange={(e) => updatePhotoMedia(adIndex, mediaIndex, 'ratio', e.target.value)}
-                                className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg text-xs font-bold outline-none border-none cursor-pointer"
-                              >
-                                {RATIO_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                              </select>
-                              {ad.images.length > 1 && (
-                                <button onClick={() => removePhotoMedia(adIndex, mediaIndex)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition ml-auto sm:ml-0"><Trash2 className="w-4 h-4" /></button>
+                        {ad.images.map((media, mediaIndex) => {
+                          const isUploadingImg = uploadingKey === `img-${adIndex}-${mediaIndex}`;
+                          return (
+                            <div key={mediaIndex} className="space-y-2.5 bg-white dark:bg-zinc-900 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                <input
+                                  type="text"
+                                  value={media.url}
+                                  onChange={(e) => updatePhotoMedia(adIndex, mediaIndex, 'url', e.target.value)}
+                                  className="w-full sm:flex-1 bg-transparent text-sm outline-none py-1 border-b sm:border-none border-zinc-100 dark:border-zinc-800"
+                                  placeholder="ImgBB Image URL (e.g., https://i.ibb.co/...)"
+                                />
+                                <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                                  <label className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-3.5 py-2 rounded-lg cursor-pointer flex-shrink-0 text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:opacity-90 transition">
+                                    {isUploadingImg ? (
+                                      <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        <span>Uploading...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ImageIcon className="w-3.5 h-3.5" />
+                                        <span>Upload Image (ImgBB)</span>
+                                      </>
+                                    )}
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      disabled={isUploadingImg}
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (f) updatePhotoMedia(adIndex, mediaIndex, 'url', '', f);
+                                        e.currentTarget.value = "";
+                                      }}
+                                    />
+                                  </label>
+                                  <select
+                                    value={media.ratio || 'auto'}
+                                    onChange={(e) => updatePhotoMedia(adIndex, mediaIndex, 'ratio', e.target.value)}
+                                    className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg text-xs font-bold outline-none border-none cursor-pointer"
+                                  >
+                                    {RATIO_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                  </select>
+                                  {ad.images.length > 1 && (
+                                    <button onClick={() => removePhotoMedia(adIndex, mediaIndex)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition ml-auto sm:ml-0"><Trash2 className="w-4 h-4" /></button>
+                                  )}
+                                </div>
+                              </div>
+                              {media.url && (
+                                <div className="rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 max-w-[220px] border border-zinc-200 dark:border-zinc-800">
+                                  <img
+                                    src={media.url}
+                                    alt="Preview"
+                                    referrerPolicy="no-referrer"
+                                    className="w-full h-auto max-h-[220px] object-contain block"
+                                  />
+                                </div>
                               )}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       <div>

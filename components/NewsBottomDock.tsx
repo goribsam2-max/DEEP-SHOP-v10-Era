@@ -4,6 +4,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { triggerHaptic } from "../lib/haptics";
 import { LoopsSvgIcon } from "./LoopsSvgIcon";
+import Icon from "./Icon";
 
 export const NewsBottomDock: React.FC<{
   variant?: "default" | "reels";
@@ -114,7 +115,7 @@ export const NewsBottomDock: React.FC<{
       path: "/messages",
       isActive: isMessagesActive,
       render: () => (
-        <LoopsSvgIcon name="loops-nav-messages" className={iconSizeClass} />
+        <Icon name="message-square" className={iconSizeClass} />
       ),
     },
     {

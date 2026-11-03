@@ -16,6 +16,7 @@ import {
   getVideoPlatformMeta,
   toPlayableMediaUrl,
   toPlayableAudioUrl,
+  toProxiedMediaStreamUrl,
 } from "../lib/videoEmbed";
 import { triggerHaptic } from "../lib/haptics";
 
@@ -89,6 +90,8 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   const [directStreamFailed, setDirectStreamFailed] = useState<boolean>(false);
   const [useRawOriginFallback, setUseRawOriginFallback] =
     useState<boolean>(false);
+  const [useAudioProxyFallback, setUseAudioProxyFallback] =
+    useState<boolean>(false);
   const [hasLoadedFrame, setHasLoadedFrame] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
   const [streamError, setStreamError] = useState<boolean>(false);
@@ -116,6 +119,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     setDuration(0);
     setDirectStreamFailed(false);
     setUseRawOriginFallback(false);
+    setUseAudioProxyFallback(false);
     setIsVideoEnded(false);
     setHasLoadedFrame(false);
     setIsBuffering(false);
@@ -776,13 +780,19 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   if (usesNativeStream) {
     const rawCandidate =
       resolvedEmbed.directStreamUrl || resolvedEmbed.canonicalUrl;
-    const proxiedCandidate = toPlayableMediaUrl(rawCandidate);
-    const streamSrc =
+    const directCandidate = toPlayableMediaUrl(rawCandidate);
+    const proxyCandidate = toProxiedMediaStreamUrl(rawCandidate);
+    const streamSrc = (
       useRawOriginFallback &&
-      resolvedEmbed.originalUrl &&
-      resolvedEmbed.originalUrl !== proxiedCandidate
-        ? resolvedEmbed.originalUrl
-        : proxiedCandidate;
+      proxyCandidate &&
+      proxyCandidate !== directCandidate
+        ? proxyCandidate
+        : directCandidate
+    ).trim();
+
+    if (!streamSrc) {
+      return null;
+    }
 
     return (
       <div
@@ -798,8 +808,8 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
           <video
             ref={nativeVideoRef}
             src={streamSrc}
-            poster={resolvedEmbed.thumbnailUrl}
-            preload={hasEnteredView || isInView ? "auto" : "metadata"}
+            poster={resolvedEmbed.thumbnailUrl?.trim() || undefined}
+            preload={isInView ? "auto" : "metadata"}
             playsInline
             loop={!enableFeedEndScreen}
             muted={isMuted || (hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01)}
@@ -873,9 +883,8 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             onError={() => {
               if (
                 !useRawOriginFallback &&
-                resolvedEmbed.originalUrl &&
-                proxiedCandidate.startsWith("/api/stream-media") &&
-                resolvedEmbed.originalUrl !== proxiedCandidate
+                proxyCandidate &&
+                proxyCandidate !== directCandidate
               ) {
                 setUseRawOriginFallback(true);
                 return;
@@ -961,15 +970,29 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             </button>
           )}
 
-          {hasSeparateBgMusic && bgMusicUrl && (
-            <audio
-              ref={bgAudioRef}
-              src={toPlayableAudioUrl(bgMusicUrl)}
-              preload="auto"
-              loop
-              muted={isMuted}
-            />
-          )}
+          {(() => {
+            if (!hasSeparateBgMusic || !bgMusicUrl) return null;
+            const resolvedBgAudioSrc = (
+              useAudioProxyFallback
+                ? toProxiedMediaStreamUrl(bgMusicUrl)
+                : toPlayableAudioUrl(bgMusicUrl)
+            ).trim();
+            if (!resolvedBgAudioSrc) return null;
+            return (
+              <audio
+                ref={bgAudioRef}
+                src={resolvedBgAudioSrc}
+                preload={isInView ? "auto" : "none"}
+                loop
+                muted={isMuted}
+                onError={() => {
+                  if (!useAudioProxyFallback) {
+                    setUseAudioProxyFallback(true);
+                  }
+                }}
+              />
+            );
+          })()}
 
           {!isVideoEnded && overlayBadge}
           {renderFeedEndScreenOverlay()}

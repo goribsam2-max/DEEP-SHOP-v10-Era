@@ -110,9 +110,9 @@ textarea:-webkit-autofill:focus {
   --linkC: #2563eb;
   --linkB: #2563eb;
   --waveB: #f8fafc;
-  --iconC: #2563eb;
-  --iconCa: #2563eb;
-  --iconCs: #2563eb;
+  --iconC: #09090b;
+  --iconCa: #09090b;
+  --iconCs: #09090b;
   --headerC: #09090b;
   --headerB: #ffffff;
   --contentB: #ffffff;
@@ -155,6 +155,9 @@ textarea:-webkit-autofill:focus {
   --contentB: #000000;
   --contentL: #18181b;
 
+  --iconC: #ffffff;
+  --iconCa: #ffffff;
+  --iconCs: #ffffff;
   --waveB: #09090b;
   --fotB: #000000;
   --fotT: #ffffff;
@@ -327,33 +330,34 @@ header nav button,
 }
 
 /* SVG Line standard formatting */
+/* SVG Line standard formatting - strictly black in Light mode, white in Dark mode */
 svg.line, svg .line {
   fill: none !important;
-  stroke: var(--iconC) !important;
+  stroke: currentColor !important;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.5px;
 }
 
-/* svgc/svgC/c/c1 class paths for dual-color SVG accents */
+/* svgc/svgC/c/c1 class paths inherit currentColor without blue forcing */
 svg .svgC, svg .c, svg .c1 {
-  fill: var(--linkC) !important;
+  stroke: currentColor !important;
   transition: all 0.3s ease;
 }
 svg.line .svgC, svg.line .c, svg.line .c1, svg .line.svgC, svg .line.c {
   fill: none !important;
-  stroke: var(--linkC) !important;
+  stroke: currentColor !important;
   transition: all 0.3s ease;
 }
 .dark svg .svgC, .dark svg .c, .dark svg .c1, .drK svg .svgC, .drK svg .c, .drK svg .c1 {
-  fill: var(--darkU) !important;
+  stroke: currentColor !important;
 }
 .dark svg.line .svgC, .dark svg.line .c, .dark svg.line .c1,
 .dark svg .line.svgC, .dark svg .line.c,
 .drK svg.line .svgC, .drK svg.line .c, .drK svg.line .c1,
 .drK svg .line.svgC, .drK svg .line.c {
   fill: none !important;
-  stroke: var(--darkU) !important;
+  stroke: currentColor !important;
 }
 
 /* Hide Google Translate top toolbar and branding frames */
@@ -598,7 +602,7 @@ html:not(.dark) main {
   background-color: #ffffff !important;
   background-image: radial-gradient(ellipse 90% 380px at 50% 0px, rgba(59, 130, 246, 0.12), transparent 100%) !important;
   background-repeat: no-repeat !important;
-  color: #110833 !important;
+  color: #09090b !important;
 }
 
 /* Cards, Product Cards, Footer, Popups, Modals, Message Buttons, Floating bars stay WHITE (#FFFFFF) */
@@ -749,8 +753,9 @@ html:not(.dark) .border-zinc-300\/60 {
   border-color: #d8f1fc !important;
 }
 
-/* Standard readable text colors on White Cards & Glass Blue background */
+/* Standard readable text & icon colors on White Cards & Light mode -> Crisp Black (#09090b) */
 html:not(.dark) .text-zinc-900,
+html:not(.dark) .text-zinc-950,
 html:not(.dark) .text-zinc-800,
 html:not(.dark) .text-gray-900,
 html:not(.dark) .text-gray-800,
@@ -758,7 +763,7 @@ html:not(.dark) .text-slate-900,
 html:not(.dark) .text-slate-800,
 html:not(.dark) .text-black,
 html:not(.dark) .text-\[\#08102b\] {
-  color: #110833 !important;
+  color: #09090b !important;
 }
 
 html:not(.dark) .text-zinc-600,
@@ -2818,6 +2823,138 @@ html.dark .notif-v2-thumb-off {
   background-color: #6b7280 !important;
 }
 
+/* ==========================================================================
+   STRICT THEME ICON COLORS & SHOP BOTTOM NAVIGATION DOCK PROTECTION
+   - General site icons: Black (#09090b) in Light mode, White (#ffffff) in Dark mode
+   - Shop Bottom Navigation Dock: White (#ffffff) bg in Light mode, Black (#09090b) bg in Dark mode
+   - Shop Bottom Navigation Buttons: White icon stroke in Light mode (on dark circle),
+     Dark (#09090b) icon stroke in Dark mode (on white/light circle)
+   ========================================================================== */
+html:not(.dark) .ds-theme-icon-btn {
+  color: #09090b !important;
+}
+html:not(.dark) .ds-theme-icon-btn svg {
+  color: #09090b !important;
+}
+html.dark .ds-theme-icon-btn {
+  color: #ffffff !important;
+}
+html.dark .ds-theme-icon-btn svg {
+  color: #ffffff !important;
+}
 
+html:not(.dark) .ds-shop-bottom-dock {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(9, 9, 11, 0.1) !important;
+  box-shadow: 0 12px 32px rgba(9, 9, 11, 0.12) !important;
+}
 
+html.dark .ds-shop-bottom-dock {
+  background-color: #09090b !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65) !important;
+}
 
+html:not(.dark) .ds-shop-bottom-btn {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+html:not(.dark) .ds-shop-bottom-btn-active {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(9, 9, 11, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(9, 9, 11, 0.22) !important;
+}
+html:not(.dark) .ds-shop-bottom-btn *,
+html:not(.dark) .ds-shop-bottom-btn-active * {
+  color: #ffffff !important;
+}
+html:not(.dark) .ds-shop-bottom-btn svg,
+html:not(.dark) .ds-shop-bottom-btn-active svg {
+  color: #ffffff !important;
+}
+
+html.dark .ds-shop-bottom-btn {
+  background-color: #e4e4e7 !important;
+  color: #09090b !important;
+  border: 1px solid rgba(9, 9, 11, 0.08) !important;
+}
+html.dark .ds-shop-bottom-btn-active {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.16) !important;
+}
+html.dark .ds-shop-bottom-btn *,
+html.dark .ds-shop-bottom-btn-active * {
+  color: #09090b !important;
+}
+html.dark .ds-shop-bottom-btn svg,
+html.dark .ds-shop-bottom-btn-active svg {
+  color: #09090b !important;
+}
+
+/* ==========================================================================
+   DEEP SHOP SPONSORED ADS & POPUP SHEETS PROTECTION
+   ========================================================================== */
+.ds-sponsored-cta {
+  background-color: #5835f2 !important;
+  color: #ffffff !important;
+}
+.ds-sponsored-cta:hover {
+  background-color: #4a28df !important;
+  color: #ffffff !important;
+}
+.ds-sponsored-cta * {
+  color: #ffffff !important;
+}
+
+.ds-sponsored-pill {
+  background-color: rgba(38, 38, 42, 0.72) !important;
+  color: #ffffff !important;
+}
+.ds-sponsored-pill * {
+  color: #ffffff !important;
+}
+
+html:not(.dark) .ds-sponsored-sheet {
+  background-color: #f2f4f7 !important;
+  color: #09090b !important;
+}
+html.dark .ds-sponsored-sheet {
+  background-color: #121316 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .ds-sponsored-sheet-white {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+}
+html.dark .ds-sponsored-sheet-white {
+  background-color: #121316 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .ds-sponsored-sheet-card {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+}
+html.dark .ds-sponsored-sheet-card {
+  background-color: #1c1d22 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) .ds-sponsored-muted {
+  color: #667085 !important;
+}
+html.dark .ds-sponsored-muted {
+  color: #a1a1aa !important;
+}
+
+html:not(.dark) .ds-sponsored-link {
+  color: #2563eb !important;
+}
+html.dark .ds-sponsored-link {
+  color: #60a5fa !important;
+}

@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/index.ts": {
-      "includeFiles": "dist/**"
+      "includeFiles": "dist/index.html"
     }
   },
   "headers": [
@@ -15,43 +15,45 @@
       ]
     },
     {
-      "source": "/(favicon\\.ico|favicon\\.png|favicon\\.jpg|logo\\.jpg|apple-touch-icon\\.png|pwa-512x512\\.png|pwa-maskable-512x512\\.png)",
+      "source": "/(manifest\\.json|manifest\\.webmanifest)",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=2592000, stale-while-revalidate=86400"
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
         }
       ]
     },
     {
-      "source": "/(llms\\.txt|robots\\.txt|sitemap\\.xml)",
+      "source": "/sw\\.js",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=86400"
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     }
   ],
   "rewrites": [
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
-    { "source": "/llms.txt", "destination": "/llms.txt" },
-    { "source": "/robots.txt", "destination": "/robots.txt" },
-    { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
-    { "source": "/favicon.ico", "destination": "/favicon.ico" },
-    { "source": "/favicon.png", "destination": "/favicon.png" },
-    { "source": "/favicon.jpg", "destination": "/favicon.jpg" },
-    { "source": "/logo.jpg", "destination": "/logo.jpg" },
-    { "source": "/apple-touch-icon.png", "destination": "/apple-touch-icon.png" },
-    { "source": "/pwa-512x512.png", "destination": "/pwa-512x512.png" },
-    { "source": "/pwa-maskable-512x512.png", "destination": "/pwa-maskable-512x512.png" },
     { "source": "/registerSW.js", "destination": "/registerSW.js" },
     { "source": "/sw.js", "destination": "/sw.js" },
     { "source": "/workbox-(.*)", "destination": "/workbox-$1" },
-    { "source": "/custom-sw.js", "destination": "/custom-sw.js" },
     { "source": "/manifest.webmanifest", "destination": "/manifest.webmanifest" },
-    { "source": "/0f6cbbdfe0864710868cb5500f5b8e54.txt", "destination": "/0f6cbbdfe0864710868cb5500f5b8e54.txt" },
     { "source": "/api/(.*)", "destination": "/api/index?__pathname=/api/$1" },
-    { "source": "/(.*)", "destination": "/api/index?__pathname=/$1" }
+    {
+      "source": "/((?!api/|assets/|.*\\.(?:js|mjs|cjs|css|map|wasm|json|webmanifest|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|mp4|webm|mp3|wav|txt|xml)$).*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([Bb]ot|[Cc]rawl|[Ss]pider|[Ss]lurp|facebookexternalhit|[Ff]acebot|[Ww]hats[Aa]pp|[Tt]elegram|[Tt]witter|[Dd]iscord|[Ll]inked[Ii]n|[Ss]lack|[Pp]interest|[Ss]kype|[Ee]mbedly|[Rr]eddit|[Bb]ing[Pp]review|[Ll]ighthouse|curl|python).*"
+        }
+      ],
+      "destination": "/api/index?__pathname=/$1"
+    },
+    {
+      "source": "/((?!api/|assets/|.*\\.(?:js|mjs|cjs|css|map|wasm|json|webmanifest|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|mp4|webm|mp3|wav|txt|xml)$).*)",
+      "destination": "/index.html"
+    }
   ]
 }

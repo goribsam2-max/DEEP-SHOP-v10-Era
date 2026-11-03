@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { useNotify } from '../components/Notifications';
 import { ArrowLeft, Plus, Check, ShoppingBag, X } from 'lucide-react';
+import { getProductDisplayImage } from '../src/lib/phonePartsArt';
 
 const BundleBuilder = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -89,7 +90,7 @@ const BundleBuilder = () => {
                   onClick={() => setSelectedBase(p)}
                   className={`p-4 rounded-3xl border-2 transition-all cursor-pointer ${selectedBase?.id === p.id ? 'border-[#1cdb5e] bg-[#1cdb5e]/5' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300'}`}
                 >
-                  <img src={p.image || p.images?.[0]} className="w-full aspect-square object-contain mb-3" alt={p.name || p.title} />
+                  <img src={getProductDisplayImage({ ...p, name: p.name || p.title })} className="w-full aspect-square object-contain mb-3" alt={p.name || p.title} />
                   <p className="font-bold text-sm truncate">{p.name || p.title}</p>
                   <p className="text-xs text-zinc-500 font-bold mt-1">৳{p.price}</p>
                 </div>
@@ -111,7 +112,7 @@ const BundleBuilder = () => {
                         className={`p-3 rounded-2xl border-2 transition-all cursor-pointer relative ${isSelected ? 'border-[#1cdb5e] bg-[#1cdb5e]/5' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300'}`}
                       >
                         {isSelected && <div className="absolute top-2 right-2 w-5 h-5 bg-[#1cdb5e] rounded-full flex items-center justify-center text-white"><Check className="w-3 h-3" /></div>}
-                        <img src={p.image || p.images?.[0]} className="w-full aspect-square object-contain mb-2" alt={p.name || p.title} />
+                        <img src={getProductDisplayImage({ ...p, name: p.name || p.title })} className="w-full aspect-square object-contain mb-2" alt={p.name || p.title} />
                         <p className="font-bold text-[10px] truncate">{p.name || p.title}</p>
                         <p className="text-[10px] text-zinc-500 font-bold mt-1">৳{p.price}</p>
                       </div>
@@ -133,7 +134,7 @@ const BundleBuilder = () => {
               <div className="col-span-2 aspect-[2/1] bg-white dark:bg-black rounded-3xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-center p-6 relative overflow-hidden shadow-sm">
                 {selectedBase ? (
                   <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center">
-                    <img src={selectedBase.image || selectedBase.images?.[0]} className="h-32 object-contain" alt="" />
+                    <img src={getProductDisplayImage({ ...selectedBase, name: selectedBase.name || selectedBase.title })} className="h-32 object-contain" alt="" />
                   </motion.div>
                 ) : (
                   <div className="text-zinc-300 dark:text-zinc-700 flex flex-col items-center">
@@ -151,7 +152,7 @@ const BundleBuilder = () => {
                     {acc ? (
                       <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center relative">
                         <button onClick={() => toggleAccessory(acc)} className="absolute -top-6 -right-6 p-2 text-zinc-400 hover:text-red-500 bg-zinc-100 rounded-full dark:bg-zinc-900"><X className="w-3 h-3" /></button>
-                        <img src={acc.image || acc.images?.[0]} className="h-20 object-contain" alt="" />
+                        <img src={getProductDisplayImage({ ...acc, name: acc.name || acc.title })} className="h-20 object-contain" alt="" />
                       </motion.div>
                     ) : (
                       <div className="text-zinc-300 dark:text-zinc-700 flex flex-col items-center">

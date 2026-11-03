@@ -21,6 +21,7 @@ import { useTheme } from "../components/ThemeContext";
 import { useLanguage } from "../components/LanguageContext";
 import { uploadToImgbb } from "../services/imgbb";
 import { PixelImage } from "../components/ui/PixelImage";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 import { BangladeshAddressSelector } from "../components/BangladeshAddressSelector";
 import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
 import AuthVoiceToggle from "../components/AuthVoiceToggle";
@@ -1379,7 +1380,7 @@ export default function CheckoutPage() {
                       className="w-9 h-9 rounded-xl ds-liquid-subpanel overflow-hidden flex items-center justify-center p-0.5"
                     >
                       <img
-                        src={item.image}
+                        src={getProductDisplayImage(item)}
                         alt={item.name}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-contain rounded-lg"
@@ -1425,7 +1426,7 @@ export default function CheckoutPage() {
                     >
                       <div className="relative w-12 h-12 rounded-xl bg-white/70 dark:bg-white/5 overflow-hidden shrink-0 p-1">
                         <PixelImage
-                          src={item.image}
+                          src={getProductDisplayImage(item)}
                           alt={item.name}
                           className="w-full h-full bg-transparent"
                           imgClassName="w-full h-full object-contain"
@@ -2246,7 +2247,7 @@ export default function CheckoutPage() {
                   >
                     <div className="relative w-14 h-14 shrink-0 rounded-2xl bg-white/80 dark:bg-white/5 border border-white/60 dark:border-white/10 overflow-hidden p-1">
                       <PixelImage
-                        src={item.image}
+                        src={getProductDisplayImage(item)}
                         alt={item.name}
                         className="w-full h-full bg-transparent"
                         imgClassName="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal"

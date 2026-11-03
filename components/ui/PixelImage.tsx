@@ -66,14 +66,17 @@ export const PixelImage: React.FC<PixelImageProps> = ({
   };
 
   const handleImageError = () => {
-    if (src && activeSrc !== src) {
-      setActiveSrc(src);
+    const rawTrimmed = typeof src === "string" ? src.trim() : "";
+    const fbTrimmed = typeof fallbackSrc === "string" ? fallbackSrc.trim() : "";
+    if (rawTrimmed && activeSrc !== rawTrimmed) {
+      setActiveSrc(rawTrimmed);
       return;
     }
-    if (fallbackSrc && activeSrc !== fallbackSrc) {
-      setActiveSrc(fallbackSrc);
+    if (fbTrimmed && activeSrc !== fbTrimmed) {
+      setActiveSrc(fbTrimmed);
       return;
     }
+    setActiveSrc("");
     setHasError(true);
   };
 

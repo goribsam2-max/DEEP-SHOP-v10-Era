@@ -110,7 +110,10 @@ import {
   getEffectiveFollowersCount,
 } from "../lib/follow";
 import { NewsPostCardSkeleton } from "../components/PageSkeletons";
-import { useFooterLogo } from "../lib/useFooterLogo";
+import {
+  useFooterLogo,
+  DEEP_SHOP_LOGO_DATA_URI,
+} from "../lib/useFooterLogo";
 import {
   formatCompactNumber,
   getSafeDisplayName,
@@ -130,7 +133,7 @@ import {
 } from "../lib/feedAlgorithm";
 
 const defaultAvatarImg = "";
-const deepShopLogoFallback = "";
+const deepShopLogoFallback = DEEP_SHOP_LOGO_DATA_URI;
 
 const TwoLineMenuIcon: React.FC<{ className?: string }> = ({
   className = "w-6 h-6",
@@ -1471,11 +1474,13 @@ export const NewsHub: React.FC = () => {
                 <div className="flex items-center gap-2.5 pb-3 border-b loops-divider">
                   <div className="w-9 h-9 rounded-full overflow-hidden bg-white dark:bg-zinc-800 ring-1 ring-slate-200/80 dark:ring-zinc-700 shadow-xs shrink-0 flex items-center justify-center">
                     <img
-                      src={footerLogo}
+                      src={footerLogo || deepShopLogoFallback}
                       alt="DEEP SHOP"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        e.currentTarget.src = deepShopLogoFallback;
+                        if (e.currentTarget.src !== deepShopLogoFallback) {
+                          e.currentTarget.src = deepShopLogoFallback;
+                        }
                       }}
                       className="w-full h-full object-cover"
                     />
@@ -2167,12 +2172,18 @@ export const NewsHub: React.FC = () => {
                         : "bg-gradient-to-tr from-[#0095F6] to-[#38BDF8]"
                     }`}
                   >
-                    <img
-                      src={group.avatar}
-                      alt={group.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
-                    />
+                    {group.avatar?.trim() ? (
+                      <img
+                        src={group.avatar.trim()}
+                        alt={group.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                        {(group.name || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   <span className="text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[64px] truncate">
                     {group.name}
@@ -2316,9 +2327,11 @@ export const NewsHub: React.FC = () => {
                   return (
                     <React.Fragment key={post.id}>
                       {postIndex > 0 && postIndex % 4 === 0 && (
-                        <div className="border-b loops-divider px-4 py-2">
-                          <AdPlacementSlot slot="feed_in_feed" postIndex={postIndex} />
-                        </div>
+                        <AdPlacementSlot
+                          slot="feed_in_feed"
+                          postIndex={postIndex}
+                          wrapperClassName="border-b loops-divider px-3 sm:px-4 py-3"
+                        />
                       )}
 
                       <PostImpressionTracker postId={post.id}>
@@ -2384,12 +2397,18 @@ export const NewsHub: React.FC = () => {
                                   <X className="w-3.5 h-3.5" />
                                 </button>
                                 <div className="flex flex-col items-center gap-1.5 w-full pt-1">
-                                  <img
-                                    src={prof.avatar}
-                                    alt={prof.name}
-                                    referrerPolicy="no-referrer"
-                                    className="w-14 h-14 rounded-full object-cover border loops-divider"
-                                  />
+                                  {prof.avatar?.trim() ? (
+                                    <img
+                                      src={prof.avatar.trim()}
+                                      alt={prof.name}
+                                      referrerPolicy="no-referrer"
+                                      className="w-14 h-14 rounded-full object-cover border loops-divider"
+                                    />
+                                  ) : (
+                                    <div className="w-14 h-14 rounded-full bg-zinc-100 dark:bg-zinc-800 border loops-divider flex items-center justify-center text-base font-bold text-zinc-700 dark:text-zinc-200">
+                                      {(prof.name || "U").charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
                                   <p className="text-xs font-bold text-zinc-950 dark:text-white truncate w-full">
                                     {prof.name}
                                   </p>
@@ -2472,12 +2491,18 @@ export const NewsHub: React.FC = () => {
                       className="flex items-center justify-between gap-2.5 cursor-pointer group"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <img
-                          src={prof.avatar}
-                          alt={prof.name}
-                          referrerPolicy="no-referrer"
-                          className="w-9 h-9 rounded-full object-cover shrink-0"
-                        />
+                        {prof.avatar?.trim() ? (
+                          <img
+                            src={prof.avatar.trim()}
+                            alt={prof.name}
+                            referrerPolicy="no-referrer"
+                            className="w-9 h-9 rounded-full object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 border loops-divider flex items-center justify-center text-xs font-bold text-zinc-700 dark:text-zinc-200 shrink-0">
+                            {(prof.name || "U").charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:text-[#0095F6] transition-colors">
                             {prof.name}

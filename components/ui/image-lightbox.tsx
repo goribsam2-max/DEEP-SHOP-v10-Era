@@ -142,29 +142,31 @@ export function ImageLightbox({ images, initialIndex, isOpen, onClose }: ImageLi
           {/* Main Image */}
           <div className="relative w-full h-full flex items-center justify-center p-4 md:p-12" onClick={onClose}>
             <AnimatePresence initial={false} custom={direction}>
-              <motion.img
-                key={activeIndex}
-                src={images[activeIndex]}
-                custom={direction}
-                initial={{ opacity: 0, x: direction > 0 ? 100 : -100 }}
-                animate={{ opacity: 1, x: 0, scale }}
-                exit={{ opacity: 0, x: direction < 0 ? 100 : -100 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                drag={scale === 1 ? "x" : false}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={1}
-                onDragEnd={(e, { offset, velocity }) => {
-                  const swipe = swipePower(offset.x, velocity.x);
-                  if (swipe < -swipeConfidenceThreshold) {
-                    paginate(1);
-                  } else if (swipe > swipeConfidenceThreshold) {
-                    paginate(-1);
-                  }
-                }}
-                className="absolute max-w-full max-h-[85vh] object-contain rounded-2xl md:rounded-3xl cursor-grab active:cursor-grabbing"
-                onClick={(e) => e.stopPropagation()}
-                alt={`Product full view ${activeIndex + 1}`}
-              />
+              {images[activeIndex]?.trim() ? (
+                <motion.img
+                  key={activeIndex}
+                  src={images[activeIndex].trim()}
+                  custom={direction}
+                  initial={{ opacity: 0, x: direction > 0 ? 100 : -100 }}
+                  animate={{ opacity: 1, x: 0, scale }}
+                  exit={{ opacity: 0, x: direction < 0 ? 100 : -100 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  drag={scale === 1 ? "x" : false}
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={1}
+                  onDragEnd={(e, { offset, velocity }) => {
+                    const swipe = swipePower(offset.x, velocity.x);
+                    if (swipe < -swipeConfidenceThreshold) {
+                      paginate(1);
+                    } else if (swipe > swipeConfidenceThreshold) {
+                      paginate(-1);
+                    }
+                  }}
+                  className="absolute max-w-full max-h-[85vh] object-contain rounded-2xl md:rounded-3xl cursor-grab active:cursor-grabbing"
+                  onClick={(e) => e.stopPropagation()}
+                  alt={`Product full view ${activeIndex + 1}`}
+                />
+              ) : null}
             </AnimatePresence>
           </div>
         </motion.div>

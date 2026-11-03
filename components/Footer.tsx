@@ -231,13 +231,20 @@ export const Footer: React.FC = () => {
     { label: "About", to: "/about" },
   ];
 
+  const resolvedFooterLogo =
+    typeof settings.footerLogo === "string" &&
+    settings.footerLogo.trim() !== "" &&
+    settings.footerLogo.trim() !== "/favicon.png"
+      ? settings.footerLogo.trim()
+      : "";
+
   const renderBrandLogo = (sizeClass: string) => (
     <div
       className={`${sizeClass} rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-center shrink-0`}
     >
-      {!logoError ? (
+      {resolvedFooterLogo && !logoError ? (
         <img
-          src={settings.footerLogo || "/favicon.png"}
+          src={resolvedFooterLogo}
           alt="DEEP SHOP"
           referrerPolicy="no-referrer"
           onError={() => setLogoError(true)}

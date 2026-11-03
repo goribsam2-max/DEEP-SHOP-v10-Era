@@ -11,6 +11,7 @@ import { Search as SearchIcon, SlidersHorizontal } from "lucide-react";
 import { ProductCard } from "../components/ui/ProductCard";
 import Icon from "../components/Icon";
 import { useIllustrations } from "../lib/useIllustrations";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 
 const Search: React.FC = () => {
   const navigate = useNavigate();
@@ -146,7 +147,7 @@ const Search: React.FC = () => {
                   className="bg-white dark:bg-zinc-800 rounded-[20px] p-4 flex flex-col justify-start cursor-pointer hover:shadow-md transition-shadow border border-zinc-100 dark:border-zinc-700"
                 >
                   <div className="w-14 h-14 rounded-full overflow-hidden mb-3 bg-[#f8f8f8] flex items-center justify-center border border-zinc-100 dark:border-zinc-700">
-                    <img src={prod.image} alt={prod.name} className="w-10 h-10 object-contain mix-blend-multiply dark:mix-blend-normal" />
+                    <img src={getProductDisplayImage(prod)} alt={prod.name} className="w-10 h-10 object-contain mix-blend-multiply dark:mix-blend-normal" />
                   </div>
                   <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px] leading-tight line-clamp-1 mb-1">
                     {prod.name}

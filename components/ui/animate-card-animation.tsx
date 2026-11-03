@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Smartphone, Sparkles, ShieldCheck, Lock, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { Product } from "../../types";
 import { formatPrice } from "../../lib/utils";
+import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
 
 interface Card {
   id: string | number;
@@ -57,7 +58,7 @@ function CardContent({
       {/* Image Area with Exact Outline Specification */}
       <div className="-outline-offset-1 flex h-[170px] sm:h-[185px] w-full items-center justify-center overflow-hidden rounded-xl outline outline-black/10 dark:outline-white/10 relative bg-zinc-50/70 dark:bg-zinc-800/40 p-2 shrink-0">
         <img
-          src={product.image || "/placeholder.svg"}
+          src={getProductDisplayImage(product)}
           alt={product.name}
           className={`h-full w-full select-none object-contain transition-transform duration-500 ${isSold ? "opacity-25 grayscale" : "hover:scale-105"}`}
         />

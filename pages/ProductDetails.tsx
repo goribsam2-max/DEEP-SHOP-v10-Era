@@ -674,11 +674,17 @@ const ProductDetails: React.FC = () => {
     );
   }
 
+  const cleanedProductImages = Array.isArray(product.images)
+    ? product.images
+        .map((img) => (typeof img === "string" ? img.trim() : ""))
+        .filter(Boolean)
+    : [];
+
   const images =
-    product.images && product.images.length > 0 && product.images[0]
-      ? product.images
-      : product.image
-        ? [product.image]
+    cleanedProductImages.length > 0
+      ? cleanedProductImages
+      : product.image?.trim()
+        ? [product.image.trim()]
         : [getProductDisplayImage(product)];
 
   const basePrice = mysteryOffer
@@ -1128,9 +1134,9 @@ const ProductDetails: React.FC = () => {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Avatar className="h-11 w-11 border border-white/80 dark:border-white/15 shrink-0">
-            {sellerInfo?.photoURL ? (
+            {sellerInfo?.photoURL?.trim() ? (
               <img
-                src={sellerInfo.photoURL}
+                src={sellerInfo.photoURL.trim()}
                 alt={sellerInfo.shopName || "Seller"}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover rounded-full"
@@ -2027,7 +2033,7 @@ const ProductDetails: React.FC = () => {
                     >
                       <div className="w-12 h-12 rounded-xl bg-white/70 dark:bg-white/5 p-1 flex items-center justify-center shrink-0">
                         <img
-                          src={item.image}
+                          src={getProductDisplayImage(item)}
                           alt={item.name}
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-contain mix-blend-multiply dark:mix-blend-normal"

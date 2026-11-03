@@ -7,6 +7,7 @@ import { Order } from "../types";
 import Icon from "../components/Icon";
 import { Button } from "@/components/ui/button";
 import { OrderDetailPageSkeleton } from "../components/PageSkeletons";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 
 const EReceipt: React.FC = () => {
   const navigate = useNavigate();
@@ -131,7 +132,7 @@ const EReceipt: React.FC = () => {
             >
               <div className="w-10 h-10 bg-zinc-50 dark:bg-zinc-800 rounded-full overflow-hidden p-1 shrink-0">
                 <img
-                  src={item.image}
+                  src={getProductDisplayImage(item)}
                   className="w-full h-full object-contain"
                   alt=""
                 />

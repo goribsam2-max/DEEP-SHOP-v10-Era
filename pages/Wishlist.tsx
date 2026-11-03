@@ -19,6 +19,7 @@ import { useLanguage } from "../components/LanguageContext";
 import { useIllustrations } from "../lib/useIllustrations";
 import { PixelImage } from "../components/ui/PixelImage";
 import { CatalogPageSkeleton } from "../components/PageSkeletons";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 
 const Wishlist: React.FC = () => {
   const navigate = useNavigate();
@@ -129,7 +130,7 @@ const Wishlist: React.FC = () => {
               >
                 <div className="aspect-[4/5] flex items-center justify-center bg-zinc-50 dark:bg-zinc-800/50 rounded-xl mb-4 overflow-hidden relative transition-all duration-300">
                   <PixelImage
-                    src={item.image || (item.images && item.images[0]) || "/favicon.png"}
+                    src={getProductDisplayImage(item)}
                     className="w-full h-full bg-transparent"
                     imgClassName="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500 ease-out mix-blend-multiply dark:mix-blend-normal"
                     alt={item.name}

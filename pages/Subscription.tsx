@@ -33,6 +33,7 @@ import Pricing6, {
   INDIVIDUALS_PLANS,
   TEAMS_PLANS,
 } from "../components/ui/components-pricings-pricing-6";
+import { DEEP_SHOP_LOGO_DATA_URI } from "../lib/useFooterLogo";
 import {
   TIER_COMPARISONS,
   getSubscriptionStatus,
@@ -267,7 +268,7 @@ export default function SubscriptionPage() {
             price: config.price,
             priceAtPurchase: config.price,
             quantity: 1,
-            image: "/favicon.png",
+            image: DEEP_SHOP_LOGO_DATA_URI,
             isSubscription: true,
           },
         ],

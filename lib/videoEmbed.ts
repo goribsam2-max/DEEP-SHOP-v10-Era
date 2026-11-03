@@ -150,58 +150,38 @@ const ensureProtocol = (raw: string): string => {
   return `https://${trimmed}`;
 };
 
-const PROXY_MEDIA_HOSTS = [
-  "files.catbox.moe",
-  "litter.catbox.moe",
-  "catbox.moe",
-  "pomf2.lain.la",
-  "uguu.se",
-  "tmpfiles.org",
-  "pixabay.com",
-  "dzcdn.net",
-];
-
-export function toPlayableMediaUrl(rawUrl?: string | null): string {
+export function unwrapProxiedMediaUrl(rawUrl?: string | null): string {
   if (!rawUrl || !rawUrl.trim()) return "";
   const trimmed = rawUrl.trim();
-  if (
-    trimmed.startsWith("/api/stream-media") ||
-    trimmed.startsWith("blob:") ||
-    trimmed.startsWith("data:") ||
-    trimmed.startsWith("/")
-  ) {
-    return trimmed;
+  if (trimmed.startsWith("/api/stream-media")) {
+    try {
+      const qsIndex = trimmed.indexOf("?");
+      if (qsIndex !== -1) {
+        const params = new URLSearchParams(trimmed.slice(qsIndex + 1));
+        const inner = params.get("url");
+        if (inner && /^https?:\/\//i.test(inner.trim())) {
+          return inner.trim().replace(/^http:\/\//i, "https://");
+        }
+      }
+    } catch {}
   }
-
-  try {
-    const normalized = ensureProtocol(trimmed).replace(/^http:\/\//i, "https://");
-    const parsed = new URL(normalized);
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-    const shouldProxy = PROXY_MEDIA_HOSTS.some(
-      (allowed) => host === allowed || host.endsWith(`.${allowed}`)
-    );
-    if (shouldProxy) {
-      return `/api/stream-media?url=${encodeURIComponent(normalized)}`;
-    }
-    return normalized;
-  } catch {
-    return trimmed;
-  }
+  return trimmed;
 }
 
-export function toPlayableAudioUrl(rawUrl?: string | null): string {
+export function toProxiedMediaStreamUrl(rawUrl?: string | null): string {
   if (!rawUrl || !rawUrl.trim()) return "";
-  const trimmed = rawUrl.trim();
+  const unwrapped = unwrapProxiedMediaUrl(rawUrl);
   if (
-    trimmed.startsWith("/api/stream-media") ||
-    trimmed.startsWith("blob:") ||
-    trimmed.startsWith("data:") ||
-    trimmed.startsWith("/")
+    !unwrapped ||
+    unwrapped.startsWith("/api/stream-media") ||
+    unwrapped.startsWith("blob:") ||
+    unwrapped.startsWith("data:") ||
+    unwrapped.startsWith("/")
   ) {
-    return trimmed;
+    return unwrapped;
   }
   try {
-    const normalized = ensureProtocol(trimmed).replace(/^http:\/\//i, "https://");
+    const normalized = ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
     const parsed = new URL(normalized);
     if (
       typeof window !== "undefined" &&
@@ -211,7 +191,45 @@ export function toPlayableAudioUrl(rawUrl?: string | null): string {
     }
     return `/api/stream-media?url=${encodeURIComponent(normalized)}`;
   } catch {
-    return trimmed;
+    return unwrapped;
+  }
+}
+
+export function toPlayableMediaUrl(rawUrl?: string | null): string {
+  if (!rawUrl || !rawUrl.trim()) return "";
+  const unwrapped = unwrapProxiedMediaUrl(rawUrl);
+  if (
+    unwrapped.startsWith("blob:") ||
+    unwrapped.startsWith("data:") ||
+    unwrapped.startsWith("/")
+  ) {
+    return unwrapped;
+  }
+
+  try {
+    const normalized = ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
+    // Always stream directly from media CDN first (0 Vercel Serverless Origin Transfer).
+    // Video/Audio elements automatically fall back to toProxiedMediaStreamUrl() on error.
+    return normalized;
+  } catch {
+    return unwrapped;
+  }
+}
+
+export function toPlayableAudioUrl(rawUrl?: string | null): string {
+  if (!rawUrl || !rawUrl.trim()) return "";
+  const unwrapped = unwrapProxiedMediaUrl(rawUrl);
+  if (
+    unwrapped.startsWith("blob:") ||
+    unwrapped.startsWith("data:") ||
+    unwrapped.startsWith("/")
+  ) {
+    return unwrapped;
+  }
+  try {
+    return ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
+  } catch {
+    return unwrapped;
   }
 }
 
@@ -221,7 +239,7 @@ export function parseVideoEmbed(
 ): ParsedVideoEmbed | null {
   if (!rawInput || !rawInput.trim()) return null;
 
-  const cleaned = stripTrailingPunct(rawInput);
+  const cleaned = unwrapProxiedMediaUrl(stripTrailingPunct(rawInput));
   if (!cleaned) return null;
 
   // Support same-origin media stream proxy & local blob previews directly

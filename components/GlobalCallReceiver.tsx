@@ -393,11 +393,17 @@ export const GlobalCallReceiver: React.FC = () => {
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl"
               />
-              <img 
-                src={incomingCall.callerAvatar} 
-                alt="Deep Shop" 
-                className="w-28 h-28 rounded-full border-4 border-zinc-800/80 shadow-2xl relative z-10"
-              />
+              {incomingCall.callerAvatar?.trim() ? (
+                <img 
+                  src={incomingCall.callerAvatar.trim()} 
+                  alt="Deep Shop" 
+                  className="w-28 h-28 rounded-full border-4 border-zinc-800/80 shadow-2xl relative z-10 object-cover"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-full border-4 border-zinc-800/80 bg-zinc-900 shadow-2xl relative z-10 flex items-center justify-center text-2xl font-black text-white">
+                  DS
+                </div>
+              )}
               <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-2.5 rounded-full border-4 border-zinc-950 z-20 shadow-lg">
                 {incomingCall.type === 'video' ? <Video className="w-5 h-5 text-white" /> : <Phone className="w-5 h-5 text-white" />}
               </div>
@@ -448,11 +454,17 @@ export const GlobalCallReceiver: React.FC = () => {
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl"
               />
-              <img 
-                src={incomingP2PCall.callerAvatar} 
-                alt={incomingP2PCall.callerName} 
-                className="w-28 h-28 rounded-full border-4 border-zinc-800/80 shadow-2xl relative z-10"
-              />
+              {incomingP2PCall.callerAvatar?.trim() ? (
+                <img 
+                  src={incomingP2PCall.callerAvatar.trim()} 
+                  alt={incomingP2PCall.callerName} 
+                  className="w-28 h-28 rounded-full border-4 border-zinc-800/80 shadow-2xl relative z-10 object-cover"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-full border-4 border-zinc-800/80 bg-zinc-900 shadow-2xl relative z-10 flex items-center justify-center text-3xl font-black text-white">
+                  {(incomingP2PCall.callerName || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-2.5 rounded-full border-4 border-zinc-950 z-20 shadow-lg">
                 {incomingP2PCall.type === 'video' ? <Video className="w-5 h-5 text-white" /> : <Phone className="w-5 h-5 text-white" />}
               </div>

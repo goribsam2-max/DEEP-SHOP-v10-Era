@@ -21,6 +21,7 @@ import {
 import { filterSafeReviews } from "../lib/reviewModeration";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { hasImmediateAdminOrStaffRole } from "../lib/admin";
+import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 
 type FilterKey = "all" | "photos" | "5" | "4" | "3" | "2" | "1";
 
@@ -135,13 +136,11 @@ const ProductReviews: React.FC = () => {
           </div>
         </div>
 
-        {(product.images?.[0] || product.image) && (
-          <img
-            src={product.images?.[0] || product.image}
-            alt={product.name}
-            className="w-12 h-12 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-zinc-800 hidden sm:block"
-          />
-        )}
+        <img
+          src={getProductDisplayImage(product)}
+          alt={product.name}
+          className="w-12 h-12 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-zinc-800 hidden sm:block"
+        />
       </div>
 
       {/* Summary & Breakdown Grid */}

@@ -6,6 +6,7 @@ import { useNotify } from "../../components/Notifications";
 import { isForbiddenNumber } from "../../lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import Icon from "../../components/Icon";
+import { normalizeCustomSvg } from "../../lib/svgNormalize";
 
 const ManageConfig: React.FC = () => {
   const navigate = useNavigate();
@@ -115,8 +116,40 @@ const ManageConfig: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, "settings", "platform"), configs);
+      const normalizedConfigs = {
+        ...configs,
+        bottomNavHomeSvg: configs.bottomNavHomeSvg
+          ? normalizeCustomSvg(configs.bottomNavHomeSvg)
+          : "",
+        bottomNavDocSvg: configs.bottomNavDocSvg
+          ? normalizeCustomSvg(configs.bottomNavDocSvg)
+          : "",
+        bottomNavSearchSvg: configs.bottomNavSearchSvg
+          ? normalizeCustomSvg(configs.bottomNavSearchSvg)
+          : "",
+        bottomNavProfileSvg: configs.bottomNavProfileSvg
+          ? normalizeCustomSvg(configs.bottomNavProfileSvg)
+          : "",
+      };
+      setConfigs(normalizedConfigs);
+      await setDoc(doc(db, "settings", "platform"), normalizedConfigs);
       await setDoc(doc(db, "settings", "voiceBot"), { options: voiceBotOptions });
+      try {
+        localStorage.setItem(
+          "ds_platform_bottom_nav_svgs",
+          JSON.stringify({
+            bottomNavHomeSvg: normalizedConfigs.bottomNavHomeSvg,
+            bottomNavDocSvg: normalizedConfigs.bottomNavDocSvg,
+            bottomNavSearchSvg: normalizedConfigs.bottomNavSearchSvg,
+            bottomNavProfileSvg: normalizedConfigs.bottomNavProfileSvg,
+          })
+        );
+        window.dispatchEvent(
+          new CustomEvent("ds:platform-config-updated", {
+            detail: normalizedConfigs,
+          })
+        );
+      } catch {}
       notify("Settings saved successfully", "success");
     } catch (e) {
       notify("Failed to save settings", "error");

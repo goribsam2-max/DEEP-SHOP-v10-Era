@@ -21,7 +21,10 @@ import { uploadToImgbb, uploadDataUrlToImgbb } from "../../services/imgbb";
 import { uploadFileToCatbox } from "../../lib/catboxUpload";
 import { toPlayableAudioUrl, toPlayableMediaUrl } from "../../lib/videoEmbed";
 import { canAccessSellerDashboard } from "../../lib/admin";
-import { useFooterLogo } from "../../lib/useFooterLogo";
+import {
+  useFooterLogo,
+  DEEP_SHOP_LOGO_DATA_URI,
+} from "../../lib/useFooterLogo";
 import { triggerHaptic } from "../../lib/haptics";
 import { getLocalFollowedIds } from "../../lib/follow";
 import { detectAiGeneratedFiles } from "../../lib/aiImageDetector";
@@ -83,11 +86,15 @@ import {
   Cpu,
 } from "lucide-react";
 
-const parkShowcaseImg = "";
-const creatorAvatar1 = "";
-const creatorAvatar2 = "";
-const creatorAvatar3 = "";
-const deepShopLogoFallback = "";
+const parkShowcaseImg =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1877F2"/><stop offset="100%" stop-color="#0f172a"/></linearGradient></defs><rect width="240" height="240" fill="url(#g)"/></svg>'
+  );
+const creatorAvatar1 = DEEP_SHOP_LOGO_DATA_URI;
+const creatorAvatar2 = DEEP_SHOP_LOGO_DATA_URI;
+const creatorAvatar3 = DEEP_SHOP_LOGO_DATA_URI;
+const deepShopLogoFallback = DEEP_SHOP_LOGO_DATA_URI;
 
 /* ============================================================================
  * TYPES & CONSTANTS (ZERO INLINE STYLES — TAILWIND CLASS MAPS + CANVAS HEX)
@@ -3030,27 +3037,29 @@ export default function AddStory() {
                     >
                       {item.type === "video" ? (
                         <>
-                          <video
-                            src={toPlayableMediaUrl(item.url)}
-                            muted
-                            playsInline
-                            preload="metadata"
-                            className="w-full h-full object-cover pointer-events-none"
-                          />
+                          {toPlayableMediaUrl(item.url) ? (
+                            <video
+                              src={toPlayableMediaUrl(item.url)}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="w-full h-full object-cover pointer-events-none"
+                            />
+                          ) : null}
                           <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-sm flex items-center gap-1 text-[10px] font-bold text-white pointer-events-none">
                             <Play className="w-2.5 h-2.5 fill-white text-white" />
                             <span>Video</span>
                           </div>
                         </>
-                      ) : (
+                      ) : item.url?.trim() ? (
                         <img
-                          src={item.url}
+                          src={item.url.trim()}
                           alt={item.label || "Story media"}
                           referrerPolicy="no-referrer"
                           loading="lazy"
                           className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                         />
-                      )}
+                      ) : null}
 
                       {/* Favourite toggle */}
                       {!multiSelectMode && (
@@ -4116,11 +4125,13 @@ export default function AddStory() {
                 className="story-pill-btn flex-1 h-12 rounded-full bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center gap-2.5 px-2.5 transition-colors active:scale-95 cursor-pointer shadow-xs"
               >
                 <img
-                  src={userAvatarResolved}
+                  src={userAvatarResolved || deepShopLogoFallback}
                   alt="Your story"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    e.currentTarget.src = deepShopLogoFallback;
+                    if (e.currentTarget.src !== deepShopLogoFallback) {
+                      e.currentTarget.src = deepShopLogoFallback;
+                    }
                   }}
                   className="w-7 h-7 rounded-full object-cover border border-zinc-300 dark:border-white/30 shrink-0"
                 />
@@ -4591,12 +4602,18 @@ export default function AddStory() {
                           }
                           className="w-full p-2 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center gap-3 text-left cursor-pointer"
                         >
-                          <img
-                            src={p.image}
-                            alt={p.name}
-                            referrerPolicy="no-referrer"
-                            className="w-11 h-11 rounded-xl object-cover shrink-0"
-                          />
+                          {p.image?.trim() ? (
+                            <img
+                              src={p.image.trim()}
+                              alt={p.name}
+                              referrerPolicy="no-referrer"
+                              className="w-11 h-11 rounded-xl object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="w-11 h-11 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0">
+                              <ShoppingBag className="w-4 h-4 text-zinc-500" />
+                            </div>
+                          )}
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
                               {p.name}
@@ -4657,7 +4674,7 @@ export default function AddStory() {
                             className="w-full p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2.5 text-left cursor-pointer"
                           >
                             <img
-                              src={u.avatar}
+                              src={u.avatar?.trim() || deepShopLogoFallback}
                               alt={u.name}
                               referrerPolicy="no-referrer"
                               className="w-8 h-8 rounded-full object-cover"
@@ -5005,7 +5022,7 @@ export default function AddStory() {
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img
-                            src={u.avatar}
+                            src={u.avatar?.trim() || deepShopLogoFallback}
                             alt={u.name}
                             referrerPolicy="no-referrer"
                             className="w-10 h-10 rounded-full object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
@@ -5093,22 +5110,24 @@ export default function AddStory() {
                       </span>
                     </div>
                   ) : selectedMedia.type === "video" ? (
-                    <video
-                      src={toPlayableMediaUrl(selectedMedia.url)}
-                      muted
-                      playsInline
-                      autoPlay
-                      loop
-                      className={`w-full h-full object-cover ${activeEffect.filterClass}`}
-                    />
-                  ) : (
+                    toPlayableMediaUrl(selectedMedia.url) ? (
+                      <video
+                        src={toPlayableMediaUrl(selectedMedia.url)}
+                        muted
+                        playsInline
+                        autoPlay
+                        loop
+                        className={`w-full h-full object-cover ${activeEffect.filterClass}`}
+                      />
+                    ) : null
+                  ) : selectedMedia.url?.trim() ? (
                     <img
-                      src={selectedMedia.url}
+                      src={selectedMedia.url.trim()}
                       alt="Story preview"
                       referrerPolicy="no-referrer"
                       className={`w-full h-full object-cover ${activeEffect.filterClass}`}
                     />
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -5121,11 +5140,13 @@ export default function AddStory() {
                 >
                   <div className="flex items-center gap-3">
                     <img
-                      src={userAvatarResolved}
+                      src={userAvatarResolved || deepShopLogoFallback}
                       alt=""
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        e.currentTarget.src = deepShopLogoFallback;
+                        if (e.currentTarget.src !== deepShopLogoFallback) {
+                          e.currentTarget.src = deepShopLogoFallback;
+                        }
                       }}
                       className="w-10 h-10 rounded-full object-cover"
                     />
@@ -5247,7 +5268,7 @@ export default function AddStory() {
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <img
-                              src={u.avatar}
+                              src={u.avatar?.trim() || deepShopLogoFallback}
                               alt={u.name}
                               referrerPolicy="no-referrer"
                               className="w-8 h-8 rounded-full object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"

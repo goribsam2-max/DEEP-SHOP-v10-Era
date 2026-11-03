@@ -187,23 +187,30 @@ const NotificationRow: React.FC<{
       )}
 
       {/* Circular Pastel Icon / Image Avatar */}
-      <div
-        className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
-          notification.image ? "bg-zinc-100 dark:bg-zinc-800" : circleClass
-        }`}
-      >
-        {notification.image ? (
-          <img
-            src={optimizeImageUrl(notification.image, 112)}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          icon
-        )}
-      </div>
+      {(() => {
+        const notifImg = notification.image?.trim()
+          ? optimizeImageUrl(notification.image.trim(), 112)
+          : "";
+        return (
+          <div
+            className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
+              notifImg ? "bg-zinc-100 dark:bg-zinc-800" : circleClass
+            }`}
+          >
+            {notifImg ? (
+              <img
+                src={notifImg}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              icon
+            )}
+          </div>
+        );
+      })()}
 
       {/* Headline + Timestamp */}
       <div className="flex-1 min-w-0">

@@ -17,7 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase";
 import ReactPlayer from "react-player";
-import { toPlayableMediaUrl } from "../../lib/videoEmbed";
+import { toPlayableMediaUrl, toProxiedMediaStreamUrl } from "../../lib/videoEmbed";
 
 const Player: any = ReactPlayer;
 
@@ -428,9 +428,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             className="flex flex-col items-center space-y-1.5 shrink-0 group active:scale-95 transition-all cursor-pointer"
           >
             <div className="relative p-[2.5px] rounded-full bg-gradient-to-tr from-[#1877F2] via-sky-400 to-cyan-300">
-              <div className="w-[62px] h-[62px] rounded-full border-2 border-white dark:border-zinc-950 overflow-hidden bg-zinc-900">
-                {group.items[0].type === "video" && !group.avatar ? (
-                  group.items[0].mediaUrl.match(/youtube\.com|youtu\.be/i) ? (
+              <div className="w-[62px] h-[62px] rounded-full border-2 border-white dark:border-zinc-950 overflow-hidden bg-zinc-900 flex items-center justify-center">
+                {group.items[0].type === "video" && !group.avatar?.trim() ? (
+                  group.items[0].mediaUrl?.match(/youtube\.com|youtu\.be/i) ? (
                     <img
                       src={`https://img.youtube.com/vi/${
                         group.items[0].mediaUrl.split("v=")[1]?.split("&")[0] ||
@@ -439,20 +439,24 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                       className="w-full h-full object-cover bg-black"
                       alt=""
                     />
-                  ) : (
+                  ) : group.items[0].mediaUrl?.trim() ? (
                     <video
-                      src={group.items[0].mediaUrl}
+                      src={group.items[0].mediaUrl.trim()}
                       className="w-full h-full object-cover bg-black"
                       muted
                     />
-                  )
-                ) : (
+                  ) : null
+                ) : (group.avatar || group.items[0].mediaUrl || "").trim() ? (
                   <img
-                    src={group.avatar || group.items[0].mediaUrl}
+                    src={(group.avatar || group.items[0].mediaUrl || "").trim()}
                     alt={group.category}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover bg-black"
                   />
+                ) : (
+                  <span className="text-sm font-bold text-white">
+                    {(group.category || "S").charAt(0).toUpperCase()}
+                  </span>
                 )}
               </div>
             </div>
@@ -508,9 +512,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
               {/* Header */}
               <div className="absolute top-8 left-4 right-4 z-50 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
-                  {activeGroup?.avatar ? (
+                  {activeGroup?.avatar?.trim() ? (
                     <img
-                      src={activeGroup.avatar}
+                      src={activeGroup.avatar.trim()}
                       alt={activeGroup.category}
                       referrerPolicy="no-referrer"
                       className="w-8 h-8 rounded-full object-cover border border-white/30 shrink-0"
@@ -613,21 +617,33 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                 {currentStory.type === "video" ? (
                   <div className="w-full h-full pointer-events-none bg-black flex items-center justify-center">
                     {!currentStory.mediaUrl.match(/youtube\.com|youtu\.be|tiktok\.com|vimeo\.com/i) ? (
-                      <video
-                        src={toPlayableMediaUrl(currentStory.mediaUrl)}
-                        className="w-full h-full object-contain bg-black"
-                        playsInline
-                        autoPlay={!isPaused}
-                        loop
-                        muted={isMuted}
-                        onEnded={handleNext}
-                        onTimeUpdate={(e) => {
-                          const v = e.currentTarget;
-                          if (v.duration > 0) {
-                            setProgress((v.currentTime / v.duration) * 100);
-                          }
-                        }}
-                      />
+                      toPlayableMediaUrl(currentStory.mediaUrl) ? (
+                        <video
+                          src={toPlayableMediaUrl(currentStory.mediaUrl)}
+                          className="w-full h-full object-contain bg-black"
+                          playsInline
+                          autoPlay={!isPaused}
+                          loop
+                          muted={isMuted}
+                          onEnded={handleNext}
+                          onError={(e) => {
+                            const v = e.currentTarget;
+                            const fallback = toProxiedMediaStreamUrl(currentStory.mediaUrl);
+                            if (fallback && !v.dataset.proxiedFallback && v.src !== fallback) {
+                              v.dataset.proxiedFallback = "1";
+                              v.src = fallback;
+                              v.load();
+                              if (!isPaused) v.play().catch(() => {});
+                            }
+                          }}
+                          onTimeUpdate={(e) => {
+                            const v = e.currentTarget;
+                            if (v.duration > 0) {
+                              setProgress((v.currentTime / v.duration) * 100);
+                            }
+                          }}
+                        />
+                      ) : null
                     ) : (
                       <Player
                         url={currentStory.mediaUrl}
@@ -659,9 +675,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                       />
                     )}
                   </div>
-                ) : (
+                ) : currentStory.mediaUrl?.trim() ? (
                   <motion.img
-                    src={currentStory.mediaUrl}
+                    src={currentStory.mediaUrl.trim()}
                     alt={currentStory.category}
                     referrerPolicy="no-referrer"
                     animate={{
@@ -672,23 +688,38 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                     transition={{ duration: 0 }}
                     className="w-full h-full object-contain bg-black select-none pointer-events-none"
                   />
-                )}
+                ) : null}
 
-                {(currentStory.audioUrl ||
-                  (currentStory as any)?.music?.audioUrl ||
-                  (currentStory as any)?.music?.url) && (
-                  <audio
-                    ref={audioRef}
-                    src={toPlayableMediaUrl(
-                      currentStory.audioUrl ||
+                {(() => {
+                  const playableStoryAudio = toPlayableMediaUrl(
+                    currentStory.audioUrl ||
+                      (currentStory as any)?.music?.audioUrl ||
+                      (currentStory as any)?.music?.url
+                  );
+                  return playableStoryAudio ? (
+                    <audio
+                      ref={audioRef}
+                      src={playableStoryAudio}
+                      preload="auto"
+                      loop
+                      playsInline
+                    onError={(e) => {
+                      const a = e.currentTarget;
+                      const rawAudio =
+                        currentStory.audioUrl ||
                         (currentStory as any)?.music?.audioUrl ||
-                        (currentStory as any)?.music?.url
-                    )}
-                    preload="auto"
-                    loop
-                    playsInline
+                        (currentStory as any)?.music?.url;
+                      const fallback = toProxiedMediaStreamUrl(rawAudio);
+                      if (fallback && !a.dataset.proxiedFallback && a.src !== fallback) {
+                        a.dataset.proxiedFallback = "1";
+                        a.src = fallback;
+                        a.load();
+                        if (!isPaused && !isMuted) a.play().catch(() => {});
+                      }
+                    }}
                   />
-                )}
+                  ) : null;
+                })()}
               </div>
 
               {/* Info & Song Overlay */}

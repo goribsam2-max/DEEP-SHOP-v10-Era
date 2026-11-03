@@ -281,12 +281,18 @@ export const ChooseAccountPage: React.FC = () => {
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-7 h-7 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 border border-[#dce1e7] dark:border-zinc-700 flex items-center justify-center shrink-0">
-                <img
-                  src={logoSrc || "/favicon.png"}
-                  alt="DEEP SHOP"
-                  onError={() => setLogoSrc("/favicon.png")}
-                  className="w-full h-full object-cover"
-                />
+                {logoSrc ? (
+                  <img
+                    src={logoSrc}
+                    alt="DEEP SHOP"
+                    onError={() => setLogoSrc("")}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-[10px] font-black text-zinc-900 dark:text-white">
+                    DS
+                  </span>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-[16px] font-semibold text-[#0a1317] dark:text-white leading-snug">
@@ -305,14 +311,16 @@ export const ChooseAccountPage: React.FC = () => {
                   displayName={primaryAccount.displayName}
                   sizeClass="w-12 h-12"
                 />
-                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-0.5 ring-2 ring-[#f0f2f5] dark:ring-zinc-800">
-                  <img
-                    src={logoSrc || "/favicon.png"}
-                    alt="DEEP SHOP"
-                    onError={() => setLogoSrc("/favicon.png")}
-                    className="w-full h-full object-cover rounded-full"
-                  />
-                </div>
+                {logoSrc && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-0.5 ring-2 ring-[#f0f2f5] dark:ring-zinc-800">
+                    <img
+                      src={logoSrc}
+                      alt="DEEP SHOP"
+                      onError={() => setLogoSrc("")}
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  </div>
+                )}
               </div>
               <ChevronRight className="w-5 h-5 text-[#5e6c77] dark:text-zinc-400" />
             </div>

@@ -4490,9 +4490,9 @@ export const NewsStoryViewerPage: React.FC = () => {
                       }
                       className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-xs font-bold text-white cursor-pointer"
                     >
-                      {story.avatar || currentUser?.photoURL ? (
+                      {(story.avatar || currentUser?.photoURL || "").trim() ? (
                         <img
-                          src={story.avatar || currentUser?.photoURL || ""}
+                          src={(story.avatar || currentUser?.photoURL || "").trim()}
                           alt="Your story"
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"
@@ -4525,15 +4525,19 @@ export const NewsStoryViewerPage: React.FC = () => {
                     }}
                     className="w-9 h-9 rounded-full overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center text-xs font-bold text-white cursor-pointer"
                   >
-                    {authorProfile?.photoURL ||
-                    authorProfile?.shopLogo ||
-                    story.avatar ? (
+                    {(
+                      authorProfile?.photoURL ||
+                      authorProfile?.shopLogo ||
+                      story.avatar ||
+                      ""
+                    ).trim() ? (
                       <img
-                        src={
+                        src={(
                           authorProfile?.photoURL ||
                           authorProfile?.shopLogo ||
-                          story.avatar
-                        }
+                          story.avatar ||
+                          ""
+                        ).trim()}
                         alt={peerDisplayHandle}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
@@ -4706,24 +4710,26 @@ export const NewsStoryViewerPage: React.FC = () => {
               )}
 
               {story.mediaType === "video" ? (
-                <video
-                  key={story.mediaUrl}
-                  src={toPlayableMediaUrl(story.mediaUrl)}
-                  autoPlay
-                  playsInline
-                  muted={audioMuted || Boolean(story.audioUrl || story.music?.url)}
-                  loop
-                  onLoadedData={() => setStoryMediaReady(true)}
-                  onCanPlay={() => setStoryMediaReady(true)}
-                  onError={() => setStoryMediaReady(true)}
-                  className={`w-full h-full object-contain bg-black transition-opacity duration-200 ease-out ${
-                    storyMediaReady ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-              ) : (
+                toPlayableMediaUrl(story.mediaUrl) ? (
+                  <video
+                    key={story.mediaUrl}
+                    src={toPlayableMediaUrl(story.mediaUrl)}
+                    autoPlay
+                    playsInline
+                    muted={audioMuted || Boolean(story.audioUrl || story.music?.url)}
+                    loop
+                    onLoadedData={() => setStoryMediaReady(true)}
+                    onCanPlay={() => setStoryMediaReady(true)}
+                    onError={() => setStoryMediaReady(true)}
+                    className={`w-full h-full object-contain bg-black transition-opacity duration-200 ease-out ${
+                      storyMediaReady ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                ) : null
+              ) : story.mediaUrl?.trim() ? (
                 <motion.img
                   key={story.mediaUrl}
-                  src={story.mediaUrl}
+                  src={story.mediaUrl.trim()}
                   alt={story.authorName}
                   loading="eager"
                   decoding="async"
@@ -4751,7 +4757,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                     storyMediaReady ? "opacity-100" : "opacity-0"
                   } ${story.isBoomerang ? "animate-pulse" : ""}`}
                 />
-              )}
+              ) : null}
 
               {/* Centered Music Card for Create-Mode Music Stories */}
               {story.isCreateMode &&
@@ -4760,9 +4766,9 @@ export const NewsStoryViewerPage: React.FC = () => {
                 (!story.stickers || story.stickers.length === 0) && (
                   <div className="absolute inset-0 z-20 flex items-center justify-center p-6 pointer-events-none">
                     <div className="px-5 py-4 rounded-3xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-2xl flex items-center gap-3.5 max-w-[280px]">
-                      {story.music.coverUrl ? (
+                      {story.music.coverUrl?.trim() ? (
                         <img
-                          src={story.music.coverUrl}
+                          src={story.music.coverUrl.trim()}
                           alt={story.music.title}
                           referrerPolicy="no-referrer"
                           className="w-14 h-14 rounded-2xl object-cover shrink-0 shadow-lg"

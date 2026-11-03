@@ -6,11 +6,22 @@ let cachedIllustrations: Record<string, string> | null = null;
 let listeners: Array<(data: Record<string, string>) => void> = [];
 let unsubscribe: (() => void) | null = null;
 
+const sanitizeIllustrations = (raw: unknown): Record<string, string> => {
+  if (!raw || typeof raw !== "object") return {};
+  const cleaned: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string" && v.trim() !== "") {
+      cleaned[k] = v.trim();
+    }
+  }
+  return cleaned;
+};
+
 const initIllustrations = () => {
   if (unsubscribe) return;
   unsubscribe = onSnapshot(doc(db, "settings", "illustrations"), (snap) => {
     if (snap.exists()) {
-      cachedIllustrations = snap.data() as Record<string, string>;
+      cachedIllustrations = sanitizeIllustrations(snap.data());
     } else {
       cachedIllustrations = {};
     }
