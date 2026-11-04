@@ -165,6 +165,28 @@ const GenericPersonAvatar: React.FC<{
   );
 };
 
+const CommentLongPressWrapper: React.FC<{
+  comment: ScamComment;
+  onLongPress: (e: React.SyntheticEvent, cmt: ScamComment) => void;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ comment, onLongPress, children, className }) => {
+  const longPressHandlers = useCommentLongPress(
+    (e) => onLongPress(e, comment),
+    420
+  );
+  return (
+    <div
+      {...longPressHandlers}
+      className={`select-none active:bg-black/[0.025] dark:active:bg-white/[0.04] rounded-xl transition-colors ${
+        className || ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+};
+
 export const NewsDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -264,15 +286,37 @@ export const NewsDetails: React.FC = () => {
     isOpen: boolean;
     comment: any;
   } | null>(null);
+  const [detailHeartBurst, setDetailHeartBurst] = useState(false);
+  const detailSingleTapTimerRef = useRef<number | null>(null);
+  const detailLastTapRef = useRef<number>(0);
+  const detailHeartTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (detailSingleTapTimerRef.current) {
+        window.clearTimeout(detailSingleTapTimerRef.current);
+      }
+      if (detailHeartTimerRef.current) {
+        window.clearTimeout(detailHeartTimerRef.current);
+      }
+    };
+  }, []);
 
   const handlePinComment = async (commentId: string, currentPinned: boolean) => {
     if (!post) return;
     triggerHaptic();
+    const nextPinned = !currentPinned;
+    setComments((prev) =>
+      prev.map((item) =>
+        item.id === commentId ? { ...item, isPinned: nextPinned } : item
+      )
+    );
     try {
-      const nextPinned = !currentPinned;
-      await updateDoc(doc(db, "scam_posts", post.id, "comments", commentId), {
-        isPinned: nextPinned,
-      });
+      if (!post.id.startsWith("showcase_") && !String(commentId).startsWith("cmt_")) {
+        await updateDoc(doc(db, "scam_posts", post.id, "comments", commentId), {
+          isPinned: nextPinned,
+        });
+      }
       notify(nextPinned ? "Comment pinned" : "Comment unpinned", "success");
     } catch {
       notify("Failed to update pin status", "error");
@@ -316,19 +360,6 @@ export const NewsDetails: React.FC = () => {
       isOpen: true,
       comment: cmt,
     });
-  };
-
-  const CommentLongPressWrapper: React.FC<{
-    comment: ScamComment;
-    children: React.ReactNode;
-    className?: string;
-  }> = ({ comment, children, className }) => {
-    const longPressHandlers = useCommentLongPress((e) => handleOpenContextMenu(e, comment));
-    return (
-      <div {...longPressHandlers} className={className}>
-        {children}
-      </div>
-    );
   };
 
   const totalReactions = useMemo(
@@ -1608,6 +1639,9 @@ export const NewsDetails: React.FC = () => {
   };
 
   const sortedRootComments = [...rootCommentsRaw].sort((a, b) => {
+    const aPinned = a.isPinned ? 1 : 0;
+    const bPinned = b.isPinned ? 1 : 0;
+    if (bPinned !== aPinned) return bPinned - aPinned;
     if (sortMode === "recent") {
       return (b.createdAt || 0) - (a.createdAt || 0);
     }
@@ -1663,7 +1697,11 @@ export const NewsDetails: React.FC = () => {
     const isEditingThis = editingCommentId === cmt.id;
 
     return (
-      <CommentLongPressWrapper comment={cmt} className="flex-1 min-w-0">
+      <CommentLongPressWrapper
+        comment={cmt}
+        onLongPress={handleOpenContextMenu}
+        className="flex-1 min-w-0"
+      >
         <div className="flex-1 min-w-0">
           {/* Top Row: Username + Verified + Author Badge + Time --- Right: Author-Liked Avatar+Heart & More menu */}
           <div className="flex items-center justify-between gap-2">
@@ -1689,6 +1727,11 @@ export const NewsDetails: React.FC = () => {
               <span className="text-[13.5px] text-zinc-400 dark:text-zinc-500 tabular-nums shrink-0">
                 {formatLoopCompactTime(cmt.createdAt)}
               </span>
+              {cmt.isPinned && (
+                <span className="text-[12px] text-amber-500 dark:text-amber-400 font-medium">
+                  · Pinned
+                </span>
+              )}
               {cmt.isEdited && (
                 <span className="text-[12px] text-zinc-400 dark:text-zinc-500">
                   · Edited
@@ -1897,6 +1940,45 @@ export const NewsDetails: React.FC = () => {
         </div>
       </CommentLongPressWrapper>
     );
+  };
+
+  const triggerDetailDoubleTapHeart = () => {
+    triggerHaptic();
+    if (!myReaction) {
+      handleReaction("love");
+    }
+    setDetailHeartBurst(true);
+    if (detailHeartTimerRef.current) {
+      window.clearTimeout(detailHeartTimerRef.current);
+    }
+    detailHeartTimerRef.current = window.setTimeout(() => {
+      setDetailHeartBurst(false);
+    }, 820);
+  };
+
+  const handleSmartDetailMediaTap = (
+    e: React.MouseEvent,
+    onSingleTap: () => void
+  ) => {
+    e.stopPropagation();
+    const now = Date.now();
+    if (now - detailLastTapRef.current < 280) {
+      if (detailSingleTapTimerRef.current) {
+        window.clearTimeout(detailSingleTapTimerRef.current);
+        detailSingleTapTimerRef.current = null;
+      }
+      detailLastTapRef.current = 0;
+      triggerDetailDoubleTapHeart();
+      return;
+    }
+    detailLastTapRef.current = now;
+    if (detailSingleTapTimerRef.current) {
+      window.clearTimeout(detailSingleTapTimerRef.current);
+    }
+    detailSingleTapTimerRef.current = window.setTimeout(() => {
+      detailSingleTapTimerRef.current = null;
+      onSingleTap();
+    }, 240);
   };
 
   if (post.isRemovedByAdmin && currentUser?.uid !== post.reporterId) {
@@ -2179,11 +2261,22 @@ export const NewsDetails: React.FC = () => {
           {/* Post Media — Full-bleed edge-to-edge zero-radius photos & carousel matching Post Card 1:1 */}
           {Array.isArray(post.images) && post.images.length === 1 && (
             <div
-              onClick={() => {
-                triggerHaptic();
-                navigate(`/loops/photo/${post.id}/0`);
+              onClick={(e) =>
+                handleSmartDetailMediaTap(e, () => {
+                  triggerHaptic();
+                  navigate(`/loops/photo/${post.id}/0`);
+                })
+              }
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                if (detailSingleTapTimerRef.current) {
+                  window.clearTimeout(detailSingleTapTimerRef.current);
+                  detailSingleTapTimerRef.current = null;
+                }
+                detailLastTapRef.current = 0;
+                triggerDetailDoubleTapHeart();
               }}
-              className="loops-edge-media -mx-4 w-[calc(100%+2rem)] max-w-none rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
+              className="loops-edge-media relative -mx-4 w-[calc(100%+2rem)] max-w-none rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer select-none"
             >
               <SmoothImage
                 src={post.images[0]}
@@ -2193,6 +2286,19 @@ export const NewsDetails: React.FC = () => {
                 skeletonClassName="rounded-none"
                 className="w-full max-h-[640px] object-cover block rounded-none"
               />
+              <AnimatePresence>
+                {detailHeartBurst && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+                    animate={{ opacity: 1, scale: [0.35, 1.25, 1], rotate: [-10, 6, 0] }}
+                    exit={{ opacity: 0, scale: 1.4 }}
+                    transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                    className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
+                  >
+                    <Heart className="w-24 h-24 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_10px_28px_rgba(255,48,64,0.55)]" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
@@ -2221,7 +2327,16 @@ export const NewsDetails: React.FC = () => {
                     }
                   }
                 }}
-                className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden group"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (detailSingleTapTimerRef.current) {
+                    window.clearTimeout(detailSingleTapTimerRef.current);
+                    detailSingleTapTimerRef.current = null;
+                  }
+                  detailLastTapRef.current = 0;
+                  triggerDetailDoubleTapHeart();
+                }}
+                className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden group select-none"
               >
                 <SmoothImage
                   src={post.images[detailCarouselIdx] || post.images[0]}
@@ -2232,14 +2347,29 @@ export const NewsDetails: React.FC = () => {
                       preloadImageUrl(post.images[detailCarouselIdx + 1]);
                     }
                   }}
-                  onClick={() => {
-                    triggerHaptic();
-                    navigate(`/loops/photo/${post.id}/${detailCarouselIdx}`);
-                  }}
+                  onClick={(e) =>
+                    handleSmartDetailMediaTap(e, () => {
+                      triggerHaptic();
+                      navigate(`/loops/photo/${post.id}/${detailCarouselIdx}`);
+                    })
+                  }
                   wrapperClassName="w-full rounded-none"
                   skeletonClassName="rounded-none"
                   className="w-full max-h-[640px] object-cover block cursor-pointer select-none rounded-none"
                 />
+                <AnimatePresence>
+                  {detailHeartBurst && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+                      animate={{ opacity: 1, scale: [0.35, 1.25, 1], rotate: [-10, 6, 0] }}
+                      exit={{ opacity: 0, scale: 1.4 }}
+                      transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                      className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
+                    >
+                      <Heart className="w-24 h-24 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_10px_28px_rgba(255,48,64,0.55)]" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Top-Right Liquid-Glass Image Count Pill (Strictly only when > 1 image) */}
                 <div className="loops-media-count-pill absolute top-3 right-3 z-20 px-2.5 py-1 text-[12px] font-semibold tabular-nums leading-none select-none pointer-events-none">
@@ -2308,11 +2438,27 @@ export const NewsDetails: React.FC = () => {
           )}
 
           {/* Non-photo rich attachments (Video, GIF, Voice, Music, Poll, Snippet, Quote, Thread items) */}
-          <div className={post.gifUrl || post.videoUrl ? "-mx-4 w-[calc(100%+2rem)] max-w-none" : ""}>
+          <div className={`relative ${post.gifUrl || post.videoUrl ? "-mx-4 w-[calc(100%+2rem)] max-w-none" : ""}`}>
             <NewsPostMedia
               post={{ ...post, images: [] }}
               onOpenImage={(idx) => navigate(`/loops/photo/${post.id}/${idx}`)}
+              onDoubleTap={triggerDetailDoubleTapHeart}
             />
+            {(post.gifUrl || post.videoUrl) && (
+              <AnimatePresence>
+                {detailHeartBurst && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+                    animate={{ opacity: 1, scale: [0.35, 1.25, 1], rotate: [-10, 6, 0] }}
+                    exit={{ opacity: 0, scale: 1.4 }}
+                    transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                    className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
+                  >
+                    <Heart className="w-24 h-24 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_10px_28px_rgba(255,48,64,0.55)]" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
           </div>
 
           {/* Conditional Scam Report Dossier (Only when post is actually a Scam Report) */}
@@ -3114,25 +3260,54 @@ export const NewsDetails: React.FC = () => {
         onPostHidden={() => navigate("/loops")}
       />
 
-      {contextMenuConfig?.comment && (
-        <LoopsCommentContextMenu
-          isOpen={contextMenuConfig.isOpen}
-          onClose={() => setContextMenuConfig(null)}
-          comment={contextMenuConfig.comment}
-          postId={post.id}
-          isPostOwner={currentUser?.uid === post.reporterId}
-          isCommentOwner={currentUser?.uid === contextMenuConfig.comment.userId}
-          isAdmin={isAdmin}
-          onPinToggle={handlePinComment}
-          onReplyWithReel={handleReplyWithReel}
-          onAddToStory={handleAddToStory}
-          onShare={handleShareComment}
-          onRestrictUser={handleRestrictUser}
-          onBlockUser={handleBlockUser}
-          onReportComment={handleReportComment}
-          onDeleteComment={handleDeleteComment}
-        />
-      )}
+      <LoopsCommentContextMenu
+        isOpen={Boolean(contextMenuConfig?.isOpen && contextMenuConfig?.comment)}
+        onClose={() => setContextMenuConfig(null)}
+        comment={contextMenuConfig?.comment || null}
+        postId={post.id}
+        isPostOwner={currentUser?.uid === post.reporterId}
+        isCommentOwner={Boolean(
+          currentUser?.uid &&
+            contextMenuConfig?.comment &&
+            currentUser.uid === contextMenuConfig.comment.userId
+        )}
+        isAdmin={isAdmin}
+        onQuickReact={(commentId, emoji) => {
+          const target = comments.find((c) => c.id === commentId);
+          if (target) {
+            handleCommentReaction(target, emoji as ReactionType);
+          }
+        }}
+        onReply={(cmt) => {
+          const prof = commentProfilesMap[cmt.userId];
+          const handle =
+            getSafePublicUsername(prof, cmt.userName) ||
+            getSafeDisplayName(prof, cmt.userName || "member");
+          const rootId = cmt.replyToCommentId || cmt.id;
+          setReplyingTo({ commentId: rootId, userName: handle });
+          if (!commentText.startsWith("@")) {
+            setCommentText(`@${handle} `);
+          }
+          window.setTimeout(() => commentInputRef.current?.focus(), 80);
+        }}
+        onCopyText={(txt) => {
+          navigator.clipboard?.writeText(txt).catch(() => {});
+          notify("Comment copied", "success");
+        }}
+        onPinToggle={handlePinComment}
+        onReplyWithReel={handleReplyWithReel}
+        onAddToStory={handleAddToStory}
+        onShare={handleShareComment}
+        onRestrictUser={handleRestrictUser}
+        onBlockUser={handleBlockUser}
+        onReportComment={handleReportComment}
+        onDeleteComment={(commentId) => {
+          const target = comments.find((c) => c.id === commentId);
+          if (target) {
+            handleDeleteComment(target);
+          }
+        }}
+      />
     </div>
   );
 };

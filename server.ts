@@ -8,7 +8,7 @@ import admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import webpush from "web-push";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 
 // Safe filesystem helpers for read-only Vercel serverless environment
@@ -194,12 +194,167 @@ app.use(async (req, res, next) => {
     }
   });
 
-  // 🤖 Stealth AI Auto-Reply Proxy for Support (Hides sk-bl API Key)
+  // 🎙️ Persistent Voice Note Upload & Byte-Range Streaming Endpoint
+  const resolveVoiceUploadsDir = () => {
+    const candidates = [
+      path.join(process.cwd(), "uploads", "voices"),
+      path.join(os.tmpdir(), "deepshop_uploads", "voices"),
+    ];
+    for (const dir of candidates) {
+      try {
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        const probe = path.join(dir, `.probe_${process.pid}`);
+        fs.writeFileSync(probe, "ok");
+        fs.unlinkSync(probe);
+        return dir;
+      } catch {}
+    }
+    return path.join(os.tmpdir(), "deepshop_uploads", "voices");
+  };
+
+  const voiceUploadsDir = resolveVoiceUploadsDir();
+  app.use(
+    "/uploads/voices",
+    express.static(voiceUploadsDir, {
+      maxAge: "365d",
+      immutable: true,
+      setHeaders: (res) => {
+        res.setHeader("Accept-Ranges", "bytes");
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      },
+    })
+  );
+
+  app.post(
+    "/api/upload-voice",
+    express.json({ limit: "25mb" }),
+    async (req, res) => {
+      try {
+        const rawDataUrl =
+          typeof req.body?.dataUrl === "string"
+            ? req.body.dataUrl
+            : typeof req.body?.audio === "string"
+            ? req.body.audio
+            : "";
+        if (!rawDataUrl) {
+          return res.status(400).json({ error: "Missing audio payload" });
+        }
+
+        const match = rawDataUrl.match(
+          /^data:([^;,]+)(?:;[^,]*)?;base64,(.+)$/i
+        );
+        const mime = (
+          match?.[1] ||
+          req.body?.mimeType ||
+          "audio/webm"
+        ).toLowerCase();
+        const base64Payload = match ? match[2] : rawDataUrl;
+        const buffer = Buffer.from(base64Payload, "base64");
+        if (!buffer || buffer.length < 32) {
+          return res.status(400).json({ error: "Recorded audio clip is empty" });
+        }
+
+        const ext = mime.includes("mp4") || mime.includes("m4a")
+          ? "m4a"
+          : mime.includes("ogg")
+          ? "ogg"
+          : mime.includes("mpeg") || mime.includes("mp3")
+          ? "mp3"
+          : mime.includes("aac")
+          ? "aac"
+          : "webm";
+
+        const fileName = `voice_${Date.now()}_${Math.random()
+          .toString(36)
+          .slice(2, 9)}.${ext}`;
+        const fullPath = path.join(voiceUploadsDir, fileName);
+
+        try {
+          if (!fs.existsSync(voiceUploadsDir)) {
+            fs.mkdirSync(voiceUploadsDir, { recursive: true });
+          }
+          await fs.promises.writeFile(fullPath, buffer);
+          return res.json({
+            url: `/uploads/voices/${fileName}`,
+            mimeType: mime,
+            bytes: buffer.length,
+          });
+        } catch (writeErr) {
+          // Read-only fallback returns clean data URL if under Firestore doc budget
+          return res.json({
+            url: rawDataUrl.startsWith("data:")
+              ? rawDataUrl
+              : `data:${mime};base64,${base64Payload}`,
+            mimeType: mime,
+            bytes: buffer.length,
+          });
+        }
+      } catch (err: any) {
+        console.error("Voice upload error:", err);
+        return res
+          .status(500)
+          .json({ error: err?.message || "Voice upload failed" });
+      }
+    }
+  );
+
+  // 🤖 Dynamic AI Auto-Reply Proxy for Support (Gemini 3.8 Flash Primary + Fallback)
   app.post("/api/chat-auto-reply", express.json(), async (req, res) => {
     try {
       const { messages, systemPrompt } = req.body;
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ error: "Missing messages array" });
+      }
+
+      const geminiApiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+      if (geminiApiKey) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey: geminiApiKey,
+            httpOptions: { headers: { "User-Agent": "aistudio-build" } },
+          });
+
+          const normalizedContents = messages
+            .filter((m: any) => typeof m?.content === "string" && m.content.trim())
+            .map((m: any) => ({
+              role: m.role === "assistant" || m.role === "model" ? "model" : "user",
+              parts: [{ text: String(m.content).trim() }],
+            }));
+
+          if (normalizedContents.length > 0) {
+            const geminiRes = await ai.models.generateContent({
+              model: "gemini-3.8-flash",
+              contents: normalizedContents,
+              config: {
+                systemInstruction:
+                  systemPrompt ||
+                  "You are a warm, concise, human-sounding customer support specialist. Reply naturally in the same language the user writes in (Bengali, Banglish, or English). Keep replies helpful and brief.",
+                thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+              },
+            });
+
+            const replyText = (geminiRes.text || "").trim();
+            if (replyText) {
+              return res.json({
+                choices: [
+                  {
+                    message: {
+                      role: "assistant",
+                      content: replyText,
+                    },
+                  },
+                ],
+              });
+            }
+          }
+        } catch (geminiErr: any) {
+          console.warn(
+            "Gemini chat-auto-reply fallback triggered:",
+            geminiErr?.message || geminiErr
+          );
+        }
       }
 
       const apiKey = "sk-bl-UIuOu3HlbF1LxOu_NKu2zN8C7F8W5N8ZgyDpKaISJRSCO8OU";

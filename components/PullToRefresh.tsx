@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 
 export const PullToRefresh: React.FC<{
   children: React.ReactNode;
   onRefresh: () => Promise<void>;
 }> = ({ children, onRefresh }) => {
+  const location = useLocation();
+  const isMessagesRoute = location.pathname.startsWith('/messages');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
@@ -150,7 +153,13 @@ export const PullToRefresh: React.FC<{
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen">
+    <div
+      className={
+        isMessagesRoute
+          ? 'relative w-full h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none'
+          : 'relative w-full min-h-screen'
+      }
+    >
       <div
         ref={indicatorRef}
         aria-hidden="true"
@@ -166,7 +175,15 @@ export const PullToRefresh: React.FC<{
           </div>
         </div>
       </div>
-      <div className="w-full min-h-screen">{children}</div>
+      <div
+        className={
+          isMessagesRoute
+            ? 'w-full h-[100dvh] max-h-[100dvh] overflow-hidden'
+            : 'w-full min-h-screen'
+        }
+      >
+        {children}
+      </div>
     </div>
   );
 };

@@ -46,6 +46,8 @@ import { initGlobalHaptics } from './lib/haptics';
 import { hasImmediateAdminOrStaffRole } from './lib/admin';
 import { ReelUploadProgressOverlay } from './components/ReelUploadProgressOverlay';
 import { MobileAppInstallExperience } from './components/MobileAppInstallExperience';
+import Messages from './pages/Messages';
+import NewsHub from './pages/NewsHub';
 
 const OnboardingOffersModal = lazyRetry(() => import('./components/OnboardingOffersModal'), 'OnboardingOffersModal');
 const CartAbandonmentPopup = lazyRetry(() =>
@@ -289,7 +291,6 @@ const CheckoutPage = lazyRetry(() => import('./pages/Checkout'), 'CheckoutPage')
 const PaymentPage = lazyRetry(() => import('./pages/Payment'), 'PaymentPage');
 const OrderSuccess = lazyRetry(() => import('./pages/OrderSuccess'), 'OrderSuccess');
 const CompleteProfile = lazyRetry(() => import('./pages/CompleteProfile'), 'CompleteProfile');
-const Messages = lazyRetry(() => import('./pages/Messages'), 'Messages');
 const KycVerification = lazyRetry(() => import('./pages/KycVerification'), 'KycVerification');
 const EditProfile = lazyRetry(() => import('./pages/EditProfile'), 'EditProfile');
 const NewPassword = lazyRetry(() => import('./pages/NewPassword'), 'NewPassword');
@@ -326,7 +327,6 @@ const BlogList = lazyRetry(() => import('./pages/BlogList'), 'BlogList');
 const BlogDetails = lazyRetry(() => import('./pages/BlogDetails'), 'BlogDetails');
 const CreateBlog = lazyRetry(() => import('./pages/CreateBlog'), 'CreateBlog');
 const NotFound = lazyRetry(() => import('./pages/NotFound'), 'NotFound');
-const NewsHub = lazyRetry(() => import('./pages/NewsHub'), 'NewsHub');
 const CreateScamPost = lazyRetry(() => import('./pages/CreateScamPost'), 'CreateScamPost');
 const NewsDetails = lazyRetry(() => import('./pages/NewsDetails'), 'NewsDetails');
 const CreatorDashboard = lazyRetry(() => import('./pages/CreatorDashboard'), 'CreatorDashboard');
@@ -697,22 +697,29 @@ const AppContent: React.FC = () => {
     notifyRef.current = notify;
   }, [navigate, notify]);
 
-  // Background-preload primary customer routes right after first paint so navigation is instantaneous (0ms chunk wait)
+  // Background-preload primary customer routes right after first paint so navigation is instantaneous (<0.1s chunk wait)
   useEffect(() => {
     const preloadCoreRoutes = () => {
-      void import('./pages/NewsHub').catch(() => {});
+      void import('./pages/NewsDetails').catch(() => {});
+      void import('./pages/CreateReelStudio').catch(() => {});
+      void import('./pages/CreateScamPost').catch(() => {});
+      void import('./pages/NewsProfilePage').catch(() => {});
       void import('./pages/ProductDetails').catch(() => {});
       void import('./pages/Cart').catch(() => {});
       void import('./pages/Search').catch(() => {});
       void import('./pages/Profile').catch(() => {});
-      void import('./pages/Messages').catch(() => {});
       void import('./pages/MyOrders').catch(() => {});
       void import('./pages/AllProducts').catch(() => {});
       void import('./pages/Wishlist').catch(() => {});
       void import('./pages/Settings').catch(() => {});
       void import('./pages/seller/AddStory').catch(() => {});
     };
-    const timer = setTimeout(preloadCoreRoutes, 450);
+    const ric = (window as any).requestIdleCallback;
+    if (typeof ric === 'function') {
+      const idleId = ric(preloadCoreRoutes, { timeout: 300 });
+      return () => (window as any).cancelIdleCallback?.(idleId);
+    }
+    const timer = setTimeout(preloadCoreRoutes, 80);
     return () => clearTimeout(timer);
   }, []);
 
@@ -984,9 +991,17 @@ const AppContent: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      <main id="main-content" tabIndex={-1} className="min-h-screen selection:bg-zinc-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`${
+          location.pathname.startsWith('/messages')
+            ? 'h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none'
+            : 'min-h-screen overflow-x-hidden'
+        } selection:bg-zinc-900 selection:text-white relative w-full max-w-full`}
+      >
         <ErrorBoundary>
-        <Suspense key={location.pathname} fallback={<RoutePageSkeleton pathname={location.pathname} />}>
+        <Suspense fallback={<RoutePageSkeleton pathname={location.pathname} />}>
         <Routes location={location}>
             <Route path="/" element={<PageWrapper><Home userData={userData} /></PageWrapper>} />
           <Route path="/onboarding" element={<PageWrapper><Onboarding onFinish={() => {}} /></PageWrapper>} />
@@ -1188,8 +1203,12 @@ const AppContent: React.FC = () => {
         </ErrorBoundary>
       </main>
       {showNav && <BottomMenu />}
-      <div className="stwRainbow" />
-      <div className="stwBlurRainbow" />
+      {!location.pathname.startsWith('/messages') && (
+        <>
+          <div className="stwRainbow" />
+          <div className="stwBlurRainbow" />
+        </>
+      )}
       <AnimatePresence>
         {isAppLocked && (
           <motion.div 

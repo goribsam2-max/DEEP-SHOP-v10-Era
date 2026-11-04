@@ -50,20 +50,23 @@ export const auth = authInstance;
 let firestoreInstance: Firestore;
 try {
   firestoreInstance = initializeFirestore(app, {
-    localCache: isEmbeddedFrame
-      ? memoryLocalCache()
-      : persistentLocalCache({
-          tabManager: persistentMultipleTabManager(),
-        }),
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
     experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
   });
 } catch {
-  firestoreInstance = initializeFirestore(app, {
-    localCache: memoryLocalCache(),
-    experimentalAutoDetectLongPolling: true,
-    ignoreUndefinedProperties: true,
-  });
+  try {
+    firestoreInstance = initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+      experimentalAutoDetectLongPolling: true,
+      ignoreUndefinedProperties: true,
+    });
+  } catch {
+    const { getFirestore } = await import("firebase/firestore");
+    firestoreInstance = getFirestore(app);
+  }
 }
 
 export const db = firestoreInstance;

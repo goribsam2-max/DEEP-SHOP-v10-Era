@@ -18,6 +18,18 @@ function ensureLogoListeners() {
   };
 
   onSnapshot(
+    doc(db, "settings", "payments"),
+    (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        const img = d.footerLogo || d.logoUrl;
+        if (img) updateLogo(img);
+      }
+    },
+    () => {}
+  );
+
+  onSnapshot(
     doc(db, "settings", "seo"),
     (snap) => {
       if (snap.exists()) {
@@ -34,7 +46,7 @@ function ensureLogoListeners() {
     (snap) => {
       if (snap.exists()) {
         const d = snap.data();
-        if (d.logoUrl) updateLogo(d.logoUrl);
+        if (d.logoUrl || d.footerLogo) updateLogo(d.logoUrl || d.footerLogo);
       }
     },
     () => {}
@@ -75,18 +87,17 @@ const Logo: React.FC<{
         <img
           src={resolvedLogoSrc}
           alt="Deep Shop Logo"
-          width={28}
-          height={28}
+          width={32}
+          height={32}
           decoding="async"
-          className="w-7 h-7 object-contain rounded-lg shadow-sm"
+          className="w-8 h-8 object-cover rounded-full border border-black/10 dark:border-white/10 shadow-sm bg-white dark:bg-zinc-800 shrink-0"
           onError={() => setLogoImg("")}
         />
       )}
       <span
-        className="lowercase text-[28px] tracking-tight mt-0.5 text-zinc-900 dark:text-white block leading-none"
+        className="lowercase text-[22px] sm:text-[25px] tracking-tight mt-0.5 text-zinc-900 dark:text-white block leading-none font-black"
         style={{
           fontFamily: "'Comfortaa', cursive",
-          fontWeight: 800,
           letterSpacing: "-0.02em",
         }}
       >

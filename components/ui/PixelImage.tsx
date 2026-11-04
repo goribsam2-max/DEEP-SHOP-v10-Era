@@ -21,6 +21,8 @@ export interface PixelImageProps {
   style?: React.CSSProperties;
 }
 
+const decodedPixelImageCache = new Set<string>();
+
 export const PixelImage: React.FC<PixelImageProps> = ({
   src,
   alt = "Product Image",
@@ -39,7 +41,9 @@ export const PixelImage: React.FC<PixelImageProps> = ({
   );
 
   const [activeSrc, setActiveSrc] = useState<string>(optimizedSrc);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState<boolean>(() =>
+    optimizedSrc ? decodedPixelImageCache.has(optimizedSrc) : false
+  );
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
@@ -53,16 +57,32 @@ export const PixelImage: React.FC<PixelImageProps> = ({
 
     setActiveSrc(optimizedSrc);
     setHasError(false);
+
+    if (decodedPixelImageCache.has(optimizedSrc)) {
+      setIsLoaded(true);
+      return;
+    }
+
     const el = imgRef.current;
     if (el && el.complete && el.naturalWidth > 0) {
+      decodedPixelImageCache.add(optimizedSrc);
       setIsLoaded(true);
     } else {
       setIsLoaded(false);
     }
   }, [optimizedSrc]);
 
-  const handleImageLoad = () => {
-    setIsLoaded(true);
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.currentTarget;
+    const reveal = () => {
+      if (activeSrc) decodedPixelImageCache.add(activeSrc);
+      setIsLoaded(true);
+    };
+    if (typeof target.decode === "function") {
+      target.decode().then(reveal).catch(reveal);
+    } else {
+      reveal();
+    }
   };
 
   const handleImageError = () => {
@@ -90,13 +110,7 @@ export const PixelImage: React.FC<PixelImageProps> = ({
       )}
     >
       {!isLoaded && !hasError && (
-        <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-zinc-200/60 dark:bg-zinc-800/80">
-          <div className="flex flex-col items-center justify-center gap-1.5 opacity-40 scale-90">
-            <div className="w-8 h-8 rounded-full bg-zinc-300 dark:bg-zinc-700/80 flex items-center justify-center">
-              <ImageIcon className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-            </div>
-          </div>
-        </div>
+        <div className="absolute inset-0 z-10 ds-skeleton bg-zinc-200/75 dark:bg-zinc-800/85 animate-pulse pointer-events-none" />
       )}
 
       {hasError && (
@@ -117,7 +131,8 @@ export const PixelImage: React.FC<PixelImageProps> = ({
           alt={alt}
           loading={loading}
           decoding="async"
-          fetchPriority={loading === "eager" ? "high" : "low"}
+          referrerPolicy="no-referrer"
+          fetchPriority={loading === "eager" ? "high" : "auto"}
           onLoad={handleImageLoad}
           onError={handleImageError}
           draggable={false}

@@ -119,15 +119,24 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
 
     let isMounted = true;
 
-    // 1. Preload High-Resolution Image
+    // 1. Preload & Decode High-Resolution Image off-thread
     const highResImg = new Image();
     highResImg.decoding = 'async';
+    highResImg.referrerPolicy = 'no-referrer';
     highResImg.src = src;
 
-    highResImg.onload = () => {
+    const finalizeDecode = () => {
       if (!isMounted) return;
       globalLoadedImageCache.add(src);
       setIsHighResLoaded(true);
+    };
+
+    highResImg.onload = () => {
+      if (typeof highResImg.decode === 'function') {
+        highResImg.decode().then(finalizeDecode).catch(finalizeDecode);
+      } else {
+        finalizeDecode();
+      }
     };
 
     highResImg.onerror = () => {
@@ -201,16 +210,23 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
           alt={alt}
           loading={loading}
           decoding="async"
-          onLoad={() => {
-            globalLoadedImageCache.add(src);
-            setIsHighResLoaded(true);
+          referrerPolicy="no-referrer"
+          onLoad={(e) => {
+            const target = e.currentTarget;
+            const reveal = () => {
+              globalLoadedImageCache.add(src);
+              setIsHighResLoaded(true);
+            };
+            if (typeof target.decode === 'function') {
+              target.decode().then(reveal).catch(reveal);
+            } else {
+              reveal();
+            }
           }}
           onError={() => setHasError(true)}
           className={cn(
-            "w-full h-full object-cover transition-all duration-400 ease-out",
-            isHighResLoaded
-              ? "opacity-100 blur-0 scale-100"
-              : "opacity-0 blur-xs scale-[0.99]",
+            "w-full h-full object-cover transition-opacity duration-200 ease-out",
+            isHighResLoaded ? "opacity-100" : "opacity-0",
             className
           )}
         />

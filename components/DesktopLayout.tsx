@@ -96,9 +96,15 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     location.pathname.startsWith('/store') ||
     isPageLoading;
 
+  const isMessagesPage = location.pathname.startsWith('/messages');
+
   return (
     <div
-      className={`relative min-h-screen flex flex-col transition-all duration-300 ${
+      className={`relative flex flex-col transition-all duration-300 ${
+        isMessagesPage
+          ? 'h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none'
+          : 'min-h-screen'
+      } ${
         isHomePage ? 'bg-[#F5F9FF]/45 dark:bg-[#121212] pt-15 md:pt-16' : 'bg-transparent'
       } ${!isHomePage && !isNoHeaderPage ? 'pt-14 md:pt-16' : ''}`}
     >
@@ -112,11 +118,27 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
       {!isNoHeaderPage && <Header />}
 
-      <div className="relative z-10 flex-1 flex w-full flex-col min-h-[calc(100vh-56px)]">
+      <div
+        className={`relative z-10 flex-1 flex w-full flex-col ${
+          isMessagesPage
+            ? 'h-full max-h-[100dvh] overflow-hidden'
+            : 'min-h-[calc(100vh-56px)]'
+        }`}
+      >
         {/* Main Content Area */}
-        <div className={`transition-all duration-300 flex-1 w-full max-w-full ${sidebarOpen ? 'md:pl-72' : ''} bg-transparent`}>
+        <div
+          className={`transition-all duration-300 flex-1 w-full max-w-full ${
+            sidebarOpen && !isMessagesPage ? 'md:pl-72' : ''
+          } ${isMessagesPage ? 'h-full overflow-hidden' : ''} bg-transparent`}
+        >
           {isHomePage && !isPageLoading && <HeaderNotification />}
-          <div className="w-full max-w-[1920px] mx-auto pb-0 min-h-[70vh]">
+          <div
+            className={
+              isMessagesPage
+                ? 'w-full h-full max-h-[100dvh] overflow-hidden pb-0'
+                : 'w-full max-w-[1920px] mx-auto pb-0 min-h-[70vh]'
+            }
+          >
             {children}
           </div>
         </div>

@@ -36,6 +36,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   increment,
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -103,6 +104,10 @@ import {
   DeepShopSponsoredAd,
   useDeepShopAds,
 } from "./DeepShopSponsoredAd";
+import {
+  LoopsCommentContextMenu,
+  useCommentLongPress,
+} from "./LoopsCommentContextMenu";
 
 /* ============================================================================
  * CRISP CUSTOM VECTOR ICONS (Delegated to Admin-Editable LoopsSvgIcon Registry)
@@ -329,6 +334,8 @@ interface SingleReelMediaStageProps {
   post: ScamPost;
   videoSource: ParsedVideoEmbed;
   isActive: boolean;
+  shouldPreload?: boolean;
+  isLiked?: boolean;
   isMuted: boolean;
   playbackSpeed: number;
   isDocked: boolean;
@@ -344,6 +351,8 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   post,
   videoSource,
   isActive,
+  shouldPreload = false,
+  isLiked = false,
   isMuted,
   playbackSpeed,
   isDocked,
@@ -369,19 +378,57 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   const [showControlsHud, setShowControlsHud] = useState(false);
   const [showHeartBurst, setShowHeartBurst] = useState(false);
   const hudTimerRef = useRef<number | null>(null);
+  const bufferingTimerRef = useRef<number | null>(null);
+  const singleTapTimerRef = useRef<number | null>(null);
+  const lastTapTimeRef = useRef<number>(0);
+  const heartBurstTimerRef = useRef<number | null>(null);
   const autoMuteNotifiedRef = useRef(false);
+
+  const triggerReelDoubleTapHeart = () => {
+    if (isDocked) return;
+    const alreadyLiked = Boolean(
+      isLiked || hasUserReactedToPost(post, auth.currentUser?.uid)
+    );
+    triggerHaptic();
+    if (!alreadyLiked && onToggleLike) {
+      onToggleLike(post);
+    }
+    setShowHeartBurst(true);
+    if (heartBurstTimerRef.current) {
+      window.clearTimeout(heartBurstTimerRef.current);
+    }
+    heartBurstTimerRef.current = window.setTimeout(() => {
+      setShowHeartBurst(false);
+    }, 820);
+  };
 
   const handleDoubleTapStage = (e: React.MouseEvent) => {
     if (isDocked) return;
     e.stopPropagation();
-    const hasLiked = hasUserReactedToPost(post, auth.currentUser?.uid);
-    if (!hasLiked && onToggleLike) {
-      triggerHaptic();
-      onToggleLike(post);
+    if (singleTapTimerRef.current) {
+      window.clearTimeout(singleTapTimerRef.current);
+      singleTapTimerRef.current = null;
     }
-    setShowHeartBurst(true);
-    setTimeout(() => setShowHeartBurst(false), 1000);
+    lastTapTimeRef.current = 0;
+    triggerReelDoubleTapHeart();
   };
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v && v.readyState >= 2) {
+      setHasLoadedFrame(true);
+      setIsBuffering(false);
+    }
+  }, [isActive, resolved]);
+
+  useEffect(() => {
+    return () => {
+      if (hudTimerRef.current) window.clearTimeout(hudTimerRef.current);
+      if (bufferingTimerRef.current) window.clearTimeout(bufferingTimerRef.current);
+      if (singleTapTimerRef.current) window.clearTimeout(singleTapTimerRef.current);
+      if (heartBurstTimerRef.current) window.clearTimeout(heartBurstTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -389,7 +436,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     setDirectFailed(false);
     setUseRawOriginFallback(false);
     setUseAudioProxyFallback(false);
-    setHasLoadedFrame(false);
+    setHasLoadedFrame(Boolean(videoRef.current && videoRef.current.readyState >= 2));
     setIsBuffering(false);
     setIsPaused(false);
     autoMuteNotifiedRef.current = false;
@@ -660,10 +707,29 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   const handleTapStage = (e: React.MouseEvent) => {
     if (isDocked) return;
     e.stopPropagation();
-    triggerHaptic();
-    const nextPaused = !isPaused;
-    setIsPaused(nextPaused);
-    revealHudBriefly(nextPaused);
+    const now = Date.now();
+    if (now - lastTapTimeRef.current < 280) {
+      if (singleTapTimerRef.current) {
+        window.clearTimeout(singleTapTimerRef.current);
+        singleTapTimerRef.current = null;
+      }
+      lastTapTimeRef.current = 0;
+      triggerReelDoubleTapHeart();
+      return;
+    }
+    lastTapTimeRef.current = now;
+    if (singleTapTimerRef.current) {
+      window.clearTimeout(singleTapTimerRef.current);
+    }
+    singleTapTimerRef.current = window.setTimeout(() => {
+      singleTapTimerRef.current = null;
+      triggerHaptic();
+      setIsPaused((prev) => {
+        const nextPaused = !prev;
+        revealHudBriefly(nextPaused);
+        return nextPaused;
+      });
+    }, 240);
   };
 
   const posterImg =
@@ -744,24 +810,41 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
           data-reel-user-paused={isPaused ? "true" : undefined}
           src={src}
           poster={posterImg?.trim() || undefined}
-          preload={isActive ? "auto" : "none"}
+          preload={isActive || shouldPreload ? "auto" : "metadata"}
           playsInline
           loop={!onVideoEnded}
           muted={isMuted}
           autoPlay={isActive}
           onPlaying={() => {
+            if (bufferingTimerRef.current) {
+              window.clearTimeout(bufferingTimerRef.current);
+              bufferingTimerRef.current = null;
+            }
             setHasLoadedFrame(true);
             setIsBuffering(false);
           }}
           onWaiting={() => {
-            setIsBuffering(true);
-            setTimeout(() => setIsBuffering(false), 2000);
+            if (!isActive) return;
+            if (bufferingTimerRef.current) {
+              window.clearTimeout(bufferingTimerRef.current);
+            }
+            bufferingTimerRef.current = window.setTimeout(() => {
+              setIsBuffering(true);
+            }, 350);
           }}
           onCanPlay={() => {
+            if (bufferingTimerRef.current) {
+              window.clearTimeout(bufferingTimerRef.current);
+              bufferingTimerRef.current = null;
+            }
             setHasLoadedFrame(true);
             setIsBuffering(false);
           }}
           onLoadedData={(e) => {
+            if (bufferingTimerRef.current) {
+              window.clearTimeout(bufferingTimerRef.current);
+              bufferingTimerRef.current = null;
+            }
             setHasLoadedFrame(true);
             setIsBuffering(false);
             const v = e.currentTarget;
@@ -1070,7 +1153,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
         </div>
       )}
 
-      {/* Tap-to-Play/Pause Catch Layer for controllable players */}
+      {/* Tap-to-Play/Pause + Double-Tap-to-React Layer */}
       {supportsTapOverlay && !isDocked && (
         <div
           onClick={handleTapStage}
@@ -1082,12 +1165,13 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       <AnimatePresence>
         {showHeartBurst && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1.2 }}
-            exit={{ opacity: 0, scale: 1.5 }}
+            initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+            animate={{ opacity: 1, scale: [0.35, 1.25, 1], rotate: [-10, 6, 0] }}
+            exit={{ opacity: 0, scale: 1.45 }}
+            transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
             className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
           >
-            <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl opacity-90" />
+            <Heart className="w-24 h-24 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_10px_28px_rgba(255,48,64,0.55)]" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -2202,6 +2286,25 @@ interface ReelCommentsSheetProps {
   onCommentCountDelta: (postId: string, delta: number) => void;
 }
 
+const ReelCommentLongPressRow: React.FC<{
+  comment: ScamComment;
+  isReply?: boolean;
+  onLongPress: (e: React.SyntheticEvent, cmt: ScamComment) => void;
+  children: React.ReactNode;
+}> = ({ comment, isReply = false, onLongPress, children }) => {
+  const lpHandlers = useCommentLongPress((e) => onLongPress(e, comment), 420);
+  return (
+    <div
+      {...lpHandlers}
+      className={`flex items-start gap-3 select-none active:bg-zinc-100/75 dark:active:bg-white/[0.04] rounded-xl px-1 -mx-1 transition-colors ${
+        isReply ? "pl-11 pt-3" : "py-3"
+      }`}
+    >
+      {children}
+    </div>
+  );
+};
+
 const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
   post,
   creatorHandle,
@@ -2232,10 +2335,18 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [gifSheetOpen, setGifSheetOpen] = useState(false);
+  const [contextMenuComment, setContextMenuComment] = useState<ScamComment | null>(null);
   const [replyingTo, setReplyingTo] = useState<{
     commentId: string;
     userName: string;
   } | null>(initialReplyTarget);
+
+  const isViewerAdmin = Boolean(
+    userProfile?.role === "admin" ||
+      userProfile?.role === "staff" ||
+      currentUser?.email?.toLowerCase() === "goribsam2@gmail.com" ||
+      currentUser?.email?.toLowerCase() === "deepshop@gmail.com"
+  );
 
   useEffect(() => {
     if (initialReplyTarget) {
@@ -2351,8 +2462,11 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
       }
     });
 
-    // Sort root comments by author-liked / engagement first, then newest
+    // Sort root comments by pinned first, then author-liked / engagement, then newest
     roots.sort((a, b) => {
+      const aPinned = a.isPinned ? 1 : 0;
+      const bPinned = b.isPinned ? 1 : 0;
+      if (bPinned !== aPinned) return bPinned - aPinned;
       const aAuthorLiked = post.reporterId && a.reactions?.[post.reporterId] ? 1 : 0;
       const bAuthorLiked = post.reporterId && b.reactions?.[post.reporterId] ? 1 : 0;
       if (bAuthorLiked !== aAuthorLiked) return bAuthorLiked - aAuthorLiked;
@@ -2436,6 +2550,94 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
         );
       } catch {}
     }
+  };
+
+  const handleQuickReactComment = async (commentId: string, emoji: string) => {
+    const target = comments.find((c) => c.id === commentId);
+    if (!target) return;
+    if (!currentUser?.uid) {
+      notify("Please sign in to react to comments.", "info");
+      navigate("/signin");
+      return;
+    }
+    triggerHaptic();
+    const uid = currentUser.uid;
+    const existing = target.reactions?.[uid];
+    const updatedReactions: Record<string, any> = { ...(target.reactions || {}) };
+    const updatedCounts: Record<string, number> = { ...(target.reactionsCount || {}) };
+
+    if (existing && updatedCounts[existing]) {
+      updatedCounts[existing] = Math.max(0, updatedCounts[existing] - 1);
+    }
+    if (existing === emoji) {
+      delete updatedReactions[uid];
+    } else {
+      updatedReactions[uid] = emoji;
+      updatedCounts[emoji] = (updatedCounts[emoji] || 0) + 1;
+    }
+
+    setComments((prev) =>
+      prev.map((item) =>
+        item.id === commentId
+          ? { ...item, reactions: updatedReactions, reactionsCount: updatedCounts }
+          : item
+      )
+    );
+
+    if (!post.id.startsWith("showcase_") && !String(commentId).startsWith("cmt_")) {
+      try {
+        await updateDoc(doc(db, "scam_posts", post.id, "comments", commentId), {
+          reactions: updatedReactions,
+          reactionsCount: updatedCounts,
+        });
+      } catch {}
+    }
+  };
+
+  const handlePinReelComment = async (commentId: string, currentPinned: boolean) => {
+    triggerHaptic();
+    const nextPinned = !currentPinned;
+    setComments((prev) =>
+      prev.map((item) =>
+        item.id === commentId ? { ...item, isPinned: nextPinned } : item
+      )
+    );
+    if (!post.id.startsWith("showcase_") && !String(commentId).startsWith("cmt_")) {
+      try {
+        await updateDoc(doc(db, "scam_posts", post.id, "comments", commentId), {
+          isPinned: nextPinned,
+        });
+      } catch {}
+    }
+    notify(nextPinned ? "Comment pinned" : "Comment unpinned", "success");
+  };
+
+  const handleDeleteReelComment = async (commentId: string) => {
+    triggerHaptic();
+    setComments((prev) => prev.filter((item) => item.id !== commentId));
+    onCommentCountDelta(post.id, -1);
+
+    try {
+      const allLocal = JSON.parse(
+        localStorage.getItem("deep_post_comments") || "{}"
+      );
+      if (Array.isArray(allLocal[post.id])) {
+        allLocal[post.id] = allLocal[post.id].filter(
+          (item: ScamComment) => item.id !== commentId
+        );
+        localStorage.setItem("deep_post_comments", JSON.stringify(allLocal));
+      }
+    } catch {}
+
+    if (!post.id.startsWith("showcase_") && !String(commentId).startsWith("cmt_")) {
+      try {
+        await deleteDoc(doc(db, "scam_posts", post.id, "comments", commentId));
+        await updateDoc(doc(db, "scam_posts", post.id), {
+          commentsCount: increment(-1),
+        });
+      } catch {}
+    }
+    notify("Comment deleted", "info");
   };
 
   const handleSubmitComment = async (e?: React.FormEvent) => {
@@ -2569,9 +2771,15 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
     const likeCount = getTotalCommentLikes(cmt);
 
     return (
-      <div
+      <ReelCommentLongPressRow
         key={cmt.id}
-        className={`flex items-start gap-3 ${isReply ? "pl-11 pt-3" : "py-3"}`}
+        comment={cmt}
+        isReply={isReply}
+        onLongPress={(e, targetCmt) => {
+          e.preventDefault();
+          triggerHaptic();
+          setContextMenuComment(targetCmt);
+        }}
       >
         <button
           type="button"
@@ -2612,6 +2820,11 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
             <span className="text-zinc-500 dark:text-zinc-400 tabular-nums">
               {formatLoopCompactTime(cmt.createdAt)}
             </span>
+            {cmt.isPinned && (
+              <span className="text-amber-500 dark:text-amber-400 font-medium">
+                · Pinned
+              </span>
+            )}
             {isPostAuthor && (
               <span className="text-zinc-500 dark:text-zinc-400 font-medium">
                 · Author
@@ -2683,7 +2896,7 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
             </span>
           )}
         </button>
-      </div>
+      </ReelCommentLongPressRow>
     );
   };
 
@@ -2927,6 +3140,62 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
           setCommentImage(gifUrl);
           setGifSheetOpen(false);
         }}
+      />
+
+      <LoopsCommentContextMenu
+        isOpen={Boolean(contextMenuComment)}
+        onClose={() => setContextMenuComment(null)}
+        comment={contextMenuComment}
+        postId={post.id}
+        isPostOwner={Boolean(
+          currentUser?.uid && post.reporterId === currentUser.uid
+        )}
+        isCommentOwner={Boolean(
+          currentUser?.uid &&
+            contextMenuComment &&
+            contextMenuComment.userId === currentUser.uid
+        )}
+        isAdmin={isViewerAdmin}
+        onQuickReact={handleQuickReactComment}
+        onReply={(cmt) => {
+          const prof = profilesMap[cmt.userId];
+          const handle =
+            getSafePublicUsername(prof) || cmt.userName || "member";
+          const rootId = cmt.replyToCommentId || cmt.id;
+          setReplyingTo({ commentId: rootId, userName: handle });
+          if (!commentText.startsWith("@")) {
+            setCommentText(`@${handle} `);
+          }
+          window.setTimeout(() => inputRef.current?.focus(), 80);
+        }}
+        onCopyText={(txt) => {
+          navigator.clipboard?.writeText(txt).catch(() => {});
+          notify("Comment copied", "success");
+        }}
+        onPinToggle={handlePinReelComment}
+        onReplyWithReel={(cmt) => {
+          onClose();
+          navigate(
+            `/loops/create-reel?replyToCommentId=${cmt.id}&postId=${post.id}`
+          );
+        }}
+        onAddToStory={(cmt) => {
+          onClose();
+          navigate(`/loops/add-story?commentId=${cmt.id}&postId=${post.id}`);
+        }}
+        onShare={() => {
+          const shareUrl = `${window.location.origin}/loops/post/${post.id}#comments`;
+          if (navigator.share) {
+            navigator.share({ title: "Reel Comment", url: shareUrl }).catch(() => {});
+          } else {
+            navigator.clipboard?.writeText(shareUrl).catch(() => {});
+            notify("Comment link copied", "success");
+          }
+        }}
+        onRestrictUser={(_, name) => notify(`${name} restricted`, "info")}
+        onBlockUser={(_, name) => notify(`${name} blocked`, "info")}
+        onReportComment={() => notify("Comment reported for review", "info")}
+        onDeleteComment={handleDeleteReelComment}
       />
     </>
   );
@@ -3889,6 +4158,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
               })}
             {reelItems.map(({ post, videoSource }, idx) => {
               const isSlideActive = idx === activeIndex;
+              const shouldPreloadSlide = Math.abs(idx - activeIndex) <= 2;
               const effectiveEmbed = resolvedMap[post.id] || videoSource;
               const platformMeta = getVideoPlatformMeta(
                 effectiveEmbed.platform,
@@ -3907,6 +4177,16 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                 currentUser?.uid,
                 localUserReactions[post.id] || null
               );
+              const handleToggleReelLike = (targetPost: ScamPost) => {
+                const alreadyLiked = hasUserReactedToPost(
+                  targetPost,
+                  currentUser?.uid,
+                  localUserReactions[targetPost.id] || null
+                );
+                if (!alreadyLiked) {
+                  onToggleReaction(targetPost, "love");
+                }
+              };
               const likesCount = getTotalPostReactions(post);
               const isReposted = Boolean(
                 currentUser?.uid &&
@@ -3970,6 +4250,8 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                           !activeAdSlideKey &&
                           !audioDetailsPost
                         }
+                        shouldPreload={shouldPreloadSlide}
+                        isLiked={isLiked}
                         isMuted={effectiveMuted}
                         playbackSpeed={playbackSpeed}
                         isDocked={showSlideDocked}
@@ -4309,9 +4591,13 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              if (videoRef.current) {
-                                try { videoRef.current.pause(); } catch {}
-                              }
+                              document
+                                .querySelectorAll("video")
+                                .forEach((v) => {
+                                  try {
+                                    v.pause();
+                                  } catch {}
+                                });
                               if (post.reporterId) {
                                 navigate(`/loops/profile/${post.reporterId}`);
                               }

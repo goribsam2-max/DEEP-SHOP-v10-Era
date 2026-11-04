@@ -24,6 +24,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 
 import { triggerHaptic } from "../../lib/haptics";
+import { optimizeImageUrl } from "../../lib/imageOptimize";
 import {
   hasImmediateAdminOrStaffRole,
   checkStaffRecord,
@@ -195,6 +196,45 @@ export function Header() {
   const isIslandActive = useIsland();
   const [cartCount, setCartCount] = React.useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = React.useState(0);
+  const [dynamicHeaderLogo, setDynamicHeaderLogo] = React.useState<string>("");
+
+  useEffect(() => {
+    let unsubPayments: (() => void) | null = null;
+    let unsubSeo: (() => void) | null = null;
+    let unsubPlatform: (() => void) | null = null;
+
+    import("@/firebase").then(({ db }) => {
+      import("firebase/firestore").then(({ doc, onSnapshot }) => {
+        unsubPayments = onSnapshot(doc(db, "settings", "payments"), (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            const logo = data.footerLogo || data.logoUrl;
+            if (logo) setDynamicHeaderLogo(logo);
+          }
+        });
+        unsubSeo = onSnapshot(doc(db, "settings", "seo"), (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            const logo = data.logoUrl || data.appIconUrl || data.faviconUrl || data.metaImage;
+            if (logo) setDynamicHeaderLogo((prev) => prev || logo);
+          }
+        });
+        unsubPlatform = onSnapshot(doc(db, "settings", "platform"), (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            const logo = data.footerLogo || data.logoUrl;
+            if (logo) setDynamicHeaderLogo(logo);
+          }
+        });
+      });
+    });
+
+    return () => {
+      if (unsubPayments) unsubPayments();
+      if (unsubSeo) unsubSeo();
+      if (unsubPlatform) unsubPlatform();
+    };
+  }, []);
 
   useEffect(() => {
     setBrandMenuOpen(false);
@@ -491,9 +531,22 @@ export function Header() {
                 aria-expanded={brandMenuOpen}
               >
                 {isHomePage ? (
-                  <span className="font-brand lowercase text-[16px] sm:text-[18px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
-                    deep shop
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {dynamicHeaderLogo && (
+                      <img
+                        src={optimizeImageUrl(dynamicHeaderLogo, 80, 80)}
+                        alt="Deep Shop Logo"
+                        width={36}
+                        height={36}
+                        decoding="async"
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-black/10 dark:border-white/10 shadow-sm bg-white dark:bg-zinc-800 shrink-0"
+                        onError={() => setDynamicHeaderLogo("")}
+                      />
+                    )}
+                    <span className="font-brand lowercase text-[20px] sm:text-[23px] font-black tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
+                      deep shop
+                    </span>
+                  </div>
                 ) : (
                   <WordmarkIcon />
                 )}
@@ -940,7 +993,7 @@ const WordmarkIcon = ({
 }: React.ComponentProps<"span">) => (
   <span
     className={cn(
-      "font-brand lowercase text-[16px] sm:text-[18px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap",
+      "font-brand lowercase text-[20px] sm:text-[23px] font-black tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap",
       className
     )}
     {...props}

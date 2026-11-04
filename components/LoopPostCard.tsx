@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Heart,
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
@@ -480,15 +481,59 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
   ]);
 
   const [showHeartBurst, setShowHeartBurst] = useState(false);
+  const heartBurstTimerRef = useRef<number | null>(null);
+  const singleTapTimerRef = useRef<number | null>(null);
+  const lastTapTimeRef = useRef<number>(0);
 
-  const handleDoubleTapReact = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  useEffect(() => {
+    return () => {
+      if (heartBurstTimerRef.current) window.clearTimeout(heartBurstTimerRef.current);
+      if (singleTapTimerRef.current) window.clearTimeout(singleTapTimerRef.current);
+    };
+  }, []);
+
+  const triggerDoubleTapHeart = () => {
+    triggerHaptic();
     if (!userLiked) {
-      triggerHaptic();
       onToggleLike(post);
     }
     setShowHeartBurst(true);
-    setTimeout(() => setShowHeartBurst(false), 1000);
+    if (heartBurstTimerRef.current) window.clearTimeout(heartBurstTimerRef.current);
+    heartBurstTimerRef.current = window.setTimeout(() => {
+      setShowHeartBurst(false);
+    }, 900);
+  };
+
+  const handleDoubleTapReact = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (singleTapTimerRef.current) {
+      window.clearTimeout(singleTapTimerRef.current);
+      singleTapTimerRef.current = null;
+    }
+    lastTapTimeRef.current = 0;
+    triggerDoubleTapHeart();
+  };
+
+  const handleSmartCardTap = (e: React.MouseEvent, onSingleTap: () => void) => {
+    e.stopPropagation();
+    const now = Date.now();
+    if (now - lastTapTimeRef.current < 280) {
+      if (singleTapTimerRef.current) {
+        window.clearTimeout(singleTapTimerRef.current);
+        singleTapTimerRef.current = null;
+      }
+      lastTapTimeRef.current = 0;
+      triggerDoubleTapHeart();
+      return;
+    }
+    lastTapTimeRef.current = now;
+    if (singleTapTimerRef.current) {
+      window.clearTimeout(singleTapTimerRef.current);
+    }
+    singleTapTimerRef.current = window.setTimeout(() => {
+      singleTapTimerRef.current = null;
+      onSingleTap();
+    }, 240);
   };
 
   if (hiddenLocally) {
@@ -945,12 +990,14 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
       {/* 2A. Full-Bleed Edge-to-Edge Visual Media (Photos, Carousel, Video, GIF — Zero Radius) */}
       {!resolvedVideo && images.length === 1 && (
         <div
-          onClick={() => {
-            triggerHaptic();
-            navigate(`/loops/photo/${post.id}/0`);
-          }}
+          onClick={(e) =>
+            handleSmartCardTap(e, () => {
+              triggerHaptic();
+              navigate(`/loops/photo/${post.id}/0`);
+            })
+          }
           onDoubleClick={handleDoubleTapReact}
-          className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
+          className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer select-none"
         >
           <SmoothImage
             src={images[0]}
@@ -962,12 +1009,13 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
           <AnimatePresence>
             {showHeartBurst && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1.2 }}
-                exit={{ opacity: 0, scale: 1.5 }}
+                initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+                animate={{ opacity: 1, scale: 1.15, rotate: 0 }}
+                exit={{ opacity: 0, scale: 1.45 }}
+                transition={{ type: "spring", stiffness: 520, damping: 22 }}
                 className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
               >
-                <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl opacity-90" />
+                <Heart className="w-24 h-24 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_12px_28px_rgba(255,48,64,0.55)]" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1017,18 +1065,20 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             }}
             className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden group"
           >
-            <div 
+            <div
               onDoubleClick={handleDoubleTapReact}
-              className="relative w-full h-full"
+              className="relative w-full h-full select-none"
             >
               <SmoothImage
                 src={images[carouselIdx] || images[0]}
                 alt={`${displayUsername} slide ${carouselIdx + 1}`}
                 eager={carouselIdx > 0}
-                onClick={() => {
-                  triggerHaptic();
-                  navigate(`/loops/photo/${post.id}/${carouselIdx}`);
-                }}
+                onClick={(e) =>
+                  handleSmartCardTap(e, () => {
+                    triggerHaptic();
+                    navigate(`/loops/photo/${post.id}/${carouselIdx}`);
+                  })
+                }
                 wrapperClassName="w-full rounded-none"
                 skeletonClassName="rounded-none"
                 className="w-full max-h-[640px] object-cover block cursor-pointer select-none rounded-none"
@@ -1036,12 +1086,13 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
               <AnimatePresence>
                 {showHeartBurst && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1.2 }}
-                    exit={{ opacity: 0, scale: 1.5 }}
+                    initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+                    animate={{ opacity: 1, scale: 1.15, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 1.45 }}
+                    transition={{ type: "spring", stiffness: 520, damping: 22 }}
                     className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
                   >
-                    <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl opacity-90" />
+                    <Heart className="w-24 h-24 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_12px_28px_rgba(255,48,64,0.55)]" />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1135,19 +1186,19 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
 
       {resolvedVideo && (
         <div
-          onClick={openPostDetails}
           onDoubleClick={handleDoubleTapReact}
-          className="loops-edge-media w-full rounded-none overflow-hidden cursor-pointer relative group"
+          className="loops-edge-media w-full rounded-none overflow-hidden cursor-pointer relative group select-none"
         >
           <AnimatePresence>
             {showHeartBurst && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1.2 }}
-                exit={{ opacity: 0, scale: 1.5 }}
+                initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+                animate={{ opacity: 1, scale: 1.15, rotate: 0 }}
+                exit={{ opacity: 0, scale: 1.45 }}
+                transition={{ type: "spring", stiffness: 520, damping: 22 }}
                 className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
               >
-                <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl opacity-90" />
+                <Heart className="w-24 h-24 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_12px_28px_rgba(255,48,64,0.55)]" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1158,6 +1209,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             videoVolume={post.music?.videoVolume ?? 1.0}
             hideBottomBar={true}
             onVideoClick={openPostDetails}
+            onDoubleTap={triggerDoubleTapHeart}
             enableFeedEndScreen={true}
             endScreenMeta={{
               authorName: displayUsername,
@@ -1204,8 +1256,9 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
 
       {images.length === 0 && !resolvedVideo && post.gifUrl && (
         <div
-          onClick={openPostDetails}
-          className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
+          onClick={(e) => handleSmartCardTap(e, () => openPostDetails())}
+          onDoubleClick={handleDoubleTapReact}
+          className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer select-none"
         >
           <SmoothImage
             src={post.gifUrl}
@@ -1214,6 +1267,19 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             skeletonClassName="rounded-none"
             className="w-full max-h-[520px] object-cover block rounded-none"
           />
+          <AnimatePresence>
+            {showHeartBurst && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+                animate={{ opacity: 1, scale: 1.15, rotate: 0 }}
+                exit={{ opacity: 0, scale: 1.45 }}
+                transition={{ type: "spring", stiffness: 520, damping: 22 }}
+                className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+              >
+                <Heart className="w-24 h-24 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_12px_28px_rgba(255,48,64,0.55)]" />
+              </motion.div>
+            )}
+          </AnimatePresence>
           <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-bold tracking-wider">
             GIF
           </span>
@@ -1243,9 +1309,10 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
 
       {/* 2B. Text-Only Body (when post has no primary image/video/gif) */}
       {!hasPrimaryVisualMedia && combinedCaption && (
-        <div className="px-3.5 pt-1 pb-2">
+        <div className="px-3.5 pt-1 pb-2 relative">
           <div
-            onClick={openPostDetails}
+            onClick={(e) => handleSmartCardTap(e, () => openPostDetails())}
+            onDoubleClick={handleDoubleTapReact}
             className={`text-[#0f0f0f] dark:text-[#f3f4f6] whitespace-pre-wrap break-words cursor-pointer ${
               post.textStyle === "large"
                 ? "text-[18px] font-medium leading-[1.42]"
@@ -1261,6 +1328,19 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
               }
             />
           </div>
+          <AnimatePresence>
+            {showHeartBurst && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.35, rotate: -10 }}
+                animate={{ opacity: 1, scale: 1.05, rotate: 0 }}
+                exit={{ opacity: 0, scale: 1.35 }}
+                transition={{ type: "spring", stiffness: 520, damping: 22 }}
+                className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+              >
+                <Heart className="w-16 h-16 text-[#FF3040] fill-[#FF3040] drop-shadow-[0_10px_24px_rgba(255,48,64,0.5)]" />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div
             className="mt-1.5 flex items-center gap-2 text-[12px] text-[#737373] dark:text-zinc-400"

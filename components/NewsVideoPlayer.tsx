@@ -40,6 +40,7 @@ interface NewsVideoPlayerProps {
   videoVolume?: number;
   hideBottomBar?: boolean;
   onVideoClick?: () => void;
+  onDoubleTap?: () => void;
   enableFeedEndScreen?: boolean;
   endScreenMeta?: FeedVideoEndScreenMeta;
   onWatchMoreReels?: () => void;
@@ -71,6 +72,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   videoVolume = 1.0,
   hideBottomBar = false,
   onVideoClick,
+  onDoubleTap,
   enableFeedEndScreen = false,
   endScreenMeta,
   onWatchMoreReels,
@@ -81,6 +83,9 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   const nativeVideoRef = useRef<HTMLVideoElement | null>(null);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const userPausedRef = useRef(false);
+  const bufferingTimerRef = useRef<number | null>(null);
+  const singleTapTimerRef = useRef<number | null>(null);
+  const lastTapTimeRef = useRef<number>(0);
 
   const [resolvedEmbed, setResolvedEmbed] =
     useState<ParsedVideoEmbed>(videoSource);
@@ -347,7 +352,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     return () => window.removeEventListener("message", handleMessage);
   }, [resolvedEmbed.platform, usesNativeStream, enableFeedEndScreen]);
 
-  // Viewport IntersectionObserver for Feed Autoplay & Off-Screen Autopause
+  // Viewport IntersectionObserver: 900px pre-buffer margin + 20% visibility autoplay
   useEffect(() => {
     const node = containerRef.current;
     if (!node || typeof IntersectionObserver === "undefined") {
@@ -356,7 +361,17 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
       return;
     }
 
-    const observer = new IntersectionObserver(
+    const preloadObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setHasEnteredView(true);
+          preloadObserver.disconnect();
+        }
+      },
+      { rootMargin: "900px 0px" }
+    );
+
+    const playObserver = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry) return;
@@ -373,9 +388,24 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
       }
     );
 
-    observer.observe(node);
-    return () => observer.disconnect();
+    preloadObserver.observe(node);
+    playObserver.observe(node);
+    return () => {
+      preloadObserver.disconnect();
+      playObserver.disconnect();
+      if (bufferingTimerRef.current) window.clearTimeout(bufferingTimerRef.current);
+      if (singleTapTimerRef.current) window.clearTimeout(singleTapTimerRef.current);
+    };
   }, []);
+
+  // Immediately clear loading state if video element already decoded frames from browser cache
+  useEffect(() => {
+    const v = nativeVideoRef.current;
+    if (v && v.readyState >= 2) {
+      setHasLoadedFrame(true);
+      setIsBuffering(false);
+    }
+  });
 
   // React to viewport visibility changes to autoplay or pause cleanly
   useEffect(() => {
@@ -477,8 +507,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     }
   }, [hasSeparateBgMusic, bgMusicUrl, bgMusicVolume, isMuted, isPlaying, isInView]);
 
-  const toggleEmbedPlayPause = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const performToggleEmbedPlayPause = () => {
     if (onVideoClick) {
       onVideoClick();
       return;
@@ -523,6 +552,48 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
       if (resolvedEmbed.platform === "tiktok") sendTikTokCommand("play");
       setIsPlaying(true);
     }
+  };
+
+  const toggleEmbedPlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    performToggleEmbedPlayPause();
+  };
+
+  const handleVideoSurfaceClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onDoubleTap) {
+      performToggleEmbedPlayPause();
+      return;
+    }
+    const now = Date.now();
+    if (now - lastTapTimeRef.current < 280) {
+      if (singleTapTimerRef.current) {
+        window.clearTimeout(singleTapTimerRef.current);
+        singleTapTimerRef.current = null;
+      }
+      lastTapTimeRef.current = 0;
+      onDoubleTap();
+      return;
+    }
+    lastTapTimeRef.current = now;
+    if (singleTapTimerRef.current) {
+      window.clearTimeout(singleTapTimerRef.current);
+    }
+    singleTapTimerRef.current = window.setTimeout(() => {
+      singleTapTimerRef.current = null;
+      performToggleEmbedPlayPause();
+    }, 245);
+  };
+
+  const handleVideoSurfaceDoubleClick = (e: React.MouseEvent) => {
+    if (!onDoubleTap) return;
+    e.stopPropagation();
+    if (singleTapTimerRef.current) {
+      window.clearTimeout(singleTapTimerRef.current);
+      singleTapTimerRef.current = null;
+    }
+    lastTapTimeRef.current = 0;
+    onDoubleTap();
   };
 
   const handleEmbedSeekBy = (e: React.MouseEvent, deltaSec: number) => {
@@ -802,14 +873,15 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
         className="w-full overflow-hidden bg-zinc-950 border-y border-slate-200/70 dark:border-zinc-800 select-none touch-manipulation"
       >
         <div
-          onClick={toggleEmbedPlayPause}
+          onClick={handleVideoSurfaceClick}
+          onDoubleClick={handleVideoSurfaceDoubleClick}
           className="relative w-full bg-zinc-950 flex items-center justify-center cursor-pointer overflow-hidden"
         >
           <video
             ref={nativeVideoRef}
             src={streamSrc}
             poster={resolvedEmbed.thumbnailUrl?.trim() || undefined}
-            preload={isInView ? "auto" : "metadata"}
+            preload={hasEnteredView || isInView ? "auto" : "metadata"}
             playsInline
             loop={!enableFeedEndScreen}
             muted={isMuted || (hasSeparateBgMusic && Number(videoVolume ?? 1) <= 0.01)}
@@ -820,6 +892,10 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               setStreamError(false);
             }}
             onPlaying={() => {
+              if (bufferingTimerRef.current) {
+                window.clearTimeout(bufferingTimerRef.current);
+                bufferingTimerRef.current = null;
+              }
               setIsPlaying(true);
               setIsVideoEnded(false);
               setHasLoadedFrame(true);
@@ -837,12 +913,25 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
                 }
               }
             }}
-            onWaiting={() => setIsBuffering(true)}
+            onWaiting={() => {
+              if (bufferingTimerRef.current) window.clearTimeout(bufferingTimerRef.current);
+              bufferingTimerRef.current = window.setTimeout(() => {
+                setIsBuffering(true);
+              }, 350);
+            }}
             onCanPlay={() => {
+              if (bufferingTimerRef.current) {
+                window.clearTimeout(bufferingTimerRef.current);
+                bufferingTimerRef.current = null;
+              }
               setHasLoadedFrame(true);
               setIsBuffering(false);
             }}
             onLoadedData={(e) => {
+              if (bufferingTimerRef.current) {
+                window.clearTimeout(bufferingTimerRef.current);
+                bufferingTimerRef.current = null;
+              }
               setHasLoadedFrame(true);
               setIsBuffering(false);
               setStreamError(false);
@@ -1139,7 +1228,8 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
           {!isVideoEnded && overlayBadge}
           {hideBottomBar && onVideoClick && !isVideoEnded && (
             <div
-              onClick={toggleEmbedPlayPause}
+              onClick={handleVideoSurfaceClick}
+              onDoubleClick={handleVideoSurfaceDoubleClick}
               className="absolute inset-0 z-10 cursor-pointer"
             />
           )}
@@ -1488,7 +1578,8 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
           )}
           {hideBottomBar && onVideoClick && (
             <div
-              onClick={toggleEmbedPlayPause}
+              onClick={handleVideoSurfaceClick}
+              onDoubleClick={handleVideoSurfaceDoubleClick}
               className="absolute inset-0 z-10 cursor-pointer"
             />
           )}
@@ -1555,7 +1646,8 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
         )}
         {hideBottomBar && onVideoClick && (
           <div
-            onClick={toggleEmbedPlayPause}
+            onClick={handleVideoSurfaceClick}
+            onDoubleClick={handleVideoSurfaceDoubleClick}
             className="absolute inset-0 z-10 cursor-pointer"
           />
         )}

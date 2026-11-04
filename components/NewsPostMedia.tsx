@@ -45,6 +45,7 @@ export const isScamPostRecord = (post?: Partial<ScamPost> | null): boolean => {
 interface NewsPostMediaProps {
   post: Partial<ScamPost>;
   onOpenImage?: (index: number) => void;
+  onDoubleTap?: () => void;
   autoPlayVideo?: boolean;
 }
 
@@ -655,6 +656,7 @@ const SnippetPostCard: React.FC<{
 export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
   post,
   onOpenImage,
+  onDoubleTap,
   autoPlayVideo = true,
 }) => {
   const images = post.images || [];
@@ -664,6 +666,8 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
   const aspectMode: ImageAspectMode = post.imageAspectRatio || "original";
 
   const [carouselIdx, setCarouselIdx] = useState(0);
+  const imgSingleTapTimerRef = useRef<number | null>(null);
+  const imgLastTapRef = useRef<number>(0);
   const [stackOrder, setStackOrder] = useState<number[]>(() =>
     images.map((_, i) => i)
   );
@@ -765,8 +769,30 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
 
   const handleImgClick = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
-    triggerHaptic();
-    onOpenImage?.(index);
+    if (!onDoubleTap) {
+      triggerHaptic();
+      onOpenImage?.(index);
+      return;
+    }
+    const now = Date.now();
+    if (now - imgLastTapRef.current < 280) {
+      if (imgSingleTapTimerRef.current) {
+        window.clearTimeout(imgSingleTapTimerRef.current);
+        imgSingleTapTimerRef.current = null;
+      }
+      imgLastTapRef.current = 0;
+      onDoubleTap();
+      return;
+    }
+    imgLastTapRef.current = now;
+    if (imgSingleTapTimerRef.current) {
+      window.clearTimeout(imgSingleTapTimerRef.current);
+    }
+    imgSingleTapTimerRef.current = window.setTimeout(() => {
+      imgSingleTapTimerRef.current = null;
+      triggerHaptic();
+      onOpenImage?.(index);
+    }, 245);
   };
 
   const getStackLayerClasses = (offsetIndex: number, isFront: boolean) => {
@@ -843,7 +869,14 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
 
       {/* Attached Animated GIF if present */}
       {post.gifUrl && (
-        <div className="relative w-full rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800">
+        <div
+          onDoubleClick={(e) => {
+            if (!onDoubleTap) return;
+            e.stopPropagation();
+            onDoubleTap();
+          }}
+          className="relative w-full rounded-none overflow-hidden bg-slate-100 dark:bg-zinc-800"
+        >
           <SmoothImage
             src={post.gifUrl}
             alt="Attached GIF"
@@ -870,6 +903,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
         <NewsVideoPlayer
           videoSource={resolvedVideo}
           autoPlayInView={autoPlayVideo}
+          onDoubleTap={onDoubleTap}
           overlayBadge={
             isScam && images.length === 0 ? (
               <div className="absolute top-3 left-3 right-14 flex items-center gap-2 pointer-events-none z-10">

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Bookmark, Check, Pencil, Smile } from 'lucide-react';
+import { Bookmark, Pencil, Smile, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MsgCameraIcon,
@@ -9,6 +9,11 @@ import {
   MsgPlusIcon,
   MsgSendIcon,
 } from './MessagesSvgIcons';
+
+const RECORDER_BAR_SEEDS = [
+  10, 16, 22, 14, 26, 18, 12, 24, 28, 16, 20, 26,
+  14, 22, 28, 18, 12, 24, 20, 15, 25, 18, 14, 10,
+];
 
 export interface ChatBottomBarProps {
   newMessage: string;
@@ -89,13 +94,20 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   };
 
   const hasContent = Boolean(newMessage.trim() || previewUrls.length > 0);
-  const computedRows = Math.min(5, Math.max(1, newMessage.split('\n').length + Math.floor(newMessage.length / 56)));
+  const computedRows = Math.min(
+    5,
+    Math.max(1, newMessage.split('\n').length + Math.floor(newMessage.length / 56))
+  );
+
+  const formattedRecTime = `${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60)
+    .toString()
+    .padStart(2, '0')}`;
 
   return (
     <div className="w-full relative select-none">
       {/* Attachments Preview Tray */}
-      {previewUrls.length > 0 && (
-        <div className="flex items-center gap-2.5 mb-2.5 p-2.5 msg-composer-capsule rounded-2xl overflow-x-auto no-scrollbar">
+      {previewUrls.length > 0 && !isRecording && (
+        <div className="flex items-center gap-2.5 mb-2 p-2.5 msg-composer-capsule rounded-2xl overflow-x-auto no-scrollbar">
           {previewUrls.map((url, idx) => (
             <div
               key={idx}
@@ -122,9 +134,9 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         </div>
       )}
 
-      {/* Floating More Tools Popover (anchored to left "+" button) */}
+      {/* Floating More Tools Popover */}
       <AnimatePresence>
-        {showPlusMenu && (
+        {showPlusMenu && !isRecording && (
           <>
             <div
               className="fixed inset-0 z-40"
@@ -134,8 +146,8 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
               initial={{ opacity: 0, scale: 0.94, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 8 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 340 }}
-              className="msg-v2-popup absolute left-0 bottom-15 z-50 w-52 bg-white dark:bg-[#1A1C24] rounded-3xl shadow-[0_16px_44px_rgba(15,23,42,0.16)] border border-black/[0.05] dark:border-white/10 p-2 space-y-0.5"
+              transition={{ type: 'spring', damping: 26, stiffness: 360 }}
+              className="msg-v2-popup absolute left-0 bottom-14 z-50 w-52 bg-white dark:bg-[#1A1C24] rounded-3xl shadow-[0_16px_44px_rgba(15,23,42,0.16)] border border-black/[0.05] dark:border-white/10 p-2 space-y-0.5"
             >
               <button
                 type="button"
@@ -203,60 +215,103 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Clean Modern Composer Row matching Active Chat aesthetic */}
-      <div className="w-full flex items-end gap-2 sm:gap-2.5">
-        {/* Left "+" Tools Button — matched 1:1 to 48px composer capsule */}
-        <button
-          type="button"
-          onClick={() => setShowPlusMenu((prev) => !prev)}
-          className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
-            showPlusMenu
-              ? 'msg-new-chat-pill rotate-45'
-              : 'msg-composer-capsule text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-95'
-          }`}
-          title="More tools & attachments"
-        >
-          <MsgPlusIcon className="w-[22px] h-[22px]" />
-        </button>
+      <AnimatePresence mode="wait" initial={false}>
+        {isRecording ? (
+          <motion.div
+            key="voice-recorder-bar"
+            initial={{ opacity: 0, scale: 0.97, y: 6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 6 }}
+            transition={{ type: 'spring', stiffness: 460, damping: 30 }}
+            className="w-full flex items-center gap-2 sm:gap-2.5"
+          >
+            {/* Left 48px Discard / Trash Button */}
+            <button
+              type="button"
+              onClick={cancelRecording}
+              aria-label="Discard voice recording"
+              title="Discard recording"
+              className="w-12 h-12 rounded-full bg-rose-500/12 dark:bg-rose-500/18 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center shrink-0 transition-all active:scale-90 cursor-pointer"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
 
-        {/* Center Soft Pill Input Capsule */}
-        <div
-          className={`flex-1 min-w-0 flex msg-composer-capsule rounded-[24px] px-4 transition-all focus-within:ring-2 focus-within:ring-[#2F80ED]/20 ${
-            isRecording
-              ? 'h-12 items-center'
-              : computedRows > 1
-              ? 'min-h-[48px] py-1.5 items-end'
-              : 'h-12 items-center'
-          }`}
-        >
-          {isRecording ? (
-            <div className="flex-1 min-w-0 flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
-                <span className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-rose-500 truncate">
-                  Recording {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+            {/* Center Live Animated Equalizer Capsule */}
+            <div className="flex-1 min-w-0 h-12 rounded-[24px] bg-gradient-to-r from-[#2F80ED]/10 via-[#2F80ED]/[0.06] to-[#2F80ED]/12 dark:from-[#2F80ED]/20 dark:via-[#1B2232] dark:to-[#2F80ED]/16 border border-[#2F80ED]/25 px-3.5 flex items-center justify-between gap-3 overflow-hidden">
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
+                </span>
+                <span className="font-mono tabular-nums text-[13px] font-bold text-zinc-900 dark:text-white">
+                  {formattedRecTime}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={cancelRecording}
-                  className="text-xs text-zinc-500 hover:text-rose-500 transition px-2.5 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => stopRecording(true)}
-                  className="w-8.5 h-8.5 rounded-full msg-accent-btn text-white flex items-center justify-center shadow-sm active:scale-95 transition cursor-pointer"
-                  title="Send voice message"
-                >
-                  <Check className="w-4 h-4 stroke-[2.5]" />
-                </button>
+
+              <div className="flex-1 min-w-0 h-7 flex items-center justify-center gap-[2.5px] overflow-hidden">
+                {RECORDER_BAR_SEEDS.map((h, i) => (
+                  <motion.span
+                    key={i}
+                    animate={{
+                      scaleY: [0.35, 1, 0.45, 0.9, 0.4],
+                    }}
+                    transition={{
+                      duration: 0.85 + (i % 5) * 0.11,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                      delay: (i % 7) * 0.06,
+                    }}
+                    style={{ height: `${h}px` }}
+                    className="flex-1 min-w-[2px] max-w-[3.5px] rounded-full bg-[#2F80ED] dark:bg-[#60A5FA] origin-center will-change-transform"
+                  />
+                ))}
               </div>
+
+              <span className="hidden sm:inline text-[11px] font-medium text-[#2F80ED] dark:text-[#60A5FA] shrink-0">
+                Live
+              </span>
             </div>
-          ) : (
-            <>
+
+            {/* Right 48px Instant Send Voice Button */}
+            <button
+              type="button"
+              onClick={() => stopRecording(true)}
+              aria-label="Send voice message"
+              title="Send voice message"
+              className="w-12 h-12 rounded-full msg-accent-btn text-white flex items-center justify-center shrink-0 shadow-[0_6px_20px_rgba(47,128,237,0.38)] hover:brightness-105 active:scale-90 transition-all cursor-pointer"
+            >
+              <MsgSendIcon className="w-[21px] h-[21px] mr-0.5" />
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="text-composer-bar"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.14 }}
+            className="w-full flex items-end gap-2 sm:gap-2.5"
+          >
+            {/* Left "+" Tools Button */}
+            <button
+              type="button"
+              onClick={() => setShowPlusMenu((prev) => !prev)}
+              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+                showPlusMenu
+                  ? 'msg-new-chat-pill rotate-45'
+                  : 'msg-composer-capsule text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-95'
+              }`}
+              title="More tools & attachments"
+            >
+              <MsgPlusIcon className="w-[22px] h-[22px]" />
+            </button>
+
+            {/* Center Soft Pill Input Capsule */}
+            <div
+              className={`flex-1 min-w-0 flex msg-composer-capsule rounded-[24px] px-4 transition-all focus-within:ring-2 focus-within:ring-[#2F80ED]/20 ${
+                computedRows > 1 ? 'min-h-[48px] py-1.5 items-end' : 'h-12 items-center'
+              }`}
+            >
               <textarea
                 ref={textareaRef}
                 value={newMessage}
@@ -286,34 +341,37 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
               >
                 <MsgImageIcon className="w-[21px] h-[21px]" />
               </button>
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Right Primary Button: Voice Mic when empty, #2F80ED Send Paper-plane when typing/attached — matched 1:1 to 48px capsule */}
-        {!isRecording && (
-          hasContent ? (
-            <button
-              type="button"
-              onClick={onSendMessage}
-              disabled={isUploading}
-              className="w-12 h-12 rounded-full msg-accent-btn text-white flex items-center justify-center hover:brightness-105 active:scale-95 transition-all shadow-[0_6px_18px_rgba(47,128,237,0.3)] cursor-pointer disabled:opacity-50 shrink-0"
-              title="Send message"
-            >
-              <MsgSendIcon className="w-[21px] h-[21px] mr-0.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={startRecording}
-              className="w-12 h-12 rounded-full msg-composer-capsule flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-95 transition shrink-0 cursor-pointer"
-              title="Record voice message"
-            >
-              <MsgMicIcon className="w-[22px] h-[22px]" />
-            </button>
-          )
+            {/* Right Primary Button: Send Paper-plane or Voice Mic */}
+            {hasContent ? (
+              <motion.button
+                key="send-btn"
+                initial={{ scale: 0.82, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 520, damping: 26 }}
+                type="button"
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={onSendMessage}
+                disabled={isUploading}
+                className="w-12 h-12 rounded-full msg-accent-btn text-white flex items-center justify-center hover:brightness-105 active:scale-90 transition-all shadow-[0_6px_18px_rgba(47,128,237,0.32)] cursor-pointer disabled:opacity-50 shrink-0"
+                title="Send message"
+              >
+                <MsgSendIcon className="w-[21px] h-[21px] mr-0.5" />
+              </motion.button>
+            ) : (
+              <button
+                type="button"
+                onClick={startRecording}
+                className="w-12 h-12 rounded-full msg-composer-capsule flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-90 transition shrink-0 cursor-pointer"
+                title="Record voice message"
+              >
+                <MsgMicIcon className="w-[22px] h-[22px]" />
+              </button>
+            )}
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 };

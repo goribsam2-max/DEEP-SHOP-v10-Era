@@ -2,12 +2,13 @@ import { uploadToImgbb, generateMicroThumb } from '../services/imgbb';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle, Archive } from 'lucide-react';
+import { Home, Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, Check, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Bot, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle, Archive } from 'lucide-react';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { subscribeToWebPush } from '../lib/push';
 import SEO from '../components/SEO';
 import { audioHelper } from '../lib/AudioHelper';
+import { triggerHaptic } from '../lib/haptics';
 import { useNotify } from '../components/Notifications';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -963,7 +964,36 @@ export default function Messages() {
     }
   }, [otherActivity]);
 
-  // Voice Recording states
+  // Lock outer document scroll while inside full-screen Messages so only inner chat streams scroll
+  useEffect(() => {
+    const htmlEl = document.documentElement;
+    const bodyEl = document.body;
+    const prevHtmlOverflow = htmlEl.style.overflow;
+    const prevHtmlOverscroll = htmlEl.style.overscrollBehavior;
+    const prevBodyOverflow = bodyEl.style.overflow;
+    const prevBodyOverscroll = bodyEl.style.overscrollBehavior;
+    const prevBodyMinHeight = bodyEl.style.minHeight;
+    const prevBodyHeight = bodyEl.style.height;
+
+    window.scrollTo(0, 0);
+    htmlEl.style.overflow = 'hidden';
+    htmlEl.style.overscrollBehavior = 'none';
+    bodyEl.style.overflow = 'hidden';
+    bodyEl.style.overscrollBehavior = 'none';
+    bodyEl.style.minHeight = '100dvh';
+    bodyEl.style.height = '100dvh';
+
+    return () => {
+      htmlEl.style.overflow = prevHtmlOverflow;
+      htmlEl.style.overscrollBehavior = prevHtmlOverscroll;
+      bodyEl.style.overflow = prevBodyOverflow;
+      bodyEl.style.overscrollBehavior = prevBodyOverscroll;
+      bodyEl.style.minHeight = prevBodyMinHeight;
+      bodyEl.style.height = prevBodyHeight;
+    };
+  }, []);
+
+  // Voice Recording, Zero-Latency Optimistic Send, Animation, and Dynamic AI Refs
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const dragStartY = useRef(0);
@@ -972,6 +1002,14 @@ export default function Messages() {
   const recordedMimeTypeRef = useRef<string>('audio/webm');
   const audioChunksRef = useRef<BlobPart[]>([]);
   const recordingTimerRef = useRef<any>(null);
+  const isRecordingRef = useRef<boolean>(false);
+  const recordingStartMsRef = useRef<number>(0);
+  const isCancellingRecordingRef = useRef<boolean>(false);
+  const localVoiceBlobUrlsRef = useRef<Map<string, string>>(new Map());
+  const pendingOptimisticMapRef = useRef<Map<string, any[]>>(new Map());
+  const animatedMsgIdsRef = useRef<Set<string>>(new Set());
+  const chatHydratedRef = useRef<Set<string>>(new Set());
+  const aiReplyTimeoutRef = useRef<Record<string, any>>({});
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
 
   
@@ -1039,6 +1077,8 @@ export default function Messages() {
   const [channelSubscribers, setChannelSubscribers] = useState<any[]>([]);
   const [forwardingMessage, setForwardingMessage] = useState<any | null>(null);
   const [showForwardModal, setShowForwardModal] = useState(false);
+  const [forwardSearchQuery, setForwardSearchQuery] = useState('');
+  const [forwardedTargetsMap, setForwardedTargetsMap] = useState<Record<string, boolean>>({});
 
   // Handle incoming ?sharePost=<postId> from News Hub Share Page
   useEffect(() => {
@@ -2189,41 +2229,73 @@ const handleCreateChannel = async () => {
   const handleSendForward = async (targetChatOrChannel: any, isChannelTarget: boolean) => {
     if (!user || !forwardingMessage) return;
 
+    const targetKey = isChannelTarget
+      ? `ch_${targetChatOrChannel.id}`
+      : `chat_${targetChatOrChannel.id || targetChatOrChannel.otherUser?.id || targetChatOrChannel.otherUser?.uid}`;
+    if (forwardedTargetsMap[targetKey]) return;
+
+    triggerHaptic();
+    setForwardedTargetsMap((prev) => ({ ...prev, [targetKey]: true }));
+
     try {
-      const forwardText = forwardingMessage.text;
-      const forwardImg = forwardingMessage.imageUrl;
-      const originalName = forwardingMessage.originalSenderName || "User";
+      const forwardText = forwardingMessage.text || '';
+      const forwardImages: string[] = Array.isArray(forwardingMessage.images) && forwardingMessage.images.length > 0
+        ? forwardingMessage.images
+        : (forwardingMessage.imageUrl ? [forwardingMessage.imageUrl] : []);
+      const forwardImg = forwardImages[0] || null;
+      const forwardAudio = forwardingMessage.audioUrl || null;
+      const forwardAudioDuration = forwardingMessage.audioDuration || 12;
+      const originalName =
+        forwardingMessage.forwardedFrom ||
+        forwardingMessage.originalSenderName ||
+        forwardingMessage.senderName ||
+        (forwardingMessage.senderId === user.uid
+          ? (userShopName || user.displayName || 'You')
+          : (participantProfiles[forwardingMessage.senderId]?.displayName ||
+             activeChat?.otherUser?.shopName ||
+             activeChat?.otherUser?.displayName ||
+             'User'));
+
+      const previewSummary =
+        forwardText ||
+        (forwardAudio ? '🎙️ Forwarded voice message' : forwardImg ? '📷 Forwarded photo' : 'Forwarded message');
 
       const msgData: any = {
-        text: forwardText || "",
-        imageUrl: forwardImg || null,
+        text: forwardText,
+        images: forwardImages,
+        imageUrl: forwardImg,
+        audioUrl: forwardAudio,
+        ...(forwardAudio ? { audioDuration: forwardAudioDuration } : {}),
         senderId: user.uid,
+        senderName: userShopName || user.displayName || 'Member',
+        senderPhoto: user.photoURL || '',
         forwardedFrom: originalName,
-        timestamp: serverTimestamp()
+        createdAt: Date.now(),
+        timestamp: serverTimestamp(),
+        seenBy: [user.uid],
       };
 
       if (isChannelTarget) {
         await addDoc(collection(db, 'community_channels', targetChatOrChannel.id, 'messages'), msgData);
-        
+
         fetch('/api/send-push-channel', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             channelId: targetChatOrChannel.id,
-            title: `📢 Forwarded Post in ${targetChatOrChannel.name}`,
-            body: forwardText || "Sent a forwarded image",
+            title: `Forwarded in ${targetChatOrChannel.name}`,
+            body: previewSummary,
             link: `/messages?channelId=${targetChatOrChannel.id}`
           })
-        }).catch(err => console.error("Channel push error:", err));
-
+        }).catch(() => {});
       } else {
         let chatId = targetChatOrChannel.id;
-        if (targetChatOrChannel.isNew) {
+        if (targetChatOrChannel.isNew || !chatId) {
           const chatRef = await addDoc(collection(db, 'p2p_chats'), {
             participants: [user.uid, targetChatOrChannel.otherUser.id],
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-            lastMessage: forwardText || 'Sent a forwarded image',
+            lastMessage: previewSummary,
             lastSenderId: user.uid,
             seenBy: [user.uid]
           });
@@ -2231,7 +2303,7 @@ const handleCreateChannel = async () => {
         } else {
           await updateDoc(doc(db, 'p2p_chats', chatId), {
             updatedAt: serverTimestamp(),
-            lastMessage: forwardText || 'Sent a forwarded image',
+            lastMessage: previewSummary,
             lastSenderId: user.uid,
             seenBy: [user.uid]
           });
@@ -2240,38 +2312,41 @@ const handleCreateChannel = async () => {
         await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), msgData);
         const recipientId = targetChatOrChannel.otherUser?.id || targetChatOrChannel.otherUser?.uid;
         if (recipientId) {
-             fetch('/api/web-push/send-p2p', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({
-                     targetUserId: recipientId,
-                     title: `${user.displayName || 'Someone'} forwarded a message`,
-                     body: msgData.text || 'Forwarded an attachment',
-                     link: `/messages?chatId=${user.uid}`
-                 })
-             }).catch(() => {});
-        }
-
-        if (recipientId && recipientId !== "system") {
-          fetch("/api/send-push-user", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+          fetch('/api/web-push/send-p2p', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: recipientId,
-              title: user.displayName || "New Message",
-              body: `Forwarded: ${forwardText || "Sent an image"}`,
+              targetUserId: recipientId,
+              title: `${user.displayName || 'Someone'} forwarded a message`,
+              body: previewSummary,
               link: `/messages?chatId=${user.uid}`
             })
-          }).catch(err => console.error("Message push notification failed:", err));
+          }).catch(() => {});
+        }
+
+        if (recipientId && recipientId !== 'system') {
+          fetch('/api/send-push-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: recipientId,
+              title: user.displayName || 'New Message',
+              body: `Forwarded: ${previewSummary}`,
+              link: `/messages?chatId=${user.uid}`
+            })
+          }).catch(() => {});
         }
       }
 
-      notify("Message forwarded successfully!", "success");
-      setShowForwardModal(false);
-      setForwardingMessage(null);
-    } catch(err) {
+      audioHelper?.playMessageSentSound?.();
+    } catch (err) {
       console.error(err);
-      notify("Failed to forward message", "error");
+      setForwardedTargetsMap((prev) => {
+        const next = { ...prev };
+        delete next[targetKey];
+        return next;
+      });
+      notify('Failed to forward message', 'error');
     }
   };
 
@@ -2582,63 +2657,162 @@ const handleCreateChannel = async () => {
     }
   }, [activeChat, searchParams, setSearchParams]);
 
-  // Effect 4: Listen for messages & set as seen (with instant in-memory message cache)
+  // Effect 4: Listen for messages & set as seen (with <0.1s synchronous memory + localStorage hydration & optimistic merge)
   useEffect(() => {
-    if (!activeChat || activeChat?.isNew || !activeChat?.id) {
-        setMessages([]);
-        return;
+    const activeId = activeChat?.id;
+    if (!activeChat || activeChat?.isNew || !activeId) {
+      setMessages([]);
+      return;
     }
 
-    const cachedMsgs = messagesCacheRef.current.get(activeChat.id);
-    if (cachedMsgs) {
-      setMessages(cachedMsgs);
+    let initialMsgs = messagesCacheRef.current.get(activeId);
+    if (!initialMsgs) {
+      try {
+        const rawLocal = localStorage.getItem(`deep_msgs_cache_${activeId}`);
+        if (rawLocal) {
+          const parsed = JSON.parse(rawLocal);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            initialMsgs = parsed;
+            messagesCacheRef.current.set(activeId, parsed);
+          }
+        }
+      } catch {}
     }
-    
-    const colRef = collection(db, 'p2p_chats', activeChat?.id, 'messages');
+
+    const knownIds = new Set<string>();
+    if (initialMsgs && initialMsgs.length > 0) {
+      initialMsgs.forEach((m: any) => {
+        if (m?.id) knownIds.add(m.id);
+      });
+      setMessages(initialMsgs);
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      });
+    }
+
+    const colRef = collection(db, 'p2p_chats', activeId, 'messages');
 
     const unsub = onSnapshot(colRef, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
-      
-      // Sort messages safely by timestamp
-      msgs.sort((a: any, b: any) => {
-        const getTs = (m: any) => {
-          if (!m.timestamp) return m.createdAt || 0;
-          if (m.timestamp.toMillis) return m.timestamp.toMillis();
-          if (m.timestamp.seconds) return m.timestamp.seconds * 1000;
-          if (typeof m.timestamp === 'number') return m.timestamp;
-          return 0;
+      const getTs = (m: any) => {
+        if (!m.timestamp) return m.createdAt || 0;
+        if (m.timestamp.toMillis) return m.timestamp.toMillis();
+        if (m.timestamp.seconds) return m.timestamp.seconds * 1000;
+        if (typeof m.timestamp === 'number') return m.timestamp;
+        return m.createdAt || 0;
+      };
+
+      const msgs = snapshot.docs.map((d) => {
+        const data = d.data() as any;
+        const localBlob =
+          data.clientMsgId && localVoiceBlobUrlsRef.current.get(data.clientMsgId);
+        return {
+          id: d.id,
+          ...data,
+          ...(localBlob ? { _localAudioUrl: localBlob } : {}),
         };
-        return getTs(a) - getTs(b);
       });
 
-      const filteredMsgs = msgs.filter(m => {
-          if (m.deletedFor && Array.isArray(m.deletedFor) && user?.uid && m.deletedFor.includes(user.uid)) return false;
-          if (activeChat?.autoDeleteTimer && typeof activeChat?.autoDeleteTimer?.duration === 'number' && activeChat?.autoDeleteTimer?.duration > 0) {
-             const ts = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp?.seconds ? m.timestamp.seconds * 1000 : (typeof m.timestamp === 'number' ? m.timestamp : 0));
-             if (ts > 0 && Date.now() - ts > activeChat?.autoDeleteTimer?.duration) return false;
+      msgs.sort((a: any, b: any) => getTs(a) - getTs(b));
+
+      const filteredMsgs = msgs.filter((m) => {
+        if (
+          m.deletedFor &&
+          Array.isArray(m.deletedFor) &&
+          user?.uid &&
+          m.deletedFor.includes(user.uid)
+        ) {
+          return false;
+        }
+        if (
+          activeChat?.autoDeleteTimer &&
+          typeof activeChat?.autoDeleteTimer?.duration === 'number' &&
+          activeChat?.autoDeleteTimer?.duration > 0
+        ) {
+          const ts = getTs(m);
+          if (ts > 0 && Date.now() - ts > activeChat.autoDeleteTimer.duration) {
+            return false;
           }
-          return true;
+        }
+        return true;
       });
-      messagesCacheRef.current.set(activeChat.id, filteredMsgs);
-      setMessages(filteredMsgs);
 
-      // Mark the active chat as seen by current user in real-time
-      if (user && activeChat?.id) {
+      // Reconcile pending optimistic messages so outgoing bubbles never flicker or disappear
+      const pendingList = pendingOptimisticMapRef.current.get(activeId) || [];
+      let remainingOptimistic: any[] = [];
+      if (pendingList.length > 0) {
+        remainingOptimistic = pendingList.filter((opt) => {
+          const matchedInRemote = filteredMsgs.some((rm) => {
+            if (opt.clientMsgId && rm.clientMsgId === opt.clientMsgId) return true;
+            if (rm.senderId === opt.senderId) {
+              const dt = Math.abs(getTs(rm) - (opt.createdAt || 0));
+              if (dt < 30000) {
+                if (opt.text && rm.text === opt.text) return true;
+                if (opt.audioUrl && rm.audioUrl) return true;
+              }
+            }
+            return false;
+          });
+          return !matchedInRemote && Date.now() - (opt.createdAt || 0) < 45000;
+        });
+        pendingOptimisticMapRef.current.set(activeId, remainingOptimistic);
+      }
+
+      const wasHydrated = chatHydratedRef.current.has(activeId);
+      let playedReceiveChime = false;
+      filteredMsgs.forEach((m) => {
+        if (!knownIds.has(m.id)) {
+          knownIds.add(m.id);
+          if (wasHydrated) {
+            animatedMsgIdsRef.current.add(m.id);
+            if (m.senderId && m.senderId !== user?.uid && !playedReceiveChime) {
+              playedReceiveChime = true;
+              if (!privacySettings.doNotDisturb) {
+                (audioHelper as any)?.playMessageReceivedSound?.();
+              }
+            }
+          }
+        }
+      });
+      chatHydratedRef.current.add(activeId);
+
+      const mergedFinal =
+        remainingOptimistic.length > 0
+          ? [...filteredMsgs, ...remainingOptimistic]
+          : filteredMsgs;
+
+      messagesCacheRef.current.set(activeId, mergedFinal);
+      setMessages(mergedFinal);
+
+      // Persist compact latest 50 messages to localStorage for <0.1s reload hydration
+      try {
+        const serializable = filteredMsgs.slice(-50).map((m) => ({
+          ...m,
+          _localAudioUrl: undefined,
+          timestamp: getTs(m) || Date.now(),
+        }));
+        localStorage.setItem(
+          `deep_msgs_cache_${activeId}`,
+          JSON.stringify(serializable)
+        );
+      } catch {}
+
+      if (user && activeId) {
         if (currentUserProfile?.readReceipts !== false) {
-          updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
+          updateDoc(doc(db, 'p2p_chats', activeId), {
             seenBy: arrayUnion(user.uid)
-          }).catch(console.error);
+          }).catch(() => {});
         }
       }
 
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: wasHydrated ? 'smooth' : 'auto',
+        });
+      });
     }, (error) => {
-      console.warn("Messages snapshot error:", error);
+      console.warn('Messages snapshot error:', error);
     });
 
-    // Request notification permission to show push notifications for new messages
     if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'default') {
       window.Notification.requestPermission().catch(() => {});
     }
@@ -2706,11 +2880,19 @@ const handleCreateChannel = async () => {
     return await uploadToImgbb(file);
   };
 
-  const handleSendMessage = async (forcedAudioUrl?: string) => {
+  const handleSendMessage = async (
+    forcedAudioUrl?: string,
+    forcedAudioDuration?: number,
+    remoteAudioPromise?: Promise<string | null>
+  ) => {
     const audioUrlToSend = forcedAudioUrl || recordedAudioUrl;
     if ((!newMessage.trim() && previewUrls.length === 0 && !audioUrlToSend) || !user) return;
 
-    const messageText = newMessage.trim();
+    const messageText = forcedAudioUrl ? '' : newMessage.trim();
+    const effectiveAudioDuration = Math.max(
+      1,
+      Math.round(forcedAudioDuration ?? (recordingDuration || 4))
+    );
 
     // Check Prohibited Words / Admin Word Filter
     if (messageText && bannedWords && bannedWords.length > 0) {
@@ -2725,99 +2907,184 @@ const handleCreateChannel = async () => {
     if (activeChannel) {
       const isCreator = activeChannel.creatorId === user.uid;
       const isChannelAdmin = channelAdmins.some((a: any) => a.id === user.uid || a.uid === user.uid);
-      
-      setNewMessage('');
-      
-      let imageUrls: string[] = [...previewUrls];
-      let currentThumbs: string[] = [...previewThumbs];
-      setPreviewUrls([]);
-      setPreviewThumbs([]);
+
+      if (!forcedAudioUrl) setNewMessage('');
+
+      const imageUrls: string[] = forcedAudioUrl ? [] : [...previewUrls];
+      const currentThumbs: string[] = forcedAudioUrl ? [] : [...previewThumbs];
+      if (!forcedAudioUrl) {
+        setPreviewUrls([]);
+        setPreviewThumbs([]);
+      }
+      const capturedReply = replyingTo;
+      setReplyingTo(null);
+      setRecordedAudioUrl(null);
 
       try {
+        let finalChannelAudioUrl = audioUrlToSend || null;
+        if (remoteAudioPromise) {
+          const uploadedVoice = await remoteAudioPromise;
+          if (uploadedVoice) {
+            finalChannelAudioUrl = uploadedVoice;
+          }
+        }
+
         const msgData: any = {
           text: messageText || null,
           images: imageUrls,
-          imageUrl: imageUrls[0] || null, // fallback
+          imageUrl: imageUrls[0] || null,
           imageThumbs: currentThumbs.length > 0 ? currentThumbs : null,
-          audioUrl: audioUrlToSend || null,
-          audioDuration: recordingDuration || 12,
+          audioUrl: finalChannelAudioUrl,
+          audioDuration: effectiveAudioDuration,
           senderId: user.uid,
           senderName: userShopName || user.displayName || 'Member',
           senderPhoto: user.photoURL || '',
           senderRole: isCreator ? 'creator' : (isChannelAdmin ? 'admin' : (userRole || 'member')),
           timestamp: serverTimestamp()
         };
-        setRecordedAudioUrl(null);
 
-        if (replyingTo) {
+        if (capturedReply) {
           msgData.replyTo = {
-            id: replyingTo.id,
-            text: replyingTo.text,
-            senderId: replyingTo.senderId,
-            senderName: replyingTo.senderName || (replyingTo.senderId === user.uid ? 'You' : 'Member'),
-            imageUrl: replyingTo.imageUrl || null
+            id: capturedReply.id,
+            text: capturedReply.text,
+            senderId: capturedReply.senderId,
+            senderName: capturedReply.senderName || (capturedReply.senderId === user.uid ? 'You' : 'Member'),
+            imageUrl: capturedReply.imageUrl || null
           };
-          setReplyingTo(null);
         }
 
         await addDoc(collection(db, 'community_channels', activeChannel.id, 'messages'), msgData);
-        
+
         fetch('/api/send-push-channel', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             channelId: activeChannel.id,
             title: `📢 New Post in ${activeChannel.name}`,
-            body: messageText || "Sent an image attachment",
+            body: messageText || (finalChannelAudioUrl ? '🎙️ Voice message' : 'Sent an image attachment'),
             link: `/messages?channelId=${activeChannel.id}`
           })
-        }).catch(err => console.error("Channel push error:", err));
+        }).catch(() => {});
 
-        setTimeout(() => {
+        requestAnimationFrame(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        });
       } catch (err) {
         console.error(err);
-        notify("Failed to send community post", "error");
+        notify('Failed to send community post', 'error');
       }
       return;
     }
 
     if (!activeChat) return;
 
-    try {
-      setIsTyping(false);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      if (activeChat?.id && user?.uid) {
-        updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
-          [`typingState.${user.uid}`]: null
-        }).catch(console.error);
-      }
+    // ⚡ SYNCHRONOUS 0ms OPTIMISTIC UI INSERTION BEFORE ANY NETWORK AWAIT
+    setIsTyping(false);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (!forcedAudioUrl) setNewMessage('');
 
-      setNewMessage('');
-      
-      let imageUrls: string[] = [...previewUrls];
-      let currentThumbs: string[] = [...previewThumbs];
+    const imageUrls: string[] = forcedAudioUrl ? [] : [...previewUrls];
+    const currentThumbs: string[] = forcedAudioUrl ? [] : [...previewThumbs];
+    if (!forcedAudioUrl) {
       setPreviewUrls([]);
       setPreviewThumbs([]);
       setAttachments([]);
-      
-      const otherUserId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
-      const isGroup = Boolean(activeChat?.isGroup || activeChat?.type === 'group');
-      let chatId = activeChat?.id;
-      
-      const lastMessageText = messageText || (audioUrlToSend ? '🎙️ Voice Message' : imageUrls.length > 0 ? 'Sent an image' : 'Sent an attachment');
-      
-      // If it's a new chat, find or create it first
+    }
+    const capturedReply = replyingTo;
+    setReplyingTo(null);
+    setRecordedAudioUrl(null);
+
+    const otherUserId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
+    const isGroup = Boolean(activeChat?.isGroup || activeChat?.type === 'group');
+    let chatId = activeChat?.id;
+
+    const currentSenderName = userShopName || user.displayName || user.email?.split('@')[0] || 'User';
+    const currentSenderPhoto = user.photoURL || '';
+    const currentSenderRole = activeChat?.creatorId === user.uid ? 'creator' : (activeChat?.admins?.includes(user.uid) ? 'admin' : (userRole || 'member'));
+
+    const clientMsgId = `cmsg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    if (audioUrlToSend && audioUrlToSend.startsWith('blob:')) {
+      localVoiceBlobUrlsRef.current.set(clientMsgId, audioUrlToSend);
+    }
+
+    const baseMsgPayload: any = {
+      clientMsgId,
+      text: messageText,
+      images: imageUrls,
+      imageUrl: imageUrls[0] || null,
+      imageThumbs: currentThumbs.length > 0 ? currentThumbs : null,
+      audioUrl: audioUrlToSend || null,
+      audioDuration: effectiveAudioDuration,
+      senderId: user.uid,
+      senderName: currentSenderName,
+      senderPhoto: currentSenderPhoto,
+      createdAt: Date.now(),
+      seenBy: [user.uid],
+      ...(isGroup && currentSenderRole ? { senderRole: currentSenderRole } : {}),
+    };
+
+    if (capturedReply) {
+      baseMsgPayload.replyTo = {
+        id: capturedReply.id,
+        text: capturedReply.text,
+        senderId: capturedReply.senderId,
+        senderName:
+          (capturedReply as any).senderName ||
+          (capturedReply.senderId === user.uid
+            ? 'You'
+            : participantProfiles[capturedReply.senderId]?.displayName || 'User'),
+        imageUrl: capturedReply.imageUrl || null,
+      };
+    }
+
+    const optimisticId = `temp-${clientMsgId}`;
+    const optimisticMsg = {
+      id: optimisticId,
+      ...baseMsgPayload,
+      ...(audioUrlToSend?.startsWith('blob:') ? { _localAudioUrl: audioUrlToSend } : {}),
+      timestamp: Date.now(),
+    };
+
+    animatedMsgIdsRef.current.add(optimisticId);
+    animatedMsgIdsRef.current.add(clientMsgId);
+
+    if (chatId && !activeChat?.isNew) {
+      const existingPending = pendingOptimisticMapRef.current.get(chatId) || [];
+      pendingOptimisticMapRef.current.set(chatId, [...existingPending, optimisticMsg]);
+    }
+    setMessages((prev) => [...prev, optimisticMsg]);
+    if (!privacySettings.doNotDisturb) {
+      audioHelper?.playMessageSentSound?.();
+    }
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    try {
+      if (activeChat?.id && user?.uid && !activeChat?.isNew) {
+        updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+          [`typingState.${user.uid}`]: null
+        }).catch(() => {});
+      }
+
+      const lastMessageText =
+        messageText ||
+        (audioUrlToSend
+          ? '🎙️ Voice Message'
+          : imageUrls.length > 0
+          ? 'Sent an image'
+          : 'Sent an attachment');
+
+      // Find or create chat doc if brand-new conversation
       if (!chatId || activeChat?.isNew) {
         if (!isGroup && otherUserId) {
-          // Check if an existing chat already exists in memory or Firestore to avoid creating duplicates
-          const existingInChats = chats.find(c => 
-            !c.isGroup && 
-            c.type !== 'group' && 
-            Array.isArray(c.participants) && 
-            c.participants.includes(otherUserId) && 
-            c.participants.includes(user.uid)
+          const existingInChats = chats.find(
+            (c) =>
+              !c.isGroup &&
+              c.type !== 'group' &&
+              Array.isArray(c.participants) &&
+              c.participants.includes(otherUserId) &&
+              c.participants.includes(user.uid)
           );
 
           if (existingInChats?.id) {
@@ -2829,17 +3096,20 @@ const handleCreateChannel = async () => {
                 where('participants', 'array-contains', user.uid)
               );
               const snapExisting = await getDocs(qExisting);
-              const foundDoc = snapExisting.docs.find(d => {
+              const foundDoc = snapExisting.docs.find((d) => {
                 const data = d.data();
                 const p = data.participants;
-                return Array.isArray(p) && p.includes(otherUserId) && !data.isGroup && data.type !== 'group';
+                return (
+                  Array.isArray(p) &&
+                  p.includes(otherUserId) &&
+                  !data.isGroup &&
+                  data.type !== 'group'
+                );
               });
               if (foundDoc) {
                 chatId = foundDoc.id;
               }
-            } catch (e) {
-              console.warn("Could not query existing chats:", e);
-            }
+            } catch {}
           }
 
           if (!chatId) {
@@ -2854,158 +3124,190 @@ const handleCreateChannel = async () => {
             chatId = chatRef.id;
           }
         } else if (isGroup && !chatId) {
-          notify("Group not found", "error");
+          notify('Group not found', 'error');
           return;
         }
 
+        if (chatId) {
+          const existingPending = pendingOptimisticMapRef.current.get(chatId) || [];
+          pendingOptimisticMapRef.current.set(chatId, [...existingPending, optimisticMsg]);
+        }
         setTempActiveChat({ ...activeChat, id: chatId, isNew: false, seenBy: [user.uid] });
-        setSearchParams({ chatId });
-      } else {
-        await updateDoc(doc(db, 'p2p_chats', chatId), {
+        setSearchParams({ chatId }, { replace: true });
+      }
+
+      // Resolve permanent voice note URL in background if this is a voice message
+      let finalRemoteAudioUrl = audioUrlToSend || null;
+      if (remoteAudioPromise) {
+        const uploadedUrl = await remoteAudioPromise;
+        if (!uploadedUrl) {
+          throw new Error('Voice upload failed');
+        }
+        finalRemoteAudioUrl = uploadedUrl;
+      }
+
+      const firestoreMsgData: any = {
+        ...baseMsgPayload,
+        audioUrl: finalRemoteAudioUrl,
+        timestamp: serverTimestamp(),
+      };
+
+      const isAdminRole = Boolean(
+        currentUserProfile?.role === 'admin' ||
+        currentUserProfile?.role === 'staff' ||
+        userRole === 'admin' ||
+        user.email?.toLowerCase() === 'goribsam2@gmail.com' ||
+        user.email?.toLowerCase() === 'deepshop@gmail.com'
+      );
+
+      // If Admin/Support replies manually, immediately cancel any pending AI auto-reply & mark aiDisabled: true
+      if (isAdminRole && chatId) {
+        if (aiReplyTimeoutRef.current[chatId]) {
+          clearTimeout(aiReplyTimeoutRef.current[chatId]);
+          delete aiReplyTimeoutRef.current[chatId];
+        }
+      }
+
+      await Promise.all([
+        addDoc(collection(db, 'p2p_chats', chatId, 'messages'), firestoreMsgData),
+        updateDoc(doc(db, 'p2p_chats', chatId), {
           updatedAt: serverTimestamp(),
           lastMessage: lastMessageText,
           lastSenderId: user.uid,
-          seenBy: [user.uid]
-        }).catch(console.error);
-      }
+          seenBy: [user.uid],
+          ...(isAdminRole && !isGroup ? { aiDisabled: true } : {}),
+        }).catch(() => {}),
+      ]);
 
-      const currentSenderName = userShopName || user.displayName || user.email?.split('@')[0] || 'User';
-      const currentSenderPhoto = user.photoURL || '';
-      const currentSenderRole = activeChat?.creatorId === user.uid ? 'creator' : (activeChat?.admins?.includes(user.uid) ? 'admin' : (userRole || 'member'));
-
-      const msgData: any = {
-        text: messageText,
-        images: imageUrls,
-        imageUrl: imageUrls[0] || null,
-        imageThumbs: currentThumbs.length > 0 ? currentThumbs : null,
-        audioUrl: audioUrlToSend || null,
-        audioDuration: recordingDuration || 12,
-        senderId: user.uid,
-        senderName: currentSenderName,
-        senderPhoto: currentSenderPhoto,
-        createdAt: Date.now(),
-        timestamp: serverTimestamp(),
-        seenBy: [user.uid],
-      };
-      if (isGroup && currentSenderRole) {
-        msgData.senderRole = currentSenderRole;
-      }
-      setRecordedAudioUrl(null);
-
-      if (replyingTo) {
-        msgData.replyTo = {
-          id: replyingTo.id,
-          text: replyingTo.text,
-          senderId: replyingTo.senderId,
-          senderName: (replyingTo as any).senderName || (replyingTo.senderId === user.uid ? 'You' : (participantProfiles[replyingTo.senderId]?.displayName || 'User'))
-        };
-        setReplyingTo(null);
-      }
-
-      // Optimistically show message immediately for sender
-      const optimisticId = `temp-${Date.now()}`;
-      const optimisticMsg = {
-        id: optimisticId,
-        ...msgData,
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, optimisticMsg]);
-
-      audioHelper?.playMessageSentSound?.();
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
-
-      // Save to Firestore
-      await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), msgData);
-      
-      // Send real push notification to recipient
+      // Send push notification + Dynamic AI Auto-Reply
       const recipientId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
-      if (recipientId && recipientId !== "system") {
-        fetch("/api/send-push-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+      if (recipientId && recipientId !== 'system' && !isGroup) {
+        fetch('/api/send-push-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: recipientId,
-            title: user.displayName || "New Message",
-            body: messageText || "Sent an image",
+            title: user.displayName || 'New Message',
+            body: lastMessageText,
             link: `/messages?chatId=${user.uid}`
           })
-        }).catch(err => console.error("Message push notification failed:", err));
+        }).catch(() => {});
 
-        // 🤖 Stealth AI Auto-Reply Trigger
-        try {
-          const aiSnap = await getDoc(doc(db, 'settings', 'ai_human_agent'));
-          const aiSettings = aiSnap.data();
-          
-          // Professional: Auto-disable AI when Admin/Staff intervenes (IMG_AI_DYNAMIC)
-          const isAdminRole = currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'staff';
-          if (isAdminRole) {
-            updateDoc(doc(db, 'p2p_chats', chatId), { aiDisabled: true }).catch(() => {});
-          }
+        // 🤖 Dynamic AI Auto-Reply (Auto-stops when Admin replies or clicks 1-click AI Off)
+        if (!isAdminRole && messageText) {
+          try {
+            const [aiSnap, liveChatSnap] = await Promise.all([
+              getDoc(doc(db, 'settings', 'ai_human_agent')),
+              getDoc(doc(db, 'p2p_chats', chatId)),
+            ]);
+            const aiSettings = aiSnap.exists() ? aiSnap.data() : null;
+            const liveChatData = liveChatSnap.exists() ? liveChatSnap.data() : activeChat;
 
-          if (aiSettings?.enabled && !activeChat?.aiDisabled && !isAdminRole) {
-            const otherEmail = activeChat?.otherUser?.email?.toLowerCase();
-            const targetEmail = aiSettings.targetEmail?.toLowerCase();
-            const isTargetAccount = (otherEmail === targetEmail) || (recipientId === aiSettings.targetUid);
+            const isChatAiDisabled = Boolean(liveChatData?.aiDisabled || activeChat?.aiDisabled);
+            const globalAiEnabled = aiSettings ? aiSettings.enabled !== false : true;
 
-            if (isTargetAccount) {
-              // Simulate human delay
-              const delay = (aiSettings.minDelay || 2) * 1000 + (Math.random() * 2000);
-              
-              setTimeout(async () => {
-                // 1. Show typing indicator
-                if (aiSettings.showTyping) {
-                  updateDoc(doc(db, 'p2p_chats', chatId), {
-                    [`typingState.${recipientId}`]: { status: 'typing', updatedAt: Date.now() }
-                  }).catch(() => {});
-                }
+            const otherEmail = (activeChat?.otherUser?.email || '').toLowerCase();
+            const targetEmail = (aiSettings?.targetEmail || '').toLowerCase();
+            const isTargetAdminAccount = Boolean(
+              (targetEmail && otherEmail === targetEmail) ||
+              (aiSettings?.targetUid && recipientId === aiSettings.targetUid) ||
+              otherEmail === 'goribsam2@gmail.com' ||
+              otherEmail === 'deepshop@gmail.com' ||
+              activeChat?.otherUser?.role === 'admin' ||
+              activeChat?.otherUser?.role === 'staff'
+            );
 
+            if (globalAiEnabled && !isChatAiDisabled && isTargetAdminAccount) {
+              if (aiReplyTimeoutRef.current[chatId]) {
+                clearTimeout(aiReplyTimeoutRef.current[chatId]);
+              }
+
+              const delay = Math.min(
+                2400,
+                Math.max(900, ((aiSettings?.minDelay || 1.2) * 1000))
+              );
+
+              aiReplyTimeoutRef.current[chatId] = setTimeout(async () => {
+                delete aiReplyTimeoutRef.current[chatId];
                 try {
-                  // 2. Prepare conversation history for AI (last 6 messages)
-                  const msgsSnap = await getDocs(query(
-                    collection(db, 'p2p_chats', chatId, 'messages'),
-                    orderBy('timestamp', 'desc'),
-                    limit(6)
-                  ));
-                  
+                  // Guard 1: Verify Admin hasn't disabled AI or already replied manually
+                  const preCheckSnap = await getDoc(doc(db, 'p2p_chats', chatId));
+                  const preCheckData = preCheckSnap.data();
+                  if (
+                    preCheckData?.aiDisabled ||
+                    (preCheckData?.lastSenderId && preCheckData.lastSenderId !== user.uid)
+                  ) {
+                    return;
+                  }
+
+                  if (aiSettings?.showTyping !== false) {
+                    updateDoc(doc(db, 'p2p_chats', chatId), {
+                      [`typingState.${recipientId}`]: { status: 'typing', updatedAt: Date.now() }
+                    }).catch(() => {});
+                  }
+
+                  const msgsSnap = await getDocs(
+                    query(
+                      collection(db, 'p2p_chats', chatId, 'messages'),
+                      orderBy('createdAt', 'desc'),
+                      limit(8)
+                    )
+                  );
+
                   const history = msgsSnap.docs
-                    .map(d => ({
+                    .map((d) => ({
                       role: d.data().senderId === recipientId ? 'assistant' : 'user',
                       content: d.data().text || ''
                     }))
-                    .filter(m => m.content)
+                    .filter((m) => m.content)
                     .reverse();
 
-                  // 3. Get AI response via server proxy
-                  const prompt = `${aiSettings.systemPrompt}\n\nContext Information:\n${aiSettings.knowledgeBase}`;
+                  if (history.length === 0 || history[history.length - 1]?.content !== messageText) {
+                    history.push({ role: 'user', content: messageText });
+                  }
+
+                  const baseSystemPrompt =
+                    aiSettings?.systemPrompt ||
+                    'You are the helpful, polite support assistant for this shop/platform. Reply naturally, concisely, and accurately in the same language (Bangla, Banglish, or English) that the customer used.';
+                  const kb = aiSettings?.knowledgeBase
+                    ? `\n\nContext Information:\n${aiSettings.knowledgeBase}`
+                    : '';
+
                   const aiRes = await fetch('/api/chat-auto-reply', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       messages: history,
-                      systemPrompt: prompt
+                      systemPrompt: `${baseSystemPrompt}${kb}`
                     })
                   });
 
                   if (aiRes.ok) {
                     const data = await aiRes.json();
-                    const aiText = data.choices?.[0]?.message?.content;
-                    
-                    if (aiText) {
-                      // 4. Send AI message to Firestore as the target user (Admin)
+                    const aiText = data.choices?.[0]?.message?.content?.trim();
+
+                    // Guard 2: Re-verify right before writing so Admin intervention mid-generation stops AI immediately
+                    const finalCheckSnap = await getDoc(doc(db, 'p2p_chats', chatId));
+                    const finalCheckData = finalCheckSnap.data();
+                    if (
+                      aiText &&
+                      !finalCheckData?.aiDisabled &&
+                      (!finalCheckData?.lastSenderId || finalCheckData.lastSenderId === user.uid)
+                    ) {
                       await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), {
                         text: aiText,
                         senderId: recipientId,
-                        senderName: activeChat?.otherUser?.shopName || activeChat?.otherUser?.displayName || 'Admin',
+                        senderName:
+                          activeChat?.otherUser?.shopName ||
+                          activeChat?.otherUser?.displayName ||
+                          'Support',
                         senderPhoto: activeChat?.otherUser?.photoURL || '',
                         createdAt: Date.now(),
                         timestamp: serverTimestamp(),
                         seenBy: [recipientId],
-                        isAiGenerated: true // internal flag
+                        isAiGenerated: true
                       });
 
-                      // 5. Update last message in chat doc
                       await updateDoc(doc(db, 'p2p_chats', chatId), {
                         updatedAt: serverTimestamp(),
                         lastMessage: aiText,
@@ -3015,23 +3317,30 @@ const handleCreateChannel = async () => {
                     }
                   }
                 } catch (err) {
-                  console.error("AI Auto-reply failed:", err);
+                  console.error('AI Auto-reply failed:', err);
                 } finally {
-                  // 6. Clear typing indicator
                   updateDoc(doc(db, 'p2p_chats', chatId), {
                     [`typingState.${recipientId}`]: null
                   }).catch(() => {});
                 }
               }, delay);
             }
+          } catch (err) {
+            console.error('Error checking AI settings:', err);
           }
-        } catch (err) {
-          console.error("Error checking AI settings:", err);
         }
       }
     } catch (err: any) {
-      console.error("Error in handleSendMessage:", err);
-      notify("মেসেজ পাঠাতে সমস্যা হয়েছে: " + (err?.message || "নেটওয়ার্ক সমস্যা"), "error");
+      console.error('Error in handleSendMessage:', err);
+      if (chatId) {
+        const list = pendingOptimisticMapRef.current.get(chatId) || [];
+        pendingOptimisticMapRef.current.set(
+          chatId,
+          list.filter((m) => m.id !== optimisticId)
+        );
+      }
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      notify('মেসেজ পাঠাতে সমস্যা হয়েছে: ' + (err?.message || 'নেটওয়ার্ক সমস্যা'), 'error');
     }
   };
 
@@ -3869,29 +4178,44 @@ const handleCreateChannel = async () => {
   }, [isUploadingAttachment, previewUrls.length]);
 
   const startRecording = async () => {
+    if (isRecordingRef.current) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
 
-      // Determine best supported recording MIME type
-      let mimeType = 'audio/webm;codecs=opus';
-      if (typeof MediaRecorder.isTypeSupported === 'function') {
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-          mimeType = 'audio/webm';
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/aac')) {
-          mimeType = 'audio/aac';
-        } else {
-          mimeType = '';
+      let mimeType = '';
+      if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+        const candidates = [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/mp4',
+          'audio/aac',
+          'audio/ogg;codecs=opus',
+        ];
+        for (const candidate of candidates) {
+          if (MediaRecorder.isTypeSupported(candidate)) {
+            mimeType = candidate;
+            break;
+          }
         }
       }
       recordedMimeTypeRef.current = mimeType || 'audio/webm';
-      const options = mimeType ? { mimeType } : undefined;
-      const mediaRecorder = new MediaRecorder(stream, options);
+
+      const recorderOptions: MediaRecorderOptions = mimeType
+        ? { mimeType, audioBitsPerSecond: 24000 }
+        : { audioBitsPerSecond: 24000 };
+      const mediaRecorder = new MediaRecorder(stream, recorderOptions);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      isCancellingRecordingRef.current = false;
+      shouldAutoSendRef.current = true;
+      recordingStartMsRef.current = Date.now();
+      isRecordingRef.current = true;
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
@@ -3899,67 +4223,145 @@ const handleCreateChannel = async () => {
         }
       };
 
-      mediaRecorder.onstop = async () => {
-        const finalType = mediaRecorder.mimeType || recordedMimeTypeRef.current || 'audio/webm';
-        const audioBlob = new Blob(audioChunksRef.current, { type: finalType });
-        
-        // Convert blob to base64
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          const base64AudioMessage = reader.result as string;
-          setRecordedAudioUrl(base64AudioMessage);
-          
-          // Stop all microphone tracks immediately
-          stream.getTracks().forEach(track => {
-            try {
-              track.stop();
-              track.enabled = false;
-            } catch (e) {}
-          });
+      mediaRecorder.onstop = () => {
+        const elapsedSec = Math.max(
+          1,
+          Math.round((Date.now() - recordingStartMsRef.current) / 1000)
+        );
+        const wasCancelled = isCancellingRecordingRef.current;
+        const shouldSendNow = shouldAutoSendRef.current && !wasCancelled;
 
-          if (shouldAutoSendRef.current) {
-            shouldAutoSendRef.current = false;
-            handleSendMessage(base64AudioMessage);
+        stream.getTracks().forEach((track) => {
+          try {
+            track.stop();
+            track.enabled = false;
+          } catch {}
+        });
+
+        isRecordingRef.current = false;
+        isCancellingRecordingRef.current = false;
+        shouldAutoSendRef.current = false;
+
+        if (wasCancelled) {
+          audioChunksRef.current = [];
+          setRecordedAudioUrl(null);
+          return;
+        }
+
+        const finalType =
+          mediaRecorder.mimeType || recordedMimeTypeRef.current || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: finalType });
+        audioChunksRef.current = [];
+
+        if (!audioBlob || audioBlob.size < 80) {
+          notify('Voice recording was too short', 'info');
+          return;
+        }
+
+        // ⚡ Instant 0ms local Blob URL so the outgoing voice bubble plays immediately with zero reload/flicker
+        const localBlobUrl = URL.createObjectURL(audioBlob);
+
+        const uploadVoicePromise = (async (): Promise<string | null> => {
+          try {
+            const res = await fetch('/api/upload-voice', {
+              method: 'POST',
+              headers: {
+                'Content-Type': finalType,
+              },
+              body: audioBlob,
+            });
+            if (res.ok) {
+              const json = await res.json();
+              if (json?.url) return String(json.url);
+            }
+          } catch (uploadErr) {
+            console.warn('Primary binary voice upload fallback:', uploadErr);
           }
-        };
+
+          // Safe fallback to compact DataURL (24kbps keeps ~2.5 min under Firestore 1MB limit)
+          if (audioBlob.size <= 720 * 1024) {
+            return await new Promise<string | null>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () =>
+                resolve(typeof reader.result === 'string' ? reader.result : null);
+              reader.onerror = () => resolve(null);
+              reader.readAsDataURL(audioBlob);
+            });
+          }
+          return null;
+        })();
+
+        if (shouldSendNow) {
+          void handleSendMessage(localBlobUrl, elapsedSec, uploadVoicePromise);
+        } else {
+          setRecordedAudioUrl(localBlobUrl);
+        }
       };
 
-      mediaRecorder.start(250);
+      mediaRecorder.start(200);
       setIsRecording(true);
       setRecordingDuration(0);
       updateMyActivity('recording');
 
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-      
+        setRecordingDuration(
+          Math.max(0, Math.floor((Date.now() - recordingStartMsRef.current) / 1000))
+        );
+      }, 250);
     } catch (err) {
-      console.error("Error accessing microphone", err);
-      notify("Microphone access denied", "error");
+      console.error('Error accessing microphone', err);
+      isRecordingRef.current = false;
+      setIsRecording(false);
+      notify('Microphone access denied', 'error');
     }
   };
 
-  const stopRecording = (autoSend: boolean = false) => {
-    if (mediaRecorderRef.current && isRecording) {
-      shouldAutoSendRef.current = autoSend;
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+  const stopRecording = (autoSend: boolean = true) => {
+    const recorder = mediaRecorderRef.current;
+    if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current);
-      updateMyActivity(null);
+      recordingTimerRef.current = null;
+    }
+    setIsRecording(false);
+    updateMyActivity(null);
+
+    if (recorder && (isRecordingRef.current || recorder.state !== 'inactive')) {
+      isCancellingRecordingRef.current = false;
+      shouldAutoSendRef.current = autoSend;
+      try {
+        if (recorder.state === 'recording') {
+          recorder.requestData();
+        }
+        if (recorder.state !== 'inactive') {
+          recorder.stop();
+        }
+      } catch (e) {
+        console.warn('Recorder stop warning:', e);
+      }
     }
   };
-  
+
   const cancelRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      shouldAutoSendRef.current = false;
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+    const recorder = mediaRecorderRef.current;
+    if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current);
-      // Don't save
+      recordingTimerRef.current = null;
+    }
+    isCancellingRecordingRef.current = true;
+    shouldAutoSendRef.current = false;
+    isRecordingRef.current = false;
+    setIsRecording(false);
+    setRecordingDuration(0);
+    setRecordedAudioUrl(null);
+    updateMyActivity(null);
+
+    if (recorder && recorder.state !== 'inactive') {
+      try {
+        recorder.stop();
+      } catch {}
+    } else {
       audioChunksRef.current = [];
-      setRecordedAudioUrl(null);
-      updateMyActivity(null);
     }
   };
 
@@ -4341,7 +4743,7 @@ const handleCreateChannel = async () => {
   );
 
   return (
-    <div className="msg-shell flex h-[100dvh] w-full font-inter overflow-hidden transition-colors duration-200">
+    <div className="msg-shell fixed inset-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full font-inter overflow-hidden overscroll-none transition-colors duration-200">
       <SEO title="Messages" description="Chat with sellers and support" noindex />
 
       {/* =====================================================================
@@ -5377,7 +5779,7 @@ const handleCreateChannel = async () => {
             Seamless frosted gradient fade | Home (Messages Home) | "+ New Chat" / "Cancel" pill | User icon
             =================================================================== */}
         {!activeChat && !activeChannel && (
-          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 msg-bottom-nav-bar px-9 pt-7 pb-[max(1.1rem,env(safe-area-inset-bottom,16px))] flex items-center justify-between pointer-events-none">
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 msg-bottom-nav-bar px-8 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom,8px))] flex items-center justify-between pointer-events-none">
             {/* Left: Messages Home Outline Icon (stays inside Messages Home, never goes to Shop) */}
             <button
               type="button"
@@ -7088,28 +7490,54 @@ const handleCreateChannel = async () => {
                           </div>
                      </div>
 
-                     {/* Header Actions matching IMG_5359 right 1:1: Video Call + Voice Call */}
-                          {(currentUserProfile?.role === "admin" || currentUserProfile?.role === "staff") && (
+                     {/* Header Actions: 1-Click Admin AI Toggle + Video Call + Voice Call */}
+                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
+                          {!(activeChat?.isGroup || activeChat?.type === 'group') &&
+                            activeChat?.id && (
                             <button
                               type="button"
                               onClick={async () => {
                                 triggerHaptic();
-                                const nextState = !activeChat?.aiDisabled;
-                                await updateDoc(doc(db, "p2p_chats", activeChat?.id), { aiDisabled: nextState });
-                                notify(nextState ? "AI Auto-reply Disabled" : "AI Auto-reply Enabled", "info");
+                                const chatDocId = activeChat.id;
+                                const nextDisabled = !Boolean(activeChat?.aiDisabled);
+                                if (nextDisabled && aiReplyTimeoutRef.current[chatDocId]) {
+                                  clearTimeout(aiReplyTimeoutRef.current[chatDocId]);
+                                  delete aiReplyTimeoutRef.current[chatDocId];
+                                }
+                                setTempActiveChat((prev: any) =>
+                                  prev && prev.id === chatDocId
+                                    ? { ...prev, aiDisabled: nextDisabled }
+                                    : prev
+                                );
+                                try {
+                                  await updateDoc(doc(db, 'p2p_chats', chatDocId), {
+                                    aiDisabled: nextDisabled,
+                                    ...(nextDisabled && user?.uid
+                                      ? { [`typingState.${user.uid}`]: null }
+                                      : {}),
+                                  });
+                                  notify(
+                                    nextDisabled
+                                      ? 'AI stopped for this user inbox'
+                                      : 'AI auto-reply active for this inbox',
+                                    'info'
+                                  );
+                                } catch {
+                                  notify('Failed to toggle AI status', 'error');
+                                }
                               }}
                               className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer",
-                                activeChat?.aiDisabled 
-                                  ? "text-rose-500 bg-rose-500/10 hover:bg-rose-500/20" 
-                                  : "text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20"
+                                'h-9 px-3 rounded-xl flex items-center gap-1.5 text-xs font-semibold transition active:scale-95 cursor-pointer border',
+                                activeChat?.aiDisabled
+                                  ? 'bg-zinc-100 dark:bg-white/[0.06] border-zinc-200/80 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                                  : 'bg-emerald-500/12 border-emerald-500/25 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
                               )}
-                              title={activeChat?.aiDisabled ? "Enable AI Auto-reply" : "Disable AI Auto-reply"}
+                              title={activeChat?.aiDisabled ? 'Turn AI Auto-Reply On' : 'Stop AI Auto-Reply for this user (1-click)'}
                             >
-                                <Sparkles className={cn("w-[21px] h-[21px]", activeChat?.aiDisabled ? "opacity-40" : "")} />
+                              <Bot className="w-3.5 h-3.5 shrink-0" />
+                              <span>{activeChat?.aiDisabled ? 'AI Off' : 'AI On'}</span>
                             </button>
                           )}
-                     <div className="flex items-center gap-2 shrink-0 relative">
                          <button
                            type="button"
                            onClick={() => startCall('video')}
@@ -7254,8 +7682,14 @@ const handleCreateChannel = async () => {
                              );
                          }
 
+                         const shouldAnimateBubble = Boolean(
+                           animatedMsgIdsRef.current.has(msg.id) ||
+                           (msg.clientMsgId && animatedMsgIdsRef.current.has(msg.clientMsgId)) ||
+                           String(msg.id).startsWith('temp-')
+                         );
+
                          return (
-                             <React.Fragment key={`${msg.id || idx}-${idx}`}>
+                             <React.Fragment key={msg.clientMsgId || msg.id || `${idx}`}>
                                  {showDate && (
                                      <div className="flex items-center justify-center my-4 select-none">
                                          <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500 tabular-nums">
@@ -7264,10 +7698,27 @@ const handleCreateChannel = async () => {
                                      </div>
                                  )}
 
-                                 <div
+                                 <motion.div
                                      id={`msg-${msg.id}`}
+                                     initial={
+                                       shouldAnimateBubble
+                                         ? {
+                                             opacity: 0,
+                                             y: 12,
+                                             scale: 0.95,
+                                             x: isMe ? 10 : -10,
+                                           }
+                                         : false
+                                     }
+                                     animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+                                     transition={{
+                                       type: 'spring',
+                                       stiffness: 520,
+                                       damping: 32,
+                                       mass: 0.68,
+                                     }}
                                      className={cn(
-                                         `flex items-end gap-2.5 ${isMe ? 'justify-end' : 'justify-start'} relative group transition-all duration-300 rounded-2xl`,
+                                         `flex items-end gap-2.5 ${isMe ? 'justify-end' : 'justify-start'} relative group rounded-2xl will-change-transform`,
                                          reactionEntries.length > 0 ? "mb-5" : isLastInCluster ? "mb-3" : "mb-1.5",
                                          highlightedMessageId === msg.id && "bg-[#2F80ED]/10 ring-1 ring-[#2F80ED]/40 px-2 py-1.5"
                                      )}
@@ -7304,11 +7755,11 @@ const handleCreateChannel = async () => {
                                            </div>
                                          )}
 
-                                         {/* Forwarded Label */}
+                                         {/* Clean Unboxed Forwarded Metadata */}
                                          {msg.forwardedFrom && (
-                                           <div className="flex items-center gap-1 text-[11px] text-zinc-400 dark:text-zinc-500 font-medium mb-1 px-1">
-                                             <MsgForwardIcon className="w-3.5 h-3.5" />
-                                             <span>Forwarded from {msg.forwardedFrom}</span>
+                                           <div className="flex items-center gap-1 text-[11px] text-zinc-400 dark:text-zinc-500 font-medium mb-1 px-1 select-none">
+                                             <MsgForwardIcon className="w-3 h-3 shrink-0" />
+                                             <span className="truncate max-w-[210px]">Forwarded · {msg.forwardedFrom}</span>
                                            </div>
                                          )}
 
@@ -7387,11 +7838,15 @@ const handleCreateChannel = async () => {
                                               )}
 
                                               {/* Voice Message */}
-                                              {msg.audioUrl && (
-                                                  <div className={cn("px-1 py-1", msg.text ? "mb-1" : "")}>
+                                              {(msg._localAudioUrl || msg.audioUrl) && (
+                                                  <div className={cn("px-0.5 py-0.5", msg.text ? "mb-1" : "")}>
                                                       <VoiceMessageBubble
-                                                          audioSrc={msg.audioUrl}
-                                                          duration={msg.audioDuration || 15}
+                                                          audioSrc={
+                                                            (msg.clientMsgId && localVoiceBlobUrlsRef.current.get(msg.clientMsgId)) ||
+                                                            msg._localAudioUrl ||
+                                                            msg.audioUrl
+                                                          }
+                                                          duration={msg.audioDuration || 4}
                                                           isMe={isMe && !privacySettings.minimalistBubbles}
                                                           waveColor={isMe && !privacySettings.minimalistBubbles ? '#ffffff' : '#2F80ED'}
                                                           autoPlay={currentlyPlayingVoiceId === msg.id}
@@ -7481,7 +7936,7 @@ const handleCreateChannel = async () => {
                                              </div>
                                          )}
                                      </div>
-                                 </div>
+                                 </motion.div>
                              </React.Fragment>
                          );
                      })}
@@ -7531,7 +7986,7 @@ const handleCreateChannel = async () => {
                  </div>
 
                  {/* Clean Borderless Composer Dock & Replying-To Banner */}
-                 <div className="msg-composer-dock px-3.5 sm:px-6 pt-2 pb-[max(0.85rem,env(safe-area-inset-bottom,14px))] shrink-0 z-20 transition-all">
+                 <div className="msg-composer-dock px-3.5 sm:px-6 pt-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom,6px))] shrink-0 z-20 transition-all">
                      <AnimatePresence>
                          {replyingTo && (
                              <motion.div
@@ -7771,7 +8226,21 @@ const handleCreateChannel = async () => {
             }}
             onForward={() => {
               if (!heldMsg) return;
-              setForwardingMessage(heldMsg);
+              const resolvedOriginName =
+                heldMsg.forwardedFrom ||
+                heldMsg.senderName ||
+                (heldMsg.senderId === user?.uid
+                  ? (userShopName || user?.displayName || 'You')
+                  : (participantProfiles[heldMsg.senderId]?.displayName ||
+                     activeChat?.otherUser?.shopName ||
+                     activeChat?.otherUser?.displayName ||
+                     'User'));
+              setForwardSearchQuery('');
+              setForwardedTargetsMap({});
+              setForwardingMessage({
+                ...heldMsg,
+                originalSenderName: resolvedOriginName,
+              });
               setShowForwardModal(true);
             }}
             onDelete={() => {
@@ -8079,7 +8548,11 @@ const handleCreateChannel = async () => {
           }
         }}
         currentAutoDeleteDuration={activeChat?.autoDeleteTimer?.duration || null}
-        onOpenGroupModal={() => setShowCreateGroupModal(true)}
+        onOpenGroupModal={() => {
+          setNewMessageInitialStep('new_group_select');
+          setNewMessageInitialGroupType('group');
+          setShowNewMessageModal(true);
+        }}
         onOpenWallpaperModal={() => setShowWallpaperModal(true)}
         onOpenClearChatModal={() => setShowClearChatModal(true)}
         notify={notify}
@@ -8414,120 +8887,330 @@ const handleCreateChannel = async () => {
 
       <AnimatePresence>
         {showForwardModal && forwardingMessage && (
-          <div className="fixed inset-0 z-[10000] bg-white dark:bg-zinc-950 overflow-y-auto">
-            <motion.div 
-              initial={{ opacity: 0, y: "100%" }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: "100%" }}
-              className="bg-white dark:bg-zinc-950 min-h-screen w-full flex flex-col max-w-lg mx-auto p-6 font-inter"
-            >
-              <button 
-                type="button"
-                onClick={() => { setShowForwardModal(false); setForwardingMessage(null); }}
-                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-400 hover:text-zinc-600 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+          <div
+            className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-0 sm:p-4 select-none"
+            onClick={() => {
+              setShowForwardModal(false);
+              setForwardingMessage(null);
+              setForwardSearchQuery('');
+              setForwardedTargetsMap({});
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
 
-              <div className="mb-4">
-                <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                  <Forward className="w-5 h-5 text-[#EF8020]" />
-                  <span>Forward Message</span>
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Select a private chat or subscribed community channel to share this content.
-                </p>
+            <motion.div
+              initial={{ opacity: 0, y: 36, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 28, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-10 w-full sm:max-w-[440px] max-h-[85dvh] bg-white dark:bg-[#14161D] border-t sm:border border-zinc-200/80 dark:border-white/10 rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden font-inter"
+            >
+              {/* Drag Handle (Mobile) */}
+              <div className="sm:hidden pt-2.5 flex justify-center shrink-0">
+                <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
               </div>
 
-              {/* Preview forwarding content */}
-              <div className="p-3 bg-zinc-50 dark:bg-white dark:bg-zinc-200 dark:bg-zinc-800/50 shadow-sm dark:shadow-none rounded-xl mb-4 border border-zinc-100 dark:border-zinc-800/80 text-xs">
-                <p className="font-extrabold text-[#EF8020] mb-1">Previewing Content:</p>
-                {forwardingMessage.imageUrl && (
+              {/* Header */}
+              <div className="px-5 pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.06] flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="text-[16px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                    Forward message
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Send instantly to chats, groups, or communities
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForwardModal(false);
+                    setForwardingMessage(null);
+                    setForwardSearchQuery('');
+                    setForwardedTargetsMap({});
+                  }}
+                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-white/[0.08] hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer"
+                  aria-label="Close forward sheet"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Message Preview Strip */}
+              <div className="mx-5 mt-3.5 p-3 rounded-2xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200/70 dark:border-white/[0.07] flex items-center gap-3 shrink-0">
+                {(forwardingMessage.images?.[0] || forwardingMessage.imageUrl) ? (
                   <ProgressiveImage
-                    src={forwardingMessage.imageUrl}
-                    alt="Forward attachment"
-                    containerClassName="w-16 h-16 rounded-lg mb-1 min-h-0"
+                    src={forwardingMessage.images?.[0] || forwardingMessage.imageUrl}
+                    alt="Forward preview"
+                    containerClassName="w-11 h-11 rounded-xl shrink-0 min-h-0 overflow-hidden"
                     showShimmerIcon={false}
                     className="w-full h-full object-cover"
                   />
-                )}
-                <p className="text-zinc-600 dark:text-zinc-300 italic truncate">"{forwardingMessage.text || 'Image Attachment'}"</p>
-              </div>
-
-              {/* Destination list */}
-              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                {/* List Community channels */}
-                {channels.length > 0 && (
-                  <div>
-                    <h5 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Subscribed Communities</h5>
-                    <div className="space-y-1">
-                      {channels.map(ch => (
-                        <button
-                          key={ch.id}
-                          onClick={() => handleSendForward(ch, true)}
-                          className="w-full flex items-center gap-3 p-2 rounded-xl bg-zinc-50 hover:bg-emerald-50 dark:bg-zinc-200 dark:bg-zinc-800/30 dark:hover:bg-zinc-200 dark:bg-zinc-800 transition text-left"
-                        >
-                          <img src={ch.imageUrl} alt="Channel img" className="w-8 h-8 rounded-full object-cover border border-zinc-200 dark:border-zinc-300 dark:border-zinc-700" />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-xs text-zinc-800 dark:text-zinc-200 truncate">{ch.name}</p>
-                            <p className="text-[10px] text-zinc-400 truncate">@{ch.customLink}</p>
-                          </div>
-                          <Forward className="w-3.5 h-3.5 text-zinc-400 mr-2 shrink-0" />
-                        </button>
-                      ))}
-                    </div>
+                ) : forwardingMessage.audioUrl ? (
+                  <div className="w-10 h-10 rounded-xl bg-[#2F80ED]/12 text-[#2F80ED] flex items-center justify-center shrink-0">
+                    <Mic className="w-4 h-4" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-zinc-200/70 dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
+                    <MsgForwardIcon className="w-4 h-4" />
                   </div>
                 )}
 
-                {/* List direct messages (strictly real talked-to chats, zero system/demo users) */}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11.5px] font-semibold text-zinc-500 dark:text-zinc-400 truncate">
+                    From {forwardingMessage.originalSenderName || forwardingMessage.forwardedFrom || forwardingMessage.senderName || 'Conversation'}
+                  </p>
+                  <p className="text-[13.5px] font-medium text-zinc-900 dark:text-zinc-100 truncate mt-0.5">
+                    {forwardingMessage.text
+                      ? forwardingMessage.text
+                      : forwardingMessage.audioUrl
+                      ? `Voice message (${forwardingMessage.audioDuration || 4}s)`
+                      : 'Photo attachment'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Instant Recipient Search */}
+              <div className="px-5 pt-3 pb-2 shrink-0">
+                <div className="h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.06] flex items-center gap-2.5">
+                  <Search className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={forwardSearchQuery}
+                    onChange={(e) => setForwardSearchQuery(e.target.value)}
+                    placeholder="Search people, groups, or communities..."
+                    className="flex-1 bg-transparent text-[13.5px] text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none border-none"
+                  />
+                  {forwardSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setForwardSearchQuery('')}
+                      className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Scrollable Recipient Rows */}
+              <div className="flex-1 overflow-y-auto px-3 py-1.5 space-y-4">
                 {(() => {
+                  const q = forwardSearchQuery.trim().toLowerCase();
+
                   const realShareableChats = chats.filter((c) => {
-                    if (c.isGroup || c.type === 'group') return true;
+                    if (c.isGroup || c.type === 'group') {
+                      const gName = String(c.name || c.groupName || 'Group').toLowerCase();
+                      return !q || gName.includes(q);
+                    }
                     const oid = c.otherUser?.id || c.otherUser?.uid;
                     if (!oid || oid === 'system' || oid === user?.uid || String(oid).startsWith('demo_')) {
                       return false;
                     }
-                    return Boolean(
+                    const hasHistory = Boolean(
                       (typeof c.lastMessage === 'string' && c.lastMessage.trim() !== '') ||
                       c.lastMessageTimestamp ||
                       c.updatedAt
                     );
+                    if (!hasHistory) return false;
+                    if (!q) return true;
+                    const label = String(
+                      c.otherUser?.shopName || c.otherUser?.displayName || c.otherUser?.username || ''
+                    ).toLowerCase();
+                    return label.includes(q);
                   });
 
-                  return realShareableChats.length > 0 ? (
-                    <div className="mt-4">
-                      <h5 className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Private Direct Chats</h5>
-                      <div className="space-y-1">
-                        {realShareableChats.map((c, idx) => (
-                          <button
-                            key={`fwd-chat-${c.id || idx}-${idx}`}
-                            onClick={() => handleSendForward(c, false)}
-                            className="w-full flex items-center gap-3 p-2 rounded-xl bg-zinc-50 hover:bg-emerald-50 dark:bg-zinc-200 dark:bg-zinc-800/30 dark:hover:bg-zinc-200 dark:bg-zinc-800 transition text-left"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-zinc-300 dark:border-zinc-700 text-xs font-bold text-emerald-700">
-                              {c.otherUser?.photoURL ? (
-                                <img src={c.otherUser.photoURL} alt="User img" className="w-full h-full rounded-full object-cover" />
-                              ) : (
-                                (c.otherUser?.displayName || 'U')[0].toUpperCase()
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-xs text-zinc-800 dark:text-zinc-200 truncate">
-                                {c.otherUser?.shopName || c.otherUser?.displayName || (c.isGroup ? c.name || c.groupName : 'Chat')}
-                              </p>
-                            </div>
-                            <Forward className="w-3.5 h-3.5 text-zinc-400 mr-2 shrink-0" />
-                          </button>
-                        ))}
+                  const filteredChannels = channels.filter((ch) => {
+                    if (!q) return true;
+                    return (
+                      String(ch.name || '').toLowerCase().includes(q) ||
+                      String(ch.customLink || '').toLowerCase().includes(q)
+                    );
+                  });
+
+                  if (realShareableChats.length === 0 && filteredChannels.length === 0) {
+                    return (
+                      <div className="py-12 px-6 text-center">
+                        <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
+                          No matching conversations
+                        </p>
+                        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                          Try another name or start a chat first.
+                        </p>
                       </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 py-4 text-center">
-                      No active direct chat conversations yet.
-                    </p>
+                    );
+                  }
+
+                  return (
+                    <>
+                      {realShareableChats.length > 0 && (
+                        <div>
+                          <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                            Recent chats
+                          </p>
+                          <div className="space-y-0.5">
+                            {realShareableChats.map((c, idx) => {
+                              const targetKey = `chat_${c.id || c.otherUser?.id || c.otherUser?.uid}`;
+                              const isSent = Boolean(forwardedTargetsMap[targetKey]);
+                              const title =
+                                c.otherUser?.shopName ||
+                                c.otherUser?.displayName ||
+                                (c.isGroup ? c.name || c.groupName : 'Conversation');
+                              const avatarUrl = c.isGroup
+                                ? c.groupImage || c.imageUrl || ''
+                                : c.otherUser?.photoURL || '';
+                              const subtitle = c.isGroup
+                                ? `${c.participants?.length || 2} members`
+                                : c.otherUser?.username
+                                ? `@${c.otherUser.username}`
+                                : 'Direct message';
+
+                              return (
+                                <div
+                                  key={`fwd-chat-${c.id || idx}-${idx}`}
+                                  className="flex items-center justify-between gap-3 px-2.5 py-2 rounded-2xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.04] transition"
+                                >
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 shrink-0 flex items-center justify-center text-sm font-semibold text-[#2F80ED]">
+                                      {avatarUrl ? (
+                                        <img
+                                          src={avatarUrl}
+                                          alt={title}
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        String(title || 'U').charAt(0).toUpperCase()
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-[14px] font-semibold text-zinc-950 dark:text-white truncate">
+                                        {title}
+                                      </p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                                        {subtitle}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    disabled={isSent}
+                                    onClick={() => handleSendForward(c, false)}
+                                    className={cn(
+                                      'h-9 min-w-[74px] px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0',
+                                      isSent
+                                        ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-300 cursor-default'
+                                        : 'bg-[#2F80ED] hover:bg-[#256FDB] text-white shadow-xs cursor-pointer'
+                                    )}
+                                  >
+                                    {isSent ? (
+                                      <>
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Sent</span>
+                                      </>
+                                    ) : (
+                                      <span>Send</span>
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {filteredChannels.length > 0 && (
+                        <div>
+                          <p className="px-2.5 pb-1.5 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                            Communities
+                          </p>
+                          <div className="space-y-0.5">
+                            {filteredChannels.map((ch) => {
+                              const targetKey = `ch_${ch.id}`;
+                              const isSent = Boolean(forwardedTargetsMap[targetKey]);
+                              return (
+                                <div
+                                  key={`fwd-ch-${ch.id}`}
+                                  className="flex items-center justify-between gap-3 px-2.5 py-2 rounded-2xl hover:bg-zinc-100/80 dark:hover:bg-white/[0.04] transition"
+                                >
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 shrink-0 flex items-center justify-center text-sm font-semibold text-[#2F80ED]">
+                                      {ch.imageUrl ? (
+                                        <img
+                                          src={ch.imageUrl}
+                                          alt={ch.name}
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        String(ch.name || 'C').charAt(0).toUpperCase()
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-[14px] font-semibold text-zinc-950 dark:text-white truncate">
+                                        {ch.name}
+                                      </p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                                        {ch.customLink ? `@${ch.customLink}` : 'Community channel'}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    disabled={isSent}
+                                    onClick={() => handleSendForward(ch, true)}
+                                    className={cn(
+                                      'h-9 min-w-[74px] px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0',
+                                      isSent
+                                        ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-300 cursor-default'
+                                        : 'bg-[#2F80ED] hover:bg-[#256FDB] text-white shadow-xs cursor-pointer'
+                                    )}
+                                  >
+                                    {isSent ? (
+                                      <>
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Sent</span>
+                                      </>
+                                    ) : (
+                                      <span>Send</span>
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   );
                 })()}
               </div>
+
+              {/* Footer Done Button */}
+              {Object.keys(forwardedTargetsMap).length > 0 && (
+                <div className="p-4 border-t border-zinc-100 dark:border-white/[0.06] shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForwardModal(false);
+                      setForwardingMessage(null);
+                      setForwardSearchQuery('');
+                      setForwardedTargetsMap({});
+                    }}
+                    className="w-full h-11 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-sm font-semibold transition active:scale-[0.99] cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
@@ -9152,57 +9835,6 @@ const handleCreateChannel = async () => {
           }
         }}
       />
-
-      {/* Custom Clear / Delete Chat Modal */}
-      <AnimatePresence>
-        {showClearChatModal && activeChat && (
-          <div 
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-            onClick={() => setShowClearChatModal(false)}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-zinc-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl"
-            >
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 text-center">
-                Clear Chat History
-              </h3>
-              <p className="text-sm text-zinc-500 mb-6 text-center">
-                Are you sure you want to clear this chat history? This action cannot be undone.
-              </p>
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    handleClearChatForMe(activeChat?.id);
-                    setShowClearChatModal(false);
-                  }}
-                  className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition"
-                >
-                  Clear for me
-                </button>
-                <button
-                  onClick={() => {
-                    handleClearChatForEveryone(activeChat?.id);
-                    setShowClearChatModal(false);
-                  }}
-                  className="w-full py-3 bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded-xl font-bold text-sm transition"
-                >
-                  Clear for everyone
-                </button>
-                <button
-                  onClick={() => setShowClearChatModal(false)}
-                  className="w-full py-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl font-bold text-sm transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
