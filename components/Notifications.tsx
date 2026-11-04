@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react';
 import { gooeyToast, GooeyToaster } from 'goey-toast';
 import 'goey-toast/styles.css';
 import { LiquidGlassPopup } from './ui/liquid-glass-popup';
@@ -42,8 +42,19 @@ interface FullScreenInfoOptions {
   buttonText?: string;
 }
 
+export interface UndoNotifyOptions {
+  onUndo?: () => void | Promise<void>;
+  undoLabel?: string;
+  durationMs?: number;
+}
+
 interface ToastContextType {
-  notify: (message: string, type?: ToastType, description?: string) => void;
+  notify: (
+    message: string,
+    type?: ToastType,
+    description?: string,
+    options?: UndoNotifyOptions
+  ) => void;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
   alert: (options: AlertOptions) => void;
   prompt: (options: PromptOptions) => void;
@@ -52,85 +63,95 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-const cleanErrorMessage = (msg: string | any): { title: string; description?: string } => {
-  if (!msg) return { title: "Unexpected Error", description: "An unexpected error occurred. Please try again later." };
-  
-  const msgStr = typeof msg === 'string' ? msg : (msg.message || "An unexpected error occurred.");
-  const m = msgStr.toLowerCase();
-  
-  if (m.includes("auth/user-not-found") || m.includes("auth/wrong-password") || m.includes("auth/invalid-credential")) {
-    return { title: "Authentication Failed", description: "Invalid credentials provided. Please check your details and try again." };
+// Standalone notify function for direct imports across non-hook files
+export let globalNotify: (
+  message: string,
+  type?: ToastType,
+  description?: string,
+  options?: UndoNotifyOptions
+) => void = () => {};
+
+export function notify(
+  message: string,
+  type: ToastType = 'info',
+  description?: string,
+  options?: UndoNotifyOptions
+) {
+  if (globalNotify) {
+    globalNotify(message, type, description, options);
   }
-  if (m.includes("auth/email-already-in-use")) {
-    return { title: "Account Exists", description: "This email is already associated with an account. Please log in instead." };
-  }
-  if (m.includes("auth/weak-password")) {
-    return { title: "Weak Password", description: "Please use a stronger password with a mix of numbers and symbols." };
-  }
-  if (m.includes("permission-denied") || m.includes("missing or insufficient permissions")) {
-    return { title: "Access Denied", description: "You do not have permission to access this resource or perform this action." };
-  }
-  if (m.includes("network-request-failed") || m.includes("offline")) {
-    return { title: "Network Error", description: "Please check your internet connection and try again." };
-  }
-  if (m.includes("quota-exceeded")) {
-    return { title: "Service Busy", description: "Our servers are experiencing high traffic. Please try again later." };
-  }
-  if (m.includes("requires-recent-login")) {
-    return { title: "Authentication Required", description: "For your security, please log out and log back in to perform this action." };
-  }
-  
-  if (m.includes("firebase") || m.includes("firestore") || m.includes("internal error")) {
-    return { title: "System Error", description: "We encountered an internal issue. Our team has been notified." };
-  }
-  
-  const cleanedText = msgStr.replace(/FirebaseError:\s*/gi, '').trim();
-  
-  if (cleanedText.length < 40) {
-    return { title: cleanedText };
-  }
-  return { title: "Action Failed", description: cleanedText };
-};
+}
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [confirmModal, setConfirmModal] = useState<ConfirmOptions | null>(null);
   const [alertModal, setAlertModal] = useState<AlertOptions | null>(null);
   const [promptModal, setPromptModal] = useState<PromptOptions | null>(null);
   const [fullScreenModal, setFullScreenModal] = useState<FullScreenInfoOptions | null>(null);
-  
+  const [undoBar, setUndoBar] = useState<{
+    message: string;
+    onUndo?: () => void | Promise<void>;
+    undoLabel?: string;
+  } | null>(null);
+  const undoTimerRef = React.useRef<any>(null);
+
   const [promptVal, setPromptVal] = useState("");
 
-  const notify = useCallback((message: string, type: ToastType = 'info', description?: string) => {
-    let finalTitle = message;
-    let finalDesc = description;
+  const notifyFunc = useCallback(
+    (
+      message: string,
+      type: ToastType = 'info',
+      description?: string,
+      options?: UndoNotifyOptions
+    ) => {
+      let finalTitle = message;
+      let finalDesc = description;
 
-    if (type === 'error') {
-      const errorData = cleanErrorMessage(message);
-      finalTitle = errorData.title;
-      if (!finalDesc) finalDesc = errorData.description;
-    }
-
-    const config = {
-      preset: 'bouncy' as const,
-      showProgress: true,
-      description: finalDesc || undefined
-    };
-
-    if (type === 'success') {
-      if (finalTitle.toLowerCase().includes('cart')) {
-         showIsland({ state: 'cart_add', title: finalTitle, subtitle: finalDesc });
-      } else {
-         showIsland({ state: 'success', title: finalTitle, subtitle: finalDesc });
+      if (type === 'error') {
+        const errorData = cleanErrorMessage(message);
+        finalTitle = errorData.title;
+        if (!finalDesc) finalDesc = errorData.description;
       }
-      return; 
-    } else if (type === 'info') {
-      showIsland({ state: 'notification', title: finalTitle, subtitle: finalDesc });
-      return;
-    }
 
-    if (type === 'error') gooeyToast.error(finalTitle, config);
-    else gooeyToast.info(finalTitle, config);
-  }, []);
+      if (options?.onUndo) {
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        setUndoBar({
+          message: finalTitle,
+          onUndo: options.onUndo,
+          undoLabel: options.undoLabel || 'Undo',
+        });
+        undoTimerRef.current = setTimeout(() => {
+          setUndoBar(null);
+        }, options.durationMs || 5000);
+        return;
+      }
+
+      const config = {
+        preset: 'bouncy' as const,
+        showProgress: true,
+        description: finalDesc || undefined,
+      };
+
+      if (type === 'success') {
+        if (finalTitle.toLowerCase().includes('cart')) {
+          showIsland({ state: 'cart_add', title: finalTitle, subtitle: finalDesc });
+        } else {
+          showIsland({ state: 'success', title: finalTitle, subtitle: finalDesc });
+        }
+        return;
+      } else if (type === 'info') {
+        showIsland({ state: 'notification', title: finalTitle, subtitle: finalDesc });
+        return;
+      }
+
+      if (type === 'error') gooeyToast.error(finalTitle, config);
+      else gooeyToast.info(finalTitle, config);
+    },
+    []
+  );
+
+  useEffect(() => {
+    globalNotify = notifyFunc;
+  }, [notifyFunc]);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise<boolean>((resolve) => {
@@ -259,6 +280,27 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setFullScreenModal(null);
         }}
       />
+
+      {/* Dark Frosted Glass Undo Snackbar matching IMG_5384 */}
+      {undoBar && (
+        <div className="fixed bottom-[74px] inset-x-3.5 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-[440px] z-[210000] rounded-[18px] bg-zinc-900/95 backdrop-blur-2xl border border-white/15 px-4 py-3.5 shadow-2xl flex items-center justify-between gap-4 text-white animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <span className="text-sm font-medium text-zinc-100 truncate">
+            {undoBar.message}
+          </span>
+          <button
+            type="button"
+            onClick={async () => {
+              const fn = undoBar.onUndo;
+              setUndoBar(null);
+              if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+              if (fn) await fn();
+            }}
+            className="text-sm font-bold text-white hover:text-blue-400 active:scale-95 transition-all shrink-0 px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20"
+          >
+            {undoBar.undoLabel || 'Undo'}
+          </button>
+        </div>
+      )}
     </ToastContext.Provider>
   );
 };

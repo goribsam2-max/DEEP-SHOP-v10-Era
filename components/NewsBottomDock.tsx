@@ -77,10 +77,40 @@ export const NewsBottomDock: React.FC<{
 
   const isReelsVariant = variant === "reels" || isVideoActive;
 
-  const iconSizeClass = isReelsVariant
+  const [isScrolledCompact, setIsScrolledCompact] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY > 44 && currentY > lastY) {
+        setIsScrolledCompact(true);
+      } else if (currentY < lastY || currentY <= 20) {
+        setIsScrolledCompact(false);
+      }
+      lastY = currentY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Listen for unread messages if user logged in
+  useEffect(() => {
+    const u = auth.currentUser;
+    if (!u) return;
+    const unsub = onSnapshot(doc(db, "users", u.uid), (snap) => {
+      if (snap.exists()) {
+        setHasUnreadMessages(Boolean(snap.data()?.unreadMessageCount || snap.data()?.hasUnreadMessages));
+      }
+    }, () => {});
+    return () => unsub();
+  }, []);
+
+  const iconSizeClass = isReelsVariant || isScrolledCompact
     ? "w-[20px] h-[20px]"
     : "w-[23px] h-[23px]";
-  const homeIconSizeClass = isReelsVariant
+  const homeIconSizeClass = isReelsVariant || isScrolledCompact
     ? "w-[20px] h-[20px]"
     : "w-[24px] h-[24px]";
 
@@ -115,7 +145,12 @@ export const NewsBottomDock: React.FC<{
       path: "/messages",
       isActive: isMessagesActive,
       render: () => (
-        <Icon name="message-square" className={iconSizeClass} />
+        <span className="relative inline-flex items-center justify-center">
+          <LoopsSvgIcon name="loops-nav-messages" className={iconSizeClass} />
+          {hasUnreadMessages && (
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#FF3040] ring-1 ring-black/75 animate-pulse" />
+          )}
+        </span>
       ),
     },
     {
@@ -141,7 +176,7 @@ export const NewsBottomDock: React.FC<{
               referrerPolicy="no-referrer"
               onError={() => setImgErr(true)}
               className={`${
-                isReelsVariant ? "w-[24px] h-[24px]" : "w-[29px] h-[29px]"
+                isReelsVariant || isScrolledCompact ? "w-[24px] h-[24px]" : "w-[29px] h-[29px]"
               } rounded-full object-cover transition ${
                 active
                   ? isReelsVariant
@@ -152,14 +187,11 @@ export const NewsBottomDock: React.FC<{
                   : "ring-1 ring-black/[0.06] dark:ring-white/15"
               }`}
             />
-            {isReelsVariant && (
-              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#FF3040] ring-1 ring-black/75" />
-            )}
           </span>
         ) : (
           <LoopsSvgIcon
             name="loops-nav-profile"
-            className={isReelsVariant ? "w-[20px] h-[20px]" : "w-[22px] h-[22px]"}
+            className={isReelsVariant || isScrolledCompact ? "w-[20px] h-[20px]" : "w-[22px] h-[22px]"}
           />
         ),
     },
@@ -169,16 +201,16 @@ export const NewsBottomDock: React.FC<{
     <nav
       aria-label="Loops Bottom Navigation"
       className={`fixed ${
-        isReelsVariant ? "bottom-2.5" : "bottom-4"
-      } inset-x-0 z-50 flex justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom)]`}
+        isReelsVariant ? "bottom-2.5" : isScrolledCompact ? "bottom-3" : "bottom-4"
+      } inset-x-0 z-50 flex justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom)] transition-all duration-300`}
     >
       <div
         onTouchStart={(e) => e.stopPropagation()}
         className={`${
-          isReelsVariant
+          isReelsVariant || isScrolledCompact
             ? "loops-reels-dock-pill max-w-[292px] h-[48px] p-1 gap-0.5"
             : "loops-dock-pill max-w-[356px] h-[60px] p-1.5 gap-1"
-        } pointer-events-auto flex items-center justify-between rounded-full w-full transition-all duration-200 ease-out touch-manipulation`}
+        } pointer-events-auto flex items-center justify-between rounded-full w-full transition-all duration-300 ease-out touch-manipulation shadow-2xl`}
       >
         {items.map((item) => (
           <button

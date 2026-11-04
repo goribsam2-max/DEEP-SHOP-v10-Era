@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { ScamPost, ScamComment, ReactionType } from "../types";
 import { auth, db } from "../firebase";
+import { LoopsAdminModerationModal } from "./LoopsAdminModerationModal";
+import { SUPER_ADMIN_EMAILS } from "../lib/admin";
 import {
   collection,
   query,
@@ -348,11 +350,18 @@ export const LoopPostOptionsSheet: React.FC<{
 
   const [subView, setSubView] = useState<"main" | "why" | "report">("main");
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminModalMode, setAdminModalMode] = useState<'claim' | 'strike' | 'remove'>('claim');
 
   const authorId = post?.reporterId || "";
   const authorLabel = post?.reporterName || "this user";
   const isOwnPost = Boolean(
     currentUser?.uid && authorId && currentUser.uid === authorId
+  );
+  const isAdmin = Boolean(
+    currentUser?.email &&
+      (SUPER_ADMIN_EMAILS.has(currentUser.email) ||
+        currentUser.email === "goribsam2@gmail.com")
   );
 
   const [isMuted, setIsMuted] = useState(false);
@@ -908,11 +917,66 @@ export const LoopPostOptionsSheet: React.FC<{
                     </button>
                   </div>
                 )}
+
+                {/* Admin Moderation Card */}
+                {isAdmin && (
+                  <div className="loops-about-card rounded-[18px] py-1 px-1 space-y-0.5 border border-amber-500/20 bg-amber-500/5">
+                    <div className="px-3 py-1.5 text-[11px] font-bold text-amber-500 uppercase tracking-wider">
+                      Admin Moderation
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setAdminModalMode('claim');
+                        setAdminModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-[13px] hover:bg-amber-500/10 text-xs font-semibold text-amber-300 text-left transition"
+                    >
+                      <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Copyright Claim (Disable Income)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setAdminModalMode('strike');
+                        setAdminModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-[13px] hover:bg-red-500/10 text-xs font-semibold text-red-400 text-left transition"
+                    >
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span>Issue Copyright Strike (1/3)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        setAdminModalMode('remove');
+                        setAdminModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-[13px] hover:bg-rose-500/10 text-xs font-semibold text-rose-400 text-left transition"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>Remove Post with Reason</span>
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </motion.div>
         </div>
       )}
+
+      {/* Admin Moderation Modal */}
+      <LoopsAdminModerationModal
+        isOpen={adminModalOpen}
+        onClose={() => setAdminModalOpen(false)}
+        post={post}
+        currentUser={currentUser}
+        defaultMode={adminModalMode}
+        onActionComplete={onClose}
+      />
     </AnimatePresence>
   );
 

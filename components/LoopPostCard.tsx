@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  AlertTriangle,
   Eye,
   Volume2,
   VolumeX,
@@ -11,6 +12,13 @@ import {
   Pause,
   Loader2,
 } from "lucide-react";
+
+const CopyrightIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M14.8 14.8A4 4 0 1 1 15 9" />
+  </svg>
+);
 import { ScamPost, UserProfile } from "../types";
 import {
   isScamPostRecord,
@@ -470,7 +478,14 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
     post.postTag,
   ]);
 
+  const [showHeartBurst, setShowHeartBurst] = useState(false);
+
   if (hiddenLocally) {
+    return null;
+  }
+
+  // Filter out posts removed by admin unless current user is author
+  if (post.isRemovedByAdmin && !isOwnPost) {
     return null;
   }
 
@@ -790,7 +805,22 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
     (cleanSingleLinePreview.length > 56 || combinedCaption.includes("\n"));
 
   return (
-    <article className="loops-surface border-b loops-divider w-full select-text">
+    <article className="relative loops-surface border-b loops-divider w-full select-text">
+      {/* Moderation Banners */}
+      {post.isRemovedByAdmin && isOwnPost && (
+        <div className="mx-3.5 mt-2.5 p-3 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-2 text-xs text-red-600 dark:text-red-400 font-semibold">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+          <span>Removed by Admin · Reason: {post.removedReason || 'Community Guidelines Violation'}</span>
+        </div>
+      )}
+
+      {post.copyrightClaim?.active && (isOwnPost || canManage) && (
+        <div className="mx-3.5 mt-2.5 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 font-semibold">
+          <CopyrightIcon className="w-4 h-4 shrink-0 text-amber-500" />
+          <span>Copyright Claim · Income Disabled ({post.copyrightClaim.ownerName || 'Rightful Owner'})</span>
+        </div>
+      )}
+
       {/* Optional Repost Kicker */}
       {repostBannerText && (
         <div

@@ -18,6 +18,7 @@ import {
   Download,
   Info,
   Shield,
+  ShieldCheck,
   VolumeX,
   Lock,
   Globe,
@@ -51,6 +52,7 @@ import {
   validatePublicUsername,
   validateRealPersonName,
 } from "../lib/authVoiceAndValidation";
+import { VerifiedLoopBadge } from "../components/VerifiedLoopBadge";
 
 const BellRingIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2440,8 +2442,11 @@ export const NewsProfilePage: React.FC = () => {
         <div className="pt-1 pb-2 space-y-3.5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-0.5 min-w-0 flex-1 pt-1">
-              <h1 className="text-[23px] sm:text-[26px] font-bold tracking-tight text-zinc-950 dark:text-white leading-tight truncate">
-                {displayName}
+              <h1 className="text-[23px] sm:text-[26px] font-bold tracking-tight text-zinc-950 dark:text-white leading-tight truncate flex items-center gap-1.5">
+                <span>{displayName}</span>
+                {Boolean(profileUser?.isVerifiedBadge || profileUser?.isVerified || profileUser?.verified || profileUser?.kycStatus === "approved" || profileUser?.role === "admin") && (
+                  <VerifiedLoopBadge />
+                )}
               </h1>
               {username && (
                 <p className="text-[15px] font-normal text-zinc-900 dark:text-zinc-200 truncate">
@@ -3273,6 +3278,19 @@ export const NewsProfilePage: React.FC = () => {
                         >
                           <BookOpen className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
                           <span>Saved loops</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowOptionsSheet(false);
+                            navigate("/loops/account-status");
+                          }}
+                          className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        >
+                          <ShieldCheck className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                          <span>Account status</span>
                         </button>
                       </div>
                     ) : (

@@ -3270,8 +3270,15 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
           Boolean(x)
       );
 
+    const seenPostIds = new Set<string>();
+    const deduplicatedBase = base.filter(({ post }) => {
+      if (!post?.id || seenPostIds.has(post.id)) return false;
+      seenPostIds.add(post.id);
+      return true;
+    });
+
     if (reelsSubTab === "friends") {
-      return base.filter(
+      return deduplicatedBase.filter(
         ({ post }) =>
           post.reporterId &&
           (followedIds.includes(post.reporterId) ||
@@ -3279,7 +3286,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       );
     }
 
-    return base;
+    return deduplicatedBase;
   }, [posts, reelsSubTab, followedIds, currentUser?.uid]);
 
   // Real Suggested Profiles for Reels Interstitial Slide (IMG_5297 — 100% real Firestore users with real names)
@@ -3540,20 +3547,28 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     }
   };
 
-  const handleScrubProgress = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    if (!rect.width) return;
-    const ratio = Math.max(
-      0,
-      Math.min(1, (e.clientX - rect.left) / rect.width)
-    );
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubTimeText, setScrubTimeText] = useState("");
+
+  const formatScrubTime = (sec: number) => {
+    if (!Number.isFinite(sec) || sec < 0) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  const applyScrubRatio = (ratio: number) => {
+    const clamped = Math.max(0, Math.min(1, ratio));
+    setProgressPct(clamped * 100);
+
     const activeVid = document.querySelector<HTMLVideoElement>(
       'video[data-active-reel-video="true"]'
     );
     if (activeVid && Number.isFinite(activeVid.duration) && activeVid.duration > 0) {
-      activeVid.currentTime = ratio * activeVid.duration;
-      setProgressPct(ratio * 100);
+      activeVid.currentTime = clamped * activeVid.duration;
+      setScrubTimeText(
+        `${formatScrubTime(activeVid.currentTime)} / ${formatScrubTime(activeVid.duration)}`
+      );
       return;
     }
     const activeAudio = document.querySelector<HTMLAudioElement>(
@@ -3564,9 +3579,41 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       Number.isFinite(activeAudio.duration) &&
       activeAudio.duration > 0
     ) {
-      activeAudio.currentTime = ratio * activeAudio.duration;
-      setProgressPct(ratio * 100);
+      activeAudio.currentTime = clamped * activeAudio.duration;
+      setScrubTimeText(
+        `${formatScrubTime(activeAudio.currentTime)} / ${formatScrubTime(activeAudio.duration)}`
+      );
     }
+  };
+
+  const handleScrubPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+    try {
+      (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    } catch {}
+    setIsScrubbing(true);
+    const ratio = (e.clientX - rect.left) / rect.width;
+    applyScrubRatio(ratio);
+  };
+
+  const handleScrubPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbing) return;
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+    const ratio = (e.clientX - rect.left) / rect.width;
+    applyScrubRatio(ratio);
+  };
+
+  const handleScrubPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbing) return;
+    e.stopPropagation();
+    try {
+      (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    setIsScrubbing(false);
   };
 
   const getCreatorPresentation = (post: ScamPost) => {
@@ -4381,20 +4428,32 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                         )}
                       </div>
 
-                      {/* Scrubbable Ultra-Thin White Progress Bar right above Compact Reels Dock (Exact IMG_5298 — zero inline styles) */}
+                      {/* Scrubbable Ultra-Thin White Progress Bar right above Compact Reels Dock */}
                       <div
-                        onClick={handleScrubProgress}
+                        onPointerDown={handleScrubPointerDown}
+                        onPointerMove={handleScrubPointerMove}
+                        onPointerUp={handleScrubPointerUp}
+                        onPointerCancel={handleScrubPointerUp}
                         onTouchStart={(e) => e.stopPropagation()}
-                        className="absolute inset-x-3.5 bottom-[64px] z-20 py-2 -my-2 cursor-pointer"
+                        className="absolute inset-x-3.5 bottom-[64px] z-30 py-2 -my-2 cursor-pointer touch-none select-none"
                       >
-                        <div className="h-[2.5px] rounded-full bg-white/30 overflow-hidden">
+                        {isScrubbing && scrubTimeText && (
+                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-black/90 backdrop-blur-md border border-white/20 text-[11px] font-mono font-bold text-white shadow-xl pointer-events-none">
+                            {scrubTimeText}
+                          </div>
+                        )}
+                        <div
+                          className={`rounded-full bg-white/30 overflow-hidden transition-all duration-150 ${
+                            isScrubbing ? 'h-[5px]' : 'h-[2.5px]'
+                          }`}
+                        >
                           <progress
                             max={100}
                             value={
                               isSlideActive
                                 ? progressPct > 0
                                   ? Math.min(100, progressPct)
-                                  : 15
+                                  : 0
                                 : 0
                             }
                             className="loops-reel-progress w-full h-full block appearance-none bg-transparent [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-white [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-white"
@@ -4428,11 +4487,11 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                 : "";
 
               if (!shouldInsertSuggestedAfter && !sponsoredAdForSlot) {
-                return reelSection;
+                return <React.Fragment key={`reel_item_${post.id}_${idx}`}>{reelSection}</React.Fragment>;
               }
 
               return (
-                <React.Fragment key={`${post.id}_interleaved`}>
+                <React.Fragment key={`reel_item_interleaved_${post.id}_${idx}`}>
                   {reelSection}
                   {shouldInsertSuggestedAfter && (
                     <ReelsSuggestedProfilesSlide

@@ -403,6 +403,54 @@ export const CreateReelStudio: React.FC = () => {
     }
   };
 
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsub = onSnapshot(doc(db, "users", currentUser.uid), (snap) => {
+      if (snap.exists()) {
+        setUserProfile(snap.data());
+      }
+    });
+    return () => unsub();
+  }, [currentUser]);
+
+  useEffect(() => {
+    const replyCommentId = searchParams.get("replyCommentId");
+    if (replyCommentId) {
+      const raw = sessionStorage.getItem("loops_reel_reply_comment");
+      if (raw) {
+        try {
+          const cmt = JSON.parse(raw);
+          setCaption(`Reply to @${cmt.userName || 'user'}: `);
+        } catch {}
+      }
+    }
+  }, [searchParams]);
+
+  const isPostingBlocked = Boolean(
+    userProfile?.loopsPostingBlocked || (userProfile?.loopsStrikeCount || 0) >= 3
+  );
+
+  if (isPostingBlocked) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-zinc-900 dark:text-white">
+        <Shield className="w-16 h-16 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold">Reels Restricted</h2>
+        <p className="text-sm text-zinc-500 max-w-sm mt-2">
+          Your account has received 3 copyright strikes or severe guideline violations. Creating new Reels is currently disabled.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/loops/account-status')}
+          className="mt-6 px-6 py-3 bg-red-600 text-white font-bold text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
+        >
+          Check Account Status
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white text-zinc-950 dark:bg-black dark:text-white transition-colors select-none font-sans">
       <SEO

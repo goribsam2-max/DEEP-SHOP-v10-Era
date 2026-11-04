@@ -2821,7 +2821,7 @@ export async function initializeAppAsync() {
         "/messages", "/profile", "/orders", "/my-orders", "/login", "/signin", "/register", "/signup",
         "/accounts", "/saved-accounts", "/find-account", "/choose-account", "/review-account", "/forgot-password", "/new-password",
         "/settings", "/favorites", "/wishlist", "/track-order", "/privacy", "/terms", "/helpline", "/ads",
-        "/categories", "/blog", "/contact", "/about", "/loops", "/news-hub", "/news", "/scam", "/scam-alert",
+        "/categories", "/blog", "/contact", "/about", "/loops", "/news-hub", "/news", "/scam", "/scam-alert", "/account-status",
         "/create-reel", "/add-story", "/custom-pay", "/exchange-request", "/e-receipt", "/devices",
         "/my-tickets", "/ticket", "/faq", "/help-center", "/cookie-policy", "/refund-policy", "/shipping-policy",
         "/disclaimer", "/sitemap-page", "/shipping-address", "/payment-methods", "/add-card", "/leave-review",

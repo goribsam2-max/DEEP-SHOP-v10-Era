@@ -12,6 +12,7 @@ import {
   Send,
   Bookmark,
   ShieldAlert,
+  AlertTriangle,
   MapPin,
   Phone,
   CreditCard,
@@ -1316,7 +1317,28 @@ export const NewsDetails: React.FC = () => {
         });
       } catch {}
     }
-    notify("Reply deleted", "info");
+
+    const deletedCmt = cmt;
+    notify("1 comment deleted", "info", undefined, {
+      undoLabel: "Undo",
+      onUndo: async () => {
+        setComments((prev) => [...prev, deletedCmt]);
+        setPost((prev) =>
+          prev
+            ? { ...prev, commentsCount: (prev.commentsCount || 0) + 1 }
+            : null
+        );
+        if (!post.id.startsWith("showcase_") && !String(deletedCmt.id).startsWith("cmt_")) {
+          try {
+            await setDoc(doc(db, "scam_posts", post.id, "comments", deletedCmt.id), deletedCmt);
+            await updateDoc(doc(db, "scam_posts", post.id), {
+              commentsCount: increment(1),
+            });
+          } catch {}
+        }
+        notify("Comment restored", "success");
+      },
+    });
   };
 
   const handleApproveComment = async (cmt: ScamComment) => {
@@ -1802,6 +1824,25 @@ export const NewsDetails: React.FC = () => {
       </div>
     );
   };
+
+  if (post.isRemovedByAdmin && currentUser?.uid !== post.reporterId) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-zinc-900 dark:text-white">
+        <AlertTriangle className="w-12 h-12 text-red-500 mb-3" />
+        <h2 className="text-lg font-bold">Loop Unavailable</h2>
+        <p className="text-xs text-zinc-500 max-w-xs mt-1">
+          This post was removed by moderators for violating Community Guidelines.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate("/loops")}
+          className="mt-5 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black font-bold text-xs rounded-full shadow-lg"
+        >
+          Return to Loops
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen loops-surface text-zinc-950 dark:text-zinc-100 font-sans pb-36">

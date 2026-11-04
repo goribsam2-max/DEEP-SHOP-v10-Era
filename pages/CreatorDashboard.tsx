@@ -781,6 +781,8 @@ export const CreatorDashboard: React.FC = () => {
   const isPostMonetizationEligible = (p: any): boolean => {
     if (!effectiveContentMonetization || monetizationEnabledAt <= 0)
       return false;
+    if (p.monetizationDisabled || p.copyrightClaim?.active || p.isRemovedByAdmin)
+      return false;
     return Number(p.createdAt || 0) >= monetizationEnabledAt;
   };
 

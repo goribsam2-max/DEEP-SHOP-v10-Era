@@ -137,6 +137,9 @@ export interface UserProfile {
   monetizationEnabledAt?: number;
   closeFriends?: string[];
   storyHighlights?: StoryHighlightItem[];
+  loopsCopyrightStrikes?: any[];
+  loopsStrikeCount?: number;
+  loopsPostingBlocked?: boolean;
 }
 
 export interface StoryHighlightSnapshot {
@@ -290,6 +293,7 @@ export interface ScamComment {
   reactions?: Record<string, ReactionType>;
   reactionsCount?: Record<string, number>;
   status?: 'approved' | 'pending_approval';
+  isPinned?: boolean;
 }
 
 export type ImageLayoutStyle = 'collage' | 'carousel' | 'grid' | 'stack';
@@ -397,6 +401,22 @@ export interface ScamPost {
   impressions?: number;
   clicks?: number;
   isAiGenerated?: boolean;
+  copyrightClaim?: {
+    active: boolean;
+    ownerId?: string;
+    ownerName?: string;
+    ownerAvatar?: string;
+    note?: string;
+    claimedAt?: number;
+    claimedBy?: string;
+  };
+  copyrightStrike?: any;
+  monetizationDisabled?: boolean;
+  isRemovedByAdmin?: boolean;
+  removedReason?: string;
+  removedAt?: number;
+  removedBy?: string;
+  pinnedCommentId?: string;
 }
 
 export interface AffiliateLog {

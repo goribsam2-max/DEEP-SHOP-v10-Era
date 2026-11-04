@@ -42,6 +42,7 @@ import {
   ZapOff,
   Smile,
   Sparkles,
+  Shield,
   Pencil,
   MoreHorizontal,
   Search,
@@ -2522,6 +2523,41 @@ export default function AddStory() {
   /* --------------------------------------------------------------------------
    * LOADING STATE
    * ------------------------------------------------------------------------ */
+  const [storyUserProfile, setStoryUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsub = onSnapshot(doc(db, "users", currentUser.uid), (snap) => {
+      if (snap.exists()) {
+        setStoryUserProfile(snap.data());
+      }
+    });
+    return () => unsub();
+  }, [currentUser]);
+
+  const isPostingBlocked = Boolean(
+    storyUserProfile?.loopsPostingBlocked || (storyUserProfile?.loopsStrikeCount || 0) >= 3
+  );
+
+  if (isPostingBlocked) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center text-white">
+        <Shield className="w-16 h-16 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold">Story Creation Restricted</h2>
+        <p className="text-sm text-zinc-400 max-w-sm mt-2">
+          Your account has received 3 copyright strikes or severe guideline violations. Creating new Stories is currently disabled.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/loops/account-status')}
+          className="mt-6 px-6 py-3 bg-red-600 text-white font-bold text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
+        >
+          Check Account Status
+        </button>
+      </div>
+    );
+  }
+
   if (authLoading) {
     return (
       <div className="story-studio-shell w-full h-[100dvh] flex items-center justify-center">

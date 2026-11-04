@@ -78,6 +78,9 @@ const LoopActivityPage = lazyRetry(() =>
 const LoopsAlgorithmPage = lazyRetry(() =>
   import('./components/LoopsReelsView').then((m) => ({ default: m.LoopsAlgorithmPage })), 'LoopsAlgorithmPage'
 );
+const LoopsAccountStatusPage = lazyRetry(() =>
+  import('./pages/LoopsAccountStatus').then((m) => ({ default: m.LoopsAccountStatusPage })), 'LoopsAccountStatusPage'
+);
 const PreferredLanguagesPage = lazyRetry(() =>
   import('./components/LoopsReelsOverlays').then((m) => ({ default: m.PreferredLanguagesPage })), 'PreferredLanguagesPage'
 );
@@ -1046,6 +1049,8 @@ const AppContent: React.FC = () => {
           <Route path="/loops/edit/:editId" element={<PageWrapper><CreateScamPost /></PageWrapper>} />
           <Route path="/loops/personalization" element={<PageWrapper><FeedPersonalization /></PageWrapper>} />
           <Route path="/loops/algorithm" element={<PageWrapper><LoopsAlgorithmPage /></PageWrapper>} />
+          <Route path="/loops/account-status" element={<PageWrapper><LoopsAccountStatusPage /></PageWrapper>} />
+          <Route path="/account-status" element={<PageWrapper><LoopsAccountStatusPage /></PageWrapper>} />
           <Route path="/loops/preferred-languages" element={<PageWrapper><PreferredLanguagesPage /></PageWrapper>} />
           <Route path="/loops/post/:id" element={<PageWrapper><NewsDetails /></PageWrapper>} />
           <Route path="/loops/post/:id/activity" element={<PageWrapper><LoopActivityPage /></PageWrapper>} />

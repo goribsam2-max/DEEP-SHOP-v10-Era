@@ -1806,6 +1806,41 @@ function cleanPayload<T>(obj: T): T {
     scamLocation: postType === "scam" ? scamLocation : undefined,
   };
 
+  const [authorUserProfile, setAuthorUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsub = onSnapshot(doc(db, "users", currentUser.uid), (snap) => {
+      if (snap.exists()) {
+        setAuthorUserProfile(snap.data());
+      }
+    });
+    return () => unsub();
+  }, [currentUser]);
+
+  const isPostingBlocked = Boolean(
+    authorUserProfile?.loopsPostingBlocked || (authorUserProfile?.loopsStrikeCount || 0) >= 3
+  );
+
+  if (isPostingBlocked) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-zinc-900 dark:text-white">
+        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold">Posting Restricted</h2>
+        <p className="text-sm text-zinc-500 max-w-sm mt-2">
+          Your account has received 3 copyright strikes or severe guideline violations. Creating new Loops posts is currently disabled.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/loops/account-status')}
+          className="mt-6 px-6 py-3 bg-red-600 text-white font-bold text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
+        >
+          Check Account Status
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F6F7F9] dark:bg-[#0B0D12] text-zinc-900 dark:text-zinc-100 font-sans pb-16 transition-colors">
       <SEO

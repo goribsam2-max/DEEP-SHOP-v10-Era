@@ -208,10 +208,13 @@ export const LoopActivityPage: React.FC = () => {
           .map((d) => ({ id: d.id, ...d.data() }))
           .filter(
             (n: any) =>
-              n.fromUserId &&
-              n.fromUserId !== "system_setup" &&
-              n.fromUserId !== "system_milestone" &&
-              n.fromUserId !== myUid
+              n.type === "post_removed" ||
+              n.type === "copyright_claim" ||
+              n.type === "copyright_strike" ||
+              (n.fromUserId &&
+                n.fromUserId !== "system_setup" &&
+                n.fromUserId !== "system_milestone" &&
+                n.fromUserId !== myUid)
           );
         setMyNotifDocs(docs);
       },

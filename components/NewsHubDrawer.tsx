@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   BarChart2,
   ShieldAlert,
+  ShieldCheck,
   SlidersHorizontal,
   Sun,
   Moon,
@@ -63,6 +64,7 @@ const DEFAULT_SECONDARY_IDS = [
   "messages",
   "search",
   "creator_studio",
+  "account_status",
   "your_algorithm",
   "preferences",
   "scam_alerts",
@@ -284,6 +286,13 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
       onClick: () => handleNav("/creator-dashboard"),
       trailing: (
         <BarChart2 className="w-[20px] h-[20px] text-zinc-700 dark:text-zinc-300 stroke-[1.85] shrink-0" />
+      ),
+    },
+    account_status: {
+      label: "Account status",
+      onClick: () => handleNav("/loops/account-status"),
+      trailing: (
+        <ShieldCheck className="w-[20px] h-[20px] text-zinc-700 dark:text-zinc-300 stroke-[1.85] shrink-0" />
       ),
     },
     your_algorithm: {
