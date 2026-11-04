@@ -337,6 +337,7 @@ interface SingleReelMediaStageProps {
   onProgressUpdate?: (progressPct: number) => void;
   onResolvedChange?: (resolved: ParsedVideoEmbed) => void;
   onVideoEnded?: () => void;
+  onToggleLike?: (post: ScamPost) => void;
 }
 
 const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
@@ -351,6 +352,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   onProgressUpdate,
   onResolvedChange,
   onVideoEnded,
+  onToggleLike,
 }) => {
   const playerId = useId();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -365,8 +367,21 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   const [isBuffering, setIsBuffering] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showControlsHud, setShowControlsHud] = useState(false);
+  const [showHeartBurst, setShowHeartBurst] = useState(false);
   const hudTimerRef = useRef<number | null>(null);
   const autoMuteNotifiedRef = useRef(false);
+
+  const handleDoubleTapStage = (e: React.MouseEvent) => {
+    if (isDocked) return;
+    e.stopPropagation();
+    const hasLiked = hasUserReactedToPost(post, auth.currentUser?.uid);
+    if (!hasLiked && onToggleLike) {
+      triggerHaptic();
+      onToggleLike(post);
+    }
+    setShowHeartBurst(true);
+    setTimeout(() => setShowHeartBurst(false), 1000);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -1059,9 +1074,23 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       {supportsTapOverlay && !isDocked && (
         <div
           onClick={handleTapStage}
+          onDoubleClick={handleDoubleTapStage}
           className="absolute inset-0 z-10 cursor-pointer"
         />
       )}
+
+      <AnimatePresence>
+        {showHeartBurst && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1.2 }}
+            exit={{ opacity: 0, scale: 1.5 }}
+            className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+          >
+            <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl opacity-90" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Center Stacked Glassmorphic Mute + Play/Pause Circles (Exact IMG_5142) */}
       <AnimatePresence>
@@ -3239,6 +3268,10 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     onOverlayOpenChange?.(anySheetOpen);
   }, [anySheetOpen, onOverlayOpenChange]);
 
+  const handleToggleReelLike = (postToLike: ScamPost) => {
+    onToggleReaction(postToLike, "love");
+  };
+
   const reelItems = useMemo(() => {
     const base = posts
       .map((post) => {
@@ -3956,6 +3989,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                             ? () => jumpToReelIndex(idx + 1)
                             : undefined
                         }
+                        onToggleLike={handleToggleReelLike}
                       />
 
                       {/* Transparent tap-shield when comments sheet is open so tapping directly on the video or iframe closes comments */}

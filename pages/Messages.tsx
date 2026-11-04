@@ -263,6 +263,27 @@ export default function Messages() {
   // activeMessagesTab is now synchronized with search parameter tab=settings
   const [isOnlineSectionVisible, setIsOnlineSectionVisible] = useState(true);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    // Professional Scroll Fix: Disable body scroll when in Messages
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  useEffect(() => {
+    if (user?.uid) {
+      const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+        if (snap.exists()) {
+          setCurrentUserProfile(snap.data());
+        }
+      });
+      return () => unsub();
+    }
+  }, [user?.uid]);
   
   // Safety Notice Dismissal State (Shows only ONCE until user clicks "буঝেছি")
   const [safetyNoticeDismissed, setSafetyNoticeDismissed] = useState<boolean>(() => {
@@ -2917,7 +2938,13 @@ const handleCreateChannel = async () => {
           const aiSnap = await getDoc(doc(db, 'settings', 'ai_human_agent'));
           const aiSettings = aiSnap.data();
           
-          if (aiSettings?.enabled) {
+          // Professional: Auto-disable AI when Admin/Staff intervenes (IMG_AI_DYNAMIC)
+          const isAdminRole = currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'staff';
+          if (isAdminRole) {
+            updateDoc(doc(db, 'p2p_chats', chatId), { aiDisabled: true }).catch(() => {});
+          }
+
+          if (aiSettings?.enabled && !activeChat?.aiDisabled && !isAdminRole) {
             const otherEmail = activeChat?.otherUser?.email?.toLowerCase();
             const targetEmail = aiSettings.targetEmail?.toLowerCase();
             const isTargetAccount = (otherEmail === targetEmail) || (recipientId === aiSettings.targetUid);
@@ -7062,6 +7089,26 @@ const handleCreateChannel = async () => {
                      </div>
 
                      {/* Header Actions matching IMG_5359 right 1:1: Video Call + Voice Call */}
+                          {(currentUserProfile?.role === "admin" || currentUserProfile?.role === "staff") && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                triggerHaptic();
+                                const nextState = !activeChat?.aiDisabled;
+                                await updateDoc(doc(db, "p2p_chats", activeChat?.id), { aiDisabled: nextState });
+                                notify(nextState ? "AI Auto-reply Disabled" : "AI Auto-reply Enabled", "info");
+                              }}
+                              className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer",
+                                activeChat?.aiDisabled 
+                                  ? "text-rose-500 bg-rose-500/10 hover:bg-rose-500/20" 
+                                  : "text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20"
+                              )}
+                              title={activeChat?.aiDisabled ? "Enable AI Auto-reply" : "Disable AI Auto-reply"}
+                            >
+                                <Sparkles className={cn("w-[21px] h-[21px]", activeChat?.aiDisabled ? "opacity-40" : "")} />
+                            </button>
+                          )}
                      <div className="flex items-center gap-2 shrink-0 relative">
                          <button
                            type="button"

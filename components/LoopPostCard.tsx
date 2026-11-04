@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
@@ -480,6 +481,16 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
 
   const [showHeartBurst, setShowHeartBurst] = useState(false);
 
+  const handleDoubleTapReact = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!userLiked) {
+      triggerHaptic();
+      onToggleLike(post);
+    }
+    setShowHeartBurst(true);
+    setTimeout(() => setShowHeartBurst(false), 1000);
+  };
+
   if (hiddenLocally) {
     return null;
   }
@@ -938,6 +949,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             triggerHaptic();
             navigate(`/loops/photo/${post.id}/0`);
           }}
+          onDoubleClick={handleDoubleTapReact}
           className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden cursor-pointer"
         >
           <SmoothImage
@@ -947,6 +959,18 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             skeletonClassName="rounded-none"
             className="w-full max-h-[640px] object-cover block rounded-none"
           />
+          <AnimatePresence>
+            {showHeartBurst && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1.2 }}
+                exit={{ opacity: 0, scale: 1.5 }}
+                className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+              >
+                <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl opacity-90" />
+              </motion.div>
+            )}
+          </AnimatePresence>
           {playableCardBgMusicUrl && (
             <button
               type="button"
@@ -993,18 +1017,35 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
             }}
             className="loops-edge-media relative w-full rounded-none bg-zinc-100 dark:bg-zinc-900 overflow-hidden group"
           >
-            <SmoothImage
-              src={images[carouselIdx] || images[0]}
-              alt={`${displayUsername} slide ${carouselIdx + 1}`}
-              eager={carouselIdx > 0}
-              onClick={() => {
-                triggerHaptic();
-                navigate(`/loops/photo/${post.id}/${carouselIdx}`);
-              }}
-              wrapperClassName="w-full rounded-none"
-              skeletonClassName="rounded-none"
-              className="w-full max-h-[640px] object-cover block cursor-pointer select-none rounded-none"
-            />
+            <div 
+              onDoubleClick={handleDoubleTapReact}
+              className="relative w-full h-full"
+            >
+              <SmoothImage
+                src={images[carouselIdx] || images[0]}
+                alt={`${displayUsername} slide ${carouselIdx + 1}`}
+                eager={carouselIdx > 0}
+                onClick={() => {
+                  triggerHaptic();
+                  navigate(`/loops/photo/${post.id}/${carouselIdx}`);
+                }}
+                wrapperClassName="w-full rounded-none"
+                skeletonClassName="rounded-none"
+                className="w-full max-h-[640px] object-cover block cursor-pointer select-none rounded-none"
+              />
+              <AnimatePresence>
+                {showHeartBurst && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1.2 }}
+                    exit={{ opacity: 0, scale: 1.5 }}
+                    className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+                  >
+                    <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl opacity-90" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Top-Right Liquid-Glass Image Count Pill (Strictly only when > 1 image) */}
             <div className="loops-media-count-pill absolute top-3 right-3 z-20 px-2.5 py-1 text-[12px] font-semibold tabular-nums leading-none select-none pointer-events-none">
@@ -1095,8 +1136,21 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
       {resolvedVideo && (
         <div
           onClick={openPostDetails}
+          onDoubleClick={handleDoubleTapReact}
           className="loops-edge-media w-full rounded-none overflow-hidden cursor-pointer relative group"
         >
+          <AnimatePresence>
+            {showHeartBurst && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1.2 }}
+                exit={{ opacity: 0, scale: 1.5 }}
+                className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+              >
+                <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl opacity-90" />
+              </motion.div>
+            )}
+          </AnimatePresence>
           <NewsVideoPlayer
             videoSource={resolvedVideo}
             bgMusicUrl={post.music?.audioUrl || post.music?.url}

@@ -59,6 +59,7 @@ import {
   LiquidGlassShareModal,
   LoopPostOptionsSheet,
 } from "../components/LiquidGlassPostInteractions";
+import { LoopsCommentContextMenu, useCommentLongPress } from "../components/LoopsCommentContextMenu";
 import { SmoothImage, preloadImageUrl } from "../components/SmoothImage";
 import { auth, db } from "../firebase";
 import {
@@ -258,6 +259,77 @@ export const NewsDetails: React.FC = () => {
   const [topicPostCount, setTopicPostCount] = useState<number>(1);
   const [detailCarouselIdx, setDetailCarouselIdx] = useState(0);
   const detailTouchStartXRef = useRef<number | null>(null);
+
+  const [contextMenuConfig, setContextMenuConfig] = useState<{
+    isOpen: boolean;
+    comment: any;
+  } | null>(null);
+
+  const handlePinComment = async (commentId: string, currentPinned: boolean) => {
+    if (!post) return;
+    triggerHaptic();
+    try {
+      const nextPinned = !currentPinned;
+      await updateDoc(doc(db, "scam_posts", post.id, "comments", commentId), {
+        isPinned: nextPinned,
+      });
+      notify(nextPinned ? "Comment pinned" : "Comment unpinned", "success");
+    } catch {
+      notify("Failed to update pin status", "error");
+    }
+  };
+
+  const handleRestrictUser = (userId: string, userName: string) => {
+    triggerHaptic();
+    notify(`User ${userName} restricted`, "info");
+  };
+
+  const handleBlockUser = (userId: string, userName: string) => {
+    triggerHaptic();
+    notify(`User ${userName} blocked`, "info");
+  };
+
+  const handleReportComment = (comment: any) => {
+    triggerHaptic();
+    notify("Comment reported for review", "info");
+  };
+
+  const handleReplyWithReel = (comment: any) => {
+    triggerHaptic();
+    navigate(`/loops/create-reel?replyToCommentId=${comment.id}&postId=${post?.id}`);
+  };
+
+  const handleAddToStory = (comment: any) => {
+    triggerHaptic();
+    navigate(`/loops/add-story?commentId=${comment.id}&postId=${post?.id}`);
+  };
+
+  const handleShareComment = (comment: any) => {
+    triggerHaptic();
+    setShowShareModal(true);
+  };
+
+  const handleOpenContextMenu = (e: React.SyntheticEvent, cmt: ScamComment) => {
+    e.preventDefault();
+    triggerHaptic();
+    setContextMenuConfig({
+      isOpen: true,
+      comment: cmt,
+    });
+  };
+
+  const CommentLongPressWrapper: React.FC<{
+    comment: ScamComment;
+    children: React.ReactNode;
+    className?: string;
+  }> = ({ comment, children, className }) => {
+    const longPressHandlers = useCommentLongPress((e) => handleOpenContextMenu(e, comment));
+    return (
+      <div {...longPressHandlers} className={className}>
+        {children}
+      </div>
+    );
+  };
 
   const totalReactions = useMemo(
     () => getTotalPostReactions(post),
@@ -1591,237 +1663,239 @@ export const NewsDetails: React.FC = () => {
     const isEditingThis = editingCommentId === cmt.id;
 
     return (
-      <div className="flex-1 min-w-0">
-        {/* Top Row: Username + Verified + Author Badge + Time --- Right: Author-Liked Avatar+Heart & More menu */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-            <button
-              type="button"
-              onClick={() => {
-                if (cmt.userId && cmt.userId !== "guest_local") {
-                  triggerHaptic();
-                  navigate(`/loops/profile/${cmt.userId}`);
-                }
-              }}
-              className="text-[14.5px] font-semibold text-zinc-950 dark:text-white hover:underline truncate cursor-pointer"
-            >
-              {cmtHandle}
-            </button>
-            {cmtVerified && <VerifiedLoopBadge className="w-3.5 h-3.5" />}
-            {isCommentByPostAuthor && (
-              <span className="px-2 py-0.5 rounded-full bg-[#E8F4FF] dark:bg-[#0095F6]/20 text-[#0095F6] text-[11px] font-semibold leading-none">
-                Author
-              </span>
-            )}
-            <span className="text-[13.5px] text-zinc-400 dark:text-zinc-500 tabular-nums shrink-0">
-              {formatLoopCompactTime(cmt.createdAt)}
-            </span>
-            {cmt.isEdited && (
-              <span className="text-[12px] text-zinc-400 dark:text-zinc-500">
-                · Edited
-              </span>
-            )}
-            {isPending && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10.5px] font-semibold">
-                Pending review
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 relative">
-            {/* Author-Liked Mini Avatar + Red Heart Badge (IMG_5091 & IMG_5094) */}
-            {likedByPostAuthor && (
-              <div
-                className="relative flex items-center"
-                title={`Liked by ${authorHandle}`}
-              >
-                <GenericPersonAvatar
-                  src={authorAvatarUrl}
-                  name={authorHandle}
-                  sizeClass="w-[19px] h-[19px]"
-                />
-                <span className="absolute -left-1.5 -bottom-0.5 w-3.5 h-3.5 rounded-full bg-white dark:bg-[#0D0E12] flex items-center justify-center">
-                  <Heart className="w-2.5 h-2.5 fill-[#FF3040] text-[#FF3040]" />
-                </span>
-              </div>
-            )}
-
-            {(isCommentOwner || canDeleteCmt || (isPending && canManage)) && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveCommentMenuId((prev) =>
-                      prev === cmt.id ? null : cmt.id
-                    )
-                  }
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
-                  aria-label="Reply options"
-                >
-                  <span className="text-[15px] leading-none tracking-widest font-bold -mt-1">
-                    ···
-                  </span>
-                </button>
-                <AnimatePresence>
-                  {activeCommentMenuId === cmt.id && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.94, y: -4 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.94, y: -4 }}
-                      transition={{ duration: 0.14 }}
-                      className="loops-liquid-popover absolute right-0 top-8 z-30 min-w-[156px] rounded-2xl py-1.5 px-1.5"
-                    >
-                      {isPending && canManage && (
-                        <button
-                          type="button"
-                          onClick={() => handleApproveComment(cmt)}
-                          className="w-full px-3 py-2 rounded-xl flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
-                        >
-                          <Check className="w-4 h-4" />
-                          <span>Approve</span>
-                        </button>
-                      )}
-                      {isCommentOwner && (
-                        <button
-                          type="button"
-                          onClick={() => handleStartEditComment(cmt)}
-                          className="w-full px-3 py-2 rounded-xl flex items-center gap-2 text-[13px] font-medium text-zinc-900 dark:text-zinc-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          <span>Edit</span>
-                        </button>
-                      )}
-                      {canDeleteCmt && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteComment(cmt)}
-                          className="w-full px-3 py-2 rounded-xl flex items-center gap-2 text-[13px] font-medium text-[#FF3040] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span>Delete</span>
-                        </button>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Comment Body or Inline Edit */}
-        {isEditingThis ? (
-          <div className="mt-2 space-y-2">
-            <textarea
-              value={editingCommentText}
-              onChange={(e) => setEditingCommentText(e.target.value)}
-              rows={2}
-              className="w-full rounded-2xl border loops-divider bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-[14.5px] outline-none resize-none"
-            />
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={savingCommentEdit}
-                onClick={() => handleSaveCommentEdit(cmt)}
-                className="px-3.5 py-1.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-semibold cursor-pointer"
-              >
-                Save
-              </button>
+      <CommentLongPressWrapper comment={cmt} className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0">
+          {/* Top Row: Username + Verified + Author Badge + Time --- Right: Author-Liked Avatar+Heart & More menu */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
               <button
                 type="button"
                 onClick={() => {
-                  setEditingCommentId(null);
-                  setEditingCommentText("");
+                  if (cmt.userId && cmt.userId !== "guest_local") {
+                    triggerHaptic();
+                    navigate(`/loops/profile/${cmt.userId}`);
+                  }
                 }}
-                className="px-3.5 py-1.5 rounded-full border loops-divider text-xs font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                className="text-[14.5px] font-semibold text-zinc-950 dark:text-white hover:underline truncate cursor-pointer"
               >
-                Cancel
+                {cmtHandle}
               </button>
+              {cmtVerified && <VerifiedLoopBadge className="w-3.5 h-3.5" />}
+              {isCommentByPostAuthor && (
+                <span className="px-2 py-0.5 rounded-full bg-[#E8F4FF] dark:bg-[#0095F6]/20 text-[#0095F6] text-[11px] font-semibold leading-none">
+                  Author
+                </span>
+              )}
+              <span className="text-[13.5px] text-zinc-400 dark:text-zinc-500 tabular-nums shrink-0">
+                {formatLoopCompactTime(cmt.createdAt)}
+              </span>
+              {cmt.isEdited && (
+                <span className="text-[12px] text-zinc-400 dark:text-zinc-500">
+                  · Edited
+                </span>
+              )}
+              {isPending && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10.5px] font-semibold">
+                  Pending review
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 relative">
+              {/* Author-Liked Mini Avatar + Red Heart Badge (IMG_5091 & IMG_5094) */}
+              {likedByPostAuthor && (
+                <div
+                  className="relative flex items-center"
+                  title={`Liked by ${authorHandle}`}
+                >
+                  <GenericPersonAvatar
+                    src={authorAvatarUrl}
+                    name={authorHandle}
+                    sizeClass="w-[19px] h-[19px]"
+                  />
+                  <span className="absolute -left-1.5 -bottom-0.5 w-3.5 h-3.5 rounded-full bg-white dark:bg-[#0D0E12] flex items-center justify-center">
+                    <Heart className="w-2.5 h-2.5 fill-[#FF3040] text-[#FF3040]" />
+                  </span>
+                </div>
+              )}
+
+              {(isCommentOwner || canDeleteCmt || (isPending && canManage)) && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveCommentMenuId((prev) =>
+                        prev === cmt.id ? null : cmt.id
+                      )
+                    }
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
+                    aria-label="Reply options"
+                  >
+                    <span className="text-[15px] leading-none tracking-widest font-bold -mt-1">
+                      ···
+                    </span>
+                  </button>
+                  <AnimatePresence>
+                    {activeCommentMenuId === cmt.id && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.94, y: -4 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.94, y: -4 }}
+                        transition={{ duration: 0.14 }}
+                        className="loops-liquid-popover absolute right-0 top-8 z-30 min-w-[156px] rounded-2xl py-1.5 px-1.5"
+                      >
+                        {isPending && canManage && (
+                          <button
+                            type="button"
+                            onClick={() => handleApproveComment(cmt)}
+                            className="w-full px-3 py-2 rounded-xl flex items-center gap-2 text-[13px] font-semibold text-emerald-600 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
+                          >
+                            <Check className="w-4 h-4" />
+                            <span>Approve</span>
+                          </button>
+                        )}
+                        {isCommentOwner && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditComment(cmt)}
+                            className="w-full px-3 py-2 rounded-xl flex items-center gap-2 text-[13px] font-medium text-zinc-900 dark:text-zinc-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+                        {canDeleteCmt && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteComment(cmt)}
+                            className="w-full px-3 py-2 rounded-xl flex items-center gap-2 text-[13px] font-medium text-[#FF3040] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span>Delete</span>
+                          </button>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           </div>
-        ) : (
-          <>
-            {cmt.text && (
-              <p className="mt-0.5 text-[15px] leading-[1.42] text-zinc-900 dark:text-zinc-100 whitespace-pre-line break-words">
-                <NewsRichText text={cmt.text} />
-              </p>
-            )}
-            {cmt.imageUrl && (
-              <div className="mt-2 max-w-[260px] rounded-2xl overflow-hidden border loops-divider">
-                <SmoothImage
-                  src={cmt.imageUrl}
-                  alt="Reply attachment"
-                  wrapperClassName="w-full min-h-[120px]"
-                  className="w-full h-auto max-h-64 object-cover"
-                />
+
+          {/* Comment Body or Inline Edit */}
+          {isEditingThis ? (
+            <div className="mt-2 space-y-2">
+              <textarea
+                value={editingCommentText}
+                onChange={(e) => setEditingCommentText(e.target.value)}
+                rows={2}
+                className="w-full rounded-2xl border loops-divider bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-[14.5px] outline-none resize-none"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={savingCommentEdit}
+                  onClick={() => handleSaveCommentEdit(cmt)}
+                  className="px-3.5 py-1.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-semibold cursor-pointer"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCommentId(null);
+                    setEditingCommentText("");
+                  }}
+                  className="px-3.5 py-1.5 rounded-full border loops-divider text-xs font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
               </div>
-            )}
-          </>
-        )}
+            </div>
+          ) : (
+            <>
+              {cmt.text && (
+                <p className="mt-0.5 text-[15px] leading-[1.42] text-zinc-900 dark:text-zinc-100 whitespace-pre-line break-words">
+                  <NewsRichText text={cmt.text} />
+                </p>
+              )}
+              {cmt.imageUrl && (
+                <div className="mt-2 max-w-[260px] rounded-2xl overflow-hidden border loops-divider">
+                  <SmoothImage
+                    src={cmt.imageUrl}
+                    alt="Reply attachment"
+                    wrapperClassName="w-full min-h-[120px]"
+                    className="w-full h-auto max-h-64 object-cover"
+                  />
+                </div>
+              )}
+            </>
+          )}
 
-        {/* Per-Comment 4-Icon Action Bar (IMG_5111) */}
-        <div className="mt-2.5 flex items-center gap-5 text-zinc-900 dark:text-zinc-100">
-          <button
-            type="button"
-            onClick={() => handleCommentReaction(cmt, "love")}
-            className={`inline-flex items-center gap-1.5 text-[13px] tabular-nums transition active:scale-90 cursor-pointer ${
-              viewerLikedComment
-                ? "text-[#FF3040]"
-                : "text-zinc-800 dark:text-zinc-200 hover:text-[#FF3040]"
-            }`}
-            aria-label="Like reply"
-          >
-            <LoopHeartIcon
-              className="w-[18px] h-[18px]"
-              filled={Boolean(viewerLikedComment)}
-            />
-            {cmtLikes > 0 && <span>{formatLoopCount(cmtLikes)}</span>}
-          </button>
+          {/* Per-Comment 4-Icon Action Bar (IMG_5111) */}
+          <div className="mt-2.5 flex items-center gap-5 text-zinc-900 dark:text-zinc-100">
+            <button
+              type="button"
+              onClick={() => handleCommentReaction(cmt, "love")}
+              className={`inline-flex items-center gap-1.5 text-[13px] tabular-nums transition active:scale-90 cursor-pointer ${
+                viewerLikedComment
+                  ? "text-[#FF3040]"
+                  : "text-zinc-800 dark:text-zinc-200 hover:text-[#FF3040]"
+              }`}
+              aria-label="Like reply"
+            >
+              <LoopHeartIcon
+                className="w-[18px] h-[18px]"
+                filled={Boolean(viewerLikedComment)}
+              />
+              {cmtLikes > 0 && <span>{formatLoopCount(cmtLikes)}</span>}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic();
-              setReplyingTo({
-                commentId: opts.rootParentId,
-                userName: cmtHandle,
-              });
-              commentInputRef.current?.focus();
-            }}
-            className="inline-flex items-center gap-1.5 text-[13px] tabular-nums text-zinc-800 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white transition active:scale-90 cursor-pointer"
-            aria-label="Reply to comment"
-          >
-            <LoopCommentIcon className="w-[18px] h-[18px]" />
-            {!opts.isReply && opts.directReplyCount > 0 && (
-              <span>{formatLoopCount(opts.directReplyCount)}</span>
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setReplyingTo({
+                  commentId: opts.rootParentId,
+                  userName: cmtHandle,
+                });
+                commentInputRef.current?.focus();
+              }}
+              className="inline-flex items-center gap-1.5 text-[13px] tabular-nums text-zinc-800 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white transition active:scale-90 cursor-pointer"
+              aria-label="Reply to comment"
+            >
+              <LoopCommentIcon className="w-[18px] h-[18px]" />
+              {!opts.isReply && opts.directReplyCount > 0 && (
+                <span>{formatLoopCount(opts.directReplyCount)}</span>
+              )}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic();
-              navigate(`/loops/create?quotePostId=${post.id}`);
-            }}
-            className="inline-flex items-center gap-1.5 text-[13px] text-zinc-800 dark:text-zinc-200 hover:text-[#00BA7C] transition active:scale-90 cursor-pointer"
-            aria-label="Quote in Loop"
-          >
-            <LoopRepeatIcon className="w-[18px] h-[18px]" />
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                navigate(`/loops/create?quotePostId=${post.id}`);
+              }}
+              className="inline-flex items-center gap-1.5 text-[13px] text-zinc-800 dark:text-zinc-200 hover:text-[#00BA7C] transition active:scale-90 cursor-pointer"
+              aria-label="Quote in Loop"
+            >
+              <LoopRepeatIcon className="w-[18px] h-[18px]" />
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic();
-              setShowShareModal(true);
-            }}
-            className="inline-flex items-center gap-1.5 text-[13px] text-zinc-800 dark:text-zinc-200 hover:text-[#0095F6] transition active:scale-90 cursor-pointer"
-            aria-label="Share reply link"
-          >
-            <LoopSendIcon className="w-[17.5px] h-[17.5px]" />
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setShowShareModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 text-[13px] text-zinc-800 dark:text-zinc-200 hover:text-[#0095F6] transition active:scale-90 cursor-pointer"
+              aria-label="Share reply link"
+            >
+              <LoopSendIcon className="w-[17.5px] h-[17.5px]" />
+            </button>
+          </div>
         </div>
-      </div>
+      </CommentLongPressWrapper>
     );
   };
 
@@ -3039,6 +3113,26 @@ export const NewsDetails: React.FC = () => {
         onDeletePost={handleDeletePost}
         onPostHidden={() => navigate("/loops")}
       />
+
+      {contextMenuConfig?.comment && (
+        <LoopsCommentContextMenu
+          isOpen={contextMenuConfig.isOpen}
+          onClose={() => setContextMenuConfig(null)}
+          comment={contextMenuConfig.comment}
+          postId={post.id}
+          isPostOwner={currentUser?.uid === post.reporterId}
+          isCommentOwner={currentUser?.uid === contextMenuConfig.comment.userId}
+          isAdmin={isAdmin}
+          onPinToggle={handlePinComment}
+          onReplyWithReel={handleReplyWithReel}
+          onAddToStory={handleAddToStory}
+          onShare={handleShareComment}
+          onRestrictUser={handleRestrictUser}
+          onBlockUser={handleBlockUser}
+          onReportComment={handleReportComment}
+          onDeleteComment={handleDeleteComment}
+        />
+      )}
     </div>
   );
 };
