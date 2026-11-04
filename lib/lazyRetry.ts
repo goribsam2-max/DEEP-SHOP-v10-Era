@@ -10,44 +10,47 @@ export function lazyRetry<T extends ComponentType<any>>(
   name?: string
 ) {
   return lazy(async () => {
-    const storageKey = `ds_lazy_retry_${name || 'route'}_${Math.floor(Date.now() / 30000)}`;
+    const storageKey = `ds_lazy_retry_${name || 'route'}_${Math.floor(Date.now() / 60000)}`;
     let alreadyReloaded = false;
     try {
       alreadyReloaded = sessionStorage.getItem(storageKey) === 'true';
     } catch {}
 
     try {
-      const mod = await componentImport();
-      return mod;
+      return await componentImport();
     } catch (firstErr: any) {
-      // Retry once after a brief pause in case of transient mobile network drop
+      // Retry up to 2 times in case of transient mobile network drop
       try {
-        await new Promise((r) => setTimeout(r, 250));
+        await new Promise((r) => setTimeout(r, 200));
         return await componentImport();
-      } catch (error: any) {
-        const msg = String(error?.message || firstErr?.message || '').toLowerCase();
-        const isMimeOrChunkErr =
-          msg.includes('text/html') ||
-          msg.includes('dynamically imported module') ||
-          msg.includes('importing a module script failed') ||
-          msg.includes('module is not valid') ||
-          msg.includes('loading chunk') ||
-          msg.includes('failed to fetch') ||
-          msg.includes('mime type') ||
-          msg.includes('valid javascript') ||
-          msg.includes("unexpected token '<'");
+      } catch {
+        try {
+          await new Promise((r) => setTimeout(r, 450));
+          return await componentImport();
+        } catch (error: any) {
+          const msg = String(error?.message || firstErr?.message || '').toLowerCase();
+          const isMimeOrChunkErr =
+            msg.includes('text/html') ||
+            msg.includes('dynamically imported module') ||
+            msg.includes('importing a module script failed') ||
+            msg.includes('module is not valid') ||
+            msg.includes('loading chunk') ||
+            msg.includes('mime type') ||
+            msg.includes('valid javascript') ||
+            msg.includes("unexpected token '<'");
 
-        if (isMimeOrChunkErr && !alreadyReloaded && typeof window !== 'undefined') {
-          try {
-            sessionStorage.setItem(storageKey, 'true');
-            if ('caches' in window) {
-              caches.delete('app-js-chunks').catch(() => {});
-            }
-          } catch {}
-          window.location.reload();
-          return new Promise<{ default: T }>(() => {});
+          if (isMimeOrChunkErr && !alreadyReloaded && typeof window !== 'undefined') {
+            try {
+              sessionStorage.setItem(storageKey, 'true');
+              if ('caches' in window) {
+                caches.delete('app-js-chunks').catch(() => {});
+              }
+            } catch {}
+            window.location.reload();
+            return new Promise<{ default: T }>(() => {});
+          }
+          throw error;
         }
-        throw error;
       }
     }
   });

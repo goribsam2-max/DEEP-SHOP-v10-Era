@@ -6810,7 +6810,7 @@ const handleCreateChannel = async () => {
                                       </div>
                                   </div>
                               ) : (
-                                  <div className="flex-1 flex items-center bg-white dark:bg-zinc-800 px-4 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-zinc-100 dark:border-zinc-700/50">
+                                  <div className="flex-1 h-12 flex items-center bg-white dark:bg-zinc-800 px-4 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-zinc-100 dark:border-zinc-700/50">
                                       <textarea
                                           value={newMessage}
                                           onChange={(e) => setNewMessage(e.target.value)}
@@ -6821,11 +6821,11 @@ const handleCreateChannel = async () => {
                                               }
                                           }}
                                           placeholder="Broadcast an update..."
-                                          className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2 text-[15px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 placeholder:font-medium leading-tight h-[40px] p-0 focus:outline-none outline-none focus-visible:outline-none"
+                                          className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-[9px] text-[15px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 placeholder:font-medium leading-[20px] h-[38px] px-0 focus:outline-none outline-none focus-visible:outline-none"
                                           rows={1}
                                       />
-                                      <button onClick={() => fileInputRef.current?.click()} className="ml-2 text-zinc-400 hover:text-indigo-600 transition-colors shrink-0" title="Add Image">
-                                          <ImageIcon className="w-5 h-5" />
+                                      <button onClick={() => fileInputRef.current?.click()} className="w-9 h-9 ml-1 rounded-full flex items-center justify-center text-zinc-400 hover:text-indigo-600 transition-colors shrink-0" title="Add Image">
+                                          <ImageIcon className="w-[21px] h-[21px]" />
                                       </button>
                                   </div>
                               )}

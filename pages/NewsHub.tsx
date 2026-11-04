@@ -63,6 +63,7 @@ import {
   updateDoc,
   deleteDoc,
   where,
+  limit,
 } from "firebase/firestore";
 import { ScamPost, ReactionType } from "../types";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
@@ -206,10 +207,37 @@ export const NewsHub: React.FC = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [authInitializing, setAuthInitializing] = useState(true);
   const [isStaffDoc, setIsStaffDoc] = useState(false);
-  const [firestorePosts, setFirestorePosts] = useState<ScamPost[]>([]);
+  const [firestorePosts, setFirestorePosts] = useState<ScamPost[]>(() => {
+    try {
+      const cached = JSON.parse(
+        localStorage.getItem("ds_loops_feed_cache_v1") || "[]"
+      );
+      return Array.isArray(cached) ? cached : [];
+    } catch {
+      return [];
+    }
+  });
   const [communityUsers, setCommunityUsers] = useState<Record<string, any>[]>([]);
-  const [stories, setStories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [stories, setStories] = useState<any[]>(() => {
+    try {
+      const cached = JSON.parse(
+        localStorage.getItem("ds_loops_stories_cache_v1") || "[]"
+      );
+      return Array.isArray(cached) ? cached : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    try {
+      const cached = JSON.parse(
+        localStorage.getItem("ds_loops_feed_cache_v1") || "[]"
+      );
+      return !(Array.isArray(cached) && cached.length > 0);
+    } catch {
+      return true;
+    }
+  });
   const followedIds = useFollowedIds(currentUser?.uid);
   const [dismissedProfileIds, setDismissedProfileIds] = useState<string[]>(() =>
     getDismissedProfileIds()
@@ -571,7 +599,11 @@ export const NewsHub: React.FC = () => {
 
   // Real-time Firestore feed listener (ONLY real posts — zero demo posts)
   useEffect(() => {
-    const q = query(collection(db, "scam_posts"), orderBy("createdAt", "desc"));
+    const q = query(
+      collection(db, "scam_posts"),
+      orderBy("createdAt", "desc"),
+      limit(60)
+    );
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -581,6 +613,12 @@ export const NewsHub: React.FC = () => {
         }));
         setFirestorePosts(list);
         setLoading(false);
+        try {
+          localStorage.setItem(
+            "ds_loops_feed_cache_v1",
+            JSON.stringify(list.slice(0, 32))
+          );
+        } catch {}
       },
       () => {
         setLoading(false);
@@ -592,7 +630,7 @@ export const NewsHub: React.FC = () => {
   // Load real community user profiles for Suggested Profiles discovery
   useEffect(() => {
     let mounted = true;
-    getDocs(collection(db, "users"))
+    getDocs(query(collection(db, "users"), limit(40)))
       .then((snap) => {
         if (!mounted) return;
         setCommunityUsers(
@@ -675,10 +713,16 @@ export const NewsHub: React.FC = () => {
         })
         .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
       setStories(sorted);
+      try {
+        localStorage.setItem(
+          "ds_loops_stories_cache_v1",
+          JSON.stringify(sorted.slice(0, 24))
+        );
+      } catch {}
     };
 
     const unsubStories = onSnapshot(
-      collection(db, "stories"),
+      query(collection(db, "stories"), limit(40)),
       (snap) => {
         mainStories = snap.docs.map((d) => mapStoryDoc(d.id, d.data()));
         emitMergedStories();
@@ -687,7 +731,7 @@ export const NewsHub: React.FC = () => {
     );
 
     const unsubCommunityStories = onSnapshot(
-      collection(db, "creator_videos"),
+      query(collection(db, "creator_videos"), limit(40)),
       (snap) => {
         communityStories = snap.docs
           .filter((d) => d.data()?.kind === "news_story")

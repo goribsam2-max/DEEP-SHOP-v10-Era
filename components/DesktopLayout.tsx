@@ -83,6 +83,7 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     location.pathname.startsWith('/create-reel') ||
     location.pathname.startsWith('/add-story') ||
     location.pathname.startsWith('/seller/add-story') ||
+    location.pathname.startsWith('/seller/custom-order') ||
     location.pathname.startsWith('/loops') ||
     location.pathname.startsWith('/news-hub') ||
     location.pathname.startsWith('/news') ||

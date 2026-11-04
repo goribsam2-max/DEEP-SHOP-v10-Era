@@ -1,6 +1,6 @@
 import { subscribeToWebPush } from './lib/push';
 
-import React, { useState, useEffect, createContext, useContext, Suspense } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { lazyRetry } from './lib/lazyRetry';
 
@@ -95,6 +95,10 @@ const NewsStoryViewerPage = lazyRetry(() =>
 );
 const CreateReelStudio = lazyRetry(() =>
   import('./pages/CreateReelStudio').then((m) => ({ default: m.CreateReelStudio })), 'CreateReelStudio'
+);
+const CreateCustomOrder = lazyRetry(
+  () => import('./pages/seller/CreateCustomOrder'),
+  'CreateCustomOrder'
 );
 
 const SEOProvider = () => {
@@ -683,11 +687,45 @@ const AppContent: React.FC = () => {
     }
   }, [location.search, notify]);
 
+  const navigateRef = useRef(navigate);
+  const notifyRef = useRef(notify);
   useEffect(() => {
+    navigateRef.current = navigate;
+    notifyRef.current = notify;
+  }, [navigate, notify]);
+
+  // Background-preload primary customer routes right after first paint so navigation is instantaneous (0ms chunk wait)
+  useEffect(() => {
+    const preloadCoreRoutes = () => {
+      void import('./pages/NewsHub').catch(() => {});
+      void import('./pages/ProductDetails').catch(() => {});
+      void import('./pages/Cart').catch(() => {});
+      void import('./pages/Search').catch(() => {});
+      void import('./pages/Profile').catch(() => {});
+      void import('./pages/Messages').catch(() => {});
+      void import('./pages/MyOrders').catch(() => {});
+      void import('./pages/AllProducts').catch(() => {});
+      void import('./pages/Wishlist').catch(() => {});
+      void import('./pages/Settings').catch(() => {});
+      void import('./pages/seller/AddStory').catch(() => {});
+    };
+    const timer = setTimeout(preloadCoreRoutes, 450);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    let unsubProfile: (() => void) | null = null;
+    let pushSubscribedUid: string | null = null;
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (unsubProfile) {
+        unsubProfile();
+        unsubProfile = null;
+      }
+
       if (currentUser) {
         sweepExpiredCoins(currentUser.uid).catch(e => console.error(e));
-        const unsubProfile = onSnapshot(doc(db, 'users', currentUser.uid), async (docSnap) => {
+        unsubProfile = onSnapshot(doc(db, 'users', currentUser.uid), async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
             setUserData((prev) => {
@@ -706,7 +744,6 @@ const AppContent: React.FC = () => {
             if (currentSessionId && data.sessions) {
               const currentSession = data.sessions.find((s: any) => s.id === currentSessionId);
               if (currentSession && currentSession.isRevoked) {
-                // FORCE LOGOUT IMMEDIATELY!
                 await auth.signOut();
                 localStorage.removeItem('session_id');
                 try {
@@ -716,15 +753,22 @@ const AppContent: React.FC = () => {
                     const filtered = saved.filter((acc: any) => acc.uid !== currentUser.uid);
                     localStorage.setItem("vibe_saved_accounts", JSON.stringify(filtered));
                   }
-                } catch (err) {}
-                notify("This device has been logged out from another device.", "error");
-                navigate('/accounts');
+                } catch {}
+                notifyRef.current("This device has been logged out from another device.", "error");
+                navigateRef.current('/accounts');
                 return;
               }
             }
             
-            // If notifications are granted, ensure they are subscribed in backend
-            if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'granted') {
+            // Subscribe to web push at most once per user session
+            if (
+              pushSubscribedUid !== currentUser.uid &&
+              typeof window !== 'undefined' &&
+              'Notification' in window &&
+              window.Notification &&
+              window.Notification.permission === 'granted'
+            ) {
+              pushSubscribedUid = currentUser.uid;
               subscribeToWebPush(currentUser.uid);
             }
           } else {
@@ -749,23 +793,34 @@ const AppContent: React.FC = () => {
             }
           }
           setLoading(false);
-        }, (err) => {
+        }, () => {
           setUserData(null);
           setLoading(false);
         });
-        return () => unsubProfile();
       } else {
+        pushSubscribedUid = null;
         setUserData(null);
         setLoading(false);
       }
     });
-    return () => unsubscribe();
-  }, [navigate, notify]);
+    return () => {
+      if (unsubProfile) {
+        unsubProfile();
+        unsubProfile = null;
+      }
+      unsubscribe();
+    };
+  }, []);
 
-  // Active Session and IP address registration hook
+  // Active Session and IP address registration hook (once per browser session)
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
+
+    const sessionGuardKey = `ds_session_reg_${user.uid}`;
+    try {
+      if (sessionStorage.getItem(sessionGuardKey) === 'true') return;
+    } catch {}
 
     let active = true;
 
@@ -819,9 +874,12 @@ const AppContent: React.FC = () => {
 
       await updateDoc(userRef, {
         sessions,
-        ipAddress: ip, // Keep primary IP address updated for Admin!
+        ipAddress: ip,
         lastActive: Date.now()
       });
+      try {
+        sessionStorage.setItem(sessionGuardKey, 'true');
+      } catch {}
     };
 
     registerSession().catch(e => console.error("Session register error:", e));
@@ -924,7 +982,8 @@ const AppContent: React.FC = () => {
         )}
       </AnimatePresence>
       <main id="main-content" tabIndex={-1} className="min-h-screen selection:bg-zinc-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
-        <Suspense fallback={<RoutePageSkeleton pathname={location.pathname} />}>
+        <ErrorBoundary>
+        <Suspense key={location.pathname} fallback={<RoutePageSkeleton pathname={location.pathname} />}>
         <Routes location={location}>
             <Route path="/" element={<PageWrapper><Home userData={userData} /></PageWrapper>} />
           <Route path="/onboarding" element={<PageWrapper><Onboarding onFinish={() => {}} /></PageWrapper>} />
@@ -1064,6 +1123,7 @@ const AppContent: React.FC = () => {
           <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
           <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
           <Route path="/seller/dashboard" element={<PageWrapper><SellerDashboard /></PageWrapper>} />
+          <Route path="/seller/custom-order" element={<PageWrapper><CreateCustomOrder /></PageWrapper>} />
           <Route path="/add-story" element={<PageWrapper><AddStory /></PageWrapper>} />
           <Route path="/seller/add-story" element={<PageWrapper><AddStory /></PageWrapper>} />
           <Route path="/__/auth/action" element={<PageWrapper><NewPassword /></PageWrapper>} />
@@ -1120,8 +1180,9 @@ const AppContent: React.FC = () => {
           <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
         </Routes>
         </Suspense>
+        </ErrorBoundary>
       </main>
-      {showNav && !isPageLoading && <BottomMenu />}
+      {showNav && <BottomMenu />}
       <div className="stwRainbow" />
       <div className="stwBlurRainbow" />
       <AnimatePresence>

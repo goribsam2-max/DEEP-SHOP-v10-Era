@@ -12,6 +12,7 @@ import {
   deleteDoc,
   setDoc,
   getDocs,
+  limit,
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { Product, Review } from "../types";
@@ -72,11 +73,41 @@ const ProductDetails: React.FC = () => {
   const { formatPrice } = useRegion();
   const { id, slug } = useParams();
   const { isDark, toggleTheme } = useTheme();
-  const [product, setProduct] = useState<Product | null>(null);
+  const initialCachedProduct = React.useMemo<Product | null>(() => {
+    try {
+      const cached: Product[] = JSON.parse(
+        localStorage.getItem("ds_home_products_v1") || "[]"
+      );
+      if (!Array.isArray(cached) || cached.length === 0) return null;
+      const slugify = (s: string) =>
+        String(s || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
+      if (id) {
+        return cached.find((p) => p.id === id) || null;
+      }
+      if (slug) {
+        return (
+          cached.find(
+            (p) =>
+              p.id === slug ||
+              slugify(p.name) === slug ||
+              p.name === decodeURIComponent(slug)
+          ) || null
+        );
+      }
+    } catch {}
+    return null;
+  }, [id, slug]);
+
+  const [product, setProduct] = useState<Product | null>(initialCachedProduct);
   const [isNotFound, setIsNotFound] = useState(false);
   const [sellerInfo, setSellerInfo] = useState<any>(null);
   const [sellerReviews, setSellerReviews] = useState<any[]>([]);
-  const [resolvedId, setResolvedId] = useState<string | null>(id || null);
+  const [resolvedId, setResolvedId] = useState<string | null>(
+    id || initialCachedProduct?.id || null
+  );
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewFilter, setReviewFilter] = useState<
     "all" | "photos" | "5" | "4" | "3" | "2" | "1"
@@ -236,50 +267,69 @@ const ProductDetails: React.FC = () => {
     let didIncrement = false;
     
     if (id) {
-      unsubscribe = onSnapshot(doc(db, "products", id), async (snap) => {
-        if (snap.exists()) {
-          const matchedProduct = { id: snap.id, ...snap.data() } as Product;
-          setProduct(matchedProduct);
-          setResolvedId(snap.id);
-          setIsNotFound(false);
-          if (!slug || slug !== toSlug(matchedProduct.name)) {
-            window.history.replaceState(null, "", `/${toSlug(matchedProduct.name)}`);
+      unsubscribe = onSnapshot(
+        doc(db, "products", id),
+        async (snap) => {
+          if (snap.exists()) {
+            const matchedProduct = { id: snap.id, ...snap.data() } as Product;
+            setProduct(matchedProduct);
+            setResolvedId(snap.id);
+            setIsNotFound(false);
+            if (!slug || slug !== toSlug(matchedProduct.name)) {
+              window.history.replaceState(null, "", `/${toSlug(matchedProduct.name)}`);
+            }
+            if (!didIncrement) {
+              didIncrement = true;
+              try {
+                const { increment, updateDoc } = await import("firebase/firestore");
+                await updateDoc(doc(db, "products", snap.id), { views: increment(1) });
+              } catch {}
+            }
+          } else {
+            setIsNotFound(true);
           }
-          if (!didIncrement) {
-             didIncrement = true;
-             try {
-               const { increment, updateDoc } = await import("firebase/firestore");
-               await updateDoc(doc(db, "products", snap.id), { views: increment(1) });
-             } catch (e) {}
-          }
-        } else {
-          setIsNotFound(true);
+        },
+        () => {
+          if (!initialCachedProduct) setIsNotFound(true);
         }
-      });
+      );
     } else if (slug) {
-      unsubscribe = onSnapshot(query(collection(db, "products")), async (snap) => {
-        const allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }) as Product);
-        const matchedProduct = allProducts.find(
-          (p) => toSlug(p.name) === slug || p.name === decodeURIComponent(slug),
-        );
-        if (matchedProduct) {
-          setProduct(matchedProduct);
-          setResolvedId(matchedProduct.id);
-          setIsNotFound(false);
-          if (slug !== toSlug(matchedProduct.name)) {
-            window.history.replaceState(null, "", `/${toSlug(matchedProduct.name)}`);
-          }
-          if (!didIncrement) {
+      unsubscribe = onSnapshot(
+        query(collection(db, "products"), limit(150)),
+        async (snap) => {
+          const allProducts = snap.docs.map(
+            (d) => ({ id: d.id, ...d.data() }) as Product
+          );
+          const matchedProduct = allProducts.find(
+            (p) =>
+              p.id === slug ||
+              toSlug(p.name) === slug ||
+              p.name === decodeURIComponent(slug)
+          );
+          if (matchedProduct) {
+            setProduct(matchedProduct);
+            setResolvedId(matchedProduct.id);
+            setIsNotFound(false);
+            if (slug !== toSlug(matchedProduct.name)) {
+              window.history.replaceState(null, "", `/${toSlug(matchedProduct.name)}`);
+            }
+            if (!didIncrement) {
               didIncrement = true;
               try {
                 const { increment, updateDoc } = await import("firebase/firestore");
                 await updateDoc(doc(db, "products", matchedProduct.id), { views: increment(1) });
-              } catch (e) {}
+              } catch {}
+            }
+          } else {
+            setIsNotFound(true);
           }
-        } else {
-          setIsNotFound(true);
+        },
+        () => {
+          if (!initialCachedProduct) setIsNotFound(true);
         }
-      });
+      );
+    } else {
+      setIsNotFound(true);
     }
 
     return () => {

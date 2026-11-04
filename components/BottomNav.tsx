@@ -12,6 +12,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { triggerHaptic } from "../lib/haptics";
+import { normalizeCustomSvg } from "../lib/svgNormalize";
 
 const BottomNav: React.FC = () => {
   const location = useLocation();
@@ -113,7 +114,7 @@ const BottomNav: React.FC = () => {
   return (
     <div className="fixed bottom-3 left-3 right-3 z-[100] md:hidden max-w-md mx-auto pointer-events-none">
       {/* FLOATING LIQUID GLASS PILL CONTAINER (Matching IMG_4760_f05ecd46.jpeg) */}
-      <nav className="pointer-events-auto bg-zinc-900 dark:bg-zinc-100 backdrop-blur-xl border border-zinc-800 dark:border-zinc-300 rounded-full shadow-2xl px-2.5 py-1.5 flex items-center justify-between transition-all">
+      <nav className="ds-shop-bottom-dock pointer-events-auto backdrop-blur-xl rounded-full px-2.5 py-1.5 flex items-center justify-between transition-all">
         {navItems.map((item) => {
           const isActive =
             location.pathname === item.to ||
@@ -128,7 +129,7 @@ const BottomNav: React.FC = () => {
                   triggerHaptic();
                   navigate(item.to);
                 }}
-                className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 text-black dark:text-white flex items-center justify-center shadow-lg active:scale-90 transition hover:opacity-90 cursor-pointer -mt-1 mx-1 shrink-0"
+                className="w-10 h-10 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center shadow-lg active:scale-90 transition hover:opacity-90 cursor-pointer -mt-1 mx-1 shrink-0"
                 title="Create Scam Report or Post"
               >
                 <Plus className="w-5 h-5 stroke-[2.5]" />
@@ -143,14 +144,14 @@ const BottomNav: React.FC = () => {
               key={item.to}
               to={item.to}
               onClick={() => triggerHaptic()}
-              className="flex-1 flex flex-col items-center justify-center py-1 relative group cursor-pointer"
+              className="flex-1 flex flex-col items-center justify-center py-0.5 relative group cursor-pointer"
             >
               <div className="relative flex items-center justify-center">
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
                     isActive
-                      ? "text-white dark:text-black bg-zinc-800 dark:bg-zinc-200 shadow-xs font-bold"
-                      : "text-white/80 dark:text-zinc-700 hover:text-white dark:hover:text-black"
+                      ? "ds-shop-bottom-btn-active"
+                      : "ds-shop-bottom-btn"
                   }`}
                 >
                   {(() => {
@@ -161,36 +162,36 @@ const BottomNav: React.FC = () => {
                           <img
                             src={cleanSvg}
                             alt={item.label}
-                            className={`w-4 h-4 object-contain transition-transform duration-300 ${isActive ? "scale-110" : ""}`}
+                            className={`w-4.5 h-4.5 object-contain transition-transform duration-200 ${
+                              isActive
+                                ? "scale-105 brightness-0 invert"
+                                : "brightness-0 dark:invert"
+                            }`}
                           />
                         );
                       }
+                      const normalizedSvg = normalizeCustomSvg(cleanSvg);
                       return (
                         <div
-                          className={`w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-full [&>svg]:max-h-full transition-transform duration-300 ${
-                            isActive ? "scale-110" : ""
+                          className={`w-4.5 h-4.5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-full [&>svg]:max-h-full transition-transform duration-200 ${
+                            isActive ? "scale-105" : ""
                           }`}
-                          dangerouslySetInnerHTML={{ __html: cleanSvg }}
+                          dangerouslySetInnerHTML={{ __html: normalizedSvg }}
                         />
                       );
                     }
-                    return <IconComp className={`w-4 h-4 transition-transform duration-300 ${isActive ? "scale-110" : ""}`} />;
+                    return <IconComp className={`w-4.5 h-4.5 transition-transform duration-200 ${isActive ? "scale-105 stroke-[2.2]" : "stroke-[1.9]"}`} />;
                   })()}
                 </div>
               </div>
 
               <span
-                className={`text-[10px] font-extrabold tracking-tight transition-colors duration-300 ${
-                  isActive ? "text-white dark:text-black" : "text-white/70 dark:text-zinc-600"
+                className={`text-[10px] font-bold tracking-tight mt-0.5 transition-colors duration-200 ${
+                  isActive ? "text-[#1877F2]" : "text-zinc-900 dark:text-zinc-200"
                 }`}
               >
                 {item.label}
               </span>
-
-              {/* Active liquid dot indicator below label */}
-              {isActive && (
-                <span className="w-1 h-1 rounded-full bg-white dark:bg-black absolute -bottom-0.5" />
-              )}
             </NavLink>
           );
         })}

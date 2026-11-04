@@ -135,7 +135,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 8 }}
               transition={{ type: 'spring', damping: 26, stiffness: 340 }}
-              className="msg-v2-popup absolute left-0 bottom-14 z-50 w-52 bg-white dark:bg-[#1A1C24] rounded-3xl shadow-[0_16px_44px_rgba(15,23,42,0.16)] border border-black/[0.05] dark:border-white/10 p-2 space-y-0.5"
+              className="msg-v2-popup absolute left-0 bottom-15 z-50 w-52 bg-white dark:bg-[#1A1C24] rounded-3xl shadow-[0_16px_44px_rgba(15,23,42,0.16)] border border-black/[0.05] dark:border-white/10 p-2 space-y-0.5"
             >
               <button
                 type="button"
@@ -203,26 +203,34 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Clean Modern Composer Row matching IMG_5359 Active Chat aesthetic */}
-      <div className="w-full flex items-end gap-2.5">
-        {/* Left "+" Tools Button */}
+      {/* Clean Modern Composer Row matching Active Chat aesthetic */}
+      <div className="w-full flex items-end gap-2 sm:gap-2.5">
+        {/* Left "+" Tools Button — matched 1:1 to 48px composer capsule */}
         <button
           type="button"
           onClick={() => setShowPlusMenu((prev) => !prev)}
-          className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+          className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
             showPlusMenu
               ? 'msg-new-chat-pill rotate-45'
               : 'msg-composer-capsule text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-95'
           }`}
           title="More tools & attachments"
         >
-          <MsgPlusIcon className="w-5 h-5" />
+          <MsgPlusIcon className="w-[22px] h-[22px]" />
         </button>
 
         {/* Center Soft Pill Input Capsule */}
-        <div className="flex-1 min-w-0 flex items-end msg-composer-capsule rounded-[24px] px-4 py-1.5 transition-all focus-within:ring-2 focus-within:ring-[#2F80ED]/20">
+        <div
+          className={`flex-1 min-w-0 flex msg-composer-capsule rounded-[24px] px-4 transition-all focus-within:ring-2 focus-within:ring-[#2F80ED]/20 ${
+            isRecording
+              ? 'h-12 items-center'
+              : computedRows > 1
+              ? 'min-h-[48px] py-1.5 items-end'
+              : 'h-12 items-center'
+          }`}
+        >
           {isRecording ? (
-            <div className="flex-1 min-w-0 flex items-center justify-between py-2">
+            <div className="flex-1 min-w-0 flex items-center justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
                 <span className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-rose-500 truncate">
@@ -240,7 +248,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                 <button
                   type="button"
                   onClick={() => stopRecording(true)}
-                  className="w-8 h-8 rounded-full msg-accent-btn text-white flex items-center justify-center shadow-sm active:scale-95 transition cursor-pointer"
+                  className="w-8.5 h-8.5 rounded-full msg-accent-btn text-white flex items-center justify-center shadow-sm active:scale-95 transition cursor-pointer"
                   title="Send voice message"
                 >
                   <Check className="w-4 h-4 stroke-[2.5]" />
@@ -263,41 +271,45 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Message..."
-                className="ds-liquid-input msg-clean-input flex-1 min-w-0 bg-transparent border-0 py-2 text-[14.5px] placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-0 resize-none leading-relaxed overflow-y-auto min-h-[36px] max-h-[124px]"
+                className={`ds-liquid-input msg-clean-input flex-1 min-w-0 bg-transparent border-0 text-[15px] placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-0 resize-none leading-[22px] overflow-y-auto max-h-[124px] ${
+                  computedRows > 1 ? 'py-1.5 min-h-[38px]' : 'py-[8px] h-[38px]'
+                }`}
               />
 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-8 h-8 mb-0.5 ml-1 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white active:scale-95 transition shrink-0 cursor-pointer"
+                className={`w-9 h-9 ml-1 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white active:scale-95 transition shrink-0 cursor-pointer ${
+                  computedRows > 1 ? 'mb-0.5' : ''
+                }`}
                 title="Send photo"
               >
-                <MsgImageIcon className="w-[19px] h-[19px]" />
+                <MsgImageIcon className="w-[21px] h-[21px]" />
               </button>
             </>
           )}
         </div>
 
-        {/* Right Primary Button: Voice Mic when empty, #2F80ED Send Paper-plane when typing/attached */}
+        {/* Right Primary Button: Voice Mic when empty, #2F80ED Send Paper-plane when typing/attached — matched 1:1 to 48px capsule */}
         {!isRecording && (
           hasContent ? (
             <button
               type="button"
               onClick={onSendMessage}
               disabled={isUploading}
-              className="w-11 h-11 rounded-full msg-accent-btn text-white flex items-center justify-center hover:brightness-105 active:scale-95 transition-all shadow-[0_6px_18px_rgba(47,128,237,0.3)] cursor-pointer disabled:opacity-50 shrink-0"
+              className="w-12 h-12 rounded-full msg-accent-btn text-white flex items-center justify-center hover:brightness-105 active:scale-95 transition-all shadow-[0_6px_18px_rgba(47,128,237,0.3)] cursor-pointer disabled:opacity-50 shrink-0"
               title="Send message"
             >
-              <MsgSendIcon className="w-[18px] h-[18px] mr-0.5" />
+              <MsgSendIcon className="w-[21px] h-[21px] mr-0.5" />
             </button>
           ) : (
             <button
               type="button"
               onClick={startRecording}
-              className="w-11 h-11 rounded-full msg-composer-capsule flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-95 transition shrink-0 cursor-pointer"
+              className="w-12 h-12 rounded-full msg-composer-capsule flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:opacity-85 active:scale-95 transition shrink-0 cursor-pointer"
               title="Record voice message"
             >
-              <MsgMicIcon className="w-[19px] h-[19px]" />
+              <MsgMicIcon className="w-[22px] h-[22px]" />
             </button>
           )
         )}

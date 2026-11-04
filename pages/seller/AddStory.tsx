@@ -2524,8 +2524,8 @@ export default function AddStory() {
    * ------------------------------------------------------------------------ */
   if (authLoading) {
     return (
-      <div className="h-screen bg-zinc-950 flex items-center justify-center">
-        <Loader2 className="w-7 h-7 animate-spin text-white/80" />
+      <div className="story-studio-shell w-full h-[100dvh] flex items-center justify-center">
+        <Loader2 className="w-7 h-7 animate-spin text-[#1877F2]" />
       </div>
     );
   }
@@ -2734,7 +2734,7 @@ export default function AddStory() {
   };
 
   return (
-    <div className="story-studio-shell min-h-screen bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-white flex flex-col items-center justify-center select-none overflow-hidden transition-colors">
+    <div className="story-studio-shell w-full h-[100dvh] flex flex-col overflow-hidden select-none relative">
       {/* Hidden File Pickers */}
       <input
         ref={galleryUploadInputRef}
@@ -2798,163 +2798,275 @@ export default function AddStory() {
         }}
       />
 
-      {/* Responsive Studio Frame: Full viewport on mobile, sleek studio shell on desktop */}
-      <div className="relative w-full max-w-[440px] h-[100dvh] sm:h-[94dvh] sm:rounded-[34px] sm:border sm:border-zinc-200 dark:sm:border-white/10 bg-white dark:bg-black flex flex-col overflow-hidden shadow-2xl transition-colors">
-        {/* Global Uploading Overlay Spinner */}
-        {uploading && (
-          <div className="absolute inset-0 z-50 bg-white/75 dark:bg-black/65 backdrop-blur-sm flex flex-col items-center justify-center gap-2.5">
-            <Loader2 className="w-8 h-8 animate-spin text-[#1877F2]" />
-            <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-              Processing studio media...
-            </p>
+      {/* Global Uploading Overlay Spinner */}
+      {uploading && (
+        <div className="fixed inset-0 z-50 bg-white/80 dark:bg-black/75 backdrop-blur-md flex flex-col items-center justify-center gap-3">
+          <div className="w-14 h-14 rounded-2xl story-studio-panel flex items-center justify-center shadow-xl">
+            <Loader2 className="w-7 h-7 animate-spin text-[#1877F2]" />
           </div>
-        )}
+          <p className="text-xs font-bold tracking-tight">Processing studio media...</p>
+        </div>
+      )}
 
+      {/* =====================================================================
+       * UNIFIED RESPONSIVE STUDIO TOP BAR
+       * =================================================================== */}
+      <header className="story-studio-topbar h-14 px-3.5 sm:px-6 border-b backdrop-blur-xl flex items-center justify-between gap-4 shrink-0 z-30">
+        {/* Left: Back / Exit + Studio Context Title */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              if (step === "gallery") {
+                navigate(storyReturnPath);
+              } else {
+                setDrawModeOpen(false);
+                setSelectedLayerId(null);
+                setStep("gallery");
+              }
+            }}
+            className="story-studio-circle-btn w-10 h-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-transform"
+            aria-label={step === "gallery" ? "Close story studio" : "Back to media"}
+          >
+            {step === "gallery" ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <ChevronLeft className="w-5 h-5" />
+            )}
+          </button>
+
+          <h1 className="text-sm sm:text-base font-extrabold tracking-tight truncate whitespace-nowrap">
+            {step === "gallery"
+              ? "Create Story"
+              : step === "camera"
+              ? "Live Camera"
+              : step === "collage"
+              ? "Collage Studio"
+              : "Story Editor"}
+          </h1>
+        </div>
+
+        {/* Center: Desktop / Tablet Segmented Mode Switcher */}
+        <nav
+          aria-label="Story studio modes"
+          className="hidden md:flex items-center gap-1 p-1 rounded-2xl story-studio-soft"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setDrawModeOpen(false);
+              setStep("gallery");
+              triggerHaptic();
+            }}
+            className={`h-8 px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+              step === "gallery"
+                ? "story-cta-blue shadow-sm"
+                : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            Media
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDrawModeOpen(false);
+              setStep("camera");
+              triggerHaptic();
+            }}
+            className={`h-8 px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+              step === "camera"
+                ? "story-cta-blue shadow-sm"
+                : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            Camera
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDrawModeOpen(false);
+              setStep("collage");
+              triggerHaptic();
+            }}
+            className={`h-8 px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+              step === "collage"
+                ? "story-cta-blue shadow-sm"
+                : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            Collage
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDrawModeOpen(false);
+              setCreateMode(true);
+              setSelectedMedia(null);
+              setStep("editor");
+              triggerHaptic();
+            }}
+            className={`h-8 px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+              step === "editor"
+                ? "story-cta-blue shadow-sm"
+                : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
+            }`}
+          >
+            Canvas Editor
+          </button>
+        </nav>
+
+        {/* Right: Contextual Quick Action + Story Controls */}
+        <div className="flex items-center gap-2 shrink-0">
+          {step === "gallery" && (
+            <button
+              type="button"
+              onClick={() => galleryUploadInputRef.current?.click()}
+              className="hidden sm:inline-flex story-cta-blue h-9 px-3.5 rounded-xl text-xs font-bold items-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Upload Media</span>
+            </button>
+          )}
+
+          {step === "editor" && (
+            <button
+              type="button"
+              onClick={handleDownloadStoryPng}
+              className="story-studio-circle-btn w-10 h-10 rounded-full flex lg:hidden items-center justify-center cursor-pointer active:scale-95 transition-transform"
+              aria-label="Download story PNG"
+              title="Download PNG"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setSettingsOpen(true);
+              triggerHaptic();
+            }}
+            className="story-studio-circle-btn w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+            aria-label="Story settings"
+            title="Story Controls"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* =====================================================================
+       * MAIN RESPONSIVE STUDIO WORKSPACE
+       * =================================================================== */}
+      <main className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
         {/* ===================================================================
-         * STEP A: "ADD TO STORY" GALLERY PICKER (Light + Dark Mode)
+         * STEP A: RESPONSIVE CREATION DECK & MEDIA LIBRARY
          * ================================================================= */}
         {step === "gallery" && (
-          <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black transition-colors">
-            {/* Header */}
-            <header className="px-4 pt-3 pb-2.5 flex items-center justify-between shrink-0">
-              <button
-                type="button"
-                onClick={() => navigate(storyReturnPath)}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer text-zinc-900 dark:text-white"
-                aria-label="Close"
-              >
-                <LoopsSvgIcon name="loops-story-close" className="w-6 h-6" />
-              </button>
-              <h1 className="text-base font-bold tracking-tight text-zinc-900 dark:text-white">
-                Add to story
-              </h1>
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors cursor-pointer text-zinc-900 dark:text-white"
-                aria-label="Story settings"
-              >
-                <LoopsSvgIcon name="loops-story-settings" className="w-5 h-5" />
-              </button>
-            </header>
-
-            {/* 4 Feature Tiles: Add yours · Video · Music · Collage */}
-            <div className="px-3.5 pt-1 pb-3 grid grid-cols-4 gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setCreateMode(true);
-                  setStep("editor");
-                  openStickerConfigurator("add_yours");
-                }}
-                className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white">
-                  <LoopsSvgIcon name="loops-story-camera" className="w-4 h-4" />
-                </div>
-                <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
-                  Add yours
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  videoUploadInputRef.current?.click();
-                }}
-                className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-full bg-[#1877F2]/15 dark:bg-[#1877F2]/20 flex items-center justify-center text-[#1877F2]">
-                  <LoopsSvgIcon name="loops-story-video" className="w-4 h-4" />
-                </div>
-                <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
-                  Video
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setCreateMode(true);
-                  setStep("editor");
-                  setMusicSheetOpen(true);
-                }}
-                className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white">
-                  <LoopsSvgIcon name="loops-story-music" className="w-4 h-4" />
-                </div>
-                <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
-                  Music
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setCollageImages([]);
-                  setStep("collage");
-                  triggerHaptic();
-                }}
-                className="h-20 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 flex flex-col items-center justify-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white">
-                  <LoopsSvgIcon name="loops-story-collage" className="w-4 h-4" />
-                </div>
-                <span className="text-[11px] font-semibold text-zinc-900 dark:text-white whitespace-nowrap">
-                  Collage
-                </span>
-              </button>
-            </div>
-
-            {/* Album Dropdown & Multi-Select Row */}
-            <div className="px-4 py-2 flex items-center justify-between relative shrink-0 z-20">
-              <button
-                type="button"
-                onClick={() => setAlbumMenuOpen((v) => !v)}
-                className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white cursor-pointer py-1"
-              >
-                <span>{albumLabelMap[albumFilter]}</span>
-                <ChevronDown className="w-4 h-4 text-zinc-500 dark:text-zinc-300" />
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => galleryUploadInputRef.current?.click()}
-                  className="px-3 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 text-xs font-semibold text-zinc-900 dark:text-white flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-                >
-                  <Upload className="w-3.5 h-3.5 text-[#1877F2]" />
-                  <span>Upload</span>
-                </button>
+          <div className="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-6 lg:px-8 py-4 pb-28">
+            <div className="max-w-6xl mx-auto w-full space-y-5">
+              {/* 1. Creation Mode Deck: 2x2 on mobile, 4-column on tablet/desktop */}
+              <section aria-label="Story formats" className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
                 <button
                   type="button"
                   onClick={() => {
-                    setMultiSelectMode((v) => !v);
-                    setSelectedIds([]);
+                    setCreateMode(true);
+                    setSelectedMedia(null);
+                    setStep("editor");
+                    openTextStudioForNew();
+                  }}
+                  className="story-studio-panel rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-left cursor-pointer active:scale-[0.98] transition-transform min-h-[68px]"
+                >
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1877F2] to-indigo-600 text-white font-serif font-extrabold text-base flex items-center justify-center shrink-0 shadow-sm">
+                    Aa
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-extrabold truncate whitespace-nowrap">
+                      Text Story
+                    </p>
+                    <p className="text-[11px] story-studio-muted truncate">
+                      Fonts & gradients
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    videoUploadInputRef.current?.click();
+                  }}
+                  className="story-studio-panel rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-left cursor-pointer active:scale-[0.98] transition-transform min-h-[68px]"
+                >
+                  <div className="w-11 h-11 rounded-2xl bg-[#1877F2]/15 text-[#1877F2] flex items-center justify-center shrink-0">
+                    <LoopsSvgIcon name="loops-story-video" className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-extrabold truncate whitespace-nowrap">
+                      Video Clip
+                    </p>
+                    <p className="text-[11px] story-studio-muted truncate">
+                      Full-motion reel
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateMode(true);
+                    setSelectedMedia(null);
+                    setStep("editor");
+                    setMusicSheetOpen(true);
+                  }}
+                  className="story-studio-panel rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-left cursor-pointer active:scale-[0.98] transition-transform min-h-[68px]"
+                >
+                  <div className="w-11 h-11 rounded-2xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0">
+                    <Music className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-extrabold truncate whitespace-nowrap">
+                      Music Card
+                    </p>
+                    <p className="text-[11px] story-studio-muted truncate">
+                      Soundtrack story
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCollageImages([]);
+                    setStep("collage");
                     triggerHaptic();
                   }}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
-                    multiSelectMode
-                      ? "bg-[#1877F2] text-white"
-                      : "bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-white border border-zinc-200/80 dark:border-white/10 hover:bg-zinc-200/80 dark:hover:bg-zinc-800"
-                  }`}
+                  className="story-studio-panel rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-left cursor-pointer active:scale-[0.98] transition-transform min-h-[68px]"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  <span>Select</span>
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
+                    <LayoutGrid className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-extrabold truncate whitespace-nowrap">
+                      Photo Grid
+                    </p>
+                    <p className="text-[11px] story-studio-muted truncate">
+                      2, 3 or 4 frames
+                    </p>
+                  </div>
                 </button>
-              </div>
+              </section>
 
-              {/* Frosted Album Filter Popover */}
-              {albumMenuOpen && (
-                <div className="absolute left-4 top-11 w-52 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200 dark:border-white/15 shadow-2xl py-1.5 z-30">
+              {/* 2. Filter Tabs & Device Upload / Multi-Select Bar */}
+              <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-1 p-1 rounded-2xl story-studio-soft overflow-x-auto no-scrollbar">
                   {(
                     [
                       { id: "recents", label: "Recents" },
                       { id: "videos", label: "Videos" },
-                      { id: "favourites", label: "Favourites" },
-                      { id: "all", label: "All albums" },
+                      { id: "favourites", label: "Saved" },
+                      { id: "all", label: "All Media" },
                     ] as { id: AlbumFilter; label: string }[]
                   ).map((alb) => (
                     <button
@@ -2965,166 +3077,222 @@ export default function AddStory() {
                         setAlbumMenuOpen(false);
                         triggerHaptic();
                       }}
-                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center justify-between cursor-pointer"
+                      className={`min-h-[38px] px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+                        albumFilter === alb.id
+                          ? "story-cta-blue shadow-sm"
+                          : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
+                      }`}
                     >
-                      <span>{alb.label}</span>
-                      {albumFilter === alb.id && <Check className="w-4 h-4 text-[#1877F2]" />}
+                      {alb.label}
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
 
-            {/* 3-Column 9:16 Media Grid */}
-            <div className="flex-1 overflow-y-auto px-1 pb-24">
-              <div className="grid grid-cols-3 gap-1">
-                {/* Tile 1: Live Camera Studio */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep("camera");
-                    triggerHaptic();
-                  }}
-                  className="aspect-[9/16] bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 flex flex-col items-center justify-center gap-2 border border-zinc-200/80 dark:border-white/10 cursor-pointer transition-colors"
-                >
-                  <div className="w-11 h-11 rounded-full bg-zinc-200/80 dark:bg-white/10 flex items-center justify-center text-zinc-900 dark:text-white">
-                    <LoopsSvgIcon name="loops-story-camera" className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                    Camera
-                  </span>
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => galleryUploadInputRef.current?.click()}
+                    className="flex-1 sm:flex-none min-h-[40px] px-3.5 rounded-xl story-studio-soft text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#1877F2]" />
+                    <span>Upload from Device</span>
+                  </button>
 
-                {/* Tile 2: Create Aa Text Mode */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCreateMode(true);
-                    setSelectedMedia(null);
-                    setStep("editor");
-                    openTextStudioForNew();
-                  }}
-                  className="aspect-[9/16] bg-gradient-to-br from-[#1877F2] via-blue-700 to-slate-950 flex flex-col items-center justify-center gap-1.5 border border-zinc-200/50 dark:border-white/10 cursor-pointer"
-                >
-                  <span className="text-2xl font-serif font-bold text-white">Aa</span>
-                  <span className="text-xs font-semibold text-white/90">Create</span>
-                </button>
-
-                {visibleGallery.map((item) => {
-                  const selIndex = selectedIds.indexOf(item.id);
-                  const isSelected = selIndex !== -1;
-                  const isFav = favouriteIds.includes(item.id);
-
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        if (multiSelectMode) {
-                          setSelectedIds((prev) =>
-                            prev.includes(item.id)
-                              ? prev.filter((x) => x !== item.id)
-                              : [...prev, item.id].slice(0, 4)
-                          );
-                          triggerHaptic();
-                          return;
-                        }
-                        setCreateMode(false);
-                        setSelectedMedia(item);
-                        setStep("editor");
-                        triggerHaptic();
-                      }}
-                      className="aspect-[9/16] relative bg-zinc-900 overflow-hidden cursor-pointer group"
-                    >
-                      {item.type === "video" ? (
-                        <>
-                          {toPlayableMediaUrl(item.url) ? (
-                            <video
-                              src={toPlayableMediaUrl(item.url)}
-                              muted
-                              playsInline
-                              preload="metadata"
-                              className="w-full h-full object-cover pointer-events-none"
-                            />
-                          ) : null}
-                          <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-sm flex items-center gap-1 text-[10px] font-bold text-white pointer-events-none">
-                            <Play className="w-2.5 h-2.5 fill-white text-white" />
-                            <span>Video</span>
-                          </div>
-                        </>
-                      ) : item.url?.trim() ? (
-                        <img
-                          src={item.url.trim()}
-                          alt={item.label || "Story media"}
-                          referrerPolicy="no-referrer"
-                          loading="lazy"
-                          className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                        />
-                      ) : null}
-
-                      {/* Favourite toggle */}
-                      {!multiSelectMode && (
-                        <button
-                          type="button"
-                          onClick={(e) => toggleFavourite(item.id, e)}
-                          className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center cursor-pointer"
-                          aria-label="Favourite"
-                        >
-                          <Heart
-                            className={`w-3.5 h-3.5 ${
-                              isFav ? "text-rose-500 fill-rose-500" : "text-white/80"
-                            }`}
-                          />
-                        </button>
-                      )}
-
-                      {/* Multi-select numbered badge */}
-                      {multiSelectMode && (
-                        <div
-                          className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold tabular-nums ${
-                            isSelected
-                              ? "bg-[#1877F2] border-[#1877F2] text-white"
-                              : "bg-black/40 border-white text-transparent"
-                          }`}
-                        >
-                          {isSelected ? selIndex + 1 : ""}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {visibleGallery.length === 0 && (
-                <div className="py-16 text-center space-y-3 px-6">
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    No media in {albumLabelMap[albumFilter]} yet.
-                  </p>
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => galleryUploadInputRef.current?.click()}
-                      className="px-4 py-2.5 rounded-full bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
-                    >
-                      Upload Photo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => videoUploadInputRef.current?.click()}
-                      className="px-4 py-2.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/15 text-zinc-900 dark:text-white text-xs font-bold cursor-pointer"
-                    >
-                      Select Video
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMultiSelectMode((v) => !v);
+                      setSelectedIds([]);
+                      triggerHaptic();
+                    }}
+                    className={`min-h-[40px] px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors ${
+                      multiSelectMode ? "story-cta-blue" : "story-studio-soft"
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{multiSelectMode ? "Cancel Select" : "Multi-Select"}</span>
+                  </button>
                 </div>
-              )}
+              </section>
+
+              {/* 3. Responsive 9:16 Media Grid (3 cols mobile -> 6 cols desktop) */}
+              <section aria-label="Story media gallery">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
+                  {/* Tile 1: Live Camera */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("camera");
+                      triggerHaptic();
+                    }}
+                    className="aspect-[9/16] rounded-2xl story-studio-panel flex flex-col items-center justify-center gap-2.5 cursor-pointer group active:scale-[0.98] transition-transform"
+                  >
+                    <div className="w-12 h-12 rounded-2xl story-studio-soft flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Camera className="w-5 h-5 text-[#1877F2]" />
+                    </div>
+                    <div className="text-center px-2">
+                      <p className="text-xs font-extrabold whitespace-nowrap">Camera</p>
+                      <p className="text-[10px] story-studio-muted hidden sm:block">
+                        Capture live
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Tile 2: Add Yours Prompt Chain */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateMode(true);
+                      setSelectedMedia(null);
+                      setStep("editor");
+                      openStickerConfigurator("add_yours");
+                    }}
+                    className="aspect-[9/16] rounded-2xl story-studio-panel flex flex-col items-center justify-center gap-2.5 cursor-pointer group active:scale-[0.98] transition-transform"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-500 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div className="text-center px-2">
+                      <p className="text-xs font-extrabold whitespace-nowrap">Add Yours</p>
+                      <p className="text-[10px] story-studio-muted hidden sm:block">
+                        Prompt chain
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Gallery Media Tiles */}
+                  {visibleGallery.map((item) => {
+                    const selIndex = selectedIds.indexOf(item.id);
+                    const isSelected = selIndex !== -1;
+                    const isFav = favouriteIds.includes(item.id);
+
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          if (multiSelectMode) {
+                            setSelectedIds((prev) =>
+                              prev.includes(item.id)
+                                ? prev.filter((x) => x !== item.id)
+                                : [...prev, item.id].slice(0, 4)
+                            );
+                            triggerHaptic();
+                            return;
+                          }
+                          setCreateMode(false);
+                          setSelectedMedia(item);
+                          setStep("editor");
+                          triggerHaptic();
+                        }}
+                        className={`aspect-[9/16] relative rounded-2xl bg-zinc-900 overflow-hidden cursor-pointer group border transition-transform active:scale-[0.98] ${
+                          isSelected
+                            ? "border-[#1877F2] ring-2 ring-[#1877F2]"
+                            : "border-black/5 dark:border-white/10"
+                        }`}
+                      >
+                        {item.type === "video" ? (
+                          <>
+                            {toPlayableMediaUrl(item.url) ? (
+                              <video
+                                src={toPlayableMediaUrl(item.url)}
+                                muted
+                                playsInline
+                                preload="metadata"
+                                className="w-full h-full object-cover pointer-events-none"
+                              />
+                            ) : null}
+                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/75 via-black/25 to-transparent flex items-center gap-1 text-[10px] font-bold text-white pointer-events-none">
+                              <Play className="w-3 h-3 fill-white text-white shrink-0" />
+                              <span>Video</span>
+                            </div>
+                          </>
+                        ) : item.url?.trim() ? (
+                          <img
+                            src={item.url.trim()}
+                            alt={item.label || "Story media"}
+                            referrerPolicy="no-referrer"
+                            loading="lazy"
+                            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          />
+                        ) : null}
+
+                        {/* Save / Favourite Button */}
+                        {!multiSelectMode && (
+                          <button
+                            type="button"
+                            onClick={(e) => toggleFavourite(item.id, e)}
+                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center cursor-pointer hover:bg-black/65 transition-colors"
+                            aria-label="Save media"
+                          >
+                            <Heart
+                              className={`w-3.5 h-3.5 ${
+                                isFav ? "text-rose-500 fill-rose-500" : "text-white/90"
+                              }`}
+                            />
+                          </button>
+                        )}
+
+                        {/* Multi-select Index Indicator */}
+                        {multiSelectMode && (
+                          <div
+                            className={`absolute top-2 right-2 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-extrabold tabular-nums ${
+                              isSelected
+                                ? "story-cta-blue border-white"
+                                : "bg-black/45 border-white/85 text-transparent"
+                            }`}
+                          >
+                            {isSelected ? selIndex + 1 : ""}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Empty Gallery State */}
+                {visibleGallery.length === 0 && (
+                  <div className="mt-4 story-studio-panel rounded-3xl py-12 px-6 text-center max-w-lg mx-auto space-y-3">
+                    <p className="text-sm font-bold">
+                      No media found in {albumLabelMap[albumFilter]}
+                    </p>
+                    <p className="text-xs story-studio-muted">
+                      Upload photos or videos from your device, or start with a gradient text card.
+                    </p>
+                    <div className="pt-1 flex flex-wrap items-center justify-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => galleryUploadInputRef.current?.click()}
+                        className="story-cta-blue h-10 px-4 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                      >
+                        Upload Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => videoUploadInputRef.current?.click()}
+                        className="story-studio-soft h-10 px-4 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                      >
+                        Select Video
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
             </div>
 
-            {/* Multi-select Floating Next CTA */}
+            {/* Floating Multi-Select Collage Dock */}
             {multiSelectMode && selectedIds.length > 0 && (
-              <div className="absolute bottom-5 inset-x-4 z-30 flex items-center justify-between bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200 dark:border-white/15 rounded-full p-2 pl-4 shadow-2xl">
-                <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 tabular-nums">
-                  {selectedIds.length} selected
-                </span>
+              <div className="fixed bottom-5 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 story-studio-panel rounded-2xl p-2.5 pl-4 shadow-2xl flex items-center justify-between gap-3">
+                <div className="text-xs font-bold tabular-nums">
+                  <span>{selectedIds.length} selected</span>
+                  <span className="mx-1.5 story-studio-muted">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIds([])}
+                    className="story-studio-muted hover:underline cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -3133,9 +3301,9 @@ export default function AddStory() {
                       .filter((u): u is string => Boolean(u));
                     buildCollageToEditor(chosenUrls);
                   }}
-                  className="px-5 py-2.5 rounded-full bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="story-cta-blue h-10 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
-                  <span>Next</span>
+                  <span>Build Collage</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -3144,256 +3312,202 @@ export default function AddStory() {
         )}
 
         {/* ===================================================================
-         * STEP B: LIVE CAMERA STUDIO (IMG_4848)
+         * STEP B: RESPONSIVE LIVE CAMERA STUDIO
          * ================================================================= */}
         {step === "camera" && (
-          <div className="flex-1 flex flex-col justify-between relative bg-zinc-950 overflow-hidden">
-            {/* Live Camera Stage */}
-            <div className="absolute inset-0 z-0">
-              {!cameraError ? (
-                <video
-                  ref={videoPreviewRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`w-full h-full object-contain bg-black ${
-                    facingMode === "user" ? "-scale-x-100" : ""
-                  } ${activeEffect.filterClass}`}
-                />
-              ) : (
-                <div className={`w-full h-full ${activeCreateGradient.bgClass} flex flex-col items-center justify-center p-8 text-center gap-3`}>
-                  <Camera className="w-10 h-10 text-white/80" />
-                  <p className="text-sm font-semibold text-white">
-                    Camera preview unavailable on this device
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => galleryUploadInputRef.current?.click()}
-                    className="px-4 py-2 rounded-full bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
+          <div className="flex-1 min-h-0 w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-8 px-2.5 sm:px-6 py-2 sm:py-4 overflow-hidden">
+            {/* 9:16 Live Viewfinder */}
+            <div className="relative h-full max-h-full aspect-[9/16] w-auto max-w-full rounded-[26px] sm:rounded-[32px] overflow-hidden bg-black shadow-2xl border border-black/10 dark:border-white/15 flex flex-col justify-between">
+              <div className="absolute inset-0 z-0">
+                {!cameraError ? (
+                  <video
+                    ref={videoPreviewRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className={`w-full h-full object-cover bg-black ${
+                      facingMode === "user" ? "-scale-x-100" : ""
+                    } ${activeEffect.filterClass}`}
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full ${activeCreateGradient.bgClass} flex flex-col items-center justify-center p-8 text-center gap-3`}
                   >
-                    Choose Photo from Device
-                  </button>
+                    <Camera className="w-10 h-10 text-white/85" />
+                    <p className="text-sm font-bold text-white">
+                      Camera access is unavailable on this browser
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => galleryUploadInputRef.current?.click()}
+                      className="story-cta-blue h-10 px-5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                    >
+                      Select Photo or Video
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Countdown Overlay */}
+              {countdownSec !== null && (
+                <div className="absolute inset-0 z-30 bg-black/40 flex items-center justify-center pointer-events-none">
+                  <span className="text-7xl font-black text-white tabular-nums drop-shadow-2xl animate-ping">
+                    {countdownSec}
+                  </span>
                 </div>
               )}
-            </div>
 
-            {/* Hands-free Countdown Overlay */}
-            {countdownSec !== null && (
-              <div className="absolute inset-0 z-30 bg-black/35 flex items-center justify-center pointer-events-none">
-                <span className="text-7xl font-black text-white tabular-nums drop-shadow-2xl animate-ping">
-                  {countdownSec}
-                </span>
-              </div>
-            )}
-
-            {/* Top Bar: X · Flash · Settings */}
-            <header className="relative z-20 px-4 pt-4 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setStep("gallery")}
-                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center cursor-pointer"
-                aria-label="Back to gallery"
-              >
-                <X className="w-6 h-6 text-white" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setFlashMode((f) => (f === "off" ? "on" : f === "on" ? "auto" : "off"));
-                  triggerHaptic();
-                }}
-                className="px-3.5 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center gap-1.5 text-xs font-bold text-white cursor-pointer"
-              >
-                {flashMode === "off" ? (
-                  <ZapOff className="w-4 h-4 text-zinc-300" />
-                ) : (
-                  <Zap className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                )}
-                <span className="capitalize">{flashMode}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center cursor-pointer"
-                aria-label="Settings"
-              >
-                <Settings className="w-5 h-5 text-white" />
-              </button>
-            </header>
-
-            {/* Left Rail: Aa Create · ∞ Boomerang · ⊞ Layout · ⦿ Hands-free */}
-            <div className="relative z-20 px-4 flex items-center">
-              <div className="flex flex-col items-start gap-4 bg-black/35 backdrop-blur-md p-2.5 rounded-3xl border border-white/10">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCreateMode(true);
-                    setSelectedMedia(null);
-                    setStep("editor");
-                    openTextStudioForNew();
-                  }}
-                  className="flex items-center gap-2.5 text-white text-xs font-bold cursor-pointer pr-2"
-                >
-                  <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center font-serif text-sm font-bold">
-                    Aa
-                  </span>
-                  {cameraRailExpanded && <span>Create</span>}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBoomerangMode((v) => !v);
-                    triggerHaptic();
-                  }}
-                  className="flex items-center gap-2.5 text-white text-xs font-bold cursor-pointer pr-2"
-                >
-                  <span
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      boomerangMode ? "bg-[#1877F2] text-white" : "bg-white/15 text-white"
-                    }`}
-                  >
-                    <InfinityIcon className="w-4 h-4" />
-                  </span>
-                  {cameraRailExpanded && <span>Boomerang</span>}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCollageImages([]);
-                    setStep("collage");
-                    triggerHaptic();
-                  }}
-                  className="flex items-center gap-2.5 text-white text-xs font-bold cursor-pointer pr-2"
-                >
-                  <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">
-                    <LayoutGrid className="w-4 h-4" />
-                  </span>
-                  {cameraRailExpanded && <span>Layout</span>}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHandsFreeMode((v) => !v);
-                    triggerHaptic();
-                  }}
-                  className="flex items-center gap-2.5 text-white text-xs font-bold cursor-pointer pr-2"
-                >
-                  <span
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      handsFreeMode ? "bg-[#1877F2] text-white" : "bg-white/15 text-white"
-                    }`}
-                  >
-                    <Timer className="w-4 h-4" />
-                  </span>
-                  {cameraRailExpanded && <span>Hands-free</span>}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCameraRailExpanded((v) => !v)}
-                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center cursor-pointer"
-                  aria-label="Toggle tools"
-                >
-                  {cameraRailExpanded ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Bottom Shutter + Filter Carousel + POST / STORY / REEL / LIVE Switcher */}
-            <div className="relative z-20 pb-5 pt-6 bg-gradient-to-t from-black/85 via-black/40 to-transparent space-y-4">
-              {/* Filter Circles + Center Shutter Ring */}
-              <div className="flex items-center justify-center gap-3 px-4">
-                {STUDIO_EFFECTS.slice(0, 2).map((eff) => (
+              {/* Camera Top Controls */}
+              <div className="relative z-20 p-3.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
-                    key={eff.id}
                     type="button"
                     onClick={() => {
-                      setEffectId(eff.id);
+                      setFlashMode((f) => (f === "off" ? "on" : f === "on" ? "auto" : "off"));
                       triggerHaptic();
                     }}
-                    className={`w-11 h-11 rounded-full ${eff.swatchBg} border-2 flex items-center justify-center text-[10px] font-bold text-white shadow-md cursor-pointer transition-transform ${
-                      effectId === eff.id ? "border-white scale-110" : "border-white/40 opacity-80"
-                    }`}
+                    className="h-9 px-3 rounded-xl bg-black/50 backdrop-blur-md border border-white/15 flex items-center gap-1.5 text-xs font-bold text-white cursor-pointer whitespace-nowrap"
                   >
-                    {eff.name.slice(0, 4)}
+                    {flashMode === "off" ? (
+                      <ZapOff className="w-3.5 h-3.5 text-zinc-300" />
+                    ) : (
+                      <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    )}
+                    <span className="capitalize">{flashMode}</span>
                   </button>
-                ))}
 
-                {/* Main Shutter Button */}
-                <button
-                  type="button"
-                  onClick={handleShutterTrigger}
-                  className="w-20 h-20 rounded-full border-4 border-white p-1.5 flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xl"
-                  aria-label="Capture story"
-                >
-                  <div
-                    className={`w-full h-full rounded-full ${
-                      boomerangMode || handsFreeMode ? "bg-[#1877F2]" : "bg-white"
-                    }`}
-                  />
-                </button>
-
-                {STUDIO_EFFECTS.slice(2, 4).map((eff) => (
                   <button
-                    key={eff.id}
                     type="button"
                     onClick={() => {
-                      setEffectId(eff.id);
+                      setBoomerangMode((v) => !v);
                       triggerHaptic();
                     }}
-                    className={`w-11 h-11 rounded-full ${eff.swatchBg} border-2 flex items-center justify-center text-[10px] font-bold text-white shadow-md cursor-pointer transition-transform ${
-                      effectId === eff.id ? "border-white scale-110" : "border-white/40 opacity-80"
+                    className={`h-9 px-3 rounded-xl backdrop-blur-md border flex items-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap ${
+                      boomerangMode
+                        ? "story-cta-blue border-[#1877F2]"
+                        : "bg-black/50 border-white/15 text-white"
                     }`}
                   >
-                    {eff.name.slice(0, 4)}
+                    <InfinityIcon className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Boomerang</span>
                   </button>
-                ))}
-              </div>
 
-              {/* Bottom Bar: Gallery Thumb · POST / STORY / REEL / LIVE · Flip Camera */}
-              <div className="px-5 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHandsFreeMode((v) => !v);
+                      triggerHaptic();
+                    }}
+                    className={`h-9 px-3 rounded-xl backdrop-blur-md border flex items-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap ${
+                      handsFreeMode
+                        ? "story-cta-blue border-[#1877F2]"
+                        : "bg-black/50 border-white/15 text-white"
+                    }`}
+                  >
+                    <Timer className="w-3.5 h-3.5" />
+                    <span>3s</span>
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setStep("gallery")}
-                  className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white bg-zinc-900 flex items-center justify-center shadow-md cursor-pointer shrink-0"
-                  aria-label="Open gallery"
+                  onClick={() => {
+                    setFacingMode((m) => (m === "environment" ? "user" : "environment"));
+                    triggerHaptic();
+                  }}
+                  className="w-9 h-9 rounded-xl bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white cursor-pointer shrink-0"
+                  aria-label="Flip camera"
                 >
-                  {visibleGallery[0]?.url ? (
-                    <img
-                      src={visibleGallery[0].url}
-                      alt="Gallery"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Camera Bottom Shutter & Filter Strip */}
+              <div className="relative z-20 pt-8 pb-4 px-4 bg-gradient-to-t from-black/85 via-black/45 to-transparent space-y-3.5">
+                <div className="flex items-center justify-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                  {STUDIO_EFFECTS.map((eff) => (
+                    <button
+                      key={eff.id}
+                      type="button"
+                      onClick={() => {
+                        setEffectId(eff.id);
+                        triggerHaptic();
+                      }}
+                      className={`h-7 px-3 rounded-full text-[11px] font-bold whitespace-nowrap cursor-pointer border ${
+                        effectId === eff.id
+                          ? "bg-white text-zinc-950 border-white"
+                          : "bg-black/45 text-white/85 border-white/20"
+                      }`}
+                    >
+                      {eff.name}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setStep("gallery")}
+                    className="w-11 h-11 rounded-2xl overflow-hidden border-2 border-white/80 bg-zinc-900 flex items-center justify-center shadow-md cursor-pointer shrink-0"
+                    aria-label="Open gallery"
+                  >
+                    {visibleGallery[0]?.url ? (
+                      <img
+                        src={visibleGallery[0].url}
+                        alt="Gallery"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-white" />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleShutterTrigger}
+                    className="w-[74px] h-[74px] rounded-full border-4 border-white p-1.5 flex items-center justify-center active:scale-90 transition-transform cursor-pointer shadow-2xl shrink-0"
+                    aria-label="Capture story"
+                  >
+                    <span
+                      className={`w-full h-full rounded-full ${
+                        boomerangMode || handsFreeMode ? "bg-[#1877F2]" : "bg-white"
+                      }`}
                     />
-                  ) : (
-                    <ImageIcon className="w-5 h-5 text-white" />
-                  )}
-                </button>
+                  </button>
 
-                <div className="flex items-center gap-4 text-xs font-extrabold tracking-wider">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateMode(true);
+                      setSelectedMedia(null);
+                      setStep("editor");
+                      openTextStudioForNew();
+                    }}
+                    className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center font-serif font-extrabold text-sm text-white cursor-pointer shrink-0"
+                    aria-label="Text story"
+                  >
+                    Aa
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-center gap-5 text-[11px] font-bold">
                   <button
                     type="button"
                     onClick={() => navigate("/news-hub/create")}
-                    className="text-zinc-400 hover:text-white cursor-pointer"
+                    className="text-zinc-400 hover:text-white cursor-pointer whitespace-nowrap"
                   >
-                    POST
+                    Post
                   </button>
-                  <span className="text-white border-b-2 border-[#1877F2] pb-0.5">STORY</span>
+                  <span className="text-white border-b-2 border-[#1877F2] pb-0.5 whitespace-nowrap">
+                    Story
+                  </span>
                   <button
                     type="button"
                     onClick={() => navigate("/news-hub/create?tab=video")}
-                    className="text-zinc-400 hover:text-white cursor-pointer"
+                    className="text-zinc-400 hover:text-white cursor-pointer whitespace-nowrap"
                   >
-                    REEL
+                    Reel
                   </button>
                   <button
                     type="button"
@@ -3408,73 +3522,88 @@ export default function AddStory() {
                       ]);
                       setStep("editor");
                     }}
-                    className="text-zinc-400 hover:text-white cursor-pointer"
+                    className="text-zinc-400 hover:text-white cursor-pointer whitespace-nowrap"
                   >
-                    LIVE
+                    Live Card
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* Desktop Camera Side Controls */}
+            <aside className="hidden lg:flex flex-col gap-4 w-72 story-studio-panel rounded-3xl p-5">
+              <div className="space-y-1">
+                <h2 className="text-sm font-bold">Camera Controls</h2>
+                <p className="text-xs story-studio-muted">
+                  Capture an instant 9:16 frame or switch capture modes
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setBoomerangMode((v) => !v)}
+                  className={`w-full h-11 px-3.5 rounded-2xl flex items-center justify-between text-xs font-bold cursor-pointer ${
+                    boomerangMode ? "story-cta-blue" : "story-studio-soft"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <InfinityIcon className="w-4 h-4" />
+                    <span>Boomerang Pulse</span>
+                  </span>
+                  <span>{boomerangMode ? "Active" : "Off"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setHandsFreeMode((v) => !v)}
+                  className={`w-full h-11 px-3.5 rounded-2xl flex items-center justify-between text-xs font-bold cursor-pointer ${
+                    handsFreeMode ? "story-cta-blue" : "story-studio-soft"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Timer className="w-4 h-4" />
+                    <span>3-Second Timer</span>
+                  </span>
+                  <span>{handsFreeMode ? "Active" : "Off"}</span>
+                </button>
 
                 <button
                   type="button"
                   onClick={() => {
-                    setFacingMode((m) => (m === "environment" ? "user" : "environment"));
+                    setCollageImages([]);
+                    setStep("collage");
                     triggerHaptic();
                   }}
-                  className="w-10 h-10 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center cursor-pointer shrink-0"
-                  aria-label="Flip camera"
+                  className="w-full h-11 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-bold cursor-pointer"
                 >
-                  <RefreshCw className="w-5 h-5 text-white" />
+                  <span className="flex items-center gap-2">
+                    <LayoutGrid className="w-4 h-4 text-[#1877F2]" />
+                    <span>Photo Collage Grid</span>
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5 story-studio-muted" />
                 </button>
               </div>
-            </div>
+
+              <button
+                type="button"
+                onClick={handleShutterTrigger}
+                className="story-cta-blue w-full h-12 rounded-2xl text-xs font-bold cursor-pointer"
+              >
+                Capture Photo
+              </button>
+            </aside>
           </div>
         )}
 
         {/* ===================================================================
-         * STEP C: COLLAGE / LAYOUT BUILDER
+         * STEP C: RESPONSIVE COLLAGE LAYOUT STUDIO
          * ================================================================= */}
         {step === "collage" && (
-          <div className="flex-1 flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white p-4 gap-4 overflow-hidden transition-colors">
-            <header className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setStep("gallery")}
-                className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
-              >
-                <ChevronLeft className="w-5 h-5 text-zinc-900 dark:text-white" />
-              </button>
-              <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-full border border-zinc-200 dark:border-white/10">
-                {([2, 3, 4] as const).map((cnt) => (
-                  <button
-                    key={cnt}
-                    type="button"
-                    onClick={() => {
-                      setCollageSlotsCount(cnt);
-                      setCollageImages((prev) => prev.slice(0, cnt));
-                    }}
-                    className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${
-                      collageSlotsCount === cnt
-                        ? "bg-[#1877F2] text-white"
-                        : "text-zinc-500 dark:text-zinc-400"
-                    }`}
-                  >
-                    {cnt} Grid
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                disabled={collageImages.length === 0}
-                onClick={() => buildCollageToEditor(collageImages)}
-                className="px-4 py-2 rounded-full bg-[#1877F2] disabled:opacity-40 text-white text-xs font-bold cursor-pointer"
-              >
-                Done
-              </button>
-            </header>
-
-            {/* Collage Preview Stage */}
+          <div className="flex-1 min-h-0 w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-8 px-3.5 sm:px-6 py-3 sm:py-5 overflow-y-auto">
+            {/* Live 9:16 Collage Frame */}
             <div
-              className={`flex-1 rounded-3xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 grid gap-1 p-1 ${
+              className={`w-full max-w-[290px] sm:max-w-[340px] aspect-[9/16] shrink-0 story-studio-panel rounded-[28px] p-2 grid gap-2 ${
                 collageSlotsCount === 2 ? "grid-rows-2" : "grid-cols-2 grid-rows-2"
               }`}
             >
@@ -3491,24 +3620,24 @@ export default function AddStory() {
                         collageSlotInputRef.current?.click();
                       }
                     }}
-                    className={`relative bg-zinc-200/80 dark:bg-zinc-800/80 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer ${spanFull}`}
+                    className={`relative story-studio-soft rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer group ${spanFull}`}
                   >
                     {img ? (
                       <>
                         <img
                           src={img}
-                          alt=""
+                          alt={`Collage slot ${idx + 1}`}
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"
                         />
-                        <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center">
+                        <span className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/65 flex items-center justify-center">
                           <X className="w-3.5 h-3.5 text-white" />
                         </span>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center gap-1 text-zinc-500 dark:text-zinc-400">
+                      <div className="flex flex-col items-center gap-1.5 story-studio-muted">
                         <Plus className="w-6 h-6" />
-                        <span className="text-[11px] font-semibold">Add Photo</span>
+                        <span className="text-xs font-semibold">Slot {idx + 1}</span>
                       </div>
                     )}
                   </div>
@@ -3516,676 +3645,1092 @@ export default function AddStory() {
               })}
             </div>
 
-            {/* Quick Tap Strip from Gallery */}
-            <div className="space-y-1.5 shrink-0">
-              <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                Tap photos below to fill grid
-              </p>
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                {visibleGallery.slice(0, 12).map((g) => (
+            {/* Collage Controls & Quick Gallery Picker */}
+            <div className="w-full max-w-md lg:w-84 story-studio-panel rounded-3xl p-4 sm:p-5 space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-sm font-bold">Grid Layout</h2>
+                <p className="text-xs story-studio-muted">
+                  Tap an empty slot to upload or pick from your gallery below
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {([2, 3, 4] as const).map((cnt) => (
                   <button
-                    key={g.id}
+                    key={cnt}
                     type="button"
                     onClick={() => {
-                      if (collageImages.length < collageSlotsCount) {
-                        setCollageImages((prev) => [...prev, g.url]);
-                        triggerHaptic();
-                      }
+                      setCollageSlotsCount(cnt);
+                      setCollageImages((prev) => prev.slice(0, cnt));
                     }}
-                    className="w-14 h-20 rounded-xl overflow-hidden shrink-0 border border-zinc-200 dark:border-white/15 cursor-pointer"
+                    className={`h-10 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap ${
+                      collageSlotsCount === cnt ? "story-cta-blue" : "story-studio-soft"
+                    }`}
                   >
-                    <img
-                      src={g.url}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
+                    {cnt === 2 ? "2 Split" : `${cnt} Grid`}
                   </button>
                 ))}
               </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => collageSlotInputRef.current?.click()}
+                  className="flex-1 h-10 px-3 rounded-xl story-studio-soft flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                >
+                  <Upload className="w-3.5 h-3.5 text-[#1877F2]" />
+                  <span>Upload Photo</span>
+                </button>
+                {collageImages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setCollageImages([])}
+                    className="h-10 px-3.5 rounded-xl story-studio-soft text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {visibleGallery.filter((g) => g.type === "image").length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold story-studio-muted">Recent Photos</p>
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {visibleGallery
+                      .filter((g) => g.type === "image")
+                      .slice(0, 12)
+                      .map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => {
+                            if (collageImages.length < collageSlotsCount) {
+                              setCollageImages((prev) => [...prev, g.url]);
+                              triggerHaptic();
+                            }
+                          }}
+                          className="w-14 h-20 rounded-xl overflow-hidden shrink-0 border border-black/10 dark:border-white/15 cursor-pointer"
+                        >
+                          <img
+                            src={g.url}
+                            alt=""
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={collageImages.length === 0}
+                onClick={() => buildCollageToEditor(collageImages)}
+                className="story-cta-blue w-full h-11 rounded-2xl text-xs font-bold disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>Continue to Editor</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
 
         {/* ===================================================================
-         * STEP D: FULL STORY CANVAS EDITOR
+         * STEP D: RESPONSIVE STORY EDITOR (3-COL DESKTOP + MOBILE DOCK)
          * ================================================================= */}
         {step === "editor" && (
-          <div className="flex-1 flex flex-col bg-zinc-100 dark:bg-black p-2 sm:p-3 gap-2.5 overflow-hidden transition-colors">
-            {/* Rounded 9:16 Interactive Story Stage (Exact Aspect Ratio + 2-Finger Pinch Zoom) */}
-            <div
-              ref={stageContainerRef}
-              onClick={() => {
-                setSelectedLayerId(null);
-                setMoreMenuOpen(false);
-              }}
-              onTouchStart={handleStageTouchStart}
-              onTouchMove={handleStageTouchMove}
-              onTouchEnd={handleStageTouchEnd}
-              onTouchCancel={handleStageTouchEnd}
-              onWheel={handleStageWheel}
-              className="relative flex-1 rounded-[28px] overflow-hidden bg-black shadow-2xl touch-none"
-            >
-              {/* Background Media (Exact Natural Aspect Ratio) or Create Gradient */}
-              <div className={`absolute inset-0 flex items-center justify-center overflow-hidden ${activeEffect.filterClass}`}>
-                {createMode || !selectedMedia ? (
-                  <div className={`w-full h-full ${activeCreateGradient.bgClass} flex items-center justify-center`}>
-                    {attachedSong && textLayers.length === 0 && placedStickers.length === 0 && (
-                      <div className="px-5 py-4 rounded-3xl bg-black/45 backdrop-blur-xl border border-white/15 shadow-2xl flex items-center gap-3.5 max-w-[270px] pointer-events-none">
-                        {attachedSong.coverUrl ? (
-                          <img
-                            src={attachedSong.coverUrl}
-                            alt={attachedSong.title}
-                            referrerPolicy="no-referrer"
-                            className="w-14 h-14 rounded-2xl object-cover shrink-0 shadow-lg"
-                          />
-                        ) : (
-                          <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-                            <Music className="w-6 h-6 text-white" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-sm font-extrabold text-white truncate">
-                            {attachedSong.title}
-                          </p>
-                          <p className="text-xs text-white/75 truncate mt-0.5">
-                            {attachedSong.artist}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : selectedMedia.type === "video" ? (
-                  <motion.video
-                    key={selectedMedia.id}
-                    src={toPlayableMediaUrl(selectedMedia.url)}
-                    autoPlay
-                    loop
-                    playsInline
-                    muted={Boolean(attachedSong) || audioMuted}
-                    animate={{
-                      scale: mediaScale,
-                      x: mediaOffset.x,
-                      y: mediaOffset.y,
+          <div className="flex-1 min-h-0 w-full max-w-7xl mx-auto flex flex-col lg:grid lg:grid-cols-[290px_minmax(0,1fr)_320px] lg:gap-6 px-0 sm:px-4 lg:px-6 py-0 lg:py-4 overflow-hidden">
+            {/* ---------------------------------------------------------------
+             * DESKTOP LEFT CREATIVE TOOLKIT
+             * ------------------------------------------------------------- */}
+            <aside className="hidden lg:flex flex-col gap-3.5 overflow-y-auto pr-1">
+              <div className="story-studio-panel rounded-3xl p-4 space-y-3">
+                <h2 className="text-xs font-bold story-studio-muted">Creative Tools</h2>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={openTextStudioForNew}
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    <span className="w-7 h-7 rounded-xl bg-[#1877F2]/15 text-[#1877F2] font-serif font-extrabold flex items-center justify-center shrink-0">
+                      Aa
+                    </span>
+                    <span>Add Text</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStickerTrayOpen(true)}
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    <span className="w-7 h-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
+                      <Smile className="w-4 h-4" />
+                    </span>
+                    <span>Stickers</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMusicSheetOpen(true)}
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    <span className="w-7 h-7 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0">
+                      <Music className="w-4 h-4" />
+                    </span>
+                    <span>Audio</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDrawModeOpen((v) => !v);
+                      triggerHaptic();
                     }}
-                    transition={{ duration: 0 }}
-                    className="w-full h-full object-contain select-none pointer-events-none bg-black"
-                  />
-                ) : (
-                  <motion.img
-                    src={selectedMedia.url}
-                    alt="Story canvas"
-                    referrerPolicy="no-referrer"
-                    animate={{
-                      scale: isBoomerangClip ? mediaScale * 1.03 : mediaScale,
-                      x: mediaOffset.x,
-                      y: mediaOffset.y,
-                    }}
-                    transition={{ duration: 0 }}
-                    className={`w-full h-full object-contain select-none pointer-events-none ${
-                      isBoomerangClip ? "animate-pulse" : ""
+                    className={`min-h-[46px] px-3 rounded-2xl flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap ${
+                      drawModeOpen ? "story-cta-blue" : "story-studio-soft"
                     }`}
-                  />
-                )}
-              </div>
-
-              {/* HTML5 Freehand Drawing Layer */}
-              <canvas
-                ref={drawCanvasRef}
-                width={1080}
-                height={1920}
-                onPointerDown={handleDrawPointerDown}
-                onPointerMove={handleDrawPointerMove}
-                onPointerUp={handleDrawPointerUp}
-                onPointerCancel={handleDrawPointerUp}
-                className={`absolute inset-0 w-full h-full touch-none ${
-                  drawModeOpen ? "z-30 cursor-crosshair" : "z-10 pointer-events-none"
-                }`}
-              />
-
-              {/* Draggable Text Layers */}
-              <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
-                {textLayers.map((layer) => {
-                  const isSel = selectedLayerId === layer.id;
-                  return (
-                    <motion.div
-                      key={layer.id}
-                      drag
-                      dragMomentum={false}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isSel) {
-                          openTextStudioForExisting(layer);
-                        } else {
-                          setSelectedLayerId(layer.id);
-                        }
-                      }}
-                      className={`pointer-events-auto absolute cursor-grab active:cursor-grabbing p-2 ${
-                        isSel ? "ring-2 ring-white/80 rounded-2xl" : ""
+                  >
+                    <span
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                        drawModeOpen ? "bg-white/20 text-white" : "bg-sky-500/15 text-sky-500"
                       }`}
                     >
-                      {renderTextLayerVisual(layer)}
-                      {isSel && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setTextLayers((prev) => prev.filter((x) => x.id !== layer.id));
-                            setSelectedLayerId(null);
-                            triggerHaptic();
-                          }}
-                          className="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-zinc-950 border border-white text-white flex items-center justify-center cursor-pointer"
-                          aria-label="Remove text"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </motion.div>
-                  );
-                })}
+                      <Pencil className="w-4 h-4" />
+                    </span>
+                    <span>Draw</span>
+                  </button>
 
-                {/* Draggable Interactive Stickers */}
-                {placedStickers.map((stk) => {
-                  const isSel = selectedLayerId === stk.id;
-                  return (
-                    <motion.div
-                      key={stk.id}
-                      drag
-                      dragMomentum={false}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedLayerId(stk.id);
-                      }}
-                      className={`pointer-events-auto absolute cursor-grab active:cursor-grabbing ${
-                        isSel ? "ring-2 ring-white/80 rounded-2xl p-1" : ""
-                      }`}
-                    >
-                      {renderStickerVisual(stk)}
-                      {isSel && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPlacedStickers((prev) => prev.filter((x) => x.id !== stk.id));
-                            setSelectedLayerId(null);
-                            triggerHaptic();
-                          }}
-                          className="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-zinc-950 border border-white text-white flex items-center justify-center cursor-pointer"
-                          aria-label="Remove sticker"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </motion.div>
-                  );
-                })}
+                  <button
+                    type="button"
+                    onClick={() => openStickerConfigurator("mention")}
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    <span className="w-7 h-7 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
+                      <AtSign className="w-4 h-4" />
+                    </span>
+                    <span>Mention</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openStickerConfigurator("shop_order")}
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    <span className="w-7 h-7 rounded-xl bg-[#1877F2]/15 text-[#1877F2] flex items-center justify-center shrink-0">
+                      <ShoppingBag className="w-4 h-4" />
+                    </span>
+                    <span>Shop Tag</span>
+                  </button>
+                </div>
               </div>
 
-              {/* AI Info Badge Indicator */}
-              {aiLabel && (
-                <div className="absolute top-16 left-4 z-20 px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/15 flex items-center gap-1.5 text-[11px] font-semibold text-white">
-                  <Cpu className="w-3 h-3 text-[#1877F2]" />
-                  <span>AI info</span>
+              {/* Visual Filters */}
+              <div className="story-studio-panel rounded-3xl p-4 space-y-2.5">
+                <h2 className="text-xs font-bold story-studio-muted">Color Filters</h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {STUDIO_EFFECTS.map((eff) => (
+                    <button
+                      key={eff.id}
+                      type="button"
+                      onClick={() => {
+                        setEffectId(eff.id);
+                        triggerHaptic();
+                      }}
+                      className={`h-9 px-3 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap transition-colors ${
+                        effectId === eff.id ? "story-cta-blue" : "story-studio-soft"
+                      }`}
+                    >
+                      {eff.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Gradient Picker when in Text/Create Mode */}
+              {(createMode || !selectedMedia) && (
+                <div className="story-studio-panel rounded-3xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xs font-bold story-studio-muted">Canvas Backdrop</h2>
+                    <button
+                      type="button"
+                      onClick={() => setStep("gallery")}
+                      className="text-[11px] font-bold text-[#1877F2] cursor-pointer"
+                    >
+                      Use Media
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {CREATE_GRADIENTS.map((g, idx) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => {
+                          setCreateGradientIdx(idx);
+                          triggerHaptic();
+                        }}
+                        className={`w-8 h-8 rounded-full ${g.bgClass} border-2 cursor-pointer transition-transform ${
+                          createGradientIdx === idx
+                            ? "border-[#1877F2] scale-110 shadow-md"
+                            : "border-black/10 dark:border-white/20"
+                        }`}
+                        aria-label={`Gradient ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Editor Top Bar & Collapsible Right Tool Rail (Hidden while Drawing or in Text Studio) */}
-              {!drawModeOpen && !textStudioOpen && (
-                <>
-                  {/* Top Bar: Back/Discard + Attached Music Pill */}
-                  <div className="absolute top-3.5 left-3.5 right-16 z-30 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setStep("gallery");
-                        triggerHaptic();
-                      }}
-                      className="w-10 h-10 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center text-white shrink-0 cursor-pointer"
-                      aria-label="Back"
-                    >
-                      <ChevronLeft className="w-6 h-6" />
-                    </button>
+              {/* Story Preferences & Export */}
+              <div className="story-studio-panel rounded-3xl p-4 space-y-2">
+                <h2 className="text-xs font-bold story-studio-muted">Canvas Options</h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiLabel((v) => !v);
+                    triggerHaptic();
+                  }}
+                  className="w-full h-10 px-3 rounded-xl story-studio-soft flex items-center justify-between text-xs font-semibold cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-[#1877F2]" />
+                    <span>AI Content Label</span>
+                  </span>
+                  <span className="text-[11px] font-bold text-[#1877F2]">
+                    {aiLabel ? "On" : "Off"}
+                  </span>
+                </button>
 
-                    {attachedSong ? (
-                      <div
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAllowCommenting((v) => !v);
+                    triggerHaptic();
+                  }}
+                  className="w-full h-10 px-3 rounded-xl story-studio-soft flex items-center justify-between text-xs font-semibold cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    {allowCommenting ? (
+                      <MessageSquare className="w-4 h-4 text-[#1877F2]" />
+                    ) : (
+                      <MessageSquareOff className="w-4 h-4 story-studio-muted" />
+                    )}
+                    <span>Story Replies</span>
+                  </span>
+                  <span className="text-[11px] font-bold text-[#1877F2]">
+                    {allowCommenting ? "Allowed" : "Muted"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadStoryPng}
+                  className="w-full h-10 px-3 rounded-xl story-studio-soft flex items-center justify-between text-xs font-semibold cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <Download className="w-4 h-4" />
+                    <span>Download PNG</span>
+                  </span>
+                  <ArrowRight className="w-3.5 h-3.5 story-studio-muted" />
+                </button>
+              </div>
+            </aside>
+
+            {/* ---------------------------------------------------------------
+             * CENTER 9:16 INTERACTIVE STORY CANVAS STAGE
+             * ------------------------------------------------------------- */}
+            <div className="flex-1 min-h-0 flex items-center justify-center px-2.5 pt-2 pb-1.5 lg:p-0 overflow-hidden">
+              <div
+                ref={stageContainerRef}
+                onClick={() => {
+                  setSelectedLayerId(null);
+                  setMoreMenuOpen(false);
+                }}
+                onTouchStart={handleStageTouchStart}
+                onTouchMove={handleStageTouchMove}
+                onTouchEnd={handleStageTouchEnd}
+                onTouchCancel={handleStageTouchEnd}
+                onWheel={handleStageWheel}
+                className="relative h-full max-h-full aspect-[9/16] w-auto max-w-full rounded-[24px] sm:rounded-[30px] overflow-hidden bg-black shadow-2xl border border-black/10 dark:border-white/15 touch-none"
+              >
+                {/* Background Media or Create Gradient */}
+                <div
+                  className={`absolute inset-0 flex items-center justify-center overflow-hidden ${activeEffect.filterClass}`}
+                >
+                  {createMode || !selectedMedia ? (
+                    <div
+                      className={`w-full h-full ${activeCreateGradient.bgClass} flex items-center justify-center`}
+                    >
+                      {attachedSong && textLayers.length === 0 && placedStickers.length === 0 && (
+                        <div className="px-5 py-4 rounded-3xl bg-black/45 backdrop-blur-xl border border-white/15 shadow-2xl flex items-center gap-3.5 max-w-[270px] pointer-events-none">
+                          {attachedSong.coverUrl ? (
+                            <img
+                              src={attachedSong.coverUrl}
+                              alt={attachedSong.title}
+                              referrerPolicy="no-referrer"
+                              className="w-14 h-14 rounded-2xl object-cover shrink-0 shadow-lg"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+                              <Music className="w-6 h-6 text-white" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-extrabold text-white truncate">
+                              {attachedSong.title}
+                            </p>
+                            <p className="text-xs text-white/75 truncate mt-0.5">
+                              {attachedSong.artist}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : selectedMedia.type === "video" ? (
+                    <motion.video
+                      key={selectedMedia.id}
+                      src={toPlayableMediaUrl(selectedMedia.url)}
+                      autoPlay
+                      loop
+                      playsInline
+                      muted={Boolean(attachedSong) || audioMuted}
+                      animate={{
+                        scale: mediaScale,
+                        x: mediaOffset.x,
+                        y: mediaOffset.y,
+                      }}
+                      transition={{ duration: 0 }}
+                      className="w-full h-full object-contain select-none pointer-events-none bg-black"
+                    />
+                  ) : (
+                    <motion.img
+                      src={selectedMedia.url}
+                      alt="Story canvas"
+                      referrerPolicy="no-referrer"
+                      animate={{
+                        scale: isBoomerangClip ? mediaScale * 1.03 : mediaScale,
+                        x: mediaOffset.x,
+                        y: mediaOffset.y,
+                      }}
+                      transition={{ duration: 0 }}
+                      className={`w-full h-full object-contain select-none pointer-events-none ${
+                        isBoomerangClip ? "animate-pulse" : ""
+                      }`}
+                    />
+                  )}
+                </div>
+
+                {/* HTML5 Freehand Drawing Layer */}
+                <canvas
+                  ref={drawCanvasRef}
+                  width={1080}
+                  height={1920}
+                  onPointerDown={handleDrawPointerDown}
+                  onPointerMove={handleDrawPointerMove}
+                  onPointerUp={handleDrawPointerUp}
+                  onPointerCancel={handleDrawPointerUp}
+                  className={`absolute inset-0 w-full h-full touch-none ${
+                    drawModeOpen ? "z-30 cursor-crosshair" : "z-10 pointer-events-none"
+                  }`}
+                />
+
+                {/* Draggable Text Layers & Interactive Stickers */}
+                <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
+                  {textLayers.map((layer) => {
+                    const isSel = selectedLayerId === layer.id;
+                    return (
+                      <motion.div
+                        key={layer.id}
+                        drag
+                        dragMomentum={false}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setAudioMuted((m) => !m);
+                          if (isSel) {
+                            openTextStudioForExisting(layer);
+                          } else {
+                            setSelectedLayerId(layer.id);
+                          }
                         }}
-                        className="flex items-center gap-2 bg-black/55 backdrop-blur-xl border border-white/15 rounded-full py-1 pl-1.5 pr-2.5 max-w-[230px] cursor-pointer"
+                        className={`pointer-events-auto absolute cursor-grab active:cursor-grabbing p-2 ${
+                          isSel ? "ring-2 ring-white/80 rounded-2xl" : ""
+                        }`}
                       >
-                        {attachedSong.coverUrl ? (
-                          <img
-                            src={attachedSong.coverUrl}
-                            alt=""
-                            referrerPolicy="no-referrer"
-                            className="w-7 h-7 rounded-full object-cover shrink-0"
-                          />
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center shrink-0">
-                            <Music className="w-3.5 h-3.5 text-white" />
+                        {renderTextLayerVisual(layer)}
+                        {isSel && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTextLayers((prev) => prev.filter((x) => x.id !== layer.id));
+                              setSelectedLayerId(null);
+                              triggerHaptic();
+                            }}
+                            className="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-zinc-950 border border-white text-white flex items-center justify-center cursor-pointer"
+                            aria-label="Remove text"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+
+                  {placedStickers.map((stk) => {
+                    const isSel = selectedLayerId === stk.id;
+                    return (
+                      <motion.div
+                        key={stk.id}
+                        drag
+                        dragMomentum={false}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedLayerId(stk.id);
+                        }}
+                        className={`pointer-events-auto absolute cursor-grab active:cursor-grabbing ${
+                          isSel ? "ring-2 ring-white/80 rounded-2xl p-1" : ""
+                        }`}
+                      >
+                        {renderStickerVisual(stk)}
+                        {isSel && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPlacedStickers((prev) => prev.filter((x) => x.id !== stk.id));
+                              setSelectedLayerId(null);
+                              triggerHaptic();
+                            }}
+                            className="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-zinc-950 border border-white text-white flex items-center justify-center cursor-pointer"
+                            aria-label="Remove sticker"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                {/* Minimal Top Canvas Status Chips (Never obscures artwork) */}
+                {!drawModeOpen && !textStudioOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-3 inset-x-3 z-30 flex items-center justify-between gap-2 pointer-events-none"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pointer-events-auto">
+                      {attachedSong ? (
+                        <div
+                          onClick={() => setAudioMuted((m) => !m)}
+                          className="flex items-center gap-2 bg-black/60 backdrop-blur-xl border border-white/15 rounded-full py-1 pl-1.5 pr-2.5 max-w-[220px] cursor-pointer"
+                        >
+                          {attachedSong.coverUrl ? (
+                            <img
+                              src={attachedSong.coverUrl}
+                              alt=""
+                              referrerPolicy="no-referrer"
+                              className="w-6 h-6 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                              <Music className="w-3 h-3 text-white" />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-bold text-white truncate">
+                              {attachedSong.title}
+                            </p>
                           </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-white truncate">
-                            {attachedSong.title}
-                          </p>
-                          <p className="text-[10px] text-zinc-300 truncate">
-                            {attachedSong.artist}
-                          </p>
+                          {audioMuted ? (
+                            <VolumeX className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                          ) : (
+                            <Volume2 className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAttachedSong(null);
+                            }}
+                            className="p-0.5 text-zinc-300 hover:text-white cursor-pointer"
+                            aria-label="Remove audio"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                        {audioMuted ? (
-                          <VolumeX className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                        ) : (
-                          <Volume2 className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
-                        )}
+                      ) : (
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAttachedSong(null);
-                          }}
-                          className="p-0.5 text-zinc-300 hover:text-white cursor-pointer"
-                          aria-label="Remove song"
+                          onClick={() => setMusicSheetOpen(true)}
+                          className="h-8 px-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 flex items-center gap-1.5 text-[11px] font-semibold text-white cursor-pointer whitespace-nowrap"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <Music className="w-3.5 h-3.5" />
+                          <span>Add Audio</span>
                         </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMusicSheetOpen(true);
-                        }}
-                        className="px-3.5 h-9 rounded-full bg-black/45 backdrop-blur-md border border-white/10 flex items-center gap-1.5 text-xs font-bold text-white cursor-pointer whitespace-nowrap"
-                      >
-                        <Music className="w-3.5 h-3.5" />
-                        <span>Audio</span>
-                      </button>
-                    )}
+                      )}
+
+                      {aiLabel && (
+                        <span className="h-7 px-2.5 rounded-full bg-black/55 backdrop-blur-md border border-white/15 flex items-center gap-1 text-[10.5px] font-semibold text-white whitespace-nowrap">
+                          <Cpu className="w-3 h-3 text-[#1877F2]" />
+                          <span>AI</span>
+                        </span>
+                      )}
+                    </div>
 
                     {!createMode && selectedMedia && hasCustomMediaTransform && (
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           setMediaScale(1);
                           setMediaOffset({ x: 0, y: 0 });
                           triggerHaptic();
                         }}
-                        className="px-3 h-9 rounded-full bg-black/55 backdrop-blur-md border border-white/15 flex items-center gap-1 text-[11px] font-bold text-white cursor-pointer whitespace-nowrap shrink-0"
+                        className="pointer-events-auto h-8 px-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center gap-1 text-[11px] font-bold text-white cursor-pointer whitespace-nowrap shrink-0"
                       >
                         <RefreshCw className="w-3 h-3" />
                         <span>1:1</span>
                       </button>
                     )}
                   </div>
+                )}
 
-                  {/* Right Vertical Tool Rail (IMG_4849 / IMG_4850) */}
+                {/* Freehand Drawing HUD */}
+                {drawModeOpen && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-3.5 right-3 z-30 flex flex-col items-end gap-2"
+                    className="absolute inset-0 z-40 pointer-events-none flex flex-col justify-between p-2.5 sm:p-3.5 overflow-hidden"
                   >
-                    <div className="flex flex-col items-end gap-2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-1.5">
-                      <button
-                        type="button"
-                        onClick={openTextStudioForNew}
-                        className="flex items-center gap-2.5 px-2.5 py-2 rounded-full hover:bg-white/10 text-white cursor-pointer"
-                      >
-                        {railExpanded && <span className="text-xs font-bold">Text</span>}
-                        <span className="w-6 h-6 flex items-center justify-center font-serif font-extrabold text-base">
-                          Aa
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setStickerTrayOpen(true)}
-                        className="flex items-center gap-2.5 px-2.5 py-2 rounded-full hover:bg-white/10 text-white cursor-pointer"
-                      >
-                        {railExpanded && <span className="text-xs font-bold">Stickers</span>}
-                        <Smile className="w-5 h-5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setMusicSheetOpen(true)}
-                        className="flex items-center gap-2.5 px-2.5 py-2 rounded-full hover:bg-white/10 text-white cursor-pointer"
-                      >
-                        {railExpanded && <span className="text-xs font-bold">Audio</span>}
-                        <Music className="w-5 h-5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setEffectsBarOpen((v) => !v)}
-                        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-full cursor-pointer ${
-                          effectsBarOpen ? "bg-[#1877F2] text-white" : "hover:bg-white/10 text-white"
-                        }`}
-                      >
-                        {railExpanded && <span className="text-xs font-bold">Effects</span>}
-                        <Sparkles className="w-5 h-5" />
-                      </button>
-
-                      {railExpanded && (
-                        <>
+                    <div className="pointer-events-auto w-full flex items-center justify-between gap-1.5 bg-black/75 backdrop-blur-xl rounded-2xl px-2.5 py-1.5 border border-white/15">
+                      <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto no-scrollbar">
+                        {(
+                          [
+                            { id: "pen", label: "Pen" },
+                            { id: "marker", label: "Marker" },
+                            { id: "neon", label: "Neon" },
+                            { id: "eraser", label: "Eraser" },
+                          ] as const
+                        ).map((b) => (
                           <button
+                            key={b.id}
                             type="button"
-                            onClick={() => openStickerConfigurator("mention")}
-                            className="flex items-center gap-2.5 px-2.5 py-2 rounded-full hover:bg-white/10 text-white cursor-pointer"
-                          >
-                            <span className="text-xs font-bold">Mention</span>
-                            <AtSign className="w-5 h-5" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDrawModeOpen(true);
-                              setRailExpanded(false);
-                              triggerHaptic();
-                            }}
-                            className="flex items-center gap-2.5 px-2.5 py-2 rounded-full hover:bg-white/10 text-white cursor-pointer"
-                          >
-                            <span className="text-xs font-bold">Draw</span>
-                            <Pencil className="w-5 h-5" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setMoreMenuOpen((v) => !v)}
-                            className="flex items-center gap-2.5 px-2.5 py-2 rounded-full hover:bg-white/10 text-white cursor-pointer"
-                          >
-                            <span className="text-xs font-bold">More</span>
-                            <MoreHorizontal className="w-5 h-5" />
-                          </button>
-                        </>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRailExpanded((v) => !v);
-                          setMoreMenuOpen(false);
-                        }}
-                        className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white self-end cursor-pointer"
-                        aria-label="Expand tools"
-                      >
-                        {railExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* More ••• Frosted Popover (IMG_4853: Download, Label AI, Turn off commenting) */}
-                    {moreMenuOpen && (
-                      <div className="w-56 rounded-2xl bg-zinc-900/95 backdrop-blur-xl border border-white/15 shadow-2xl py-1.5 overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={handleDownloadStoryPng}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-white hover:bg-white/10 flex items-center justify-between cursor-pointer"
-                        >
-                          <span>Download</span>
-                          <Download className="w-4 h-4 text-zinc-300" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAiLabel((v) => !v);
-                            setMoreMenuOpen(false);
-                            triggerHaptic();
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-white hover:bg-white/10 flex items-center justify-between cursor-pointer"
-                        >
-                          <span>{aiLabel ? "Remove AI label" : "Label AI"}</span>
-                          <Cpu className={`w-4 h-4 ${aiLabel ? "text-[#1877F2]" : "text-zinc-300"}`} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAllowCommenting((v) => !v);
-                            setMoreMenuOpen(false);
-                            triggerHaptic();
-                          }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-bold text-white hover:bg-white/10 flex items-center justify-between cursor-pointer"
-                        >
-                          <span>
-                            {allowCommenting ? "Turn off commenting" : "Turn on commenting"}
-                          </span>
-                          {allowCommenting ? (
-                            <MessageSquareOff className="w-4 h-4 text-zinc-300" />
-                          ) : (
-                            <MessageSquare className="w-4 h-4 text-[#1877F2]" />
-                          )}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Effects Filter Strip */}
-                  {effectsBarOpen && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute bottom-16 inset-x-3 z-30 bg-black/65 backdrop-blur-xl border border-white/15 rounded-2xl p-2.5 flex items-center gap-2 overflow-x-auto"
-                    >
-                      {STUDIO_EFFECTS.map((eff) => (
-                        <button
-                          key={eff.id}
-                          type="button"
-                          onClick={() => {
-                            setEffectId(eff.id);
-                            triggerHaptic();
-                          }}
-                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap cursor-pointer ${
-                            effectId === eff.id
-                              ? "bg-[#1877F2] text-white"
-                              : "bg-white/10 text-zinc-200 hover:bg-white/20"
-                          }`}
-                        >
-                          {eff.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Create Mode Gradient Cycle Button + Caption Bar */}
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute bottom-3 inset-x-3 z-20 flex items-center gap-2"
-                  >
-                    <input
-                      type="text"
-                      value={caption}
-                      onChange={(e) => setCaption(e.target.value)}
-                      placeholder="Add a caption..."
-                      className="flex-1 h-10 px-4 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-xs text-white placeholder-zinc-300 outline-none focus:border-white/40"
-                    />
-                    {createMode && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCreateGradientIdx((i) => (i + 1) % CREATE_GRADIENTS.length);
-                          triggerHaptic();
-                        }}
-                        className="w-10 h-10 rounded-full bg-black/55 backdrop-blur-md border border-white/25 flex items-center justify-center shrink-0 cursor-pointer"
-                        title="Change gradient"
-                      >
-                        <div className={`w-6 h-6 rounded-full ${activeCreateGradient.bgClass}`} />
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* Freehand Drawing HUD (Pinned Done Button — Never Overflows Mobile Viewport) */}
-              {drawModeOpen && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute inset-x-0 top-0 bottom-0 z-40 pointer-events-none flex flex-col justify-between p-2.5 sm:p-3.5 overflow-hidden"
-                >
-                  <div className="pointer-events-auto w-full max-w-full box-border flex items-center justify-between gap-1.5 bg-black/75 backdrop-blur-xl rounded-full px-2 py-1.5 border border-white/15 overflow-hidden">
-                    <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto no-scrollbar">
-                      {(
-                        [
-                          { id: "pen", label: "Pen" },
-                          { id: "marker", label: "Marker" },
-                          { id: "neon", label: "Neon" },
-                          { id: "eraser", label: "Eraser" },
-                        ] as const
-                      ).map((b) => (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={() => setDrawBrush(b.id)}
-                          aria-label={b.label}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 whitespace-nowrap cursor-pointer transition-colors ${
-                            drawBrush === b.id
-                              ? "bg-[#1877F2] text-white"
-                              : "text-zinc-300 hover:text-white"
-                          }`}
-                        >
-                          {b.id === "eraser" ? <Eraser className="w-3.5 h-3.5" /> : b.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0 pl-1.5 border-l border-white/15">
-                      <button
-                        type="button"
-                        onClick={() => setStrokes((prev) => prev.slice(0, -1))}
-                        className="w-7 h-7 flex items-center justify-center text-white hover:bg-white/10 rounded-full shrink-0 cursor-pointer"
-                        aria-label="Undo stroke"
-                      >
-                        <Undo2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStrokes([])}
-                        className="w-7 h-7 flex items-center justify-center text-white hover:bg-white/10 rounded-full shrink-0 cursor-pointer"
-                        aria-label="Clear drawing"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDrawModeOpen(false)}
-                        className="px-3 py-1 rounded-full bg-white text-zinc-950 text-xs font-extrabold shrink-0 whitespace-nowrap cursor-pointer active:scale-95 transition-transform"
-                      >
-                        Done
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="pointer-events-auto space-y-2 bg-black/60 backdrop-blur-xl rounded-2xl p-2.5 border border-white/15">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[11px] font-semibold text-zinc-300">Brush size</span>
-                      <div className="flex items-center gap-1.5">
-                        {[4, 8, 14, 22].map((w) => (
-                          <button
-                            key={w}
-                            type="button"
-                            onClick={() => setDrawWidth(w)}
-                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tabular-nums cursor-pointer ${
-                              drawWidth === w ? "bg-[#1877F2] text-white" : "bg-white/10 text-zinc-300"
+                            onClick={() => setDrawBrush(b.id)}
+                            aria-label={b.label}
+                            className={`h-8 px-2.5 rounded-xl text-[11px] font-bold shrink-0 whitespace-nowrap cursor-pointer transition-colors ${
+                              drawBrush === b.id
+                                ? "story-cta-blue"
+                                : "text-zinc-300 hover:text-white"
                             }`}
                           >
-                            {w}px
+                            {b.id === "eraser" ? <Eraser className="w-3.5 h-3.5" /> : b.label}
                           </button>
                         ))}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 overflow-x-auto py-0.5">
-                      {STORY_COLORS.map((c) => (
+
+                      <div className="flex items-center gap-1 shrink-0 pl-1.5 border-l border-white/15">
                         <button
-                          key={c.id}
                           type="button"
-                          onClick={() => setDrawColorId(c.id)}
-                          className={`w-7 h-7 rounded-full shrink-0 ${c.swatchClass} border-2 cursor-pointer ${
-                            drawColorId === c.id ? "border-white scale-110" : "border-white/25"
-                          }`}
-                          aria-label={c.label}
+                          onClick={() => setStrokes((prev) => prev.slice(0, -1))}
+                          className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-xl shrink-0 cursor-pointer"
+                          aria-label="Undo stroke"
+                        >
+                          <Undo2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStrokes([])}
+                          className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-xl shrink-0 cursor-pointer"
+                          aria-label="Clear drawing"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDrawModeOpen(false)}
+                          className="story-cta-blue h-8 px-3 rounded-xl text-xs font-bold shrink-0 whitespace-nowrap cursor-pointer"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pointer-events-auto space-y-2 bg-black/70 backdrop-blur-xl rounded-2xl p-2.5 border border-white/15">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[11px] font-semibold text-zinc-300">Brush Width</span>
+                        <div className="flex items-center gap-1.5">
+                          {[4, 8, 14, 22].map((w) => (
+                            <button
+                              key={w}
+                              type="button"
+                              onClick={() => setDrawWidth(w)}
+                              className={`h-6 px-2.5 rounded-lg text-[11px] font-bold tabular-nums cursor-pointer ${
+                                drawWidth === w ? "story-cta-blue" : "bg-white/10 text-zinc-300"
+                              }`}
+                            >
+                              {w}px
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                        {STORY_COLORS.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setDrawColorId(c.id)}
+                            className={`w-7 h-7 rounded-full shrink-0 ${c.swatchClass} border-2 cursor-pointer ${
+                              drawColorId === c.id ? "border-white scale-110" : "border-white/25"
+                            }`}
+                            aria-label={c.label}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ---------------------------------------------------------------
+             * MOBILE ERGONOMIC EDIT DOCK + PUBLISH BAR (Below Canvas, Never Overlapping)
+             * ------------------------------------------------------------- */}
+            <div className="lg:hidden shrink-0 story-studio-topbar border-t px-2.5 pt-2 pb-2.5 space-y-2 z-30">
+              {/* Optional Expandable Filters & Gradient Strip */}
+              {effectsBarOpen && (
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                  {STUDIO_EFFECTS.map((eff) => (
+                    <button
+                      key={eff.id}
+                      type="button"
+                      onClick={() => {
+                        setEffectId(eff.id);
+                        triggerHaptic();
+                      }}
+                      className={`h-8 px-3 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer ${
+                        effectId === eff.id ? "story-cta-blue" : "story-studio-soft"
+                      }`}
+                    >
+                      {eff.name}
+                    </button>
+                  ))}
+
+                  {(createMode || !selectedMedia) &&
+                    CREATE_GRADIENTS.map((g, idx) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => {
+                          setCreateGradientIdx(idx);
+                          triggerHaptic();
+                        }}
+                        className={`w-7 h-7 rounded-full shrink-0 ${g.bgClass} border-2 cursor-pointer ${
+                          createGradientIdx === idx
+                            ? "border-[#1877F2] scale-110"
+                            : "border-black/10 dark:border-white/20"
+                        }`}
+                        aria-label={`Backdrop ${idx + 1}`}
+                      />
+                    ))}
+                </div>
+              )}
+
+              {/* Row 1: Scrollable Single-Line Edit Tools */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <button
+                  type="button"
+                  onClick={openTextStudioForNew}
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <span className="font-serif font-extrabold text-sm">Aa</span>
+                  <span>Text</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStickerTrayOpen(true)}
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Smile className="w-3.5 h-3.5" />
+                  <span>Stickers</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMusicSheetOpen(true)}
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Music className="w-3.5 h-3.5" />
+                  <span>Audio</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEffectsBarOpen((v) => !v)}
+                  className={`min-h-[38px] px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer ${
+                    effectsBarOpen ? "story-cta-blue" : "story-studio-soft"
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Filters</span>
+                </button>
+
+                {(createMode || !selectedMedia) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateGradientIdx((i) => (i + 1) % CREATE_GRADIENTS.length);
+                      triggerHaptic();
+                    }}
+                    className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    <span className={`w-3.5 h-3.5 rounded-full ${activeCreateGradient.bgClass}`} />
+                    <span>Backdrop</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawModeOpen(true);
+                    triggerHaptic();
+                  }}
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Draw</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openStickerConfigurator("mention")}
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <AtSign className="w-3.5 h-3.5" />
+                  <span>Mention</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openStickerConfigurator("shop_order")}
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>Shop</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAiLabel((v) => !v);
+                    triggerHaptic();
+                  }}
+                  className={`min-h-[38px] px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer ${
+                    aiLabel ? "story-cta-blue" : "story-studio-soft"
+                  }`}
+                >
+                  <Cpu className="w-3.5 h-3.5" />
+                  <span>AI Label</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAllowCommenting((v) => !v);
+                    triggerHaptic();
+                  }}
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  {allowCommenting ? (
+                    <MessageSquare className="w-3.5 h-3.5" />
+                  ) : (
+                    <MessageSquareOff className="w-3.5 h-3.5" />
+                  )}
+                  <span>{allowCommenting ? "Replies On" : "Replies Off"}</span>
+                </button>
+              </div>
+
+              {/* Row 2: Caption + Audience Publish Actions */}
+              <div className="story-publish-bar flex items-center gap-1.5">
+                <div className="flex-1 min-w-0 h-10 px-3 rounded-2xl story-studio-soft flex items-center">
+                  <input
+                    type="text"
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    placeholder="Add a caption..."
+                    className="story-clean-input bg-transparent w-full text-xs outline-none"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={publishing}
+                  onClick={() => handlePublishStory("story")}
+                  className="story-pill-btn h-10 px-3 rounded-2xl flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                >
+                  <img
+                    src={userAvatarResolved || deepShopLogoFallback}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      if (e.currentTarget.src !== deepShopLogoFallback) {
+                        e.currentTarget.src = deepShopLogoFallback;
+                      }
+                    }}
+                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                  />
+                  <span className="text-xs font-bold whitespace-nowrap">
+                    {publishing ? "Posting..." : "Story"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={publishing}
+                  onClick={() => setCloseFriendsOpen(true)}
+                  className="story-pill-btn w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-transform"
+                  aria-label="Close Friends"
+                >
+                  <span className="story-cf-badge w-6 h-6 rounded-full flex items-center justify-center">
+                    <Star className="w-3.5 h-3.5 fill-white text-white" />
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={publishing}
+                  onClick={() => setShareSheetOpen(true)}
+                  className="story-cta-blue w-10 h-10 rounded-2xl flex items-center justify-center shadow-md shrink-0 cursor-pointer active:scale-95 transition-transform"
+                  aria-label="Share options"
+                >
+                  {publishing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* ---------------------------------------------------------------
+             * DESKTOP RIGHT PUBLISH & AUDIENCE INSPECTOR
+             * ------------------------------------------------------------- */}
+            <aside className="hidden lg:flex flex-col justify-between story-studio-panel rounded-3xl p-5 overflow-y-auto gap-4">
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold story-studio-muted block">
+                    Story Caption
+                  </label>
+                  <div className="rounded-2xl story-studio-soft p-3">
+                    <textarea
+                      rows={3}
+                      value={caption}
+                      onChange={(e) => setCaption(e.target.value)}
+                      placeholder="Write a short note or story caption..."
+                      className="story-clean-input bg-transparent w-full text-xs outline-none resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Audio Track Card */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-bold story-studio-muted block">Soundtrack</span>
+                  {attachedSong ? (
+                    <div className="p-2.5 rounded-2xl story-studio-soft flex items-center gap-2.5">
+                      {attachedSong.coverUrl ? (
+                        <img
+                          src={attachedSong.coverUrl}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="w-10 h-10 rounded-xl object-cover shrink-0"
                         />
-                      ))}
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-[#1877F2]/15 text-[#1877F2] flex items-center justify-center shrink-0">
+                          <Music className="w-4 h-4" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold truncate">{attachedSong.title}</p>
+                        <p className="text-[11px] story-studio-muted truncate">
+                          {attachedSong.artist}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAttachedSong(null)}
+                        className="story-studio-circle-btn w-7 h-7 rounded-full flex items-center justify-center shrink-0 cursor-pointer"
+                        aria-label="Remove song"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setMusicSheetOpen(true)}
+                      className="w-full h-11 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-bold cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Music className="w-4 h-4 text-[#1877F2]" />
+                        <span>Select Song or Audio</span>
+                      </span>
+                      <Plus className="w-4 h-4 story-studio-muted" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Audience Selection */}
+                <div className="space-y-2">
+                  <span className="text-xs font-bold story-studio-muted block">Audience</span>
+                  <button
+                    type="button"
+                    onClick={() => setShareTargetAudience("story")}
+                    className={`w-full p-3 rounded-2xl flex items-center justify-between cursor-pointer border transition-colors ${
+                      shareTargetAudience === "story"
+                        ? "border-[#1877F2] story-studio-soft"
+                        : "border-transparent story-studio-soft opacity-80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img
+                        src={userAvatarResolved || deepShopLogoFallback}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          if (e.currentTarget.src !== deepShopLogoFallback) {
+                            e.currentTarget.src = deepShopLogoFallback;
+                          }
+                        }}
+                        className="w-9 h-9 rounded-full object-cover shrink-0"
+                      />
+                      <div className="text-left min-w-0">
+                        <p className="text-xs font-bold truncate">Your Story</p>
+                        <p className="text-[11px] story-studio-muted truncate">Public on Loops</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        shareTargetAudience === "story"
+                          ? "story-cta-blue border-[#1877F2]"
+                          : "border-zinc-300 dark:border-zinc-600"
+                      }`}
+                    >
+                      {shareTargetAudience === "story" && <Check className="w-3 h-3" />}
+                    </span>
+                  </button>
+
+                  <div
+                    className={`w-full p-3 rounded-2xl flex items-center justify-between border transition-colors ${
+                      shareTargetAudience === "close_friends"
+                        ? "border-[#1877F2] story-studio-soft"
+                        : "border-transparent story-studio-soft opacity-80"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setShareTargetAudience("close_friends")}
+                      className="flex items-center gap-2.5 flex-1 min-w-0 text-left cursor-pointer"
+                    >
+                      <span className="story-cf-badge w-9 h-9 rounded-full flex items-center justify-center shrink-0">
+                        <Star className="w-4 h-4 fill-white text-white" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold truncate">Close Friends</p>
+                        <p className="text-[11px] story-studio-muted tabular-nums truncate">
+                          {closeFriendIds.length} members
+                        </p>
+                      </div>
+                    </button>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setCloseFriendsOpen(true)}
+                        className="text-[11px] font-bold text-[#1877F2] cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShareTargetAudience("close_friends")}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer ${
+                          shareTargetAudience === "close_friends"
+                            ? "story-cta-blue border-[#1877F2]"
+                            : "border-zinc-300 dark:border-zinc-600"
+                        }`}
+                      >
+                        {shareTargetAudience === "close_friends" && <Check className="w-3 h-3" />}
+                      </button>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Bottom Publish Bar: Your story · Close Friends · #1877F2 → */}
-            <div className="story-publish-bar flex items-center gap-2 shrink-0 pb-1 bg-transparent">
-              <button
-                type="button"
-                disabled={publishing}
-                onClick={() => handlePublishStory("story")}
-                className="story-pill-btn flex-1 h-12 rounded-full bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center gap-2.5 px-2.5 transition-colors active:scale-95 cursor-pointer shadow-xs"
-              >
-                <img
-                  src={userAvatarResolved || deepShopLogoFallback}
-                  alt="Your story"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    if (e.currentTarget.src !== deepShopLogoFallback) {
-                      e.currentTarget.src = deepShopLogoFallback;
-                    }
-                  }}
-                  className="w-7 h-7 rounded-full object-cover border border-zinc-300 dark:border-white/30 shrink-0"
-                />
-                <span className="text-xs font-bold text-zinc-900 dark:text-white whitespace-nowrap truncate">
-                  {publishing ? "Sharing..." : "Your story"}
-                </span>
-              </button>
+              <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShareSheetOpen(true)}
+                  className="w-full h-10 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-bold cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <Send className="w-3.5 h-3.5 text-[#1877F2]" />
+                    <span>Send in Direct Message</span>
+                  </span>
+                  {selectedDmUserIds.length > 0 ? (
+                    <span className="text-[11px] text-[#1877F2] tabular-nums">
+                      {selectedDmUserIds.length} selected
+                    </span>
+                  ) : (
+                    <ArrowRight className="w-3.5 h-3.5 story-studio-muted" />
+                  )}
+                </button>
 
-              <button
-                type="button"
-                disabled={publishing}
-                onClick={() => setCloseFriendsOpen(true)}
-                className="story-pill-btn flex-1 h-12 rounded-full bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center gap-2 px-2.5 transition-colors active:scale-95 cursor-pointer shadow-xs"
-              >
-                <span className="story-cf-badge w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-                  <Star className="w-3.5 h-3.5 text-white fill-white" />
-                </span>
-                <span className="text-xs font-bold text-zinc-900 dark:text-white whitespace-nowrap truncate">
-                  Close Friends
-                </span>
-              </button>
-
-              <button
-                type="button"
-                disabled={publishing}
-                onClick={() => setShareSheetOpen(true)}
-                className="story-cta-blue w-12 h-12 rounded-full bg-[#1877F2] hover:bg-blue-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all shrink-0 cursor-pointer"
-                aria-label="Open share options"
-              >
-                {publishing ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <ArrowRight className="w-5 h-5" />
-                )}
-              </button>
-            </div>
+                <button
+                  type="button"
+                  disabled={publishing}
+                  onClick={() => handlePublishStory(shareTargetAudience)}
+                  className="story-cta-blue w-full h-12 rounded-2xl text-sm font-bold shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-transform"
+                >
+                  {publishing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Publishing...</span>
+                    </>
+                  ) : (
+                    <span>
+                      {shareTargetAudience === "close_friends"
+                        ? "Share to Close Friends"
+                        : "Publish Story"}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </aside>
           </div>
         )}
 
-        {/* ===================================================================
-         * OVERLAY 1: TEXT STUDIO (IMG_4851)
-         * ================================================================= */}
-        <AnimatePresence>
-          {textStudioOpen && (
+      </main>
+
+      {/* =====================================================================
+       * OVERLAY 1: RESPONSIVE TEXT STUDIO COMPOSER
+       * =================================================================== */}
+      <AnimatePresence>
+        {textStudioOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={commitTextStudio}
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6"
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col justify-between p-4"
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-xl h-[86dvh] max-h-[680px] rounded-[28px] bg-zinc-950/95 border border-white/15 shadow-2xl flex flex-col justify-between p-4 sm:p-6 text-white overflow-hidden"
             >
-              {/* TopFormatting Bar + Done */}
-              <header className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  {/* 1. Aa Case */}
+              {/* Top Formatting Toolbar */}
+              <header className="flex items-center justify-between gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                   <button
                     type="button"
                     onClick={() =>
@@ -4193,23 +4738,21 @@ export default function AddStory() {
                         m === "normal" ? "upper" : m === "upper" ? "lower" : "normal"
                       )
                     }
-                    className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white flex items-center justify-center cursor-pointer"
-                    title="Case"
+                    className="min-w-[38px] h-9 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white flex items-center justify-center cursor-pointer whitespace-nowrap"
+                    title="Text case"
                   >
                     Aa
                   </button>
 
-                  {/* 2. Color Wheel Toggle */}
                   <button
                     type="button"
                     onClick={() => setTextColorTrayOpen((v) => !v)}
-                    className="w-9 h-9 rounded-full bg-gradient-to-tr from-rose-500 via-amber-400 to-[#1877F2] p-0.5 cursor-pointer"
+                    className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-500 via-amber-400 to-[#1877F2] p-0.5 shrink-0 cursor-pointer"
                     title="Colors"
                   >
-                    <span className="block w-full h-full rounded-full border-2 border-black" />
+                    <span className="block w-full h-full rounded-[10px] border-2 border-zinc-950" />
                   </button>
 
-                  {/* 3. Motion Animation //A */}
                   <button
                     type="button"
                     onClick={() =>
@@ -4217,31 +4760,29 @@ export default function AddStory() {
                         a === "none" ? "pulse" : a === "pulse" ? "bounce" : "none"
                       )
                     }
-                    className={`px-2.5 h-9 rounded-full text-xs font-extrabold cursor-pointer ${
+                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-extrabold cursor-pointer whitespace-nowrap ${
                       draftAnimation !== "none"
-                        ? "bg-[#1877F2] text-white"
-                        : "bg-white/10 text-white"
+                        ? "story-cta-blue"
+                        : "bg-white/10 hover:bg-white/20 text-white"
                     }`}
-                    title="Animation"
+                    title="Text motion"
                   >
-                    =A
+                    Motion
                   </button>
 
-                  {/* 4. Outline Contrast A */}
                   <button
                     type="button"
                     onClick={() => setDraftOutline((v) => !v)}
-                    className={`w-9 h-9 rounded-full text-xs font-extrabold border cursor-pointer ${
+                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-extrabold border cursor-pointer whitespace-nowrap ${
                       draftOutline
                         ? "bg-white text-zinc-950 border-white"
-                        : "bg-transparent text-white border-white/30"
+                        : "bg-transparent text-white border-white/25 hover:bg-white/10"
                     }`}
-                    title="Outline"
+                    title="Outline stroke"
                   >
-                    A
+                    Stroke
                   </button>
 
-                  {/* 5. Alignment */}
                   <button
                     type="button"
                     onClick={() =>
@@ -4249,7 +4790,7 @@ export default function AddStory() {
                         a === "center" ? "left" : a === "left" ? "right" : "center"
                       )
                     }
-                    className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer"
+                    className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center shrink-0 cursor-pointer"
                     title="Alignment"
                   >
                     {draftAlign === "left" ? (
@@ -4261,7 +4802,6 @@ export default function AddStory() {
                     )}
                   </button>
 
-                  {/* 6. [A] Pill Highlight */}
                   <button
                     type="button"
                     onClick={() =>
@@ -4269,39 +4809,47 @@ export default function AddStory() {
                         p === "none" ? "solid" : p === "solid" ? "soft" : "none"
                       )
                     }
-                    className={`px-2.5 h-9 rounded-xl text-xs font-extrabold cursor-pointer ${
+                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-extrabold cursor-pointer whitespace-nowrap ${
                       draftPillMode !== "none"
                         ? "bg-white text-zinc-950"
-                        : "bg-white/10 text-white"
+                        : "bg-white/10 hover:bg-white/20 text-white"
                     }`}
                     title="Background highlight"
                   >
-                    [A]
+                    Box
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={commitTextStudio}
-                  className="px-4 py-1.5 rounded-full bg-[#1877F2] text-white text-sm font-bold cursor-pointer"
-                >
-                  Done
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setTextStudioOpen(false)}
+                    className="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-zinc-200 cursor-pointer whitespace-nowrap"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={commitTextStudio}
+                    className="story-cta-blue h-9 px-4 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                  >
+                    Done
+                  </button>
+                </div>
               </header>
 
-              {/* Center Area: Left Vertical 7-Step Size Slider + Live Textarea */}
-              <div className="flex-1 flex items-center gap-3 my-4">
-                {/* Vertical 7-Step Font Size Slider */}
-                <div className="flex flex-col items-center gap-1.5 bg-white/10 rounded-full py-3 px-1.5">
+              {/* Center Live Text Stage + 7-Step Size Selector */}
+              <div className="flex-1 min-h-0 flex items-center gap-3 sm:gap-4 my-3">
+                <div className="flex flex-col items-center gap-1.5 bg-white/10 rounded-2xl py-2.5 px-1.5 shrink-0">
                   {[...FONT_SIZE_STEPS].reverse().map((s) => (
                     <button
                       key={s.step}
                       type="button"
                       onClick={() => setDraftSizeStep(s.step)}
-                      className={`w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-transform ${
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer transition-transform ${
                         draftSizeStep === s.step
-                          ? "bg-[#1877F2] scale-125"
-                          : "bg-white/25 hover:bg-white/40"
+                          ? "story-cta-blue scale-110"
+                          : "bg-white/15 hover:bg-white/30"
                       }`}
                       aria-label={`Text size ${s.step + 1}`}
                     >
@@ -4310,15 +4858,14 @@ export default function AddStory() {
                   ))}
                 </div>
 
-                {/* Live Styled Textarea */}
-                <div className="flex-1 flex items-center justify-center">
+                <div className="flex-1 h-full rounded-2xl bg-white/[0.04] border border-white/10 p-4 flex items-center justify-center overflow-y-auto">
                   <textarea
                     autoFocus
                     rows={4}
                     value={draftText}
                     onChange={(e) => setDraftText(e.target.value)}
-                    placeholder="Type something..."
-                    className={`w-full bg-transparent outline-none resize-none placeholder-white/35 ${
+                    placeholder="Type your story headline..."
+                    className={`story-clean-input bg-transparent w-full outline-none resize-none placeholder-white/35 ${
                       (STORY_FONTS.find((f) => f.id === draftFontId) || STORY_FONTS[0]).className
                     } ${FONT_SIZE_STEPS[draftSizeStep].textClass} ${
                       (STORY_COLORS.find((c) => c.id === draftColorId) || STORY_COLORS[0]).textClass
@@ -4333,32 +4880,56 @@ export default function AddStory() {
                 </div>
               </div>
 
-              {/* Bottom Controls: Quick Mention/Location, Colors, Fonts, Presets/Texture, Mode Switcher */}
-              <div className="space-y-3">
-                {/* @ Mention & Location Quick Insert Chips */}
-                <div className="flex items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDraftText((t) => `${t}${t ? " " : ""}@deepshop`)}
-                    className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white flex items-center gap-1 cursor-pointer"
-                  >
-                    <AtSign className="w-3.5 h-3.5 text-[#1877F2]" />
-                    <span>Mention</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDraftText((t) => `${t}${t ? " · " : ""}Dhaka, BD`)}
-                    className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white flex items-center gap-1 cursor-pointer"
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Location</span>
-                  </button>
+              {/* Bottom Style Inspector */}
+              <div className="space-y-3 shrink-0">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setDraftText((t) => `${t}${t ? " " : ""}@deepshop`)}
+                      className="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    >
+                      <AtSign className="w-3.5 h-3.5 text-[#1877F2]" />
+                      <span>Mention</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDraftText((t) => `${t}${t ? " · " : ""}Dhaka, BD`)}
+                      className="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Location</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
+                    {(
+                      [
+                        { id: "text", label: "Fonts" },
+                        { id: "texts", label: "Phrases" },
+                        { id: "texture", label: "Finish" },
+                      ] as const
+                    ).map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTextBottomTab(t.id)}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap transition-colors ${
+                          textBottomTab === t.id
+                            ? "bg-white text-zinc-950"
+                            : "text-zinc-300 hover:text-white"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {textBottomTab === "text" && (
-                  <>
+                  <div className="space-y-2.5">
                     {textColorTrayOpen && (
-                      <div className="flex items-center gap-2.5 overflow-x-auto py-1">
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                         {STORY_COLORS.map((c) => (
                           <button
                             key={c.id}
@@ -4373,13 +4944,13 @@ export default function AddStory() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2 overflow-x-auto py-1">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
                       {STORY_FONTS.map((f) => (
                         <button
                           key={f.id}
                           type="button"
                           onClick={() => setDraftFontId(f.id)}
-                          className={`px-3.5 py-1.5 rounded-full text-xs whitespace-nowrap cursor-pointer ${
+                          className={`h-8 px-3.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-colors ${
                             draftFontId === f.id
                               ? "bg-white text-zinc-950 font-bold"
                               : "bg-white/10 text-white hover:bg-white/20"
@@ -4389,17 +4960,17 @@ export default function AddStory() {
                         </button>
                       ))}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {textBottomTab === "texts" && (
-                  <div className="flex items-center gap-2 overflow-x-auto py-1">
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                     {TEXT_PRESETS.map((preset) => (
                       <button
                         key={preset}
                         type="button"
                         onClick={() => setDraftText(preset)}
-                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white whitespace-nowrap cursor-pointer"
+                        className="h-9 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white whitespace-nowrap cursor-pointer"
                       >
                         {preset}
                       </button>
@@ -4408,22 +4979,22 @@ export default function AddStory() {
                 )}
 
                 {textBottomTab === "texture" && (
-                  <div className="flex items-center justify-center gap-2 py-1">
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                     {(
                       [
                         { id: "clean", label: "Clean Matte" },
                         { id: "shimmer", label: "Gold Shimmer" },
-                        { id: "neon", label: "Deep Neon Glow" },
+                        { id: "neon", label: "Neon Glow" },
                       ] as const
                     ).map((tx) => (
                       <button
                         key={tx.id}
                         type="button"
                         onClick={() => setDraftTexture(tx.id)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer ${
+                        className={`h-9 px-4 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap ${
                           draftTexture === tx.id
-                            ? "bg-[#1877F2] text-white"
-                            : "bg-white/10 text-zinc-300"
+                            ? "story-cta-blue"
+                            : "bg-white/10 text-zinc-200 hover:bg-white/20"
                         }`}
                       >
                         {tx.label}
@@ -4431,104 +5002,105 @@ export default function AddStory() {
                     ))}
                   </div>
                 )}
-
-                {/* Bottom Switcher: Text · Texts · Texture */}
-                <div className="flex items-center justify-center gap-6 pt-1 border-t border-white/10 text-xs font-bold">
-                  {(
-                    [
-                      { id: "text", label: "Text" },
-                      { id: "texts", label: "Texts" },
-                      { id: "texture", label: "Texture" },
-                    ] as const
-                  ).map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setTextBottomTab(t.id)}
-                      className={`py-1 cursor-pointer ${
-                        textBottomTab === t.id ? "text-white" : "text-zinc-500"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* ===================================================================
-         * OVERLAY 2: STICKER TRAY + CONFIGURATOR MODAL (Light + Dark Mode)
-         * ================================================================= */}
-        <AnimatePresence>
-          {stickerTrayOpen && (
+      {/* =====================================================================
+       * OVERLAY 2: STICKERS & INTERACTIVE WIDGETS DRAWER
+       * =================================================================== */}
+      <AnimatePresence>
+        {stickerTrayOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setStickerTrayOpen(false)}
+            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-40 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl flex flex-col p-4 overflow-hidden text-zinc-900 dark:text-white"
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="story-studio-sheet w-full sm:max-w-lg max-h-[70dvh] sm:max-h-[78dvh] rounded-t-[28px] sm:rounded-[28px] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden"
             >
-              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-white/25 mx-auto mb-3 shrink-0" />
+              <div className="w-10 h-1.5 rounded-full bg-zinc-300 dark:bg-white/20 mx-auto mb-3 sm:hidden shrink-0" />
 
-              {/* Search Bar + Close */}
-              <div className="flex items-center gap-2 mb-4 shrink-0">
-                <div className="flex-1 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-transparent px-3 flex items-center gap-2">
-                  <Search className="w-4 h-4 text-zinc-400 shrink-0" />
-                  <input
-                    type="text"
-                    value={stickerSearch}
-                    onChange={(e) => setStickerSearch(e.target.value)}
-                    placeholder="Search stickers"
-                    className="w-full bg-transparent text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none"
-                  />
+              <header className="flex items-center justify-between gap-3 pb-3 shrink-0">
+                <div>
+                  <h3 className="text-base font-bold">Stickers & Widgets</h3>
+                  <p className="text-xs story-studio-muted">
+                    Add interactive tags, polls, products, or live badges
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setStickerTrayOpen(false)}
-                  className="px-3 h-10 rounded-xl bg-zinc-100 dark:bg-white/10 text-xs font-bold text-zinc-800 dark:text-white cursor-pointer"
+                  className="story-studio-circle-btn w-9 h-9 rounded-full flex items-center justify-center shrink-0 cursor-pointer"
+                  aria-label="Close stickers"
                 >
-                  Cancel
+                  <X className="w-4 h-4" />
                 </button>
+              </header>
+
+              <div className="h-10 rounded-xl story-studio-soft px-3.5 flex items-center gap-2 mb-3.5 shrink-0">
+                <Search className="w-4 h-4 story-studio-muted shrink-0" />
+                <input
+                  type="text"
+                  value={stickerSearch}
+                  onChange={(e) => setStickerSearch(e.target.value)}
+                  placeholder="Search location, poll, mention, shop..."
+                  className="story-clean-input bg-transparent w-full text-xs outline-none"
+                />
+                {stickerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setStickerSearch("")}
+                    className="story-studio-muted hover:opacity-80 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-5 pb-6">
-                {/* 18 Interactive Sticker Pills */}
-                <div className="flex flex-wrap gap-2.5 justify-center">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-0.5 pb-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {filteredStickerDefs.map((s, idx) => (
                     <button
                       key={`${s.label}_${idx}`}
                       type="button"
                       onClick={s.onSelect}
-                      className="px-3.5 py-2.5 rounded-2xl bg-white dark:bg-white text-zinc-950 border border-zinc-200 dark:border-transparent shadow-sm hover:scale-105 active:scale-95 transition-transform flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-tight cursor-pointer whitespace-nowrap"
+                      className="min-h-[44px] px-3 py-2 rounded-2xl story-studio-soft flex items-center gap-2 text-xs font-bold text-left active:scale-[0.98] transition-transform cursor-pointer"
                     >
-                      <span className={s.badgeClass}>{s.icon}</span>
-                      <span>{s.label}</span>
+                      <span className={`shrink-0 ${s.badgeClass}`}>{s.icon}</span>
+                      <span className="truncate">{s.label}</span>
                     </button>
                   ))}
                 </div>
 
-                {/* Live Dhaka Clock, Heart Counter, SOUND ON, Day Stamp Row */}
-                <div className="pt-2 border-t border-zinc-200 dark:border-white/10 space-y-3">
-                  <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                    Live badges & widgets
+                <div className="pt-3 border-t border-black/5 dark:border-white/10 space-y-2.5">
+                  <p className="text-xs font-semibold story-studio-muted">
+                    Live Time & Reaction Widgets
                   </p>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "clock", title: "Dhaka Time" })}
-                      className="p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center gap-1.5 font-mono font-black text-lg text-zinc-900 dark:text-white tabular-nums cursor-pointer"
+                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1 font-mono font-bold text-sm tabular-nums cursor-pointer"
                     >
-                      <span className="px-2 py-1 rounded bg-white dark:bg-white/10">{dhakaClock.hh}</span>
+                      <span>{dhakaClock.hh}</span>
                       <span>:</span>
-                      <span className="px-2 py-1 rounded bg-white dark:bg-white/10">{dhakaClock.mm}</span>
+                      <span>{dhakaClock.mm}</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "day_stamp", title: dhakaClock.dayStr })}
-                      className="p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center font-serif font-black tracking-widest text-sm text-zinc-900 dark:text-white cursor-pointer"
+                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center font-serif font-bold text-xs tracking-wider cursor-pointer truncate"
                     >
                       {dhakaClock.dayStr}
                     </button>
@@ -4536,177 +5108,188 @@ export default function AddStory() {
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "heart_count", title: "1" })}
-                      className="p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center gap-1.5 text-rose-500 dark:text-rose-400 font-extrabold text-sm cursor-pointer"
+                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1.5 text-rose-500 font-bold text-xs cursor-pointer"
                     >
                       <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
-                      <span>1</span>
+                      <span>Like Meter</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "sound_on", title: "SOUND ON" })}
-                      className="p-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center gap-1.5 text-zinc-900 dark:text-white font-extrabold text-xs cursor-pointer"
+                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1.5 font-bold text-xs cursor-pointer whitespace-nowrap"
                     >
                       <Volume2 className="w-4 h-4 text-[#1877F2]" />
-                      <span>SOUND ON</span>
+                      <span>Sound On</span>
                     </button>
                   </div>
                 </div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Sticker Configurator Dialog */}
-        <AnimatePresence>
-          {configuringSticker && (
+      {/* =====================================================================
+       * STICKER CONFIGURATOR DIALOG
+       * =================================================================== */}
+      <AnimatePresence>
+        {configuringSticker && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setConfiguringSticker(null)}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-black/60 dark:bg-black/85 backdrop-blur-xl flex flex-col justify-center p-5"
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              onClick={(e) => e.stopPropagation()}
+              className="story-studio-sheet w-full sm:max-w-md max-h-[74dvh] rounded-t-[28px] sm:rounded-[28px] p-5 space-y-4 shadow-2xl overflow-y-auto"
             >
-              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl max-h-[82vh] overflow-y-auto text-zinc-900 dark:text-white">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white capitalize">
-                    {configuringSticker.replace("_", " ")} sticker
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setConfiguringSticker(null)}
-                    className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
-                  >
-                    <X className="w-4 h-4 text-zinc-700 dark:text-white" />
-                  </button>
-                </div>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold capitalize">
+                  Configure {configuringSticker.replace("_", " ")}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setConfiguringSticker(null)}
+                  className="story-studio-circle-btn w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-                {configuringSticker === "shop_order" ? (
-                  <div className="space-y-2.5">
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Attach a verified product card to your story:
-                    </p>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {shopProducts.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() =>
-                            addStickerInstant({
-                              kind: "shop_order",
-                              title: p.name,
-                              imageUrl: p.image,
-                              productId: p.id,
-                              priceLabel: p.price ? `৳${Number(p.price).toLocaleString()}` : "Order now",
-                              url: `/product/${p.id}`,
-                            })
-                          }
-                          className="w-full p-2 rounded-2xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 flex items-center gap-3 text-left cursor-pointer"
-                        >
-                          {p.image?.trim() ? (
-                            <img
-                              src={p.image.trim()}
-                              alt={p.name}
-                              referrerPolicy="no-referrer"
-                              className="w-11 h-11 rounded-xl object-cover shrink-0"
-                            />
-                          ) : (
-                            <div className="w-11 h-11 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0">
-                              <ShoppingBag className="w-4 h-4 text-zinc-500" />
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                              {p.name}
-                            </p>
-                            <p className="text-[11px] font-semibold text-[#1877F2] tabular-nums">
-                              ৳{Number(p.price || 0).toLocaleString()}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
+              {configuringSticker === "shop_order" ? (
+                <div className="space-y-3">
+                  <p className="text-xs story-studio-muted">
+                    Select a product from Deep Shop so viewers can order directly from your story:
+                  </p>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-0.5">
+                    {shopProducts.map((p) => (
                       <button
+                        key={p.id}
                         type="button"
                         onClick={() =>
                           addStickerInstant({
                             kind: "shop_order",
-                            title: "Explore Featured Deals",
-                            priceLabel: "Shop orders →",
-                            url: "/products",
+                            title: p.name,
+                            imageUrl: p.image,
+                            productId: p.id,
+                            priceLabel: p.price
+                              ? `৳${Number(p.price).toLocaleString()}`
+                              : "Order now",
+                            url: `/product/${p.id}`,
                           })
                         }
-                        className="w-full py-2.5 rounded-xl bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
+                        className="w-full p-2.5 rounded-2xl story-studio-soft flex items-center gap-3 text-left cursor-pointer"
                       >
-                        Link All Products
+                        {p.image?.trim() ? (
+                          <img
+                            src={p.image.trim()}
+                            alt={p.name}
+                            referrerPolicy="no-referrer"
+                            className="w-11 h-11 rounded-xl object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-xl bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+                            <ShoppingBag className="w-4 h-4 story-studio-muted" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold truncate">{p.name}</p>
+                          <p className="text-[11px] font-semibold text-[#1877F2] tabular-nums">
+                            ৳{Number(p.price || 0).toLocaleString()}
+                          </p>
+                        </div>
                       </button>
-                    </div>
+                    ))}
                   </div>
-                ) : configuringSticker === "mention" ? (
-                  <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      addStickerInstant({
+                        kind: "shop_order",
+                        title: "Explore Featured Deals",
+                        priceLabel: "Shop orders →",
+                        url: "/products",
+                      })
+                    }
+                    className="story-cta-blue w-full h-11 rounded-2xl text-xs font-bold cursor-pointer"
+                  >
+                    Link Storefront Catalog
+                  </button>
+                </div>
+              ) : configuringSticker === "mention" ? (
+                <div className="space-y-3">
+                  <div className="h-10 px-3.5 rounded-xl story-studio-soft flex items-center gap-2">
+                    <AtSign className="w-4 h-4 text-[#1877F2] shrink-0" />
                     <input
                       type="text"
                       autoFocus
                       value={configSearchUser}
                       onChange={(e) => setConfigSearchUser(e.target.value)}
-                      placeholder="Type @username or search member..."
-                      className="w-full h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
+                      placeholder="Type username or search member..."
+                      className="story-clean-input bg-transparent w-full text-xs outline-none"
                     />
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                      {communityUsers
-                        .filter((u) =>
-                          !configSearchUser.trim()
-                            ? true
-                            : `${u.name} ${u.handle}`
-                                .toLowerCase()
-                                .includes(configSearchUser.toLowerCase())
-                        )
-                        .slice(0, 8)
-                        .map((u) => (
-                          <button
-                            key={u.uid}
-                            type="button"
-                            onClick={() =>
-                              addStickerInstant({
-                                kind: "mention",
-                                title: u.handle,
-                                targetUid: u.uid,
-                              })
-                            }
-                            className="w-full p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2.5 text-left cursor-pointer"
-                          >
-                            <img
-                              src={u.avatar?.trim() || deepShopLogoFallback}
-                              alt={u.name}
-                              referrerPolicy="no-referrer"
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                                {u.name}
-                              </p>
-                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                                @{u.handle}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                    </div>
-                    {configSearchUser.trim() && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          addStickerInstant({
-                            kind: "mention",
-                            title: configSearchUser.trim().replace(/^@/, ""),
-                          })
-                        }
-                        className="w-full py-2.5 rounded-xl bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
-                      >
-                        Add @{configSearchUser.trim().replace(/^@/, "")}
-                      </button>
-                    )}
                   </div>
-                ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {communityUsers
+                      .filter((u) =>
+                        !configSearchUser.trim()
+                          ? true
+                          : `${u.name} ${u.handle}`
+                              .toLowerCase()
+                              .includes(configSearchUser.toLowerCase())
+                      )
+                      .slice(0, 8)
+                      .map((u) => (
+                        <button
+                          key={u.uid}
+                          type="button"
+                          onClick={() =>
+                            addStickerInstant({
+                              kind: "mention",
+                              title: u.handle,
+                              targetUid: u.uid,
+                            })
+                          }
+                          className="w-full p-2 rounded-xl story-studio-soft flex items-center gap-2.5 text-left cursor-pointer"
+                        >
+                          <img
+                            src={u.avatar?.trim() || deepShopLogoFallback}
+                            alt={u.name}
+                            referrerPolicy="no-referrer"
+                            className="w-9 h-9 rounded-full object-cover shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold truncate">{u.name}</p>
+                            <p className="text-[11px] story-studio-muted truncate">@{u.handle}</p>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                  {configSearchUser.trim() && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        addStickerInstant({
+                          kind: "mention",
+                          title: configSearchUser.trim().replace(/^@/, ""),
+                        })
+                      }
+                      className="story-cta-blue w-full h-11 rounded-2xl text-xs font-bold cursor-pointer"
+                    >
+                      Add @{configSearchUser.trim().replace(/^@/, "")}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="h-11 px-3.5 rounded-xl story-studio-soft flex items-center">
                     <input
                       type="text"
                       autoFocus
@@ -4719,143 +5302,164 @@ export default function AddStory() {
                           ? "Topic name"
                           : "Enter title or prompt..."
                       }
-                      className="w-full h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
+                      className="story-clean-input bg-transparent w-full text-xs outline-none"
                     />
+                  </div>
 
-                    {configuringSticker === "location" && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {["Dhaka, Bangladesh", "Chattogram", "Sylhet"].map(
-                          (loc) => (
-                            <button
-                              key={loc}
-                              type="button"
-                              onClick={() => setConfigTitle(loc)}
-                              className="px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-200 cursor-pointer"
-                            >
-                              {loc}
-                            </button>
-                          )
-                        )}
-                      </div>
-                    )}
+                  {configuringSticker === "location" && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Dhaka, Bangladesh", "Chattogram", "Sylhet", "Rajshahi"].map((loc) => (
+                        <button
+                          key={loc}
+                          type="button"
+                          onClick={() => setConfigTitle(loc)}
+                          className="h-8 px-3 rounded-xl story-studio-soft text-xs font-medium cursor-pointer whitespace-nowrap"
+                        >
+                          {loc}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                    {(configuringSticker === "link" || configuringSticker === "countdown") && (
+                  {(configuringSticker === "link" || configuringSticker === "countdown") && (
+                    <div className="h-11 px-3.5 rounded-xl story-studio-soft flex items-center">
                       <input
                         type="text"
                         value={configSubtitle}
                         onChange={(e) => setConfigSubtitle(e.target.value)}
                         placeholder={
                           configuringSticker === "link"
-                            ? "Sticker button text (e.g. Shop Now)"
-                            : "Time label (e.g. Tonight · 9:00 PM)"
+                            ? "Button label (e.g. Visit Store)"
+                            : "Target time (e.g. Tonight · 9:00 PM)"
                         }
-                        className="w-full h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
+                        className="story-clean-input bg-transparent w-full text-xs outline-none"
                       />
-                    )}
+                    </div>
+                  )}
 
-                    {configuringSticker === "poll" && (
-                      <div className="grid grid-cols-2 gap-2">
+                  {configuringSticker === "poll" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="h-10 px-3 rounded-xl story-studio-soft flex items-center">
                         <input
                           type="text"
                           value={configOptA}
                           onChange={(e) => setConfigOptA(e.target.value)}
                           placeholder="Option 1"
-                          className="h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
+                          className="story-clean-input bg-transparent w-full text-xs outline-none"
                         />
+                      </div>
+                      <div className="h-10 px-3 rounded-xl story-studio-soft flex items-center">
                         <input
                           type="text"
                           value={configOptB}
                           onChange={(e) => setConfigOptB(e.target.value)}
                           placeholder="Option 2"
-                          className="h-10 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white outline-none border border-zinc-200 dark:border-white/10"
+                          className="story-clean-input bg-transparent w-full text-xs outline-none"
                         />
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {configuringSticker === "slider" && (
-                      <div className="flex items-center justify-center gap-2">
-                        {["🔥", "😍", "💯", "🎉", "❤️"].map((em) => (
-                          <button
-                            key={em}
-                            type="button"
-                            onClick={() => setConfigEmoji(em)}
-                            className={`w-10 h-10 rounded-full text-lg cursor-pointer ${
-                              configEmoji === em
-                                ? "bg-[#1877F2]"
-                                : "bg-zinc-100 dark:bg-zinc-800"
-                            }`}
-                          >
-                            {em}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  {configuringSticker === "slider" && (
+                    <div className="flex items-center justify-center gap-2 py-1">
+                      {["🔥", "😍", "💯", "🎉", "❤️"].map((em) => (
+                        <button
+                          key={em}
+                          type="button"
+                          onClick={() => setConfigEmoji(em)}
+                          className={`w-11 h-11 rounded-2xl text-lg cursor-pointer transition-transform ${
+                            configEmoji === em ? "story-cta-blue scale-105" : "story-studio-soft"
+                          }`}
+                        >
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!configTitle.trim()) return;
-                        addStickerInstant({
-                          kind: configuringSticker,
-                          title: configTitle.trim(),
-                          subtitle: configSubtitle.trim() || undefined,
-                          optionA: configuringSticker === "poll" ? configOptA.trim() || "Yes" : undefined,
-                          optionB: configuringSticker === "poll" ? configOptB.trim() || "No" : undefined,
-                          emoji: configuringSticker === "slider" ? configEmoji : undefined,
-                          url: configuringSticker === "link" ? configTitle.trim() : undefined,
-                        });
-                      }}
-                      className="w-full py-2.5 rounded-full bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold cursor-pointer"
-                    >
-                      Add to Story
-                    </button>
-                  </div>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!configTitle.trim()) return;
+                      addStickerInstant({
+                        kind: configuringSticker,
+                        title: configTitle.trim(),
+                        subtitle: configSubtitle.trim() || undefined,
+                        optionA:
+                          configuringSticker === "poll" ? configOptA.trim() || "Yes" : undefined,
+                        optionB:
+                          configuringSticker === "poll" ? configOptB.trim() || "No" : undefined,
+                        emoji: configuringSticker === "slider" ? configEmoji : undefined,
+                        url: configuringSticker === "link" ? configTitle.trim() : undefined,
+                      });
+                    }}
+                    className="story-cta-blue w-full h-11 rounded-2xl text-xs font-bold cursor-pointer"
+                  >
+                    Add Sticker
+                  </button>
+                </div>
+              )}
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* ===================================================================
-         * OVERLAY 3: MUSIC & AUDIO SHEET (Zero Deezer · Community Video Audio + Library)
-         * ================================================================= */}
-        <AnimatePresence>
-          {musicSheetOpen && (
+      {/* =====================================================================
+       * OVERLAY 3: SONGS & CREATOR VIDEO AUDIO DRAWER
+       * =================================================================== */}
+      <AnimatePresence>
+        {musicSheetOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setPreviewingSongId(null);
+              setMusicSheetOpen(false);
+            }}
+            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-50 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl flex flex-col p-4 text-zinc-900 dark:text-white"
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="story-studio-sheet w-full sm:max-w-lg max-h-[70dvh] sm:max-h-[78dvh] rounded-t-[28px] sm:rounded-[28px] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden"
             >
-              <header className="flex items-center justify-between pb-3">
-                <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                  Songs & Video Audio
-                </h3>
+              <div className="w-10 h-1.5 rounded-full bg-zinc-300 dark:bg-white/20 mx-auto mb-3 sm:hidden shrink-0" />
+
+              <header className="flex items-center justify-between pb-3 shrink-0">
+                <div>
+                  <h3 className="text-base font-bold">Audio Library</h3>
+                  <p className="text-xs story-studio-muted">
+                    Pair background songs or original creator audio
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
                     setPreviewingSongId(null);
                     setMusicSheetOpen(false);
                   }}
-                  className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
+                  className="story-studio-circle-btn w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
                 >
-                  <X className="w-5 h-5 text-zinc-900 dark:text-white" />
+                  <X className="w-4 h-4" />
                 </button>
               </header>
 
-              <div className="h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-transparent px-3 flex items-center gap-2 mb-3 shrink-0">
-                <Search className="w-4 h-4 text-zinc-400" />
+              <div className="h-10 rounded-xl story-studio-soft px-3.5 flex items-center gap-2 mb-3 shrink-0">
+                <Search className="w-4 h-4 story-studio-muted shrink-0" />
                 <input
                   type="text"
                   value={musicSearch}
                   onChange={(e) => setMusicSearch(e.target.value)}
-                  placeholder="Search songs or creator video audio..."
-                  className="w-full bg-transparent text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none"
+                  placeholder="Search songs or creator audio..."
+                  className="story-clean-input bg-transparent w-full text-xs outline-none"
                 />
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-2 pb-4">
+              <div className="flex-1 overflow-y-auto space-y-2 pr-0.5 pb-2">
                 {displayedSongs.map((song) => {
                   const isPlaying = previewingSongId === song.id;
                   const isAttached =
@@ -4864,7 +5468,7 @@ export default function AddStory() {
                   return (
                     <div
                       key={song.id}
-                      className="p-2.5 rounded-2xl bg-zinc-100/90 hover:bg-zinc-200/70 dark:bg-zinc-900 dark:hover:bg-zinc-800/90 border border-zinc-200/70 dark:border-white/5 flex items-center gap-3 transition-colors"
+                      className="p-2.5 rounded-2xl story-studio-soft flex items-center gap-3"
                     >
                       {song.coverUrl ? (
                         <img
@@ -4874,13 +5478,14 @@ export default function AddStory() {
                           onError={(e) => {
                             e.currentTarget.classList.add("hidden");
                           }}
-                          className="w-12 h-12 rounded-xl object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
+                          className="w-11 h-11 rounded-xl object-cover shrink-0 bg-black/10"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                          <Music className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+                        <div className="w-11 h-11 rounded-xl bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+                          <Music className="w-5 h-5 story-studio-muted" />
                         </div>
                       )}
+
                       <div
                         onClick={() => {
                           setAttachedSong(song);
@@ -4891,12 +5496,8 @@ export default function AddStory() {
                         }}
                         className="min-w-0 flex-1 cursor-pointer"
                       >
-                        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                          {song.title}
-                        </p>
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                          {song.artist}
-                        </p>
+                        <p className="text-xs font-bold truncate">{song.title}</p>
+                        <p className="text-[11px] story-studio-muted truncate">{song.artist}</p>
                       </div>
 
                       <button
@@ -4904,7 +5505,7 @@ export default function AddStory() {
                         onClick={() =>
                           setPreviewingSongId((prev) => (prev === song.id ? null : song.id))
                         }
-                        className="w-9 h-9 rounded-full bg-white dark:bg-white/10 border border-zinc-200 dark:border-transparent flex items-center justify-center text-zinc-900 dark:text-white cursor-pointer shrink-0"
+                        className="story-studio-circle-btn w-9 h-9 rounded-full flex items-center justify-center shrink-0 cursor-pointer"
                         aria-label={isPlaying ? "Pause preview" : "Play preview"}
                       >
                         {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -4919,8 +5520,8 @@ export default function AddStory() {
                           setMusicSheetOpen(false);
                           triggerHaptic();
                         }}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold cursor-pointer shrink-0 ${
-                          isAttached ? "bg-green-500 text-white" : "bg-[#1877F2] text-white"
+                        className={`h-9 px-3.5 rounded-xl text-xs font-bold cursor-pointer shrink-0 whitespace-nowrap ${
+                          isAttached ? "story-cf-badge" : "story-cta-blue"
                         }`}
                       >
                         {isAttached ? "Added" : "Use"}
@@ -4930,65 +5531,77 @@ export default function AddStory() {
                 })}
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* ===================================================================
-         * OVERLAY 4: CLOSE FRIENDS SHEET (Light + Dark Mode)
-         * ================================================================= */}
-        <AnimatePresence>
-          {closeFriendsOpen && (
+      {/* =====================================================================
+       * OVERLAY 4: CLOSE FRIENDS AUDIENCE SHEET
+       * =================================================================== */}
+      <AnimatePresence>
+        {closeFriendsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setCloseFriendsOpen(false)}
+            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col p-4 text-zinc-900 dark:text-white"
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="story-studio-sheet w-full sm:max-w-lg max-h-[72dvh] sm:max-h-[80dvh] rounded-t-[28px] sm:rounded-[28px] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden"
             >
-              <header className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setCloseFriendsOpen(false)}
-                  className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
-                >
-                  <X className="w-5 h-5 text-zinc-900 dark:text-white" />
-                </button>
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                    <Star className="w-3.5 h-3.5 text-white fill-white" />
+              <div className="w-10 h-1.5 rounded-full bg-zinc-300 dark:bg-white/20 mx-auto mb-3 sm:hidden shrink-0" />
+
+              <header className="flex items-center justify-between pb-3 border-b border-black/5 dark:border-white/10 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <span className="story-cf-badge w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                    <Star className="w-4 h-4 fill-white text-white" />
                   </span>
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-                    Close Friends
-                  </h3>
+                  <div>
+                    <h3 className="text-sm font-bold">Close Friends</h3>
+                    <p className="text-[11px] story-studio-muted tabular-nums">
+                      {closeFriendIds.length} selected · Private list
+                    </p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setCloseFriendIds([])}
-                  className="text-xs font-semibold text-[#1877F2] cursor-pointer"
-                >
-                  Clear all
-                </button>
+
+                <div className="flex items-center gap-2">
+                  {closeFriendIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCloseFriendIds([])}
+                      className="text-xs font-semibold text-[#1877F2] px-2 py-1 cursor-pointer whitespace-nowrap"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setCloseFriendsOpen(false)}
+                    className="story-studio-circle-btn w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </header>
 
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 py-2.5 leading-relaxed">
-                We don&apos;t send notifications when you edit your Close Friends list.{" "}
-                <span className="text-zinc-900 dark:text-white font-semibold tabular-nums">
-                  {closeFriendIds.length} selected
-                </span>
-              </p>
-
-              <div className="h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 px-3 flex items-center gap-2 mb-3 border border-zinc-200 dark:border-white/10 shrink-0">
-                <Search className="w-4 h-4 text-zinc-400" />
+              <div className="h-10 rounded-xl story-studio-soft px-3.5 flex items-center gap-2 my-3 shrink-0">
+                <Search className="w-4 h-4 story-studio-muted shrink-0" />
                 <input
                   type="text"
                   value={closeFriendsSearch}
                   onChange={(e) => setCloseFriendsSearch(e.target.value)}
-                  placeholder="Search followers or following"
-                  className="w-full bg-transparent text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none"
+                  placeholder="Search followers or following..."
+                  className="story-clean-input bg-transparent w-full text-xs outline-none"
                 />
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-1.5 pb-4">
+              <div className="flex-1 overflow-y-auto space-y-1.5 pr-0.5 pb-3">
                 {(() => {
                   const filteredCf = closeFriendCandidates.filter((u) =>
                     !closeFriendsSearch.trim()
@@ -4999,14 +5612,14 @@ export default function AddStory() {
                   );
                   if (filteredCf.length === 0) {
                     return (
-                      <div className="py-10 px-4 text-center space-y-1.5">
-                        <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                      <div className="py-10 px-4 text-center space-y-1">
+                        <p className="text-xs font-semibold">
                           {closeFriendCandidates.length === 0
                             ? "No followers or following yet"
-                            : "No matching followers or following"}
+                            : "No matching members"}
                         </p>
-                        <p className="text-[11px] text-zinc-500">
-                          People who follow you or whom you follow on Feed will appear here.
+                        <p className="text-[11px] story-studio-muted">
+                          People who follow you or whom you follow on Loops appear here.
                         </p>
                       </div>
                     );
@@ -5018,20 +5631,18 @@ export default function AddStory() {
                         key={u.uid}
                         type="button"
                         onClick={() => toggleCloseFriendMember(u.uid)}
-                        className="w-full p-2.5 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 flex items-center justify-between cursor-pointer"
+                        className="w-full p-2.5 rounded-2xl story-studio-soft flex items-center justify-between cursor-pointer"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img
                             src={u.avatar?.trim() || deepShopLogoFallback}
                             alt={u.name}
                             referrerPolicy="no-referrer"
-                            className="w-10 h-10 rounded-full object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
+                            className="w-10 h-10 rounded-full object-cover shrink-0"
                           />
                           <div className="text-left min-w-0">
-                            <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                              {u.name}
-                            </p>
-                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                            <p className="text-xs font-bold truncate">{u.name}</p>
+                            <p className="text-[11px] story-studio-muted truncate">
                               @{u.handle}
                               {u.relationLabel ? ` · ${u.relationLabel}` : ""}
                             </p>
@@ -5041,7 +5652,7 @@ export default function AddStory() {
                         <span
                           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
                             checked
-                              ? "story-cta-blue bg-[#1877F2] border-[#1877F2] text-white"
+                              ? "story-cta-blue border-[#1877F2]"
                               : "border-zinc-300 dark:border-zinc-600"
                           }`}
                         >
@@ -5053,11 +5664,11 @@ export default function AddStory() {
                 })()}
               </div>
 
-              <div className="pt-2 border-t border-zinc-200 dark:border-white/10 flex items-center gap-2.5">
+              <div className="pt-3 border-t border-black/5 dark:border-white/10 flex items-center gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setCloseFriendsOpen(false)}
-                  className="story-pill-btn px-5 py-3 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white text-xs font-bold cursor-pointer"
+                  className="story-pill-btn h-11 px-5 rounded-2xl text-xs font-bold cursor-pointer whitespace-nowrap"
                 >
                   Save List
                 </button>
@@ -5065,80 +5676,97 @@ export default function AddStory() {
                   type="button"
                   disabled={publishing}
                   onClick={() => handlePublishStory("close_friends")}
-                  className="story-cta-blue flex-1 py-3 rounded-full bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold cursor-pointer"
+                  className="story-cta-blue flex-1 h-11 rounded-2xl text-xs font-bold cursor-pointer whitespace-nowrap"
                 >
                   {publishing ? "Sharing..." : "Share to Close Friends"}
                 </button>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* ===================================================================
-         * OVERLAY 5: SHARE SHEET (Light + Dark Mode + Video Preview Support)
-         * ================================================================= */}
-        <AnimatePresence>
-          {shareSheetOpen && (
+      {/* =====================================================================
+       * OVERLAY 5: SHARE STORY & DIRECT MESSAGE SHEET
+       * =================================================================== */}
+      <AnimatePresence>
+        {shareSheetOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShareSheetOpen(false)}
+            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col p-4 text-zinc-900 dark:text-white"
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="story-studio-sheet w-full sm:max-w-lg max-h-[74dvh] sm:max-h-[82dvh] rounded-t-[28px] sm:rounded-[28px] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden"
             >
-              <header className="flex items-center justify-between pb-3">
+              <div className="w-10 h-1.5 rounded-full bg-zinc-300 dark:bg-white/20 mx-auto mb-3 sm:hidden shrink-0" />
+
+              <header className="flex items-center justify-between pb-3 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-11 aspect-[9/16] rounded-xl overflow-hidden border border-black/10 dark:border-white/15 bg-zinc-900 shrink-0">
+                    {createMode || !selectedMedia ? (
+                      <div
+                        className={`w-full h-full ${activeCreateGradient.bgClass} flex items-center justify-center p-1 text-center`}
+                      >
+                        <span className="text-[7px] font-bold text-white line-clamp-2">
+                          {textLayers[0]?.text || caption || "Story"}
+                        </span>
+                      </div>
+                    ) : selectedMedia.type === "video" ? (
+                      toPlayableMediaUrl(selectedMedia.url) ? (
+                        <video
+                          src={toPlayableMediaUrl(selectedMedia.url)}
+                          muted
+                          playsInline
+                          autoPlay
+                          loop
+                          className={`w-full h-full object-cover ${activeEffect.filterClass}`}
+                        />
+                      ) : null
+                    ) : selectedMedia.url?.trim() ? (
+                      <img
+                        src={selectedMedia.url.trim()}
+                        alt="Story preview"
+                        referrerPolicy="no-referrer"
+                        className={`w-full h-full object-cover ${activeEffect.filterClass}`}
+                      />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold">Share Story</h3>
+                    <p className="text-xs story-studio-muted truncate">
+                      Choose audience or send directly in chat
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setShareSheetOpen(false)}
-                  className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 flex items-center justify-center cursor-pointer"
+                  className="story-studio-circle-btn w-9 h-9 rounded-full flex items-center justify-center shrink-0 cursor-pointer"
                 >
-                  <X className="w-5 h-5 text-zinc-900 dark:text-white" />
+                  <X className="w-4 h-4" />
                 </button>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-                  Share story
-                </h3>
-                <span className="w-9" />
               </header>
 
-              {/* Shrunk Story Preview Card */}
-              <div className="flex justify-center py-2 shrink-0">
-                <div className="w-24 aspect-[9/16] rounded-2xl overflow-hidden border border-zinc-200 dark:border-white/20 shadow-xl bg-zinc-900">
-                  {createMode || !selectedMedia ? (
-                    <div className={`w-full h-full ${activeCreateGradient.bgClass} flex items-center justify-center p-2 text-center`}>
-                      <span className="text-[9px] font-bold text-white line-clamp-3">
-                        {textLayers[0]?.text || caption || "Story"}
-                      </span>
-                    </div>
-                  ) : selectedMedia.type === "video" ? (
-                    toPlayableMediaUrl(selectedMedia.url) ? (
-                      <video
-                        src={toPlayableMediaUrl(selectedMedia.url)}
-                        muted
-                        playsInline
-                        autoPlay
-                        loop
-                        className={`w-full h-full object-cover ${activeEffect.filterClass}`}
-                      />
-                    ) : null
-                  ) : selectedMedia.url?.trim() ? (
-                    <img
-                      src={selectedMedia.url.trim()}
-                      alt="Story preview"
-                      referrerPolicy="no-referrer"
-                      className={`w-full h-full object-cover ${activeEffect.filterClass}`}
-                    />
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Audience Selection Rows */}
-              <div className="space-y-2 py-3 border-b border-zinc-200 dark:border-white/10 shrink-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-2.5 border-y border-black/5 dark:border-white/10 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShareTargetAudience("story")}
-                  className="w-full p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between cursor-pointer"
+                  className={`p-3 rounded-2xl flex items-center justify-between cursor-pointer border transition-colors ${
+                    shareTargetAudience === "story"
+                      ? "border-[#1877F2] story-studio-soft"
+                      : "border-transparent story-studio-soft opacity-80"
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <img
                       src={userAvatarResolved || deepShopLogoFallback}
                       alt=""
@@ -5148,91 +5776,97 @@ export default function AddStory() {
                           e.currentTarget.src = deepShopLogoFallback;
                         }
                       }}
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="w-9 h-9 rounded-full object-cover shrink-0"
                     />
-                    <div className="text-left">
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                        Your story
-                      </p>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                        Visible on Feed
-                      </p>
+                    <div className="text-left min-w-0">
+                      <p className="text-xs font-bold truncate">Your Story</p>
+                      <p className="text-[11px] story-studio-muted truncate">Public on Loops</p>
                     </div>
                   </div>
                   <span
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                       shareTargetAudience === "story"
-                        ? "bg-[#1877F2] border-[#1877F2] text-white"
+                        ? "story-cta-blue border-[#1877F2]"
                         : "border-zinc-300 dark:border-zinc-600"
                     }`}
                   >
-                    {shareTargetAudience === "story" && <Check className="w-3.5 h-3.5" />}
+                    {shareTargetAudience === "story" && <Check className="w-3 h-3" />}
                   </span>
                 </button>
 
-                <div className="w-full p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between">
+                <div
+                  className={`p-3 rounded-2xl flex items-center justify-between border transition-colors ${
+                    shareTargetAudience === "close_friends"
+                      ? "border-[#1877F2] story-studio-soft"
+                      : "border-transparent story-studio-soft opacity-80"
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => setShareTargetAudience("close_friends")}
-                    className="flex items-center gap-3 flex-1 text-left cursor-pointer"
+                    className="flex items-center gap-2.5 flex-1 min-w-0 text-left cursor-pointer"
                   >
-                    <span className="story-cf-badge w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-                      <Star className="w-5 h-5 text-white fill-white" />
+                    <span className="story-cf-badge w-9 h-9 rounded-full flex items-center justify-center shrink-0">
+                      <Star className="w-4 h-4 fill-white text-white" />
                     </span>
-                    <div>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                        Close Friends
-                      </p>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
-                        {closeFriendIds.length} people
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold truncate">Close Friends</p>
+                      <p className="text-[11px] story-studio-muted tabular-nums truncate">
+                        {closeFriendIds.length} members
                       </p>
                     </div>
                   </button>
 
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => {
                         setShareSheetOpen(false);
                         setCloseFriendsOpen(true);
                       }}
-                      className="text-xs font-semibold text-[#1877F2] cursor-pointer"
+                      className="text-[11px] font-bold text-[#1877F2] cursor-pointer"
                     >
                       Edit
                     </button>
                     <button
                       type="button"
                       onClick={() => setShareTargetAudience("close_friends")}
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer ${
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer ${
                         shareTargetAudience === "close_friends"
-                          ? "story-cta-blue bg-[#1877F2] border-[#1877F2] text-white"
+                          ? "story-cta-blue border-[#1877F2]"
                           : "border-zinc-300 dark:border-zinc-600"
                       }`}
                     >
-                      {shareTargetAudience === "close_friends" && <Check className="w-3.5 h-3.5" />}
+                      {shareTargetAudience === "close_friends" && <Check className="w-3 h-3" />}
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Send in Message Section */}
-              <div className="flex-1 overflow-y-auto py-3 space-y-2.5">
+              <div className="flex-1 min-h-0 overflow-y-auto py-3 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <span className="text-xs font-bold flex items-center gap-1.5">
                     <Send className="w-3.5 h-3.5 text-[#1877F2]" />
-                    <span>Message</span>
+                    <span>Also send in Direct Message</span>
                   </span>
+                  {selectedDmUserIds.length > 0 && (
+                    <span className="text-[11px] font-semibold text-[#1877F2] tabular-nums">
+                      {selectedDmUserIds.length} selected
+                    </span>
+                  )}
                 </div>
-                <div className="h-9 rounded-xl bg-zinc-100 dark:bg-zinc-900 px-3 flex items-center gap-2 border border-zinc-200 dark:border-white/10">
-                  <Search className="w-3.5 h-3.5 text-zinc-400" />
+
+                <div className="h-9 rounded-xl story-studio-soft px-3 flex items-center gap-2">
+                  <Search className="w-3.5 h-3.5 story-studio-muted shrink-0" />
                   <input
                     type="text"
                     value={shareMessageQuery}
                     onChange={(e) => setShareMessageQuery(e.target.value)}
-                    placeholder="Search recent chats..."
-                    className="w-full bg-transparent text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none"
+                    placeholder="Search recent chat partners..."
+                    className="story-clean-input bg-transparent w-full text-xs outline-none"
                   />
                 </div>
+
                 <div className="space-y-1">
                   {(() => {
                     const filteredChats = chatContacts.filter((u) =>
@@ -5244,7 +5878,7 @@ export default function AddStory() {
                     );
                     if (filteredChats.length === 0) {
                       return (
-                        <p className="py-5 text-center text-xs text-zinc-500">
+                        <p className="py-5 text-center text-xs story-studio-muted">
                           {chatContacts.length === 0
                             ? "No recent chat conversations yet."
                             : "No matching chats found."}
@@ -5264,20 +5898,18 @@ export default function AddStory() {
                                 : [...prev, u.uid]
                             )
                           }
-                          className="w-full p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 flex items-center justify-between cursor-pointer"
+                          className="w-full p-2 rounded-xl story-studio-soft flex items-center justify-between cursor-pointer"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <img
                               src={u.avatar?.trim() || deepShopLogoFallback}
                               alt={u.name}
                               referrerPolicy="no-referrer"
-                              className="w-8 h-8 rounded-full object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
+                              className="w-8 h-8 rounded-full object-cover shrink-0"
                             />
                             <div className="text-left min-w-0">
-                              <p className="text-xs font-semibold text-zinc-900 dark:text-white truncate">
-                                {u.name}
-                              </p>
-                              <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 truncate">
+                              <p className="text-xs font-semibold truncate">{u.name}</p>
+                              <p className="text-[10.5px] story-studio-muted truncate">
                                 @{u.handle}
                               </p>
                             </div>
@@ -5285,7 +5917,7 @@ export default function AddStory() {
                           <span
                             className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
                               sel
-                                ? "story-cta-blue bg-[#1877F2] border-[#1877F2] text-white"
+                                ? "story-cta-blue border-[#1877F2]"
                                 : "border-zinc-300 dark:border-zinc-600"
                             }`}
                           >
@@ -5298,130 +5930,134 @@ export default function AddStory() {
                 </div>
               </div>
 
-              {/* Primary #1877F2 Share Button */}
               <button
                 type="button"
                 disabled={publishing}
                 onClick={() => handlePublishStory(shareTargetAudience)}
-                className="story-cta-blue w-full py-3.5 rounded-full bg-[#1877F2] hover:bg-blue-600 text-white text-sm font-bold shadow-lg flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                className="story-cta-blue w-full h-12 rounded-2xl text-sm font-bold shadow-lg flex items-center justify-center gap-2 cursor-pointer shrink-0"
               >
                 {publishing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Sharing...</span>
+                    <span>Publishing Story...</span>
                   </>
                 ) : (
-                  <span>Share</span>
+                  <span>
+                    {shareTargetAudience === "close_friends"
+                      ? "Publish to Close Friends"
+                      : "Publish Story"}
+                  </span>
                 )}
               </button>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* ===================================================================
-         * OVERLAY 6: STORY SETTINGS SHEET (Light + Dark Mode)
-         * ================================================================= */}
-        <AnimatePresence>
-          {settingsOpen && (
+      {/* =====================================================================
+       * OVERLAY 6: COMPACT STORY CONTROLS SHEET
+       * =================================================================== */}
+      <AnimatePresence>
+        {settingsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSettingsOpen(false)}
+            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="absolute inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col justify-between p-5 text-zinc-900 dark:text-white"
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="story-studio-sheet w-full sm:max-w-md max-h-[68dvh] rounded-t-[28px] sm:rounded-[28px] p-5 space-y-4 shadow-2xl overflow-y-auto"
             >
-              <div className="space-y-5">
-                <header className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                    Story controls
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setSettingsOpen(false)}
-                    className="px-3.5 py-1.5 rounded-full bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
-                  >
-                    Done
-                  </button>
-                </header>
+              <div className="w-10 h-1.5 rounded-full bg-zinc-300 dark:bg-white/20 mx-auto mb-1 sm:hidden shrink-0" />
 
-                <div className="space-y-2">
-                  <p className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
-                    Allow story replies
-                  </p>
-                  {(
-                    [
-                      { id: "everyone", label: "Everyone" },
-                      { id: "followers", label: "Followers you follow back" },
-                      { id: "off", label: "Off" },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setReplyPrivacy(opt.id)}
-                      className="w-full p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between text-xs font-semibold text-zinc-900 dark:text-white cursor-pointer"
-                    >
-                      <span>{opt.label}</span>
-                      <span
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          replyPrivacy === opt.id
-                            ? "bg-[#1877F2] border-[#1877F2]"
-                            : "border-zinc-300 dark:border-zinc-600"
-                        }`}
-                      >
-                        {replyPrivacy === opt.id && <Check className="w-3 h-3 text-white" />}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                      Save story to archive
-                    </p>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      Automatically keep published stories in Recents
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAutoSaveArchive((v) => !v)}
-                    className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${
-                      autoSaveArchive ? "bg-[#1877F2]" : "bg-zinc-300 dark:bg-zinc-700"
-                    }`}
-                  >
-                    <span
-                      className={`block w-5 h-5 rounded-full bg-white transition-transform ${
-                        autoSaveArchive ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </div>
-
+              <header className="flex items-center justify-between">
+                <h3 className="text-base font-bold">Story Controls</h3>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSettingsOpen(false);
-                    setCloseFriendsOpen(true);
-                  }}
-                  className="w-full p-3.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900 flex items-center justify-between text-xs font-bold text-zinc-900 dark:text-white cursor-pointer"
+                  onClick={() => setSettingsOpen(false)}
+                  className="story-cta-blue h-9 px-4 rounded-xl text-xs font-bold cursor-pointer"
                 >
-                  <span className="flex items-center gap-2">
-                    <Star className="w-4 h-4 text-green-500 fill-green-500" />
-                    <span>Manage Close Friends ({closeFriendIds.length})</span>
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-zinc-400" />
+                  Done
+                </button>
+              </header>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold story-studio-muted">Who can reply</p>
+                {(
+                  [
+                    { id: "everyone", label: "Everyone" },
+                    { id: "followers", label: "Followers you follow back" },
+                    { id: "off", label: "Turn off replies" },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setReplyPrivacy(opt.id)}
+                    className="w-full p-3 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-semibold cursor-pointer"
+                  >
+                    <span>{opt.label}</span>
+                    <span
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        replyPrivacy === opt.id
+                          ? "story-cta-blue border-[#1877F2]"
+                          : "border-zinc-300 dark:border-zinc-600"
+                      }`}
+                    >
+                      {replyPrivacy === opt.id && <Check className="w-3 h-3" />}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-3.5 rounded-2xl story-studio-soft flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold">Save story to archive</p>
+                  <p className="text-[11px] story-studio-muted">
+                    Keep published stories in your private Recents gallery
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAutoSaveArchive((v) => !v)}
+                  className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                    autoSaveArchive ? "story-cta-blue" : "bg-zinc-300 dark:bg-zinc-700"
+                  }`}
+                >
+                  <span
+                    className={`block w-5 h-5 rounded-full bg-white transition-transform ${
+                      autoSaveArchive ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
                 </button>
               </div>
 
-              <p className="text-[11px] text-center text-zinc-500">
-                Story Studio
-              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  setCloseFriendsOpen(true);
+                }}
+                className="w-full p-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-bold cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="story-cf-badge w-6 h-6 rounded-full flex items-center justify-center">
+                    <Star className="w-3.5 h-3.5 fill-white text-white" />
+                  </span>
+                  <span>Manage Close Friends ({closeFriendIds.length})</span>
+                </span>
+                <ArrowRight className="w-4 h-4 story-studio-muted" />
+              </button>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

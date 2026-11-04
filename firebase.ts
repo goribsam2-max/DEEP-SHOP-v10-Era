@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import {
   initializeFirestore,
+  memoryLocalCache,
   persistentLocalCache,
   persistentMultipleTabManager,
   type Firestore,
@@ -25,10 +26,21 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
+const isEmbeddedFrame = (() => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+})();
+
 let authInstance: Auth;
 try {
   authInstance = initializeAuth(app, {
-    persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    persistence: isEmbeddedFrame
+      ? [browserLocalPersistence]
+      : [indexedDBLocalPersistence, browserLocalPersistence],
   });
 } catch {
   authInstance = getAuth(app);
@@ -38,14 +50,17 @@ export const auth = authInstance;
 let firestoreInstance: Firestore;
 try {
   firestoreInstance = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
+    localCache: isEmbeddedFrame
+      ? memoryLocalCache()
+      : persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
     experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
   });
 } catch {
   firestoreInstance = initializeFirestore(app, {
+    localCache: memoryLocalCache(),
     experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
   });

@@ -566,12 +566,44 @@ export const LoopPostOptionsSheet: React.FC<{
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 390, damping: 34 }}
             onClick={(e) => e.stopPropagation()}
-            className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 max-h-[88vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
+            className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[26px] px-4 pt-2.5 pb-5 space-y-2.5 max-h-[48vh] sm:max-h-[52vh] overflow-y-auto overscroll-contain shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
           >
-            {/* Top Grab Handle matching IMG_5127 */}
-            <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+            {/* Top Grab Handle */}
+            <div className="w-10 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-0.5 shrink-0" />
 
             {subView === "report" ? (
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setSubView("main")}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                    aria-label="Back"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-[15px] font-bold text-[#0f0f0f] dark:text-white">
+                    Why are you reporting this post?
+                  </span>
+                  <span className="w-8" />
+                </div>
+
+                <div className="loops-about-card rounded-[18px] divide-y loops-divider overflow-hidden">
+                  {REPORT_REASONS.map((reason) => (
+                    <button
+                      key={reason}
+                      type="button"
+                      disabled={submittingReport}
+                      onClick={() => handleSubmitReportReason(reason)}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[14px] font-medium text-[#0f0f0f] dark:text-white cursor-pointer text-left"
+                    >
+                      <span>{reason}</span>
+                      <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : subView === "why" ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <button
@@ -582,53 +614,21 @@ export const LoopPostOptionsSheet: React.FC<{
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
-                    Why are you reporting this post?
-                  </span>
-                  <span className="w-8" />
-                </div>
-
-                <div className="loops-about-card rounded-[22px] divide-y loops-divider overflow-hidden">
-                  {REPORT_REASONS.map((reason) => (
-                    <button
-                      key={reason}
-                      type="button"
-                      disabled={submittingReport}
-                      onClick={() => handleSubmitReportReason(reason)}
-                      className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-[15.5px] font-medium text-[#0f0f0f] dark:text-white cursor-pointer text-left"
-                    >
-                      <span>{reason}</span>
-                      <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : subView === "why" ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setSubView("main")}
-                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
-                    aria-label="Back"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <span className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
+                  <span className="text-[15px] font-bold text-[#0f0f0f] dark:text-white">
                     Why you&apos;re seeing this post
                   </span>
                   <span className="w-8" />
                 </div>
 
-                <p className="text-[14.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                <p className="text-[13.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
                   Posts in Loops are shown based on profiles you follow, topics
                   you engage with, and recent conversations in the community.
                 </p>
 
-                <div className="loops-about-card rounded-[22px] p-4 space-y-3.5">
-                  <div className="flex items-start gap-3">
-                    <UserIcon className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mt-0.5 shrink-0" />
-                    <div className="text-[14.5px] leading-snug">
+                <div className="loops-about-card rounded-[18px] p-3.5 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <UserIcon className="w-4.5 h-4.5 text-zinc-700 dark:text-zinc-300 mt-0.5 shrink-0" />
+                    <div className="text-[13.5px] leading-snug">
                       <p className="font-semibold text-[#0f0f0f] dark:text-white">
                         {isOwnPost
                           ? "You shared this post"
@@ -636,7 +636,7 @@ export const LoopPostOptionsSheet: React.FC<{
                           ? `You follow ${authorLabel}`
                           : `Suggested creator · ${authorLabel}`}
                       </p>
-                      <p className="text-zinc-500 dark:text-zinc-400 text-[13px] mt-0.5">
+                      <p className="text-zinc-500 dark:text-zinc-400 text-[12.5px] mt-0.5">
                         {isFollowingAuthor
                           ? "Posts from accounts you follow appear higher in your feed."
                           : "Popular with members who share similar Loops interests."}
@@ -645,13 +645,13 @@ export const LoopPostOptionsSheet: React.FC<{
                   </div>
 
                   {post.postTag && (
-                    <div className="flex items-start gap-3">
-                      <Sparkles className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mt-0.5 shrink-0" />
-                      <div className="text-[14.5px] leading-snug">
+                    <div className="flex items-start gap-2.5">
+                      <Sparkles className="w-4.5 h-4.5 text-zinc-700 dark:text-zinc-300 mt-0.5 shrink-0" />
+                      <div className="text-[13.5px] leading-snug">
                         <p className="font-semibold text-[#0f0f0f] dark:text-white">
                           Topic: {post.postTag}
                         </p>
-                        <p className="text-zinc-500 dark:text-zinc-400 text-[13px] mt-0.5">
+                        <p className="text-zinc-500 dark:text-zinc-400 text-[12.5px] mt-0.5">
                           Matched with active community topics in your feed.
                         </p>
                       </div>
@@ -666,52 +666,52 @@ export const LoopPostOptionsSheet: React.FC<{
                     onClose();
                     navigate("/loops/personalization");
                   }}
-                  className="w-full py-3.5 rounded-2xl bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] text-[15px] font-semibold cursor-pointer active:scale-[0.98] transition"
+                  className="w-full py-2.5 rounded-xl bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] text-[14px] font-semibold cursor-pointer active:scale-[0.98] transition"
                 >
                   Manage feed preferences
                 </button>
               </div>
             ) : (
               <>
-                {/* "About this post" Heading + Real Post Summary matching IMG_5127 */}
-                <div className="space-y-2 pt-0.5">
-                  <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                {/* Compact "About this post" Heading + Summary */}
+                <div className="space-y-1 px-0.5">
+                  <h3 className="text-[14.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
                     About this post
                   </h3>
-                  <p className="text-[15px] leading-[1.42] text-[#141414] dark:text-zinc-200">
+                  <p className="text-[13px] leading-[1.38] text-[#141414] dark:text-zinc-200 line-clamp-2">
                     {aboutSummary}
                   </p>
                 </div>
 
-                {/* Primary Options Card matching IMG_5127 exact left-icon layout */}
-                <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                {/* Primary Options Card */}
+                <div className="loops-about-card rounded-[18px] py-1 px-1 space-y-0.5">
                   <button
                     type="button"
                     onClick={() => {
                       triggerHaptic();
                       setSubView("why");
                     }}
-                    className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                   >
-                    <CircledInfoSvg className="w-[23px] h-[23px] text-[#0f0f0f] dark:text-white shrink-0" />
+                    <CircledInfoSvg className="w-[19px] h-[19px] text-[#0f0f0f] dark:text-white shrink-0" />
                     <span>Why you&apos;re seeing this post</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleInterested}
-                    className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                   >
-                    <CircledCheckSvg className="w-[23px] h-[23px] text-[#0f0f0f] dark:text-white shrink-0" />
+                    <CircledCheckSvg className="w-[19px] h-[19px] text-[#0f0f0f] dark:text-white shrink-0" />
                     <span>Interested</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleNotInterested}
-                    className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                   >
-                    <CircledCrossSvg className="w-[23px] h-[23px] text-[#0f0f0f] dark:text-white shrink-0" />
+                    <CircledCrossSvg className="w-[19px] h-[19px] text-[#0f0f0f] dark:text-white shrink-0" />
                     <span>Not interested</span>
                   </button>
 
@@ -722,23 +722,23 @@ export const LoopPostOptionsSheet: React.FC<{
                         triggerHaptic();
                         setSubView("report");
                       }}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-rose-500/10 text-[16px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-rose-500/10 text-[14.5px] font-normal text-[#FF3040] cursor-pointer text-left transition"
                     >
-                      <ReportBubbleExclamationIcon className="w-[23px] h-[23px] text-[#FF3040] shrink-0" />
+                      <ReportBubbleExclamationIcon className="w-[19px] h-[19px] text-[#FF3040] shrink-0" />
                       <span>Report</span>
                     </button>
                   )}
                 </div>
 
-                {/* Secondary Actions Card (Save, Copy link, Share, Author/Moderation controls) */}
-                <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                {/* Secondary Actions Card */}
+                <div className="loops-about-card rounded-[18px] py-1 px-1 space-y-0.5">
                   <button
                     type="button"
                     onClick={handleDefaultSave}
-                    className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                   >
                     <Bookmark
-                      className={`w-[22px] h-[22px] stroke-[1.95] shrink-0 ${
+                      className={`w-[19px] h-[19px] stroke-[1.95] shrink-0 ${
                         isSaved
                           ? "fill-current text-[#0f0f0f] dark:text-white"
                           : "text-[#0f0f0f] dark:text-white"
@@ -750,9 +750,9 @@ export const LoopPostOptionsSheet: React.FC<{
                   <button
                     type="button"
                     onClick={handleDefaultCopy}
-                    className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                   >
-                    <Link2 className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                    <Link2 className="w-[19px] h-[19px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
                     <span>Copy link</span>
                   </button>
 
@@ -764,9 +764,9 @@ export const LoopPostOptionsSheet: React.FC<{
                         onClose();
                         onOpenShare();
                       }}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                     >
-                      <ShareUploadIcon className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <ShareUploadIcon className="w-[19px] h-[19px] text-[#0f0f0f] dark:text-white shrink-0" />
                       <span>Share</span>
                     </button>
                   )}
@@ -779,9 +779,9 @@ export const LoopPostOptionsSheet: React.FC<{
                         onClose();
                         onTranslatePost();
                       }}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                     >
-                      <Languages className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <Languages className="w-[19px] h-[19px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
                       <span>{isTranslated ? "See original" : "Translate post"}</span>
                     </button>
                   )}
@@ -794,9 +794,9 @@ export const LoopPostOptionsSheet: React.FC<{
                         onClose();
                         onOpenTranslationSettings();
                       }}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                     >
-                      <SlidersHorizontal className="w-[21px] h-[21px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <SlidersHorizontal className="w-[18px] h-[18px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
                       <span>Translation settings</span>
                     </button>
                   )}
@@ -814,36 +814,36 @@ export const LoopPostOptionsSheet: React.FC<{
                             )}?postId=${encodeURIComponent(post.id)}`
                           );
                         }}
-                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                       >
-                        <Star className="w-[22px] h-[22px] stroke-[1.95] text-amber-500 shrink-0" />
+                        <Star className="w-[19px] h-[19px] stroke-[1.95] text-amber-500 shrink-0" />
                         <span>Gift Stars</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={handleToggleMute}
-                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                       >
-                        <MutePersonOutlineIcon className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <MutePersonOutlineIcon className="w-[19px] h-[19px] text-[#0f0f0f] dark:text-white shrink-0" />
                         <span>{isMuted ? "Unmute" : "Mute"}</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={handleToggleRestrict}
-                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                       >
-                        <RestrictPersonOutlineIcon className="w-[22px] h-[22px] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <RestrictPersonOutlineIcon className="w-[19px] h-[19px] text-[#0f0f0f] dark:text-white shrink-0" />
                         <span>{isRestricted ? "Unrestrict" : "Restrict"}</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={handleToggleBlock}
-                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-rose-500/10 text-[15.5px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-rose-500/10 text-[14.5px] font-normal text-[#FF3040] cursor-pointer text-left transition"
                       >
-                        <BlockUserOutlineIcon className="w-[22px] h-[22px] text-[#FF3040] shrink-0" />
+                        <BlockUserOutlineIcon className="w-[19px] h-[19px] text-[#FF3040] shrink-0" />
                         <span>{isBlocked ? "Unblock" : "Block"}</span>
                       </button>
                     </>
@@ -852,7 +852,7 @@ export const LoopPostOptionsSheet: React.FC<{
 
                 {/* Author / Admin Controls Card */}
                 {canManage && (
-                  <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
+                  <div className="loops-about-card rounded-[18px] py-1 px-1 space-y-0.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -860,9 +860,9 @@ export const LoopPostOptionsSheet: React.FC<{
                         onClose();
                         navigate(`/loops/post/${post.id}/activity`);
                       }}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                     >
-                      <BarChart2 className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <BarChart2 className="w-[19px] h-[19px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
                       <span>View activity</span>
                     </button>
 
@@ -874,9 +874,9 @@ export const LoopPostOptionsSheet: React.FC<{
                           onClose();
                           onOpenReplyOptions();
                         }}
-                        className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                       >
-                        <SlidersHorizontal className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                        <SlidersHorizontal className="w-[19px] h-[19px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
                         <span>Who can reply</span>
                       </button>
                     )}
@@ -892,18 +892,18 @@ export const LoopPostOptionsSheet: React.FC<{
                           navigate(`/loops/edit/${post.id}`);
                         }
                       }}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[15.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[14.5px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
                     >
-                      <Edit3 className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
+                      <Edit3 className="w-[19px] h-[19px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
                       <span>Edit</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={handleFallbackDelete}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-[16px] hover:bg-rose-500/10 text-[15.5px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[13px] hover:bg-rose-500/10 text-[14.5px] font-normal text-[#FF3040] cursor-pointer text-left transition"
                     >
-                      <Trash2 className="w-[22px] h-[22px] stroke-[1.95] text-[#FF3040] shrink-0" />
+                      <Trash2 className="w-[19px] h-[19px] stroke-[1.95] text-[#FF3040] shrink-0" />
                       <span>Delete</span>
                     </button>
                   </div>

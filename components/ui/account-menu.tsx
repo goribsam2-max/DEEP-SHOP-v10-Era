@@ -130,14 +130,14 @@ export default function AccountMenu({
 
   const triggerClass = isNewsHubStyle
     ? cn(
-        "flex items-center justify-center p-0 md:pl-1.5 md:pr-3.5 gap-2 rounded-full font-semibold transition-all duration-200 w-10 h-10 md:w-auto md:h-10 shrink-0 bg-white dark:bg-zinc-900 border-none text-zinc-900 dark:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 cursor-pointer"
+        "flex items-center justify-center p-0 md:pl-1.5 md:pr-3 gap-2 rounded-full font-semibold transition-all duration-200 w-9 h-9 md:w-auto md:h-10 shrink-0 bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] text-zinc-900 dark:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 cursor-pointer"
       )
     : isPill
     ? cn(
-        "flex items-center justify-center p-0 md:pl-1 md:pr-4 gap-2 rounded-full font-medium transition-all duration-300 w-9 h-9 md:w-auto md:h-9 shrink-0 bg-transparent border-none text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-none"
+        "flex items-center justify-center p-0 md:pl-1.5 md:pr-3 gap-1.5 rounded-full font-medium transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 md:w-auto md:h-10 shrink-0 bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] text-zinc-900 dark:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 cursor-pointer"
       )
     : cn(
-        "flex items-center justify-center p-0 md:pl-2 md:pr-4 md:py-2 gap-2 rounded-full font-medium transition-all duration-300 w-10 h-10 md:w-auto md:h-auto shrink-0 bg-transparent border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        "flex items-center justify-center p-0 md:pl-2 md:pr-3.5 md:py-2 gap-2 rounded-full font-medium transition-all duration-200 w-9 h-9 md:w-auto md:h-auto shrink-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] cursor-pointer"
       );
 
   return (
@@ -151,8 +151,8 @@ export default function AccountMenu({
           title={user ? displayName : "Sign in or Account menu"}
         >
           {user ? (
-            <div className="relative w-fit shrink-0 p-[2px]">
-              <Avatar className="w-8 h-8 md:w-7 md:h-7 rounded-full border-2 border-[#1877F2] shrink-0">
+            <div className="relative w-fit shrink-0 p-[1px]">
+              <Avatar className="w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 rounded-full border-2 border-[#1877F2] shrink-0">
                 <AvatarImage
                   src={userProfile?.photoURL || user.photoURL || undefined}
                   alt={displayName}
@@ -163,11 +163,11 @@ export default function AccountMenu({
                 </AvatarFallback>
               </Avatar>
               {unreadCount > 0 ? (
-                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-4 text-[10px] font-bold text-white bg-rose-500 rounded-full ring-2 ring-white dark:ring-zinc-900 px-1 z-10">
+                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[15px] h-3.5 text-[9px] font-bold text-white bg-rose-500 rounded-full ring-2 ring-white dark:ring-zinc-900 px-1 z-10">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : (
-                <span className="absolute bottom-0 right-0 inline-flex size-2.5 rounded-full ring-2 ring-white dark:ring-zinc-900 bg-emerald-500 z-10"></span>
+                <span className="absolute bottom-0 right-0 inline-flex size-2 rounded-full ring-2 ring-white dark:ring-zinc-900 bg-emerald-500 z-10"></span>
               )}
             </div>
           ) : (
@@ -175,10 +175,10 @@ export default function AccountMenu({
               className={cn(
                 "rounded-full flex items-center justify-center shrink-0",
                 isNewsHubStyle
-                  ? "w-8 h-8 md:w-7 md:h-7 bg-transparent"
+                  ? "w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 bg-transparent"
                   : isPill
-                  ? "w-8 h-8 md:w-7 md:h-7 bg-white shadow-sm"
-                  : "w-8 h-8 md:w-7 md:h-7 bg-zinc-100 dark:bg-zinc-800 shadow-sm"
+                  ? "w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 bg-white dark:bg-zinc-800 shadow-sm"
+                  : "w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 bg-zinc-100 dark:bg-zinc-800 shadow-sm"
               )}
             >
               <Icon
@@ -188,14 +188,14 @@ export default function AccountMenu({
                   isNewsHubStyle
                     ? "text-zinc-900 dark:text-zinc-100"
                     : isPill
-                    ? "text-zinc-900"
+                    ? "text-zinc-900 dark:text-zinc-100"
                     : "text-zinc-900 dark:text-zinc-100"
                 )}
               />
             </div>
           )}
 
-          <span className="hidden md:inline-block max-w-[80px] lg:max-w-[120px] truncate text-sm">
+          <span className="hidden md:inline-block max-w-[76px] lg:max-w-[120px] truncate text-sm">
             {user ? displayName : "Sign in"}
           </span>
           <span className="hidden md:inline-flex items-center">

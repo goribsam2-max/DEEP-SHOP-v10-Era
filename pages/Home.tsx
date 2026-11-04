@@ -265,7 +265,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const [referState, setReferState] = useState<string>("refer-idle");
 
   useEffect(() => {
-    const qProds = query(collection(db, "products"));
+    const qProds = query(collection(db, "products"), limit(80));
     const unsubscribeProds = onSnapshot(
       qProds,
       (snapshot) => {
@@ -289,6 +289,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     const qBanners = query(
       collection(db, "banners"),
       orderBy("createdAt", "desc"),
+      limit(20),
     );
     const unsubscribeBanners = onSnapshot(
       qBanners,

@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, useCallback, useMemo } from 'react';
 import { gooeyToast, GooeyToaster } from 'goey-toast';
 import 'goey-toast/styles.css';
 import { LiquidGlassPopup } from './ui/liquid-glass-popup';
@@ -100,7 +100,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
   const [promptVal, setPromptVal] = useState("");
 
-  const notify = (message: string, type: ToastType = 'info', description?: string) => {
+  const notify = useCallback((message: string, type: ToastType = 'info', description?: string) => {
     let finalTitle = message;
     let finalDesc = description;
 
@@ -130,22 +130,27 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (type === 'error') gooeyToast.error(finalTitle, config);
     else gooeyToast.info(finalTitle, config);
-  };
+  }, []);
 
-  const confirm = (options: ConfirmOptions): Promise<boolean> => {
+  const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise<boolean>((resolve) => {
       setConfirmModal({
         ...options,
         _resolve: resolve,
       });
     });
-  };
-  const alert = (options: AlertOptions) => setAlertModal(options);
-  const prompt = (options: PromptOptions) => {
+  }, []);
+  const alert = useCallback((options: AlertOptions) => setAlertModal(options), []);
+  const prompt = useCallback((options: PromptOptions) => {
     setPromptVal("");
     setPromptModal(options);
-  };
-  const fullScreenInfo = (options: FullScreenInfoOptions) => setFullScreenModal(options);
+  }, []);
+  const fullScreenInfo = useCallback((options: FullScreenInfoOptions) => setFullScreenModal(options), []);
+
+  const contextValue = useMemo(
+    () => ({ notify, confirm, alert, prompt, fullScreenInfo }),
+    [notify, confirm, alert, prompt, fullScreenInfo]
+  );
 
   const handleCancelConfirm = () => {
     confirmModal?.onCancel?.();
@@ -166,7 +171,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <ToastContext.Provider value={{ notify, confirm, alert, prompt, fullScreenInfo }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <GooeyToaster position="top-right" showProgress closeButton="top-right" />
       

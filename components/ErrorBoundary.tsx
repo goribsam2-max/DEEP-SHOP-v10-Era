@@ -27,13 +27,12 @@ class ErrorBoundary extends Component<Props, State> {
       msg.includes('importing a module script failed') ||
       msg.includes('module is not valid') ||
       msg.includes('loading chunk') ||
-      msg.includes('failed to fetch') ||
       msg.includes('mime type') ||
       msg.includes('valid javascript') ||
       msg.includes("unexpected token '<'");
 
     if (isChunkOrMimeError && typeof window !== 'undefined') {
-      const reloadKey = 'ds_chunk_reload_' + Math.floor(Date.now() / 20000);
+      const reloadKey = 'ds_chunk_reload_' + Math.floor(Date.now() / 60000);
       try {
         if (!sessionStorage.getItem(reloadKey)) {
           sessionStorage.setItem(reloadKey, 'true');

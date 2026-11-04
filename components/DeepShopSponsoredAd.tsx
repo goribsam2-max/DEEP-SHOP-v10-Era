@@ -436,22 +436,6 @@ const DocDetailsOutlineIcon: React.FC<{ className?: string }> = ({
   </svg>
 );
 
-const AutoScrollSkipIcon: React.FC<{ className?: string }> = ({
-  className = "w-6 h-6",
-}) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.9"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polygon points="5 5 15 12 5 19 5 5" />
-    <line x1="19" y1="5" x2="19" y2="19" />
-  </svg>
-);
 
 const LoopsInfinityMark: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
@@ -562,22 +546,12 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
   const [expandedAccountDetails, setExpandedAccountDetails] = useState(false);
   const [submittingReport, setSubmittingReport] = useState(false);
 
-  const [localAutoScroll, setLocalAutoScroll] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("loops_reels_autoscroll") === "1";
-    } catch {
-      return false;
-    }
-  });
-
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hudTimerRef = useRef<number | null>(null);
   const impressionRecordedRef = useRef<string | null>(null);
 
   const effectiveMuted =
     controlledMuted !== undefined ? controlledMuted : localMuted;
-  const effectiveAutoScroll =
-    controlledAutoScroll !== undefined ? controlledAutoScroll : localAutoScroll;
 
   const { ads: hookLibraryAds } = useDeepShopAds();
   const libraryAds = allLibraryAds || hookLibraryAds;
@@ -652,24 +626,6 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
     }, 650);
   };
 
-  const handleToggleAutoScrollInternal = () => {
-    triggerHaptic();
-    if (onToggleAutoScroll) {
-      onToggleAutoScroll();
-      return;
-    }
-    const next = !localAutoScroll;
-    setLocalAutoScroll(next);
-    try {
-      localStorage.setItem("loops_reels_autoscroll", next ? "1" : "0");
-    } catch {}
-    notify(
-      next
-        ? "Auto-scroll to next reel enabled"
-        : "Auto-scroll to next reel turned off",
-      "info"
-    );
-  };
 
   const navigateToDestination = (customLink?: string) => {
     const rawTarget = (customLink ?? ad.buttonLink ?? "/all-products").trim();
@@ -1029,35 +985,6 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                         About this ad
                       </p>
                     </div>
-                  </button>
-                </div>
-
-                {/* Card 3: Auto-scroll to next reel */}
-                <div className="ds-sponsored-sheet-card rounded-[20px] px-4 py-3.5 flex items-center justify-between gap-3 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <AutoScrollSkipIcon className="w-[24px] h-[24px] shrink-0" />
-                    <span className="text-[16px] font-semibold truncate">
-                      Auto-scroll to next reel
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={effectiveAutoScroll}
-                    onClick={handleToggleAutoScrollInternal}
-                    className={`relative w-[52px] h-[30px] rounded-full transition-colors p-0.5 shrink-0 cursor-pointer ${
-                      effectiveAutoScroll
-                        ? "bg-zinc-900 dark:bg-white"
-                        : "bg-zinc-500/80 dark:bg-zinc-700"
-                    }`}
-                  >
-                    <span
-                      className={`block w-[26px] h-[26px] rounded-full transition-transform shadow ${
-                        effectiveAutoScroll
-                          ? "translate-x-[22px] bg-white dark:bg-zinc-950"
-                          : "translate-x-0 bg-white"
-                      }`}
-                    />
                   </button>
                 </div>
               </motion.div>

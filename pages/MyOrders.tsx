@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { auth, db } from "../firebase";
 import {
   collection,
@@ -6,6 +6,7 @@ import {
   where,
   onSnapshot,
   doc,
+  getDoc,
   updateDoc,
 } from "firebase/firestore";
 import { Order, OrderStatus } from "../types";
@@ -178,11 +179,41 @@ const MyOrders: React.FC = () => {
   const notify = useNotify();
   const confirm = useConfirm();
 
+  const hasAutoSelectedTabRef = useRef(false);
+
   useEffect(() => {
-    let unsubscribeOrders: (() => void) | null = null;
+    let orderUnsubs: Array<() => void> = [];
     let unsubscribeSubs: (() => void) | null = null;
+    let activeSession = true;
+
+    const cleanupOrderListeners = () => {
+      orderUnsubs.forEach((fn) => {
+        try {
+          fn();
+        } catch {}
+      });
+      orderUnsubs = [];
+    };
+
+    const normalizeBdPhone = (raw?: string | null): string => {
+      if (!raw) return "";
+      const digits = String(raw).replace(/\D/g, "");
+      if (digits.length >= 11 && digits.startsWith("880")) {
+        return digits.slice(2);
+      }
+      if (digits.length > 11) {
+        return digits.slice(-11);
+      }
+      return digits;
+    };
 
     const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+      cleanupOrderListeners();
+      if (unsubscribeSubs) {
+        unsubscribeSubs();
+        unsubscribeSubs = null;
+      }
+
       const searchParams = new URLSearchParams(window.location.search);
       const pendingOrderId =
         searchParams.get("guestOrder") || localStorage.getItem("pending_guest_order_id");
@@ -201,7 +232,7 @@ const MyOrders: React.FC = () => {
           const ordRef = doc(db, "orders", pendingOrderId);
           await updateDoc(ordRef, {
             userId: user.uid,
-            customerEmail: user.email || "",
+            customerEmail: (user.email || "").toLowerCase(),
           });
           localStorage.removeItem("pending_guest_order_id");
           localStorage.removeItem("pending_guest_order_phone");
@@ -212,16 +243,149 @@ const MyOrders: React.FC = () => {
       }
 
       const uid = user.uid;
-      const q = query(collection(db, "orders"), where("userId", "==", uid));
-      unsubscribeOrders = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(
-          (d) => ({ id: d.id, ...d.data() }) as Order
+      let profileData: any = null;
+      try {
+        const userSnap = await getDoc(doc(db, "users", uid));
+        if (userSnap.exists()) {
+          profileData = userSnap.data();
+        }
+      } catch {}
+
+      if (!activeSession) return;
+
+      const queryBuckets = new Map<string, Order[]>();
+      const backfilledIds = new Set<string>();
+
+      const recomputeMergedOrders = () => {
+        const mergedMap = new Map<string, Order>();
+        queryBuckets.forEach((bucketList) => {
+          bucketList.forEach((ord) => {
+            mergedMap.set(ord.id, ord);
+          });
+        });
+
+        const merged = Array.from(mergedMap.values()).sort(
+          (a, b) =>
+            safeTimestampMillis(b.createdAt || (b as any).timestamp) -
+            safeTimestampMillis(a.createdAt || (a as any).timestamp)
         );
-        data.sort(
-          (a, b) => safeTimestampMillis(b.createdAt) - safeTimestampMillis(a.createdAt)
-        );
-        setOrders(data);
+
+        // Auto-link any matched custom/guest order permanently to the customer's UID
+        merged.forEach((ord) => {
+          if (
+            (!ord.userId || ord.userId === "guest") &&
+            !backfilledIds.has(ord.id)
+          ) {
+            backfilledIds.add(ord.id);
+            updateDoc(doc(db, "orders", ord.id), {
+              userId: uid,
+              customerId: uid,
+            }).catch(() => {});
+          }
+        });
+
+        // If user has 0 Pending orders on first load, but has Active orders (e.g., Seller Custom Order in Approved/Confirmed/Processing), show Active tab automatically
+        if (!hasAutoSelectedTabRef.current && merged.length > 0) {
+          hasAutoSelectedTabRef.current = true;
+          const pendingLen = merged.filter(
+            (o) => o.status === OrderStatus.PENDING || o.status === "Pending"
+          ).length;
+          const activeLen = merged.filter(
+            (o) =>
+              o.status !== OrderStatus.PENDING &&
+              o.status !== "Pending" &&
+              o.status !== OrderStatus.CANCELLED &&
+              o.status !== OrderStatus.RETURNED &&
+              o.status !== "Cancelled"
+          ).length;
+          if (pendingLen === 0 && activeLen > 0) {
+            setActiveTab("Active");
+          }
+        }
+
+        setOrders(merged);
         setLoading(false);
+      };
+
+      const attachOrderQuery = (key: string, qRef: any) => {
+        const unsub = onSnapshot(
+          qRef,
+          (snapshot: any) => {
+            const list = snapshot.docs.map(
+              (d: any) => ({ id: d.id, ...d.data() }) as Order
+            );
+            queryBuckets.set(key, list);
+            recomputeMergedOrders();
+          },
+          () => {
+            setLoading(false);
+          }
+        );
+        orderUnsubs.push(unsub);
+      };
+
+      // 1. Primary UID match
+      attachOrderQuery(
+        "uid",
+        query(collection(db, "orders"), where("userId", "==", uid))
+      );
+      // 2. Secondary customerId match
+      attachOrderQuery(
+        "customerId",
+        query(collection(db, "orders"), where("customerId", "==", uid))
+      );
+
+      // 3. Email match (catches custom orders created by email)
+      const rawEmail = (user.email || profileData?.email || "").trim();
+      const lowerEmail = rawEmail.toLowerCase();
+      if (lowerEmail) {
+        attachOrderQuery(
+          "email_lower",
+          query(
+            collection(db, "orders"),
+            where("customerEmail", "==", lowerEmail)
+          )
+        );
+        if (rawEmail !== lowerEmail) {
+          attachOrderQuery(
+            "email_raw",
+            query(
+              collection(db, "orders"),
+              where("customerEmail", "==", rawEmail)
+            )
+          );
+        }
+      }
+
+      // 4. Phone match (catches custom orders created by customer phone number)
+      const candidatePhones = new Set<string>();
+      [
+        user.phoneNumber,
+        profileData?.phone,
+        profileData?.phoneNumber,
+        profileData?.shippingAddress?.phone,
+      ].forEach((p) => {
+        if (typeof p === "string" && p.trim()) {
+          candidatePhones.add(p.trim());
+          const norm = normalizeBdPhone(p);
+          if (norm.length >= 10) candidatePhones.add(norm);
+        }
+      });
+
+      Array.from(candidatePhones).forEach((ph, idx) => {
+        attachOrderQuery(
+          `phone_${idx}`,
+          query(collection(db, "orders"), where("contactNumber", "==", ph))
+        );
+        if (/^\d{10,11}$/.test(ph)) {
+          attachOrderQuery(
+            `phone_norm_${idx}`,
+            query(
+              collection(db, "orders"),
+              where("customerPhoneNormalized", "==", ph)
+            )
+          );
+        }
       });
 
       const subQ = query(collection(db, "subscriptions"), where("userId", "==", uid));
@@ -239,8 +403,9 @@ const MyOrders: React.FC = () => {
 
     const timer = setInterval(() => setCurrentTime(Date.now()), 10000);
     return () => {
+      activeSession = false;
       unsubscribeAuth();
-      if (unsubscribeOrders) unsubscribeOrders();
+      cleanupOrderListeners();
       if (unsubscribeSubs) unsubscribeSubs();
       clearInterval(timer);
     };
@@ -500,15 +665,24 @@ const MyOrders: React.FC = () => {
 
         {/* Items List */}
         <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-          {order.items?.map((item: any, idx: number) => (
+          {order.items?.map((item: any, idx: number) => {
+            const targetProdId = String(item.productId || item.id || "");
+            const isCustomItem =
+              Boolean(item.isCustomItem) ||
+              targetProdId.startsWith("custom_prod_");
+            return (
             <div
-              key={`${item.productId || item.id || idx}`}
+              key={`${targetProdId || idx}`}
               onClick={() => {
-                if (item.productId || item.id) {
-                  navigate(`/product/${item.productId || item.id}`);
+                if (targetProdId && !isCustomItem) {
+                  navigate(`/product/${targetProdId}`);
                 }
               }}
-              className="flex items-center gap-3 p-2.5 rounded-2xl orders-v2-seller-box cursor-pointer hover:opacity-90 transition"
+              className={`flex items-center gap-3 p-2.5 rounded-2xl orders-v2-seller-box transition ${
+                targetProdId && !isCustomItem
+                  ? "cursor-pointer hover:opacity-90"
+                  : ""
+              }`}
             >
               <div className="w-12 h-14 rounded-xl bg-white dark:bg-zinc-800 overflow-hidden border border-black/5 shrink-0 flex items-center justify-center">
                 {item.image?.trim() ? (
@@ -535,7 +709,8 @@ const MyOrders: React.FC = () => {
                 {formatPrice((item.price || item.priceAtPurchase || 0) * (item.quantity || 1))}
               </span>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Border Offer / Delivery Info */}

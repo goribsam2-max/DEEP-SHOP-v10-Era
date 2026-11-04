@@ -273,10 +273,11 @@ const BottomMenu = () => {
               }}
               title={item.label}
               aria-label={item.label}
+              aria-current={item.isActive ? "page" : undefined}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer ${
                 item.isActive
                   ? "ds-shop-bottom-btn-active"
-                  : "ds-shop-bottom-btn opacity-90 hover:opacity-100"
+                  : "ds-shop-bottom-btn"
               }`}
             >
               {(() => {
@@ -292,7 +293,11 @@ const BottomMenu = () => {
                       <img
                         src={cleanSvg}
                         alt={item.label}
-                        className="w-5 h-5 object-contain"
+                        className={`w-5 h-5 object-contain ${
+                          item.isActive
+                            ? "brightness-0 invert"
+                            : "brightness-0 dark:invert"
+                        }`}
                       />
                     );
                   }

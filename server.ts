@@ -2821,7 +2821,11 @@ export async function initializeAppAsync() {
         "/messages", "/profile", "/orders", "/my-orders", "/login", "/signin", "/register", "/signup",
         "/accounts", "/saved-accounts", "/find-account", "/choose-account", "/review-account", "/forgot-password", "/new-password",
         "/settings", "/favorites", "/wishlist", "/track-order", "/privacy", "/terms", "/helpline", "/ads",
-        "/categories", "/blog", "/contact", "/about", "/news-hub", "/news", "/scam", "/scam-alert",
+        "/categories", "/blog", "/contact", "/about", "/loops", "/news-hub", "/news", "/scam", "/scam-alert",
+        "/create-reel", "/add-story", "/custom-pay", "/exchange-request", "/e-receipt", "/devices",
+        "/my-tickets", "/ticket", "/faq", "/help-center", "/cookie-policy", "/refund-policy", "/shipping-policy",
+        "/disclaimer", "/sitemap-page", "/shipping-address", "/payment-methods", "/add-card", "/leave-review",
+        "/payment", "/success", "/location", "/buy-stars", "/gift-stars", "/sponsor", "/creator-dashboard",
         "/author", "/creator", "/store", "/flash-sale", "/bundles", "/build-box", "/bonus", "/credits",
         "/deposit", "/withdraw", "/my-coins", "/my-coupons", "/coupon", "/subscription", "/affiliate",
         "/search", "/notifications", "/onboarding", "/auth-selector", "/verify", "/complete-profile",
@@ -2830,10 +2834,19 @@ export async function initializeAppAsync() {
       const isKnownRoute = knownAppRoutes.some(r => reqPath === r || reqPath.startsWith(r + "/"));
       const hasExtension = reqPath.includes(".");
 
-      const newsPostMatch = reqPath.match(/^\/(?:news-hub\/(?:post|share)|news|scam)\/([^/?#]+)/);
+      const newsPostMatch = reqPath.match(/^\/(?:(?:loops|news-hub)\/(?:post|share)|news|scam)\/([^/?#]+)/);
       const productMatch = reqPath.match(/^\/product\/(.+)/);
       const blogMatch = reqPath.match(/^\/blog\/(.+)/);
       const isSlugMatch = !isKnownRoute && !hasExtension && !reqPath.startsWith("/api");
+
+      const userAgent = String(req.headers["user-agent"] || "");
+      const isSocialOrSearchBot = /bot|crawl|spider|slurp|facebookexternalhit|facebot|whatsapp|telegram|twitter|discord|linkedin|slack|pinterest|skype|embedly|reddit|bingpreview|lighthouse|curl|python/i.test(userAgent);
+
+      const withSsrTimeout = <T>(promise: Promise<T>, ms = 1200): Promise<T | null> =>
+        Promise.race([
+          promise,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+        ]);
 
       const protoHeader = String(req.headers["x-forwarded-proto"] || req.protocol || "https").split(",")[0].trim();
       const hostHeader = String(req.headers["x-forwarded-host"] || req.get("host") || "www.deepshop.top").split(",")[0].trim();
@@ -2845,26 +2858,26 @@ export async function initializeAppAsync() {
 
       if (newsPostMatch && newsPostMatch[1]) {
         const decodedPostId = decodeURIComponent(newsPostMatch[1]);
-        newsPost = await fetchNewsPostData(decodedPostId);
+        newsPost = await withSsrTimeout(fetchNewsPostData(decodedPostId), 1200);
         if (newsPost && !newsPost.id) {
           newsPost = { id: decodedPostId, ...newsPost };
         }
-      } else if (productMatch && productMatch[1]) {
+      } else if (isSocialOrSearchBot && productMatch && productMatch[1]) {
         const segments = productMatch[1].split("/").filter(Boolean);
         const lastPart = decodeURIComponent(segments[segments.length - 1]);
         const firstPart = decodeURIComponent(segments[0]);
-        product = await fetchProductData(lastPart);
+        product = await withSsrTimeout(fetchProductData(lastPart), 1200);
         if (!product && lastPart !== firstPart) {
-          product = await fetchProductData(firstPart);
+          product = await withSsrTimeout(fetchProductData(firstPart), 1200);
         }
-      } else if (blogMatch && blogMatch[1]) {
+      } else if (isSocialOrSearchBot && blogMatch && blogMatch[1]) {
         const blogSlug = decodeURIComponent(blogMatch[1].split("/")[0]);
-        blog = await fetchBlogData(blogSlug);
-      } else if (isSlugMatch) {
+        blog = await withSsrTimeout(fetchBlogData(blogSlug), 1200);
+      } else if (isSocialOrSearchBot && isSlugMatch) {
         const cleanSlug = decodeURIComponent(reqPath.replace(/^\//, ""));
-        product = await fetchProductData(cleanSlug);
+        product = await withSsrTimeout(fetchProductData(cleanSlug), 1200);
         if (!product) {
-          blog = await fetchBlogData(cleanSlug);
+          blog = await withSsrTimeout(fetchBlogData(cleanSlug), 1200);
         }
       }
 
@@ -3054,7 +3067,7 @@ export async function initializeAppAsync() {
         let description = "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site. Get authentic border cross devices and products.";
         let imageUrl = `${requestOrigin}/favicon.png`;
 
-        const seoData = await fetchSeoSettingsData();
+        const seoData = isSocialOrSearchBot ? await withSsrTimeout(fetchSeoSettingsData(), 1000) : null;
         if (seoData) {
           if (seoData.metaTitle) title = String(seoData.metaTitle).trim();
           if (seoData.metaDescription) description = String(seoData.metaDescription).trim();
@@ -3093,7 +3106,7 @@ export async function initializeAppAsync() {
         .status(200)
         .set({
           "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "public, max-age=60, s-maxage=1800, stale-while-revalidate=86400",
+          "Cache-Control": "public, max-age=0, must-revalidate",
         })
         .end(template);
     } catch (e: any) {

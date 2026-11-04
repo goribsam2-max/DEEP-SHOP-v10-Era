@@ -400,12 +400,15 @@ export function Header() {
     "ds-theme-icon-btn relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer shrink-0 border-none";
 
   const standardDesktopBtnClass =
-    "ds-theme-icon-btn transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 bg-zinc-100 dark:bg-zinc-800 border-none text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 shadow-sm rounded-full w-10 h-10 cursor-pointer";
+    "ds-theme-icon-btn transition-all duration-200 flex items-center justify-center hover:scale-105 active:scale-95 bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] text-zinc-900 dark:text-white hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] rounded-full w-10 h-10 cursor-pointer shrink-0";
+
+  const mobileCircleBtnClass =
+    "ds-theme-icon-btn relative rounded-full bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 text-zinc-900 dark:text-white flex items-center justify-center cursor-pointer shrink-0";
 
   return (
     <header
       className={cn(
-        "fixed top-0 z-[120] w-full transition-all duration-300 ease-in-out pointer-events-none border-none",
+        "fixed top-0 inset-x-0 z-[120] w-full max-w-[100vw] box-border transition-all duration-300 ease-in-out pointer-events-none border-none",
         scrolled || open
           ? "bg-gradient-to-b from-[#1877F2]/90 via-[#3b82f6]/30 via-75% to-white dark:from-[#0f172a] dark:via-[#181826]/90 dark:to-black backdrop-blur-xl shadow-[0_12px_24px_-10px_rgba(24,119,242,0.08)]"
           : "bg-gradient-to-b from-[#1877F2]/35 via-[#3b82f6]/10 via-70% to-white dark:from-[#1e1b4b]/40 dark:via-[#0f172a]/20 dark:to-black"
@@ -413,12 +416,12 @@ export function Header() {
     >
       <nav
         className={cn(
-          "mx-auto flex w-full max-w-[1920px] items-center justify-between px-4 lg:px-6 transition-all duration-300",
+          "mx-auto flex w-full max-w-[1920px] items-center justify-between gap-1.5 px-3 sm:px-5 lg:px-6 box-border transition-all duration-300",
           isHomePage ? "h-15 md:h-16" : "h-14 md:h-16"
         )}
       >
-        <div className="flex items-center gap-2 md:gap-3 pointer-events-auto">
-          {/* Top-left Menu Button: Hidden on mobile ONLY on Home ("/"), visible on desktop & all other pages */}
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0 shrink pointer-events-auto">
+          {/* Top-left Menu / Back Button: Hidden on mobile ONLY on Home ("/"), visible on desktop & all other pages */}
           <Button
             size="icon"
             variant="ghost"
@@ -444,17 +447,15 @@ export function Header() {
               }
             }}
             className={cn(
-              "items-center justify-center transition-all w-10 h-10 rounded-full shrink-0",
-              isHomePage
-                ? "hidden md:flex bg-white dark:bg-zinc-900 shadow-[0_4px_14px_rgba(15,23,42,0.08)] border-none"
-                : "flex border-transparent shadow-none"
+              "ds-theme-icon-btn items-center justify-center transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 md:w-10 md:h-10 rounded-full shrink-0 bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 cursor-pointer",
+              isHomePage ? "hidden md:flex" : "flex"
             )}
             aria-expanded={open}
             aria-controls="mobile-menu"
             aria-label="Toggle menu"
           >
             {isInnerPage ? (
-              <ChevronLeft className="size-6 text-zinc-900 dark:text-white" />
+              <ChevronLeft className="size-5 sm:size-5.5 text-zinc-900 dark:text-white" />
             ) : (
               <MenuToggleIcon
                 open={open}
@@ -469,24 +470,14 @@ export function Header() {
             <NavLink
               to="/admin"
               aria-label="DEEP SHOP Admin Dashboard"
-              className={cn(
-                "flex items-center gap-2.5 shrink-0 rounded-3xl border-none ring-0 shadow-none bg-transparent transition-all duration-300",
-                isIslandActive
-                  ? "opacity-0 scale-95 pointer-events-none w-0 overflow-hidden"
-                  : "opacity-100 scale-100 w-auto"
-              )}
+              className="flex items-center gap-2 min-w-0 shrink rounded-3xl border-none ring-0 shadow-none bg-transparent transition-all duration-200"
             >
               <WordmarkIcon />
             </NavLink>
           ) : (
             <div
               ref={brandMenuRef}
-              className={cn(
-                "relative shrink-0 transition-all duration-300",
-                isIslandActive
-                  ? "opacity-0 scale-95 pointer-events-none w-0 overflow-hidden"
-                  : "opacity-100 scale-100 w-auto"
-              )}
+              className="relative min-w-0 shrink transition-all duration-200"
             >
               <button
                 type="button"
@@ -495,12 +486,12 @@ export function Header() {
                   triggerHaptic();
                   setBrandMenuOpen((prev) => !prev);
                 }}
-                className="inline-flex items-center gap-1.5 px-1.5 py-1 rounded-2xl hover:bg-black/[0.03] dark:hover:bg-white/[0.05] active:scale-95 transition cursor-pointer select-none"
+                className="inline-flex items-center gap-1 px-1 py-1 rounded-2xl hover:bg-black/[0.03] dark:hover:bg-white/[0.05] active:scale-95 transition cursor-pointer select-none min-w-0"
                 aria-label="Switch between Deep Shop and Loops"
                 aria-expanded={brandMenuOpen}
               >
                 {isHomePage ? (
-                  <span className="font-brand lowercase text-[24px] sm:text-[26px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
+                  <span className="font-brand lowercase text-[16px] sm:text-[18px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
                     deep shop
                   </span>
                 ) : (
@@ -508,7 +499,7 @@ export function Header() {
                 )}
                 <ChevronDown
                   className={cn(
-                    "w-4 h-4 text-zinc-900 dark:text-zinc-200 stroke-[2.3] mt-0.5 transition-transform duration-200 shrink-0",
+                    "w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-900 dark:text-zinc-200 stroke-[2.3] mt-0.5 transition-transform duration-200 shrink-0",
                     brandMenuOpen && "rotate-180"
                   )}
                 />
@@ -571,14 +562,7 @@ export function Header() {
         </div>
 
         {/* DESKTOP RIGHT ACTION BUTTONS */}
-        <div
-          className={cn(
-            "hidden items-center gap-2.5 md:flex pointer-events-auto transition-all duration-300",
-            isIslandActive
-              ? "opacity-0 scale-95 pointer-events-none"
-              : "opacity-100 scale-100"
-          )}
-        >
+        <div className="hidden items-center gap-2 lg:gap-2.5 md:flex shrink-0 pr-0.5 pointer-events-auto transition-all duration-200">
           <button
             type="button"
             onClick={() => {
@@ -626,7 +610,7 @@ export function Header() {
               triggerHaptic();
               navigate("/messages");
             }}
-            className="ds-theme-icon-btn relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex items-center justify-center text-zinc-900 dark:text-white cursor-pointer"
+            className={cn("relative", standardDesktopBtnClass)}
             aria-label="Messages"
           >
             <Icon name="message-square" className="w-5 h-5 text-zinc-900 dark:text-white" />
@@ -637,76 +621,80 @@ export function Header() {
             )}
           </button>
 
-          <AnimatedThemeToggler className="ds-theme-icon-btn rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-900 dark:text-white" />
+          <AnimatedThemeToggler className={standardDesktopBtnClass} />
 
-          {location.pathname !== "/profile" && (
+          {location.pathname === "/profile" ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/settings");
+              }}
+              className={cn("relative", standardDesktopBtnClass)}
+              aria-label="Settings"
+            >
+              <Settings className="w-5 h-5" strokeWidth={1.8} />
+            </Button>
+          ) : (
             <AccountMenu scrolled={scrolled} isPill />
           )}
         </div>
 
-        {/* MOBILE RIGHT ACTION BUTTONS — Unified Cart, Message, Theme & Account buttons across Home (/) and all inner pages */}
-        <div
-          className={cn(
-            "flex items-center gap-1 md:hidden pointer-events-auto transition-all duration-300",
-            isIslandActive
-              ? "opacity-0 scale-95 pointer-events-none"
-              : "opacity-100 scale-100"
-          )}
-        >
-          <div className="flex items-center gap-1 rounded-full p-1.5 bg-transparent shadow-none">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/cart");
-              }}
-              className="ds-theme-icon-btn relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-900 dark:text-white cursor-pointer"
-              aria-label="Shopping Cart"
-            >
-              <Icon name="shopping-cart" className="w-5 h-5 text-zinc-900 dark:text-white" />
-              {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-[#5F2CFF] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
-                  {cartCount}
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/messages");
-              }}
-              className="ds-theme-icon-btn relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-900 dark:text-white flex cursor-pointer"
-              aria-label="Messages"
-            >
-              <Icon name="message-square" className="w-5 h-5 text-zinc-900 dark:text-white" />
-              {unreadMessagesCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm animate-bounce">
-                  {unreadMessagesCount}
-                </span>
-              )}
-            </Button>
-            <AnimatedThemeToggler className="ds-theme-icon-btn rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 flex text-zinc-900 dark:text-white" />
-
-            {location.pathname === "/profile" ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/settings");
-                }}
-                className="ds-theme-icon-btn relative rounded-full shadow-none border-none bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 w-9 h-9 text-zinc-900 dark:text-white flex items-center justify-center cursor-pointer"
-                aria-label="Settings"
-              >
-                <Settings className="w-5 h-5" strokeWidth={1.8} />
-              </Button>
-            ) : (
-              <AccountMenu scrolled={scrolled} isPill />
+        {/* MOBILE RIGHT ACTION BUTTONS — Crisp white circular icons in Light mode & zinc-900 in Dark mode */}
+        <div className="flex items-center gap-1.5 sm:gap-2 md:hidden shrink-0 pointer-events-auto transition-all duration-200">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              triggerHaptic();
+              navigate("/cart");
+            }}
+            className={mobileCircleBtnClass}
+            aria-label="Shopping Cart"
+          >
+            <Icon name="shopping-cart" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-zinc-900 dark:text-white" />
+            {cartCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-[#5F2CFF] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+                {cartCount}
+              </span>
             )}
-          </div>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              triggerHaptic();
+              navigate("/messages");
+            }}
+            className={mobileCircleBtnClass}
+            aria-label="Messages"
+          >
+            <Icon name="message-square" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-zinc-900 dark:text-white" />
+            {unreadMessagesCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm animate-bounce">
+                {unreadMessagesCount}
+              </span>
+            )}
+          </Button>
+          <AnimatedThemeToggler className={mobileCircleBtnClass} />
+
+          {location.pathname === "/profile" ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/settings");
+              }}
+              className={mobileCircleBtnClass}
+              aria-label="Settings"
+            >
+              <Settings className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px]" strokeWidth={1.85} />
+            </Button>
+          ) : (
+            <AccountMenu scrolled={scrolled} isPill />
+          )}
         </div>
       </nav>
 
@@ -952,7 +940,7 @@ const WordmarkIcon = ({
 }: React.ComponentProps<"span">) => (
   <span
     className={cn(
-      "font-brand lowercase text-[24px] sm:text-[26px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap",
+      "font-brand lowercase text-[16px] sm:text-[18px] font-extrabold tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap",
       className
     )}
     {...props}
