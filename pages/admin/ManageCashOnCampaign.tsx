@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   RefreshCw,
   X,
+  MapPin,
+  Globe,
 } from "lucide-react";
 
 interface CashOnApplication {
@@ -27,6 +29,8 @@ interface CashOnApplication {
   tiktokUsername: string;
   foundSource: string;
   reason: string;
+  userIp?: string;
+  location?: { lat: number; lng: number } | null;
   createdAt: number;
   screenshots: {
     followScreenshot?: string;
@@ -231,6 +235,7 @@ export default function ManageCashOnCampaign() {
                   <th className="py-3 px-3">Phone & Email</th>
                   <th className="py-3 px-3">TikTok ID</th>
                   <th className="py-3 px-3">Source</th>
+                  <th className="py-3 px-3">IP & Location</th>
                   <th className="py-3 px-3">Screenshots</th>
                   <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
@@ -249,6 +254,27 @@ export default function ManageCashOnCampaign() {
                       {app.tiktokUsername}
                     </td>
                     <td className="py-3 px-3">{app.foundSource || "Social"}</td>
+                    <td className="py-3 px-3">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1 text-zinc-500">
+                          <Globe className="w-3 h-3" />
+                          <span>{app.userIp || "N/A"}</span>
+                        </div>
+                        {app.location ? (
+                          <a
+                            href={`https://www.google.com/maps?q=${app.location.lat},${app.location.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-blue-500 hover:underline"
+                          >
+                            <MapPin className="w-3 h-3" />
+                            <span>View Map</span>
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-zinc-400">No Location</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1">
                         {Object.values(app.screenshots || {}).filter(Boolean).length} / 4 uploaded
@@ -299,6 +325,24 @@ export default function ManageCashOnCampaign() {
               </div>
               <div>
                 <span className="text-zinc-400">Source:</span> {selectedApp.foundSource}
+              </div>
+              <div>
+                <span className="text-zinc-400">User IP:</span> {selectedApp.userIp || "N/A"}
+              </div>
+              <div>
+                <span className="text-zinc-400">Location:</span>{" "}
+                {selectedApp.location ? (
+                  <a
+                    href={`https://www.google.com/maps?q=${selectedApp.location.lat},${selectedApp.location.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 underline"
+                  >
+                    View on Map
+                  </a>
+                ) : (
+                  "N/A"
+                )}
               </div>
               <div className="col-span-2">
                 <span className="text-zinc-400">Address:</span> {selectedApp.address || "N/A"}

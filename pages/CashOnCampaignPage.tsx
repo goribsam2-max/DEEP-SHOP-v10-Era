@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, onSnapshot, addDoc, collection } from "firebase/firestore";
+import { doc, onSnapshot, addDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { triggerHaptic } from "../lib/haptics";
 import { useNotify } from "../components/Notifications";
@@ -23,6 +23,7 @@ import {
   MapPin,
   HelpCircle,
   Video,
+  Globe,
 } from "lucide-react";
 
 interface UploadState {
@@ -57,6 +58,9 @@ export default function CashOnCampaignPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [alreadyApplied, setAlreadyApplied] = useState(false);
+  const [userIp, setUserIp] = useState("");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // File Input Hidden Refs
   const followInputRef = useRef<HTMLInputElement>(null);
@@ -80,6 +84,41 @@ export default function CashOnCampaignPage() {
         setLoadingSettings(false);
       }
     );
+
+    // 1. Fetch User IP
+    const fetchIp = async () => {
+      try {
+        const res = await fetch("https://api.ipify.org?format=json");
+        const data = await res.json();
+        if (data.ip) {
+          setUserIp(data.ip);
+          // Check if this IP has already applied
+          const q = query(collection(db, "cash_on_applications"), where("userIp", "==", data.ip));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            setAlreadyApplied(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch IP:", err);
+      }
+    };
+    fetchIp();
+
+    // 2. Fetch User Location
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+        },
+        (err) => {
+          console.warn("Geolocation failed or denied:", err);
+        }
+      );
+    }
 
     // Play Bengali male voice guide from Auth system
     playAuthVoice("ক্যাশ অন ডেলিভারি ক্যাম্পেইনে স্বাগতম। আপনার তথ্য ও ৪ টি স্ক্রিনশট প্রদান করে জমা দিন।");
@@ -126,6 +165,11 @@ export default function CashOnCampaignPage() {
       return;
     }
 
+    if (alreadyApplied) {
+      notify("আপনার এই আইপি থেকে ইতিমধ্যেই আবেদন করা হয়েছে। (Already applied from this IP)", "error");
+      return;
+    }
+
     setErrors({});
     setSubmitting(true);
 
@@ -143,6 +187,8 @@ export default function CashOnCampaignPage() {
         video2Screenshot: video2Screenshot.url,
         video3Screenshot: video3Screenshot.url,
       },
+      userIp: userIp,
+      location: userLocation || null,
       createdAt: Date.now(),
       userId: auth.currentUser?.uid || "guest",
       status: "pending",
@@ -525,33 +571,49 @@ export default function CashOnCampaignPage() {
             </div>
 
             {/* Bottom Actions Row Matching IMG_5509_ea736e50.jpeg */}
-            <div className="pt-4 flex flex-col sm:flex-row gap-3">
-              {/* Primary Black Button "Get Started / Submit" */}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 py-4 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition cursor-pointer disabled:opacity-50"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Submitting Application...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Submit Application (Get Started)</span>
-                  </>
-                )}
-              </button>
+            <div className="pt-4 flex flex-col gap-3">
+              {alreadyApplied && (
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-2.5 text-rose-600">
+                  <Globe className="w-5 h-5 shrink-0" />
+                  <p className="text-xs font-bold">
+                    আপনার এই আইপি ({userIp}) থেকে ইতিমধ্যেই একটি আবেদন জমা হয়েছে। আপনি একটি আইপি থেকে একবারই আবেদন করতে পারবেন।
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Primary Black Button "Get Started / Submit" */}
+                <button
+                  type="submit"
+                  disabled={submitting || alreadyApplied}
+                  className="flex-1 py-4 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Submitting Application...</span>
+                    </>
+                  ) : alreadyApplied ? (
+                    <>
+                      <span>Already Applied ✓</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Submit Application (Get Started)</span>
+                    </>
+                  )}
+                </button>
 
-              {/* Secondary Light Button "Save Draft" */}
-              <button
-                type="button"
-                onClick={saveDraft}
-                className="py-4 px-6 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition cursor-pointer"
-              >
-                Save Draft
-              </button>
+                {/* Secondary Light Button "Save Draft" */}
+                <button
+                  type="button"
+                  onClick={saveDraft}
+                  disabled={alreadyApplied}
+                  className="py-4 px-6 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition cursor-pointer disabled:opacity-50"
+                >
+                  Save Draft
+                </button>
+              </div>
             </div>
           </form>
         )}
