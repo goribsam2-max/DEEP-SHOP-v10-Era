@@ -33,7 +33,8 @@ import {
   Activity,
   Crown,
   TrendingUp,
-  Bot
+  Bot,
+  Gift
 } from "lucide-react";
 import {
   AreaChart,
@@ -48,6 +49,14 @@ import {
 import { StaffContext } from "../../components/AdminLayout";
 
 const ADMIN_PIN_ITEMS: PinListItem[] = [
+  {
+    id: 'cash-on-campaign',
+    name: 'Cash on Campaign',
+    info: 'Manage applications, toggle campaign status & pick random winners',
+    icon: Gift,
+    pinned: true,
+    href: 'cash-on-campaign'
+  },
   {
     id: 'ai-assistant',
     name: 'AI Support Assistant',

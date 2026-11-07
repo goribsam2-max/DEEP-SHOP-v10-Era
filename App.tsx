@@ -396,6 +396,9 @@ const ManageGroups = lazyRetry(() => import('./pages/admin/ManageGroups'), 'Mana
 const ManageSecurity = lazyRetry(() => import('./pages/admin/ManageSecurity'), 'ManageSecurity');
 const SystemHealthDiagnostics = lazyRetry(() => import('./pages/admin/SystemHealthDiagnostics'), 'SystemHealthDiagnostics');
 const ManageRiders = lazyRetry(() => import('./pages/admin/ManageRiders'), 'ManageRiders');
+const CashOnCampaignPage = lazyRetry(() => import('./pages/CashOnCampaignPage'), 'CashOnCampaignPage');
+const ManageCashOnCampaign = lazyRetry(() => import('./pages/admin/ManageCashOnCampaign'), 'ManageCashOnCampaign');
+const CashOnCampaignDraw = lazyRetry(() => import('./pages/admin/CashOnCampaignDraw'), 'CashOnCampaignDraw');
 
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -429,6 +432,14 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    // Explicitly restore document and body scrolling for all pages outside messages
+    if (!location.pathname.startsWith('/messages')) {
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overflowY = 'auto';
+      document.body.style.overflow = '';
+      document.body.style.overflowY = 'auto';
+      document.body.style.overscrollBehavior = '';
+    }
     setIsPageLoading(false);
   }, [location.pathname, location.search, location.key, setIsPageLoading]);
 
@@ -1141,6 +1152,7 @@ const AppContent: React.FC = () => {
           <Route path="/add-card" element={<PageWrapper><AddCard /></PageWrapper>} />
           <Route path="/new-password" element={<PageWrapper><NewPassword /></PageWrapper>} />
           <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
+          <Route path="/cash-on-campaign" element={<PageWrapper><CashOnCampaignPage /></PageWrapper>} />
           <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
           <Route path="/seller/dashboard" element={<PageWrapper><SellerDashboard /></PageWrapper>} />
           <Route path="/seller/custom-order" element={<PageWrapper><CreateCustomOrder /></PageWrapper>} />
@@ -1153,6 +1165,8 @@ const AppContent: React.FC = () => {
              <Routes>
                 <Route element={<AdminLayout userData={userData} />}>
                   <Route index element={<PageWrapper><AdminDashboard /></PageWrapper>} />
+                  <Route path="cash-on-campaign" element={<PageWrapper><ManageCashOnCampaign /></PageWrapper>} />
+                  <Route path="cash-on-campaign/draw" element={<PageWrapper><CashOnCampaignDraw /></PageWrapper>} />
                   <Route path="products" element={<PageWrapper><ManageProducts /></PageWrapper>} />
                   <Route path="products/edit/:id" element={<PageWrapper><EditProduct /></PageWrapper>} />
                   <Route path="users" element={<PageWrapper><ManageUsers /></PageWrapper>} />

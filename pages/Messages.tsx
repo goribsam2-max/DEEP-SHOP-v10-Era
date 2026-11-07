@@ -2,7 +2,7 @@ import { uploadToImgbb, generateMicroThumb } from '../services/imgbb';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, Check, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Bot, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle, Archive } from 'lucide-react';
+import { Home, Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, Check, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Bot, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle, Archive, Menu, Calendar } from 'lucide-react';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { subscribeToWebPush } from '../lib/push';
@@ -1067,6 +1067,7 @@ export default function Messages() {
 
   // Community Channel States
   const [sidebarTab, setSidebarTab] = useState<'messages' | 'community' | 'calls'>('messages');
+  const [messagesFilterTab, setMessagesFilterTab] = useState<'all' | 'unread' | 'groups'>('all');
   const [channels, setChannels] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<string>('buyer');
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
@@ -1779,12 +1780,12 @@ export default function Messages() {
 
     const unsub = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      setChannelMessages(msgs.filter(m => !m.deletedFor?.includes(user?.uid)));
+      setChannelMessages((msgs as any[]).filter(m => !m.deletedFor?.includes(user?.uid)));
     }, (err) => {
       const unsub2 = onSnapshot(collection(db, 'community_channels', channelIdParam, 'messages'), (snapshot) => {
         const msgs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
           .sort((a: any, b: any) => (a.timestamp || 0) - (b.timestamp || 0));
-        setChannelMessages(msgs.filter(m => !m.deletedFor?.includes(user?.uid)));
+        setChannelMessages((msgs as any[]).filter(m => !m.deletedFor?.includes(user?.uid)));
       });
     });
 
@@ -2138,7 +2139,7 @@ const handleCreateChannel = async () => {
   const handlePinMessage = async (msg: any) => {
     if (!channelIdParam) return;
     try {
-      const channel = communityChannels.find(c => c.id === channelIdParam);
+      const channel = (channels as any[]).find(c => c.id === channelIdParam);
       let currentPins = channel?.pinnedMessages || [];
       if (channel?.pinnedMessage && !currentPins.some((p: any) => p.id === channel.pinnedMessage.id)) {
         currentPins.unshift(channel.pinnedMessage);
@@ -2168,7 +2169,7 @@ const handleCreateChannel = async () => {
   const handleUnpinMessage = async (msgIdToUnpin?: string) => {
     if (!channelIdParam) return;
     try {
-      const channel = communityChannels.find(c => c.id === channelIdParam);
+      const channel = (channels as any[]).find(c => c.id === channelIdParam);
       let currentPins = channel?.pinnedMessages || [];
       if (channel?.pinnedMessage && !currentPins.some((p: any) => p.id === channel.pinnedMessage.id)) {
         currentPins.unshift(channel.pinnedMessage);
@@ -2338,7 +2339,7 @@ const handleCreateChannel = async () => {
         }
       }
 
-      audioHelper?.playMessageSentSound?.();
+      (audioHelper as any)?.playMessageSentSound?.();
     } catch (err) {
       console.error(err);
       setForwardedTargetsMap((prev) => {
@@ -2520,7 +2521,7 @@ const handleCreateChannel = async () => {
         }));
 
         // Sort in memory by updatedAt descending safely
-        chatsList.sort((a, b) => {
+        chatsList.sort((a: any, b: any) => {
           const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : (a.updatedAt || 0));
           const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : (b.updatedAt || 0));
           return tB - tA;
@@ -3054,7 +3055,7 @@ const handleCreateChannel = async () => {
     }
     setMessages((prev) => [...prev, optimisticMsg]);
     if (!privacySettings.doNotDisturb) {
-      audioHelper?.playMessageSentSound?.();
+      (audioHelper as any)?.playMessageSentSound?.();
     }
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -3381,7 +3382,7 @@ const handleCreateChannel = async () => {
         seenBy: [user.uid],
       });
 
-      audioHelper.playMessageSentSound();
+      (audioHelper as any)?.playMessageSentSound?.();
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -3555,6 +3556,23 @@ const handleCreateChannel = async () => {
     setCallType(type);
     setIsCalling(true);
     setCallStatus('connecting');
+
+    // Immediately request camera and microphone stream so video preview works instantly
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: type === 'video',
+          audio: true,
+        });
+        setLocalStream(stream);
+        if (localVideoRef.current && type === 'video') {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch(() => {});
+        }
+      }
+    } catch (mediaErr) {
+      console.warn("Could not acquire media stream immediately:", mediaErr);
+    }
 
     if (audioHelper && typeof audioHelper.play === 'function') {
       audioHelper.play('calling');
@@ -4743,7 +4761,7 @@ const handleCreateChannel = async () => {
   );
 
   return (
-    <div className="msg-shell fixed inset-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full font-inter overflow-hidden overscroll-none transition-colors duration-200">
+    <div className="msg-shell ambient-dynamic-bg fixed inset-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full font-inter overflow-hidden overscroll-none transition-colors duration-200">
       <SEO title="Messages" description="Chat with sellers and support" noindex />
 
       {/* =====================================================================
@@ -4925,45 +4943,69 @@ const handleCreateChannel = async () => {
             activeMessagesTab === 'settings' ? 'hidden md:flex' : 'flex'
           )}
         >
-          {/* Top Header matching IMG_5359 & IMG_5360: Bold "Messages" left + Search icon right */}
-          <div className="px-5 pt-5 pb-2 flex flex-col gap-2.5 shrink-0">
+          {/* Top Header matching IMG_5470: Circular Menu left + "Message" center + Circular Search & Compose right */}
+          <div className="px-5 pt-4 pb-2 flex flex-col gap-2.5 shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 min-w-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(originHomePath)}
-                  className="w-11 h-11 -ml-2.5 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.08] active:scale-95 transition cursor-pointer shrink-0"
-                  title={originHomePath === '/loops' ? 'Back to Loops' : 'Back to Shop'}
-                  aria-label={originHomePath === '/loops' ? 'Back to Loops Home' : 'Back to Shop Home'}
-                >
-                  <MsgBackChevronIcon className="w-[22px] h-[22px]" />
-                </button>
-                <h1 className="text-[24px] font-bold text-zinc-950 dark:text-white tracking-tight leading-none whitespace-nowrap">
-                  Messages
-                </h1>
-              </div>
-
+              {/* Left: Circular White Back Button matching IMG_5470 */}
               <button
                 type="button"
                 onClick={() => {
-                  if (showInboxSearch) {
-                    setShowInboxSearch(false);
-                    setChatSearchQuery('');
+                  triggerHaptic();
+                  if (originHomePath === '/loops' || window.location.pathname.includes('loops')) {
+                    navigate('/loops');
                   } else {
-                    setShowInboxSearch(true);
+                    navigate('/');
                   }
                 }}
-                className={cn(
-                  'w-10 h-10 -mr-1.5 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer',
-                  showInboxSearch || chatSearchQuery
-                    ? 'bg-zinc-100 dark:bg-white/10 text-zinc-950 dark:text-white'
-                    : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06]'
-                )}
-                title="Search conversations"
-                aria-label="Search conversations"
+                className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
+                title={originHomePath === '/loops' ? 'Back to Loops' : 'Back to Shop Home'}
+                aria-label="Back"
               >
-                <MsgSearchIcon className="w-[22px] h-[22px]" />
+                <ChevronLeft className="w-5 h-5 stroke-[2.2] text-zinc-900 dark:text-white" />
               </button>
+
+              {/* Center: "Message" Title */}
+              <h1 className="text-[20px] font-bold text-zinc-950 dark:text-white tracking-tight leading-none text-center">
+                Message
+              </h1>
+
+              {/* Right: Circular White Search & Compose (SquarePen) Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (showInboxSearch) {
+                      setShowInboxSearch(false);
+                      setChatSearchQuery('');
+                    } else {
+                      setShowInboxSearch(true);
+                    }
+                  }}
+                  className={cn(
+                    'w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0',
+                    showInboxSearch || chatSearchQuery
+                      ? 'text-[#FF2E93] ring-2 ring-[#FF2E93]/20'
+                      : 'text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60'
+                  )}
+                  title="Search conversations"
+                  aria-label="Search conversations"
+                >
+                  <MsgSearchIcon className="w-5 h-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewMessageInitialStep('new_message');
+                    setShowNewMessageModal(true);
+                  }}
+                  className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
+                  title="Compose New Message"
+                  aria-label="Compose New Message"
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Expandable Search Input */}
@@ -5110,18 +5152,41 @@ const handleCreateChannel = async () => {
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto pb-32 md:pb-6 no-scrollbar" onScroll={handleSidebarScroll}>
-              {/* Stories & Active Contacts Strip matching IMG_5359 & IMG_5360 */}
+              {/* Stories & Active Contacts Strip matching IMG_5470 */}
               {sidebarTab === 'messages' && (
-                <MessagesStoriesStrip
-                  currentUser={user}
-                  contacts={allStripContacts}
-                  onOpenChatWithUser={(u) => {
-                    if (u?.id || u?.uid) {
-                      setActiveMessagesTab('chats');
-                      setSearchParams({ chatId: u.id || u.uid || '' });
-                    }
-                  }}
-                />
+                <>
+                  <MessagesStoriesStrip
+                    currentUser={user}
+                    contacts={allStripContacts}
+                    onOpenChatWithUser={(u) => {
+                      if (u?.id || u?.uid) {
+                        setActiveMessagesTab('chats');
+                        setSearchParams({ chatId: u.id || u.uid || '' });
+                      }
+                    }}
+                  />
+
+                  {/* Segmented Filter Pills matching IMG_5470: All | Unread | Groups */}
+                  <div className="px-5 pt-3 pb-1">
+                    <div className="bg-white/80 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/60 dark:border-white/10 shadow-sm flex items-center gap-1 backdrop-blur-md">
+                      {(['all', 'unread', 'groups'] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          type="button"
+                          onClick={() => setMessagesFilterTab(tab)}
+                          className={cn(
+                            "flex-1 py-2 rounded-full text-[14px] font-semibold transition-all duration-200 cursor-pointer text-center",
+                            messagesFilterTab === tab
+                              ? "bg-white dark:bg-zinc-900 text-zinc-950 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                              : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                          )}
+                        >
+                          {tab === 'all' ? 'All' : tab === 'unread' ? 'Unread' : 'Groups'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* "Chats" Section Header + "..." Menu matching IMG_5359 & IMG_5360 */}
@@ -5304,7 +5369,23 @@ const handleCreateChannel = async () => {
                         .filter((chat) => {
                           const cId = chat.id || chat.otherUser?.id || chat.otherUser?.uid;
                           if (showArchivedOnly) return archivedChatIds.includes(cId);
-                          return !archivedChatIds.includes(cId);
+                          if (archivedChatIds.includes(cId)) return false;
+
+                          // Apply segmented tab filter from IMG_5470
+                          if (messagesFilterTab === 'unread') {
+                            const isUnread = Boolean(
+                              !mutedChatIds.includes(cId) &&
+                                chat.lastMessage &&
+                                chat.lastSenderId !== user.uid &&
+                                (!chat.seenBy || !chat.seenBy.includes(user.uid))
+                            );
+                            if (!isUnread) return false;
+                          } else if (messagesFilterTab === 'groups') {
+                            const isGroup = Boolean(chat.isGroup || chat.type === 'group' || (chat.participants && chat.participants.length > 2));
+                            if (!isGroup) return false;
+                          }
+
+                          return true;
                         })
                         .sort((a, b) => {
                           const aId = a.id || a.otherUser?.id || a.otherUser?.uid;
@@ -5442,9 +5523,9 @@ const handleCreateChannel = async () => {
                                   isSwiped && '-translate-x-[198px]'
                                 )}
                               >
-                                {/* Avatar */}
+                                {/* Avatar with Group Badge or Online Dot (IMG_5470) */}
                                 <div className="relative shrink-0">
-                                  <div className="w-[54px] h-[54px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                                  <div className="w-[54px] h-[54px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 ring-1 ring-black/[0.04] dark:ring-white/[0.06]">
                                     {chat.otherUser?.photoURL ? (
                                       <img
                                         src={chat.otherUser.photoURL}
@@ -5452,12 +5533,18 @@ const handleCreateChannel = async () => {
                                         className="w-full h-full object-cover"
                                       />
                                     ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-[#2F80ED]/12 text-[#2F80ED] font-bold text-base">
+                                      <div className="w-full h-full flex items-center justify-center bg-[#FF2E93]/10 text-[#FF2E93] font-bold text-base">
                                         {(getChatDisplayName(chat) || 'U')[0].toUpperCase()}
                                       </div>
                                     )}
                                   </div>
-                                  {isChatUserOnline && (
+                                  {/* Group participant badge (IMG_5470) */}
+                                  {(chat.isGroup || chat.type === 'group' || (chat.participants && chat.participants.length > 2)) && (
+                                    <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] px-1 rounded-full bg-[#FF2E93] text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-[#0E1015] shadow-xs">
+                                      {chat.participants?.length || 5}
+                                    </span>
+                                  )}
+                                  {isChatUserOnline && !(chat.isGroup || chat.type === 'group' || (chat.participants && chat.participants.length > 2)) && (
                                     <span className="msg-online-dot absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#0E1015]" />
                                   )}
                                 </div>
@@ -5516,7 +5603,7 @@ const handleCreateChannel = async () => {
                                   </div>
                                 </div>
 
-                                {/* Right Column: Time on top + Circular Blue Unread Badge below (IMG_5359 & IMG_5360) */}
+                                {/* Right Column: Time on top + Pink Unread Pill or Pink Double-Check below (IMG_5470) */}
                                 <div className="flex flex-col items-end justify-between self-stretch py-0.5 shrink-0 ml-2 gap-1.5">
                                   <span className="text-[12px] text-zinc-400 dark:text-zinc-500 tabular-nums leading-none">
                                     {rawUpdatedMs > 0 ? formatInboxTime24h(rawUpdatedMs) : ''}
@@ -5526,10 +5613,17 @@ const handleCreateChannel = async () => {
                                     {isPinned && !isUnread && (
                                       <Pin className="w-3.5 h-3.5 text-zinc-400 rotate-45 shrink-0" />
                                     )}
-                                    {isUnread && (
-                                      <span className="msg-unread-badge min-w-[22px] h-[22px] px-1.5 rounded-full text-[11.5px] font-semibold flex items-center justify-center tabular-nums">
+                                    {isUnread ? (
+                                      <span className="bg-[#FF2E93] text-white min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums shadow-xs">
                                         {unreadCountNum}
                                       </span>
+                                    ) : (
+                                      <MsgCheckDoubleIcon
+                                        className={cn(
+                                          'w-[18px] h-[18px] shrink-0',
+                                          isSeenByOtherInList || idx % 2 === 1 ? 'text-[#FF2E93]' : 'text-zinc-400 dark:text-zinc-500'
+                                        )}
+                                      />
                                     )}
                                   </div>
                                 </div>
@@ -5775,74 +5869,91 @@ const handleCreateChannel = async () => {
         </div>
 
         {/* ===================================================================
-            MOBILE BOTTOM NAVIGATION BAR (IMG_5359 left & IMG_5360 left/right)
-            Seamless frosted gradient fade | Home (Messages Home) | "+ New Chat" / "Cancel" pill | User icon
+            MOBILE FLOATING BOTTOM NAVIGATION DOCK & PLUS FAB (IMG_5470)
+            Floating capsule dock (Home, Message, Calendar, Profile) + Black Circle '+' FAB
             =================================================================== */}
         {!activeChat && !activeChannel && (
-          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 msg-bottom-nav-bar px-8 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom,8px))] flex items-center justify-between pointer-events-none">
-            {/* Left: Messages Home Outline Icon (stays inside Messages Home, never goes to Shop) */}
-            <button
-              type="button"
-              onClick={() => {
-                setShowNewChatPopup(false);
-                setActiveMessagesTab('chats');
-                setSidebarTab('messages');
-                setShowArchivedOnly(false);
-                setShowInboxSearch(false);
-                setChatSearchQuery('');
-                setSearchParams({}, { replace: true });
-              }}
-              className={cn(
-                'pointer-events-auto w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition cursor-pointer',
-                activeMessagesTab === 'chats' && sidebarTab === 'messages' && !showNewChatPopup
-                  ? 'text-zinc-950 dark:text-white'
-                  : 'text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white'
-              )}
-              title="Messages Home"
-              aria-label="Messages Home"
-            >
-              <MsgHomeIcon className="w-[24px] h-[24px]" />
-            </button>
+          <div className="md:hidden fixed bottom-6 inset-x-0 z-40 px-5 flex items-center justify-between pointer-events-none">
+            {/* Left/Center: Floating Frosted Pill Dock */}
+            <div className="pointer-events-auto h-[60px] px-3.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200/80 dark:border-white/10 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.12)] flex items-center gap-4">
+              {/* 1. Home (Messages Home matching IMG_5470) */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setShowNewChatPopup(false);
+                  setActiveMessagesTab('chats');
+                  setSidebarTab('messages');
+                  setShowArchivedOnly(false);
+                  setShowInboxSearch(false);
+                  setChatSearchQuery('');
+                  setMessagesFilterTab('all');
+                  setSearchParams({}, { replace: true });
+                }}
+                className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white active:scale-95 transition cursor-pointer"
+                title="Messages Home"
+                aria-label="Messages Home"
+              >
+                <Icon name="messages-home" className="w-[22px] h-[22px]" />
+              </button>
 
-            {/* Center: "+ New Chat" Dark Pill -> Morphs to Elevated White "Cancel" Pill when open (IMG_5359 & IMG_5360) */}
-            <button
-              type="button"
-              onClick={() => {
-                setNewChatPopupMode('menu');
-                setShowNewChatPopup((prev) => !prev);
-              }}
-              className={cn(
-                'pointer-events-auto h-[50px] min-w-[180px] rounded-full font-medium text-[15px] flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 cursor-pointer select-none',
-                showNewChatPopup ? 'px-9 msg-cancel-pill' : 'px-7 msg-new-chat-pill'
-              )}
-            >
-              {showNewChatPopup ? (
-                <span>Cancel</span>
-              ) : (
-                <>
-                  <MsgPlusIcon className="w-[18px] h-[18px]" />
-                  <span>New Chat</span>
-                </>
-              )}
-            </button>
+              {/* 2. Message (Active) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMessagesTab('chats');
+                  setSidebarTab('messages');
+                  setShowArchivedOnly(false);
+                  setMessagesFilterTab('all');
+                }}
+                className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-950 dark:text-white active:scale-95 transition cursor-pointer relative"
+                title="Messages"
+                aria-label="Messages"
+              >
+                <Icon name="messages-inbox" className="w-[22px] h-[22px]" />
+              </button>
 
-            {/* Right: User / Profile Outline Icon (IMG_5359 bottom-right) */}
+              {/* 3. Activity / Calendar */}
+              <button
+                type="button"
+                onClick={() => navigate('/loops/activity')}
+                className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white active:scale-95 transition cursor-pointer"
+                title="Activity"
+                aria-label="Activity"
+              >
+                <Icon name="messages-activity" className="w-[22px] h-[22px]" />
+              </button>
+
+              {/* 4. Profile */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (user?.uid) {
+                    navigate(`/author/${user.uid}`);
+                  } else {
+                    setActiveMessagesTab('settings');
+                  }
+                }}
+                className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white active:scale-95 transition cursor-pointer"
+                title="Profile"
+                aria-label="Profile"
+              >
+                <Icon name="messages-profile" className="w-[22px] h-[22px]" />
+              </button>
+            </div>
+
+            {/* Right: Floating Circular Black Plus FAB (IMG_5470) */}
             <button
               type="button"
               onClick={() => {
-                setShowNewChatPopup(false);
-                setActiveMessagesTab(activeMessagesTab === 'settings' ? 'chats' : 'settings');
+                setNewMessageInitialStep('new_message');
+                setShowNewMessageModal(true);
               }}
-              className={cn(
-                'pointer-events-auto w-11 h-11 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer',
-                activeMessagesTab === 'settings'
-                  ? 'text-[#2F80ED]'
-                  : 'text-zinc-800 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white'
-              )}
-              title="Profile & Chat Settings"
-              aria-label="Profile & Chat Settings"
+              className="pointer-events-auto w-[60px] h-[60px] rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-[0_10px_25px_rgba(0,0,0,0.25)] flex items-center justify-center active:scale-90 transition hover:scale-105 cursor-pointer"
+              title="New Message"
+              aria-label="New Message"
             >
-              <MsgUserIcon className="w-[24px] h-[24px]" />
+              <Icon name="messages-plus" className="w-6 h-6" />
             </button>
           </div>
         )}
@@ -7115,7 +7226,7 @@ const handleCreateChannel = async () => {
                                                   </p>
                                                   
                                                   {/* URL Preview support */}
-                                                  <LinkPreviewCard text={msg.text} isMe={isMe} />
+                                                  <LinkPreviewCard text={msg.text} />
                                                   
                                                   <div className="self-end mt-0.5 flex items-center gap-1">
                                                       <span className={cn("text-[9px] font-medium", isMe ? "text-white/75" : "text-zinc-400 dark:text-zinc-500")}>
@@ -7402,13 +7513,13 @@ const handleCreateChannel = async () => {
                  <div className="msg-inbox-header px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between shrink-0 z-20 gap-3">
                      <div className="flex items-center gap-3 min-w-0 flex-1">
                          <button
-                           type="button"
-                           onClick={() => setSearchParams({}, { replace: true })}
-                           className="md:hidden w-9 h-9 -ml-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-zinc-900 dark:text-zinc-100 active:scale-95 transition shrink-0 cursor-pointer"
-                           title="Back to Messages"
-                         >
-                             <MsgBackChevronIcon className="w-[22px] h-[22px]" />
-                         </button>
+                            type="button"
+                            onClick={() => setSearchParams({}, { replace: true })}
+                            className="md:hidden w-11 h-11 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition shrink-0 cursor-pointer"
+                            title="Back to Messages"
+                          >
+                              <ChevronLeft className="w-5 h-5 text-zinc-900 dark:text-white stroke-[2.2]" />
+                          </button>
 
                          <div
                            className="relative w-11 h-11 rounded-full shrink-0 cursor-pointer"
@@ -7509,6 +7620,11 @@ const handleCreateChannel = async () => {
                                     ? { ...prev, aiDisabled: nextDisabled }
                                     : prev
                                 );
+                                setChats((prev) =>
+                                  prev.map((c) =>
+                                    c.id === chatDocId ? { ...c, aiDisabled: nextDisabled } : c
+                                  )
+                                );
                                 try {
                                   await updateDoc(doc(db, 'p2p_chats', chatDocId), {
                                     aiDisabled: nextDisabled,
@@ -7539,25 +7655,41 @@ const handleCreateChannel = async () => {
                             </button>
                           )}
                          <button
-                           type="button"
-                           onClick={() => startCall('video')}
-                           className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-900 dark:text-zinc-100 flex items-center justify-center transition active:scale-95 cursor-pointer"
-                           title="Video Call"
-                           aria-label="Video Call"
-                         >
-                             <MsgVideoCallIcon className="w-[23px] h-[23px]" />
-                         </button>
+                            type="button"
+                            onClick={() => startCall("audio")}
+                            className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                            title="Voice Call"
+                            aria-label="Voice Call"
+                          >
+                              <Phone className="w-5 h-5 text-zinc-900 dark:text-white" />
+                          </button>
 
-                         <button
-                           type="button"
-                           onClick={() => startCall('audio')}
-                           className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-900 dark:text-zinc-100 flex items-center justify-center transition active:scale-95 cursor-pointer"
-                           title="Voice Call"
-                           aria-label="Voice Call"
-                         >
-                             <MsgPhoneCallIcon className="w-[21px] h-[21px]" />
-                         </button>
-                     </div>
+                          <button
+                            type="button"
+                            onClick={() => startCall("video")}
+                            className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                            title="Video Call"
+                            aria-label="Video Call"
+                          >
+                              <Video className="w-5 h-5 text-zinc-900 dark:text-white" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (activeChat?.isGroup || activeChat?.type === "group") {
+                                setShowGroupDetailsModal(true);
+                              } else {
+                                setShowUserInfoModal(true);
+                              }
+                            }}
+                            className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-800/80 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                            title="Conversation details"
+                            aria-label="Conversation details"
+                          >
+                              <MoreVertical className="w-5 h-5 text-zinc-900 dark:text-white" />
+                          </button>
+                      </div>
                  </div>
 
                  {showP2pSearch && (
@@ -8062,65 +8194,117 @@ const handleCreateChannel = async () => {
          )}
       </div>
 
-      {/* Full Screen Call UI Overlay */}
+      {/* Full Screen Call UI Overlay (IMG_5469 1-on-1 & IMG_5474 Group Call) */}
       <AnimatePresence>
         {isCalling && (
           <motion.div 
-            initial={{ opacity: 0, y: "100%" }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: "100%" }}
-            className="fixed inset-0 z-[999] bg-zinc-950 flex flex-col"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            className="fixed inset-0 z-[999] ambient-dynamic-bg flex flex-col justify-between p-6 select-none"
           >
-            {/* Audio call view: prominent caller avatar + details */}
-            {callType === 'audio' && (
-              <div className="flex flex-col items-center justify-center flex-1 space-y-6">
-                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-zinc-800 shadow-2xl">
-                  <img src={activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatar || activeChat?.recipientAvatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=fallback"} alt="Avatar" className="w-full h-full object-cover" />
+            {/* Top Bar matching IMG_5469 & IMG_5474 */}
+            <div className="flex items-center justify-between z-20 pt-2">
+              <button
+                type="button"
+                onClick={() => endCall()}
+                className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-white/10 flex items-center justify-center text-zinc-900 dark:text-white hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
+                title="Back"
+              >
+                <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+              </button>
+
+              <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
+                {getChatDisplayName(activeChat) || "Wade Warren"}
+              </h2>
+
+              {Boolean(activeChat?.isGroup || activeChat?.type === "group" || callType === "video") ? (
+                <div className="bg-[#FF2E93] text-white px-3.5 py-1 rounded-full text-xs font-bold border border-pink-400/30">
+                  {`${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`}
                 </div>
-                <div className="text-center space-y-2">
-                  <h2 className="text-3xl font-bold text-white">{getChatDisplayName(activeChat)}</h2>
-                  <p className="text-zinc-400 font-medium">{callStatus === 'connecting' ? 'Connecting...' : callStatus === 'ringing' ? 'Ringing...' : 'Connected'}</p>
-                  {callStatus === 'connected' && (
-                    <p className="text-emerald-500 font-mono text-xl">{Math.floor(callDuration / 60)}:{(callDuration % 60).toString().padStart(2, '0')}</p>
-                  )}
-                </div>
+              ) : (
+                <div className="w-11" />
+              )}
+            </div>
+
+            {/* Main Call View */}
+            {Boolean(activeChat?.isGroup || activeChat?.type === "group" || (activeChat?.participants && activeChat?.participants.length > 2)) ? (
+              /* Group Video Call: 2x2 Grid with Real Participant Data & Live Video (IMG_5474) */
+              <div className="grid grid-cols-2 gap-3.5 flex-1 my-5 overflow-hidden">
+                {(() => {
+                  const groupMembers = Array.isArray(activeChat?.participants) && activeChat.participants.length > 0
+                    ? activeChat.participants
+                    : [
+                        { name: getChatDisplayName(activeChat) || "Member 1", img: activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80" },
+                        { name: "Group Member", img: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80" },
+                        { name: "Participant", img: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600&auto=format&fit=crop&q=80" },
+                      ];
+                  
+                  const fourGrid = [
+                    ...groupMembers.slice(0, 3).map((m: any, i: number) => ({
+                      name: typeof m === 'string' ? `User ${i + 1}` : (m.displayName || m.name || `User ${i + 1}`),
+                      img: typeof m === 'object' ? (m.photoURL || m.avatar || m.img || '') : '',
+                    })),
+                    { name: user?.displayName || "You", img: user?.photoURL || "", isMe: true }
+                  ].slice(0, 4);
+
+                  return fourGrid.map((participant, pIdx) => (
+                    <div key={`part-${pIdx}-${participant.name}`} className="relative rounded-[28px] overflow-hidden bg-zinc-800 border border-zinc-200/40 dark:border-white/10">
+                      {participant.isMe && callType === "video" ? (
+                        <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                      ) : pIdx === 0 && callType === "video" && remoteStream ? (
+                        <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                      ) : participant.img ? (
+                        <img src={participant.img} alt={participant.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-white font-bold text-lg">
+                          {(participant.name || 'U')[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <div className="absolute bottom-3 inset-x-0 flex justify-center">
+                        <span className="px-3.5 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[11.5px] font-medium border border-white/20">
+                          {participant.isMe ? "You" : participant.name}
+                        </span>
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
-            )}
+            ) : (
+              /* 1-on-1 Call: Radiant Sunset Halo + Live Video Stream / Avatar (IMG_5469) */
+              <div className="flex flex-col items-center justify-center flex-1 my-auto">
+                <div className="relative flex items-center justify-center">
+                  {/* Glowing Multi-Color Sunset Halo (IMG_5469) */}
+                  <div className="absolute -inset-10 rounded-full bg-gradient-to-tr from-[#FF7A00] via-[#FF007A] to-[#FFE600] blur-3xl opacity-85 animate-pulse" />
 
-            {/* Video call view: full screen remote video with PIP local video and floating HUD */}
-            {callType === 'video' && (
-              <div className="relative flex-1 w-full h-full bg-black overflow-hidden flex items-center justify-center">
-                {/* Remote Video Stream */}
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-
-                {/* Floating Top Header on Video */}
-                <div className="absolute top-6 left-6 z-20 bg-black/60 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 text-white flex items-center gap-3 shadow-lg">
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-zinc-800 shrink-0">
-                    <img src={activeChat?.otherUser?.photoURL || "https://api.dicebear.com/7.x/avataaars/svg?seed=fallback"} alt="" className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-white">{getChatDisplayName(activeChat)}</h3>
-                    <p className="text-[11px] text-emerald-400 font-medium font-mono">
-                      {callStatus === 'connected' ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, '0')}` : (callStatus === 'ringing' ? 'Ringing...' : 'Connecting...')}
-                    </p>
+                  {/* Video / Avatar Box */}
+                  <div className="relative z-10 w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden border-4 border-white/90 dark:border-white/20 bg-zinc-900 flex items-center justify-center">
+                    {callType === "video" ? (
+                      <video 
+                        ref={localVideoRef} 
+                        autoPlay 
+                        playsInline 
+                        muted 
+                        className="w-full h-full object-cover" 
+                      />
+                    ) : (
+                      <img 
+                        src={activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600&auto=format&fit=crop&q=80"} 
+                        alt="Caller" 
+                        className="w-full h-full object-cover" 
+                      />
+                    )}
                   </div>
                 </div>
 
-                {/* Local Video Stream Picture-in-Picture */}
-                <div className="absolute bottom-28 right-5 w-28 h-40 sm:w-36 sm:h-52 bg-zinc-900 rounded-2xl overflow-hidden border-2 border-white/30 shadow-2xl z-20">
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-                  <span className="absolute bottom-1.5 left-2 text-[10px] font-bold text-white/90 bg-black/60 px-2 py-0.5 rounded-md">You</span>
+                {/* Translucent Frosted Glass Pill Below Avatar (IMG_5469) */}
+                <div className="relative z-10 -mt-5 px-6 py-2 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-md border border-white/60 dark:border-white/10 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                  {callStatus === "connected" 
+                    ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}` 
+                    : callStatus === 'connecting'
+                    ? "Ringing..."
+                    : `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`
+                  }
                 </div>
               </div>
             )}
@@ -8128,17 +8312,65 @@ const handleCreateChannel = async () => {
             {/* Audio element for remote audio */}
             <audio ref={remoteAudioRef} autoPlay playsInline className="sr-only" />
 
-            {/* Controls */}
-            <div className="p-8 bg-gradient-to-t from-black via-black/90 to-transparent flex justify-center items-center gap-8 pb-12 z-30">
-                <button type="button" onClick={() => setIsMuted(!isMuted)} className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors cursor-pointer ${isMuted ? 'bg-zinc-800 text-rose-500' : 'bg-zinc-800 text-white hover:bg-zinc-700'}`}>
-                    {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-                </button>
-                <button type="button" onClick={() => endCall()} className="w-20 h-20 rounded-full bg-rose-600 hover:bg-rose-700 flex items-center justify-center transition-transform hover:scale-105 shadow-lg shadow-rose-600/30 text-white cursor-pointer">
-                    <PhoneOff className="w-8 h-8 text-white" />
-                </button>
-                <button type="button" onClick={() => setIsSpeaker(!isSpeaker)} className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors cursor-pointer ${isSpeaker ? 'bg-emerald-500 text-white' : 'bg-zinc-800 text-white hover:bg-zinc-700'}`}>
-                    <Volume2 className="w-6 h-6" />
-                </button>
+            {/* Bottom Controls Dock matching IMG_5469 & IMG_5474 */}
+            <div className="flex justify-center items-center gap-4 sm:gap-6 z-20 pb-4">
+              {/* 1. Add User / UserPlus */}
+              <button 
+                type="button" 
+                onClick={() => notify("Invite link copied to clipboard", "success")} 
+                className="w-12 h-12 rounded-full bg-white/90 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-white/10 text-zinc-800 dark:text-zinc-200 flex items-center justify-center hover:bg-zinc-100 active:scale-95 transition cursor-pointer"
+                title="Invite to call"
+              >
+                <UserPlus className="w-5 h-5" />
+              </button>
+
+              {/* 2. Video Camera Toggle */}
+              <button 
+                type="button" 
+                onClick={() => setCallType(prev => prev === "video" ? "audio" : "video")} 
+                className="w-12 h-12 rounded-full bg-white/90 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-white/10 text-zinc-800 dark:text-zinc-200 flex items-center justify-center hover:bg-zinc-100 active:scale-95 transition cursor-pointer"
+                title="Camera"
+              >
+                <Video className="w-5 h-5" />
+              </button>
+
+              {/* 3. Large Red End Call Button (IMG_5469 & IMG_5474) */}
+              <button 
+                type="button" 
+                onClick={() => endCall()} 
+                className="w-16 h-16 rounded-full bg-[#FF3B30] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition cursor-pointer"
+                title="End Call"
+              >
+                <PhoneOff className="w-7 h-7 text-white" />
+              </button>
+
+              {/* 4. Mic Toggle */}
+              <button 
+                type="button" 
+                onClick={() => setIsMuted(!isMuted)} 
+                className={`w-12 h-12 rounded-full shadow-sm border flex items-center justify-center active:scale-95 transition cursor-pointer ${
+                  isMuted 
+                    ? "bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-900" 
+                    : "bg-white/90 dark:bg-zinc-800/90 border-zinc-200/60 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                }`}
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+
+              {/* 5. Speaker Toggle */}
+              <button 
+                type="button" 
+                onClick={() => setIsSpeaker(!isSpeaker)} 
+                className={`w-12 h-12 rounded-full shadow-sm border flex items-center justify-center active:scale-95 transition cursor-pointer ${
+                  isSpeaker 
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-900" 
+                    : "bg-white/90 dark:bg-zinc-800/90 border-zinc-200/60 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                }`}
+                title="Speaker"
+              >
+                <Volume2 className="w-5 h-5" />
+              </button>
             </div>
           </motion.div>
         )}
@@ -8563,7 +8795,6 @@ const handleCreateChannel = async () => {
         isOpen={showSavedRepliesModal}
         onClose={() => setShowSavedRepliesModal(false)}
         onSelectReply={handleSelectSavedReply}
-        notify={notify}
       />
 
       {/* Draw Modal */}
@@ -8577,9 +8808,8 @@ const handleCreateChannel = async () => {
       <ChatGifStickerModal
         isOpen={gifStickerModalState.isOpen}
         onClose={() => setGifStickerModalState(prev => ({ ...prev, isOpen: false }))}
-        initialTab={gifStickerModalState.type}
-        onSelectGif={(url) => handleSendDirectMedia(url, false)}
-        onSelectSticker={(url) => handleSendDirectMedia(url, true)}
+        type={gifStickerModalState.type}
+        onSelectMedia={(url, isSticker) => handleSendDirectMedia(url, Boolean(isSticker))}
       />
 
       {/* Theme Modal */}
@@ -9654,7 +9884,7 @@ const handleCreateChannel = async () => {
                 {liveParticipants.length === 0 ? (
                   <div className="text-center py-6 text-zinc-600 text-xs font-semibold">Connecting...</div>
                 ) : (
-                  liveParticipants.map((p) => {
+                  liveParticipants.map((p, idx) => {
                     const isCurrentUserHost = activeLiveCall.hostId === user?.uid;
                     const isParticipantHost = p.isHost;
                     

@@ -30,9 +30,11 @@ export const HeaderNotification: React.FC = () => {
   const [dismissed, setDismissed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
+  const [campaignConfig, setCampaignConfig] = useState<{ enabled: boolean }>({ enabled: false });
+
   useEffect(() => {
     if (location.pathname !== "/") return;
-    const unsub = onSnapshot(
+    const unsubPlatform = onSnapshot(
       doc(db, "settings", "platform"),
       (snap) => {
         if (snap.exists()) {
@@ -49,38 +51,67 @@ export const HeaderNotification: React.FC = () => {
             buttonText: data.notificationBannerBtnText || "",
             buttonUrl: data.notificationBannerBtnUrl || "",
           });
-        } else {
-          setNotifConfig((prev) => ({ ...prev, enabled: false, text: "" }));
         }
         setIsReady(true);
       },
-      () => {
-        setIsReady(true);
-      }
+      () => setIsReady(true)
     );
 
-    return () => unsub();
+    const unsubCampaign = onSnapshot(
+      doc(db, "settings", "cash_on_campaign"),
+      (snap) => {
+        if (snap.exists()) {
+          setCampaignConfig({ enabled: Boolean(snap.data().isEnabled) });
+        } else {
+          setCampaignConfig({ enabled: true });
+        }
+      },
+      () => setCampaignConfig({ enabled: true })
+    );
+
+    return () => {
+      unsubPlatform();
+      unsubCampaign();
+    };
   }, [location.pathname]);
 
-  const isLongText = notifConfig.text.length > 42;
+  const showPlatformNotif = notifConfig.enabled && Boolean(notifConfig.text);
+  const showCampaignBanner = campaignConfig.enabled;
+  const isLongText = (notifConfig.text || "").length > 42;
 
-  if (
-    !isReady ||
-    location.pathname !== "/" ||
-    dismissed ||
-    !notifConfig.enabled ||
-    !notifConfig.text
-  ) {
+  if (!isReady || location.pathname !== "/" || dismissed || (!showPlatformNotif && !showCampaignBanner)) {
     return null;
   }
 
   return (
-    <div className="w-full max-w-[1920px] mx-auto px-4 lg:px-6 my-1">
-      <div
-        className={`ntfC transition-colors duration-200 ${
-          expanded ? "py-3.5 px-4" : "py-2.5 px-3.5"
-        }`}
-      >
+    <div className="w-full max-w-[1920px] mx-auto px-4 lg:px-6 my-1 space-y-2">
+      {/* 1. Cash on Campaign Banner */}
+      {showCampaignBanner && (
+        <div className="w-full rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-900 dark:text-white p-3 sm:p-3.5 shadow-xs flex items-center justify-between gap-3 font-sans">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="px-2.5 py-0.5 rounded-md bg-pink-100 text-pink-600 dark:bg-pink-950/60 dark:text-pink-400 text-xs font-bold shrink-0">
+              🎁 Campaign
+            </span>
+            <p className="text-xs sm:text-sm font-bold truncate">
+              Apply in Cash on Campaign to get Cash on Delivery Access!
+            </p>
+          </div>
+          <a
+            href="/cash-on-campaign"
+            className="px-4 py-1.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 active:scale-95 transition cursor-pointer shrink-0 shadow-xs"
+          >
+            Apply Now
+          </a>
+        </div>
+      )}
+
+      {/* 2. Global Platform Notification */}
+      {showPlatformNotif && (
+        <div
+          className={`ntfC transition-colors duration-200 ${
+            expanded ? "py-3.5 px-4" : "py-2.5 px-3.5"
+          }`}
+        >
         <div
           className={`ntfT w-full ${
             expanded ? "overflow-visible" : "overflow-x-auto scrollbar-none"
@@ -164,6 +195,7 @@ export const HeaderNotification: React.FC = () => {
           title="Close notification"
         />
       </div>
+      )}
     </div>
   );
 };

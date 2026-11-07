@@ -200,6 +200,11 @@ const customIconMapping: Record<string, keyof typeof LucideIcons> = {
   'activity': 'Activity',
   'compass': 'Compass',
   'file-text': 'FileText',
+  'messages-home': 'Home',
+  'messages-inbox': 'MessageCircle',
+  'messages-activity': 'Calendar',
+  'messages-profile': 'User',
+  'messages-plus': 'Plus',
 }
 
 import { useState, useEffect } from 'react';
@@ -225,6 +230,11 @@ try {
 }
 
 const ICON_FALLBACK_ALIASES: Record<string, string[]> = {
+  'messages-home': ['messages-home', 'home', 'bottom-nav-home'],
+  'messages-inbox': ['messages-inbox', 'message-circle', 'comment-dots', 'message-square'],
+  'messages-activity': ['messages-activity', 'calendar', 'activity'],
+  'messages-profile': ['messages-profile', 'user', 'profile'],
+  'messages-plus': ['messages-plus', 'plus', 'add'],
   'message-square': [
     'message-square',
     'comment-dots',

@@ -131,10 +131,17 @@ async function generateSitemap() {
 </urlset>
 `;
 
+    // Ensure directories exist
+    const publicDir = path.resolve(process.cwd(), "public");
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+
     // Write to both public/ (for Vite dev/build) and dist/ (for production static serving)
-    fs.writeFileSync(path.resolve(process.cwd(), "public/sitemap.xml"), sitemap);
-    if (fs.existsSync(path.resolve(process.cwd(), "dist"))) {
-      fs.writeFileSync(path.resolve(process.cwd(), "dist/sitemap.xml"), sitemap);
+    fs.writeFileSync(path.join(publicDir, "sitemap.xml"), sitemap);
+    const distDir = path.resolve(process.cwd(), "dist");
+    if (fs.existsSync(distDir)) {
+      fs.writeFileSync(path.join(distDir, "sitemap.xml"), sitemap);
     }
     console.log("Sitemap generated successfully at public/sitemap.xml");
     process.exit(0);

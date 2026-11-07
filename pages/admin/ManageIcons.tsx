@@ -168,6 +168,11 @@ const PREDEFINED_ICONS: IconConfig[] = [
   { key: "mic-off", name: "Microphone Silent State", description: "Muted sound feed inside helpdesk calls", category: "chat" },
   { key: "shield", name: "Group Rules Protection", description: "Group moderator settings rules", category: "chat" },
   { key: "activity", name: "Channel Sync Tracker", description: "System performance or network sync status", category: "chat" },
+  { key: "messages-home", name: "Messages Bottom Nav: Home", description: "Messages page bottom navigation Home tab icon", category: "chat" },
+  { key: "messages-inbox", name: "Messages Bottom Nav: Inbox / Chat", description: "Messages page bottom navigation Chat/Inbox tab icon", category: "chat" },
+  { key: "messages-activity", name: "Messages Bottom Nav: Activity", description: "Messages page bottom navigation Activity/Calendar tab icon", category: "chat" },
+  { key: "messages-profile", name: "Messages Bottom Nav: Profile", description: "Messages page bottom navigation Profile tab icon", category: "chat" },
+  { key: "messages-plus", name: "Messages Bottom Nav: Add / Plus FAB", description: "Messages page bottom navigation Plus FAB action icon", category: "chat" },
 
   // Social & Platform Utilities
   { key: "facebook", name: "Facebook Link", description: "Social links, customer sync options", category: "social" },

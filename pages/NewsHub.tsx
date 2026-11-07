@@ -1500,7 +1500,7 @@ export const NewsHub: React.FC = () => {
         onClick={() => {
           if (drawerOpen) setDrawerOpen(false);
         }}
-        className={`min-h-screen loops-surface sm:bg-[#F8F9FA] sm:dark:bg-[#08090C] text-zinc-950 dark:text-zinc-100 font-sans pb-32 overflow-x-hidden ${
+        className={`min-h-screen loops-surface ambient-dynamic-bg text-zinc-950 dark:text-zinc-100 font-sans pb-32 overflow-x-hidden ${
           drawerOpen ? "will-change-transform" : ""
         }`}
       >

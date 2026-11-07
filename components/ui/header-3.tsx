@@ -531,19 +531,23 @@ export function Header() {
                 aria-expanded={brandMenuOpen}
               >
                 {isHomePage ? (
-                  <div className="flex items-center gap-2">
-                    {dynamicHeaderLogo && (
-                      <img
-                        src={optimizeImageUrl(dynamicHeaderLogo, 80, 80)}
-                        alt="Deep Shop Logo"
-                        width={36}
-                        height={36}
-                        decoding="async"
-                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-black/10 dark:border-white/10 shadow-sm bg-white dark:bg-zinc-800 shrink-0"
-                        onError={() => setDynamicHeaderLogo("")}
-                      />
+                  <div className="flex items-center gap-2.5">
+                    {(dynamicHeaderLogo || "/favicon.png") && (
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-black/10 dark:border-white/10 shadow-sm bg-white dark:bg-zinc-800 shrink-0 flex items-center justify-center aspect-square">
+                        <img
+                          src={optimizeImageUrl(dynamicHeaderLogo || "/favicon.png", 96, 96)}
+                          alt="Deep Shop Logo"
+                          width={40}
+                          height={40}
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                          onError={() => {
+                            if (dynamicHeaderLogo) setDynamicHeaderLogo("");
+                          }}
+                        />
+                      </div>
                     )}
-                    <span className="font-brand lowercase text-[20px] sm:text-[23px] font-black tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
+                    <span className="font-brand lowercase text-[22px] sm:text-[26px] font-black tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
                       deep shop
                     </span>
                   </div>

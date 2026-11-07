@@ -34,6 +34,8 @@ import {
   Type,
   Eye,
   PenLine,
+  UserPlus,
+  Radio,
 } from "lucide-react";
 import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
 import { pingBingIndexNow } from "../lib/indexNowClient";
@@ -1842,7 +1844,7 @@ function cleanPayload<T>(obj: T): T {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9] dark:bg-[#0B0D12] text-zinc-900 dark:text-zinc-100 font-sans pb-16 transition-colors">
+    <div className="min-h-screen ambient-dynamic-bg text-zinc-900 dark:text-zinc-100 font-sans pb-16 transition-colors">
       <SEO
         title={editId ? "Edit Loop — Loops" : "Create Post — Loops"}
         description="Share thoughts, photos, music, voice notes, polls, GIFs, or verified community alerts on Loops."
@@ -1867,113 +1869,25 @@ function cleanPayload<T>(obj: T): T {
       />
 
       {/* Sticky Studio Top Header */}
-      <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#11131A]/90 backdrop-blur-xl border-b border-slate-200/80 dark:border-zinc-800/80">
-        <div className="max-w-5xl mx-auto px-3 sm:px-5 h-15 flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                if (step === 2) {
-                  setStep(1);
-                } else {
-                  navigate("/loops");
-                }
-              }}
-              className="w-9 h-9 rounded-full bg-slate-100 dark:bg-zinc-800/90 hover:bg-slate-200/80 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-900 dark:text-zinc-100 active:scale-95 transition cursor-pointer shrink-0"
-              aria-label="Back"
-            >
-              <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
-            </button>
-            <div className="min-w-0">
-              <h1 className="text-[16px] sm:text-[17px] font-bold tracking-tight text-zinc-900 dark:text-white truncate leading-tight">
-                {editId ? "Edit Loop" : postType === "scam" ? "Report Scam Alert" : "Create Loop"}
-              </h1>
-              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate hidden xs:block">
-                {postType === "scam"
-                  ? "Verified community alert with evidence stamp"
-                  : attachedMusic && processedImages.length > 0
-                  ? "Photo Loop + Music · Auto-featured in Reels"
-                  : "Share text, photos, music, voice or polls"}
-              </p>
-            </div>
-          </div>
+      <header className="sticky top-0 z-30 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl border-b border-zinc-200/50 dark:border-white/5">
+        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              navigate("/loops");
+            }}
+            className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
+            aria-label="Back"
+          >
+            <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+          </button>
 
-          {/* Mobile Compose / Preview Segmented Toggle */}
-          <div className="flex lg:hidden items-center bg-slate-100 dark:bg-zinc-800/90 p-0.5 rounded-full shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                setStep(1);
-              }}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer ${
-                step === 1
-                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                  : "text-zinc-500 dark:text-zinc-400"
-              }`}
-            >
-              <PenLine className="w-3 h-3" />
-              <span>Write</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                if (isRecording) stopVoiceRecording();
-                setStep(2);
-              }}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer ${
-                step === 2
-                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                  : "text-zinc-500 dark:text-zinc-400"
-              }`}
-            >
-              <Eye className="w-3 h-3" />
-              <span>Preview</span>
-            </button>
-          </div>
+          <h1 className="text-[18px] font-bold tracking-tight text-zinc-900 dark:text-white">
+            Create post
+          </h1>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <LiquidGlassHeaderCapsule
-              draftsCount={drafts.length}
-              isAiGenerated={effectiveAiLabel}
-              scheduledAt={scheduledAt}
-              onOpenDrafts={() => setShowDraftsSheet(true)}
-              onToggleAiLabel={() => {
-                const next = !effectiveAiLabel;
-                setManualAiLabel(next);
-                notify(
-                  next ? "AI label added to post" : "AI label removed",
-                  "info"
-                );
-              }}
-              onOpenSchedule={() => setShowScheduleModal(true)}
-            />
-
-            <button
-              type="button"
-              onClick={() => {
-                if (isRecording) stopVoiceRecording();
-                handlePublish();
-              }}
-              disabled={isSubmitting || isProcessingImages || isUploadingAudio}
-              className="h-9 px-4 sm:px-5 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white font-bold text-[13px] shadow-xs active:scale-95 transition disabled:opacity-50 cursor-pointer shrink-0 whitespace-nowrap flex items-center gap-1.5"
-            >
-              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>
-                {isSubmitting
-                  ? "Posting..."
-                  : isUploadingAudio
-                  ? "Uploading..."
-                  : editId
-                  ? "Save"
-                  : scheduledAt
-                  ? "Schedule"
-                  : "Post"}
-              </span>
-            </button>
-          </div>
+          <div className="w-11" />
         </div>
       </header>
 
@@ -1990,36 +1904,42 @@ function cleanPayload<T>(obj: T): T {
           >
             {/* Mode & Typography Control Bar */}
             <div className="bg-white dark:bg-[#141720] rounded-2xl p-2 sm:p-2.5 border border-slate-200/80 dark:border-zinc-800/90 flex items-center justify-between gap-2 flex-wrap">
-              {/* Post Type Segmented Switch */}
-              <div className="flex items-center bg-slate-100 dark:bg-zinc-800/90 p-1 rounded-xl">
+              {/* Chips row matching IMG_5474 */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    setPostType("normal");
+                    setShowTagPopover(p => !p);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
-                    postType === "normal"
-                      ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-                  }`}
+                  className="px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 text-xs font-semibold flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
                 >
-                  Community Post
+                  <UserPlus className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
+                  <span>Tag People</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    setPostType("scam");
+                    setActiveInlinePanel(p => p === "audience" ? null : "audience");
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap ${
-                    postType === "scam"
-                      ? "bg-rose-600 text-white shadow-2xs"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400"
-                  }`}
+                  className="px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 text-xs font-semibold flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
                 >
-                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                  <span>Scam Report</span>
+                  <Eye className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
+                  <span className="capitalize">{privacy === "only_me" ? "Only Me" : privacy === "followers" ? "Followers" : "Who can see"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShowLocationModal(true);
+                  }}
+                  className="px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 text-xs font-semibold flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
+                  <span className="max-w-[100px] truncate">{locationTag || "Location"}</span>
                 </button>
               </div>
 
@@ -2352,7 +2272,7 @@ function cleanPayload<T>(obj: T): T {
                   }
                 >
                   <textarea
-                    rows={processedImages.length > 0 ? 3 : 5}
+                    rows={6}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={
@@ -3414,267 +3334,93 @@ function cleanPayload<T>(obj: T): T {
                 </div>
               </div>
 
-              {/* Studio Attachment Dock */}
-              <div className="px-4 sm:px-5 py-3 bg-slate-50/80 dark:bg-zinc-900/50 border-t border-slate-200/70 dark:border-zinc-800/80 space-y-3 rounded-b-3xl">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                    {/* Photo */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setActiveInlinePanel("media");
-                        fileInputRef.current?.click();
-                      }}
-                      className={`h-9 px-2.5 rounded-xl inline-flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${
-                        processedImages.length > 0
-                          ? "bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF]"
-                          : "text-zinc-600 dark:text-zinc-300 hover:bg-slate-200/70 dark:hover:bg-zinc-800"
-                      }`}
-                      title="Attach photos"
-                    >
-                      <LoopsSvgIcon
-                        name="loops-composer-photo"
-                        className="w-[18px] h-[18px]"
-                      />
-                      <span className="hidden sm:inline">Photo</span>
-                      {processedImages.length > 0 && (
-                        <span className="text-[11px] font-bold">
-                          {processedImages.length}
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Music */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setShowMusicModal(true);
-                      }}
-                      className={`h-9 px-2.5 rounded-xl inline-flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${
-                        attachedMusic
-                          ? "bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF]"
-                          : "text-zinc-600 dark:text-zinc-300 hover:bg-slate-200/70 dark:hover:bg-zinc-800"
-                      }`}
-                      title="Attach background music"
-                    >
-                      <MusicNotesOutlineIcon className="w-[18px] h-[18px]" />
-                      <span className="hidden sm:inline">Music</span>
-                    </button>
-
-                    {/* Voice Studio */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setActiveInlinePanel((prev) =>
-                          prev === "voice" ? null : "voice"
-                        );
-                      }}
-                      className={`h-9 px-2.5 rounded-xl inline-flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${
-                        activeInlinePanel === "voice" || audioUrl || isRecording
-                          ? "bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF]"
-                          : "text-zinc-600 dark:text-zinc-300 hover:bg-slate-200/70 dark:hover:bg-zinc-800"
-                      }`}
-                      title="Voice note & audio upload"
-                    >
-                      <Mic className="w-[17px] h-[17px]" />
-                      <span className="hidden sm:inline">Voice</span>
-                    </button>
-
-                    {/* GIF */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setShowGiphySheet(true);
-                      }}
-                      className={`h-9 px-2.5 rounded-xl inline-flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${
-                        gifUrl
-                          ? "bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF]"
-                          : "text-zinc-600 dark:text-zinc-300 hover:bg-slate-200/70 dark:hover:bg-zinc-800"
-                      }`}
-                      title="Attach GIF"
-                    >
-                      <GifBadgeOutlineIcon className="w-[18px] h-[18px]" />
-                    </button>
-
-                    {/* Stickers */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setShowStickersSheet(true);
-                      }}
-                      className={`h-9 px-2.5 rounded-xl inline-flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${
-                        stickers.length > 0
-                          ? "bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF]"
-                          : "text-zinc-600 dark:text-zinc-300 hover:bg-slate-200/70 dark:hover:bg-zinc-800"
-                      }`}
-                      title="Stickers & Kaomoji"
-                    >
-                      <StickerPeelSmileIcon className="w-[18px] h-[18px]" />
-                    </button>
-
-                    {/* Poll */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setPollDraft((prev) =>
-                          prev
-                            ? null
-                            : {
-                                question: "",
-                                options: ["", ""],
-                                durationHours: 24,
-                              }
-                        );
-                      }}
-                      className={`h-9 px-2.5 rounded-xl inline-flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${
-                        pollDraft
-                          ? "bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF]"
-                          : "text-zinc-600 dark:text-zinc-300 hover:bg-slate-200/70 dark:hover:bg-zinc-800"
-                      }`}
-                      title="Create Poll"
-                    >
-                      <BarChart3 className="w-[17px] h-[17px]" />
-                    </button>
-
-                    {/* Categories / Topics */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setActiveInlinePanel((prev) =>
-                          prev === "themes" ? null : "themes"
-                        );
-                      }}
-                      className={`h-9 px-2.5 rounded-xl inline-flex items-center gap-1 text-xs font-semibold transition cursor-pointer ${
-                        activeInlinePanel === "themes"
-                          ? "bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF]"
-                          : "text-zinc-600 dark:text-zinc-300 hover:bg-slate-200/70 dark:hover:bg-zinc-800"
-                      }`}
-                      title="Feed topics"
-                    >
-                      <Hash className="w-4 h-4" />
-                      <span className="hidden md:inline">Topics</span>
-                    </button>
-
-                    {/* More (Snippet, Quote, Camera, Poll, Location) */}
-                    <div className="relative inline-flex items-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic();
-                          setShowMoreAttachPopover((prev) => !prev);
-                        }}
-                        className={`h-9 w-9 rounded-xl inline-flex items-center justify-center transition cursor-pointer ${
-                          showMoreAttachPopover
-                            ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                            : "text-zinc-600 dark:text-zinc-300 hover:bg-slate-200/70 dark:hover:bg-zinc-800"
-                        }`}
-                        title="Snippet, Quote, Camera, Location"
-                        aria-label="More attachments"
-                      >
-                        <MoreCircleDotsIcon className="w-[19px] h-[19px]" />
-                      </button>
-
-                      <AttachmentMorePopover
-                        open={showMoreAttachPopover}
-                        onClose={() => setShowMoreAttachPopover(false)}
-                        onSelectAction={(action) => {
-                          if (action === "snippet") {
-                            setSnippetDraft(
-                              (prev) => prev || { title: "", content: "" }
-                            );
-                          } else if (action === "quote") {
-                            setQuoteDraft(
-                              (prev) => prev || { text: "", author: "" }
-                            );
-                          } else if (action === "camera") {
-                            setShowCameraModal(true);
-                          } else if (action === "poll") {
-                            setPollDraft(
-                              (prev) =>
-                                prev || {
-                                  question: "",
-                                  options: ["", ""],
-                                  durationHours: 24,
-                                }
-                            );
-                          } else if (action === "location") {
-                            setShowLocationModal(true);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Controls: Post Options + 24h Ghost Toggle + Publish CTA */}
-                <div className="pt-2.5 border-t border-slate-200/70 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+              {/* Studio Attachment Shelf & Publish Post matching IMG_5474 */}
+              <div className="px-4 sm:px-6 py-4 bg-slate-50/60 dark:bg-zinc-900/60 border-t border-slate-200/70 dark:border-zinc-800/80 rounded-b-3xl space-y-4">
+                {/* 5-Item Attachment Shelf (Image, GIF, Live, Video, Music) */}
+                <div className="grid grid-cols-5 gap-2">
+                  {/* 1. Image */}
                   <button
                     type="button"
                     onClick={() => {
                       triggerHaptic();
-                      setShowPostOptionsSheet(true);
+                      fileInputRef.current?.click();
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition cursor-pointer whitespace-nowrap"
+                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
                   >
-                    <SlidersSquareIcon className="w-4 h-4 shrink-0" />
-                    <span>
-                      {replyPermission === "anyone"
-                        ? "Anyone can reply"
-                        : replyPermission === "followers"
-                        ? "Followers can reply"
-                        : "Mentioned only"}
-                    </span>
-                    {(replyPermission !== "anyone" ||
-                      reviewApproveReplies ||
-                      alsoShareOn.length > 0) && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#1877F2] shrink-0" />
-                    )}
+                    <ImageIcon className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
+                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">Image</span>
                   </button>
 
-                  <div className="flex items-center gap-2.5">
-                    <LiquidGlassGhostToggle
-                      active={isGhostPost}
-                      onChange={(next) => {
-                        setIsGhostPost(next);
-                        notify(
-                          next
-                            ? "Ghost post on — disappears after 24 hours"
-                            : "Ghost post off",
-                          "info"
-                        );
-                      }}
-                    />
+                  {/* 2. GIF */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowGiphySheet(true);
+                    }}
+                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
+                  >
+                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200 border-2 border-current px-1 py-0.2 rounded-md leading-none">GIF</span>
+                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">GIF</span>
+                  </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isRecording) stopVoiceRecording();
-                        handlePublish();
-                      }}
-                      disabled={
-                        isSubmitting || isProcessingImages || isUploadingAudio
-                      }
-                      className="h-9.5 px-5 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white font-bold text-[13.5px] shadow-xs active:scale-95 transition disabled:opacity-50 cursor-pointer whitespace-nowrap"
-                    >
-                      {isSubmitting
-                        ? "Posting..."
-                        : isUploadingAudio
-                        ? "Uploading..."
-                        : editId
-                        ? "Save Changes"
-                        : scheduledAt
-                        ? "Schedule"
-                        : "Post Loop"}
-                    </button>
-                  </div>
+                  {/* 3. Live */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      notify("Live broadcasting feature is launching soon!", "info");
+                    }}
+                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
+                  >
+                    <Radio className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
+                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">Live</span>
+                  </button>
+
+                  {/* 4. Video */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      fileInputRef.current?.click();
+                    }}
+                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
+                  >
+                    <Play className="w-5 h-5 text-zinc-700 dark:text-zinc-200 fill-current" />
+                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">Video</span>
+                  </button>
+
+                  {/* 5. Music (Deezer Music Picker for Background Music) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShowMusicModal(true);
+                    }}
+                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
+                  >
+                    <Music className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
+                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">Music</span>
+                  </button>
                 </div>
+
+                {/* Full-Width Rounded-2xl "Publish Post" Button (IMG_5474) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    handlePublish();
+                  }}
+                  disabled={isSubmitting || isProcessingImages || isUploadingAudio || (!description.trim() && processedImages.length === 0 && !attachedMusic && !gifUrl)}
+                  className={`w-full py-4 rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 transition-all duration-200 border border-zinc-200/60 dark:border-white/10 ${
+                    description.trim() || processedImages.length > 0 || attachedMusic || gifUrl
+                      ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:opacity-90 active:scale-[0.99] cursor-pointer"
+                      : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                  }`}
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{isSubmitting ? "Publishing Post..." : "Publish Post"}</span>
+                </button>
               </div>
             </div>
           </div>

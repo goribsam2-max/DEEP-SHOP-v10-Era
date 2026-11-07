@@ -518,6 +518,15 @@ export const NewsProfilePage: React.FC = () => {
     title?: string;
   } | null>(null);
   const [showTopicsSheet, setShowTopicsSheet] = useState(false);
+  const [showCampaignStatusSheet, setShowCampaignStatusSheet] = useState(false);
+
+  useEffect(() => {
+    // Guarantee window and body scrolling is fully unlocked when navigating from Messages
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.overflowY = 'auto';
+    document.body.style.overflow = '';
+    document.body.style.overflowY = 'auto';
+  }, []);
   const [showLinksSheet, setShowLinksSheet] = useState(false);
   const [userStoriesViews30d, setUserStoriesViews30d] = useState(0);
   const [storyHighlights, setStoryHighlights] = useState<StoryHighlightItem[]>([]);
@@ -3379,6 +3388,19 @@ export const NewsProfilePage: React.FC = () => {
                         <Info className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
                         <span>About this profile</span>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic();
+                          setShowOptionsSheet(false);
+                          setShowCampaignStatusSheet(true);
+                        }}
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-pink-600 dark:text-pink-400 font-bold cursor-pointer text-left transition"
+                      >
+                        <Sparkles className="w-[22px] h-[22px] stroke-[2] text-pink-600 dark:text-pink-400 shrink-0" />
+                        <span>Cash on Campaign Status</span>
+                      </button>
                     </div>
 
                     {/* Group 3: Mute, Restrict, Block, Report for Other Profiles */}
@@ -4005,6 +4027,100 @@ export const NewsProfilePage: React.FC = () => {
                         </button>
                       ))}
                     </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* CASH ON CAMPAIGN STATUS MODAL SHEET */}
+            <AnimatePresence>
+              {showCampaignStatusSheet && (
+                <div
+                  className="fixed inset-0 z-[280] flex flex-col justify-end"
+                  onClick={() => setShowCampaignStatusSheet(false)}
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
+                  />
+
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-6 pt-4 pb-8 space-y-5 max-h-[85vh] overflow-y-auto border-t loops-divider"
+                  >
+                    <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-bold text-[#0f0f0f] dark:text-white tracking-tight flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-pink-500" />
+                        <span>Cash on Campaign Status</span>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowCampaignStatusSheet(false)}
+                        className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                      >
+                        <X className="w-4.5 h-4.5" />
+                      </button>
+                    </div>
+
+                    {/* Status Card Logic */}
+                    {["tasmia.rahman99@gmail.com", "sabbir.hossain.bd@gmail.com", "tanha.jahan@gmail.com", "mahmud.hasan.dev@gmail.com", "anika.tabassum.bd@gmail.com"].includes(currentUser?.email || "") ? (
+                      /* Demo Winner Status View */
+                      <div className="bg-gradient-to-r from-amber-500/15 via-pink-500/15 to-purple-500/15 border border-amber-500/30 rounded-2xl p-5 space-y-3 text-center">
+                        <div className="w-14 h-14 rounded-full bg-amber-400 text-zinc-950 flex items-center justify-center mx-auto shadow-md font-bold">
+                          🎉
+                        </div>
+                        <h4 className="text-lg font-bold text-zinc-900 dark:text-white">
+                          Congratulations! You Won COD Access 🎉
+                        </h4>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                          অভিনন্দন! ক্যাশ অন ক্যাম্পেইনে আপনি বিজয়ী হিসেবে নির্বাচিত হয়েছেন। এখন থেকে আপনি ডিপ শপে ক্যাশ অন ডেলিভারিতে অর্ডার করতে পারবেন।
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowCampaignStatusSheet(false);
+                            navigate("/");
+                          }}
+                          className="w-full py-3 rounded-xl bg-amber-400 text-zinc-950 font-bold text-xs hover:brightness-105 active:scale-95 transition cursor-pointer shadow-md"
+                        >
+                          Order with Cash on Delivery (ক্যাশ অন ডেলিভারিতে অর্ডার করুন)
+                        </button>
+                      </div>
+                    ) : (
+                      /* Standard Applicant Status View: Better Luck Next Time */
+                      <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-5 space-y-3 text-center">
+                        <div className="w-12 h-12 rounded-full bg-pink-500/10 text-pink-500 flex items-center justify-center mx-auto font-bold text-xl">
+                          🌟
+                        </div>
+                        <h4 className="text-base font-bold text-zinc-900 dark:text-white">
+                          Better Luck Next Time!
+                        </h4>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                          আপনার ক্যাশ অন ক্যাম্পেইন আবেদনটি সফলভাবে ড্র-তালিকায় অন্তর্ভুক্ত রয়েছে। পরবর্তী বিজয়ী তালিকায় আপনার নাম থাকলে সেলার ড্যাশবোর্ড থেকে নোটিফিকেশন পাবেন।
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic();
+                            setShowCampaignStatusSheet(false);
+                            navigate("/cash-on-campaign");
+                          }}
+                          className="w-full py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-xs active:scale-95 transition cursor-pointer"
+                        >
+                          View Application Details (আবেদন দেখুন)
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 </div>
               )}
