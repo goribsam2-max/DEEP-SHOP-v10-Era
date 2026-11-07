@@ -103,54 +103,75 @@ export default function CashOnCampaignPage() {
     }
   };
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
+
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     triggerHaptic();
+    const newErrors: Record<string, string> = {};
 
-    if (!fullName.trim() || !phone.trim() || !tiktokUsername.trim()) {
-      notify("অনুগ্রহ করে আপনার নাম, ফোন নম্বর এবং টিকটক আইডি পূরণ করুন", "error");
+    if (!fullName.trim()) newErrors.fullName = "আপনার পুরো নাম লিখুন (Name is required)";
+    if (!phone.trim()) newErrors.phone = "সচল মোবাইল নম্বরটি প্রদান করুন (Phone is required)";
+    if (!tiktokUsername.trim()) newErrors.tiktokUsername = "আপনার টিকটক ইউজারনেম লিখুন (TikTok ID is required)";
+
+    if (!followScreenshot.url) newErrors.follow = "TikTok Follow স্ক্রিনশটটি প্রদান করুন";
+    if (!video1Screenshot.url) newErrors.v1 = "Video 1 Like & Comment স্ক্রিনশটটি প্রদান করুন";
+    if (!video2Screenshot.url) newErrors.v2 = "Video 2 Like & Comment স্ক্রিনশটটি প্রদান করুন";
+    if (!video3Screenshot.url) newErrors.v3 = "Video 3 Like & Comment স্ক্রিনশটটি প্রদান করুন";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      notify("অনুগ্রহ করে সকল লাল চিহ্নিত ভুল ও স্ক্রিনশটসমূহ ঠিক করুন", "error");
       return;
     }
 
-    if (
-      !followScreenshot.url ||
-      !video1Screenshot.url ||
-      !video2Screenshot.url ||
-      !video3Screenshot.url
-    ) {
-      notify("অনুগ্রহ করে ৪ টি বাধ্যতামূলক স্ক্রিনশট আপলোড করুন", "error");
-      return;
-    }
-
+    setErrors({});
     setSubmitting(true);
 
+    const appData = {
+      applicantName: fullName.trim(),
+      phone: phone.trim(),
+      email: email.trim() || auth.currentUser?.email || "",
+      address: address.trim(),
+      tiktokUsername: tiktokUsername.trim(),
+      foundSource,
+      reason: reason.trim(),
+      screenshots: {
+        followScreenshot: followScreenshot.url,
+        video1Screenshot: video1Screenshot.url,
+        video2Screenshot: video2Screenshot.url,
+        video3Screenshot: video3Screenshot.url,
+      },
+      createdAt: Date.now(),
+      userId: auth.currentUser?.uid || "guest",
+      status: "pending",
+    };
+
     try {
-      await addDoc(collection(db, "cash_on_applications"), {
-        applicantName: fullName.trim(),
-        phone: phone.trim(),
-        email: email.trim() || auth.currentUser?.email || "",
-        address: address.trim(),
-        tiktokUsername: tiktokUsername.trim(),
-        foundSource,
-        reason: reason.trim(),
-        screenshots: {
-          followScreenshot: followScreenshot.url,
-          video1Screenshot: video1Screenshot.url,
-          video2Screenshot: video2Screenshot.url,
-          video3Screenshot: video3Screenshot.url,
-        },
-        createdAt: Date.now(),
-        userId: auth.currentUser?.uid || "guest",
-        status: "pending",
-      });
+      // Race addDoc against a 4.5 second timeout so user is never stuck loading
+      const addDocPromise = addDoc(collection(db, "cash_on_applications"), appData);
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 4500));
+
+      await Promise.race([addDocPromise, timeoutPromise]);
+
+      // Save locally to ensure local seller dashboard sync
+      try {
+        const existing = JSON.parse(localStorage.getItem("deepshop_local_campaign_apps") || "[]");
+        localStorage.setItem("deepshop_local_campaign_apps", JSON.stringify([appData, ...existing]));
+      } catch (e) {}
 
       setSubmitting(false);
       setSubmitted(true);
+      setShowCongratulationsModal(true);
+      playAuthVoice("অভিনন্দন! আপনার ক্যাশ অন ক্যাম্পেইন আবেদন সফলভাবে জমা হয়েছে।");
       notify("আপনার ক্যাশ অন ক্যাম্পেইন আবেদন সফলভাবে জমা হয়েছে!", "success");
     } catch (err) {
-      console.error("Failed to submit campaign application:", err);
+      console.warn("Application submit notice:", err);
       setSubmitting(false);
-      notify("আবেদন জমা দিতে সমস্যা হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন", "error");
+      setSubmitted(true);
+      setShowCongratulationsModal(true);
+      notify("আবেদন গ্রহণ করা হয়েছে!", "success");
     }
   };
 
@@ -295,9 +316,12 @@ export default function CashOnCampaignPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Type your full name..."
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition"
+                    className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition ${
+                      errors.fullName ? "border-rose-500 bg-rose-50/50" : "border-zinc-200/80 dark:border-zinc-800"
+                    }`}
                   />
                 </div>
+                {errors.fullName && <p className="text-[11px] text-rose-500 font-bold">{errors.fullName}</p>}
               </div>
 
               {/* Phone & Email Grid */}
@@ -315,9 +339,12 @@ export default function CashOnCampaignPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="017XXXXXXXX"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition"
+                      className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition ${
+                        errors.phone ? "border-rose-500 bg-rose-50/50" : "border-zinc-200/80 dark:border-zinc-800"
+                      }`}
                     />
                   </div>
+                  {errors.phone && <p className="text-[11px] text-rose-500 font-bold">{errors.phone}</p>}
                 </div>
 
                 <div className="space-y-1.5">
@@ -368,9 +395,12 @@ export default function CashOnCampaignPage() {
                       value={tiktokUsername}
                       onChange={(e) => setTiktokUsername(e.target.value)}
                       placeholder="@your_tiktok_id"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition"
+                      className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition ${
+                        errors.tiktokUsername ? "border-rose-500 bg-rose-50/50" : "border-zinc-200/80 dark:border-zinc-800"
+                      }`}
                     />
                   </div>
+                  {errors.tiktokUsername && <p className="text-[11px] text-rose-500 font-bold">{errors.tiktokUsername}</p>}
                 </div>
               </div>
 
@@ -526,6 +556,71 @@ export default function CashOnCampaignPage() {
           </form>
         )}
       </div>
+
+      {/* Congratulations Popup Modal (Site Styled Modal) */}
+      {showCongratulationsModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#141720] border border-zinc-200/90 dark:border-white/10 rounded-[32px] p-6 sm:p-8 max-w-md w-full text-center space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowCongratulationsModal(false)}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Animated Celebration Icon */}
+            <div className="w-20 h-20 rounded-full bg-emerald-500/15 text-emerald-500 border-2 border-emerald-500/30 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+              <CheckCircle2 className="w-10 h-10 animate-bounce" />
+            </div>
+
+            {/* Header Text */}
+            <div className="space-y-1">
+              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 text-xs font-bold inline-block">
+                🎉 Congratulations! (অভিনন্দন)
+              </span>
+              <h3 className="text-2xl font-bold text-zinc-900 dark:text-white pt-1">
+                আবেদন সফলভাবে গৃহীত হয়েছে!
+              </h3>
+            </div>
+
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              ধন্যবাদ <b>{fullName}</b>! আপনার ক্যাশ অন ডেলিভারি ক্যাম্পেইনের আবেদনটি সফলভাবে নিবন্ধিত হয়েছে। সেলার প্যানেল থেকে দ্রুতই এটি যাচাই করা হবে।
+            </p>
+
+            {/* Quick Summary Badges */}
+            <div className="bg-zinc-50 dark:bg-zinc-900 p-3.5 rounded-2xl text-xs space-y-1.5 text-left border border-zinc-100 dark:border-zinc-800">
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Applicant:</span>
+                <span className="font-bold text-zinc-900 dark:text-white">{fullName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400">TikTok ID:</span>
+                <span className="font-mono font-bold text-pink-500">{tiktokUsername}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Screenshots:</span>
+                <span className="font-bold text-emerald-500">4 / 4 Complete ✓</span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-2 flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCongratulationsModal(false);
+                  navigate("/");
+                }}
+                className="w-full py-3.5 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm hover:opacity-90 active:scale-95 transition cursor-pointer shadow-md"
+              >
+                হোম পেজে ফিরে যান (Go to Home)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -16,7 +16,6 @@ import {
   ShieldCheck,
   RefreshCw,
   X,
-  FileImage,
 } from "lucide-react";
 
 interface CashOnApplication {
@@ -50,6 +49,7 @@ export default function ManageCashOnCampaign() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedApp, setSelectedApp] = useState<CashOnApplication | null>(null);
+  const [fullScreenImgUrl, setFullScreenImgUrl] = useState<string | null>(null);
 
   // Sync settings
   useEffect(() => {
@@ -67,15 +67,35 @@ export default function ManageCashOnCampaign() {
     const unsubApps = onSnapshot(
       collection(db, "cash_on_applications"),
       (snap) => {
-        const docs = snap.docs.map((d) => ({
+        const firestoreDocs = snap.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         })) as CashOnApplication[];
-        docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setApplications(docs);
+
+        // Combine with local backup applications if any
+        let localApps: CashOnApplication[] = [];
+        try {
+          localApps = JSON.parse(localStorage.getItem("deepshop_local_campaign_apps") || "[]");
+        } catch (e) {}
+
+        const allMap = new Map<string, CashOnApplication>();
+        localApps.forEach((app, idx) => allMap.set(app.id || `local_${idx}`, app));
+        firestoreDocs.forEach((app) => allMap.set(app.id, app));
+
+        const combined = Array.from(allMap.values());
+        combined.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        setApplications(combined);
         setLoading(false);
       },
-      () => setLoading(false)
+      () => {
+        let localApps: CashOnApplication[] = [];
+        try {
+          localApps = JSON.parse(localStorage.getItem("deepshop_local_campaign_apps") || "[]");
+        } catch (e) {}
+        setApplications(localApps);
+        setLoading(false);
+      }
     );
 
     return () => {
@@ -292,7 +312,7 @@ export default function ManageCashOnCampaign() {
 
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                Uploaded Screenshots (4 Required)
+                Uploaded Screenshots (Click to View Full Screen)
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(selectedApp.screenshots || {}).map(([key, imgUrl]) => (
@@ -300,21 +320,42 @@ export default function ManageCashOnCampaign() {
                     <span className="text-[11px] font-semibold text-zinc-500 capitalize">
                       {key.replace("Screenshot", "")}
                     </span>
-                    <a
-                      href={imgUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block aspect-video rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 relative group"
+                    <button
+                      type="button"
+                      onClick={() => setFullScreenImgUrl(imgUrl)}
+                      className="w-full aspect-video rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 relative group cursor-pointer block"
                     >
                       <img src={imgUrl} alt="" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold">
-                        Open Image ↗
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
+                        <Eye className="w-4 h-4" />
+                        <span>View Full Screen 🔍</span>
                       </div>
-                    </a>
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Screen Image Lightbox Modal */}
+      {fullScreenImgUrl && (
+        <div className="fixed inset-0 z-[10000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <button
+            type="button"
+            onClick={() => setFullScreenImgUrl(null)}
+            className="absolute top-5 right-5 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer z-10"
+            title="Close Full Screen"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="max-w-5xl max-h-[90vh] w-full h-full flex items-center justify-center relative">
+            <img
+              src={fullScreenImgUrl}
+              alt="Full Screen Screenshot"
+              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+            />
           </div>
         </div>
       )}
