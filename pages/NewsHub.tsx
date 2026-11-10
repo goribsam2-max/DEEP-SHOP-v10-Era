@@ -747,10 +747,22 @@ export const NewsHub: React.FC = () => {
     };
   }, []);
 
-  // Merge real Firestore posts + real user-created offline fallback posts only
+  // Merge real Firestore posts + real user-created offline fallback posts only (filters out copyright strikes & removed posts)
   const allPosts = React.useMemo(() => {
     const map = new Map<string, ScamPost>();
-    firestorePosts.forEach((p) => {
+    firestorePosts.forEach((p: any) => {
+      // Completely exclude posts removed by admin, copyright strikes, copyright claims, or rejected
+      if (
+        p.isRemovedByAdmin ||
+        p.isDeleted ||
+        p.isRemoved ||
+        p.status === "removed" ||
+        p.status === "rejected" ||
+        p.copyrightStrike ||
+        p.isCopyrightViolation
+      ) {
+        return;
+      }
       if (
         p.status === "under_review" &&
         p.reporterId !== currentUser?.uid
@@ -764,9 +776,16 @@ export const NewsHub: React.FC = () => {
       const localList: ScamPost[] = JSON.parse(
         localStorage.getItem("deep_scam_posts") || "[]"
       );
-      localList.forEach((p) => {
+      localList.forEach((p: any) => {
         if (
           p?.id &&
+          !p.isRemovedByAdmin &&
+          !p.isDeleted &&
+          !p.isRemoved &&
+          p.status !== "removed" &&
+          p.status !== "rejected" &&
+          !p.copyrightStrike &&
+          !p.isCopyrightViolation &&
           !String(p.id).startsWith("showcase_") &&
           !map.has(p.id)
         ) {

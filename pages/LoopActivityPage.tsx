@@ -4,7 +4,9 @@ import {
   ChevronLeft,
   Heart,
   MessageCircle,
+  User,
   UserPlus,
+  Share2,
   Loader2,
   Search,
   Calendar,
@@ -67,7 +69,7 @@ interface ActivityEntry {
   gridImages?: string[];
 }
 
-// Built-in high fidelity demo cards matching IMG_5471.jpeg
+// Built-in high fidelity fallback cards if no real notifications exist
 const SAMPLE_NOTIFICATIONS: ActivityEntry[] = [
   {
     id: "demo_comment_1",
@@ -77,38 +79,6 @@ const SAMPLE_NOTIFICATIONS: ActivityEntry[] = [
     timestamp: Date.now() - 2 * 3600 * 1000,
     timeAgoText: "2 hours ago",
     text: "Jenny wilson commented on your photo.",
-    isNew: true,
-  },
-  {
-    id: "demo_birthday_2",
-    actorFallbackName: "Jenny Wilson",
-    actorFallbackAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=250&q=80",
-    kind: "birthday",
-    timestamp: Date.now() - 2 * 3600 * 1000,
-    timeAgoText: "2 hours ago",
-    text: "Today is your Jenny Wilson 27th Birthday 🎉",
-    isNew: true,
-  },
-  {
-    id: "demo_memory_3",
-    kind: "memory",
-    timestamp: Date.now() - 2 * 3600 * 1000,
-    timeAgoText: "2 hours ago",
-    text: "On this day 49 years ago your grandfather was in Tokyo, Japan.",
-    gridImages: [
-      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=300&q=80",
-      "https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=300&q=80",
-      "https://images.unsplash.com/photo-1476514525535-ce74f4581a8f?auto=format&fit=crop&w=300&q=80",
-      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=300&q=80",
-    ],
-    isNew: true,
-  },
-  {
-    id: "demo_location_4",
-    kind: "location",
-    timestamp: Date.now() - 2 * 3600 * 1000,
-    timeAgoText: "2 hours ago",
-    text: "You are currently in Rome, Italy. Your mother and father visited this location 2 years ago.",
     isNew: true,
   },
   {
@@ -402,16 +372,43 @@ export const LoopActivityPage: React.FC = () => {
       const uid = String(n.fromUserId || "");
       if (!uid || uid === myUid) return;
       const key = `notif_${n.id}`;
+      const t = String(n.type || "").toLowerCase();
+      const bodyText = (String(n.title || "") + " " + String(n.body || "")).toLowerCase();
+      let kind: ActivityKind = "reply";
+      if (t.includes("like") || t.includes("react") || bodyText.includes("liked") || bodyText.includes("react")) {
+        kind = "like";
+      } else if (t.includes("follow") || bodyText.includes("following") || bodyText.includes("followed")) {
+        kind = "follow";
+      } else if (t.includes("share") || t.includes("repost") || bodyText.includes("shared") || bodyText.includes("reposted")) {
+        kind = "repost";
+      } else {
+        kind = "reply";
+      }
       map.set(key, {
         id: key,
         actorUid: uid,
         actorFallbackName: n.fromUserName,
         actorFallbackAvatar: n.fromUserAvatar,
-        kind: n.type?.includes("follow") ? "follow" : "reply",
+        kind,
         timestamp: Number(n.createdAt || Date.now()),
         text: String(n.title || n.body || "New notification"),
         isNew: true,
       });
+    });
+
+    myFollowerUids.forEach((fUid) => {
+      if (!fUid || fUid === myUid) return;
+      const key = `follower_${fUid}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          actorUid: fUid,
+          kind: "follow",
+          timestamp: Date.now() - 3600 * 1000,
+          text: "started following you.",
+          isNew: true,
+        });
+      }
     });
 
     return Array.from(map.values()).sort(
@@ -425,12 +422,13 @@ export const LoopActivityPage: React.FC = () => {
     myPosts,
     myPostCommentsMap,
     myNotifDocs,
+    myFollowerUids,
   ]);
 
-  // Combine real entries + sample design cards matching IMG_5471.jpeg
+  // If real entries exist, display real activity; fallback to clean sample notifications if empty
   const allEntries = useMemo(() => {
     if (realEntries.length > 0) {
-      return [...realEntries, ...SAMPLE_NOTIFICATIONS];
+      return realEntries;
     }
     return SAMPLE_NOTIFICATIONS;
   }, [realEntries]);
@@ -523,12 +521,12 @@ export const LoopActivityPage: React.FC = () => {
     document.body.style.overflowY = 'auto';
   }, []);
 
-  // Badge icon renderer matching IMG_5471.jpeg
+  // Badge icon renderer matching IMG_5471.jpeg & user requirements
   const renderCardBadge = (kind: ActivityKind) => {
     if (kind === "reply") {
       return (
-        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
-          •••
+        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-xs">
+          <MessageCircle className="w-2.5 h-2.5 fill-white text-white" />
         </span>
       );
     }
@@ -541,8 +539,22 @@ export const LoopActivityPage: React.FC = () => {
     }
     if (kind === "like") {
       return (
-        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-pink-500 text-white flex items-center justify-center text-[10px] shadow-xs">
-          💖
+        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#FF2E93] text-white flex items-center justify-center shadow-xs">
+          <Heart className="w-2.5 h-2.5 fill-white text-white" />
+        </span>
+      );
+    }
+    if (kind === "follow") {
+      return (
+        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#2F80ED] text-white flex items-center justify-center shadow-xs">
+          <User className="w-2.5 h-2.5 fill-white text-white" />
+        </span>
+      );
+    }
+    if (kind === "repost") {
+      return (
+        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+          <Share2 className="w-2.5 h-2.5 text-white" />
         </span>
       );
     }

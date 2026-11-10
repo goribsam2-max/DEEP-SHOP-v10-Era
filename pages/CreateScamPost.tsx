@@ -83,6 +83,7 @@ import {
 } from "../lib/videoEmbed";
 import { FEED_THEMES, FEED_THEME_GROUPS } from "../lib/feed-themes";
 import { resolvePostById } from "./NewsHubSubPages";
+import { LiveStreamModal } from "../components/LiveStreamModal";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
 import SEO from "../components/SEO";
@@ -356,8 +357,11 @@ export const CreateScamPost: React.FC = () => {
   const [bgMusicVolume, setBgMusicVolume] = useState<number>(1.0);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showLiveStudio, setShowLiveStudio] = useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const videoFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Social Video Link Embed State (YouTube, Facebook, TikTok only — zero file upload)
+  // Video State
   const [videoUrl, setVideoUrl] = useState("");
   const [dismissedCaptionVideoUrl, setDismissedCaptionVideoUrl] = useState("");
   const [resolvedCaptionVideoUrl, setResolvedCaptionVideoUrl] = useState("");
@@ -787,11 +791,54 @@ function cleanPayload<T>(obj: T): T {
     const imageFiles = incoming.filter((f) => !isVideoFileCandidate(f));
 
     if (videoFiles.length > 0) {
-      notify("Please use the Reels section to upload videos.", "info");
+      const vFile = videoFiles[0];
+      setIsUploadingVideo(true);
+      notify("Processing video...", "info");
+      uploadFileToCatbox(vFile).then((url) => {
+        if (url) {
+          setVideoUrl(url);
+          notify("Video attached successfully!", "success");
+        } else {
+          setVideoUrl(URL.createObjectURL(vFile));
+        }
+      }).catch(() => {
+        setVideoUrl(URL.createObjectURL(vFile));
+      }).finally(() => {
+        setIsUploadingVideo(false);
+      });
     }
     if (imageFiles.length > 0) {
       setRawFiles((prev) => [...prev, ...imageFiles]);
       setActiveInlinePanel("media");
+    }
+  };
+
+  const handleVideoFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 100 * 1024 * 1024) {
+      notify("Video file must be under 100MB", "error");
+      return;
+    }
+    setIsUploadingVideo(true);
+    triggerHaptic();
+    notify("Uploading video...", "info");
+    try {
+      const hostedUrl = await uploadFileToCatbox(file);
+      if (hostedUrl) {
+        setVideoUrl(hostedUrl);
+        notify("Video attached successfully!", "success");
+      } else {
+        const localBlob = URL.createObjectURL(file);
+        setVideoUrl(localBlob);
+        notify("Video attached!", "success");
+      }
+    } catch {
+      const localBlob = URL.createObjectURL(file);
+      setVideoUrl(localBlob);
+    } finally {
+      setIsUploadingVideo(false);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -1868,1738 +1915,475 @@ function cleanPayload<T>(obj: T): T {
         className="hidden"
       />
 
-      {/* Sticky Studio Top Header */}
-      <header className="sticky top-0 z-30 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl border-b border-zinc-200/50 dark:border-white/5">
-        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic();
-              navigate("/loops");
-            }}
-            className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
-            aria-label="Back"
-          >
-            <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
-          </button>
+      {/* Hidden Video File Input */}
+      <input
+        ref={videoFileInputRef}
+        type="file"
+        accept="video/mp4,video/webm,video/quicktime,video/*"
+        onChange={handleVideoFileSelected}
+        className="hidden"
+      />
 
-          <h1 className="text-[18px] font-bold tracking-tight text-zinc-900 dark:text-white">
-            Create post
-          </h1>
+      {/* Main Single-Column Studio Layout Matching IMG_5474 */}
+      <div className="max-w-[480px] w-full mx-auto px-4 pt-2 pb-6 min-h-screen flex flex-col justify-between">
+        <div className="space-y-3 flex-1 flex flex-col">
+          {/* Top Header Matching IMG_5474 */}
+          <header className="flex items-center justify-between py-2">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                navigate("/loops");
+              }}
+              className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
+              aria-label="Back"
+            >
+              <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+            </button>
 
-          <div className="w-11" />
-        </div>
-      </header>
+            <h1 className="text-[18.5px] font-bold tracking-tight text-zinc-900 dark:text-white">
+              Create post
+            </h1>
 
-      {/* Main Responsive 2-Column Studio Layout */}
-      <main className="max-w-5xl mx-auto pt-4 sm:pt-6 px-3 sm:px-5">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
-          {/* ================================================================
-           * LEFT COLUMN: COMPOSER WORKSPACE (Always on Desktop, Step 1 Mobile)
-           * ============================================================== */}
-          <div
-            className={`lg:col-span-7 space-y-4 ${
-              step === 2 ? "hidden lg:block" : "block"
-            }`}
-          >
-            {/* Mode & Typography Control Bar */}
-            <div className="bg-white dark:bg-[#141720] rounded-2xl p-2 sm:p-2.5 border border-slate-200/80 dark:border-zinc-800/90 flex items-center justify-between gap-2 flex-wrap">
-              {/* Chips row matching IMG_5474 */}
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-11 shrink-0" />
+          </header>
+
+          {/* Action Pills Row Matching IMG_5474 (+ Scam Post Toggle Feature) */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            {/* 1. Tag People */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setShowTagPopover((prev) => !prev);
+                setActiveInlinePanel(null);
+              }}
+              className={`px-4 py-2 rounded-full border text-[13.5px] font-medium flex items-center gap-2 shrink-0 transition active:scale-95 cursor-pointer ${
+                postTag
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent shadow-xs"
+                  : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+              }`}
+            >
+              <UserPlus className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+              <span>{postTag ? `#${postTag}` : "Tag People"}</span>
+            </button>
+
+            {/* 2. Who can see */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setActiveInlinePanel((prev) => (prev === "audience" ? null : "audience"));
+                setShowTagPopover(false);
+              }}
+              className={`px-4 py-2 rounded-full border text-[13.5px] font-medium flex items-center gap-2 shrink-0 transition active:scale-95 cursor-pointer ${
+                activeInlinePanel === "audience"
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent shadow-xs"
+                  : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+              }`}
+            >
+              <Eye className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+              <span className="capitalize">
+                {privacy === "only_me" ? "Only Me" : privacy === "followers" ? "Followers" : "Who can see"}
+              </span>
+            </button>
+
+            {/* 3. Location */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setShowLocationModal(true);
+              }}
+              className={`px-4 py-2 rounded-full border text-[13.5px] font-medium flex items-center gap-2 shrink-0 transition active:scale-95 cursor-pointer ${
+                locationTag
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                  : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+              }`}
+            >
+              <MapPin className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+              <span className="max-w-[120px] truncate">{locationTag || "Location"}</span>
+            </button>
+
+            {/* 4. Scam Post (User-Requested Extra Feature) */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setPostType((prev) => (prev === "scam" ? "post" : "scam"));
+              }}
+              className={`px-4 py-2 rounded-full border text-[13.5px] font-semibold flex items-center gap-2 shrink-0 transition active:scale-95 cursor-pointer ${
+                postType === "scam"
+                  ? "bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-500/20"
+                  : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-current" />
+              <span>{postType === "scam" ? "Scam Alert ON" : "Scam Post"}</span>
+            </button>
+          </div>
+
+          {/* Inline Audience Selector Panel */}
+          {activeInlinePanel === "audience" && (
+            <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/10 p-3 shadow-md space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Who can see this post?</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setShowTagPopover(p => !p);
-                  }}
-                  className="px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 text-xs font-semibold flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
+                  onClick={() => setActiveInlinePanel(null)}
+                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
                 >
-                  <UserPlus className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
-                  <span>Tag People</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setActiveInlinePanel(p => p === "audience" ? null : "audience");
-                  }}
-                  className="px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 text-xs font-semibold flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
-                  <span className="capitalize">{privacy === "only_me" ? "Only Me" : privacy === "followers" ? "Followers" : "Who can see"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setShowLocationModal(true);
-                  }}
-                  className="px-4 py-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-white/10 text-xs font-semibold flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
-                >
-                  <MapPin className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
-                  <span className="max-w-[100px] truncate">{locationTag || "Location"}</span>
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-
-              {/* Text Typography Style Picker */}
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800/90 p-1 rounded-xl">
+              <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: "normal" as const, label: "Standard", icon: Type },
-                  { id: "large" as const, label: "Headline", icon: Sparkles },
-                  { id: "quote" as const, label: "Quote", icon: Quote },
-                ].map((st) => {
-                  const IconComp = st.icon;
-                  const active = textStyle === st.id;
+                  { id: "public" as const, label: "Public", sub: "Anyone on Loops", icon: Globe },
+                  { id: "followers" as const, label: "Followers", sub: "Followers only", icon: UserCheck },
+                  { id: "only_me" as const, label: "Only Me", sub: "Private archive", icon: Lock },
+                ].map((aud) => {
+                  const AudIcon = aud.icon;
+                  const active = privacy === aud.id;
                   return (
                     <button
-                      key={st.id}
+                      key={aud.id}
                       type="button"
                       onClick={() => {
                         triggerHaptic();
-                        setTextStyle(st.id);
+                        setPrivacy(aud.id);
+                        setActiveInlinePanel(null);
                       }}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer whitespace-nowrap ${
+                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
                         active
-                          ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs"
-                          : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                          ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
+                          : "bg-zinc-50 dark:bg-zinc-800 border-black/5 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
                       }`}
-                      title={`${st.label} text style`}
                     >
-                      <IconComp className="w-3 h-3 shrink-0" />
-                      <span className="hidden sm:inline">{st.label}</span>
+                      <div className="flex items-center gap-1.5 text-xs font-bold">
+                        <AudIcon className="w-3.5 h-3.5 shrink-0" />
+                        <span>{aud.label}</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">{aud.sub}</p>
                     </button>
                   );
                 })}
               </div>
             </div>
+          )}
 
-            {/* Primary Studio Composer Card */}
-            <div className="bg-white dark:bg-[#141720] rounded-3xl border border-slate-200/80 dark:border-zinc-800/90 shadow-xs overflow-visible">
-              <div className="p-4 sm:p-5 space-y-4">
-                {/* Author Identity + Topic Tag + Audience & Status Pills */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-slate-100 dark:ring-zinc-800 shrink-0 bg-slate-100 dark:bg-zinc-800">
-                      {userAvatarDisplay ? (
-                        <img
-                          src={userAvatarDisplay}
-                          alt={userNameDisplay}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
-                          {(userNameDisplay || "M").slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1 relative">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[15px] font-bold text-zinc-900 dark:text-white truncate max-w-[165px] sm:max-w-[240px]">
-                          {userNameDisplay}
-                        </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                        {postTag ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-[#1877F2]/10 text-[#1877F2] dark:text-[#58A6FF] text-xs font-semibold">
-                            <span className="truncate max-w-[110px]">#{postTag}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                triggerHaptic();
-                                setPostTag("");
-                              }}
-                              className="hover:opacity-75 cursor-pointer shrink-0"
-                              aria-label="Remove tag"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic();
-                              setTagInput("");
-                              setShowTagPopover((p) => !p);
-                            }}
-                            className="text-xs font-semibold text-zinc-400 hover:text-[#1877F2] dark:hover:text-[#58A6FF] transition cursor-pointer"
-                          >
-                            + Add topic tag
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Topic Tag Popover */}
-                      {showTagPopover && (
-                        <div className="absolute left-0 top-7 z-50 w-68 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-xl p-3 space-y-2.5">
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800">
-                            <span className="text-xs font-bold text-zinc-400">#</span>
-                            <input
-                              type="text"
-                              value={tagInput}
-                              onChange={(e) => setTagInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && tagInput.trim()) {
-                                  e.preventDefault();
-                                  setPostTag(tagInput.trim().replace(/^#+/, ""));
-                                  setShowTagPopover(false);
-                                }
-                              }}
-                              placeholder="Custom topic..."
-                              autoFocus
-                              className="w-full bg-transparent text-xs font-medium text-zinc-900 dark:text-white outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (tagInput.trim()) {
-                                  setPostTag(tagInput.trim().replace(/^#+/, ""));
-                                }
-                                setShowTagPopover(false);
-                              }}
-                              className="text-xs font-bold text-[#1877F2] cursor-pointer"
-                            >
-                              Set
-                            </button>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[
-                              "community",
-                              "tech",
-                              "dhaka",
-                              "scamalert",
-                              "update",
-                              "deals",
-                            ].map((t) => (
-                              <button
-                                key={t}
-                                type="button"
-                                onClick={() => {
-                                  triggerHaptic();
-                                  setPostTag(t);
-                                  setShowTagPopover(false);
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-[#1877F2]/12 hover:text-[#1877F2] text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer transition"
-                              >
-                                #{t}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Audience & Active Metadata Row */}
-                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic();
-                            setActiveInlinePanel((p) =>
-                              p === "audience" ? null : "audience"
-                            );
-                          }}
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer ${
-                            activeInlinePanel === "audience"
-                              ? "bg-[#1877F2] text-white"
-                              : "bg-slate-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-                          }`}
-                        >
-                          {privacy === "followers" ? (
-                            <UserCheck className="w-3 h-3 shrink-0" />
-                          ) : privacy === "only_me" ? (
-                            <Lock className="w-3 h-3 shrink-0" />
-                          ) : (
-                            <Globe className="w-3 h-3 shrink-0" />
-                          )}
-                          <span className="capitalize">
-                            {privacy === "only_me" ? "Only Me" : privacy}
-                          </span>
-                        </button>
-
-                        {effectiveAiLabel && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-[#1877F2] dark:text-blue-400 text-[11px] font-semibold">
-                            <Sparkles className="w-3 h-3 shrink-0" />
-                            <span>AI label</span>
-                            <button
-                              type="button"
-                              onClick={() => setManualAiLabel(false)}
-                              className="cursor-pointer hover:opacity-75"
-                              aria-label="Remove AI label"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        )}
-
-                        {scheduledAt && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold">
-                            <Clock className="w-3 h-3 shrink-0" />
-                            <span>
-                              {new Date(scheduledAt).toLocaleString([], {
-                                month: "short",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setScheduledAt(null)}
-                              className="cursor-pointer hover:opacity-75"
-                              aria-label="Clear schedule"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        )}
-
-                        {locationTag && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold">
-                            <MapPin className="w-3 h-3 shrink-0" />
-                            <span className="max-w-[130px] truncate">{locationTag}</span>
-                            <button
-                              type="button"
-                              onClick={() => setLocationTag("")}
-                              className="cursor-pointer hover:opacity-75"
-                              aria-label="Clear location"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Inline Audience Selector Panel */}
-                {activeInlinePanel === "audience" && (
-                  <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700/70 p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200">
-                        Who can see this Loop?
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveInlinePanel(null)}
-                        className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-                        aria-label="Close audience selector"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        {
-                          id: "public" as const,
-                          label: "Public",
-                          sub: "Anyone on Loops",
-                          icon: Globe,
-                        },
-                        {
-                          id: "followers" as const,
-                          label: "Followers",
-                          sub: "Followers only",
-                          icon: UserCheck,
-                        },
-                        {
-                          id: "only_me" as const,
-                          label: "Only Me",
-                          sub: "Private archive",
-                          icon: Lock,
-                        },
-                      ].map((aud) => {
-                        const AudIcon = aud.icon;
-                        const active = privacy === aud.id;
-                        return (
-                          <button
-                            key={aud.id}
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic();
-                              setPrivacy(aud.id);
-                              setActiveInlinePanel(null);
-                            }}
-                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                              active
-                                ? "bg-[#1877F2]/10 border-[#1877F2] text-[#1877F2] dark:text-[#58A6FF]"
-                                : "bg-white dark:bg-zinc-900 border-slate-200/80 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-slate-300"
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5 text-xs font-bold">
-                              <AudIcon className="w-3.5 h-3.5 shrink-0" />
-                              <span>{aud.label}</span>
-                            </div>
-                            <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
-                              {aud.sub}
-                            </p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* 24-Hour Ghost Post Banner */}
-                {isGhostPost && (
-                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800/80 border border-dashed border-slate-300 dark:border-zinc-700 text-xs font-medium text-zinc-700 dark:text-zinc-200">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <DottedGhostCatIcon className="w-4 h-4 text-zinc-900 dark:text-white shrink-0" />
-                      <span className="truncate">
-                        Ghost mode active · Disappears from feed after 24 hours
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsGhostPost(false)}
-                      className="text-zinc-400 hover:text-zinc-800 dark:hover:text-white shrink-0 cursor-pointer"
-                      aria-label="Turn off Ghost post"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Main Caption / Thought Textarea */}
-                <div
-                  className={
-                    textStyle === "quote"
-                      ? "rounded-2xl bg-slate-50 dark:bg-zinc-800/60 p-4 border border-slate-200/80 dark:border-zinc-700/80"
-                      : ""
-                  }
+          {/* Inline Tag People Popover */}
+          {showTagPopover && (
+            <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/10 p-3 shadow-md space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Tag Topic or Mention</span>
+                <button
+                  type="button"
+                  onClick={() => setShowTagPopover(false)}
+                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
                 >
-                  <textarea
-                    rows={6}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder={
-                      postType === "scam"
-                        ? "Describe clearly what happened, timeline, and proof details so the community stays safe... (#scamalert)"
-                        : textStyle === "quote"
-                        ? "“Write a memorable quote, reflection, or highlight...”"
-                        : textStyle === "large"
-                        ? "Write a bold headline or announcement..."
-                        : "What's happening? Share an update, photo story, or #hashtag..."
-                    }
-                    className={`w-full bg-transparent border-none outline-none resize-none placeholder:text-zinc-400 dark:placeholder:text-zinc-500 ${
-                      textStyle === "large"
-                        ? "text-[21px] sm:text-[23px] font-bold leading-snug text-zinc-900 dark:text-white"
-                        : textStyle === "quote"
-                        ? "text-[17px] sm:text-[18px] italic font-medium leading-relaxed text-zinc-900 dark:text-white"
-                        : "text-[15.5px] sm:text-[16px] leading-relaxed text-zinc-800 dark:text-zinc-100"
-                    }`}
-                  />
-                </div>
-
-                {/* Detected Hashtags & Link Preview Cards */}
-                {extractHashtagsFromText(description).length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {extractHashtagsFromText(description).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2.5 py-0.5 rounded-md bg-[#1877F2]/10 text-[#1877F2] dark:text-[#58A6FF] text-xs font-semibold"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <NewsLinkPreviewCards text={description} />
-
-                {/* SCAM INCIDENT DETAILS — Shown ONLY when Scam Report is selected */}
-                {postType === "scam" && (
-                  <div className="rounded-2xl bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200/80 dark:border-rose-900/50 p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span>Where did the scam happen? (Watermarked on photo)</span>
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {SCAM_PLACES.map((place) => (
-                        <button
-                          key={place}
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic();
-                            setScamLocation(place);
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
-                            scamLocation === place
-                              ? "bg-rose-600 text-white"
-                              : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-rose-200/70 dark:border-zinc-700"
-                          }`}
-                        >
-                          {place}
-                        </button>
-                      ))}
-                    </div>
-
-                    <input
-                      type="text"
-                      value={scamLocation}
-                      onChange={(e) => setScamLocation(e.target.value)}
-                      placeholder="Exact Page / Group / Website / Shop name..."
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200 dark:border-zinc-700 text-xs font-medium outline-none focus:border-rose-500"
-                    />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <input
-                        type="text"
-                        value={scammerName}
-                        onChange={(e) => setScammerName(e.target.value)}
-                        placeholder="Scammer / Page Name (Optional)"
-                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-zinc-700 text-xs outline-none focus:border-rose-500"
-                      />
-                      <input
-                        type="text"
-                        value={scammerPhone}
-                        onChange={(e) => setScammerPhone(e.target.value)}
-                        placeholder="Phone / WhatsApp Number"
-                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-zinc-700 text-xs outline-none focus:border-rose-500"
-                      />
-                      <input
-                        type="text"
-                        value={scammerBkash}
-                        onChange={(e) => setScammerBkash(e.target.value)}
-                        placeholder="bKash / Nagad / Bank Account"
-                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-zinc-700 text-xs outline-none focus:border-rose-500"
-                      />
-                      <input
-                        type="number"
-                        value={scammedAmount}
-                        onChange={(e) => setScammedAmount(e.target.value)}
-                        placeholder="Amount Lost (৳)"
-                        className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200/70 dark:border-zinc-700 text-xs outline-none focus:border-rose-500"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* PHOTO & MULTI-IMAGE STUDIO PANEL */}
-                {(processedImages.length > 0 || activeInlinePanel === "media") && (
-                  <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800/50 p-3.5 sm:p-4 space-y-3.5 border border-slate-200/80 dark:border-zinc-700/70">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4 text-[#1877F2]" />
-                        <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                          {isProcessingImages
-                            ? "Optimizing high-res photos..."
-                            : processedImages.length > 0
-                            ? `Photos (${processedImages.length})`
-                            : "Photo Studio"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setShowCameraModal(true)}
-                          className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-1 cursor-pointer hover:border-slate-300"
-                        >
-                          <Camera className="w-3.5 h-3.5" />
-                          <span>Camera</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="px-3 py-1.5 rounded-lg bg-[#1877F2] hover:bg-[#1464D0] text-white text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add Photos</span>
-                        </button>
-                        {processedImages.length === 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveInlinePanel(null)}
-                            className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-zinc-400 hover:text-zinc-700 flex items-center justify-center cursor-pointer"
-                            aria-label="Close photo panel"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {processedImages.length === 0 && !isProcessingImages && (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-7 rounded-xl border border-dashed border-slate-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/50 hover:border-[#1877F2] transition flex flex-col items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-[#1877F2]/10 text-[#1877F2] flex items-center justify-center">
-                          <ImageIcon className="w-5 h-5" />
-                        </div>
-                        <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                          Tap to select one or multiple photos
-                        </span>
-                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                          Supports Original, 1:1, 4:5 Portrait, Collage & Carousel layouts
-                        </span>
-                      </button>
-                    )}
-
-                    {/* Aspect Ratio & Multi-Photo Layout Controls */}
-                    {processedImages.length > 0 && (
-                      <div className="space-y-2.5">
-                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                          {[
-                            { id: "original", label: "Original", icon: Maximize2 },
-                            { id: "square", label: "1:1 Square", icon: Square },
-                            { id: "portrait", label: "4:5 Portrait", icon: ImageIcon },
-                            { id: "landscape", label: "16:10 Wide", icon: LayoutGrid },
-                          ].map((opt) => {
-                            const IconC = opt.icon;
-                            const active = imageAspectRatio === opt.id;
-                            return (
-                              <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => {
-                                  triggerHaptic();
-                                  setImageAspectRatio(opt.id as ImageAspectMode);
-                                }}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
-                                  active
-                                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700"
-                                }`}
-                              >
-                                <IconC className="w-3 h-3 shrink-0" />
-                                <span>{opt.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {processedImages.length > 1 && (
-                          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                            {[
-                              { id: "collage", label: "Collage", icon: LayoutGrid },
-                              { id: "carousel", label: "Carousel", icon: ImageIcon },
-                              { id: "grid", label: "2×2 Grid", icon: Square },
-                              { id: "stack", label: "Card Stack", icon: Layers },
-                            ].map((st) => {
-                              const IconC = st.icon;
-                              const active = imageLayout === st.id;
-                              return (
-                                <button
-                                  key={st.id}
-                                  type="button"
-                                  onClick={() => {
-                                    triggerHaptic();
-                                    setImageLayout(st.id as ImageLayoutStyle);
-                                  }}
-                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
-                                    active
-                                      ? "bg-[#1877F2] text-white"
-                                      : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700"
-                                  }`}
-                                >
-                                  <IconC className="w-3 h-3 shrink-0" />
-                                  <span>{st.label}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {(isCheckingAiImage || isAiGenerated) && (
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                            <Sparkles className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
-                            <span>
-                              {isCheckingAiImage
-                                ? "Checking image authenticity..."
-                                : "AI generated · Auto-detected"}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Interactive Layout Preview */}
-                        <div className="lg:hidden">
-                          <NewsPostMedia
-                            post={{
-                              ...previewPostObj,
-                              videoUrl: undefined,
-                              description: "",
-                            }}
-                          />
-                        </div>
-
-                        {/* Removable Thumbnail Strip */}
-                        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                          {processedImages.map((img, i) => (
-                            <div
-                              key={i}
-                              className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-900"
-                            >
-                              <img
-                                src={img}
-                                alt={`Photo ${i + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveImage(i)}
-                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center cursor-pointer hover:bg-rose-600 transition"
-                                aria-label="Remove image"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ATTACHED BACKGROUND MUSIC CARD */}
-                {attachedMusic && (
-                  <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800/70 border border-slate-200/80 dark:border-zinc-700 p-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-zinc-200 dark:bg-zinc-700">
-                        <img
-                          src={attachedMusic.cover}
-                          alt={attachedMusic.title}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={toggleAttachedMusicPreview}
-                          className="absolute inset-0 bg-black/40 text-white flex items-center justify-center cursor-pointer"
-                          aria-label="Play music preview"
-                        >
-                          {playingAttachedMusic ? (
-                            <Pause className="w-4 h-4 fill-current" />
-                          ) : (
-                            <Play className="w-4 h-4 fill-current ml-0.5" />
-                          )}
-                        </button>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#1877F2] dark:text-[#58A6FF]">
-                          <Music className="w-3 h-3 shrink-0" />
-                          <span className="truncate">
-                            {processedImages.length > 0
-                              ? "Background Music · Also appears in Reels"
-                              : "Background Music"}
-                          </span>
-                          {playingAttachedMusic && (
-                            <Volume2 className="w-3 h-3 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                          {attachedMusic.title}
-                        </p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                          {attachedMusic.artist}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setShowMusicModal(true)}
-                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                      >
-                        Change
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic();
-                          if (musicPreviewAudioRef.current) {
-                            musicPreviewAudioRef.current.pause();
-                          }
-                          setPlayingAttachedMusic(false);
-                          setAttachedMusic(null);
-                        }}
-                        className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-zinc-500 hover:text-rose-600 flex items-center justify-center cursor-pointer"
-                        aria-label="Remove music"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ATTACHED STICKERS PREVIEW ROW */}
-                {stickers.length > 0 && (
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    {stickers.map((sUrl, sIdx) => (
-                      <div
-                        key={`${sUrl}-${sIdx}`}
-                        className="relative w-18 h-18 rounded-2xl bg-slate-50 dark:bg-zinc-800/70 p-2 flex items-center justify-center border border-slate-200/80 dark:border-zinc-700"
-                      >
-                        <img
-                          src={sUrl}
-                          alt="Sticker"
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-contain"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic();
-                            setStickers((prev) =>
-                              prev.filter((_, idx) => idx !== sIdx)
-                            );
-                          }}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-xs cursor-pointer"
-                          aria-label="Remove sticker"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* ATTACHED GIF PREVIEW CARD */}
-                {gifUrl && (
-                  <div className="relative rounded-2xl overflow-hidden border border-slate-200/80 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 max-w-sm">
-                    <img
-                      src={gifUrl}
-                      alt="Attached GIF"
-                      referrerPolicy="no-referrer"
-                      className="w-full max-h-68 object-cover block"
-                    />
-                    <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/75 text-white text-[10px] font-extrabold tracking-wider">
-                      GIF
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic();
-                        setGifUrl("");
-                      }}
-                      className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/75 text-white flex items-center justify-center hover:bg-black cursor-pointer"
-                      aria-label="Remove GIF"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-
-                {/* INTERACTIVE POLL BUILDER */}
-                {pollDraft && (
-                  <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                        <BarChart3 className="w-3.5 h-3.5 text-[#1877F2]" />
-                        <span>Interactive Poll</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic();
-                          setPollDraft(null);
-                        }}
-                        className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-900 text-zinc-500 hover:text-rose-600 flex items-center justify-center cursor-pointer"
-                        aria-label="Remove poll"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <input
-                      type="text"
-                      value={pollDraft.question}
-                      onChange={(e) =>
-                        setPollDraft((prev) =>
-                          prev ? { ...prev, question: e.target.value } : null
-                        )
-                      }
-                      placeholder="Poll question (optional if written in caption)..."
-                      className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-700 text-xs font-semibold outline-none focus:border-[#1877F2]"
-                    />
-
-                    <div className="space-y-2">
-                      {pollDraft.options.map((opt, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={opt}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setPollDraft((prev) => {
-                                if (!prev) return null;
-                                const nextOpts = [...prev.options];
-                                nextOpts[idx] = val;
-                                return { ...prev, options: nextOpts };
-                              });
-                            }}
-                            placeholder={`Choice ${idx + 1}`}
-                            className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-700 text-xs outline-none focus:border-[#1877F2]"
-                          />
-                          {pollDraft.options.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPollDraft((prev) =>
-                                  prev
-                                    ? {
-                                        ...prev,
-                                        options: prev.options.filter(
-                                          (_, i) => i !== idx
-                                        ),
-                                      }
-                                    : null
-                                )
-                              }
-                              className="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      {pollDraft.options.length < 4 ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPollDraft((prev) =>
-                              prev
-                                ? { ...prev, options: [...prev.options, ""] }
-                                : null
-                            )
-                          }
-                          className="text-xs font-bold text-[#1877F2] flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add choice</span>
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-zinc-400">
-                          Maximum 4 choices
-                        </span>
-                      )}
-
-                      <div className="flex items-center gap-1">
-                        {[
-                          { h: 24, label: "24h" },
-                          { h: 72, label: "3d" },
-                          { h: 168, label: "7d" },
-                        ].map((dur) => (
-                          <button
-                            key={dur.h}
-                            type="button"
-                            onClick={() =>
-                              setPollDraft((prev) =>
-                                prev ? { ...prev, durationHours: dur.h } : null
-                              )
-                            }
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${
-                              pollDraft.durationHours === dur.h
-                                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                                : "bg-white dark:bg-zinc-900 text-zinc-500 border border-slate-200/70 dark:border-zinc-700"
-                            }`}
-                          >
-                            {dur.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* SNIPPET CARD EDITOR */}
-                {snippetDraft && (
-                  <div className="rounded-2xl bg-zinc-950 text-zinc-100 p-4 space-y-2.5 border border-zinc-800">
-                    <div className="flex items-center justify-between">
-                      <input
-                        type="text"
-                        value={snippetDraft.title}
-                        onChange={(e) =>
-                          setSnippetDraft((prev) =>
-                            prev ? { ...prev, title: e.target.value } : null
-                          )
-                        }
-                        placeholder="Snippet title (optional)..."
-                        className="bg-transparent text-xs font-bold text-zinc-200 placeholder:text-zinc-500 outline-none flex-1"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSnippetDraft(null)}
-                        className="w-6 h-6 rounded-lg bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <textarea
-                      rows={3}
-                      value={snippetDraft.content}
-                      onChange={(e) =>
-                        setSnippetDraft((prev) =>
-                          prev ? { ...prev, content: e.target.value } : null
-                        )
-                      }
-                      placeholder="Paste or write a formatted note, excerpt, or code snippet..."
-                      className="w-full bg-zinc-900/90 rounded-xl p-3 font-mono text-xs text-zinc-100 placeholder:text-zinc-500 outline-none resize-none border border-zinc-800"
-                    />
-                  </div>
-                )}
-
-                {/* QUOTE BLOCK EDITOR (Clean Hairline Card) */}
-                {quoteDraft && (
-                  <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800/70 border border-slate-200/80 dark:border-zinc-700 p-4 space-y-2 relative">
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1877F2] dark:text-[#58A6FF]">
-                        <Quote className="w-3 h-3" />
-                        <span>Highlighted Quote</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setQuoteDraft(null)}
-                        className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-900 text-zinc-400 hover:text-rose-500 flex items-center justify-center cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <textarea
-                      rows={2}
-                      value={quoteDraft.text}
-                      onChange={(e) =>
-                        setQuoteDraft((prev) =>
-                          prev ? { ...prev, text: e.target.value } : null
-                        )
-                      }
-                      placeholder="“Write a quote or key takeaway...”"
-                      className="w-full bg-transparent text-sm italic font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none resize-none"
-                    />
-                    <input
-                      type="text"
-                      value={quoteDraft.author}
-                      onChange={(e) =>
-                        setQuoteDraft((prev) =>
-                          prev ? { ...prev, author: e.target.value } : null
-                        )
-                      }
-                      placeholder="— Source or author (optional)"
-                      className="w-full bg-transparent text-xs font-semibold text-zinc-500 dark:text-zinc-400 outline-none"
-                    />
-                  </div>
-                )}
-
-                {/* REAL LIVE VOICE NOTE STUDIO */}
-                {(activeInlinePanel === "voice" || audioUrl || isRecording) && (
-                  <div className="relative rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200/80 dark:border-zinc-700/70 p-4 sm:p-5 flex flex-col items-center justify-center">
-                    {!isRecording && !audioUrl && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic();
-                          setActiveInlinePanel(null);
-                        }}
-                        className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition cursor-pointer"
-                        aria-label="Close voice recorder"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
-                    {audioUrl && !isRecording && (
-                      <audio
-                        ref={studioAudioRef}
-                        src={audioUrl}
-                        preload="metadata"
-                        onLoadedMetadata={(e) => {
-                          const d = e.currentTarget.duration;
-                          if (Number.isFinite(d) && d > 0) {
-                            const rounded = Math.max(1, Math.round(d));
-                            setAudioDuration(rounded);
-                            if (!isPlayingPreview) {
-                              setRecordCentiseconds(rounded * 100);
-                            }
-                          }
-                        }}
-                        onTimeUpdate={(e) => {
-                          const cur = e.currentTarget.currentTime;
-                          const dur =
-                            Number.isFinite(e.currentTarget.duration) &&
-                            e.currentTarget.duration > 0
-                              ? e.currentTarget.duration
-                              : audioDuration || 1;
-                          setPreviewCurrentCs(Math.floor(cur * 100));
-                          setPreviewProgress(Math.min(100, (cur / dur) * 100));
-                        }}
-                        onPlay={() => setIsPlayingPreview(true)}
-                        onPause={() => setIsPlayingPreview(false)}
-                        onEnded={() => {
-                          setIsPlayingPreview(false);
-                          setPreviewProgress(0);
-                          setPreviewCurrentCs(0);
-                        }}
-                      />
-                    )}
-
-                    <div className="text-[34px] sm:text-[38px] font-bold tracking-tight tabular-nums text-zinc-900 dark:text-white leading-none">
-                      {formatRecorderClock(
-                        isPlayingPreview ? previewCurrentCs : recordCentiseconds
-                      )}
-                    </div>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium flex items-center gap-1.5">
-                      {isRecording && (
-                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
-                      )}
-                      <span>
-                        {isRecording
-                          ? "Recording live microphone · Speak clearly"
-                          : isPlayingPreview
-                          ? "Playing voice note · Tap waveform to seek"
-                          : audioUrl
-                          ? "Voice note ready · Tap Play or scrub bars"
-                          : "Tap microphone to record or upload MP3/WAV"}
-                      </span>
-                    </p>
-
-                    <div className="mt-4 flex items-center gap-3">
-                      {audioUrl && !isRecording && (
-                        <button
-                          type="button"
-                          onClick={toggleStudioPreviewPlay}
-                          className="w-11 h-11 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center shadow-xs active:scale-95 transition cursor-pointer"
-                          aria-label={
-                            isPlayingPreview
-                              ? "Pause voice preview"
-                              : "Play voice preview"
-                          }
-                        >
-                          {isPlayingPreview ? (
-                            <Pause className="w-4 h-4 fill-current" />
-                          ) : (
-                            <Play className="w-4 h-4 fill-current ml-0.5" />
-                          )}
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={
-                          isRecording ? stopVoiceRecording : startVoiceRecording
-                        }
-                        className={`w-14 h-14 rounded-full text-white flex items-center justify-center shadow-sm active:scale-95 transition cursor-pointer ${
-                          isRecording
-                            ? "bg-rose-600 hover:bg-rose-700 ring-4 ring-rose-500/20"
-                            : "bg-[#1877F2] hover:bg-[#1465D8]"
-                        }`}
-                        aria-label={
-                          isRecording ? "Stop recording" : "Start recording"
-                        }
-                      >
-                        {isRecording ? (
-                          <span className="w-4 h-4 rounded-xs bg-white block" />
-                        ) : (
-                          <Mic className="w-5 h-5" />
-                        )}
-                      </button>
-
-                      {audioUrl && !isRecording && (
-                        <button
-                          type="button"
-                          onClick={clearRecordedVoice}
-                          className="w-11 h-11 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-rose-600 flex items-center justify-center active:scale-95 transition cursor-pointer"
-                          aria-label="Delete voice note"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => audioUploadInputRef.current?.click()}
-                        disabled={isUploadingAudio}
-                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-[#1877F2] text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      >
-                        <Music className="w-3.5 h-3.5 text-[#1877F2]" />
-                        <span>
-                          {isUploadingAudio
-                            ? `Uploading audio (${uploadProgress}%)...`
-                            : "Upload Audio File (MP3 / WAV)"}
-                        </span>
-                      </button>
-                      <input
-                        type="file"
-                        ref={audioUploadInputRef}
-                        accept="audio/mp3,audio/wav,audio/mpeg,audio/x-wav,audio/*,.mp3,.wav"
-                        onChange={handleAudioFileUpload}
-                        className="hidden"
-                      />
-                    </div>
-
-                    {/* Interactive Waveform Scrubber */}
-                    <div className="w-full mt-5">
-                      <div
-                        ref={studioTrackRef}
-                        onClick={handleStudioWaveformSeek}
-                        className={`relative h-24 flex items-center gap-[3px] px-1 select-none ${
-                          audioUrl && !isRecording ? "cursor-pointer" : ""
-                        }`}
-                      >
-                        {isRecording
-                          ? Array.from({ length: STUDIO_BAR_COUNT }).map(
-                              (_, idx) => {
-                                const hasSample = idx < liveBars.length;
-                                const isPlayheadEdge =
-                                  hasSample && idx === liveBars.length - 1;
-                                if (!hasSample) {
-                                  return (
-                                    <span
-                                      key={idx}
-                                      className="flex-1 flex items-center justify-center h-full"
-                                    >
-                                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                                    </span>
-                                  );
-                                }
-                                const peak = liveBars[idx];
-                                return (
-                                  <span
-                                    key={idx}
-                                    className={`flex-1 flex items-center justify-center h-full relative ${
-                                      isPlayheadEdge
-                                        ? "border-r-2 border-[#1877F2]"
-                                        : ""
-                                    }`}
-                                  >
-                                    <span
-                                      className={`w-[3px] rounded-full transition-all duration-75 ${studioPeakToHeightClass(
-                                        peak
-                                      )} ${
-                                        isPlayheadEdge
-                                          ? "bg-[#1877F2]"
-                                          : "bg-zinc-800 dark:bg-zinc-100"
-                                      }`}
-                                    />
-                                  </span>
-                                );
-                              }
-                            )
-                          : audioUrl
-                          ? (audioWaveform.length > 0
-                              ? audioWaveform
-                              : Array.from(
-                                  { length: STUDIO_BAR_COUNT },
-                                  (_, i) =>
-                                    0.25 + 0.45 * Math.abs(Math.sin(i * 0.55))
-                                )
-                            ).map((peak, idx, arr) => {
-                              const barPct = ((idx + 0.5) / arr.length) * 100;
-                              const played =
-                                previewProgress > 0 && barPct <= previewProgress;
-                              const nextBarPct =
-                                ((idx + 1.5) / arr.length) * 100;
-                              const isPlayhead =
-                                previewProgress > 0 &&
-                                barPct <= previewProgress &&
-                                nextBarPct > previewProgress;
-                              return (
-                                <span
-                                  key={idx}
-                                  className={`flex-1 flex items-center justify-center h-full ${
-                                    isPlayhead
-                                      ? "border-r-2 border-[#1877F2]"
-                                      : ""
-                                  } ${played ? "bg-[#1877F2]/[0.07]" : ""}`}
-                                >
-                                  <span
-                                    className={`w-[3px] rounded-full transition-all duration-100 ${studioPeakToHeightClass(
-                                      peak
-                                    )} ${
-                                      played
-                                        ? "bg-[#1877F2]"
-                                        : "bg-zinc-700 dark:bg-zinc-300 hover:bg-[#1877F2]/70"
-                                    }`}
-                                  />
-                                </span>
-                              );
-                            })
-                          : Array.from({ length: STUDIO_BAR_COUNT }).map(
-                              (_, idx) => (
-                                <span
-                                  key={idx}
-                                  className="flex-1 flex items-center justify-center h-full"
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                                </span>
-                              )
-                            )}
-                      </div>
-
-                      <div className="border-t border-slate-200 dark:border-zinc-700 pt-2 flex items-center justify-between text-[11px] font-medium tabular-nums text-zinc-500">
-                        {Array.from({ length: 9 }).map((_, idx) => {
-                          const totalTimelineSec = Math.max(
-                            8,
-                            isRecording
-                              ? Math.ceil(recordCentiseconds / 100)
-                              : audioDuration || 8
-                          );
-                          const secVal = Math.round(
-                            (idx / 8) * totalTimelineSec
-                          );
-                          const m = Math.floor(secVal / 60);
-                          const s = secVal % 60;
-                          return (
-                            <span key={idx}>
-                              {m}:{String(s).padStart(2, "0")}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* CATEGORY & TOPICS SELECTOR */}
-                {activeInlinePanel === "themes" && (
-                  <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700/70 p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                        Feed Categories ({selectedThemes.length} selected)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActiveInlinePanel(null)}
-                        className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer"
-                        aria-label="Close categories"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                      {["All", ...FEED_THEME_GROUPS].map((grp) => {
-                        const active = activeCategoryGroup === grp;
-                        return (
-                          <button
-                            key={grp}
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic();
-                              setActiveCategoryGroup(grp);
-                            }}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition cursor-pointer shrink-0 ${
-                              active
-                                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700"
-                            }`}
-                          >
-                            {grp}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-0.5">
-                      {(activeCategoryGroup === "All"
-                        ? FEED_THEMES
-                        : FEED_THEMES.filter(
-                            (t) => t.group === activeCategoryGroup
-                          )
-                      ).map((theme) => {
-                        const active = selectedThemes.includes(theme.id);
-                        return (
-                          <button
-                            key={theme.id}
-                            type="button"
-                            onClick={() => toggleThemeSelection(theme.id)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0 ${
-                              active
-                                ? "bg-[#1877F2] text-white"
-                                : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-slate-200/70 dark:border-zinc-700 hover:border-[#1877F2]/50"
-                            }`}
-                          >
-                            <span>{theme.emoji}</span>
-                            <span>{theme.label}</span>
-                            {active && <Check className="w-3 h-3 shrink-0" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* CONNECTED MULTI-LOOP THREAD ITEMS */}
-                <div className="pt-1 space-y-3">
-                  {threadItems.map((item, idx) => (
-                    <div
-                      key={item.id}
-                      className="relative pl-9 pt-1 space-y-2 border-l-2 border-slate-200 dark:border-zinc-800 ml-4"
-                    >
-                      {userAvatarDisplay ? (
-                        <img
-                          src={userAvatarDisplay}
-                          alt={userNameDisplay}
-                          referrerPolicy="no-referrer"
-                          className="absolute -left-[15px] top-1 w-7 h-7 rounded-full object-cover ring-2 ring-white dark:ring-[#141720]"
-                        />
-                      ) : (
-                        <div className="absolute -left-[15px] top-1 w-7 h-7 rounded-full bg-slate-200 dark:bg-zinc-800 ring-2 ring-white dark:ring-[#141720] flex items-center justify-center text-[11px] font-bold text-zinc-700 dark:text-zinc-200">
-                          {(userNameDisplay || "M").slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                          Connected Loop #{idx + 2}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setThreadItems((prev) =>
-                              prev.filter((t) => t.id !== item.id)
-                            )
-                          }
-                          className="text-zinc-400 hover:text-rose-500 cursor-pointer"
-                          aria-label="Remove loop item"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <textarea
-                        rows={2}
-                        value={item.text}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setThreadItems((prev) =>
-                            prev.map((t) =>
-                              t.id === item.id ? { ...t, text: val } : t
-                            )
-                          );
-                        }}
-                        placeholder="Continue this thread..."
-                        className="w-full bg-slate-50 dark:bg-zinc-800/70 border border-slate-200/70 dark:border-zinc-700/70 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none resize-none"
-                      />
-                      {item.imageUrl ? (
-                        <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-700">
-                          <img
-                            src={item.imageUrl}
-                            alt="Loop attachment"
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setThreadItems((prev) =>
-                                prev.map((t) =>
-                                  t.id === item.id
-                                    ? { ...t, imageUrl: undefined }
-                                    : t
-                                )
-                              )
-                            }
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center cursor-pointer"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-[#1877F2] cursor-pointer">
-                          <ImageIcon className="w-3.5 h-3.5" />
-                          <span>Attach photo</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) =>
-                              handleThreadPhotoSelected(item.id, e)
-                            }
-                            className="hidden"
-                          />
-                        </label>
-                      )}
-                    </div>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={handleAddThreadItem}
-                    className="inline-flex items-center gap-2 py-1 text-xs font-semibold text-zinc-500 hover:text-[#1877F2] dark:text-zinc-400 dark:hover:text-[#58A6FF] transition cursor-pointer"
-                  >
-                    <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
-                      <Plus className="w-3 h-3" />
-                    </span>
-                    <span>Add another post to thread</span>
-                  </button>
-                </div>
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-
-              {/* Studio Attachment Shelf & Publish Post matching IMG_5474 */}
-              <div className="px-4 sm:px-6 py-4 bg-slate-50/60 dark:bg-zinc-900/60 border-t border-slate-200/70 dark:border-zinc-800/80 rounded-b-3xl space-y-4">
-                {/* 5-Item Attachment Shelf (Image, GIF, Live, Video, Music) */}
-                <div className="grid grid-cols-5 gap-2">
-                  {/* 1. Image */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      fileInputRef.current?.click();
-                    }}
-                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
-                  >
-                    <ImageIcon className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
-                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">Image</span>
-                  </button>
-
-                  {/* 2. GIF */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setShowGiphySheet(true);
-                    }}
-                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
-                  >
-                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200 border-2 border-current px-1 py-0.2 rounded-md leading-none">GIF</span>
-                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">GIF</span>
-                  </button>
-
-                  {/* 3. Live */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      notify("Live broadcasting feature is launching soon!", "info");
-                    }}
-                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
-                  >
-                    <Radio className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
-                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">Live</span>
-                  </button>
-
-                  {/* 4. Video */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      fileInputRef.current?.click();
-                    }}
-                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
-                  >
-                    <Play className="w-5 h-5 text-zinc-700 dark:text-zinc-200 fill-current" />
-                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">Video</span>
-                  </button>
-
-                  {/* 5. Music (Deezer Music Picker for Background Music) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic();
-                      setShowMusicModal(true);
-                    }}
-                    className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl bg-white dark:bg-zinc-800/80 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
-                  >
-                    <Music className="w-5 h-5 text-zinc-700 dark:text-zinc-200" />
-                    <span className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300">Music</span>
-                  </button>
-                </div>
-
-                {/* Full-Width Rounded-2xl "Publish Post" Button (IMG_5474) */}
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800">
+                <span className="text-xs font-bold text-zinc-400">#</span>
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && tagInput.trim()) {
+                      e.preventDefault();
+                      setPostTag(tagInput.trim().replace(/^#+/, ""));
+                      setShowTagPopover(false);
+                    }
+                  }}
+                  placeholder="Type topic or friend name..."
+                  autoFocus
+                  className="w-full bg-transparent text-xs font-medium text-zinc-900 dark:text-white outline-none"
+                />
                 <button
                   type="button"
                   onClick={() => {
-                    triggerHaptic();
-                    handlePublish();
+                    if (tagInput.trim()) {
+                      setPostTag(tagInput.trim().replace(/^#+/, ""));
+                    }
+                    setShowTagPopover(false);
                   }}
-                  disabled={isSubmitting || isProcessingImages || isUploadingAudio || (!description.trim() && processedImages.length === 0 && !attachedMusic && !gifUrl)}
-                  className={`w-full py-4 rounded-2xl font-bold text-[15px] flex items-center justify-center gap-2 transition-all duration-200 border border-zinc-200/60 dark:border-white/10 ${
-                    description.trim() || processedImages.length > 0 || attachedMusic || gifUrl
-                      ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 hover:opacity-90 active:scale-[0.99] cursor-pointer"
-                      : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-                  }`}
+                  className="text-xs font-bold text-zinc-900 dark:text-white cursor-pointer px-1.5"
                 >
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>{isSubmitting ? "Publishing Post..." : "Publish Post"}</span>
+                  Set
                 </button>
               </div>
-            </div>
-          </div>
-
-          {/* ================================================================
-           * RIGHT COLUMN: LIVE FEED CARD PREVIEW & PUBLISHING RAIL
-           * Always visible sticky on Desktop (lg+); shown on Mobile Step 2
-           * ============================================================== */}
-          <aside
-            className={`lg:col-span-5 lg:sticky lg:top-20 space-y-4 ${
-              step === 2 ? "block" : "hidden lg:block"
-            }`}
-          >
-            <div className="bg-white dark:bg-[#141720] rounded-3xl border border-slate-200/80 dark:border-zinc-800/90 p-4 sm:p-5 shadow-xs space-y-4">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-sm font-bold text-zinc-900 dark:text-white">
-                    Live Feed Preview
-                  </h2>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    {postType === "scam"
-                      ? `Scam Alert · Stamp: "${scamLocation}"`
-                      : attachedMusic && processedImages.length > 0
-                      ? "Appears in Loops Feed & Reels"
-                      : "Real-time appearance in Loops Feed"}
-                  </p>
-                </div>
-                <span
-                  className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold ${
-                    postType === "scam"
-                      ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
-                      : "bg-slate-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
-                  }`}
-                >
-                  {postType === "scam" ? "Scam Alert" : "Loop Card"}
-                </span>
-              </div>
-
-              {/* Rendered Feed Card */}
-              <div className="rounded-2xl bg-[#F8FAFC] dark:bg-zinc-900/80 p-4 space-y-3 border border-slate-200/80 dark:border-zinc-800">
-                <div className="flex items-center gap-3">
-                  {userAvatarDisplay ? (
-                    <img
-                      src={userAvatarDisplay}
-                      alt={userNameDisplay}
-                      referrerPolicy="no-referrer"
-                      className="w-10 h-10 rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200 shrink-0">
-                      {(userNameDisplay || "M").slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                        {userNameDisplay}
-                      </p>
-                      {postTag && (
-                        <span className="text-xs font-semibold text-[#1877F2] dark:text-[#58A6FF] shrink-0">
-                          › #{postTag}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                      {scheduledAt
-                        ? `Scheduled · ${new Date(
-                            scheduledAt
-                          ).toLocaleDateString([], {
-                            month: "short",
-                            day: "numeric",
-                          })}`
-                        : "Just now"}{" "}
-                      · {privacy === "only_me" ? "Only Me" : privacy}
-                      {locationTag ? ` · ${locationTag}` : ""}
-                      {isGhostPost ? " · 24h Ghost" : ""}
-                    </p>
-                    {effectiveAiLabel && (
-                      <p className="text-[11px] text-[#1877F2] font-medium flex items-center gap-1 mt-0.5">
-                        <Sparkles className="w-3 h-3" />
-                        <span>AI generated</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {description ? (
-                  <div
-                    className={`whitespace-pre-line break-words ${
-                      textStyle === "large"
-                        ? "text-lg font-bold text-zinc-900 dark:text-white leading-snug"
-                        : textStyle === "quote"
-                        ? "text-[15px] italic font-medium text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-800/80 p-3.5 rounded-xl border border-slate-200/80 dark:border-zinc-700"
-                        : "text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed"
-                    }`}
-                  >
-                    <NewsRichText text={description} />
-                  </div>
-                ) : (
-                  !processedImages.length &&
-                  !audioUrl &&
-                  !gifUrl &&
-                  !pollDraft &&
-                  !quoteDraft &&
-                  !snippetDraft && (
-                    <p className="text-sm text-zinc-400 dark:text-zinc-500 py-3">
-                      Your caption, photos, music, or voice note will preview live here...
-                    </p>
-                  )
-                )}
-
-                <NewsLinkPreviewCards text={description} />
-                <NewsPostMedia post={previewPostObj} />
-              </div>
-
-              {/* Active Topics Quick Bar */}
-              <div className="pt-1 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                    Selected Feed Topics
-                  </span>
+              <div className="flex flex-wrap gap-1.5">
+                {["community", "deals", "viral", "tech", "scamalert", "lifestyle"].map((t) => (
                   <button
+                    key={t}
                     type="button"
                     onClick={() => {
-                      setStep(1);
-                      setActiveInlinePanel("themes");
+                      triggerHaptic();
+                      setPostTag(t);
+                      setShowTagPopover(false);
                     }}
-                    className="text-xs font-semibold text-[#1877F2] hover:underline cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 cursor-pointer transition"
                   >
-                    Edit topics
+                    #{t}
                   </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {FEED_THEMES.filter((t) => selectedThemes.includes(t.id)).map(
-                    (theme) => (
-                      <span
-                        key={theme.id}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 inline-flex items-center gap-1"
-                      >
-                        <span>{theme.emoji}</span>
-                        <span>{theme.label}</span>
-                      </span>
-                    )
-                  )}
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Main Writing Textarea Matching IMG_5474 */}
+          <div className="flex-1 flex flex-col pt-1">
+            <textarea
+              rows={7}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What's on your mind?"
+              className="w-full flex-1 bg-transparent border-none outline-none resize-none text-[17px] text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 leading-relaxed font-normal"
+            />
+          </div>
+
+          {/* Scam Incident Details (When Scam Post is Active) */}
+          {postType === "scam" && (
+            <div className="rounded-2xl bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200/80 dark:border-rose-900/50 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>Scam Incident Details (Protect the community)</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {["Facebook Page", "Daraz Seller", "WhatsApp", "Telegram", "Fake Website", "Physical Shop"].map((place) => (
+                  <button
+                    key={place}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setScamLocation(place);
+                    }}
+                    className={`px-3 py-1 rounded-full text-[11.5px] font-semibold transition cursor-pointer ${
+                      scamLocation === place
+                        ? "bg-rose-600 text-white"
+                        : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border border-rose-200/70 dark:border-zinc-700"
+                    }`}
+                  >
+                    {place}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={scamLocation}
+                onChange={(e) => setScamLocation(e.target.value)}
+                placeholder="Exact Page / Group / Website / Shop name..."
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200 dark:border-zinc-700 text-xs font-medium outline-none focus:border-rose-500 text-zinc-900 dark:text-white"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={scammerPhone}
+                  onChange={(e) => setScammerPhone(e.target.value)}
+                  placeholder="Scammer Phone / WhatsApp"
+                  className="px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200 dark:border-zinc-700 text-xs outline-none text-zinc-900 dark:text-white"
+                />
+                <input
+                  type="number"
+                  value={scammedAmount}
+                  onChange={(e) => setScammedAmount(e.target.value)}
+                  placeholder="Amount Lost (৳)"
+                  className="px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-rose-200 dark:border-zinc-700 text-xs outline-none text-zinc-900 dark:text-white"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Attached Photos Preview */}
+          {processedImages.length > 0 && (
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between text-xs font-semibold text-zinc-500">
+                <span>Photos ({processedImages.length})</span>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-zinc-900 dark:text-white font-bold cursor-pointer hover:underline"
+                >
+                  + Add more
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {processedImages.map((img, i) => (
+                  <div key={i} className="relative aspect-square rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-black/5">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(i)}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center cursor-pointer hover:bg-rose-600 transition"
+                      aria-label="Remove image"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Attached Video Preview */}
+          {videoUrl && (
+            <div className="relative rounded-2xl overflow-hidden bg-black border border-black/10 aspect-video flex items-center justify-center">
+              <video
+                src={toPlayableMediaUrl(videoUrl)}
+                controls
+                playsInline
+                className="w-full h-full object-contain"
+              />
+              <button
+                type="button"
+                onClick={() => setVideoUrl("")}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/75 text-white flex items-center justify-center hover:bg-rose-600 transition cursor-pointer z-10"
+                aria-label="Remove video"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Attached GIF Preview */}
+          {gifUrl && (
+            <div className="relative rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-black/5 max-h-60 flex items-center justify-center">
+              <img src={gifUrl} alt="Attached GIF" className="max-h-60 object-contain rounded-2xl" />
+              <button
+                type="button"
+                onClick={() => setGifUrl("")}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/75 text-white flex items-center justify-center hover:bg-rose-600 transition cursor-pointer"
+                aria-label="Remove GIF"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Attached Music Preview */}
+          {attachedMusic && (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-zinc-800 border border-black/5 shadow-xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Music className="w-4 h-4 text-purple-600 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">{attachedMusic.title}</p>
+                  <p className="text-[11px] text-zinc-500 truncate">{attachedMusic.artist}</p>
                 </div>
               </div>
-
-              {/* Mobile Step 2 Action Buttons */}
-              {step === 2 && (
-                <div className="flex lg:hidden items-center gap-2.5 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="px-5 py-3 rounded-full bg-slate-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold cursor-pointer"
-                  >
-                    Back to Write
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePublish}
-                    disabled={
-                      isSubmitting || isProcessingImages || isUploadingAudio
-                    }
-                    className="flex-1 py-3 rounded-full bg-[#1877F2] hover:bg-[#1464D0] text-white text-xs font-bold shadow-xs disabled:opacity-50 cursor-pointer"
-                  >
-                    {isSubmitting
-                      ? "Publishing..."
-                      : editId
-                      ? "Save Changes"
-                      : scheduledAt
-                      ? "Schedule Loop"
-                      : "Publish to Loops"}
-                  </button>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => setAttachedMusic(null)}
+                className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 hover:text-rose-500 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
-          </aside>
+          )}
         </div>
-      </main>
+
+        {/* Bottom Attachment Shelf & Publish Post Button Matching IMG_5474 */}
+        <div className="pt-4 space-y-4">
+          {/* Exactly 4 Toolbar Cards: Image | GIF | Live | Video (IMG_5474) */}
+          <div className="grid grid-cols-4 gap-2.5">
+            {/* 1. Image */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                fileInputRef.current?.click();
+              }}
+              className="bg-white dark:bg-zinc-800 rounded-2xl py-3.5 px-2 flex flex-col items-center justify-center gap-1.5 border border-black/5 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shadow-2xs"
+            >
+              <ImageIcon className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
+              <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">Image</span>
+            </button>
+
+            {/* 2. GIF */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setShowGiphySheet(true);
+              }}
+              className="bg-white dark:bg-zinc-800 rounded-2xl py-3.5 px-2 flex flex-col items-center justify-center gap-1.5 border border-black/5 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shadow-2xs"
+            >
+              <span className="text-[9.5px] font-bold text-zinc-700 dark:text-zinc-200 border-[1.5px] border-current px-1 py-0.2 rounded-xs leading-none">
+                GIF
+              </span>
+              <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">GIF</span>
+            </button>
+
+            {/* 3. Live */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setShowLiveStudio(true);
+              }}
+              className="bg-white dark:bg-zinc-800 rounded-2xl py-3.5 px-2 flex flex-col items-center justify-center gap-1.5 border border-black/5 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shadow-2xs"
+            >
+              <Radio className="w-5 h-5 text-red-500 animate-pulse" />
+              <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">Live</span>
+            </button>
+
+            {/* 4. Video - Directly triggers device file picker without popup */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                videoFileInputRef.current?.click();
+              }}
+              className="bg-white dark:bg-zinc-800 rounded-2xl py-3.5 px-2 flex flex-col items-center justify-center gap-1.5 border border-black/5 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shadow-2xs"
+            >
+              <Play className="w-5 h-5 text-zinc-600 dark:text-zinc-300 fill-current" />
+              <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">Video</span>
+            </button>
+          </div>
+
+          {/* Large Full-Width "Publish Post" Pill Button Matching IMG_5474 */}
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic();
+              handlePublish();
+            }}
+            disabled={
+              isSubmitting ||
+              isProcessingImages ||
+              isUploadingAudio ||
+              isUploadingVideo ||
+              (!description.trim() &&
+                processedImages.length === 0 &&
+                !videoUrl &&
+                !gifUrl &&
+                !audioUrl &&
+                !attachedMusic)
+            }
+            className={`w-full py-4 rounded-full font-semibold text-[16px] flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer ${
+              description.trim() ||
+              processedImages.length > 0 ||
+              videoUrl ||
+              gifUrl ||
+              audioUrl ||
+              attachedMusic
+                ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-sm hover:opacity-95 active:scale-[0.99]"
+                : "bg-[#D1D5DB] dark:bg-zinc-700 text-white cursor-not-allowed"
+            }`}
+          >
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            <span>{isSubmitting ? "Publishing Post..." : "Publish Post"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Live Stream Studio Modal */}
+      <LiveStreamModal
+        isOpen={showLiveStudio}
+        onClose={() => setShowLiveStudio(false)}
+        initialTitle={description.slice(0, 40) || "Live Discussion"}
+      />
 
       {/* ====================================================================
        * LIQUID GLASS MODALS & BOTTOM SHEETS

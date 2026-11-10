@@ -5167,18 +5167,18 @@ const handleCreateChannel = async () => {
                   />
 
                   {/* Segmented Filter Pills matching IMG_5470: All | Unread | Groups */}
-                  <div className="px-5 pt-3 pb-1">
-                    <div className="bg-white/80 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/60 dark:border-white/10 shadow-sm flex items-center gap-1 backdrop-blur-md">
+                  <div className="px-5 pt-3 pb-2">
+                    <div className="bg-white dark:bg-zinc-800/90 py-3 px-6 rounded-full border border-black/[0.04] dark:border-white/10 shadow-2xs flex items-center justify-around backdrop-blur-md">
                       {(['all', 'unread', 'groups'] as const).map((tab) => (
                         <button
                           key={tab}
                           type="button"
                           onClick={() => setMessagesFilterTab(tab)}
                           className={cn(
-                            "flex-1 py-2 rounded-full text-[14px] font-semibold transition-all duration-200 cursor-pointer text-center",
+                            "text-[15px] transition-all duration-200 cursor-pointer text-center px-4 py-0.5",
                             messagesFilterTab === tab
-                              ? "bg-white dark:bg-zinc-900 text-zinc-950 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                              : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                              ? "font-bold text-zinc-950 dark:text-white"
+                              : "font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
                           )}
                         >
                           {tab === 'all' ? 'All' : tab === 'unread' ? 'Unread' : 'Groups'}
@@ -5874,30 +5874,9 @@ const handleCreateChannel = async () => {
             =================================================================== */}
         {!activeChat && !activeChannel && (
           <div className="md:hidden fixed bottom-6 inset-x-0 z-40 px-5 flex items-center justify-between pointer-events-none">
-            {/* Left/Center: Floating Frosted Pill Dock */}
-            <div className="pointer-events-auto h-[60px] px-3.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-zinc-200/80 dark:border-white/10 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.12)] flex items-center gap-4">
-              {/* 1. Home (Messages Home matching IMG_5470) */}
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  setShowNewChatPopup(false);
-                  setActiveMessagesTab('chats');
-                  setSidebarTab('messages');
-                  setShowArchivedOnly(false);
-                  setShowInboxSearch(false);
-                  setChatSearchQuery('');
-                  setMessagesFilterTab('all');
-                  setSearchParams({}, { replace: true });
-                }}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white active:scale-95 transition cursor-pointer"
-                title="Messages Home"
-                aria-label="Messages Home"
-              >
-                <Icon name="messages-home" className="w-[22px] h-[22px]" />
-              </button>
-
-              {/* 2. Message (Active) */}
+            {/* Left/Center: Floating Frosted Pill Dock (Messages, Activity, Profile) */}
+            <div className="pointer-events-auto h-[60px] px-3.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full shadow-sm flex items-center gap-4">
+              {/* 1. Message (Active) */}
               <button
                 type="button"
                 onClick={() => {
@@ -7515,7 +7494,7 @@ const handleCreateChannel = async () => {
                          <button
                             type="button"
                             onClick={() => setSearchParams({}, { replace: true })}
-                            className="md:hidden w-11 h-11 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition shrink-0 cursor-pointer"
+                            className="md:hidden w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition shrink-0 cursor-pointer"
                             title="Back to Messages"
                           >
                               <ChevronLeft className="w-5 h-5 text-zinc-900 dark:text-white stroke-[2.2]" />
@@ -7654,41 +7633,44 @@ const handleCreateChannel = async () => {
                               <span>{activeChat?.aiDisabled ? 'AI Off' : 'AI On'}</span>
                             </button>
                           )}
+                         {/* Audio Call Button matching IMG_5472 */}
                          <button
-                            type="button"
-                            onClick={() => startCall("audio")}
-                            className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer"
-                            title="Voice Call"
-                            aria-label="Voice Call"
-                          >
-                              <Phone className="w-5 h-5 text-zinc-900 dark:text-white" />
-                          </button>
+                           type="button"
+                           onClick={() => startCall("audio")}
+                           className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+                           title="Voice Call"
+                           aria-label="Voice Call"
+                         >
+                           <Phone className="w-5 h-5 text-zinc-900 dark:text-white" />
+                         </button>
 
-                          <button
-                            type="button"
-                            onClick={() => startCall("video")}
-                            className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer"
-                            title="Video Call"
-                            aria-label="Video Call"
-                          >
-                              <Video className="w-5 h-5 text-zinc-900 dark:text-white" />
-                          </button>
+                         {/* Video Call Button matching IMG_5472 */}
+                         <button
+                           type="button"
+                           onClick={() => startCall("video")}
+                           className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+                           title="Video Call"
+                           aria-label="Video Call"
+                         >
+                           <Video className="w-5 h-5 text-zinc-900 dark:text-white" />
+                         </button>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (activeChat?.isGroup || activeChat?.type === "group") {
-                                setShowGroupDetailsModal(true);
-                              } else {
-                                setShowUserInfoModal(true);
-                              }
-                            }}
-                            className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 shadow-sm border border-zinc-100 dark:border-zinc-800/80 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer"
-                            title="Conversation details"
-                            aria-label="Conversation details"
-                          >
-                              <MoreVertical className="w-5 h-5 text-zinc-900 dark:text-white" />
-                          </button>
+                         {/* Conversation details menu button matching IMG_5472 */}
+                         <button
+                           type="button"
+                           onClick={() => {
+                             if (activeChat?.isGroup || activeChat?.type === "group") {
+                               setShowGroupDetailsModal(true);
+                             } else {
+                               setShowUserInfoModal(true);
+                             }
+                           }}
+                           className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                           title="Conversation details"
+                           aria-label="Conversation details"
+                         >
+                           <MoreVertical className="w-5 h-5 text-zinc-900 dark:text-white" />
+                         </button>
                       </div>
                  </div>
 
@@ -8051,6 +8033,14 @@ const handleCreateChannel = async () => {
                                               )}
                                            </div>
                                          </div>
+
+                                         {/* AI Generated Disclaimer Label */}
+                                         {(msg.isAiGenerated || msg.isAi || msg.senderId === 'ai' || msg.isBotReply) && (
+                                             <div className={cn("flex items-center gap-1 mt-1 px-1 text-[10.5px] font-medium text-zinc-400 dark:text-zinc-500 select-none", isMe ? "justify-end" : "justify-start")}>
+                                                 <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                                                 <span>AI generated message · AI can make mistakes</span>
+                                             </div>
+                                         )}
 
                                          {/* Quiet Read Receipt on Final Outgoing Message Only (Keeps bubble stream clean like IMG_5359 right) */}
                                          {!privacySettings.minimalistBubbles && isMe && idx === filteredMessages.length - 1 && (

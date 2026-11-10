@@ -602,16 +602,16 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       v.muted = isMuted || (hasSeparateReelMusic && reelVideoVolume <= 0.01);
       v.playbackRate = playbackSpeed;
       if (isActive && !isPaused) {
-        v.play().catch(() => {
-          // Browser blocked unmuted autoplay before first click gesture: mute temporarily once
-          v.muted = true;
-          if (audioEl) audioEl.pause();
-          if (!autoMuteNotifiedRef.current) {
-            autoMuteNotifiedRef.current = true;
-            onAutoMuted?.();
-          }
-          v.play().catch(() => {});
-        });
+        setIsBuffering(false);
+        const p = v.play();
+        if (p !== undefined) {
+          p.catch(() => {
+            // If browser blocks unmuted playback on slide change, fallback to muted for this video element
+            v.muted = true;
+            if (audioEl) audioEl.pause();
+            v.play().catch(() => {});
+          });
+        }
       } else {
         v.pause();
       }
@@ -830,15 +830,19 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
             }
             bufferingTimerRef.current = window.setTimeout(() => {
               setIsBuffering(true);
-            }, 350);
+            }, 750);
           }}
-          onCanPlay={() => {
+          onCanPlay={(e) => {
             if (bufferingTimerRef.current) {
               window.clearTimeout(bufferingTimerRef.current);
               bufferingTimerRef.current = null;
             }
             setHasLoadedFrame(true);
             setIsBuffering(false);
+            const v = e.currentTarget;
+            if (isActive && !isPaused && v.paused) {
+              v.play().catch(() => {});
+            }
           }}
           onLoadedData={(e) => {
             if (bufferingTimerRef.current) {
@@ -852,10 +856,6 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
               v.muted = isMuted;
               v.play().catch(() => {
                 v.muted = true;
-                if (!autoMuteNotifiedRef.current) {
-                  autoMuteNotifiedRef.current = true;
-                  onAutoMuted?.();
-                }
                 v.play().catch(() => {});
               });
             }
@@ -897,29 +897,52 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
               return;
             }
             setIsBuffering(false);
-            if (resolved.platform !== "direct") {
-              setDirectFailed(true);
-            }
+            setDirectFailed(true);
           }}
           className="w-full h-full object-contain bg-black"
         />
       );
     }
 
-    if (!isActive) {
+    if (!isActive || directFailed) {
       return posterImg ? (
-        <img
-          src={posterImg}
-          alt={post.title || "Reel preview"}
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-contain bg-black opacity-85"
-        />
+        <div className="relative w-full h-full bg-black flex items-center justify-center">
+          <img
+            src={posterImg}
+            alt={post.title || "Reel preview"}
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-contain bg-black opacity-85"
+          />
+          {directFailed && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center gap-2.5 p-4 text-center z-10">
+              <p className="text-white text-sm font-semibold">Video stream unavailable</p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDirectFailed(false);
+                  setUseRawOriginFallback(true);
+                  if (videoRef.current) {
+                    videoRef.current.load();
+                    videoRef.current.play().catch(() => {});
+                  }
+                }}
+                className="px-4 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold backdrop-blur-md border border-white/20 cursor-pointer active:scale-95 transition"
+              >
+                Tap to Retry
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
-        <div className="w-full h-full bg-zinc-950 flex items-center justify-center">
+        <div className="w-full h-full bg-zinc-950 flex flex-col items-center justify-center gap-2 p-4 text-center">
           <SocialPlatformBrandIcon
             platform={resolved.platform}
             className="w-10 h-10 text-white/30"
           />
+          {directFailed && (
+            <p className="text-zinc-400 text-xs font-medium">Video could not be played</p>
+          )}
         </div>
       );
     }
@@ -1144,8 +1167,8 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
         );
       })()}
 
-      {/* Buffering Indicator for Active Native Reel */}
-      {isActive && usesNativeVideo && (!hasLoadedFrame || isBuffering) && !directFailed && (
+      {/* Buffering Indicator for Active Native Reel — only shows if playback is genuinely stalled */}
+      {isActive && usesNativeVideo && isBuffering && !directFailed && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <div className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white">
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -3543,6 +3566,21 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
 
   const reelItems = useMemo(() => {
     const base = posts
+      .filter((post: any) => {
+        if (!post) return false;
+        if (
+          post.isRemovedByAdmin ||
+          post.isDeleted ||
+          post.isRemoved ||
+          post.status === "removed" ||
+          post.status === "rejected" ||
+          post.copyrightStrike ||
+          post.isCopyrightViolation
+        ) {
+          return false;
+        }
+        return true;
+      })
       .map((post) => {
         const videoSource = resolvePostVideoSource(post);
         if (videoSource) return { post, videoSource };
@@ -3785,7 +3823,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       (entries) => {
         if (Date.now() < programmaticScrollUntilRef.current) return;
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.58) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.45) {
             const targetEl = entry.target as HTMLElement;
             if (targetEl.dataset.adSlide) {
               setActiveAdSlideKey(targetEl.dataset.adSlide);
@@ -3808,7 +3846,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       },
       {
         root: container,
-        threshold: [0.58],
+        threshold: [0.45],
       }
     );
 

@@ -208,8 +208,23 @@ export function toPlayableMediaUrl(rawUrl?: string | null): string {
 
   try {
     const normalized = ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
-    // Always stream directly from media CDN first (0 Vercel Serverless Origin Transfer).
-    // Video/Audio elements automatically fall back to toProxiedMediaStreamUrl() on error.
+    const parsed = new URL(normalized);
+    const host = parsed.hostname.toLowerCase();
+
+    // Hosts with strict cross-origin restrictions, SAMEORIGIN headers, or ISP blocks in Bangladesh/mobile networks:
+    // Route them through the local /api/stream-media proxy to ensure immediate playback with full range support.
+    if (
+      host.includes("pomf") ||
+      host.includes("catbox.moe") ||
+      host.includes("qu.ax") ||
+      host.includes("uguu") ||
+      host.includes("0x0.st") ||
+      host.includes("tmpfiles") ||
+      host.includes("file.io")
+    ) {
+      return toProxiedMediaStreamUrl(normalized);
+    }
+
     return normalized;
   } catch {
     return unwrapped;
