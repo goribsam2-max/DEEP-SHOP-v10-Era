@@ -1,4 +1,5 @@
 import { uploadToImgbb, generateMicroThumb } from '../services/imgbb';
+import { uploadFileToCatbox } from '../lib/catboxUpload';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -219,33 +220,37 @@ const renderTextWithLinks = (text: string, isMe?: boolean) => {
 
 const CallBubble = ({ msg }: { msg: any }) => {
   const isVideo = msg.text?.toLowerCase().includes('video') || msg.systemType === 'video';
+  const isMissed = msg.text?.includes('Missed');
   const timestamp = formatTime12h(msg.timestamp);
-  let icon = <Icon name="phone" className="w-4 h-4 text-emerald-500" />;
-  let title = "Voice Call";
-  let subtitle = "Call logged";
-  let bgClass = "bg-zinc-100 dark:bg-zinc-200 dark:bg-zinc-800 border-zinc-200/50 dark:border-zinc-300 dark:border-zinc-700/50";
+  
+  let iconBg = "bg-zinc-100 dark:bg-zinc-800";
+  let iconColor = "text-zinc-500 dark:text-zinc-400";
+  let title = isVideo ? "Video call" : "Audio call";
+  let subtext = "Tap to call again";
 
-  if (msg.text?.includes('Missed')) {
-      icon = <Icon name="phone-off" className="w-4 h-4 text-rose-500" />;
-      title = "Missed Call";
-      bgClass = "bg-rose-50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/20";
-  } else if (isVideo) {
-      icon = <Icon name="video" className="w-4 h-4 text-blue-500" />;
-      title = "Video Call";
+  if (isMissed) {
+    iconBg = "bg-rose-500";
+    iconColor = "text-white";
+    title = isVideo ? "Missed video call" : "Missed audio call";
+    subtext = "Tap to call back";
+  } else {
+    // If it's a completed call, might show duration
+    if (msg.duration) {
+      const mins = Math.floor(msg.duration / 60);
+      const secs = msg.duration % 60;
+      subtext = mins > 0 ? `${mins} mins` : `${secs} secs`;
+    }
   }
 
   return (
-      <div className={`flex items-center gap-3 p-3 rounded-2xl border ${bgClass} w-64 my-1`}>
-          <div className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center shadow-sm shrink-0">
-             {icon}
-          </div>
-          <div className="flex-1 min-w-0">
-             <p className="font-semibold text-[13px] text-zinc-900 dark:text-zinc-100">{title}</p>
-             <p className="text-[11px] text-zinc-500">{subtitle}</p>
-          </div>
-          <span className="text-[9px] font-bold text-zinc-400 mt-auto">{timestamp}</span>
-  
-  
+    <div className="flex items-center gap-3 p-3.5 pl-4 pr-6 rounded-[22px] bg-zinc-50 dark:bg-zinc-900 border border-black/[0.03] dark:border-white/[0.05] shadow-sm min-w-[210px] my-1 group active:scale-[0.98] transition-transform cursor-pointer">
+      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-xs", iconBg)}>
+        <Icon name={isMissed ? "phone-off" : (isVideo ? "video" : "phone")} className={cn("w-4.5 h-4.5", iconColor)} />
+      </div>
+      <div className="flex flex-col">
+        <p className="font-bold text-[14.5px] text-zinc-900 dark:text-zinc-100 leading-tight tracking-tight">{title}</p>
+        <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">{subtext}</p>
+      </div>
     </div>
   );
 };
@@ -648,8 +653,10 @@ export default function Messages() {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [previewThumbs, setPreviewThumbs] = useState<string[]>([]);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Message Long-Press / Hold Context Popup State & Refs (IMG_5359 right)
@@ -2876,6 +2883,33 @@ const handleCreateChannel = async () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 250 * 1024 * 1024) {
+      notify("Video file must be under 250MB", "error");
+      return;
+    }
+
+    const localPreview = URL.createObjectURL(file);
+    setPreviewVideoUrl(localPreview);
+    setIsUploadingAttachment(true);
+
+    try {
+      const uploadedUrl = await uploadFileToCatbox(file, file.name);
+      setPreviewVideoUrl(uploadedUrl);
+      notify("Video attached successfully", "success");
+    } catch (err: any) {
+      console.error("Video upload error:", err);
+      notify(err?.message || "Failed to attach video", "error");
+      setPreviewVideoUrl(null);
+    } finally {
+      setIsUploadingAttachment(false);
+      if (videoInputRef.current) videoInputRef.current.value = '';
+    }
+  };
+
   const handleAttachmentChange = handleFileSelect;
 
   const uploadImage = async (file: File): Promise<string> => {
@@ -2888,7 +2922,7 @@ const handleCreateChannel = async () => {
     remoteAudioPromise?: Promise<string | null>
   ) => {
     const audioUrlToSend = forcedAudioUrl || recordedAudioUrl;
-    if ((!newMessage.trim() && previewUrls.length === 0 && !audioUrlToSend) || !user) return;
+    if ((!newMessage.trim() && previewUrls.length === 0 && !audioUrlToSend && !previewVideoUrl) || !user) return;
 
     const messageText = forcedAudioUrl ? '' : newMessage.trim();
     const effectiveAudioDuration = Math.max(
@@ -2914,9 +2948,11 @@ const handleCreateChannel = async () => {
 
       const imageUrls: string[] = forcedAudioUrl ? [] : [...previewUrls];
       const currentThumbs: string[] = forcedAudioUrl ? [] : [...previewThumbs];
+      const videoUrlToSend = forcedAudioUrl ? null : (previewVideoUrl || null);
       if (!forcedAudioUrl) {
         setPreviewUrls([]);
         setPreviewThumbs([]);
+        setPreviewVideoUrl(null);
       }
       const capturedReply = replyingTo;
       setReplyingTo(null);
@@ -2936,6 +2972,7 @@ const handleCreateChannel = async () => {
           images: imageUrls,
           imageUrl: imageUrls[0] || null,
           imageThumbs: currentThumbs.length > 0 ? currentThumbs : null,
+          videoUrl: videoUrlToSend,
           audioUrl: finalChannelAudioUrl,
           audioDuration: effectiveAudioDuration,
           senderId: user.uid,
@@ -2963,7 +3000,7 @@ const handleCreateChannel = async () => {
           body: JSON.stringify({
             channelId: activeChannel.id,
             title: `📢 New Post in ${activeChannel.name}`,
-            body: messageText || (finalChannelAudioUrl ? '🎙️ Voice message' : 'Sent an image attachment'),
+            body: messageText || (finalChannelAudioUrl ? '🎙️ Voice message' : videoUrlToSend ? '📹 Video attachment' : 'Sent an image attachment'),
             link: `/messages?channelId=${activeChannel.id}`
           })
         }).catch(() => {});
@@ -2987,10 +3024,12 @@ const handleCreateChannel = async () => {
 
     const imageUrls: string[] = forcedAudioUrl ? [] : [...previewUrls];
     const currentThumbs: string[] = forcedAudioUrl ? [] : [...previewThumbs];
+    const videoUrlToSend = forcedAudioUrl ? null : (previewVideoUrl || null);
     if (!forcedAudioUrl) {
       setPreviewUrls([]);
       setPreviewThumbs([]);
       setAttachments([]);
+      setPreviewVideoUrl(null);
     }
     const capturedReply = replyingTo;
     setReplyingTo(null);
@@ -2998,6 +3037,7 @@ const handleCreateChannel = async () => {
 
     const otherUserId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
     const isGroup = Boolean(activeChat?.isGroup || activeChat?.type === 'group');
+
     let chatId = activeChat?.id;
 
     const currentSenderName = userShopName || user.displayName || user.email?.split('@')[0] || 'User';
@@ -3015,6 +3055,7 @@ const handleCreateChannel = async () => {
       images: imageUrls,
       imageUrl: imageUrls[0] || null,
       imageThumbs: currentThumbs.length > 0 ? currentThumbs : null,
+      videoUrl: videoUrlToSend,
       audioUrl: audioUrlToSend || null,
       audioDuration: effectiveAudioDuration,
       senderId: user.uid,
@@ -3073,6 +3114,8 @@ const handleCreateChannel = async () => {
         messageText ||
         (audioUrlToSend
           ? '🎙️ Voice Message'
+          : videoUrlToSend
+          ? '📹 Video attachment'
           : imageUrls.length > 0
           ? 'Sent an image'
           : 'Sent an attachment');
@@ -7094,6 +7137,8 @@ const handleCreateChannel = async () => {
                               const isCreator = msg.senderId === activeChannel.creatorId;
                               const isChannelAdmin = channelAdmins.some((a: any) => a.id === msg.senderId || a.uid === msg.senderId);
                               const isSeller = msg.senderRole === "seller" || isCreator;
+                              const hasMedia = Boolean((msg.images && msg.images.length > 0) || msg.imageUrl || msg.videoUrl);
+                              const isVoiceOnly = Boolean(msg.audioUrl && !msg.text && !msg.replyTo && !hasMedia);
 
                               if (msg.isDeletedForEveryone) {
                                  return (
@@ -7113,11 +7158,8 @@ const handleCreateChannel = async () => {
                                                     </div>
                                                   )}
                                                   <div className="flex flex-col relative">
-                                                      <div className="px-4 py-2 text-[13px] bg-white/60 dark:bg-zinc-800/40 rounded-[18px] text-zinc-400 italic">
-                                                          <div className="flex items-center gap-1.5 opacity-75">
-                                                              <Icon name="trash" className="w-3.5 h-3.5" />
-                                                              <span>This message was deleted</span>
-                                                          </div>
+                                                      <div className="px-4 py-2.5 text-[14px] bg-zinc-100 dark:bg-zinc-800/60 rounded-[18px] text-zinc-500 dark:text-zinc-400 italic">
+                                                          {msg.senderName || 'User'} deleted a message
                                                       </div>
                                                   </div>
                                               </div>
@@ -7211,7 +7253,7 @@ const handleCreateChannel = async () => {
 
                                           {/* Voice Audio */}
                                           {msg.audioUrl && (
-                                              <div className={`px-2 py-2 ${msg.text ? 'mb-1' : ''}`}>
+                                              <div className={cn(isVoiceOnly ? "p-0" : "px-2 py-2", msg.text ? 'mb-1' : '')}>
                                                   <VoiceMessageBubble 
                                                       audioSrc={msg.audioUrl} 
                                                       duration={msg.audioDuration || 15} 
@@ -7233,6 +7275,19 @@ const handleCreateChannel = async () => {
                                                 loadedImages={loadedImages}
                                                 onLoadImage={(key) => setLoadedImages(prev => ({ ...prev, [key]: true }))}
                                                 onImageClick={(url, idx, allImgs) => openMediaGallery(url, idx, allImgs, msg.senderName || 'Member', msg.timestamp)}
+                                              />
+                                            </div>
+                                          )}
+
+                                          {/* Video attachment */}
+                                          {msg.videoUrl && (
+                                            <div className="my-1.5 max-w-xs sm:max-w-sm rounded-2xl overflow-hidden bg-black border border-white/10 shadow-md">
+                                              <video
+                                                src={msg.videoUrl}
+                                                controls
+                                                playsInline
+                                                preload="metadata"
+                                                className="w-full h-auto max-h-72 object-contain bg-black"
                                               />
                                             </div>
                                           )}
@@ -7620,7 +7675,7 @@ const handleCreateChannel = async () => {
 
                      {/* Header Actions: 1-Click Admin AI Toggle + Video Call + Voice Call */}
                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
-                          {!(activeChat?.isGroup || activeChat?.type === 'group') &&
+                          {userRole === 'admin' && !(activeChat?.isGroup || activeChat?.type === 'group') &&
                             activeChat?.id && (
                             <button
                               type="button"
@@ -7780,6 +7835,7 @@ const handleCreateChannel = async () => {
                          const reactionEntries = Object.entries(msg.reactions || {});
                          const hasMedia = Boolean((msg.images && msg.images.length > 0) || msg.imageUrl);
                          const isMediaOnly = Boolean(hasMedia && !msg.text && !msg.replyTo && !msg.audioUrl);
+                         const isVoiceOnly = Boolean(msg.audioUrl && !msg.text && !msg.replyTo && !hasMedia);
                          const isEmojiOnly = Boolean(msg.text && isOnlyEmojis(msg.text) && !msg.replyTo && !msg.audioUrl && !hasMedia);
                          const isCustomTheme = Boolean(activeTheme?.id && activeTheme.id !== 'default');
                          const isSeenByOther = Boolean(activeChat?.seenBy && activeChat?.seenBy.includes(activeChat?.otherUser?.id));
@@ -7807,9 +7863,8 @@ const handleCreateChannel = async () => {
                                                  ) : null}
                                              </div>
                                          )}
-                                         <div className="px-4 py-2.5 text-[13.5px] rounded-[18px] border border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 italic flex items-center gap-1.5">
-                                             <MsgTrashIcon className="w-3.5 h-3.5 shrink-0" />
-                                             <span>Message unsent</span>
+                                         <div className="px-4 py-2.5 text-[14px] bg-zinc-100 dark:bg-zinc-800/60 rounded-[18px] text-zinc-500 dark:text-zinc-400 italic">
+                                             {isMe ? 'You' : (senderName || 'User')} deleted a message
                                          </div>
                                      </div>
                                 </div>
@@ -7958,7 +8013,7 @@ const handleCreateChannel = async () => {
                                                  "select-none relative flex flex-col max-w-[330px] sm:max-w-[390px] transition-all",
                                                  isEmojiOnly
                                                    ? "bg-transparent shadow-none p-0.5"
-                                                   : isMediaOnly
+                                                   : isMediaOnly || isVoiceOnly
                                                    ? "bg-transparent shadow-none p-0"
                                                    : privacySettings.minimalistBubbles
                                                    ? "px-4 py-3 rounded-[18px] border border-zinc-200 dark:border-zinc-700 bg-white/70 dark:bg-white/[0.04] text-zinc-900 dark:text-zinc-100"
@@ -8032,6 +8087,19 @@ const handleCreateChannel = async () => {
                                                     loadedImages={loadedImages}
                                                     onLoadImage={(key) => setLoadedImages(prev => ({ ...prev, [key]: true }))}
                                                     onImageClick={(url, iIdx, allImgs) => openMediaGallery(url, iIdx, allImgs, senderName, msg.timestamp)}
+                                                  />
+                                                </div>
+                                              )}
+
+                                              {/* Video attachment */}
+                                              {msg.videoUrl && (
+                                                <div className="my-1.5 max-w-xs sm:max-w-sm rounded-2xl overflow-hidden bg-black border border-white/10 shadow-md">
+                                                  <video
+                                                    src={msg.videoUrl}
+                                                    controls
+                                                    playsInline
+                                                    preload="metadata"
+                                                    className="w-full h-auto max-h-72 object-contain bg-black"
                                                   />
                                                 </div>
                                               )}
@@ -8187,6 +8255,7 @@ const handleCreateChannel = async () => {
                      
                      <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" multiple />
                      <input type="file" ref={cameraInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" capture="environment" />
+                     <input type="file" ref={videoInputRef} onChange={handleVideoSelect} className="hidden" accept="video/*,.mp4,.webm,.mov,.m4v" />
 
                      <ChatBottomBar
                        newMessage={newMessage}
@@ -8200,6 +8269,7 @@ const handleCreateChannel = async () => {
                        cancelRecording={cancelRecording}
                        fileInputRef={fileInputRef}
                        cameraInputRef={cameraInputRef}
+                       videoInputRef={videoInputRef}
                        onOpenSavedReplies={() => setShowSavedRepliesModal(true)}
                        onOpenDraw={() => setShowDrawModal(true)}
                        onOpenGifs={() => setGifStickerModalState({ isOpen: true, type: "gif" })}
@@ -8216,10 +8286,12 @@ const handleCreateChannel = async () => {
                        }
                        isUploading={isUploadingAttachment}
                        previewUrls={previewUrls}
+                       previewVideoUrl={previewVideoUrl}
                        onRemovePreview={(idx) => {
                          setAttachments(prev => prev.filter((_, i) => i !== idx));
                          setPreviewUrls(prev => prev.filter((_, i) => i !== idx));
                        }}
+                       onRemoveVideoPreview={() => setPreviewVideoUrl(null)}
                      />
                  </div>
              </>

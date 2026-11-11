@@ -28,6 +28,7 @@ export interface ChatBottomBarProps {
   cancelRecording: () => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   cameraInputRef?: React.RefObject<HTMLInputElement>;
+  videoInputRef?: React.RefObject<HTMLInputElement>;
   onOpenSavedReplies: () => void;
   onOpenDraw: () => void;
   onOpenGifs: () => void;
@@ -36,7 +37,9 @@ export interface ChatBottomBarProps {
   blockedMessage?: string;
   isUploading?: boolean;
   previewUrls?: string[];
+  previewVideoUrl?: string | null;
   onRemovePreview?: (index: number) => void;
+  onRemoveVideoPreview?: () => void;
 }
 
 export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
@@ -51,6 +54,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   cancelRecording,
   fileInputRef,
   cameraInputRef,
+  videoInputRef,
   onOpenSavedReplies,
   onOpenDraw,
   onOpenGifs,
@@ -59,7 +63,9 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   blockedMessage,
   isUploading = false,
   previewUrls = [],
+  previewVideoUrl = null,
   onRemovePreview,
+  onRemoveVideoPreview,
 }) => {
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -76,7 +82,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
     if (e.key === 'Enter' && !e.shiftKey && window.innerWidth >= 768) {
       e.preventDefault();
       e.stopPropagation();
-      if (newMessage.trim() || previewUrls.length > 0) {
+      if (newMessage.trim() || previewUrls.length > 0 || previewVideoUrl) {
         onSendMessage();
       }
       return;
@@ -94,7 +100,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
     }
   };
 
-  const hasContent = Boolean(newMessage.trim() || previewUrls.length > 0);
+  const hasContent = Boolean(newMessage.trim() || previewUrls.length > 0 || previewVideoUrl);
   const computedRows = Math.min(
     5,
     Math.max(1, newMessage.split('\n').length + Math.floor(newMessage.length / 56))
@@ -107,7 +113,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   return (
     <div className="w-full relative select-none">
       {/* Attachments Preview Tray */}
-      {previewUrls.length > 0 && !isRecording && (
+      {(previewUrls.length > 0 || previewVideoUrl) && !isRecording && (
         <div className="flex items-center gap-2.5 mb-2 p-2.5 msg-composer-capsule rounded-2xl overflow-x-auto no-scrollbar">
           {previewUrls.map((url, idx) => (
             <div
@@ -132,6 +138,30 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
               )}
             </div>
           ))}
+
+          {previewVideoUrl && (
+            <div className="relative w-20 h-16 rounded-2xl overflow-hidden shrink-0 border border-black/10 dark:border-white/10 shadow-sm bg-black group flex items-center justify-center">
+              <video src={previewVideoUrl} className="w-full h-full object-cover opacity-70" />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <Icon name="video" className="w-5 h-5 text-white drop-shadow-md" />
+              </div>
+              {isUploading && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
+                  <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                </div>
+              )}
+              {onRemoveVideoPreview && (
+                <button
+                  type="button"
+                  onClick={onRemoveVideoPreview}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 hover:bg-rose-500 text-white flex items-center justify-center shadow-md cursor-pointer transition z-10"
+                  title="Remove video"
+                >
+                  <MsgCloseIcon className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -150,6 +180,30 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
               transition={{ type: 'spring', damping: 26, stiffness: 360 }}
               className="msg-v2-popup absolute left-0 bottom-14 z-50 w-52 bg-white dark:bg-[#1A1C24] rounded-3xl shadow-[0_16px_44px_rgba(15,23,42,0.16)] border border-black/[0.05] dark:border-white/10 p-2 space-y-0.5"
             >
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPlusMenu(false);
+                  fileInputRef?.current?.click();
+                }}
+                className="w-full px-3.5 py-2.5 rounded-2xl flex items-center gap-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition text-left cursor-pointer"
+              >
+                <MsgImageIcon className="w-4 h-4 text-emerald-500" />
+                <span>Attach Photo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPlusMenu(false);
+                  videoInputRef?.current?.click();
+                }}
+                className="w-full px-3.5 py-2.5 rounded-2xl flex items-center gap-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition text-left cursor-pointer"
+              >
+                <Icon name="video" className="w-4 h-4 text-blue-500" />
+                <span>Attach Video</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {

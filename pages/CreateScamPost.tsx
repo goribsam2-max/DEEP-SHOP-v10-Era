@@ -1932,6 +1932,36 @@ function cleanPayload<T>(obj: T): T {
               <span>{postTag ? `#${postTag}` : "Tag People"}</span>
             </button>
 
+            {/* 1.5. Music Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setShowMusicModal(true);
+              }}
+              className={`px-4 py-2 rounded-full border text-[13.5px] font-medium flex items-center gap-2 shrink-0 transition active:scale-95 cursor-pointer ${
+                attachedMusic
+                  ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white border-transparent shadow-xs"
+                  : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+              }`}
+            >
+              <MusicNotesOutlineIcon className="w-4 h-4 text-pink-500 shrink-0" />
+              <span className="max-w-[120px] truncate">
+                {attachedMusic ? (attachedMusic.title || attachedMusic.name || "Music") : "Add Music"}
+              </span>
+              {attachedMusic && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAttachedMusic(null);
+                  }}
+                  className="ml-1 text-white/80 hover:text-white font-bold"
+                >
+                  ✕
+                </span>
+              )}
+            </button>
+
             {/* 2. Who can see */}
             <button
               type="button"

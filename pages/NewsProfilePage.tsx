@@ -2785,20 +2785,20 @@ export const NewsProfilePage: React.FC = () => {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar py-1 scroll-smooth snap-x snap-mandatory">
               {incompleteSetupSteps.map((step) => (
                 <div
                   key={step.id}
-                  className="bg-zinc-100/80 dark:bg-zinc-900/80 rounded-[24px] p-5 flex flex-col items-center text-center justify-between space-y-3 border border-black/5 dark:border-white/5"
+                  className="w-[230px] shrink-0 snap-start bg-zinc-100/80 dark:bg-zinc-900/80 rounded-[24px] p-4 flex flex-col items-center text-center justify-between space-y-3 border border-black/5 dark:border-white/5"
                 >
-                  <div className="w-13 h-13 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 shadow-xs">
+                  <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 shadow-xs">
                     {step.icon}
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                    <h4 className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-1">
                       {step.title}
                     </h4>
-                    <p className="text-[11.5px] text-zinc-400 leading-snug">
+                    <p className="text-[11px] text-zinc-400 leading-snug line-clamp-2">
                       {step.description}
                     </p>
                   </div>
@@ -2808,7 +2808,7 @@ export const NewsProfilePage: React.FC = () => {
                       triggerHaptic();
                       step.onClick();
                     }}
-                    className="w-full py-2.5 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-xs font-bold cursor-pointer active:scale-95 transition"
+                    className="w-full py-2 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-xs font-bold cursor-pointer active:scale-95 transition"
                   >
                     {step.cta}
                   </button>

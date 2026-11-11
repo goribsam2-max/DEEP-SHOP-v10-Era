@@ -759,8 +759,18 @@ export const NewsHub: React.FC = () => {
       });
     } catch {}
 
+    const getPostTimeMs = (p: any): number => {
+      if (typeof p?.createdAtMs === "number" && p.createdAtMs > 0) return p.createdAtMs;
+      if (typeof p?.createdAt === "number" && p.createdAt > 0) return p.createdAt;
+      if (typeof p?.createdAt === "string") {
+        const parsed = new Date(p.createdAt).getTime();
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+      return 0;
+    };
+
     return Array.from(map.values()).sort(
-      (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+      (a, b) => getPostTimeMs(b) - getPostTimeMs(a)
     );
   }, [firestorePosts, currentUser?.uid]);
 

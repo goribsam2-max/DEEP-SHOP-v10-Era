@@ -32,6 +32,8 @@ import {
   ChevronLeft,
   Star,
   Languages,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { ScamPost, ScamComment, ReactionType } from "../types";
 import { auth, db } from "../firebase";
@@ -44,8 +46,10 @@ import {
   getDocs,
   addDoc,
   doc,
+  updateDoc,
   deleteDoc,
   limit,
+  increment,
 } from "firebase/firestore";
 import { triggerHaptic } from "../lib/haptics";
 import {
@@ -1159,6 +1163,70 @@ export const LiquidGlassShareModal: React.FC<{
     }
   };
 
+  const [shareTarget, setShareTarget] = useState<"feed" | "profile" | "story">("feed");
+  const [sharePrivacy, setSharePrivacy] = useState<"public" | "followers" | "only_me">("public");
+  const [shareCommentText, setShareCommentText] = useState("");
+  const [isPostingShare, setIsPostingShare] = useState(false);
+
+  const handleShareToFeedNow = async () => {
+    if (isPostingShare) return;
+    triggerHaptic();
+    if (!currentUser) {
+      onClose();
+      navigate("/signin");
+      return;
+    }
+    setIsPostingShare(true);
+    try {
+      const authorName = currentUser.displayName || currentUser.email?.split("@")[0] || "Loops User";
+      const authorAvatar = currentUser.photoURL || "";
+      const postPayload = {
+        description: shareCommentText.trim() || `Shared loop by @${authorName}`,
+        postType: "normal",
+        contentType: post?.videoUrl ? "video" : post?.images?.length ? "photo" : "text",
+        images: post?.images || [],
+        videoUrl: post?.videoUrl || null,
+        music: post?.music || null,
+        repostedFromPostId: post?.id || null,
+        originalPost: post ? {
+          id: post.id,
+          reporterName: post.reporterName || "Loops Creator",
+          reporterAvatar: post.reporterAvatar || "",
+          description: post.description || "",
+          images: post.images || [],
+          videoUrl: post.videoUrl || null,
+        } : null,
+        reporterId: currentUser.uid,
+        reporterName: authorName,
+        reporterAvatar: authorAvatar,
+        createdAt: Date.now(),
+        createdAtMs: Date.now(),
+        status: "active",
+        privacy: sharePrivacy,
+        targetDestination: shareTarget,
+        likesCount: 0,
+        commentsCount: 0,
+        repostsCount: 0,
+      };
+
+      await addDoc(collection(db, "scam_posts"), postPayload);
+      if (post?.id) {
+        try {
+          await updateDoc(doc(db, "scam_posts", post.id), {
+            repostsCount: increment(1),
+          });
+        } catch {}
+      }
+      notify(`Post shared to your ${shareTarget === "story" ? "story" : "feed"}!`, "success");
+      setIsPostingShare(false);
+      setShareCommentText("");
+      onClose();
+    } catch {
+      setIsPostingShare(false);
+      notify("Failed to share post", "error");
+    }
+  };
+
   const filteredContacts = contacts.filter(
     (c) =>
       !searchQuery.trim() ||
@@ -1187,6 +1255,108 @@ export const LiquidGlassShareModal: React.FC<{
           >
             {/* Grab Handle */}
             <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto my-1 shrink-0" />
+
+            {/* Repost to Feed / Profile Card (Matching IMG_5587_217c74bb.jpeg) */}
+            <div className="mt-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 shadow-xs shrink-0 space-y-3">
+              <div className="flex items-center gap-3">
+                {currentUser?.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || "Avatar"}
+                    className="w-11 h-11 rounded-full object-cover shrink-0 ring-1 ring-black/10 dark:ring-white/10"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0">
+                    {(currentUser?.displayName || currentUser?.email || "U").charAt(0).toUpperCase()}
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[14.5px] font-extrabold text-zinc-900 dark:text-white truncate">
+                    {currentUser?.displayName || currentUser?.email?.split("@")[0] || "Loops User"}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    {/* Destination Pill */}
+                    <div className="relative">
+                      <select
+                        value={shareTarget}
+                        onChange={(e) => setShareTarget(e.target.value as any)}
+                        className="appearance-none bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs font-bold px-3 py-1 pr-6 rounded-xl outline-none cursor-pointer border border-zinc-300/60 dark:border-zinc-700"
+                      >
+                        <option value="feed">Feed</option>
+                        <option value="profile">Profile</option>
+                        <option value="story">Story</option>
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-zinc-500 absolute right-1.5 top-1.5 pointer-events-none" />
+                    </div>
+
+                    {/* Privacy Pill */}
+                    <div className="relative">
+                      <select
+                        value={sharePrivacy}
+                        onChange={(e) => setSharePrivacy(e.target.value as any)}
+                        className="appearance-none bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs font-bold px-3 py-1 pr-6 rounded-xl outline-none cursor-pointer border border-zinc-300/60 dark:border-zinc-700"
+                      >
+                        <option value="public">🌐 Public</option>
+                        <option value="followers">👥 Followers</option>
+                        <option value="only_me">🔒 Only me</option>
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-zinc-500 absolute right-1.5 top-1.5 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Caption input */}
+              <textarea
+                value={shareCommentText}
+                onChange={(e) => setShareCommentText(e.target.value)}
+                placeholder="Say something about this..."
+                rows={2}
+                className="w-full bg-transparent text-[13.5px] text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none resize-none pt-1"
+              />
+
+              {/* Card Footer */}
+              <div className="flex items-center justify-between pt-2 border-t border-zinc-200/70 dark:border-zinc-800">
+                <div className="flex items-center gap-2 text-zinc-500">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      setShareCommentText((prev) => `${prev} 😊`);
+                    }}
+                    className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition"
+                    title="Add Emoji"
+                  >
+                    <Smile className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic();
+                      notify("Tagging people in shared post", "info");
+                    }}
+                    className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition"
+                    title="Tag People"
+                  >
+                    <UserPlus className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isPostingShare}
+                  onClick={handleShareToFeedNow}
+                  className="px-5 py-2 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] active:scale-95 text-white font-extrabold text-[13.5px] shadow-sm transition flex items-center gap-2 cursor-pointer"
+                >
+                  {isPostingShare ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Share now"
+                  )}
+                </button>
+              </div>
+            </div>
 
             {/* Top Row: Search Input + Add User Icon matching IMG_5099 */}
             <div className="mt-2.5 flex items-center gap-2.5 shrink-0">
