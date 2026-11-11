@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, PhoneOff, Video, Volume2 } from 'lucide-react';
-import { db, auth } from '../firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion, setDoc, query, collection, where, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { auth, db } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, setDoc, updateDoc, onSnapshot, query, collection, getDoc, where } from 'firebase/firestore';
 import { audioHelper } from '../lib/AudioHelper';
 import { useNotify } from './Notifications';
+import Icon from './Icon';
 
 const triggerBrowserNotification = (title: string, options?: NotificationOptions) => {
   if (typeof window === "undefined" || !("Notification" in window) || !window.Notification) return;
@@ -405,13 +405,13 @@ export const GlobalCallReceiver: React.FC = () => {
                 </div>
               )}
               <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-2.5 rounded-full border-4 border-zinc-950 z-20 shadow-lg">
-                {incomingCall.type === 'video' ? <Video className="w-5 h-5 text-white" /> : <Phone className="w-5 h-5 text-white" />}
+                {incomingCall.type === 'video' ? <Icon name="video" className="w-5 h-5 text-white" /> : <Icon name="phone" className="w-5 h-5 text-white" />}
               </div>
             </div>
 
             <h2 className="text-3xl font-black tracking-tight text-white mb-2">Deep Shop</h2>
             <p className="text-emerald-400 font-semibold text-sm uppercase tracking-wider mb-1 flex items-center gap-1.5 justify-center">
-              <Volume2 className="w-4 h-4 animate-bounce" />
+              <Icon name="volume-2" className="w-4 h-4 animate-bounce" />
               Incoming Support Call
             </p>
             <p className="text-zinc-400 text-sm font-medium mb-16 capitalize">
@@ -424,7 +424,7 @@ export const GlobalCallReceiver: React.FC = () => {
                 onClick={declineCall}
                 className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center shadow-lg shadow-red-600/30 transition-transform active:scale-95"
               >
-                <PhoneOff className="w-6 h-6 text-white" />
+                <Icon name="phone-off" className="w-6 h-6 text-white" />
               </button>
 
               {/* Accept Button */}
@@ -432,7 +432,7 @@ export const GlobalCallReceiver: React.FC = () => {
                 onClick={acceptCall}
                 className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/40 transition-transform active:scale-95 animate-pulse"
               >
-                <Phone className="w-6 h-6 text-white" />
+                <Icon name="phone" className="w-6 h-6 text-white" />
               </button>
             </div>
           </div>
@@ -466,13 +466,13 @@ export const GlobalCallReceiver: React.FC = () => {
                 </div>
               )}
               <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-2.5 rounded-full border-4 border-zinc-950 z-20 shadow-lg">
-                {incomingP2PCall.type === 'video' ? <Video className="w-5 h-5 text-white" /> : <Phone className="w-5 h-5 text-white" />}
+                {incomingP2PCall.type === 'video' ? <Icon name="video" className="w-5 h-5 text-white" /> : <Icon name="phone" className="w-5 h-5 text-white" />}
               </div>
             </div>
 
             <h2 className="text-3xl font-black tracking-tight text-white mb-2">{incomingP2PCall.callerName}</h2>
             <p className="text-emerald-400 font-semibold text-sm uppercase tracking-wider mb-1 flex items-center gap-1.5 justify-center">
-              <Volume2 className="w-4 h-4 animate-bounce" />
+              <Icon name="volume-2" className="w-4 h-4 animate-bounce" />
               Incoming Call
             </p>
 
@@ -482,7 +482,7 @@ export const GlobalCallReceiver: React.FC = () => {
                 onClick={declineP2PCall}
                 className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center shadow-lg shadow-red-600/30 transition-transform active:scale-95"
               >
-                <PhoneOff className="w-6 h-6 text-white" />
+                <Icon name="phone-off" className="w-6 h-6 text-white" />
               </button>
 
               {/* Accept Button */}
@@ -490,7 +490,7 @@ export const GlobalCallReceiver: React.FC = () => {
                 onClick={acceptP2PCall}
                 className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/40 transition-transform active:scale-95 animate-pulse"
               >
-                <Phone className="w-6 h-6 text-white" />
+                <Icon name="phone" className="w-6 h-6 text-white" />
               </button>
             </div>
           </div>

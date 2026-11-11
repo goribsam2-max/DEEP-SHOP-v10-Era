@@ -1,16 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
-import {
-  PhoneCall,
-  MessageCircle,
-  X,
-  ArrowUpRight,
-  ChevronRight,
-  ArrowUp,
-  ShieldCheck,
-  Headphones,
-} from "lucide-react";
+import Icon from "./Icon";
 import { Link } from "react-router-dom";
 
 interface FooterSettings {
@@ -311,7 +302,7 @@ export const Footer: React.FC = () => {
                       {item.sublabel}
                     </span>
                   </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors shrink-0" />
+                  <Icon name="arrow-up-right" className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors shrink-0" />
                 </a>
               ))}
 
@@ -320,7 +311,7 @@ export const Footer: React.FC = () => {
                 onClick={() => setIsContactOpen(true)}
                 className="min-h-[48px] px-4 py-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Headphones className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
+                <Icon name="headphones" className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
                 <span>24/7 Helpline</span>
               </button>
             </div>
@@ -359,7 +350,7 @@ export const Footer: React.FC = () => {
               </span>
               <span aria-hidden="true">·</span>
               <span className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 font-medium">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <Icon name="shield-check" className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>Verified Marketplace</span>
               </span>
             </div>
@@ -378,7 +369,7 @@ export const Footer: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold transition-colors cursor-pointer whitespace-nowrap"
               >
                 <span>Back to top</span>
-                <ArrowUp className="w-3.5 h-3.5" />
+                <Icon name="arrow-up" className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -408,7 +399,7 @@ export const Footer: React.FC = () => {
                 onClick={() => setIsContactOpen(true)}
                 className="min-h-[38px] px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
               >
-                <PhoneCall className="w-3.5 h-3.5 shrink-0" />
+                <Icon name="phone-call" className="w-3.5 h-3.5 shrink-0" />
                 <span>Helpline</span>
               </button>
               <button
@@ -417,7 +408,7 @@ export const Footer: React.FC = () => {
                 aria-label="Scroll to top"
                 className="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center text-zinc-600 dark:text-zinc-300 active:scale-95 transition-transform cursor-pointer"
               >
-                <ArrowUp className="w-4 h-4" />
+                <Icon name="arrow-up" className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -462,7 +453,7 @@ export const Footer: React.FC = () => {
                 className="min-h-[42px] px-3.5 py-2.5 rounded-xl bg-zinc-50/90 dark:bg-zinc-900/70 border border-zinc-200/60 dark:border-zinc-800/80 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-between gap-2 transition-colors"
               >
                 <span className="truncate">{lnk.label}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                <Icon name="chevron-right" className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
               </Link>
             ))}
           </div>
@@ -519,7 +510,7 @@ export const Footer: React.FC = () => {
                 onClick={() => setIsContactOpen(false)}
                 className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <Icon name="x" className="w-4 h-4" />
               </button>
             </div>
 
@@ -529,7 +520,7 @@ export const Footer: React.FC = () => {
                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors text-blue-700 dark:text-blue-400"
               >
                 <div className="w-11 h-11 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center shadow-2xs shrink-0">
-                  <PhoneCall className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <Icon name="phone-call" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="text-left">
                   <p className="font-bold text-sm">Direct Call</p>
@@ -545,7 +536,7 @@ export const Footer: React.FC = () => {
                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors text-emerald-700 dark:text-emerald-400 cursor-pointer"
               >
                 <div className="w-11 h-11 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center shadow-2xs shrink-0">
-                  <MessageCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <Icon name="message-circle" className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="text-left">
                   <p className="font-bold text-sm">WhatsApp Support</p>
@@ -576,7 +567,7 @@ export const Footer: React.FC = () => {
                 onClick={() => setIsWhatsAppOpen(false)}
                 className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <Icon name="x" className="w-4 h-4" />
               </button>
             </div>
 

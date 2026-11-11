@@ -175,7 +175,7 @@ export const FeedPersonalization: React.FC = () => {
       : FEED_THEMES.filter((t) => t.group === activeThemeTab);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 font-sans pb-10">
+    <div className="min-h-screen ambient-dynamic-bg text-zinc-900 dark:text-zinc-100 font-sans pb-10">
       <SEO
         title="Personalize — Loops"
         description="Customize the themes and content types shown in your Loops feed."

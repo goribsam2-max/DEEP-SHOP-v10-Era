@@ -1,42 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import {
-  ChevronLeft,
-  Image as ImageIcon,
-  BarChart3,
-  QrCode,
-  Mic,
-  Plus,
-  X,
-  Check,
-  ShieldAlert,
-  Globe,
-  UserCheck,
-  Lock,
-  MapPin,
-  Trash2,
-  Play,
-  Pause,
-  LayoutGrid,
-  Layers,
-  Maximize2,
-  Square,
-  Link2,
-  Sparkles,
-  Clock,
-  ChevronRight,
-  Music,
-  Volume2,
-  Loader2,
-  Camera,
-  Hash,
-  Quote,
-  Type,
-  Eye,
-  PenLine,
-  UserPlus,
-  Radio,
-} from "lucide-react";
+import Icon from "../components/Icon";
 import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
 import { pingBingIndexNow } from "../lib/indexNowClient";
 import { auth, db } from "../firebase";
@@ -1873,8 +1837,8 @@ function cleanPayload<T>(obj: T): T {
 
   if (isPostingBlocked) {
     return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-zinc-900 dark:text-white">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+      <div className="min-h-screen ambient-dynamic-bg flex flex-col items-center justify-center p-6 text-center text-zinc-900 dark:text-white">
+        <Icon name="shield-alert" className="w-16 h-16 text-red-500 mb-4" />
         <h2 className="text-xl font-bold">Posting Restricted</h2>
         <p className="text-sm text-zinc-500 max-w-sm mt-2">
           Your account has received 3 copyright strikes or severe guideline violations. Creating new Loops posts is currently disabled.
@@ -1938,7 +1902,7 @@ function cleanPayload<T>(obj: T): T {
               className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
               aria-label="Back"
             >
-              <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+              <Icon name="chevron-left" className="w-5 h-5" />
             </button>
 
             <h1 className="text-[18.5px] font-bold tracking-tight text-zinc-900 dark:text-white">
@@ -1964,7 +1928,7 @@ function cleanPayload<T>(obj: T): T {
                   : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
               }`}
             >
-              <UserPlus className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+              <Icon name="user-plus" className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
               <span>{postTag ? `#${postTag}` : "Tag People"}</span>
             </button>
 
@@ -1982,7 +1946,7 @@ function cleanPayload<T>(obj: T): T {
                   : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
               }`}
             >
-              <Eye className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+              <Icon name="eye" className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
               <span className="capitalize">
                 {privacy === "only_me" ? "Only Me" : privacy === "followers" ? "Followers" : "Who can see"}
               </span>
@@ -2001,7 +1965,7 @@ function cleanPayload<T>(obj: T): T {
                   : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
               }`}
             >
-              <MapPin className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+              <Icon name="map-marker" className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
               <span className="max-w-[120px] truncate">{locationTag || "Location"}</span>
             </button>
 
@@ -2010,7 +1974,7 @@ function cleanPayload<T>(obj: T): T {
               type="button"
               onClick={() => {
                 triggerHaptic();
-                setPostType((prev) => (prev === "scam" ? "post" : "scam"));
+                setPostType((prev) => (prev === "scam" ? "normal" : "scam"));
               }}
               className={`px-4 py-2 rounded-full border text-[13.5px] font-semibold flex items-center gap-2 shrink-0 transition active:scale-95 cursor-pointer ${
                 postType === "scam"
@@ -2018,7 +1982,7 @@ function cleanPayload<T>(obj: T): T {
                   : "bg-white dark:bg-zinc-800 border-black/5 dark:border-white/10 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20"
               }`}
             >
-              <ShieldAlert className="w-4 h-4 text-current" />
+              <Icon name="shield-alert" className="w-4 h-4 text-current" />
               <span>{postType === "scam" ? "Scam Alert ON" : "Scam Post"}</span>
             </button>
           </div>
@@ -2033,16 +1997,15 @@ function cleanPayload<T>(obj: T): T {
                   onClick={() => setActiveInlinePanel(null)}
                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <Icon name="x" className="w-3.5 h-3.5" />
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: "public" as const, label: "Public", sub: "Anyone on Loops", icon: Globe },
-                  { id: "followers" as const, label: "Followers", sub: "Followers only", icon: UserCheck },
-                  { id: "only_me" as const, label: "Only Me", sub: "Private archive", icon: Lock },
+                  { id: "public" as const, label: "Public", sub: "Anyone on Loops", iconName: "globe" },
+                  { id: "followers" as const, label: "Followers", sub: "Followers only", iconName: "user-check" },
+                  { id: "only_me" as const, label: "Only Me", sub: "Private archive", iconName: "lock" },
                 ].map((aud) => {
-                  const AudIcon = aud.icon;
                   const active = privacy === aud.id;
                   return (
                     <button
@@ -2060,7 +2023,7 @@ function cleanPayload<T>(obj: T): T {
                       }`}
                     >
                       <div className="flex items-center gap-1.5 text-xs font-bold">
-                        <AudIcon className="w-3.5 h-3.5 shrink-0" />
+                        <Icon name={aud.iconName} className="w-3.5 h-3.5 shrink-0" />
                         <span>{aud.label}</span>
                       </div>
                       <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">{aud.sub}</p>
@@ -2081,7 +2044,7 @@ function cleanPayload<T>(obj: T): T {
                   onClick={() => setShowTagPopover(false)}
                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <Icon name="x" className="w-3.5 h-3.5" />
                 </button>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800">
@@ -2148,7 +2111,7 @@ function cleanPayload<T>(obj: T): T {
           {postType === "scam" && (
             <div className="rounded-2xl bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200/80 dark:border-rose-900/50 p-4 space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
-                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <Icon name="shield-alert" className="w-4 h-4 shrink-0" />
                 <span>Scam Incident Details (Protect the community)</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -2219,7 +2182,7 @@ function cleanPayload<T>(obj: T): T {
                       className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center cursor-pointer hover:bg-rose-600 transition"
                       aria-label="Remove image"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <Icon name="x" className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
@@ -2242,7 +2205,7 @@ function cleanPayload<T>(obj: T): T {
                 className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/75 text-white flex items-center justify-center hover:bg-rose-600 transition cursor-pointer z-10"
                 aria-label="Remove video"
               >
-                <X className="w-4 h-4" />
+                <Icon name="x" className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -2257,7 +2220,7 @@ function cleanPayload<T>(obj: T): T {
                 className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/75 text-white flex items-center justify-center hover:bg-rose-600 transition cursor-pointer"
                 aria-label="Remove GIF"
               >
-                <X className="w-4 h-4" />
+                <Icon name="x" className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -2266,7 +2229,7 @@ function cleanPayload<T>(obj: T): T {
           {attachedMusic && (
             <div className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-zinc-800 border border-black/5 shadow-xs">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Music className="w-4 h-4 text-purple-600 shrink-0" />
+                <Icon name="music" className="w-4 h-4 text-purple-600 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">{attachedMusic.title}</p>
                   <p className="text-[11px] text-zinc-500 truncate">{attachedMusic.artist}</p>
@@ -2277,7 +2240,7 @@ function cleanPayload<T>(obj: T): T {
                 onClick={() => setAttachedMusic(null)}
                 className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-zinc-500 hover:text-rose-500 cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
+                <Icon name="x" className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
@@ -2296,7 +2259,7 @@ function cleanPayload<T>(obj: T): T {
               }}
               className="bg-white dark:bg-zinc-800 rounded-2xl py-3.5 px-2 flex flex-col items-center justify-center gap-1.5 border border-black/5 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shadow-2xs"
             >
-              <ImageIcon className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
+              <Icon name="image" className="w-5 h-5 text-zinc-600 dark:text-zinc-300" />
               <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">Image</span>
             </button>
 
@@ -2324,7 +2287,7 @@ function cleanPayload<T>(obj: T): T {
               }}
               className="bg-white dark:bg-zinc-800 rounded-2xl py-3.5 px-2 flex flex-col items-center justify-center gap-1.5 border border-black/5 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shadow-2xs"
             >
-              <Radio className="w-5 h-5 text-red-500 animate-pulse" />
+              <Icon name="radio" className="w-5 h-5 text-red-500 animate-pulse" />
               <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">Live</span>
             </button>
 
@@ -2337,7 +2300,7 @@ function cleanPayload<T>(obj: T): T {
               }}
               className="bg-white dark:bg-zinc-800 rounded-2xl py-3.5 px-2 flex flex-col items-center justify-center gap-1.5 border border-black/5 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shadow-2xs"
             >
-              <Play className="w-5 h-5 text-zinc-600 dark:text-zinc-300 fill-current" />
+              <Icon name="play" className="w-5 h-5 text-zinc-600 dark:text-zinc-300" solid />
               <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">Video</span>
             </button>
           </div>
@@ -2372,7 +2335,7 @@ function cleanPayload<T>(obj: T): T {
                 : "bg-[#D1D5DB] dark:bg-zinc-700 text-white cursor-not-allowed"
             }`}
           >
-            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSubmitting && <Icon name="loader-2" className="w-4 h-4 animate-spin" />}
             <span>{isSubmitting ? "Publishing Post..." : "Publish Post"}</span>
           </button>
         </div>

@@ -1100,7 +1100,7 @@ export const NewsSharePage: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#BCE0FD]/80 via-[#E2F1FF]/45 to-transparent dark:from-transparent dark:via-transparent dark:to-transparent text-zinc-900 dark:text-zinc-100 pb-24">
+    <div className="min-h-screen ambient-dynamic-bg text-zinc-900 dark:text-zinc-100 pb-24">
       <SEO
         title={exactShareTitle}
         description={exactShareDescription || exactShareTitle}

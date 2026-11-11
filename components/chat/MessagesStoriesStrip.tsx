@@ -240,81 +240,94 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
 
   return (
     <>
-      <div className="w-full pt-2 pb-5 shrink-0 flex items-center justify-between px-2 sm:px-4 max-w-full overflow-hidden">
-        {/* Left Scrollable Flanking Stories (Staggered Arc layout matching IMG_5470) */}
-        <div className="flex-1 overflow-x-auto no-scrollbar flex items-center justify-end gap-3 sm:gap-4 pr-1 sm:pr-2">
-          {leftOthers.map((item, idx) => {
-            const initial = (item.name || 'U')[0]?.toUpperCase() || 'U';
-            const distLeft = leftOthers.length - 1 - idx;
-            const offsetY = Math.min(distLeft * 5, 14);
+      <div className="w-full pt-3 pb-4 shrink-0 flex items-start justify-between px-1 sm:px-3 max-w-full overflow-visible">
+        {/* Left Scrollable Flanking Stories (Curved lower-left to upper-center arc matching IMG_5470) */}
+        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar pr-1 sm:pr-2 pt-2 pb-5">
+          <div className="ml-auto flex items-start gap-2.5 sm:gap-3.5 w-max">
+            {leftOthers.map((item, idx) => {
+              const initial = (item.name || 'U')[0]?.toUpperCase() || 'U';
+              const distLeft = leftOthers.length - 1 - idx;
+              const offsetY = Math.min(4 + distLeft * 9, 20);
 
-            return (
-              <button
-                key={item.key}
-                type="button"
-                style={{ transform: `translateY(${offsetY}px)` }}
-                onClick={() => {
-                  if (item.isLive && item.liveStreamId) {
-                    setWatchingStreamId(item.liveStreamId);
-                  } else if (item.hasStory && item.storyId) {
-                    navigate(`/loops/story/${item.storyId}?from=messages`, { state: { from: '/messages' } });
-                  } else {
-                    onOpenChatWithUser({
-                      id: item.userId,
-                      uid: item.userId,
-                      displayName: item.name,
-                      photoURL: item.avatar,
-                    });
-                  }
-                }}
-                className="flex flex-col items-center shrink-0 w-[58px] sm:w-[64px] group cursor-pointer focus:outline-none transition-transform"
-              >
-                <div className="relative w-[56px] h-[56px] sm:w-[62px] sm:h-[62px] flex items-center justify-center transition-transform group-active:scale-95">
-                  <div
-                    className={cn(
-                      'w-full h-full rounded-full overflow-hidden flex items-center justify-center',
-                      item.isLive
-                        ? 'p-[2.5px] bg-red-600 ring-2 ring-red-500 animate-pulse shadow-md shadow-red-500/30'
-                        : item.hasStory
-                        ? 'p-[2.5px] bg-gradient-to-tr from-[#FF007A] via-[#E100FF] to-[#7928CA]'
-                        : 'p-0 border border-black/10 dark:border-white/10' // Clean circle without gradient ring if no story!
-                    )}
-                  >
-                    <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-800 p-[1px]">
-                      {item.avatar ? (
-                        <img
-                          src={item.avatar}
-                          alt={item.name}
-                          className="w-full h-full rounded-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
-                          {initial}
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  style={{ marginTop: `${offsetY}px` }}
+                  onClick={() => {
+                    if (item.isLive && item.liveStreamId) {
+                      setWatchingStreamId(item.liveStreamId);
+                    } else if (item.hasStory && item.storyId) {
+                      navigate(`/loops/story/${item.storyId}?from=messages`, { state: { from: '/messages' } });
+                    } else {
+                      onOpenChatWithUser({
+                        id: item.userId,
+                        uid: item.userId,
+                        displayName: item.name,
+                        photoURL: item.avatar,
+                      });
+                    }
+                  }}
+                  className="flex flex-col items-center shrink-0 w-[56px] sm:w-[62px] group cursor-pointer focus:outline-none transition-transform"
+                >
+                  <div className="relative w-[54px] h-[54px] sm:w-[60px] sm:h-[60px] flex items-center justify-center transition-transform group-active:scale-95">
+                    {item.isLive ? (
+                      <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center p-[2.5px] bg-red-600 ring-2 ring-red-500 animate-pulse shadow-md shadow-red-500/30">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-[1.5px]">
+                          {item.avatar ? (
+                            <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                              {initial}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : item.hasStory ? (
+                      <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center p-[2.5px] bg-gradient-to-tr from-[#FF007A] via-[#E100FF] to-[#7928CA]">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-[1.5px]">
+                          {item.avatar ? (
+                            <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                              {initial}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* No Story -> Pure clean edge-to-edge circular photo, NO ring/border */
+                      <div className="w-full h-full rounded-full overflow-hidden">
+                        {item.avatar ? (
+                          <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full rounded-full flex items-center justify-center bg-white/80 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                            {initial}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Underneath Name or LIVE badge */}
-                {item.isLive ? (
-                  <span className="mt-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-extrabold text-[8.5px] tracking-wider uppercase flex items-center gap-1 shadow-xs animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                    <span>LIVE</span>
-                  </span>
-                ) : (
-                  <span className="mt-1.5 text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300 truncate w-full text-center leading-tight">
-                    {item.name}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                  {/* Underneath Name or LIVE badge */}
+                  {item.isLive ? (
+                    <span className="mt-1.5 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-extrabold text-[8.5px] tracking-wider uppercase flex items-center gap-1 shadow-xs animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      <span>LIVE</span>
+                    </span>
+                  ) : (
+                    <span className="mt-1.5 pb-1 text-[11px] font-medium text-zinc-700 dark:text-zinc-300 truncate w-full text-center leading-normal">
+                      {item.name}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Center FIXED Prominent User Avatar + Add Story (+) Pill matching IMG_5470 */}
-        <div className="flex flex-col items-center shrink-0 mx-2 sm:mx-3 z-10">
+        {/* Center FIXED Prominent User Avatar + White Add Story (+) Pill matching IMG_5470 */}
+        <div className="flex flex-col items-center shrink-0 mx-1.5 sm:mx-3 z-10">
           <button
             type="button"
             onClick={() => {
@@ -326,18 +339,44 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                 navigate('/loops/create-story?from=messages', { state: { from: '/messages' } });
               }
             }}
-            className="relative w-[80px] h-[80px] sm:w-[88px] sm:h-[88px] flex items-center justify-center transition-transform active:scale-95 group cursor-pointer focus:outline-none"
+            className="relative w-[82px] h-[82px] sm:w-[90px] sm:h-[90px] flex items-center justify-center transition-transform active:scale-95 group cursor-pointer focus:outline-none"
             title={isMyUserLive ? 'You are LIVE' : hasMyStory ? 'View your story' : 'Add Story'}
           >
-            <div
-              className={cn(
-                'w-full h-full rounded-full p-[3px] flex items-center justify-center border border-white/20 shadow-md',
-                isMyUserLive
-                  ? 'bg-red-600 ring-4 ring-red-500/60 animate-pulse'
-                  : 'bg-gradient-to-tr from-[#FF7A00] via-[#FF007A] to-[#D300C5]'
-              )}
-            >
-              <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-800 p-[2px]">
+            {isMyUserLive ? (
+              <div className="w-full h-full rounded-full p-[3px] flex items-center justify-center bg-red-600 ring-4 ring-red-500/60 animate-pulse">
+                <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-[2px]">
+                  {currentUserAvatar ? (
+                    <img
+                      src={currentUserAvatar}
+                      alt="Your avatar"
+                      className="w-full h-full rounded-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-bold text-xl">
+                      {(currentUser?.displayName || 'Y')[0]?.toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : hasMyStory ? (
+              <div className="w-full h-full rounded-full p-[3px] flex items-center justify-center bg-gradient-to-tr from-[#FF7A00] via-[#FF007A] to-[#D300C5]">
+                <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-[2px]">
+                  {currentUserAvatar ? (
+                    <img
+                      src={currentUserAvatar}
+                      alt="Your avatar"
+                      className="w-full h-full rounded-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-bold text-xl">
+                      {(currentUser?.displayName || 'Y')[0]?.toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Clean circular avatar with zero outer ring when current user has no story */
+              <div className="w-full h-full rounded-full overflow-hidden">
                 {currentUserAvatar ? (
                   <img
                     src={currentUserAvatar}
@@ -350,15 +389,15 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </button>
 
-          {/* Underneath Pill Button matching IMG_5470 or LIVE status */}
+          {/* Underneath White Pill with Black "+" Circle Button matching IMG_5470 */}
           {isMyUserLive ? (
             <button
               type="button"
               onClick={() => setWatchingStreamId(myLiveId)}
-              className="mt-1 px-3 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-black tracking-wide uppercase flex items-center gap-1 animate-pulse shadow-md cursor-pointer"
+              className="mt-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-[11px] font-black tracking-wide uppercase flex items-center gap-1 animate-pulse cursor-pointer"
             >
               <span className="w-2 h-2 rounded-full bg-white" />
               <span>LIVE</span>
@@ -367,84 +406,99 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
             <button
               type="button"
               onClick={() => navigate('/loops/create-story?from=messages', { state: { from: '/messages' } })}
-              className="mt-1 px-3.5 py-1 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[11.5px] font-bold flex items-center gap-1 border border-black/10 dark:border-white/10 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xs"
+              className="mt-1.5 pl-3 pr-1 py-1 rounded-full bg-white/95 dark:bg-zinc-800 text-zinc-950 dark:text-white text-[11.5px] font-semibold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_4px_16px_rgba(120,90,160,0.08)]"
             >
               <span>Add Story</span>
-              <span className="text-sm leading-none font-bold">+</span>
+              <span className="w-6 h-6 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center text-[15px] leading-none font-normal">
+                +
+              </span>
             </button>
           )}
         </div>
 
-        {/* Right Scrollable Flanking Stories (Staggered Arc layout matching IMG_5470) */}
-        <div className="flex-1 overflow-x-auto no-scrollbar flex items-center justify-start gap-3 sm:gap-4 pl-1 sm:pl-2">
-          {rightOthers.map((item, idx) => {
-            const initial = (item.name || 'U')[0]?.toUpperCase() || 'U';
-            const distRight = idx;
-            const offsetY = Math.min(distRight * 5, 14);
+        {/* Right Scrollable Flanking Stories (Curved upper-center to lower-right arc matching IMG_5470) */}
+        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar pl-1 sm:pl-2 pt-2 pb-5">
+          <div className="mr-auto flex items-start gap-2.5 sm:gap-3.5 w-max">
+            {rightOthers.map((item, idx) => {
+              const initial = (item.name || 'U')[0]?.toUpperCase() || 'U';
+              const distRight = idx;
+              const offsetY = Math.min(4 + distRight * 9, 20);
 
-            return (
-              <button
-                key={item.key}
-                type="button"
-                style={{ transform: `translateY(${offsetY}px)` }}
-                onClick={() => {
-                  if (item.isLive && item.liveStreamId) {
-                    setWatchingStreamId(item.liveStreamId);
-                  } else if (item.hasStory && item.storyId) {
-                    navigate(`/loops/story/${item.storyId}?from=messages`, { state: { from: '/messages' } });
-                  } else {
-                    onOpenChatWithUser({
-                      id: item.userId,
-                      uid: item.userId,
-                      displayName: item.name,
-                      photoURL: item.avatar,
-                    });
-                  }
-                }}
-                className="flex flex-col items-center shrink-0 w-[58px] sm:w-[64px] group cursor-pointer focus:outline-none transition-transform"
-              >
-                <div className="relative w-[56px] h-[56px] sm:w-[62px] sm:h-[62px] flex items-center justify-center transition-transform group-active:scale-95">
-                  <div
-                    className={cn(
-                      'w-full h-full rounded-full overflow-hidden flex items-center justify-center',
-                      item.isLive
-                        ? 'p-[2.5px] bg-red-600 ring-2 ring-red-500 animate-pulse shadow-md shadow-red-500/30'
-                        : item.hasStory
-                        ? 'p-[2.5px] bg-gradient-to-tr from-[#FF007A] via-[#E100FF] to-[#7928CA]'
-                        : 'p-0 border border-black/10 dark:border-white/10' // Clean circle without gradient ring if no story!
-                    )}
-                  >
-                    <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-800 p-[1px]">
-                      {item.avatar ? (
-                        <img
-                          src={item.avatar}
-                          alt={item.name}
-                          className="w-full h-full rounded-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
-                          {initial}
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  style={{ marginTop: `${offsetY}px` }}
+                  onClick={() => {
+                    if (item.isLive && item.liveStreamId) {
+                      setWatchingStreamId(item.liveStreamId);
+                    } else if (item.hasStory && item.storyId) {
+                      navigate(`/loops/story/${item.storyId}?from=messages`, { state: { from: '/messages' } });
+                    } else {
+                      onOpenChatWithUser({
+                        id: item.userId,
+                        uid: item.userId,
+                        displayName: item.name,
+                        photoURL: item.avatar,
+                      });
+                    }
+                  }}
+                  className="flex flex-col items-center shrink-0 w-[56px] sm:w-[62px] group cursor-pointer focus:outline-none transition-transform"
+                >
+                  <div className="relative w-[54px] h-[54px] sm:w-[60px] sm:h-[60px] flex items-center justify-center transition-transform group-active:scale-95">
+                    {item.isLive ? (
+                      <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center p-[2.5px] bg-red-600 ring-2 ring-red-500 animate-pulse shadow-md shadow-red-500/30">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-[1.5px]">
+                          {item.avatar ? (
+                            <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                              {initial}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : item.hasStory ? (
+                      <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center p-[2.5px] bg-gradient-to-tr from-[#FF007A] via-[#E100FF] to-[#7928CA]">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-[1.5px]">
+                          {item.avatar ? (
+                            <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                              {initial}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* No Story -> Pure clean edge-to-edge circular photo, NO ring/border */
+                      <div className="w-full h-full rounded-full overflow-hidden">
+                        {item.avatar ? (
+                          <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full rounded-full flex items-center justify-center bg-white/80 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                            {initial}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Underneath Name or LIVE badge */}
-                {item.isLive ? (
-                  <span className="mt-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-extrabold text-[8.5px] tracking-wider uppercase flex items-center gap-1 shadow-xs animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                    <span>LIVE</span>
-                  </span>
-                ) : (
-                  <span className="mt-1.5 text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300 truncate w-full text-center leading-tight">
-                    {item.name}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                  {/* Underneath Name or LIVE badge */}
+                  {item.isLive ? (
+                    <span className="mt-1.5 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-extrabold text-[8.5px] tracking-wider uppercase flex items-center gap-1 shadow-xs animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      <span>LIVE</span>
+                    </span>
+                  ) : (
+                    <span className="mt-1.5 pb-1 text-[11px] font-medium text-zinc-700 dark:text-zinc-300 truncate w-full text-center leading-normal">
+                      {item.name}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

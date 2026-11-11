@@ -372,7 +372,7 @@ export const SponsorCreator: React.FC = () => {
     SPONSOR_PLANS.find((p) => p.id === tierType) || SPONSOR_PLANS[0];
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#090A0D] text-zinc-900 dark:text-zinc-100 font-sans pb-24">
+    <div className="min-h-screen ambient-dynamic-bg text-zinc-900 dark:text-zinc-100 font-sans pb-24">
       <SEO
         title={`Sponsor ${creatorName} · DEEP SHOP`}
         description={`Partner with or sponsor ${creatorName} directly on DEEP SHOP Loops.`}

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Bookmark, Pencil, Smile, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import Icon from '../Icon';
 import {
   MsgCameraIcon,
   MsgCloseIcon,
@@ -170,7 +170,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                 }}
                 className="w-full px-3.5 py-2.5 rounded-2xl flex items-center gap-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition text-left cursor-pointer"
               >
-                <Bookmark className="w-4 h-4 text-zinc-700 dark:text-zinc-300 stroke-[2]" />
+                <Icon name="bookmark" className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
                 <span>Saved Replies</span>
               </button>
 
@@ -182,7 +182,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                 }}
                 className="w-full px-3.5 py-2.5 rounded-2xl flex items-center gap-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition text-left cursor-pointer"
               >
-                <Pencil className="w-4 h-4 text-zinc-700 dark:text-zinc-300 stroke-[2]" />
+                <Icon name="pencil" className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
                 <span>Sketch & Draw</span>
               </button>
 
@@ -208,7 +208,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                 }}
                 className="w-full px-3.5 py-2.5 rounded-2xl flex items-center gap-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition text-left cursor-pointer"
               >
-                <Smile className="w-4 h-4 text-zinc-700 dark:text-zinc-300 stroke-[2]" />
+                <Icon name="smile" className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
                 <span>Stickers</span>
               </button>
             </motion.div>
@@ -216,169 +216,188 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         )}
       </AnimatePresence>
 
-      <AnimatePresence mode="wait" initial={false}>
+      {/* Composer Bar (Stays visible at top even while Listening panel is open, matching IMG_5472) */}
+      <div className="w-full flex items-center gap-2 sm:gap-2.5">
+        {/* Left Pure Black Circular "+" Button matching IMG_5472 */}
+        <button
+          type="button"
+          onClick={() => {
+            if (isRecording) return;
+            setShowPlusMenu((prev) => !prev);
+          }}
+          className={cn(
+            'w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer',
+            showPlusMenu
+              ? 'bg-zinc-800 text-white rotate-45'
+              : 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950'
+          )}
+          title="More tools & attachments"
+          aria-label="Add tools"
+        >
+          <MsgPlusIcon className="w-5 h-5" />
+        </button>
+
+        {/* Center Pure White Input Capsule with X Clear button matching IMG_5472 */}
+        <div
+          className={cn(
+            'flex-1 min-w-0 flex items-center bg-white dark:bg-zinc-800 rounded-full px-4 sm:px-4.5 py-1.5 shadow-[0_4px_20px_rgba(120,90,160,0.07)] transition-all focus-within:ring-2 focus-within:ring-[#F246F5]/25',
+            computedRows > 1 ? 'min-h-[46px]' : 'h-11 sm:h-12'
+          )}
+        >
+          <textarea
+            ref={textareaRef}
+            value={isRecording ? (newMessage || `Listening (${formattedRecTime})...`) : newMessage}
+            rows={computedRows}
+            readOnly={isRecording}
+            onChange={(e) => {
+              if (isRecording) return;
+              if (onInputChange) {
+                onInputChange(e);
+              } else {
+                setNewMessage(e.target.value);
+              }
+              if (showPlusMenu) setShowPlusMenu(false);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Message..."
+            className="ds-liquid-input msg-clean-input flex-1 min-w-0 bg-transparent border-0 text-[14px] sm:text-[14.5px] text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-0 resize-none leading-[20px] overflow-y-auto max-h-[120px] py-[6px]"
+          />
+
+          <button
+            type="button"
+            onClick={() => {
+              if (isRecording) {
+                cancelRecording();
+              } else {
+                setNewMessage('');
+              }
+            }}
+            className={cn(
+              'w-6 h-6 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 shrink-0 ml-1 transition cursor-pointer',
+              !isRecording && !newMessage.trim() && 'opacity-45 hover:opacity-100'
+            )}
+            title={isRecording ? 'Cancel voice recording' : 'Clear text'}
+          >
+            <MsgCloseIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Right Magenta-Pink Circular Send / Mic Button matching IMG_5472 */}
         {isRecording ? (
+          <motion.button
+            key="voice-send-btn"
+            initial={{ scale: 0.88, opacity: 0.8 }}
+            animate={{ scale: 1, opacity: 1 }}
+            type="button"
+            onClick={() => stopRecording(true)}
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#F246F5] text-white flex items-center justify-center hover:brightness-105 active:scale-92 transition-all cursor-pointer shrink-0"
+            title="Send voice message"
+          >
+            <MsgSendIcon className="w-[20px] h-[20px] mr-0.5" />
+          </motion.button>
+        ) : hasContent ? (
+          <motion.button
+            key="send-btn"
+            initial={{ scale: 0.85, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            type="button"
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={onSendMessage}
+            disabled={isUploading}
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#F246F5] text-white flex items-center justify-center hover:brightness-105 active:scale-92 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+            title="Send message"
+          >
+            <MsgSendIcon className="w-[20px] h-[20px] mr-0.5" />
+          </motion.button>
+        ) : (
+          <button
+            type="button"
+            onClick={startRecording}
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#F246F5] text-white flex items-center justify-center hover:brightness-105 active:scale-92 transition-all shrink-0 cursor-pointer"
+            title="Speak / Voice message"
+          >
+            <MsgMicIcon className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Bottom White Rounded "Listening..." Panel with Pastel Fluid Pearl Orb (IMG_5472) */}
+      <AnimatePresence>
+        {isRecording && (
           <motion.div
             key="voice-listening-panel"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-            className="w-full flex flex-col items-center justify-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-6 shadow-2xl relative"
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+            className="overflow-hidden"
           >
-            <button
-              type="button"
-              onClick={cancelRecording}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 flex items-center justify-center text-zinc-500 cursor-pointer transition"
-              title="Close"
-            >
-              <MsgCloseIcon className="w-4 h-4" />
-            </button>
+            <div className="w-full flex flex-col items-center justify-center bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-[28px] px-6 pt-5 pb-7 shadow-[0_6px_28px_rgba(120,90,160,0.06)] relative">
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-[18px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                  Listening...
+                </h3>
+                <span className="text-[11px] font-mono font-semibold text-zinc-400 dark:text-zinc-500 tabular-nums">
+                  {formattedRecTime}
+                </span>
+              </div>
 
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6 tracking-tight">
-              Listening...
-            </h3>
-
-            {/* Glowing Iridescent Fluid Siri-style Orb from IMG_5472 */}
-            <div className="relative w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center my-2">
-              <motion.div
-                animate={{
-                  scale: [1, 1.08, 0.96, 1.05, 1],
-                  rotate: [0, 90, 180, 270, 360],
-                }}
-                transition={{
-                  duration: 8,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-                className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-[#38BDF8] via-[#818CF8] via-35% via-[#C084FC] via-60% via-[#F472B6] to-[#FB7185] shadow-[0_0_60px_rgba(192,132,252,0.45)] blur-[1px] relative flex items-center justify-center overflow-hidden"
-              >
-                {/* Internal multi-layer fluid refraction rings */}
-                <div className="absolute inset-2 rounded-full bg-gradient-to-br from-white/40 via-transparent to-black/30 backdrop-blur-sm" />
-                <motion.div
-                  animate={{
-                    scale: [0.9, 1.15, 0.95, 1.1, 0.9],
-                    opacity: [0.65, 0.95, 0.7, 1, 0.65],
+              {/* Bright Pearl Sphere with Flowing Pastel Blue / Lavender / Pink Ribbons (IMG_5472) */}
+              <div className="relative w-40 h-40 sm:w-44 sm:h-44 flex items-center justify-center my-1">
+                <div
+                  className="w-36 h-36 sm:w-40 sm:h-40 rounded-full relative overflow-hidden flex items-center justify-center shadow-[0_12px_36px_rgba(147,197,253,0.35),inset_0_0_24px_rgba(255,255,255,0.95)]"
+                  style={{
+                    background:
+                      'radial-gradient(circle at 35% 30%, #ffffff 0%, #f5f3ff 42%, #ede9fe 72%, #fce7f3 100%)',
                   }}
-                  transition={{
-                    duration: 3.5,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                  className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#60A5FA]/80 via-[#EC4899]/70 to-[#F43F5E]/80 blur-md"
-                />
-              </motion.div>
+                >
+                  {/* Sweeping Blue-Indigo-Pink Siri Wave Ribbon 1 */}
+                  <motion.div
+                    animate={{
+                      rotate: [0, 360],
+                      scale: [1, 1.12, 0.96, 1],
+                    }}
+                    transition={{
+                      duration: 6,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                    className="w-40 h-20 rounded-full blur-md opacity-85"
+                    style={{
+                      background:
+                        'linear-gradient(90deg, rgba(192,132,252,0.85) 0%, rgba(96,165,250,0.9) 48%, rgba(59,130,246,0.9) 70%, rgba(244,114,182,0.8) 100%)',
+                    }}
+                  />
+                  {/* Sweeping Pastel Magenta-Cyan Highlight Ribbon 2 */}
+                  <motion.div
+                    animate={{
+                      rotate: [360, 0],
+                      x: [-8, 10, -8],
+                      y: [6, -6, 6],
+                    }}
+                    transition={{
+                      duration: 4.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                    className="absolute w-32 h-14 rounded-full blur-md opacity-75"
+                    style={{
+                      background:
+                        'linear-gradient(120deg, rgba(240,171,252,0.85) 0%, rgba(167,139,250,0.8) 55%, rgba(56,189,248,0.85) 100%)',
+                    }}
+                  />
+                  {/* Soft White Gloss Pearl Shell Overlay */}
+                  <div
+                    className="absolute inset-0 rounded-full pointer-events-none"
+                    style={{
+                      background:
+                        'radial-gradient(circle at 30% 22%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.22) 45%, rgba(255,255,255,0.5) 100%)',
+                    }}
+                  />
+                </div>
+              </div>
             </div>
-
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mt-4 tabular-nums">
-              {formattedRecTime}
-            </p>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-4 mt-6">
-              <button
-                type="button"
-                onClick={cancelRecording}
-                className="px-5 py-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs font-semibold hover:bg-zinc-200 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => stopRecording(true)}
-                className="px-6 py-2.5 rounded-full bg-[#FF2E93] text-white text-xs font-bold shadow-lg shadow-pink-500/25 hover:brightness-105 active:scale-95 transition cursor-pointer flex items-center gap-2"
-              >
-                <span>Send</span>
-                <MsgSendIcon className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="text-composer-bar"
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.14 }}
-            className="w-full flex items-center gap-2 sm:gap-2.5"
-          >
-            {/* Left Pure Black Circular "+" Button matching IMG_5472 */}
-            <button
-              type="button"
-              onClick={() => setShowPlusMenu((prev) => !prev)}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer ${
-                showPlusMenu
-                  ? 'bg-zinc-800 text-white rotate-45'
-                  : 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950'
-              }`}
-              title="More tools & attachments"
-              aria-label="Add tools"
-            >
-              <MsgPlusIcon className="w-5 h-5" />
-            </button>
-
-            {/* Center Pure White Input Capsule with X Clear button matching IMG_5472 */}
-            <div
-              className={`flex-1 min-w-0 flex items-center bg-white dark:bg-zinc-800 border border-zinc-200/90 dark:border-zinc-700/80 rounded-full px-4 sm:px-4.5 py-1.5 transition-all focus-within:ring-2 focus-within:ring-pink-500/25 ${
-                computedRows > 1 ? 'min-h-[46px]' : 'h-11 sm:h-12'
-              }`}
-            >
-              <textarea
-                ref={textareaRef}
-                value={newMessage}
-                rows={computedRows}
-                onChange={(e) => {
-                  if (onInputChange) {
-                    onInputChange(e);
-                  } else {
-                    setNewMessage(e.target.value);
-                  }
-                  if (showPlusMenu) setShowPlusMenu(false);
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder='"Hello! I&apos;m feeling low today...'
-                className={`ds-liquid-input msg-clean-input flex-1 min-w-0 bg-transparent border-0 text-[14px] sm:text-[14.5px] text-zinc-900 dark:text-white placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-0 resize-none leading-[20px] overflow-y-auto max-h-[120px] py-[6px]`}
-              />
-
-              <button
-                type="button"
-                onClick={() => setNewMessage('')}
-                className={cn(
-                  "w-6 h-6 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 shrink-0 ml-1 transition cursor-pointer",
-                  !newMessage.trim() && "opacity-40 hover:opacity-100"
-                )}
-                title="Clear text"
-              >
-                <MsgCloseIcon className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Right Vibrant Hot Pink Circular Send / Mic Button matching IMG_5472 */}
-            {hasContent ? (
-              <motion.button
-                key="send-btn"
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                type="button"
-                onPointerDown={(e) => e.preventDefault()}
-                onClick={onSendMessage}
-                disabled={isUploading}
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#FF2E93] text-white flex items-center justify-center hover:brightness-105 active:scale-92 transition-all cursor-pointer disabled:opacity-50 shrink-0"
-                title="Send message"
-              >
-                <MsgSendIcon className="w-[20px] h-[20px] mr-0.5" />
-              </motion.button>
-            ) : (
-              <button
-                type="button"
-                onClick={startRecording}
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#FF2E93] text-white flex items-center justify-center hover:brightness-105 active:scale-92 transition-all shrink-0 cursor-pointer"
-                title="Speak / Voice message"
-              >
-                <MsgMicIcon className="w-5 h-5" />
-              </button>
-            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,28 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import {
-  ChevronLeft,
-  ChevronRight,
-  User,
-  Search,
-  Bell,
-  BellOff,
-  MoreHorizontal,
-  EyeOff,
-  Ban,
-  MessageSquareWarning,
-  MessageCircle,
-  Lock,
-  Users,
-  Clock,
-  Edit3,
-  Check,
-  X,
-  Shield,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
+import Icon from '../Icon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getSafeDisplayName, getSafePublicUsername } from '../../lib/utils';
@@ -205,42 +184,42 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex flex-col bg-white dark:bg-[#121214] text-zinc-900 dark:text-white overflow-y-auto no-scrollbar font-inter">
-      {/* Top Header with circular Back button matching Image 1 */}
-      <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#121214]/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-zinc-150 dark:border-zinc-800/80">
+    <div className="fixed inset-0 z-[10000] flex flex-col ambient-dynamic-bg text-zinc-900 dark:text-white overflow-y-auto no-scrollbar font-inter">
+      {/* Top Header with circular Back button */}
+      <div className="sticky top-0 z-20 bg-transparent backdrop-blur-md px-4 py-3 flex items-center justify-between border-0">
         <button
           type="button"
           onClick={onClose}
-          className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition active:scale-95 cursor-pointer shadow-xs"
+          className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-white dark:hover:bg-zinc-700/60 transition active:scale-95 cursor-pointer"
         >
-          <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+          <Icon name="chevron-left" className="w-5 h-5 stroke-[2.2]" />
         </button>
-        <div className="w-10" />
+        <div className="w-11" />
       </div>
 
-      <div className="w-full max-w-lg mx-auto px-4 py-6 flex flex-col items-center">
+      <div className="w-full max-w-lg mx-auto px-4 py-4 pb-12 flex flex-col items-center">
         {/* Centered Large Circular Avatar */}
-        <div className="w-28 h-28 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-200 dark:border-zinc-700/70 flex items-center justify-center text-zinc-400 dark:text-zinc-500 shadow-md">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={realName}
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <svg className="w-16 h-16 fill-current text-zinc-400 dark:text-zinc-500" viewBox="0 0 24 24">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-          )}
+        <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-[#F246F5] to-purple-500 p-[2.5px] shadow-[0_10px_28px_rgba(242,70,245,0.16)]">
+          <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 flex items-center justify-center text-zinc-400 dark:text-zinc-500">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={realName}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Icon name="user" className="w-12 h-12 text-zinc-400 dark:text-zinc-500" />
+            )}
+          </div>
         </div>
 
         {/* Real User Name */}
-        <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white mt-4 text-center tracking-tight">
+        <h2 className="text-xl sm:text-2xl font-bold text-zinc-950 dark:text-white mt-4 text-center tracking-tight">
           {realName}
         </h2>
         {userNickname ? (
-          <div className="flex items-center gap-1.5 mt-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-semibold border border-indigo-200 dark:border-indigo-800/60">
+          <div className="flex items-center gap-1.5 mt-1.5 bg-[#F246F5]/10 text-[#C026D3] dark:text-[#F472B6] px-3.5 py-1 rounded-full text-xs font-semibold border-0">
             <span>Nickname set by you: <strong>{userNickname}</strong></span>
             <button
               type="button"
@@ -248,7 +227,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                 setNicknameInput(userNickname);
                 setShowNicknameModal(true);
               }}
-              className="ml-1 text-[11px] underline hover:text-indigo-900 dark:hover:text-indigo-100 cursor-pointer"
+              className="ml-1 text-[11px] underline hover:opacity-80 cursor-pointer"
             >
               Edit
             </button>
@@ -259,7 +238,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
           </p>
         ) : null}
 
-        {/* 4 Action Buttons Row: Profile, Search, Mute, Options (Image 1) */}
+        {/* 4 Action Buttons Row: Profile, Search, Mute, Options */}
         <div className="grid grid-cols-4 gap-4 mt-6 w-full max-w-sm relative">
           {/* 1. Profile */}
           <button
@@ -268,7 +247,6 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               onClose();
               const targetId = otherUser.id || otherUser.uid || otherUid;
               if (targetId) {
-                // Determine destination: Seller Store or News Hub Feed Profile
                 const isSeller = realUserData?.role === 'seller';
                 if (isSeller) {
                   navigate(`/store/${targetId}`);
@@ -279,10 +257,10 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             }}
             className="flex flex-col items-center justify-center group active:scale-95 transition cursor-pointer"
           >
-            <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-800 dark:text-zinc-200 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700 transition shadow-xs">
-              <User className="w-5 h-5 stroke-[2]" />
+            <div className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 group-hover:bg-white dark:group-hover:bg-zinc-700 transition">
+              <Icon name="user" className="w-5 h-5 stroke-[2]" />
             </div>
-            <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 mt-1.5">Profile</span>
+            <span className="text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 mt-1.5">Profile</span>
           </button>
 
           {/* 2. Search */}
@@ -294,10 +272,10 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             }}
             className="flex flex-col items-center justify-center group active:scale-95 transition cursor-pointer"
           >
-            <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-800 dark:text-zinc-200 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700 transition shadow-xs">
-              <Search className="w-5 h-5 stroke-[2]" />
+            <div className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 group-hover:bg-white dark:group-hover:bg-zinc-700 transition">
+              <Icon name="search" className="w-5 h-5 stroke-[2]" />
             </div>
-            <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 mt-1.5">Search</span>
+            <span className="text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 mt-1.5">Search</span>
           </button>
 
           {/* 3. Mute */}
@@ -307,15 +285,15 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             className="flex flex-col items-center justify-center group active:scale-95 transition cursor-pointer"
           >
             <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition border shadow-xs ${
+              className={`w-12 h-12 rounded-full border-0 flex items-center justify-center transition ${
                 isMuted
-                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800'
-                  : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200/60 dark:border-zinc-700/60 text-zinc-800 dark:text-zinc-200 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700'
+                  ? 'bg-[#F246F5]/15 text-[#F246F5] shadow-[0_4px_16px_rgba(242,70,245,0.14)]'
+                  : 'bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-900 dark:text-zinc-100 group-hover:bg-white dark:group-hover:bg-zinc-700'
               }`}
             >
-              {isMuted ? <BellOff className="w-5 h-5 stroke-[2]" /> : <Bell className="w-5 h-5 stroke-[2]" />}
+              {isMuted ? <Icon name="bell-slash" className="w-5 h-5 stroke-[2]" /> : <Icon name="bell" className="w-5 h-5 stroke-[2]" />}
             </div>
-            <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 mt-1.5">
+            <span className="text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 mt-1.5">
               {isMuted ? 'Muted' : 'Mute'}
             </span>
           </button>
@@ -327,13 +305,13 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               onClick={() => setShowOptionsMenu(!showOptionsMenu)}
               className="flex flex-col items-center justify-center group active:scale-95 transition cursor-pointer"
             >
-              <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-800 dark:text-zinc-200 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700 transition shadow-xs">
-                <MoreHorizontal className="w-5 h-5 stroke-[2]" />
+              <div className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 group-hover:bg-white dark:group-hover:bg-zinc-700 transition">
+                <Icon name="more-horizontal" className="w-5 h-5 stroke-[2]" />
               </div>
-              <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300 mt-1.5">Options</span>
+              <span className="text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 mt-1.5">Options</span>
             </button>
 
-            {/* Options Dropdown Menu (Image 1: Restrict, Block, Report) */}
+            {/* Options Dropdown Menu */}
             <AnimatePresence>
               {showOptionsMenu && (
                 <>
@@ -345,14 +323,14 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: -5 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#1E1F24] rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-750 py-2 z-40 overflow-hidden text-left"
+                    className="absolute right-0 top-full mt-2 w-52 bg-white/95 dark:bg-[#1E1C26]/95 backdrop-blur-xl rounded-2xl shadow-[0_14px_38px_rgba(120,90,160,0.18)] border-0 py-2 z-40 overflow-hidden text-left"
                   >
                     <button
                       type="button"
                       onClick={toggleRestrict}
-                      className="w-full text-left px-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition cursor-pointer"
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100/70 dark:hover:bg-white/[0.06] flex items-center gap-3 transition cursor-pointer"
                     >
-                      <EyeOff className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                      <Icon name="eye-slash" className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                       <span>{isRestricted ? 'Unrestrict' : 'Restrict'}</span>
                     </button>
                     <button
@@ -361,9 +339,9 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                         setShowOptionsMenu(false);
                         onBlockUser();
                       }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition cursor-pointer"
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100/70 dark:hover:bg-white/[0.06] flex items-center gap-3 transition cursor-pointer"
                     >
-                      <Ban className="w-4 h-4 text-rose-500" />
+                      <Icon name="ban" className="w-4 h-4 text-rose-500" />
                       <span>{isBlocked ? 'Unblock' : 'Block'}</span>
                     </button>
                     {onOpenWallpaperModal && (
@@ -374,9 +352,9 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                           onClose();
                           onOpenWallpaperModal();
                         }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition cursor-pointer"
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100/70 dark:hover:bg-white/[0.06] flex items-center gap-3 transition cursor-pointer"
                       >
-                        <MessageCircle className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                        <Icon name="message-circle" className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                         <span>Change Wallpaper</span>
                       </button>
                     )}
@@ -388,9 +366,9 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                           onClose();
                           onOpenClearChatModal();
                         }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-amber-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition cursor-pointer"
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-amber-600 hover:bg-zinc-100/70 dark:hover:bg-white/[0.06] flex items-center gap-3 transition cursor-pointer"
                       >
-                        <Clock className="w-4 h-4 text-amber-600" />
+                        <Icon name="clock" className="w-4 h-4 text-amber-600" />
                         <span>Clear / Delete Chat</span>
                       </button>
                     )}
@@ -400,9 +378,9 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                         setShowOptionsMenu(false);
                         setShowReportModal(true);
                       }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-rose-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 transition cursor-pointer"
+                      className="w-full text-left px-4 py-2.5 text-sm font-medium text-rose-500 hover:bg-rose-50/70 dark:hover:bg-rose-500/10 flex items-center gap-3 transition cursor-pointer"
                     >
-                      <MessageSquareWarning className="w-4 h-4 text-rose-500" />
+                      <Icon name="message-square-warning" className="w-4 h-4 text-rose-500" />
                       <span>Report</span>
                     </button>
                   </motion.div>
@@ -412,23 +390,23 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
           </div>
         </div>
 
-        {/* Feature Rows (Image 1: Theme, Nicknames, Disappearing messages, Chat controls, Privacy, Group chat, Something isn't working) */}
-        <div className="w-full mt-8 space-y-1">
+        {/* Grouped Frosted Card Feature Rows */}
+        <div className="w-full mt-7 bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-[26px] shadow-[0_4px_20px_rgba(120,90,160,0.05)] overflow-hidden divide-y divide-zinc-100/70 dark:divide-white/[0.06]">
           {/* Row 1: Theme */}
           <div
             onClick={onOpenThemeModal}
-            className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60 cursor-pointer transition group"
+            className="flex items-center justify-between py-3.5 px-4 hover:bg-zinc-100/50 dark:hover:bg-white/[0.04] cursor-pointer transition group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center shrink-0">
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-fuchsia-500 via-purple-500 to-indigo-500 shadow-sm border border-white/20" />
+              <div className="w-10 h-10 rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#F246F5] via-purple-500 to-indigo-500 shadow-sm" />
               </div>
               <div>
-                <h4 className="text-[15px] font-medium text-zinc-900 dark:text-white">Theme</h4>
+                <h4 className="text-[15px] font-semibold text-zinc-950 dark:text-white">Theme</h4>
                 <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{activeThemeName}</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+            <Icon name="chevron-right" className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* Row 2: Nicknames */}
@@ -437,60 +415,60 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               setNicknameInput(userNickname);
               setShowNicknameModal(true);
             }}
-            className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60 cursor-pointer transition group"
+            className="flex items-center justify-between py-3.5 px-4 hover:bg-zinc-100/50 dark:hover:bg-white/[0.04] cursor-pointer transition group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
-                <Edit3 className="w-4.5 h-4.5" />
+              <div className="w-10 h-10 rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
+                <Icon name="edit-3" className="w-4.5 h-4.5" />
               </div>
-              <h4 className="text-[15px] font-medium text-zinc-900 dark:text-white">Nicknames</h4>
+              <h4 className="text-[15px] font-semibold text-zinc-950 dark:text-white">Nicknames</h4>
             </div>
-            <ChevronRight className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+            <Icon name="chevron-right" className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* Row 3: Disappearing messages */}
           <div
             onClick={() => setShowDisappearingModal(true)}
-            className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60 cursor-pointer transition group"
+            className="flex items-center justify-between py-3.5 px-4 hover:bg-zinc-100/50 dark:hover:bg-white/[0.04] cursor-pointer transition group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
-                <Clock className="w-4.5 h-4.5" />
+              <div className="w-10 h-10 rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
+                <Icon name="clock" className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h4 className="text-[15px] font-medium text-zinc-900 dark:text-white">Disappearing messages</h4>
+                <h4 className="text-[15px] font-semibold text-zinc-950 dark:text-white">Disappearing messages</h4>
                 <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{getDisappearingLabel()}</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+            <Icon name="chevron-right" className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* Row 4: Chat controls */}
           <div
             onClick={() => setShowChatControlsModal(true)}
-            className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60 cursor-pointer transition group"
+            className="flex items-center justify-between py-3.5 px-4 hover:bg-zinc-100/50 dark:hover:bg-white/[0.04] cursor-pointer transition group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
-                <MessageCircle className="w-4.5 h-4.5" />
+              <div className="w-10 h-10 rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
+                <Icon name="message-circle" className="w-4.5 h-4.5" />
               </div>
-              <h4 className="text-[15px] font-medium text-zinc-900 dark:text-white">Chat controls</h4>
+              <h4 className="text-[15px] font-semibold text-zinc-950 dark:text-white">Chat controls</h4>
             </div>
-            <ChevronRight className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+            <Icon name="chevron-right" className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* Row 5: Privacy and safety */}
           <div
             onClick={() => setShowPrivacyModal(true)}
-            className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60 cursor-pointer transition group"
+            className="flex items-center justify-between py-3.5 px-4 hover:bg-zinc-100/50 dark:hover:bg-white/[0.04] cursor-pointer transition group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
-                <Lock className="w-4.5 h-4.5" />
+              <div className="w-10 h-10 rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
+                <Icon name="lock" className="w-4.5 h-4.5" />
               </div>
-              <h4 className="text-[15px] font-medium text-zinc-900 dark:text-white">Privacy and safety</h4>
+              <h4 className="text-[15px] font-semibold text-zinc-950 dark:text-white">Privacy and safety</h4>
             </div>
-            <ChevronRight className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+            <Icon name="chevron-right" className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* Row 6: Create a group chat */}
@@ -499,29 +477,29 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               onClose();
               onOpenGroupModal();
             }}
-            className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60 cursor-pointer transition group"
+            className="flex items-center justify-between py-3.5 px-4 hover:bg-zinc-100/50 dark:hover:bg-white/[0.04] cursor-pointer transition group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
-                <Users className="w-4.5 h-4.5" />
+              <div className="w-10 h-10 rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
+                <Icon name="users" className="w-4.5 h-4.5" />
               </div>
-              <h4 className="text-[15px] font-medium text-zinc-900 dark:text-white">Create a group chat</h4>
+              <h4 className="text-[15px] font-semibold text-zinc-950 dark:text-white">Create a group chat</h4>
             </div>
-            <ChevronRight className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+            <Icon name="chevron-right" className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
           </div>
 
           {/* Row 7: Something isn't working */}
           <div
             onClick={() => setShowFeedbackModal(true)}
-            className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-zinc-100/70 dark:hover:bg-zinc-800/60 cursor-pointer transition group"
+            className="flex items-center justify-between py-3.5 px-4 hover:bg-zinc-100/50 dark:hover:bg-white/[0.04] cursor-pointer transition group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
-                <MessageSquareWarning className="w-4.5 h-4.5" />
+              <div className="w-10 h-10 rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 flex items-center justify-center text-zinc-700 dark:text-zinc-200 shrink-0">
+                <Icon name="message-square-warning" className="w-4.5 h-4.5" />
               </div>
-              <h4 className="text-[15px] font-medium text-zinc-900 dark:text-white">Something isn&apos;t working</h4>
+              <h4 className="text-[15px] font-semibold text-zinc-950 dark:text-white">Something isn&apos;t working</h4>
             </div>
-            <ChevronRight className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+            <Icon name="chevron-right" className="w-5 h-5 text-zinc-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
       </div>
@@ -529,18 +507,18 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
       {/* SUB-MODAL: Nicknames */}
       {showNicknameModal && (
         <div
-          className="fixed inset-0 z-[10020] flex items-center justify-center ds-liquid-backdrop p-5"
+          className="fixed inset-0 z-[10020] flex items-center justify-center bg-black/45 backdrop-blur-sm p-5"
           onClick={() => setShowNicknameModal(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
+            className="bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-[28px] border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
           >
             <div>
-              <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Set nickname</h3>
-              <p className="ds-liquid-popup-desc text-[15px] mt-2 leading-[1.44]">
+              <h3 className="text-[20px] font-bold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Set nickname</h3>
+              <p className="text-zinc-500 dark:text-zinc-400 text-[14px] mt-1.5 leading-[1.44]">
                 Only you will see this nickname in your chats with this user.
               </p>
             </div>
@@ -549,20 +527,20 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               value={nicknameInput}
               onChange={(e) => setNicknameInput(e.target.value)}
               placeholder="Enter nickname..."
-              className="ds-liquid-input w-full rounded-2xl px-4 py-3.5 text-[15px] placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#0074f8]/50"
+              className="w-full rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 px-4 py-3.5 text-[15px] text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#F246F5]/30"
             />
-            <div className="pt-2 flex flex-col gap-3">
+            <div className="pt-2 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={handleSaveNickname}
-                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+                className="w-full min-h-[48px] px-5 rounded-full bg-[#F246F5] hover:opacity-95 text-white text-[15px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
               >
                 Save nickname
               </button>
               <button
                 type="button"
                 onClick={() => setShowNicknameModal(false)}
-                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+                className="w-full min-h-[48px] px-5 rounded-full bg-[#F5F3FA] dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-[15px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
               >
                 Cancel
               </button>
@@ -573,22 +551,28 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
 
       {/* SUB-MODAL: Disappearing Messages */}
       {showDisappearingModal && (
-        <div className="fixed inset-0 z-[10020] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-          <div className="w-full max-w-md bg-white dark:bg-[#1E1F24] rounded-t-3xl sm:rounded-3xl p-6 border border-zinc-200 dark:border-zinc-750 shadow-2xl space-y-4">
+        <div
+          className="fixed inset-0 z-[10020] flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-sm p-0 sm:p-4"
+          onClick={() => setShowDisappearingModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-[28px] p-6 border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] space-y-4"
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Disappearing Messages</h3>
+              <h3 className="text-lg font-bold text-zinc-950 dark:text-white">Disappearing Messages</h3>
               <button
                 type="button"
                 onClick={() => setShowDisappearingModal(false)}
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center cursor-pointer"
+                className="w-9 h-9 rounded-full bg-[#F5F3FA] dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:opacity-80 flex items-center justify-center cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <Icon name="x" className="w-4 h-4" />
               </button>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               When enabled, new messages sent in this chat will disappear after the selected period.
             </p>
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2 pt-1">
               {[
                 { label: 'Off', val: null },
                 { label: '24 hours', val: 86400000 },
@@ -602,14 +586,14 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                     onSetAutoDelete(opt.val);
                     setShowDisappearingModal(false);
                   }}
-                  className={`w-full p-3.5 rounded-2xl flex items-center justify-between text-sm font-semibold transition cursor-pointer ${
+                  className={`w-full p-3.5 rounded-2xl flex items-center justify-between text-sm font-semibold transition cursor-pointer border-0 ${
                     currentAutoDeleteDuration === opt.val
-                      ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-400/50 shadow-xs'
-                      : 'bg-zinc-50 dark:bg-zinc-800/70 text-zinc-800 dark:text-zinc-200 border border-zinc-200/80 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      ? 'bg-[#F246F5]/12 text-[#C026D3] dark:text-[#F472B6]'
+                      : 'bg-[#F5F3FA] dark:bg-white/[0.06] text-zinc-800 dark:text-zinc-200 hover:opacity-90'
                   }`}
                 >
                   <span>{opt.label}</span>
-                  {currentAutoDeleteDuration === opt.val && <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+                  {currentAutoDeleteDuration === opt.val && <Icon name="check" className="w-4 h-4 text-[#F246F5]" />}
                 </button>
               ))}
             </div>
@@ -619,22 +603,28 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
 
       {/* SUB-MODAL: Chat Controls */}
       {showChatControlsModal && (
-        <div className="fixed inset-0 z-[10020] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-          <div className="w-full max-w-md bg-white dark:bg-[#1E1F24] rounded-t-3xl sm:rounded-3xl p-6 border border-zinc-200 dark:border-zinc-750 shadow-2xl space-y-4">
+        <div
+          className="fixed inset-0 z-[10020] flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-sm p-0 sm:p-4"
+          onClick={() => setShowChatControlsModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-[28px] p-6 border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] space-y-4"
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Chat Controls</h3>
+              <h3 className="text-lg font-bold text-zinc-950 dark:text-white">Chat Controls</h3>
               <button
                 type="button"
                 onClick={() => setShowChatControlsModal(false)}
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center cursor-pointer"
+                className="w-9 h-9 rounded-full bg-[#F5F3FA] dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:opacity-80 flex items-center justify-center cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <Icon name="x" className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/70 rounded-2xl border border-zinc-200/80 dark:border-zinc-700">
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between p-4 bg-[#F5F3FA] dark:bg-white/[0.06] rounded-2xl border-0">
                 <div>
-                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">Read Receipts</h4>
+                  <h4 className="text-sm font-semibold text-zinc-950 dark:text-white">Read Receipts</h4>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Let others know when you&apos;ve seen their messages</p>
                 </div>
                 <input
@@ -644,13 +634,13 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                     setReadReceipts(e.target.checked);
                     notify(`Read receipts ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
                   }}
-                  className="w-5 h-5 accent-[#5B51D8] rounded cursor-pointer"
+                  className="w-5 h-5 accent-[#F246F5] rounded cursor-pointer"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/70 rounded-2xl border border-zinc-200/80 dark:border-zinc-700">
+              <div className="flex items-center justify-between p-4 bg-[#F5F3FA] dark:bg-white/[0.06] rounded-2xl border-0">
                 <div>
-                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">Sound Effects</h4>
+                  <h4 className="text-sm font-semibold text-zinc-950 dark:text-white">Sound Effects</h4>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Play chime when messages arrive or send</p>
                 </div>
                 <input
@@ -660,7 +650,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
                     setSoundEffects(e.target.checked);
                     notify(`Sound effects ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
                   }}
-                  className="w-5 h-5 accent-[#5B51D8] rounded cursor-pointer"
+                  className="w-5 h-5 accent-[#F246F5] rounded cursor-pointer"
                 />
               </div>
             </div>
@@ -671,44 +661,46 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
       {/* SUB-MODAL: Privacy and Safety */}
       {showPrivacyModal && (
         <div
-          className="fixed inset-0 z-[10020] flex items-center justify-center ds-liquid-backdrop p-5"
+          className="fixed inset-0 z-[10020] flex items-center justify-center bg-black/45 backdrop-blur-sm p-5"
           onClick={() => setShowPrivacyModal(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="ds-liquid-glass-popup w-full max-w-[390px] px-6 pt-7 pb-6 text-left space-y-4"
+            className="bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-[28px] border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] w-full max-w-[390px] px-6 pt-7 pb-6 text-left space-y-4"
           >
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-[#0074f8]" />
-              <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Privacy &amp; Safety</h3>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center shrink-0">
+                <Icon name="shield" className="w-5 h-5" />
+              </div>
+              <h3 className="text-[20px] font-bold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Privacy &amp; Safety</h3>
             </div>
             <div className="space-y-2.5 text-xs">
-              <div className="p-3.5 bg-white/60 dark:bg-white/10 rounded-2xl border border-white/60 dark:border-white/10">
-                <p className="font-bold ds-liquid-popup-title">End-to-End Chat Encryption</p>
-                <p className="text-[12px] ds-liquid-popup-desc mt-0.5">
+              <div className="p-3.5 bg-[#F5F3FA] dark:bg-white/[0.06] rounded-2xl border-0">
+                <p className="font-bold text-zinc-950 dark:text-white">End-to-End Chat Encryption</p>
+                <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                   Messages and calls are secured with transport encryption and private token validation.
                 </p>
               </div>
-              <div className="p-3.5 bg-white/60 dark:bg-white/10 rounded-2xl border border-white/60 dark:border-white/10">
-                <p className="font-bold ds-liquid-popup-title">Scam Prevention Guarantee</p>
-                <p className="text-[12px] ds-liquid-popup-desc mt-0.5">
+              <div className="p-3.5 bg-[#F5F3FA] dark:bg-white/[0.06] rounded-2xl border-0">
+                <p className="font-bold text-zinc-950 dark:text-white">Scam Prevention Guarantee</p>
+                <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                   DEEP SHOP automatically scans suspicious review fraud and protects consumer transactions.
                 </p>
               </div>
-              <div className="p-3.5 bg-white/60 dark:bg-white/10 rounded-2xl border border-white/60 dark:border-white/10">
-                <p className="font-bold ds-liquid-popup-title">Restrict &amp; Block Control</p>
-                <p className="text-[12px] ds-liquid-popup-desc mt-0.5">
+              <div className="p-3.5 bg-[#F5F3FA] dark:bg-white/[0.06] rounded-2xl border-0">
+                <p className="font-bold text-zinc-950 dark:text-white">Restrict &amp; Block Control</p>
+                <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                   You can restrict or block accounts at any time without alerting the other party.
                 </p>
               </div>
             </div>
-            <div className="pt-2">
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={() => setShowPrivacyModal(false)}
-                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+                className="w-full min-h-[48px] px-5 rounded-full bg-[#F246F5] hover:opacity-95 text-white text-[15px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
               >
                 Done
               </button>
@@ -720,21 +712,21 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
       {/* SUB-MODAL: Report */}
       {showReportModal && (
         <div
-          className="fixed inset-0 z-[10025] flex items-center justify-center ds-liquid-backdrop p-5"
+          className="fixed inset-0 z-[10025] flex items-center justify-center bg-black/45 backdrop-blur-sm p-5"
           onClick={() => setShowReportModal(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
+            className="bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-[28px] border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
           >
             <div>
-              <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em] flex items-center gap-2">
-                <MessageSquareWarning className="w-5 h-5 text-rose-500" />
+              <h3 className="text-[20px] font-bold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em] flex items-center gap-2">
+                <Icon name="message-square-warning" className="w-5 h-5 text-rose-500" />
                 <span>Report user</span>
               </h3>
-              <p className="ds-liquid-popup-desc text-[15px] mt-2 leading-[1.44]">
+              <p className="text-zinc-500 dark:text-zinc-400 text-[14px] mt-1.5 leading-[1.44]">
                 Please tell us why you are reporting this conversation.
               </p>
             </div>
@@ -743,21 +735,21 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
               placeholder="Describe the issue (e.g. spam, harassment, counterfeit)..."
-              className="ds-liquid-input w-full rounded-2xl p-3.5 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#0074f8]/50 resize-none"
+              className="w-full rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 p-3.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#F246F5]/30 resize-none"
             />
-            <div className="pt-2 flex flex-col gap-3">
+            <div className="pt-1 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={handleSendReport}
                 disabled={!reportReason.trim()}
-                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
+                className="w-full min-h-[48px] px-5 rounded-full bg-[#F246F5] hover:opacity-95 text-white text-[15px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
               >
                 Submit report
               </button>
               <button
                 type="button"
                 onClick={() => setShowReportModal(false)}
-                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+                className="w-full min-h-[48px] px-5 rounded-full bg-[#F5F3FA] dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-[15px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
               >
                 Cancel
               </button>
@@ -769,18 +761,18 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
       {/* SUB-MODAL: Something isn't working */}
       {showFeedbackModal && (
         <div
-          className="fixed inset-0 z-[10025] flex items-center justify-center ds-liquid-backdrop p-5"
+          className="fixed inset-0 z-[10025] flex items-center justify-center bg-black/45 backdrop-blur-sm p-5"
           onClick={() => setShowFeedbackModal(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
+            className="bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-[28px] border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
           >
             <div>
-              <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Report a problem</h3>
-              <p className="ds-liquid-popup-desc text-[15px] mt-2 leading-[1.44]">
+              <h3 className="text-[20px] font-bold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Report a problem</h3>
+              <p className="text-zinc-500 dark:text-zinc-400 text-[14px] mt-1.5 leading-[1.44]">
                 Briefly explain what happened and what wasn&apos;t working as expected.
               </p>
             </div>
@@ -789,21 +781,21 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
               placeholder="Write your feedback..."
-              className="ds-liquid-input w-full rounded-2xl p-3.5 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#0074f8]/50 resize-none"
+              className="w-full rounded-2xl bg-[#F5F3FA] dark:bg-white/[0.06] border-0 p-3.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#F246F5]/30 resize-none"
             />
-            <div className="pt-2 flex flex-col gap-3">
+            <div className="pt-1 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={handleSendFeedback}
                 disabled={!feedbackText.trim()}
-                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
+                className="w-full min-h-[48px] px-5 rounded-full bg-[#F246F5] hover:opacity-95 text-white text-[15px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
               >
                 Send feedback
               </button>
               <button
                 type="button"
                 onClick={() => setShowFeedbackModal(false)}
-                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
+                className="w-full min-h-[48px] px-5 rounded-full bg-[#F5F3FA] dark:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-[15px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
               >
                 Cancel
               </button>

@@ -65,7 +65,7 @@ const Search: React.FC = () => {
   ];
 
   return (
-    <div className="pt-6 pb-[120px] px-4 sm:px-6 animate-fade-in min-h-screen bg-[#f3f3f3] dark:bg-zinc-900 mx-auto font-sans">
+    <div className="pt-6 pb-[120px] px-4 sm:px-6 animate-fade-in min-h-screen ambient-dynamic-bg mx-auto font-sans">
       <div className="max-w-md mx-auto">
       <div className="flex items-center gap-3 mb-8">
         <div className="relative flex-1">

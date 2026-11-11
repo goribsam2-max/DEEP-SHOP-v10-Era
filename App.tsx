@@ -996,7 +996,7 @@ const AppContent: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="fixed inset-0 z-[9999] bg-white dark:bg-black overflow-hidden pointer-events-none"
+            className="fixed inset-0 z-[9999] ambient-dynamic-bg overflow-hidden pointer-events-none"
           >
             <RoutePageSkeleton pathname={location.pathname} />
           </motion.div>

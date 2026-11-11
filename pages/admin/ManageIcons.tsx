@@ -13,6 +13,53 @@ import {
   broadcastLoopsIconUpdate,
 } from "../../components/LoopsSvgIcon";
 import { normalizeCustomSvg } from "../../lib/svgNormalize";
+import {
+  MsgSearchIcon,
+  MsgPlusIcon,
+  MsgDotsHorizontalIcon,
+  MsgCheckDoubleIcon,
+  MsgHomeIcon,
+  MsgUserIcon,
+  MsgBackChevronIcon,
+  MsgVideoCallIcon,
+  MsgPhoneCallIcon,
+  MsgCopyIcon,
+  MsgReplyIcon,
+  MsgForwardIcon,
+  MsgTrashIcon,
+  MsgCommunityIcon,
+  MsgChatBubbleIcon,
+  MsgSettingsIcon,
+  MsgSendIcon,
+  MsgMicIcon,
+  MsgImageIcon,
+  MsgCameraIcon,
+  MsgCloseIcon,
+} from "../../components/chat/MessagesSvgIcons";
+
+const MSG_ICON_PREVIEW_MAP: Record<string, React.FC<{ className?: string }>> = {
+  "msg-search": MsgSearchIcon,
+  "msg-plus": MsgPlusIcon,
+  "msg-dots-horizontal": MsgDotsHorizontalIcon,
+  "msg-check-double": MsgCheckDoubleIcon,
+  "msg-home": MsgHomeIcon,
+  "msg-user": MsgUserIcon,
+  "msg-back": MsgBackChevronIcon,
+  "msg-video-call": MsgVideoCallIcon,
+  "msg-phone-call": MsgPhoneCallIcon,
+  "msg-copy": MsgCopyIcon,
+  "msg-reply": MsgReplyIcon,
+  "msg-forward": MsgForwardIcon,
+  "msg-trash": MsgTrashIcon,
+  "msg-community": MsgCommunityIcon,
+  "msg-chat-bubble": MsgChatBubbleIcon,
+  "msg-settings": MsgSettingsIcon,
+  "msg-send": MsgSendIcon,
+  "msg-mic": MsgMicIcon,
+  "msg-image": MsgImageIcon,
+  "msg-camera": MsgCameraIcon,
+  "msg-close": MsgCloseIcon,
+};
 
 interface IconConfig {
   key: string;
@@ -63,6 +110,13 @@ const PREDEFINED_ICONS: IconConfig[] = [
   { key: "sun", name: "Light Mode (Sun)", description: "Sun icon used for Light Mode controls and indicators", category: "navigation" },
   { key: "moon", name: "Dark Mode (Moon)", description: "Moon icon used for Dark Mode controls and indicators", category: "navigation" },
   { key: "monitor", name: "System Mode (Monitor)", description: "Monitor icon used for System Theme controls and indicators", category: "navigation" },
+  { key: "check", name: "Checkmark", description: "Selection checkmark across menus and modals", category: "navigation" },
+  { key: "x", name: "Close Cross (X)", description: "Dismiss and clear buttons across dialogs", category: "navigation" },
+  { key: "globe", name: "Global / Public", description: "Global feed and public link indicators", category: "navigation" },
+  { key: "external-link", name: "External Link", description: "Open external links and shared URLs", category: "navigation" },
+  { key: "sliders-horizontal", name: "Sliders / Filters", description: "Feed preferences and horizontal filters", category: "navigation" },
+  { key: "infinity", name: "Loops Infinity Brand", description: "Loops switcher icon inside Shop header menu", category: "navigation" },
+  { key: "qr-code", name: "QR Code", description: "QR sharing and verification actions", category: "navigation" },
 
   // Profile & User Management
   { key: "user", name: "User Account Profile", description: "Bottom profiles tab and user accounts panel", category: "profile" },
@@ -128,6 +182,15 @@ const PREDEFINED_ICONS: IconConfig[] = [
   { key: "store", name: "Seller Store Profiles", description: "Store pages and seller detail setups", category: "dashboard" },
   { key: "list-plus", name: "Bulk Import", description: "Adding multiple listings or inventories", category: "dashboard" },
   { key: "loader-2", name: "Process Spinner", description: "Loading/rendering indicator inside analytics", category: "dashboard" },
+  { key: "layout-dashboard", name: "Creator / Dashboard Grid", description: "Creator Studio & analytics dashboard icon", category: "dashboard" },
+  { key: "layout-grid", name: "Grid View", description: "Grid layout switchers", category: "dashboard" },
+  { key: "layers", name: "Layers / Stacks", description: "Stacked views and collections", category: "dashboard" },
+  { key: "trending-up", name: "Trending Up", description: "Growth metrics in Creator Studio & analytics", category: "dashboard" },
+  { key: "settings", name: "Settings Gear", description: "Header and page settings trigger", category: "dashboard" },
+  { key: "palette", name: "Theme & Appearance Palette", description: "Personalization and chat themes", category: "dashboard" },
+  { key: "calendar", name: "Calendar / Date", description: "Schedules and activity date markers", category: "dashboard" },
+  { key: "bookmark", name: "Saved Bookmark", description: "Saved Loops and bookmarks", category: "dashboard" },
+  { key: "file-text", name: "Document / File", description: "Shared files and scam post documents", category: "dashboard" },
 
   // Communication & Chat
   { key: "envelope", name: "Direct Message / Email", description: "Support inbox, general messaging, emails", category: "chat" },
@@ -173,6 +236,36 @@ const PREDEFINED_ICONS: IconConfig[] = [
   { key: "messages-activity", name: "Messages Bottom Nav: Activity", description: "Messages page bottom navigation Activity/Calendar tab icon", category: "chat" },
   { key: "messages-profile", name: "Messages Bottom Nav: Profile", description: "Messages page bottom navigation Profile tab icon", category: "chat" },
   { key: "messages-plus", name: "Messages Bottom Nav: Add / Plus FAB", description: "Messages page bottom navigation Plus FAB action icon", category: "chat" },
+  { key: "msg-search", name: "Messages Header: Search", description: "Search button icon inside Messages inbox header", category: "chat" },
+  { key: "msg-plus", name: "Messages Header: Compose / Plus", description: "Compose & add icon across Messages UI", category: "chat" },
+  { key: "msg-dots-horizontal", name: "Messages Header: Menu / Dots", description: "More options menu icon in Messages header", category: "chat" },
+  { key: "msg-check-double", name: "Messages: Double Checkmark", description: "Seen / delivered double checkmark indicator", category: "chat" },
+  { key: "msg-home", name: "Messages Rail: Home", description: "Desktop rail Home icon in Messages", category: "chat" },
+  { key: "msg-user", name: "Messages Header: Profile / User", description: "User profile circle icon in Messages", category: "chat" },
+  { key: "msg-back", name: "Messages Thread: Back Chevron", description: "Back button inside Messages thread & calls", category: "chat" },
+  { key: "msg-video-call", name: "Messages Call: Video Call", description: "Video call camera icon in Messages header & calls", category: "chat" },
+  { key: "msg-phone-call", name: "Messages Call: Audio Call", description: "Voice call handset icon in Messages header & calls", category: "chat" },
+  { key: "msg-copy", name: "Messages Menu: Copy", description: "Copy message action inside hold popup", category: "chat" },
+  { key: "msg-reply", name: "Messages Menu: Reply", description: "Reply arrow action inside hold popup & channel", category: "chat" },
+  { key: "msg-forward", name: "Messages Menu: Forward", description: "Forward arrow action inside hold popup & channel", category: "chat" },
+  { key: "msg-trash", name: "Messages Menu: Delete Trash", description: "Trash delete icon inside hold popup & channels", category: "chat" },
+  { key: "msg-community", name: "Messages Tab: Community", description: "Community channels icon in Messages rail", category: "chat" },
+  { key: "msg-chat-bubble", name: "Messages Rail: Chats Bubble", description: "Active chat bubble icon in Messages desktop rail", category: "chat" },
+  { key: "msg-settings", name: "Messages Rail: Settings Gear", description: "Settings icon in Messages desktop rail", category: "chat" },
+  { key: "msg-send", name: "Messages Composer: Send", description: "Send paper-plane button inside Messages composer", category: "chat" },
+  { key: "msg-mic", name: "Messages Composer: Mic", description: "Voice recording microphone button in Messages composer", category: "chat" },
+  { key: "msg-image", name: "Messages Composer: Photo Gallery", description: "Image upload icon in Messages composer", category: "chat" },
+  { key: "msg-camera", name: "Messages Composer: Camera", description: "Quick camera icon in Messages & channels", category: "chat" },
+  { key: "msg-close", name: "Messages: Close Cross", description: "Close icon inside voice recorder & hold overlays", category: "chat" },
+  { key: "bot", name: "AI Bot Assistant", description: "AI assistant chat indicator icon", category: "chat" },
+  { key: "message-circle", name: "Message Circle", description: "Direct chat bubble & comment actions", category: "chat" },
+  { key: "message-square-warning", name: "Report Message Warning", description: "Report conversation or scam feedback icon", category: "chat" },
+  { key: "archive", name: "Archive Chat", description: "Archive/unarchive chat tray action", category: "chat" },
+  { key: "phone-call", name: "Active Phone Call", description: "In-progress phone call indicator", category: "chat" },
+  { key: "more-horizontal", name: "More Options Horizontal", description: "Horizontal three-dots menu icon", category: "chat" },
+  { key: "shield-alert", name: "Scam / Security Alert", description: "Scam reporting & moderation alert shield", category: "chat" },
+  { key: "eye-slash", name: "Restrict / Hide", description: "Restrict account or hide element icon", category: "chat" },
+  { key: "user-check", name: "Verified / Following User", description: "Following state and user check icon", category: "chat" },
 
   // Social & Platform Utilities
   { key: "facebook", name: "Facebook Link", description: "Social links, customer sync options", category: "social" },
@@ -185,7 +278,25 @@ const PREDEFINED_ICONS: IconConfig[] = [
   { key: "cloud-upload", name: "Upload To Cloud", description: "Drag and drop upload files controls", category: "social" },
   { key: "link", name: "Direct Link URL", description: "Embeds, videos links, external resources", category: "social" },
   { key: "trash", name: "Delete Trash", description: "Remove product, dismiss order, delete items", category: "social" },
+  { key: "trash-2", name: "Delete Bin (Alt)", description: "Secondary delete bin icon across modals & channels", category: "social" },
   { key: "edit", name: "Edit Pen", description: "Modify fields, update profiles and listings", category: "social" },
+  { key: "edit-3", name: "Edit Details (Square/Line)", description: "Edit group name, nicknames and notes", category: "social" },
+  { key: "pencil", name: "Pencil", description: "Compact edit pencil button", category: "social" },
+  { key: "pen-line", name: "Pen Line", description: "Compose or annotate action", category: "social" },
+  { key: "camera", name: "Camera", description: "Photo capture and avatar upload", category: "social" },
+  { key: "smile", name: "Emoji Smile", description: "Emoji picker and reaction button", category: "social" },
+  { key: "play", name: "Play Media", description: "Video & audio playback control", category: "social" },
+  { key: "music", name: "Music / Audio Track", description: "Music & reel audio track icon", category: "social" },
+  { key: "headphones", name: "Headphones Audio", description: "Audio listening & playback icon", category: "social" },
+  { key: "flame", name: "Trending Flame", description: "Trending / flash highlights icon", category: "social" },
+  { key: "arrow-up-right", name: "Open / Diagonal Arrow", description: "External jump & link arrow", category: "social" },
+  { key: "graduation-cap", name: "Creator / Education Cap", description: "Creator academy / guides icon", category: "social" },
+  { key: "wrench", name: "Tools / Repair Wrench", description: "Shop categories & support tools icon", category: "social" },
+  { key: "cpu", name: "Electronics / Processor", description: "Tech & hardware category icon", category: "social" },
+  { key: "battery", name: "Power / Battery", description: "Power accessories & charge status icon", category: "social" },
+  { key: "smartphone", name: "Mobile / Smartphone", description: "Device & mobile category icon", category: "social" },
+  { key: "refresh-cw", name: "Switch / Rotate Camera", description: "Camera flip and live stream refresh icon", category: "social" },
+  { key: "eye", name: "Viewers / Eye Count", description: "Live stream viewer counter and visibility icon", category: "social" },
   { key: "save", name: "Save Controls", description: "Save form inputs, submit system values", category: "social" },
   { key: "ban", name: "Banish / Block User", description: "Suspend account, ban sellers, fraud restrictions", category: "social" },
 ];
@@ -670,6 +781,11 @@ const ManageIcons: React.FC = () => {
                             previewOverrideSvg={inputs[icon.key]}
                             className="w-5 h-5"
                           />
+                        ) : MSG_ICON_PREVIEW_MAP[icon.key] ? (
+                          (() => {
+                            const MsgComp = MSG_ICON_PREVIEW_MAP[icon.key];
+                            return <MsgComp className="w-5 h-5" />;
+                          })()
                         ) : (
                           <Icon name={icon.key} className="w-5 h-5" />
                         )}

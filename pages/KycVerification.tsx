@@ -16,7 +16,7 @@ import {
 
 type KycStep = "info" | "nid-front" | "nid-back" | "face-liveness" | "processing" | "success";
 
-export default function KycVerification() {
+export default function KycVerification(props?: { onSuccess?: () => void }) {
   const navigate = useNavigate();
   const notify = useNotify();
   const [currentStep, setCurrentStep] = useState<KycStep>("info");
@@ -223,7 +223,7 @@ export default function KycVerification() {
 
       setCurrentStep("success");
       notify("KYC Documents submitted successfully", "success");
-      if (onSuccess) onSuccess();
+      if (typeof (props as any)?.onSuccess === 'function') (props as any).onSuccess();
     } catch (err: any) {
       console.error(err);
       notify("Verification Upload Failed. Please try again.", "error");

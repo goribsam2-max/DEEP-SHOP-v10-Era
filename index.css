@@ -52,10 +52,10 @@
 }
 
 html {
-  background-color: #ffffff;
+  background-color: #fbf9fd;
 }
 html.dark {
-  background-color: #000000;
+  background-color: #0e0c13;
 }
 
 body {
@@ -63,15 +63,26 @@ body {
   max-width: 100vw;
   font-family: "Satoshi", "Hind Siliguri", "Inter", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   min-height: 100vh;
-  background-color: #ffffff;
-  background-image: radial-gradient(ellipse 90% 380px at 50% 0px, rgba(59, 130, 246, 0.12), transparent 100%);
+  background-color: #fbf9fd;
+  background-image:
+    radial-gradient(at 45% -5%, rgba(235, 200, 255, 0.72) 0px, transparent 58%),
+    radial-gradient(at 92% 10%, rgba(255, 205, 245, 0.65) 0px, transparent 50%),
+    radial-gradient(at 8% 35%, rgba(230, 220, 255, 0.58) 0px, transparent 52%),
+    radial-gradient(at 95% 78%, rgba(245, 212, 255, 0.45) 0px, transparent 55%),
+    radial-gradient(at 20% 95%, rgba(240, 224, 255, 0.42) 0px, transparent 55%);
+  background-attachment: fixed;
   background-repeat: no-repeat;
   color: #09090b;
 }
 
 .dark body {
-  background-color: #000000;
-  background-image: radial-gradient(ellipse 90% 380px at 50% 0px, rgba(37, 99, 235, 0.22), transparent 100%);
+  background-color: #0e0c13;
+  background-image:
+    radial-gradient(at 50% -10%, rgba(68, 30, 92, 0.52) 0px, transparent 65%),
+    radial-gradient(at 100% 15%, rgba(95, 20, 65, 0.42) 0px, transparent 55%),
+    radial-gradient(at 0% 25%, rgba(45, 25, 75, 0.36) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(30, 20, 45, 0.45) 0px, transparent 60%);
+  background-attachment: fixed;
   background-repeat: no-repeat;
   color: #f4f4f5;
 }
@@ -598,8 +609,14 @@ body {
 html:not(.dark) body,
 html:not(.dark) #root,
 html:not(.dark) main {
-  background-color: #ffffff !important;
-  background-image: radial-gradient(ellipse 90% 380px at 50% 0px, rgba(59, 130, 246, 0.12), transparent 100%) !important;
+  background-color: #fbf9fd !important;
+  background-image:
+    radial-gradient(at 45% -5%, rgba(235, 200, 255, 0.72) 0px, transparent 58%),
+    radial-gradient(at 92% 10%, rgba(255, 205, 245, 0.65) 0px, transparent 50%),
+    radial-gradient(at 8% 35%, rgba(230, 220, 255, 0.58) 0px, transparent 52%),
+    radial-gradient(at 95% 78%, rgba(245, 212, 255, 0.45) 0px, transparent 55%),
+    radial-gradient(at 20% 95%, rgba(240, 224, 255, 0.42) 0px, transparent 55%) !important;
+  background-attachment: fixed !important;
   background-repeat: no-repeat !important;
   color: #09090b !important;
 }
@@ -625,7 +642,7 @@ html:not(.dark) .card:not(.ds-liquid-glass-popup) {
   background-color: #ffffff !important;
 }
 
-/* Secondary light card surfaces become soft clean white-tinted surfaces */
+/* Secondary light card surfaces become soft clean lavender-white tinted surfaces */
 html:not(.dark) .bg-zinc-100,
 html:not(.dark) .bg-gray-100,
 html:not(.dark) .bg-slate-100,
@@ -635,7 +652,7 @@ html:not(.dark) .bg-\[\#f4f4f5\],
 html:not(.dark) .bg-\[\#f8fafc\],
 html:not(.dark) .bg-\[\#f1f5f9\],
 html:not(.dark) .bg-\[\#F0F2F5\] {
-  background-color: #f2faff !important;
+  background-color: #f5f3fa !important;
 }
 
 /* CHROME VIOLET (#5F2CFF) replacing ALL Green colors (#1cdb5e, #22c55e, #10b981, #25D366, emerald, green) & Primary accents */
@@ -1433,19 +1450,24 @@ html.dark .ds-liquid-input {
    Authentic frosted refractive glass cards, docks, and wells
    ========================================================================== */
 html:not(.dark) .ds-liquid-checkout-shell {
-  background-color: #f3f8ff !important;
+  background-color: #fbf9fd !important;
   background-image:
-    radial-gradient(ellipse 68% 420px at 16% 4%, rgba(56, 189, 248, 0.2), transparent 72%),
-    radial-gradient(ellipse 60% 420px at 86% 12%, rgba(99, 102, 241, 0.14), transparent 72%),
-    radial-gradient(ellipse 75% 460px at 50% 96%, rgba(14, 165, 233, 0.12), transparent 75%) !important;
+    radial-gradient(at 45% -5%, rgba(235, 200, 255, 0.72) 0px, transparent 58%),
+    radial-gradient(at 92% 10%, rgba(255, 205, 245, 0.65) 0px, transparent 50%),
+    radial-gradient(at 8% 35%, rgba(230, 220, 255, 0.58) 0px, transparent 52%),
+    radial-gradient(at 95% 78%, rgba(245, 212, 255, 0.45) 0px, transparent 55%),
+    radial-gradient(at 20% 95%, rgba(240, 224, 255, 0.42) 0px, transparent 55%) !important;
+  background-attachment: fixed !important;
 }
 
 html.dark .ds-liquid-checkout-shell {
-  background-color: #030408 !important;
+  background-color: #0e0c13 !important;
   background-image:
-    radial-gradient(ellipse 68% 420px at 16% 4%, rgba(13, 130, 255, 0.18), transparent 72%),
-    radial-gradient(ellipse 60% 420px at 86% 14%, rgba(139, 92, 246, 0.16), transparent 72%),
-    radial-gradient(ellipse 70% 460px at 50% 96%, rgba(14, 165, 233, 0.1), transparent 75%) !important;
+    radial-gradient(at 50% -10%, rgba(68, 30, 92, 0.52) 0px, transparent 65%),
+    radial-gradient(at 100% 15%, rgba(95, 20, 65, 0.42) 0px, transparent 55%),
+    radial-gradient(at 0% 25%, rgba(45, 25, 75, 0.36) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(30, 20, 45, 0.45) 0px, transparent 60%) !important;
+  background-attachment: fixed !important;
 }
 
 html:not(.dark) .ds-liquid-panel {
@@ -2357,18 +2379,21 @@ html.dark .loops-reels-dock-active-pill {
 /* ==========================================================================
    MESSAGES, INBOX & CHAT BUBBLES LIGHT + DARK THEME PROTECTION
    ========================================================================== */
-html:not(.dark) .msg-shell {
-  background-color: #ffffff !important;
-  color: #09090b !important;
-}
-
-html:not(.dark) .msg-shell {
+html:not(.dark) .msg-shell:not(.ambient-dynamic-bg) {
   background-color: #ffffff !important;
   color: #111827 !important;
 }
 
-html.dark .msg-shell {
+html:not(.dark) .msg-shell.ambient-dynamic-bg {
+  color: #111827 !important;
+}
+
+html.dark .msg-shell:not(.ambient-dynamic-bg) {
   background-color: #0b0d12 !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .msg-shell.ambient-dynamic-bg {
   color: #f4f4f5 !important;
 }
 
@@ -2412,45 +2437,45 @@ html.dark .msg-v2-popup .dark\:text-zinc-500 {
 }
 
 html:not(.dark) .msg-sidebar {
-  background-color: #ffffff !important;
-  border-color: #f1f2f5 !important;
+  background-color: transparent !important;
+  border-color: rgba(120, 90, 160, 0.08) !important;
 }
 
 html.dark .msg-sidebar {
-  background-color: #0e1015 !important;
-  border-color: #1c1f29 !important;
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
 html:not(.dark) .msg-inbox-header {
-  background-color: rgba(255, 255, 255, 0.96) !important;
+  background-color: transparent !important;
   border-color: transparent !important;
 }
 
 html.dark .msg-inbox-header {
-  background-color: rgba(14, 16, 21, 0.96) !important;
+  background-color: transparent !important;
   border-color: transparent !important;
 }
 
 html:not(.dark) .msg-stream-default {
-  background-color: #ffffff !important;
+  background-color: transparent !important;
 }
 
 html.dark .msg-stream-default {
-  background-color: #0e1015 !important;
+  background-color: transparent !important;
 }
 
 html:not(.dark) .msg-composer-dock {
-  background-color: rgba(255, 255, 255, 0.98) !important;
+  background-color: transparent !important;
   border-color: transparent !important;
 }
 
 html.dark .msg-composer-dock {
-  background-color: rgba(14, 16, 21, 0.98) !important;
+  background-color: transparent !important;
   border-color: transparent !important;
 }
 
 html:not(.dark) .msg-composer-capsule {
-  background-color: #f2f4f7 !important;
+  background-color: #ffffff !important;
   border-color: transparent !important;
 }
 
@@ -2487,12 +2512,12 @@ html.dark .msg-story-add-ring {
   color: #f3f4f6 !important;
 }
 
-/* Exact Seamless Frosted Bottom Navigation Bar (IMG_5359 bottom-left) */
+/* Exact Seamless Frosted Bottom Navigation Bar (IMG_5470 bottom) */
 html:not(.dark) .msg-bottom-nav-bar {
   background: linear-gradient(
     to top,
-    #ffffff 55%,
-    rgba(255, 255, 255, 0.92) 78%,
+    rgba(255, 255, 255, 0.94) 55%,
+    rgba(255, 255, 255, 0.78) 82%,
     rgba(255, 255, 255, 0) 100%
   ) !important;
   border: 0 !important;
@@ -2553,7 +2578,7 @@ html.dark .msg-cancel-pill * {
   color: #ffffff !important;
 }
 
-/* True Green Online Dot & #2F80ED Unread Badge */
+/* True Green Online Dot & Magenta-Pink Accent / Unread Badge (IMG_5470 & IMG_5472) */
 html:not(.dark) .msg-online-dot,
 html.dark .msg-online-dot {
   background-color: #22c55e !important;
@@ -2561,16 +2586,17 @@ html.dark .msg-online-dot {
 
 html:not(.dark) .msg-unread-badge,
 html.dark .msg-unread-badge {
-  background-color: #ff2e93 !important;
+  background-color: #f246f5 !important;
   color: #ffffff !important;
 }
 
 html:not(.dark) .msg-bubble-sent,
 html.dark .msg-bubble-sent {
-  background: #ff2e93 !important;
+  background: linear-gradient(135deg, #f659f8 0%, #ed3df2 100%) !important;
   color: #ffffff !important;
-  border-radius: 22px !important;
-  border-top-right-radius: 4px !important;
+  border-radius: 20px !important;
+  border-top-right-radius: 6px !important;
+  box-shadow: none !important;
 }
 
 html:not(.dark) .msg-bubble-sent *,
@@ -2579,25 +2605,25 @@ html.dark .msg-bubble-sent * {
 }
 
 html:not(.dark) .msg-bubble-received {
-  background-color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.92) !important;
   color: #1e232c !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  border-radius: 22px !important;
-  border-top-left-radius: 4px !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  border-top-left-radius: 6px !important;
+  box-shadow: 0 2px 12px rgba(120, 90, 160, 0.04) !important;
 }
 
 html.dark .msg-bubble-received {
   background-color: #1c1a24 !important;
   color: #f3f4f6 !important;
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  border-radius: 22px !important;
-  border-top-left-radius: 4px !important;
+  border-radius: 20px !important;
+  border-top-left-radius: 6px !important;
 }
 
 html:not(.dark) .msg-accent-btn,
 html.dark .msg-accent-btn {
-  background-color: #ff2e93 !important;
+  background-color: #f246f5 !important;
   color: #ffffff !important;
 }
 
@@ -2607,30 +2633,31 @@ html.dark .msg-accent-btn * {
 }
 
 html:not(.dark) .msg-chat-row-active {
-  background-color: rgba(255, 46, 147, 0.06) !important;
+  background-color: rgba(242, 70, 245, 0.08) !important;
 }
 
 html.dark .msg-chat-row-active {
-  background-color: rgba(255, 46, 147, 0.12) !important;
+  background-color: rgba(242, 70, 245, 0.14) !important;
 }
 
-/* Ambient Dynamic Soft-Glow Background for Messages, Loops Home, Post Create, Activity & Calls */
+/* Ambient Dynamic Soft-Glow Background matching IMG_5470 & IMG_5472 */
 .ambient-dynamic-bg {
-  background-color: #faf7fc;
-  background-image: 
-    radial-gradient(at 50% -10%, rgba(243, 226, 255, 0.75) 0px, transparent 65%),
-    radial-gradient(at 100% 15%, rgba(255, 225, 245, 0.6) 0px, transparent 55%),
-    radial-gradient(at 0% 25%, rgba(235, 230, 255, 0.5) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(248, 240, 255, 0.4) 0px, transparent 60%);
+  background-color: #fbf9fd;
+  background-image:
+    radial-gradient(at 45% -5%, rgba(235, 200, 255, 0.72) 0px, transparent 58%),
+    radial-gradient(at 92% 10%, rgba(255, 205, 245, 0.65) 0px, transparent 50%),
+    radial-gradient(at 8% 35%, rgba(230, 220, 255, 0.58) 0px, transparent 52%),
+    radial-gradient(at 95% 78%, rgba(245, 212, 255, 0.45) 0px, transparent 55%),
+    radial-gradient(at 20% 95%, rgba(240, 224, 255, 0.42) 0px, transparent 55%);
   background-attachment: fixed;
 }
 
 .dark .ambient-dynamic-bg {
   background-color: #0e0c13;
-  background-image: 
-    radial-gradient(at 50% -10%, rgba(68, 30, 92, 0.5) 0px, transparent 65%),
-    radial-gradient(at 100% 15%, rgba(95, 20, 65, 0.4) 0px, transparent 55%),
-    radial-gradient(at 0% 25%, rgba(45, 25, 75, 0.35) 0px, transparent 50%),
+  background-image:
+    radial-gradient(at 50% -10%, rgba(68, 30, 92, 0.52) 0px, transparent 65%),
+    radial-gradient(at 100% 15%, rgba(95, 20, 65, 0.42) 0px, transparent 55%),
+    radial-gradient(at 0% 25%, rgba(45, 25, 75, 0.36) 0px, transparent 50%),
     radial-gradient(at 50% 100%, rgba(30, 20, 45, 0.45) 0px, transparent 60%);
   background-attachment: fixed;
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Pin } from 'lucide-react';
+import Icon from '../Icon';
 import { cn } from '../../lib/utils';
 import {
   MsgCopyIcon,
@@ -105,11 +105,11 @@ export const MessageHoldPopup: React.FC<MessageHoldPopupProps> = ({
                   className={cn(
                     'w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition cursor-pointer',
                     isPinned
-                      ? 'bg-[#2F80ED]/15 text-[#2F80ED]'
+                      ? 'bg-[#F246F5]/15 text-[#F246F5]'
                       : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/10'
                   )}
                 >
-                  <Pin className="w-3.5 h-3.5" />
+                  <Icon name="pin" className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -124,7 +124,7 @@ export const MessageHoldPopup: React.FC<MessageHoldPopupProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowAllEmojis(false)}
-                    className="text-xs font-semibold text-[#2F80ED] cursor-pointer"
+                    className="text-xs font-semibold text-[#F246F5] cursor-pointer"
                   >
                     Less
                   </button>
@@ -143,7 +143,7 @@ export const MessageHoldPopup: React.FC<MessageHoldPopupProps> = ({
                       }}
                       className={cn(
                         'h-9 rounded-xl flex items-center justify-center text-[22px] hover:scale-120 active:scale-95 transition-transform cursor-pointer',
-                        myReaction === emoji && 'bg-[#2F80ED]/15 ring-1 ring-[#2F80ED]/40'
+                        myReaction === emoji && 'bg-[#F246F5]/15 ring-1 ring-[#F246F5]/40'
                       )}
                     >
                       {emoji}
@@ -162,7 +162,7 @@ export const MessageHoldPopup: React.FC<MessageHoldPopupProps> = ({
                       }}
                       className={cn(
                         'w-9 h-9 rounded-full flex items-center justify-center text-[23px] hover:scale-125 active:scale-90 transition-transform cursor-pointer',
-                        myReaction === emoji && 'bg-[#2F80ED]/15 ring-1 ring-[#2F80ED]/40'
+                        myReaction === emoji && 'bg-[#F246F5]/15 ring-1 ring-[#F246F5]/40'
                       )}
                     >
                       {emoji}

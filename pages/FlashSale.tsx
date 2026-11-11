@@ -32,7 +32,7 @@ export default function FlashSale() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 pb-20">
+    <div className="min-h-screen ambient-dynamic-bg pb-20">
       <div className="bg-[#ff0800] text-white pt-8 pb-12 px-4 rounded-b-[40px] relative overflow-hidden shadow-lg border-b border-red-500">
         <div className="absolute top-0 right-10 w-32 h-[200%] bg-yellow-400 rotate-[35deg] transform -translate-y-1/4 opacity-90 blur-[1px]"></div>
         <div className="absolute top-10 right-0 w-8 h-[200%] bg-white rotate-[35deg] transform -translate-y-1/4 opacity-60 blur-[1px]"></div>

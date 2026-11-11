@@ -369,7 +369,7 @@ export default function SubscriptionPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#F6F8FB] dark:bg-[#090B10] text-zinc-950 dark:text-zinc-100 pt-3 sm:pt-6 pb-28 px-3.5 sm:px-6 lg:px-8">
+    <div className="min-h-screen ambient-dynamic-bg text-zinc-950 dark:text-zinc-100 pt-3 sm:pt-6 pb-28 px-3.5 sm:px-6 lg:px-8">
       <SEO
         title="VIP Subscription & Reseller Pass — DEEP SHOP"
         description="Activate 0 Taka Advance 100% Cash on Delivery, Free Express Shipping across Bangladesh, and Reseller Masterclass benefits on DEEP SHOP."

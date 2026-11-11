@@ -100,22 +100,14 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   return (
     <div
-      className={`relative flex flex-col transition-all duration-300 ${
+      className={`ambient-dynamic-bg relative flex flex-col transition-all duration-300 ${
         isMessagesPage
           ? 'h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none'
           : 'min-h-screen'
       } ${
-        isHomePage ? 'bg-[#F5F9FF]/45 dark:bg-[#121212] pt-15 md:pt-16' : 'bg-transparent'
+        isHomePage ? 'pt-15 md:pt-16' : ''
       } ${!isHomePage && !isNoHeaderPage ? 'pt-14 md:pt-16' : ''}`}
     >
-      {/* News Hub Sky-Blue Ambient Top Gradient on Shop Home (/) */}
-      {isHomePage && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-gradient-to-b from-[#1877F2]/30 via-[#60A5FA]/15 to-transparent dark:from-[#1E1B4B]/30 dark:via-[#0F172A]/10 dark:to-transparent z-0 transition-opacity duration-300"
-        />
-      )}
-
       {!isNoHeaderPage && <Header />}
 
       <div

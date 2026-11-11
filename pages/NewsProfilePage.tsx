@@ -1264,7 +1264,7 @@ export const NewsProfilePage: React.FC = () => {
   // Loading indicator for auth initializing or target profile load
   if (authInitializing || (loading && !profileUser)) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center space-y-3">
+      <div className="min-h-screen ambient-dynamic-bg flex flex-col items-center justify-center space-y-3">
         <div className="w-9 h-9 border-3 border-[#1877F2] border-t-transparent rounded-full animate-spin" />
         <p className="text-xs font-semibold text-slate-400">Loading profile...</p>
       </div>
@@ -1282,7 +1282,7 @@ export const NewsProfilePage: React.FC = () => {
     );
 
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans pb-28">
+      <div className="min-h-screen ambient-dynamic-bg text-slate-900 dark:text-zinc-100 font-sans pb-28">
         <SEO title="Select Interests — Loops" description="Choose topics you care about to customize your Loops experience." exactTitle />
 
         <div className="max-w-xl mx-auto px-4 pt-4 sm:pt-6">

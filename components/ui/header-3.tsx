@@ -8,18 +8,6 @@ import { AnimatedThemeToggler } from "./animated-theme-toggler";
 import Icon from "../Icon";
 import AccountMenu from "./account-menu";
 import { useIsland } from "./dynamic-island";
-import {
-  ShoppingBag,
-  Heart,
-  ChevronLeft,
-  ChevronDown,
-  Check,
-  Settings,
-  Shield,
-  Search,
-  ShoppingCart,
-  MessageSquare,
-} from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 
@@ -437,21 +425,21 @@ export function Header() {
   }, [open]);
 
   const newsHubCircleBtnClass =
-    "ds-theme-icon-btn relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white flex items-center justify-center shadow-[0_4px_14px_rgba(15,23,42,0.08)] hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer shrink-0 border-none";
+    "ds-theme-icon-btn relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/95 dark:bg-zinc-900/90 text-zinc-900 dark:text-white flex items-center justify-center shadow-[0_4px_16px_rgba(120,90,160,0.06)] hover:bg-white dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer shrink-0 border-0";
 
   const standardDesktopBtnClass =
-    "ds-theme-icon-btn transition-all duration-200 flex items-center justify-center hover:scale-105 active:scale-95 bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] text-zinc-900 dark:text-white hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] rounded-full w-10 h-10 cursor-pointer shrink-0";
+    "ds-theme-icon-btn transition-all duration-200 flex items-center justify-center hover:scale-105 active:scale-95 bg-white/95 dark:bg-zinc-900/90 border-0 text-zinc-900 dark:text-white hover:bg-white dark:hover:bg-zinc-800 shadow-[0_4px_16px_rgba(120,90,160,0.06)] rounded-full w-10 h-10 cursor-pointer shrink-0";
 
   const mobileCircleBtnClass =
-    "ds-theme-icon-btn relative rounded-full bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 text-zinc-900 dark:text-white flex items-center justify-center cursor-pointer shrink-0";
+    "ds-theme-icon-btn relative rounded-full bg-white/95 dark:bg-zinc-900/90 border-0 hover:bg-white dark:hover:bg-zinc-800 shadow-[0_4px_16px_rgba(120,90,160,0.06)] active:scale-95 transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 text-zinc-900 dark:text-white flex items-center justify-center cursor-pointer shrink-0";
 
   return (
     <header
       className={cn(
         "fixed top-0 inset-x-0 z-[120] w-full max-w-[100vw] box-border transition-all duration-300 ease-in-out pointer-events-none border-none",
         scrolled || open
-          ? "bg-gradient-to-b from-[#1877F2]/90 via-[#3b82f6]/30 via-75% to-white dark:from-[#0f172a] dark:via-[#181826]/90 dark:to-black backdrop-blur-xl shadow-[0_12px_24px_-10px_rgba(24,119,242,0.08)]"
-          : "bg-gradient-to-b from-[#1877F2]/35 via-[#3b82f6]/10 via-70% to-white dark:from-[#1e1b4b]/40 dark:via-[#0f172a]/20 dark:to-black"
+          ? "bg-white/75 dark:bg-[#0e0c13]/80 backdrop-blur-xl shadow-[0_6px_24px_rgba(120,90,160,0.06)]"
+          : "bg-transparent"
       )}
     >
       <nav
@@ -487,7 +475,7 @@ export function Header() {
               }
             }}
             className={cn(
-              "ds-theme-icon-btn items-center justify-center transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 md:w-10 md:h-10 rounded-full shrink-0 bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 cursor-pointer",
+              "ds-theme-icon-btn items-center justify-center transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 md:w-10 md:h-10 rounded-full shrink-0 bg-white/95 dark:bg-zinc-900/90 border-0 hover:bg-white dark:hover:bg-zinc-800 shadow-[0_4px_16px_rgba(120,90,160,0.06)] active:scale-95 cursor-pointer",
               isHomePage ? "hidden md:flex" : "flex"
             )}
             aria-expanded={open}
@@ -495,7 +483,7 @@ export function Header() {
             aria-label="Toggle menu"
           >
             {isInnerPage ? (
-              <ChevronLeft className="size-5 sm:size-5.5 text-zinc-900 dark:text-white" />
+              <Icon name="chevron-left" className="size-5 sm:size-5.5 text-zinc-900 dark:text-white" />
             ) : (
               <MenuToggleIcon
                 open={open}
@@ -554,9 +542,10 @@ export function Header() {
                 ) : (
                   <WordmarkIcon />
                 )}
-                <ChevronDown
+                <Icon
+                  name="chevron-down"
                   className={cn(
-                    "w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-900 dark:text-zinc-200 stroke-[2.3] mt-0.5 transition-transform duration-200 shrink-0",
+                    "w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-900 dark:text-zinc-200 mt-0.5 transition-transform duration-200 shrink-0",
                     brandMenuOpen && "rotate-180"
                   )}
                 />
@@ -584,7 +573,7 @@ export function Header() {
                       className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
                     >
                       <span>Deep Shop</span>
-                      <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                      <Icon name="check" className="w-[19px] h-[19px] text-zinc-950 dark:text-white" />
                     </button>
 
                     <div className="my-1 border-t loops-divider mx-2" />
@@ -599,17 +588,7 @@ export function Header() {
                       className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
                     >
                       <span>Loops</span>
-                      <svg
-                        className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.95"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z" />
-                      </svg>
+                      <Icon name="infinity" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                     </button>
                   </motion.div>
                 )}
@@ -691,7 +670,7 @@ export function Header() {
               className={cn("relative", standardDesktopBtnClass)}
               aria-label="Settings"
             >
-              <Settings className="w-5 h-5" strokeWidth={1.8} />
+              <Icon name="settings" className="w-5 h-5" />
             </Button>
           ) : (
             <AccountMenu scrolled={scrolled} isPill />
@@ -747,7 +726,7 @@ export function Header() {
               className={mobileCircleBtnClass}
               aria-label="Settings"
             >
-              <Settings className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px]" strokeWidth={1.85} />
+              <Icon name="settings" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px]" />
             </Button>
           ) : (
             <AccountMenu scrolled={scrolled} isPill />
@@ -811,7 +790,7 @@ export function Header() {
                 navigate("/admin");
               }}
             >
-              <Shield className="w-4 h-4 mr-2" /> Admin Control Panel
+              <Icon name="shield" className="w-4 h-4 mr-2" /> Admin Control Panel
             </Button>
           )}
 
@@ -824,7 +803,7 @@ export function Header() {
                 navigate("/");
               }}
             >
-              <ChevronLeft className="w-4 h-4 mr-2" /> Back to Store
+              <Icon name="chevron-left" className="w-4 h-4 mr-2" /> Back to Store
             </Button>
           )}
 

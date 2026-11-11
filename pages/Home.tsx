@@ -431,7 +431,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   }, [sellers]);
 
   return (
-    <div className="relative pt-2 sm:pt-3 bg-transparent dark:bg-[#121212] w-full min-h-screen font-sans pb-0">
+    <div className="relative pt-2 sm:pt-3 bg-transparent dark:bg-transparent w-full min-h-screen font-sans pb-0">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-5 md:px-12">
       <SEO
         title={
@@ -539,7 +539,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             <div className="md:col-span-8 flex flex-col justify-between space-y-3 z-10">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[11px] font-extrabold tracking-wide uppercase flex items-center gap-1.5">
-                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  <Icon name="crown" className="w-3.5 h-3.5 text-amber-500" />
                   <span>VIP Masterclass</span>
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
@@ -561,7 +561,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                   className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-[#0064e0] hover:bg-[#0056c1] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
                 >
                   <span>গাইড ও প্ল্যান দেখুন</span>
-                  <ChevronRight className="w-4 h-4" />
+                  <Icon name="chevron-right" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -569,7 +569,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
             {/* Desktop Visual Card Column */}
             <div className="md:col-span-4 relative h-36 sm:h-40 md:h-full min-h-[120px] rounded-2xl overflow-hidden bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-blue-600/15 border border-amber-500/20 flex flex-col items-center justify-center p-4 text-center">
               <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 shadow-xs">
-                <GraduationCap className="w-6 h-6" />
+                <Icon name="graduation-cap" className="w-6 h-6" />
               </div>
               <p className="text-xs font-bold text-zinc-900 dark:text-white">
                 DEEP SHOP Reseller Hub
@@ -918,7 +918,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
 
                       {/* Right View Arrow */}
                       <div className="w-8 h-8 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0">
-                        <ChevronRight className="w-4 h-4" />
+                        <Icon name="chevron-right" className="w-4 h-4" />
                       </div>
                     </div>
                   );

@@ -225,7 +225,7 @@ export const BuyStars: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans pb-24">
+    <div className="min-h-screen ambient-dynamic-bg text-zinc-900 dark:text-zinc-100 font-sans pb-24">
       <SEO
         title="Buy Stars • DEEP SHOP"
         description="Buy Stars to gift community creators, upvote verified scam reports, and unlock creator perks on DEEP SHOP."

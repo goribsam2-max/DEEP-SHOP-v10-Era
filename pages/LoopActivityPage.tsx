@@ -1,18 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  ChevronLeft,
-  Heart,
-  MessageCircle,
-  User,
-  UserPlus,
-  Share2,
-  Loader2,
-  Search,
-  Calendar,
-  MapPin,
-  PartyPopper,
-} from "lucide-react";
+import Icon from "../components/Icon";
 import {
   collection,
   doc,
@@ -526,7 +514,7 @@ export const LoopActivityPage: React.FC = () => {
     if (kind === "reply") {
       return (
         <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-xs">
-          <MessageCircle className="w-2.5 h-2.5 fill-white text-white" />
+          <Icon name="message-circle" className="w-2.5 h-2.5 text-white" solid />
         </span>
       );
     }
@@ -540,21 +528,21 @@ export const LoopActivityPage: React.FC = () => {
     if (kind === "like") {
       return (
         <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#FF2E93] text-white flex items-center justify-center shadow-xs">
-          <Heart className="w-2.5 h-2.5 fill-white text-white" />
+          <Icon name="heart" className="w-2.5 h-2.5 text-white" solid />
         </span>
       );
     }
     if (kind === "follow") {
       return (
         <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#2F80ED] text-white flex items-center justify-center shadow-xs">
-          <User className="w-2.5 h-2.5 fill-white text-white" />
+          <Icon name="user" className="w-2.5 h-2.5 text-white" solid />
         </span>
       );
     }
     if (kind === "repost") {
       return (
         <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-          <Share2 className="w-2.5 h-2.5 text-white" />
+          <Icon name="share-alt" className="w-2.5 h-2.5 text-white" />
         </span>
       );
     }
@@ -565,14 +553,14 @@ export const LoopActivityPage: React.FC = () => {
     if (item.kind === "memory") {
       return (
         <div className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-2xs flex items-center justify-center shrink-0">
-          <Calendar className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
+          <Icon name="calendar" className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
         </div>
       );
     }
     if (item.kind === "location") {
       return (
         <div className="w-12 h-12 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-2xs flex items-center justify-center shrink-0">
-          <MapPin className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
+          <Icon name="map-marker" className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
         </div>
       );
     }
@@ -666,7 +654,7 @@ export const LoopActivityPage: React.FC = () => {
             aria-label="Back"
             className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800/90 shadow-xs border border-zinc-100 dark:border-zinc-700/80 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:scale-105 active:scale-95 transition cursor-pointer"
           >
-            <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+            <Icon name="chevron-left" className="w-5 h-5" />
           </button>
 
           <h1 className="text-[19px] font-bold tracking-tight text-zinc-900 dark:text-white">
@@ -678,7 +666,7 @@ export const LoopActivityPage: React.FC = () => {
 
         {/* Full-width Search Capsule Input matching IMG_5471.jpeg */}
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <Icon name="search" className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="text"
             placeholder="Search"
@@ -723,7 +711,7 @@ export const LoopActivityPage: React.FC = () => {
         {/* Content Section */}
         {loadingPost || loadingMyActivity ? (
           <div className="py-20 flex flex-col items-center justify-center gap-2 text-zinc-400">
-            <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+            <Icon name="loader-2" className="w-6 h-6 animate-spin text-purple-500" />
             <span className="text-[13px]">Loading notifications...</span>
           </div>
         ) : filteredEntries.length === 0 ? (

@@ -1,8 +1,8 @@
 import { uploadToImgbb, generateMicroThumb } from '../services/imgbb';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, Check, CheckCheck, Clock, ChevronLeft, ArrowLeft, User, Search, AlertCircle, MessageSquareShare, MessageSquare, Star, Sparkles, Bot, Plus, Users, Pin, PinOff, VolumeX, Forward, Edit, Edit3, MoreVertical, MoreHorizontal, Link, Info, Trash, UserPlus, UserX, UserMinus, ChevronRight, Radio, LogOut, Settings, Trash2, Minimize2, Maximize2, Shield, ShieldAlert, Eye, EyeOff, Bell, CornerUpLeft, Mail, Copy, Loader2, Activity, Lock, MessageCircle, Archive, Menu, Calendar } from 'lucide-react';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { subscribeToWebPush } from '../lib/push';
@@ -306,6 +306,7 @@ export default function Messages() {
   });
   const [showArchivedOnly, setShowArchivedOnly] = useState(false);
   const [activeContextMenuChatId, setActiveContextMenuChatId] = useState<string | null>(null);
+  const [activeContextMenuPos, setActiveContextMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   // Message Pinning State
   const [pinnedMessageIdsMap, setPinnedMessageIdsMap] = useState<Record<string, string[]>>(() => {
@@ -4431,7 +4432,7 @@ const handleCreateChannel = async () => {
                             <p className="text-[11px] text-zinc-500 font-medium truncate">I had a lovely conversation</p>
                         </div>
                         <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-400 flex items-center justify-center shadow-sm">
-                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                            <Icon name="check" className="w-3.5 h-3.5 text-white" />
                         </div>
                     </div>
 
@@ -4448,7 +4449,7 @@ const handleCreateChannel = async () => {
                             <p className="text-[11px] text-zinc-500 font-medium truncate">Today we will have lunch...</p>
                         </div>
                         <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-400 flex items-center justify-center shadow-sm">
-                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                            <Icon name="check" className="w-3.5 h-3.5 text-white" />
                         </div>
                     </div>
                 </div>
@@ -4462,7 +4463,7 @@ const handleCreateChannel = async () => {
                     >
                         <span className="text-zinc-600 font-medium text-sm">Sign up with phone number</span>
                         <div className="w-12 h-12 rounded-[20px] bg-[#FFB800] flex items-center justify-center text-white shrink-0">
-                            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            <Icon name="phone" className="w-5 h-5" />
                         </div>
                     </button>
 
@@ -4957,11 +4958,11 @@ const handleCreateChannel = async () => {
                     navigate('/');
                   }
                 }}
-                className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
+                className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-white dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
                 title={originHomePath === '/loops' ? 'Back to Loops' : 'Back to Shop Home'}
                 aria-label="Back"
               >
-                <ChevronLeft className="w-5 h-5 stroke-[2.2] text-zinc-900 dark:text-white" />
+                <MsgBackChevronIcon className="w-5 h-5 text-zinc-900 dark:text-white" />
               </button>
 
               {/* Center: "Message" Title */}
@@ -4982,10 +4983,10 @@ const handleCreateChannel = async () => {
                     }
                   }}
                   className={cn(
-                    'w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0',
+                    'w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0',
                     showInboxSearch || chatSearchQuery
-                      ? 'text-[#FF2E93] ring-2 ring-[#FF2E93]/20'
-                      : 'text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60'
+                      ? 'text-[#F246F5] ring-2 ring-[#F246F5]/25'
+                      : 'text-zinc-800 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700/60'
                   )}
                   title="Search conversations"
                   aria-label="Search conversations"
@@ -4999,11 +5000,11 @@ const handleCreateChannel = async () => {
                     setNewMessageInitialStep('new_message');
                     setShowNewMessageModal(true);
                   }}
-                  className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
+                  className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shrink-0"
                   title="Compose New Message"
                   aria-label="Compose New Message"
                 >
-                  <Edit3 className="w-5 h-5" />
+                  <Icon name="edit-3" className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -5166,19 +5167,19 @@ const handleCreateChannel = async () => {
                     }}
                   />
 
-                  {/* Segmented Filter Pills matching IMG_5470: All | Unread | Groups */}
-                  <div className="px-5 pt-3 pb-2">
-                    <div className="bg-white dark:bg-zinc-800/90 py-3 px-6 rounded-full border border-black/[0.04] dark:border-white/10 shadow-2xs flex items-center justify-around backdrop-blur-md">
+                  {/* Segmented Filter Tabs matching IMG_5470: All | Unread | Groups (zero shadow, faint kalsha active pill) */}
+                  <div className="px-4 pt-1 pb-2">
+                    <div className="bg-white/75 dark:bg-zinc-800/75 p-1 rounded-full border-0 shadow-none grid grid-cols-3 items-center backdrop-blur-md">
                       {(['all', 'unread', 'groups'] as const).map((tab) => (
                         <button
                           key={tab}
                           type="button"
                           onClick={() => setMessagesFilterTab(tab)}
                           className={cn(
-                            "text-[15px] transition-all duration-200 cursor-pointer text-center px-4 py-0.5",
+                            "text-[14.5px] transition-all duration-200 cursor-pointer text-center py-2.5 px-3 rounded-full",
                             messagesFilterTab === tab
-                              ? "font-bold text-zinc-950 dark:text-white"
-                              : "font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                              ? "bg-[#f2f0f6] dark:bg-white/12 font-semibold text-zinc-950 dark:text-white"
+                              : "bg-transparent font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
                           )}
                         >
                           {tab === 'all' ? 'All' : tab === 'unread' ? 'Unread' : 'Groups'}
@@ -5251,11 +5252,11 @@ const handleCreateChannel = async () => {
                             className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
                           >
                             <span className="flex items-center gap-2.5">
-                              <MessageCircle className="w-4 h-4 text-zinc-500" />
+                              <Icon name="message-circle" className="w-4 h-4 text-zinc-500" />
                               All Chats
                             </span>
                             {sidebarTab === 'messages' && !showArchivedOnly && (
-                              <span className="w-2 h-2 rounded-full bg-[#2F80ED]" />
+                              <span className="w-2 h-2 rounded-full bg-[#F246F5]" />
                             )}
                           </button>
 
@@ -5268,11 +5269,11 @@ const handleCreateChannel = async () => {
                             className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
                           >
                             <span className="flex items-center gap-2.5">
-                              <Users className="w-4 h-4 text-zinc-500" />
+                              <Icon name="users" className="w-4 h-4 text-zinc-500" />
                               Communities
                             </span>
                             {sidebarTab === 'community' && (
-                              <span className="w-2 h-2 rounded-full bg-[#2F80ED]" />
+                              <span className="w-2 h-2 rounded-full bg-[#F246F5]" />
                             )}
                           </button>
 
@@ -5285,11 +5286,11 @@ const handleCreateChannel = async () => {
                             className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
                           >
                             <span className="flex items-center gap-2.5">
-                              <Phone className="w-4 h-4 text-zinc-500" />
+                              <Icon name="phone" className="w-4 h-4 text-zinc-500" />
                               Call History
                             </span>
                             {sidebarTab === 'calls' && (
-                              <span className="w-2 h-2 rounded-full bg-[#2F80ED]" />
+                              <span className="w-2 h-2 rounded-full bg-[#F246F5]" />
                             )}
                           </button>
 
@@ -5303,7 +5304,7 @@ const handleCreateChannel = async () => {
                             className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
                           >
                             <span className="flex items-center gap-2.5">
-                              <Archive className="w-4 h-4 text-zinc-500" />
+                              <Icon name="archive" className="w-4 h-4 text-zinc-500" />
                               {showArchivedOnly ? 'Exit Archived' : 'Archived Chats'}
                             </span>
                             {archivedChatIds.length > 0 && (
@@ -5323,7 +5324,7 @@ const handleCreateChannel = async () => {
                             }}
                             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
                           >
-                            <CheckCheck className="w-4 h-4 text-[#2F80ED]" />
+                            <Icon name="check-double" className="w-4 h-4 text-[#F246F5]" />
                             <span>Mark all as read</span>
                           </button>
 
@@ -5335,7 +5336,7 @@ const handleCreateChannel = async () => {
                             }}
                             className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
                           >
-                            <Settings className="w-4 h-4 text-zinc-500" />
+                            <Icon name="settings" className="w-4 h-4 text-zinc-500" />
                             <span>Chat Settings</span>
                           </button>
                         </motion.div>
@@ -5355,7 +5356,7 @@ const handleCreateChannel = async () => {
                         </div>
                       ) : (
                         <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-white/[0.05] flex items-center justify-center mb-3">
-                          <MessageSquareShare className="w-6 h-6 text-zinc-400" />
+                          <Icon name="message-square-share" className="w-6 h-6 text-zinc-400" />
                         </div>
                       )}
                       <p className="font-semibold text-sm text-zinc-800 dark:text-zinc-200">No conversations yet</p>
@@ -5364,7 +5365,7 @@ const handleCreateChannel = async () => {
                       </p>
                     </div>
                   ) : (
-                    <div className="px-2 space-y-0.5">
+                    <div className="mx-3 mt-1 px-2 py-1.5 rounded-[26px] bg-white/85 dark:bg-zinc-900/75 backdrop-blur-md divide-y divide-zinc-100/80 dark:divide-white/[0.05]">
                       {chats
                         .filter((chat) => {
                           const cId = chat.id || chat.otherUser?.id || chat.otherUser?.uid;
@@ -5431,16 +5432,28 @@ const handleCreateChannel = async () => {
                           return (
                             <div
                               key={`chat-item-${cId}`}
-                              className="relative overflow-hidden rounded-2xl select-none"
+                              className={cn('relative select-none', isMenuOpen && 'z-50')}
                               onContextMenu={(e) => {
                                 e.preventDefault();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const menuW = 200;
+                                const menuH = 225;
+                                const top = Math.min(Math.max(12, rect.top + 48), (typeof window !== 'undefined' ? window.innerHeight : 760) - menuH);
+                                const left = Math.min(Math.max(12, rect.right - menuW - 12), (typeof window !== 'undefined' ? window.innerWidth : 400) - menuW - 12);
+                                setActiveContextMenuPos({ top, left });
                                 setActiveContextMenuChatId(cId);
                                 setSwipedChatId(null);
                               }}
                               onTouchStart={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const menuW = 200;
+                                const menuH = 225;
+                                const top = Math.min(Math.max(12, rect.top + 48), (typeof window !== 'undefined' ? window.innerHeight : 760) - menuH);
+                                const left = Math.min(Math.max(12, rect.right - menuW - 12), (typeof window !== 'undefined' ? window.innerWidth : 400) - menuW - 12);
                                 touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, cId };
                                 if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
                                 longPressTimerRef.current = setTimeout(() => {
+                                  setActiveContextMenuPos({ top, left });
                                   setActiveContextMenuChatId(cId);
                                   setSwipedChatId(null);
                                   touchStartRef.current = null;
@@ -5464,48 +5477,51 @@ const handleCreateChannel = async () => {
                                 touchStartRef.current = null;
                               }}
                             >
-                              {/* Swipe Quick Actions */}
-                              <div className="absolute right-0 top-0 bottom-0 w-[198px] flex items-center z-0 overflow-hidden rounded-r-2xl">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    togglePinChat(cId);
-                                    setSwipedChatId(null);
-                                  }}
-                                  className="h-full w-[66px] msg-accent-btn text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                >
-                                  <Pin className="w-4 h-4" />
-                                  <span className="text-[10px] whitespace-nowrap">{isPinned ? 'Unpin' : 'Pin'}</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    toggleArchiveChat(cId);
-                                    setSwipedChatId(null);
-                                  }}
-                                  className="h-full w-[66px] bg-zinc-700 hover:bg-zinc-600 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                >
-                                  <Archive className="w-4 h-4" />
-                                  <span className="text-[10px] whitespace-nowrap">{isArchived ? 'Restore' : 'Archive'}</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setShowClearChatModal(true);
-                                    setSwipedChatId(null);
-                                  }}
-                                  className="h-full w-[66px] bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  <span className="text-[10px] whitespace-nowrap">Delete</span>
-                                </button>
-                              </div>
+                              <div className="relative overflow-hidden rounded-2xl">
+                              {/* Swipe Quick Actions (mounted ONLY when swiped so nothing peeks out at rest) */}
+                              {isSwiped && (
+                                <div className="absolute right-0 top-0 bottom-0 w-[198px] flex items-center z-0 overflow-hidden rounded-r-2xl">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      togglePinChat(cId);
+                                      setSwipedChatId(null);
+                                    }}
+                                    className="h-full w-[66px] bg-[#F246F5] hover:bg-[#e135e4] text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                  >
+                                    <Icon name="pin" className="w-4 h-4" />
+                                    <span className="text-[10px] whitespace-nowrap">{isPinned ? 'Unpin' : 'Pin'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      toggleArchiveChat(cId);
+                                      setSwipedChatId(null);
+                                    }}
+                                    className="h-full w-[66px] bg-zinc-700 hover:bg-zinc-600 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                  >
+                                    <Icon name="archive" className="w-4 h-4" />
+                                    <span className="text-[10px] whitespace-nowrap">{isArchived ? 'Restore' : 'Archive'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setShowClearChatModal(true);
+                                      setSwipedChatId(null);
+                                    }}
+                                    className="h-full w-[66px] bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
+                                  >
+                                    <Icon name="trash-2" className="w-4 h-4" />
+                                    <span className="text-[10px] whitespace-nowrap">Delete</span>
+                                  </button>
+                                </div>
+                              )}
 
                               {/* Conversation Row matching IMG_5359 & IMG_5360 */}
                               <div
@@ -5518,14 +5534,14 @@ const handleCreateChannel = async () => {
                                   setSearchParams({ chatId: chat.id || chat.otherUser?.id || '' }, { replace: true });
                                 }}
                                 className={cn(
-                                  'flex items-center gap-3.5 px-3 py-3 rounded-2xl cursor-pointer transition-all duration-200 relative group/chat z-10 msg-sidebar',
-                                  isSelected ? 'msg-chat-row-active' : 'hover:bg-zinc-50 dark:hover:bg-white/[0.04]',
-                                  isSwiped && '-translate-x-[198px]'
+                                  'flex items-center gap-3.5 px-3 py-3 rounded-2xl cursor-pointer transition-all duration-200 relative group/chat z-10',
+                                  isSelected ? 'msg-chat-row-active' : 'hover:bg-white/60 dark:hover:bg-white/[0.04]',
+                                  isSwiped && '-translate-x-[198px] bg-white/95 dark:bg-zinc-900'
                                 )}
                               >
                                 {/* Avatar with Group Badge or Online Dot (IMG_5470) */}
                                 <div className="relative shrink-0">
-                                  <div className="w-[54px] h-[54px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 ring-1 ring-black/[0.04] dark:ring-white/[0.06]">
+                                  <div className="w-[54px] h-[54px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                                     {chat.otherUser?.photoURL ? (
                                       <img
                                         src={chat.otherUser.photoURL}
@@ -5533,14 +5549,14 @@ const handleCreateChannel = async () => {
                                         className="w-full h-full object-cover"
                                       />
                                     ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-[#FF2E93]/10 text-[#FF2E93] font-bold text-base">
+                                      <div className="w-full h-full flex items-center justify-center bg-[#F246F5]/12 text-[#F246F5] font-bold text-base">
                                         {(getChatDisplayName(chat) || 'U')[0].toUpperCase()}
                                       </div>
                                     )}
                                   </div>
                                   {/* Group participant badge (IMG_5470) */}
                                   {(chat.isGroup || chat.type === 'group' || (chat.participants && chat.participants.length > 2)) && (
-                                    <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] px-1 rounded-full bg-[#FF2E93] text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-[#0E1015] shadow-xs">
+                                    <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] px-1 rounded-full bg-[#F246F5] text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-[#0E1015]">
                                       {chat.participants?.length || 5}
                                     </span>
                                   )}
@@ -5558,7 +5574,7 @@ const handleCreateChannel = async () => {
                                     {(chat.otherUser?.kycStatus === 'verified' || chat.otherUser?.verified) && (
                                       <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                                     )}
-                                    {isMuted && <VolumeX className="w-3.5 h-3.5 text-zinc-400 shrink-0" />}
+                                    {isMuted && <Icon name="volume-x" className="w-3.5 h-3.5 text-zinc-400 shrink-0" />}
                                     {isBlocked && (
                                       <span className="text-[10px] font-medium text-rose-500 shrink-0">· Blocked</span>
                                     )}
@@ -5569,7 +5585,7 @@ const handleCreateChannel = async () => {
                                       <p className="text-[13.5px] font-medium text-[#2F80ED] truncate">typing...</p>
                                     ) : isChatOtherRecording ? (
                                       <p className="text-[13.5px] font-medium text-rose-500 truncate flex items-center gap-1">
-                                        <Mic className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                        <Icon name="mic" className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                         <span>recording voice...</span>
                                       </p>
                                     ) : chat.lastSenderId === user?.uid && chat.lastMessage ? (
@@ -5611,107 +5627,115 @@ const handleCreateChannel = async () => {
 
                                   <div className="flex items-center gap-1 min-h-[22px]">
                                     {isPinned && !isUnread && (
-                                      <Pin className="w-3.5 h-3.5 text-zinc-400 rotate-45 shrink-0" />
+                                      <Icon name="pin" className="w-3.5 h-3.5 text-zinc-400 rotate-45 shrink-0" />
                                     )}
                                     {isUnread ? (
-                                      <span className="bg-[#FF2E93] text-white min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums shadow-xs">
+                                      <span className="bg-[#F246F5] text-white min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums">
                                         {unreadCountNum}
                                       </span>
                                     ) : (
                                       <MsgCheckDoubleIcon
                                         className={cn(
                                           'w-[18px] h-[18px] shrink-0',
-                                          isSeenByOtherInList || idx % 2 === 1 ? 'text-[#FF2E93]' : 'text-zinc-400 dark:text-zinc-500'
+                                          isSeenByOtherInList ? 'text-[#F246F5]' : 'text-zinc-400 dark:text-zinc-500'
                                         )}
                                       />
                                     )}
                                   </div>
                                 </div>
+                              </div>
+                              </div>
 
-                                {/* Context Menu Popover */}
-                                <AnimatePresence>
-                                  {isMenuOpen && (
-                                    <>
-                                      <div
-                                        className="fixed inset-0 z-40"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
+                              {/* Context Menu Popover via Portal so it NEVER clips inside rows or scroll containers */}
+                              {typeof document !== 'undefined' &&
+                                isMenuOpen &&
+                                createPortal(
+                                  <AnimatePresence>
+                                    <div
+                                      key={`ctx-backdrop-${cId}`}
+                                      className="fixed inset-0 z-[9590]"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveContextMenuChatId(null);
+                                      }}
+                                    />
+                                    <motion.div
+                                      key={`ctx-menu-${cId}`}
+                                      initial={{ opacity: 0, scale: 0.94, y: 4 }}
+                                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                                      exit={{ opacity: 0, scale: 0.94, y: 4 }}
+                                      style={{
+                                        top: `${activeContextMenuPos?.top ?? 120}px`,
+                                        left: `${activeContextMenuPos?.left ?? 16}px`,
+                                      }}
+                                      className="fixed w-[200px] bg-white/95 dark:bg-[#1E1C26]/95 backdrop-blur-xl border border-black/[0.04] dark:border-white/10 shadow-[0_18px_42px_rgba(120,90,160,0.22)] rounded-2xl p-1.5 z-[9600] text-left"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          togglePinChat(cId);
                                           setActiveContextMenuChatId(null);
                                         }}
-                                      />
-                                      <motion.div
-                                        initial={{ opacity: 0, scale: 0.94, y: 4 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.94, y: 4 }}
-                                        className="absolute right-3 top-12 w-48 bg-white dark:bg-[#1A1C24] border border-zinc-200/90 dark:border-zinc-800 shadow-2xl rounded-2xl p-1.5 z-50 text-left"
-                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
                                       >
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            togglePinChat(cId);
-                                            setActiveContextMenuChatId(null);
-                                          }}
-                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
-                                        >
-                                          <Pin className="w-3.5 h-3.5 text-zinc-500" />
-                                          <span>{isPinned ? 'Unpin Chat' : 'Pin Chat'}</span>
-                                        </button>
+                                        <Icon name="pin" className="w-3.5 h-3.5 text-zinc-500" />
+                                        <span>{isPinned ? 'Unpin Chat' : 'Pin Chat'}</span>
+                                      </button>
 
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            toggleArchiveChat(cId);
-                                            setActiveContextMenuChatId(null);
-                                          }}
-                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
-                                        >
-                                          <Archive className="w-3.5 h-3.5 text-zinc-500" />
-                                          <span>{isArchived ? 'Unarchive Chat' : 'Archive Chat'}</span>
-                                        </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          toggleArchiveChat(cId);
+                                          setActiveContextMenuChatId(null);
+                                        }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                                      >
+                                        <Icon name="archive" className="w-3.5 h-3.5 text-zinc-500" />
+                                        <span>{isArchived ? 'Unarchive Chat' : 'Archive Chat'}</span>
+                                      </button>
 
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            toggleMuteChat(cId);
-                                            setActiveContextMenuChatId(null);
-                                          }}
-                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
-                                        >
-                                          <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
-                                          <span>{isMuted ? 'Unmute Notifications' : 'Mute Notifications'}</span>
-                                        </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          toggleMuteChat(cId);
+                                          setActiveContextMenuChatId(null);
+                                        }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                                      >
+                                        <Icon name="volume-x" className="w-3.5 h-3.5 text-zinc-500" />
+                                        <span>{isMuted ? 'Unmute Notifications' : 'Mute Notifications'}</span>
+                                      </button>
 
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            toggleBlockUser(cId);
-                                            setActiveContextMenuChatId(null);
-                                          }}
-                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
-                                        >
-                                          <UserX className="w-3.5 h-3.5 text-zinc-500" />
-                                          <span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
-                                        </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          toggleBlockUser(cId);
+                                          setActiveContextMenuChatId(null);
+                                        }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] rounded-xl transition cursor-pointer"
+                                      >
+                                        <Icon name="user-x" className="w-3.5 h-3.5 text-zinc-500" />
+                                        <span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
+                                      </button>
 
-                                        <div className="border-t border-zinc-100 dark:border-zinc-800 my-1" />
+                                      <div className="border-t border-zinc-100 dark:border-zinc-800 my-1" />
 
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setActiveContextMenuChatId(null);
-                                            setShowClearChatModal(true);
-                                          }}
-                                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition cursor-pointer"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                          <span>Delete Chat History</span>
-                                        </button>
-                                      </motion.div>
-                                    </>
-                                  )}
-                                </AnimatePresence>
-                              </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveContextMenuChatId(null);
+                                          setShowClearChatModal(true);
+                                        }}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition cursor-pointer"
+                                      >
+                                        <Icon name="trash-2" className="w-3.5 h-3.5" />
+                                        <span>Delete Chat History</span>
+                                      </button>
+                                    </motion.div>
+                                  </AnimatePresence>,
+                                  document.body
+                                )}
                             </div>
                           );
                         })}
@@ -5722,7 +5746,7 @@ const handleCreateChannel = async () => {
                 <div className="flex flex-col px-2">
                   {channels.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-zinc-400 p-6 text-center">
-                      <Users className="w-12 h-12 mb-3 text-zinc-300 dark:text-zinc-700" />
+                      <Icon name="users" className="w-12 h-12 mb-3 text-zinc-300 dark:text-zinc-700" />
                       <p className="font-medium text-sm">No community channels yet</p>
                       <p className="text-xs mt-1">Start a community to broadcast updates and connect!</p>
                       <button
@@ -5821,7 +5845,7 @@ const handleCreateChannel = async () => {
                                 {getChatDisplayName(chat)}
                               </h4>
                               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5">
-                                <Phone className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                <Icon name="phone" className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                                 <span>
                                   {callTypeLabel} call {timeLabel ? `· ${timeLabel}` : ''}
                                 </span>
@@ -5841,7 +5865,7 @@ const handleCreateChannel = async () => {
                               className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer"
                               title="Voice Call"
                             >
-                              <Phone className="w-4 h-4" />
+                              <Icon name="phone" className="w-4 h-4" />
                             </button>
                             <button
                               type="button"
@@ -5855,7 +5879,7 @@ const handleCreateChannel = async () => {
                               className="w-9 h-9 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-200 flex items-center justify-center transition cursor-pointer"
                               title="Video Call"
                             >
-                              <Video className="w-4 h-4" />
+                              <Icon name="video" className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
@@ -5873,9 +5897,9 @@ const handleCreateChannel = async () => {
             Floating capsule dock (Home, Message, Calendar, Profile) + Black Circle '+' FAB
             =================================================================== */}
         {!activeChat && !activeChannel && (
-          <div className="md:hidden fixed bottom-6 inset-x-0 z-40 px-5 flex items-center justify-between pointer-events-none">
-            {/* Left/Center: Floating Frosted Pill Dock (Messages, Activity, Profile) */}
-            <div className="pointer-events-auto h-[60px] px-3.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full shadow-sm flex items-center gap-4">
+          <div className="md:hidden fixed bottom-5 inset-x-0 z-40 px-4 flex items-center justify-between gap-3 pointer-events-none">
+            {/* Left/Center: Clean Frosted White Navigation Bar (Messages, Activity, Profile — no Home icon per user request) */}
+            <div className="pointer-events-auto flex-1 max-w-[260px] h-[56px] px-4 bg-white/92 dark:bg-zinc-900/92 backdrop-blur-xl border-0 shadow-none rounded-full flex items-center justify-around">
               {/* 1. Message (Active) */}
               <button
                 type="button"
@@ -5892,7 +5916,7 @@ const handleCreateChannel = async () => {
                 <Icon name="messages-inbox" className="w-[22px] h-[22px]" />
               </button>
 
-              {/* 3. Activity / Calendar */}
+              {/* 2. Activity / Calendar */}
               <button
                 type="button"
                 onClick={() => navigate('/loops/activity')}
@@ -5903,7 +5927,7 @@ const handleCreateChannel = async () => {
                 <Icon name="messages-activity" className="w-[22px] h-[22px]" />
               </button>
 
-              {/* 4. Profile */}
+              {/* 3. Profile */}
               <button
                 type="button"
                 onClick={() => {
@@ -5921,14 +5945,14 @@ const handleCreateChannel = async () => {
               </button>
             </div>
 
-            {/* Right: Floating Circular Black Plus FAB (IMG_5470) */}
+            {/* Right: Flat Circular Black Plus FAB (IMG_5470 — no heavy box shadow) */}
             <button
               type="button"
               onClick={() => {
                 setNewMessageInitialStep('new_message');
                 setShowNewMessageModal(true);
               }}
-              className="pointer-events-auto w-[60px] h-[60px] rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-[0_10px_25px_rgba(0,0,0,0.25)] flex items-center justify-center active:scale-90 transition hover:scale-105 cursor-pointer"
+              className="pointer-events-auto w-[56px] h-[56px] rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-none flex items-center justify-center active:scale-90 transition hover:scale-105 cursor-pointer shrink-0"
               title="New Message"
               aria-label="New Message"
             >
@@ -5952,7 +5976,7 @@ const handleCreateChannel = async () => {
         )}
       >
          {activeMessagesTab === 'settings' ? (
-           <div className="hidden md:flex flex-col h-full w-full overflow-hidden bg-white dark:bg-[#0B0D12]">
+           <div className="hidden md:flex flex-col h-full w-full overflow-hidden ambient-dynamic-bg border-0">
              <div className="px-6 py-4 border-b border-zinc-100 dark:border-white/[0.06] flex items-center justify-between shrink-0">
                <div>
                  <h2 className="text-lg font-bold text-zinc-950 dark:text-white">Chat & Privacy Settings</h2>
@@ -5970,9 +5994,9 @@ const handleCreateChannel = async () => {
            </div>
          ) : activeChannel ? (
              isUserBanned ? (
-                 <div className="flex-1 flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-6 text-center h-full">
-                     <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500 mb-6 border border-rose-500/20 shadow-md">
-                         <UserX className="w-10 h-10" />
+                 <div className="flex-1 flex flex-col items-center justify-center ambient-dynamic-bg p-6 text-center h-full">
+                     <div className="w-20 h-20 bg-rose-500/12 rounded-full flex items-center justify-center text-rose-500 mb-6 border-0 shadow-[0_4px_20px_rgba(120,90,160,0.08)]">
+                         <Icon name="user-x" className="w-10 h-10" />
                      </div>
                      <h3 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">You are Banned from this Channel</h3>
                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm leading-relaxed">
@@ -5980,111 +6004,121 @@ const handleCreateChannel = async () => {
                      </p>
                      <button
                          onClick={() => setSearchParams({})}
-                         className="mt-6 px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-white rounded-xl text-xs font-black transition-all"
+                         className="mt-6 px-6 py-3 bg-white/95 dark:bg-zinc-800/90 hover:bg-white text-zinc-900 dark:text-white rounded-full text-xs font-bold shadow-[0_4px_16px_rgba(120,90,160,0.08)] border-0 transition-all cursor-pointer"
                      >
                          Back to Chats
                      </button>
                  </div>
              ) : showChannelDetailsModal ? (
-                 <div className="flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white overflow-y-auto font-inter relative">
-                     {/* Telegram-style Channel Info Header */}
-                     <div className="sticky top-0 z-10 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200/80 dark:border-zinc-800/80 px-4 py-3 flex items-center justify-between">
+                 <div className="flex-1 flex flex-col ambient-dynamic-bg text-zinc-900 dark:text-white overflow-y-auto font-inter relative">
+                     {/* Header matching IMG_5470 / IMG_5472 */}
+                     <div className="sticky top-0 z-10 bg-transparent backdrop-blur-md border-0 px-4 py-3.5 flex items-center justify-between">
                          <button 
+                             type="button"
                              onClick={() => setShowChannelDetailsModal(false)}
-                             className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-100 transition"
+                             className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-white dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer"
                          >
-                             <ArrowLeft className="w-6 h-6" />
+                             <MsgBackChevronIcon className="w-5 h-5" />
                          </button>
-                         <h2 className="font-bold text-base text-zinc-900 dark:text-zinc-100">Channel Details</h2>
+                         <h2 className="font-bold text-[17px] text-zinc-950 dark:text-white tracking-tight">Channel Details</h2>
                          {activeChannel.creatorId === user?.uid ? (
                              <button 
+                                 type="button"
                                  onClick={() => {
                                      setShowChannelDetailsModal(false);
                                      handleEditChannel();
                                  }} 
-                                 className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-100 transition"
+                                 className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-white dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer"
                              >
-                                 <Edit className="w-5 h-5" />
+                                 <Icon name="edit-3" className="w-5 h-5" />
                              </button>
                          ) : (
-                             <div className="w-8"></div>
+                             <div className="w-11" />
                          )}
                      </div>
 
                      <div className="p-4 sm:p-6 w-full max-w-2xl mx-auto flex flex-col items-center flex-1 pb-24">
-                        <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 mb-4 border border-zinc-300 dark:border-zinc-700 shadow-md">
+                        <div className="p-[2.5px] rounded-full bg-gradient-to-tr from-[#F246F5] to-purple-500 mb-4 shadow-[0_8px_24px_rgba(242,70,245,0.2)]">
+                          <div className="w-24 h-24 rounded-full overflow-hidden bg-white dark:bg-zinc-900 ring-2 ring-white dark:ring-zinc-950">
                             <ProgressiveImage src={activeChannel.imageUrl} alt="Channel cover" containerClassName="w-24 h-24 rounded-full min-h-0" className="w-full h-full object-cover" />
+                          </div>
                         </div>
-                        <h2 className="text-2xl font-black text-zinc-900 dark:text-white flex items-center gap-1.5 tracking-tight text-center">
+                        <h2 className="text-2xl font-bold text-zinc-950 dark:text-white flex items-center gap-1.5 tracking-tight text-center">
                             {activeChannel.name}
                             {(activeChannel.verified !== false) && <VerifiedIcon className="w-5 h-5 text-emerald-500 shrink-0" />}
                         </h2>
-                        <p className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold uppercase tracking-wider mt-1.5">
-                            {activeChannel.creatorId === user?.uid ? 'public channel (owner)' : `${activeChannel.subscriberCount || 1} subscribers`}
+                        <p className="text-zinc-500 dark:text-zinc-400 text-xs font-medium mt-1">
+                            {activeChannel.creatorId === user?.uid ? 'Public channel (Owner)' : `${activeChannel.subscriberCount || 1} subscribers`}
                         </p>
                         
-                        <div className="flex items-center justify-center gap-4 mt-6 w-full">
+                        <div className="flex items-center justify-center gap-3 mt-6 w-full">
                             {activeChannel.creatorId === user?.uid ? (
                                 <>
                                     <button 
+                                        type="button"
                                         onClick={() => handleToggleMuteChannel(activeChannel, userSubscription?.muted)} 
-                                        className="flex-1 flex flex-col items-center justify-center py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition"
+                                        className="flex-1 flex flex-col items-center justify-center py-3.5 bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] hover:bg-white dark:hover:bg-zinc-800/90 active:scale-[0.98] transition cursor-pointer"
                                     >
-                                        <VolumeX className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mb-1.5" />
-                                        <span className="text-[11px] font-extrabold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">{userSubscription?.muted ? "Unmute" : "Mute"}</span>
+                                        <Icon name="volume-x" className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mb-1.5" />
+                                        <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">{userSubscription?.muted ? "Unmute" : "Mute"}</span>
                                     </button>
                                     <button 
+                                        type="button"
                                         onClick={() => setDetailsSubModal('settings')} 
-                                        className="flex-1 flex flex-col items-center justify-center py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition"
+                                        className="flex-1 flex flex-col items-center justify-center py-3.5 bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] hover:bg-white dark:hover:bg-zinc-800/90 active:scale-[0.98] transition cursor-pointer"
                                     >
-                                        <svg className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mb-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                        <span className="text-[11px] font-extrabold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">Settings</span>
+                                        <Icon name="settings" className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mb-1.5" />
+                                        <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">Settings</span>
                                     </button>
                                 </>
                             ) : (
                                 <>
                                     <button 
+                                        type="button"
                                         onClick={() => { if(!userSubscription) handleSubscribeToChannel(activeChannel); else handleUnsubscribeFromChannel(activeChannel); }} 
-                                        className="flex-1 flex flex-col items-center justify-center py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition"
+                                        className="flex-1 flex flex-col items-center justify-center py-3.5 bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] hover:bg-white dark:hover:bg-zinc-800/90 active:scale-[0.98] transition cursor-pointer"
                                     >
-                                        {userSubscription ? <X className="w-5 h-5 text-red-500 mb-1.5" /> : <UserPlus className="w-5 h-5 text-emerald-500 mb-1.5" />}
-                                        <span className="text-[11px] font-extrabold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">{userSubscription ? "Leave" : "Join"}</span>
+                                        {userSubscription ? <Icon name="x" className="w-5 h-5 text-rose-500 mb-1.5" /> : <Icon name="user-plus" className="w-5 h-5 text-[#F246F5] mb-1.5" />}
+                                        <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">{userSubscription ? "Leave" : "Join"}</span>
                                     </button>
                                     <button 
+                                        type="button"
                                         onClick={() => handleToggleMuteChannel(activeChannel, userSubscription?.muted)} 
-                                        className="flex-1 flex flex-col items-center justify-center py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition"
+                                        className="flex-1 flex flex-col items-center justify-center py-3.5 bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] hover:bg-white dark:hover:bg-zinc-800/90 active:scale-[0.98] transition cursor-pointer"
                                     >
-                                        <VolumeX className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mb-1.5" />
-                                        <span className="text-[11px] font-extrabold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">{userSubscription?.muted ? "Unmute" : "Mute"}</span>
+                                        <Icon name="volume-x" className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mb-1.5" />
+                                        <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">{userSubscription?.muted ? "Unmute" : "Mute"}</span>
                                     </button>
                                     <button 
+                                        type="button"
                                         onClick={async () => {
                                             try {
                                                 await navigator.clipboard.writeText(`${window.location.origin}/messages?channel=${activeChannel.id}`);
                                                 notify("Link copied!", "success");
                                             } catch(e) {}
                                         }} 
-                                        className="flex-1 flex flex-col items-center justify-center py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition"
+                                        className="flex-1 flex flex-col items-center justify-center py-3.5 bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] hover:bg-white dark:hover:bg-zinc-800/90 active:scale-[0.98] transition cursor-pointer"
                                     >
-                                        <Forward className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mb-1.5" />
-                                        <span className="text-[11px] font-extrabold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">Share</span>
+                                        <Icon name="forward" className="w-5 h-5 text-zinc-700 dark:text-zinc-300 mb-1.5" />
+                                        <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">Share</span>
                                     </button>
                                     <button 
+                                        type="button"
                                         onClick={() => notify("Channel reported. Our administrators will review the content.", "info")} 
-                                        className="flex-1 flex flex-col items-center justify-center py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition"
+                                        className="flex-1 flex flex-col items-center justify-center py-3.5 bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] hover:bg-white dark:hover:bg-zinc-800/90 active:scale-[0.98] transition cursor-pointer"
                                     >
-                                        <AlertCircle className="w-5 h-5 text-amber-500 mb-1.5" />
-                                        <span className="text-[11px] font-extrabold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">Report</span>
+                                        <Icon name="alert-circle" className="w-5 h-5 text-amber-500 mb-1.5" />
+                                        <span className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200">Report</span>
                                     </button>
                                 </>
                             )}
                         </div>
 
                         {/* Description & Link Card */}
-                        <div className="w-full mt-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 shadow-sm rounded-[24px] flex flex-col overflow-hidden">
-                            <div className="p-5 text-left border-b border-zinc-100 dark:border-zinc-800/80">
-                                <p className="text-[14px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Description</p>
-                                <p className="text-[15px] text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                        <div className="w-full mt-6 bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] rounded-[26px] flex flex-col overflow-hidden divide-y divide-zinc-100/80 dark:divide-white/[0.05]">
+                            <div className="p-5 text-left">
+                                <p className="text-[12px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1.5">Description</p>
+                                <p className="text-[14.5px] text-zinc-800 dark:text-zinc-200 leading-relaxed">
                                     {activeChannel.description || "Welcome to our exclusive product broadcast channel. Join for periodic updates, visual arrivals, and direct chat links!"}
                                 </p>
                             </div>
@@ -6095,66 +6129,66 @@ const handleCreateChannel = async () => {
                                         notify("Link copied!", "success");
                                     } catch(e) {}
                                 }} 
-                                className="flex items-center justify-between p-5 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
+                                className="flex items-center justify-between p-5 cursor-pointer hover:bg-white/60 dark:hover:bg-zinc-800/40 transition-colors"
                             >
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[14px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Invite Link</p>
-                                    <p className="text-[14px] text-zinc-800 dark:text-zinc-200 truncate pr-4 font-mono">
+                                    <p className="text-[12px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Invite Link</p>
+                                    <p className="text-[13.5px] text-zinc-800 dark:text-zinc-200 truncate pr-4 font-mono">
                                         {`${window.location.origin}/messages?channel=${activeChannel.id}`}
                                     </p>
                                 </div>
-                                <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 active:scale-95 transition-all">
-                                    <Link className="w-4 h-4" />
+                                <div className="w-10 h-10 rounded-full bg-zinc-100/90 dark:bg-zinc-800/90 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:scale-105 active:scale-95 transition-all shrink-0">
+                                    <Icon name="link" className="w-4 h-4" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Owner Moderation List Rows */}
                         {activeChannel.creatorId === user?.uid && (
-                            <div className="w-full mt-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-[24px] flex flex-col py-1 overflow-hidden">
+                            <div className="w-full mt-4 bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] rounded-[26px] flex flex-col py-1 overflow-hidden divide-y divide-zinc-100/80 dark:divide-white/[0.05]">
                                 <div 
                                     onClick={() => setDetailsSubModal('subscribers')} 
-                                    className="flex items-center justify-between p-4.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
+                                    className="flex items-center justify-between px-5 py-4 hover:bg-white/60 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
-                                            <Users className="w-5 h-5" />
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center">
+                                            <Icon name="users" className="w-5 h-5" />
                                         </div>
-                                        <span className="text-[15px] font-bold text-zinc-800 dark:text-zinc-200">Subscribers</span>
+                                        <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Subscribers</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[14px] font-extrabold text-purple-500">{activeChannel.subscriberCount || 1}</span>
-                                        <ChevronRight className="w-4 h-4 text-zinc-400" />
+                                        <span className="text-[13.5px] font-bold text-[#F246F5]">{activeChannel.subscriberCount || 1}</span>
+                                        <Icon name="chevron-right" className="w-4 h-4 text-zinc-400" />
                                     </div>
                                 </div>
                                 <div 
                                     onClick={() => setDetailsSubModal('admins')} 
-                                    className="flex items-center justify-between p-4.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors border-t border-zinc-100 dark:border-zinc-800/50"
+                                    className="flex items-center justify-between px-5 py-4 hover:bg-white/60 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                                            <Star className="w-5 h-5" />
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-full bg-amber-500/12 text-amber-500 flex items-center justify-center">
+                                            <Icon name="star" className="w-5 h-5" />
                                         </div>
-                                        <span className="text-[15px] font-bold text-zinc-800 dark:text-zinc-200">Administrators</span>
+                                        <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Administrators</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[14px] font-extrabold text-amber-500">1</span>
-                                        <ChevronRight className="w-4 h-4 text-zinc-400" />
+                                        <span className="text-[13.5px] font-bold text-amber-500">{(channelAdmins?.length || 0) + 1}</span>
+                                        <Icon name="chevron-right" className="w-4 h-4 text-zinc-400" />
                                     </div>
                                 </div>
                                 <div 
                                     onClick={() => setDetailsSubModal('banned')} 
-                                    className="flex items-center justify-between p-4.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors border-t border-zinc-100 dark:border-zinc-800/50"
+                                    className="flex items-center justify-between px-5 py-4 hover:bg-white/60 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center">
-                                            <UserX className="w-5 h-5" />
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="w-10 h-10 rounded-full bg-rose-500/12 text-rose-500 flex items-center justify-center">
+                                            <Icon name="user-x" className="w-5 h-5" />
                                         </div>
-                                        <span className="text-[15px] font-bold text-zinc-800 dark:text-zinc-200">Removed Users</span>
+                                        <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Removed Users</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[14px] font-extrabold text-red-500">{bannedUsers.length}</span>
-                                        <ChevronRight className="w-4 h-4 text-zinc-400" />
+                                        <span className="text-[13.5px] font-bold text-rose-500">{bannedUsers.length}</span>
+                                        <Icon name="chevron-right" className="w-4 h-4 text-zinc-400" />
                                     </div>
                                 </div>
                             </div>
@@ -6169,17 +6203,18 @@ const handleCreateChannel = async () => {
                                  animate={{ opacity: 1, x: 0 }}
                                  exit={{ opacity: 0, x: '100%' }}
                                  transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                                 className="fixed inset-0 z-[100] bg-zinc-50 dark:bg-zinc-950 flex flex-col font-inter"
+                                 className="fixed inset-0 z-[100] ambient-dynamic-bg flex flex-col font-inter"
                              >
                                  {/* Drawer Header */}
-                                 <div className="sticky top-0 z-10 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 px-4 py-3.5 flex items-center gap-3">
+                                 <div className="sticky top-0 z-10 bg-transparent backdrop-blur-md border-0 px-4 py-3.5 flex items-center gap-3">
                                      <button 
+                                         type="button"
                                          onClick={() => { setDetailsSubModal(null); setConfirmDeleteChannel(false); }}
-                                         className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-100 transition-colors"
+                                         className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-white active:scale-95 transition cursor-pointer"
                                      >
-                                         <ArrowLeft className="w-5 h-5" />
+                                         <MsgBackChevronIcon className="w-5 h-5" />
                                      </button>
-                                     <h3 className="font-extrabold text-base capitalize text-zinc-900 dark:text-white">
+                                     <h3 className="font-bold text-[17px] capitalize text-zinc-950 dark:text-white tracking-tight">
                                          {detailsSubModal === 'banned' ? 'Removed Users' : detailsSubModal}
                                      </h3>
                                  </div>
@@ -6198,24 +6233,26 @@ const handleCreateChannel = async () => {
                                               </button>
 
                                               {/* PROFILE INFO CARD */}
-                                              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm text-center space-y-4">
-                                                  <div className="relative mx-auto w-24 h-24 rounded-full overflow-hidden border-2 border-emerald-500/30 bg-zinc-100 dark:bg-zinc-800">
+                                              <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 p-5 rounded-[26px] shadow-[0_4px_20px_rgba(120,90,160,0.05)] text-center space-y-4">
+                                                  <div className="relative mx-auto w-24 h-24 rounded-full overflow-hidden p-[2px] bg-gradient-to-tr from-[#F246F5] to-purple-500">
+                                                    <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-zinc-900">
                                                       {selectedSubscriber.photoURL ? (
                                                           <img src={selectedSubscriber.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                       ) : (
-                                                          <div className="w-full h-full flex items-center justify-center font-black text-3xl bg-emerald-500/10 text-emerald-500">
+                                                          <div className="w-full h-full flex items-center justify-center font-black text-3xl bg-[#F246F5]/12 text-[#F246F5]">
                                                               {(selectedSubscriber.displayName || 'U')[0].toUpperCase()}
                                                           </div>
                                                       )}
+                                                    </div>
                                                   </div>
 
                                                   <div className="space-y-1">
-                                                      <h3 className="font-extrabold text-lg text-zinc-900 dark:text-white flex items-center justify-center gap-1">
+                                                      <h3 className="font-bold text-lg text-zinc-900 dark:text-white flex items-center justify-center gap-1">
                                                           {selectedSubscriber.displayName || 'Anonymous User'}
-                                                          {selectedSubscriber.id === activeChannel.creatorId && <span className="bg-emerald-500 text-zinc-950 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Owner</span>}
+                                                          {selectedSubscriber.id === activeChannel.creatorId && <span className="bg-[#F246F5] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Owner</span>}
                                                       </h3>
                                                       <p className="text-xs text-zinc-400 font-medium">Joined {selectedSubscriber.joinedAt ? new Date(selectedSubscriber.joinedAt).toLocaleDateString() : 'recently'}</p>
-                                                      <p className="text-[10px] font-mono text-zinc-500 select-all bg-zinc-50 dark:bg-zinc-800 px-2 py-1 rounded inline-block">UID: {selectedSubscriber.id}</p>
+                                                      <p className="text-[10px] font-mono text-zinc-500 select-all bg-zinc-100/80 dark:bg-zinc-800/80 px-2.5 py-1 rounded-full inline-block">UID: {selectedSubscriber.id}</p>
                                                   </div>
 
                                                   <div className="pt-2 flex flex-col gap-2">
@@ -6226,9 +6263,9 @@ const handleCreateChannel = async () => {
                                                               setSearchParams({ chatId: selectedSubscriber.id });
                                                               setShowChannelDetailsModal(false);
                                                           }}
-                                                          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-zinc-950 dark:text-white rounded-xl text-xs font-black shadow transition-all flex items-center justify-center gap-2"
+                                                          className="w-full py-3 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
                                                       >
-                                                          <MessageSquare className="w-4 h-4" />
+                                                          <Icon name="message-square" className="w-4 h-4" />
                                                           Send Private Message
                                                       </button>
 
@@ -6237,16 +6274,16 @@ const handleCreateChannel = async () => {
                                                           <button
                                                               type="button"
                                                               onClick={() => handleToggleMuteSubscriber(selectedSubscriber)}
-                                                              className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${selectedSubscriber.muted ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                                                              className={`w-full py-3 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${selectedSubscriber.muted ? 'bg-amber-500/12 text-amber-600 hover:bg-amber-500/20' : 'bg-zinc-100/90 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                                                           >
                                                               {selectedSubscriber.muted ? (
                                                                   <>
-                                                                      <VolumeX className="w-4 h-4" />
+                                                                      <Icon name="volume-x" className="w-4 h-4" />
                                                                       Unmute Subscriber
                                                                   </>
                                                               ) : (
                                                                   <>
-                                                                      <Volume2 className="w-4 h-4" />
+                                                                      <Icon name="volume-2" className="w-4 h-4" />
                                                                       Mute Subscriber
                                                                   </>
                                                               )}
@@ -6261,9 +6298,9 @@ const handleCreateChannel = async () => {
                                                                   await handleBanSubscriber(selectedSubscriber);
                                                                   setSelectedSubscriber(null);
                                                               }}
-                                                              className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 hover:text-rose-700 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2"
+                                                              className="w-full py-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/25 text-rose-600 dark:text-rose-400 hover:text-rose-700 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
                                                           >
-                                                              <UserMinus className="w-4 h-4" />
+                                                              <Icon name="user-minus" className="w-4 h-4" />
                                                               Remove & Ban Member
                                                           </button>
                                                       )}
@@ -6271,8 +6308,8 @@ const handleCreateChannel = async () => {
                                               </div>
 
                                               {/* Subscriber contact details block */}
-                                              <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 shadow-sm rounded-3xl flex flex-col overflow-hidden mt-4">
-                                                  <div className="p-4 text-left border-b border-zinc-100 dark:border-zinc-800/80">
+                                              <div className="w-full bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] rounded-[26px] flex flex-col overflow-hidden mt-4 divide-y divide-zinc-100/80 dark:divide-white/[0.05]">
+                                                  <div className="p-4 text-left">
                                                       <p className="text-[14px] font-semibold text-zinc-900 dark:text-white mb-0.5">{(selectedSubscriber.hideEmail && selectedSubscriber.id !== user?.uid) ? "Email Hidden" : (formatDisplayEmail(selectedSubscriber.email) || "No email registered")}</p>
                                                       <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Email Address</p>
                                                   </div>
@@ -6289,26 +6326,26 @@ const handleCreateChannel = async () => {
                                                   <div className="text-center py-12 text-zinc-400 text-sm font-medium">No subscribers yet</div>
                                               ) : (
                                                   channelSubscribers.map(sub => (
-                                                      <div key={sub.id} className="flex items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3.5 rounded-2xl shadow-sm hover:border-emerald-500/40 transition-all">
+                                                      <div key={sub.id} className="flex items-center justify-between bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 p-3.5 rounded-[22px] shadow-[0_4px_16px_rgba(120,90,160,0.05)] transition-all">
                                                           <div 
                                                               className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
                                                               onClick={() => setSelectedSubscriber(sub)}
                                                           >
-                                                              <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-150 dark:bg-zinc-800 shrink-0 border border-zinc-200 dark:border-zinc-700">
+                                                              <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 shrink-0">
                                                                   {sub.photoURL ? (
                                                                       <img src={sub.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                   ) : (
-                                                                      <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+                                                                      <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-[#F246F5]/12 text-[#F246F5]">
                                                                           {(sub.displayName || 'U')[0].toUpperCase()}
                                                                       </div>
                                                                   )}
                                                               </div>
                                                               <div className="min-w-0 flex-1">
-                                                                  <p className="font-bold text-[14px] text-zinc-900 dark:text-white flex items-center gap-1 truncate">
+                                                                  <p className="font-bold text-[14px] text-zinc-900 dark:text-white flex items-center gap-1.5 truncate">
                                                                       {sub.displayName || 'Anonymous User'}
-                                                                      {sub.id === activeChannel.creatorId && <span className="bg-emerald-500/10 text-emerald-500 text-[8px] font-black px-1 rounded">OWNER</span>}
+                                                                      {sub.id === activeChannel.creatorId && <span className="bg-[#F246F5]/12 text-[#F246F5] text-[8.5px] font-bold px-1.5 py-0.5 rounded-full">OWNER</span>}
                                                                   </p>
-                                                                  <p className="text-[10px] text-zinc-400 mt-0.5 truncate">Joined {sub.joinedAt ? new Date(sub.joinedAt).toLocaleDateString() : 'recently'}</p>
+                                                                  <p className="text-[11px] text-zinc-400 mt-0.5 truncate">Joined {sub.joinedAt ? new Date(sub.joinedAt).toLocaleDateString() : 'recently'}</p>
                                                               </div>
                                                           </div>
                                                           {sub.id !== user?.uid && (
@@ -6316,18 +6353,18 @@ const handleCreateChannel = async () => {
                                                                   <button 
                                                                       type="button"
                                                                       onClick={() => handleToggleMuteSubscriber(sub)}
-                                                                      className={`p-2 rounded-xl text-xs font-bold transition-all ${sub.muted ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                                                                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${sub.muted ? 'bg-amber-500/12 text-amber-500 hover:bg-amber-500/20' : 'bg-zinc-100/90 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                                                                       title={sub.muted ? 'Unmute' : 'Mute'}
                                                                   >
-                                                                      {sub.muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                                                                      {sub.muted ? <Icon name="volume-x" className="w-4 h-4" /> : <Icon name="volume-2" className="w-4 h-4" />}
                                                                   </button>
                                                                   <button 
                                                                       type="button"
                                                                       onClick={() => handleBanSubscriber(sub)}
-                                                                      className="p-2 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 text-xs font-bold transition-all"
+                                                                      className="w-9 h-9 rounded-full flex items-center justify-center bg-rose-500/12 text-rose-500 hover:bg-rose-500/20 text-xs font-bold transition-all cursor-pointer"
                                                                       title="Remove User"
                                                                   >
-                                                                      <UserMinus className="w-4 h-4" />
+                                                                      <Icon name="user-minus" className="w-4 h-4" />
                                                                   </button>
                                                               </div>
                                                           )}
@@ -6353,7 +6390,7 @@ const handleCreateChannel = async () => {
                                                               setAdminSearchResult(null);
                                                               setAdminSearchEmail('');
                                                           }}
-                                                          className="text-xs font-extrabold text-emerald-600 dark:text-emerald-450 hover:underline flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded-full transition-all"
+                                                          className="text-xs font-bold text-[#F246F5] hover:underline flex items-center gap-1 bg-[#F246F5]/12 px-3 py-1.5 rounded-full transition-all cursor-pointer"
                                                       >
                                                           {isSearchingAdmin ? "Back to Admins" : "+ Add Administrator"}
                                                       </button>
@@ -6362,7 +6399,7 @@ const handleCreateChannel = async () => {
 
                                               {isSearchingAdmin ? (
                                                   /* SEARCH USER FOR ADMIN INTERFACE */
-                                                  <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-2xl shadow-sm space-y-4">
+                                                  <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 p-4 rounded-[24px] shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-4">
                                                       <div className="space-y-2">
                                                           <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">Search by Email</label>
                                                           <div className="flex gap-2">
@@ -6372,14 +6409,14 @@ const handleCreateChannel = async () => {
                                                                       value={adminSearchEmail}
                                                                       onChange={(e) => setAdminSearchEmail(e.target.value)}
                                                                       placeholder="user@example.com"
-                                                                      className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 ring-emerald-500/50 font-medium text-zinc-900 dark:text-white"
+                                                                      className="w-full bg-zinc-100/80 dark:bg-zinc-800/80 border-0 rounded-full px-4 py-2.5 text-xs outline-none focus:ring-2 ring-[#F246F5]/40 font-medium text-zinc-900 dark:text-white"
                                                                   />
                                                               </div>
                                                               <button
                                                                   type="button"
                                                                   disabled={adminSearchLoading}
                                                                   onClick={handleSearchAdminUser}
-                                                                  className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl text-xs font-black transition-all"
+                                                                  className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
                                                               >
                                                                   {adminSearchLoading ? "Searching..." : "Search"}
                                                               </button>
@@ -6387,26 +6424,26 @@ const handleCreateChannel = async () => {
                                                       </div>
 
                                                       {adminSearchResult && (
-                                                          <div className="border-t border-zinc-150 dark:border-zinc-800 pt-4 space-y-4 animate-fade-in">
-                                                              <div className="flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800 p-3 rounded-xl">
-                                                                  <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-250 shrink-0 border border-zinc-200">
+                                                          <div className="border-t border-zinc-100/80 dark:border-white/[0.06] pt-4 space-y-4 animate-fade-in">
+                                                              <div className="flex items-center gap-3 bg-zinc-50/80 dark:bg-zinc-800/60 p-3 rounded-2xl">
+                                                                  <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-200 shrink-0">
                                                                       {adminSearchResult.photoURL ? (
                                                                           <img src={adminSearchResult.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                       ) : (
-                                                                          <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-emerald-100 text-emerald-600">
+                                                                          <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-[#F246F5]/12 text-[#F246F5]">
                                                                               {(adminSearchResult.displayName || 'U')[0].toUpperCase()}
                                                                           </div>
                                                                       )}
                                                                   </div>
                                                                   <div className="min-w-0">
-                                                                      <p className="font-extrabold text-xs text-zinc-900 dark:text-white truncate">{adminSearchResult.displayName || 'Anonymous User'}</p>
+                                                                      <p className="font-bold text-xs text-zinc-900 dark:text-white truncate">{adminSearchResult.displayName || 'Anonymous User'}</p>
                                                                       <p className="text-[10px] text-zinc-400 truncate mt-0.5">{(adminSearchResult.hideEmail && adminSearchResult.id !== user?.uid) ? "Email Hidden" : formatDisplayEmail(adminSearchResult.email)}</p>
                                                                       <p className="text-[9px] font-mono text-zinc-500 truncate mt-0.5">UID: {adminSearchResult.id}</p>
                                                                   </div>
                                                               </div>
 
                                                               {/* PERMISSIONS / ACCESS TOGGLES */}
-                                                              <div className="space-y-2.5 bg-zinc-50/50 dark:bg-zinc-800/40 p-3 rounded-xl border border-zinc-200/50 dark:border-zinc-800">
+                                                              <div className="space-y-2.5 bg-zinc-50/60 dark:bg-zinc-800/40 p-3.5 rounded-2xl border-0">
                                                                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-0.5">Define Admin Permissions</p>
                                                                   
                                                                   <div className="space-y-2">
@@ -6427,7 +6464,7 @@ const handleCreateChannel = async () => {
                                                                                           [perm.key]: e.target.checked
                                                                                       });
                                                                                   }}
-                                                                                  className="rounded text-emerald-500 border-zinc-300 focus:ring-emerald-500/30 w-4 h-4"
+                                                                                  className="rounded text-[#F246F5] border-zinc-300 focus:ring-[#F246F5]/30 w-4 h-4 accent-[#F246F5]"
                                                                               />
                                                                           </label>
                                                                       ))}
@@ -6437,7 +6474,7 @@ const handleCreateChannel = async () => {
                                                               <button
                                                                   type="button"
                                                                   onClick={handleAddAdmin}
-                                                                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-zinc-900 dark:text-white font-black text-xs rounded-xl shadow-md uppercase tracking-wider transition-all"
+                                                                  className="w-full py-3 bg-[#F246F5] hover:bg-[#e135e4] text-white font-bold text-xs rounded-full shadow-sm tracking-wide transition-all cursor-pointer"
                                                               >
                                                                   Save & Add Admin
                                                               </button>
@@ -6448,19 +6485,19 @@ const handleCreateChannel = async () => {
                                                   /* LIST CURRENT ADMINS */
                                                   <div className="space-y-3">
                                                       {/* PRIMARY OWNER */}
-                                                      <div className="flex items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-2xl shadow-sm">
+                                                      <div className="flex items-center justify-between bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 p-4 rounded-[22px] shadow-[0_4px_16px_rgba(120,90,160,0.05)]">
                                                           <div className="flex items-center gap-3 min-w-0">
-                                                              <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-150 dark:bg-zinc-800 shrink-0 border border-zinc-200 dark:border-zinc-700">
+                                                              <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 shrink-0">
                                                                   {activeChannel.creatorId === user?.uid && user?.photoURL ? (
                                                                       <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                   ) : (
-                                                                      <div className="w-full h-full flex items-center justify-center font-bold text-base bg-emerald-500/10 text-emerald-500">
+                                                                      <div className="w-full h-full flex items-center justify-center font-bold text-base bg-[#F246F5]/12 text-[#F246F5]">
                                                                           {(activeChannel.creatorName || 'O')[0].toUpperCase()}
                                                                       </div>
                                                                   )}
                                                               </div>
                                                               <div className="min-w-0">
-                                                                  <p className="font-extrabold text-[15px] text-zinc-900 dark:text-white flex items-center gap-1.5 leading-tight">
+                                                                  <p className="font-bold text-[15px] text-zinc-900 dark:text-white flex items-center gap-1.5 leading-tight">
                                                                       {activeChannel.creatorName || 'Channel Creator'}
                                                                       <VerifiedIcon className="w-4 h-4 text-emerald-500 shrink-0" />
                                                                   </p>
@@ -6468,17 +6505,17 @@ const handleCreateChannel = async () => {
                                                                   <p className="text-[9px] font-mono text-zinc-500 mt-1 truncate">ID: {activeChannel.creatorId}</p>
                                                               </div>
                                                           </div>
-                                                          <span className="bg-emerald-500 text-zinc-950 text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider scale-95 shadow-sm">
+                                                          <span className="bg-[#F246F5] text-white text-[9.5px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                                                               Creator
                                                           </span>
                                                       </div>
 
                                                       {/* OTHER PROMOTED ADMINS */}
                                                       {channelAdmins.map((adm) => (
-                                                          <div key={adm.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-2xl shadow-sm space-y-3">
+                                                          <div key={adm.id} className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 p-4 rounded-[22px] shadow-[0_4px_16px_rgba(120,90,160,0.05)] space-y-3">
                                                               <div className="flex items-center justify-between">
                                                                   <div className="flex items-center gap-3 min-w-0">
-                                                                      <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-150 shrink-0 border border-zinc-200">
+                                                                      <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 shrink-0">
                                                                           {adm.photoURL ? (
                                                                               <img src={adm.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                           ) : (
@@ -6501,20 +6538,20 @@ const handleCreateChannel = async () => {
                                                                       <button
                                                                           type="button"
                                                                           onClick={() => handleRemoveAdmin(adm.id)}
-                                                                          className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-rose-600 hover:text-rose-700 dark:text-rose-400 text-xs font-black transition-all"
+                                                                          className="w-8 h-8 rounded-full flex items-center justify-center bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-rose-600 hover:text-rose-700 dark:text-rose-400 text-xs font-bold transition-all cursor-pointer"
                                                                           title="Revoke Admin status"
                                                                       >
-                                                                          <UserX className="w-4 h-4" />
+                                                                          <Icon name="user-x" className="w-4 h-4" />
                                                                       </button>
                                                                   )}
                                                               </div>
 
                                                               {/* PERMISSION BADGES LIST */}
-                                                              <div className="flex flex-wrap gap-1 border-t border-zinc-100 dark:border-zinc-800 pt-2 text-[8.5px] font-black uppercase tracking-wider text-zinc-500">
-                                                                  <span className={cn("px-1.5 py-0.5 rounded", adm.permissions?.canPost !== false ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-zinc-100 text-zinc-400 line-through")}>Post</span>
-                                                                  <span className={cn("px-1.5 py-0.5 rounded", adm.permissions?.canDelete !== false ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-zinc-100 text-zinc-400 line-through")}>Delete</span>
-                                                                  <span className={cn("px-1.5 py-0.5 rounded", adm.permissions?.canPin !== false ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-zinc-100 text-zinc-400 line-through")}>Pin</span>
-                                                                  <span className={cn("px-1.5 py-0.5 rounded", adm.permissions?.canBan !== false ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-zinc-100 text-zinc-400 line-through")}>Ban</span>
+                                                              <div className="flex flex-wrap gap-1.5 border-t border-zinc-100/80 dark:border-white/[0.05] pt-2 text-[9px] font-bold uppercase tracking-wider text-zinc-500">
+                                                                  <span className={cn("px-2 py-0.5 rounded-full", adm.permissions?.canPost !== false ? "bg-[#F246F5]/12 text-[#F246F5]" : "bg-zinc-100 text-zinc-400 line-through")}>Post</span>
+                                                                  <span className={cn("px-2 py-0.5 rounded-full", adm.permissions?.canDelete !== false ? "bg-[#F246F5]/12 text-[#F246F5]" : "bg-zinc-100 text-zinc-400 line-through")}>Delete</span>
+                                                                  <span className={cn("px-2 py-0.5 rounded-full", adm.permissions?.canPin !== false ? "bg-[#F246F5]/12 text-[#F246F5]" : "bg-zinc-100 text-zinc-400 line-through")}>Pin</span>
+                                                                  <span className={cn("px-2 py-0.5 rounded-full", adm.permissions?.canBan !== false ? "bg-[#F246F5]/12 text-[#F246F5]" : "bg-zinc-100 text-zinc-400 line-through")}>Ban</span>
                                                               </div>
                                                           </div>
                                                       ))}
@@ -6530,25 +6567,26 @@ const handleCreateChannel = async () => {
                                                  <div className="text-center py-12 text-zinc-400 text-sm font-medium">No removed or banned users</div>
                                              ) : (
                                                  bannedUsers.map(bUser => (
-                                                     <div key={bUser.id} className="flex items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3.5 rounded-2xl shadow-sm">
+                                                     <div key={bUser.id} className="flex items-center justify-between bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 p-3.5 rounded-[22px] shadow-[0_4px_16px_rgba(120,90,160,0.05)]">
                                                          <div className="flex items-center gap-3">
-                                                             <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-150 dark:bg-zinc-800 shrink-0 border border-zinc-200 dark:border-zinc-700">
+                                                             <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 shrink-0">
                                                                  {bUser.photoURL ? (
                                                                      <img src={bUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                  ) : (
-                                                                     <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-red-100 dark:bg-red-950/30 text-red-500">
+                                                                     <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-rose-100 dark:bg-rose-950/30 text-rose-500">
                                                                          {(bUser.displayName || 'U')[0].toUpperCase()}
                                                                      </div>
                                                                  )}
                                                              </div>
                                                              <div>
                                                                  <p className="font-bold text-[14px] text-zinc-900 dark:text-white">{bUser.displayName || 'Banned User'}</p>
-                                                                 <p className="text-[10px] text-zinc-400 mt-0.5">Banned on {bUser.bannedAt ? new Date(bUser.bannedAt).toLocaleDateString() : 'recently'}</p>
+                                                                 <p className="text-[11px] text-zinc-400 mt-0.5">Banned on {bUser.bannedAt ? new Date(bUser.bannedAt).toLocaleDateString() : 'recently'}</p>
                                                              </div>
                                                          </div>
                                                          <button 
+                                                             type="button"
                                                              onClick={() => handleUnbanUser(bUser)}
-                                                             className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-xs font-extrabold text-zinc-700 dark:text-zinc-200 transition-all"
+                                                             className="px-3.5 py-1.5 rounded-full bg-zinc-100/90 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-200 transition-all cursor-pointer"
                                                          >
                                                              Unban
                                                          </button>
@@ -6561,39 +6599,39 @@ const handleCreateChannel = async () => {
                                      {detailsSubModal === 'settings' && (
                                          <div className="space-y-4 font-inter text-zinc-900 dark:text-zinc-100">
                                              {/* Channel statistics & Growth */}
-                                             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3">
-                                                 <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800/80 pb-2">
-                                                     <div className="p-1 rounded-lg bg-pink-500/10 text-pink-500">
-                                                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                                             <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-[26px] p-5 shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-3">
+                                                 <div className="flex items-center gap-2.5 border-b border-zinc-100/80 dark:border-white/[0.05] pb-2.5">
+                                                     <div className="w-8 h-8 rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center">
+                                                         <Icon name="trending-up" className="w-4 h-4" />
                                                      </div>
-                                                     <p className="text-xs font-black uppercase tracking-wider text-zinc-400">Channel Insights & Growth</p>
+                                                     <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Channel Insights & Growth</p>
                                                  </div>
-                                                 <div className="grid grid-cols-2 gap-2">
-                                                     <div className="p-3 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                                                 <div className="grid grid-cols-2 gap-2.5">
+                                                     <div className="p-3.5 bg-zinc-100/70 dark:bg-zinc-800/60 rounded-2xl border-0">
                                                          <p className="text-[10px] font-bold text-zinc-400 uppercase">Interaction Rate</p>
-                                                         <p className="text-lg font-black text-emerald-500 mt-1">94.8%</p>
-                                                         <p className="text-[9px] text-zinc-400 mt-0.5">High engagement</p>
+                                                         <p className="text-lg font-black text-[#F246F5] mt-1">94.8%</p>
+                                                         <p className="text-[10px] text-zinc-400 mt-0.5">High engagement</p>
                                                      </div>
-                                                     <div className="p-3 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                                                     <div className="p-3.5 bg-zinc-100/70 dark:bg-zinc-800/60 rounded-2xl border-0">
                                                          <p className="text-[10px] font-bold text-zinc-400 uppercase">Channel Views</p>
                                                          <p className="text-lg font-black text-zinc-800 dark:text-zinc-100 mt-1">
                                                              {Math.max(12, (activeChannel.subscriberCount || 1) * 28 + 142)}
                                                          </p>
-                                                         <p className="text-[9px] text-zinc-400 mt-0.5">Updated live</p>
+                                                         <p className="text-[10px] text-zinc-400 mt-0.5">Updated live</p>
                                                      </div>
                                                  </div>
                                                  {/* Simple mini sparkline */}
                                                  <div className="pt-1.5">
-                                                     <p className="text-[9px] font-bold text-zinc-400 uppercase mb-1 flex justify-between">
+                                                     <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1 flex justify-between">
                                                          <span>7-Day Subscriber Trend</span>
-                                                         <span className="text-emerald-500 font-extrabold">+12.5%</span>
+                                                         <span className="text-[#F246F5] font-bold">+12.5%</span>
                                                      </p>
                                                      <div className="h-6 flex items-end gap-1 px-1">
                                                          {[40, 55, 48, 70, 85, 75, 98].map((val, i) => (
                                                              <div 
                                                                  key={i} 
                                                                  style={{ height: `${val}%` }} 
-                                                                 className="flex-1 bg-gradient-to-t from-[#EF8020] to-[#f39c12] rounded-t-sm" 
+                                                                 className="flex-1 bg-gradient-to-t from-[#F246F5] to-purple-400 rounded-t-sm" 
                                                                  title={`Day ${i+1}`}
                                                              />
                                                          ))}
@@ -6602,14 +6640,14 @@ const handleCreateChannel = async () => {
                                              </div>
 
                                              {/* Referral / Affiliate program */}
-                                             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3">
-                                                 <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800/80 pb-2">
-                                                     <div className="p-1 rounded-lg bg-indigo-500/10 text-indigo-500">
-                                                         <Link className="w-4 h-4" />
+                                             <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-[26px] p-5 shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-3">
+                                                 <div className="flex items-center gap-2.5 border-b border-zinc-100/80 dark:border-white/[0.05] pb-2.5">
+                                                     <div className="w-8 h-8 rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center">
+                                                         <Icon name="link" className="w-4 h-4" />
                                                      </div>
-                                                     <p className="text-xs font-black uppercase tracking-wider text-zinc-400">Affiliate Referral Program</p>
+                                                     <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Affiliate Referral Program</p>
                                                  </div>
-                                                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                                                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                                                      Share your unique custom tracker link to earn platform referral points and recruit subscribers seamlessly.
                                                  </p>
                                                  <div className="flex gap-2">
@@ -6617,39 +6655,41 @@ const handleCreateChannel = async () => {
                                                          type="text" 
                                                          readOnly 
                                                          value={`${window.location.origin}/messages?channel=${activeChannel.id}&ref=${user.uid}`}
-                                                         className="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-[10px] font-mono outline-none text-zinc-600 dark:text-zinc-300"
+                                                         className="flex-1 px-3.5 py-2.5 bg-zinc-100/80 dark:bg-zinc-800/80 border-0 rounded-full text-[10.5px] font-mono outline-none text-zinc-600 dark:text-zinc-300"
                                                      />
                                                      <button 
+                                                         type="button"
                                                          onClick={() => {
                                                              navigator.clipboard.writeText(`${window.location.origin}/messages?channel=${activeChannel.id}&ref=${user.uid}`);
                                                              notify("Affiliate tracker link copied!", "success");
                                                          }}
-                                                         className="p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl transition"
+                                                         className="w-10 h-10 bg-[#F246F5]/12 hover:bg-[#F246F5]/20 text-[#F246F5] rounded-full flex items-center justify-center transition cursor-pointer shrink-0"
                                                          title="Copy Link"
                                                      >
-                                                         <Copy className="w-4 h-4" />
+                                                         <Icon name="copy" className="w-4 h-4" />
                                                      </button>
                                                  </div>
-                                                 <div className="flex items-center justify-between text-[10px] font-bold text-zinc-400 pt-0.5">
+                                                 <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 pt-0.5">
                                                      <span>Total referrals recruited</span>
-                                                     <span className="text-indigo-600 dark:text-indigo-400">8 users</span>
+                                                     <span className="text-[#F246F5]">8 users</span>
                                                  </div>
                                              </div>
 
                                              {/* Interactive configurations */}
-                                             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-4">
+                                             <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-[26px] p-5 shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-3">
                                                  <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider px-0.5">Interactive Controls</p>
                                                  
                                                  {/* Channel Type Toggle */}
-                                                 <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-xl">
+                                                 <div className="flex items-center justify-between p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl">
                                                      <div>
                                                          <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                                                             <Shield className="w-4 h-4 text-[#EF8020]" />
+                                                             <Icon name="shield" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Private Channel</span>
                                                          </p>
-                                                         <p className="text-[10px] text-zinc-400 mt-0.5">Only invited users can join this channel.</p>
+                                                         <p className="text-[10.5px] text-zinc-400 mt-0.5">Only invited users can join this channel.</p>
                                                      </div>
                                                      <button 
+                                                         type="button"
                                                          onClick={async () => {
                                                              try {
                                                                  const newVal = !activeChannel.isPrivate;
@@ -6657,22 +6697,23 @@ const handleCreateChannel = async () => {
                                                                  notify(`Channel is now ${newVal ? 'Private' : 'Public'}`, 'success');
                                                              } catch(e) { notify('Failed to update setting', 'error'); }
                                                          }}
-                                                         className={`w-11 h-6 rounded-full p-0.5 transition-colors ${activeChannel.isPrivate ? 'bg-emerald-500 flex justify-end' : 'bg-zinc-300 dark:bg-zinc-700 flex justify-start'}`}
+                                                         className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${activeChannel.isPrivate ? 'bg-[#F246F5] flex justify-end' : 'bg-zinc-300 dark:bg-zinc-700 flex justify-start'}`}
                                                      >
                                                          <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
                                                      </button>
                                                  </div>
 
                                                  {/* Discussion Comments Toggle */}
-                                                 <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-xl">
+                                                 <div className="flex items-center justify-between p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl">
                                                      <div>
                                                          <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                                                             <MessageSquare className="w-4 h-4 text-[#EF8020]" />
+                                                             <Icon name="message-square" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Enable Comments</span>
                                                          </p>
-                                                         <p className="text-[10px] text-zinc-400 mt-0.5">Let subscribers discuss your posts directly.</p>
+                                                         <p className="text-[10.5px] text-zinc-400 mt-0.5">Let subscribers discuss your posts directly.</p>
                                                      </div>
                                                      <button 
+                                                         type="button"
                                                          onClick={async () => {
                                                              try {
                                                                  const newVal = !activeChannel.discussionEnabled;
@@ -6680,22 +6721,23 @@ const handleCreateChannel = async () => {
                                                                  notify(`Comments ${newVal ? 'Enabled' : 'Disabled'}`, 'success');
                                                              } catch(e) { notify('Failed to update setting', 'error'); }
                                                          }}
-                                                         className={`w-11 h-6 rounded-full p-0.5 transition-colors ${activeChannel.discussionEnabled ? 'bg-emerald-500 flex justify-end' : 'bg-zinc-300 dark:bg-zinc-700 flex justify-start'}`}
+                                                         className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${activeChannel.discussionEnabled ? 'bg-[#F246F5] flex justify-end' : 'bg-zinc-300 dark:bg-zinc-700 flex justify-start'}`}
                                                      >
                                                          <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
                                                      </button>
                                                  </div>
 
                                                  {/* Allow Direct Messages */}
-                                                 <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-xl">
+                                                 <div className="flex items-center justify-between p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl">
                                                      <div>
                                                          <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                                                             <User className="w-4 h-4 text-[#EF8020]" />
+                                                             <Icon name="user" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Allow DM Contacts</span>
                                                          </p>
-                                                         <p className="text-[10px] text-zinc-400 mt-0.5">Allow subscribers to PM you from this channel.</p>
+                                                         <p className="text-[10.5px] text-zinc-400 mt-0.5">Allow subscribers to PM you from this channel.</p>
                                                      </div>
                                                      <button 
+                                                         type="button"
                                                          onClick={async () => {
                                                              try {
                                                                  const newVal = activeChannel.allowDMs === false ? true : false;
@@ -6703,22 +6745,23 @@ const handleCreateChannel = async () => {
                                                                  notify(`Direct messages ${newVal ? 'Allowed' : 'Disabled'}`, 'success');
                                                              } catch(e) { notify('Failed to update setting', 'error'); }
                                                          }}
-                                                         className={`w-11 h-6 rounded-full p-0.5 transition-colors ${activeChannel.allowDMs !== false ? 'bg-emerald-500 flex justify-end' : 'bg-zinc-300 dark:bg-zinc-700 flex justify-start'}`}
+                                                         className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${activeChannel.allowDMs !== false ? 'bg-[#F246F5] flex justify-end' : 'bg-zinc-300 dark:bg-zinc-700 flex justify-start'}`}
                                                      >
                                                          <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
                                                      </button>
                                                  </div>
 
                                                  {/* Auto-Translate Toggle */}
-                                                 <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-xl">
+                                                 <div className="flex items-center justify-between p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl">
                                                      <div>
                                                          <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                                                             <Sparkles className="w-4 h-4 text-[#EF8020]" />
+                                                             <Icon name="sparkles" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Auto-Translate Posts</span>
                                                          </p>
-                                                         <p className="text-[10px] text-zinc-400 mt-0.5">Translate posts automatically for international viewers.</p>
+                                                         <p className="text-[10.5px] text-zinc-400 mt-0.5">Translate posts automatically for international viewers.</p>
                                                      </div>
                                                      <button 
+                                                         type="button"
                                                          onClick={async () => {
                                                              try {
                                                                  const newVal = !activeChannel.autoTranslate;
@@ -6726,24 +6769,25 @@ const handleCreateChannel = async () => {
                                                                  notify(`Auto-translate ${newVal ? 'Enabled' : 'Disabled'}`, 'success');
                                                              } catch(e) { notify('Failed to update setting', 'error'); }
                                                          }}
-                                                         className={`w-11 h-6 rounded-full p-0.5 transition-colors ${activeChannel.autoTranslate ? 'bg-emerald-500 flex justify-end' : 'bg-zinc-300 dark:bg-zinc-700 flex justify-start'}`}
+                                                         className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${activeChannel.autoTranslate ? 'bg-[#F246F5] flex justify-end' : 'bg-zinc-300 dark:bg-zinc-700 flex justify-start'}`}
                                                      >
                                                          <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
                                                      </button>
                                                  </div>
 
                                                  {/* Allowed Reactions Selector */}
-                                                 <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-xl space-y-2.5">
+                                                 <div className="p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl space-y-2.5">
                                                      <div>
                                                          <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                                                             <Info className="w-4 h-4 text-[#EF8020]" />
+                                                             <Icon name="info" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Allowed Reactions</span>
                                                          </p>
-                                                         <p className="text-[10px] text-zinc-400 mt-0.5">Restrict the types of reaction emojis subscribers can use.</p>
+                                                         <p className="text-[10.5px] text-zinc-400 mt-0.5">Restrict the types of reaction emojis subscribers can use.</p>
                                                      </div>
                                                      <div className="flex gap-1.5 pt-1">
                                                          {['all', 'some', 'none'].map((opt) => (
                                                              <button
+                                                                 type="button"
                                                                  key={opt}
                                                                  onClick={async () => {
                                                                      try {
@@ -6751,10 +6795,10 @@ const handleCreateChannel = async () => {
                                                                          notify(`Allowed reactions updated to: ${opt}`, 'success');
                                                                      } catch(e) { notify('Failed to update setting', 'error'); }
                                                                  }}
-                                                                 className={`flex-1 py-2 rounded-xl text-xs font-extrabold capitalize transition-colors ${
+                                                                 className={`flex-1 py-2 rounded-full text-xs font-bold capitalize transition-all cursor-pointer ${
                                                                      (activeChannel.allowedReactions || 'all') === opt 
-                                                                         ? 'bg-gradient-to-r from-[#EF8020] to-[#f39c12] text-white shadow-md shadow-[#EF8020]/20' 
-                                                                         : 'bg-zinc-100 dark:bg-zinc-700/60 text-zinc-650 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200/50 dark:border-zinc-700/50'
+                                                                         ? 'bg-[#F246F5] text-white shadow-sm' 
+                                                                         : 'bg-white/90 dark:bg-zinc-700/60 text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-700'
                                                                  }`}
                                                              >
                                                                  {opt}
@@ -6765,23 +6809,23 @@ const handleCreateChannel = async () => {
                                              </div>
 
                                              {/* Recent activity audit log */}
-                                             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3">
-                                                 <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800/80 pb-2">
-                                                     <div className="p-1 rounded-lg bg-teal-500/10 text-teal-500">
-                                                         <Activity className="w-4 h-4" />
+                                             <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-[26px] p-5 shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-3">
+                                                 <div className="flex items-center gap-2.5 border-b border-zinc-100/80 dark:border-white/[0.05] pb-2.5">
+                                                     <div className="w-8 h-8 rounded-full bg-teal-500/12 text-teal-500 flex items-center justify-center">
+                                                         <Icon name="activity" className="w-4 h-4" />
                                                      </div>
-                                                     <p className="text-xs font-black uppercase tracking-wider text-zinc-400">Recent Admin Audit Log</p>
+                                                     <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Recent Admin Audit Log</p>
                                                  </div>
-                                                 <div className="space-y-2 text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
-                                                     <div className="flex justify-between py-1 border-b border-zinc-50 dark:border-zinc-800/40">
+                                                 <div className="space-y-2 text-[10.5px] font-semibold text-zinc-500 dark:text-zinc-400">
+                                                     <div className="flex justify-between py-1 border-b border-zinc-100/70 dark:border-white/[0.04]">
                                                          <span>Changed allowed reactions to "{activeChannel.allowedReactions || 'all'}"</span>
                                                          <span className="text-zinc-400">Just now</span>
                                                      </div>
-                                                     <div className="flex justify-between py-1 border-b border-zinc-50 dark:border-zinc-800/40">
+                                                     <div className="flex justify-between py-1 border-b border-zinc-100/70 dark:border-white/[0.04]">
                                                          <span>Updated channel description</span>
                                                          <span className="text-zinc-400">2h ago</span>
                                                      </div>
-                                                     <div className="flex justify-between py-1 border-b border-zinc-50 dark:border-zinc-800/40">
+                                                     <div className="flex justify-between py-1">
                                                          <span>Activated discussion group forum link</span>
                                                          <span className="text-zinc-400">1d ago</span>
                                                      </div>
@@ -6789,46 +6833,50 @@ const handleCreateChannel = async () => {
                                              </div>
 
                                              {/* Standard profile & delete actions */}
-                                             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-3">
+                                             <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-[26px] p-5 shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-3">
                                                  <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider px-0.5">Danger Zone</p>
                                                  <button 
+                                                     type="button"
                                                      onClick={() => {
                                                          setDetailsSubModal(null);
                                                          handleEditChannel();
                                                      }}
-                                                     className="w-full py-3 px-4 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-xl font-bold text-sm text-zinc-800 dark:text-zinc-100 flex items-center justify-between transition-colors border border-zinc-200/50 dark:border-zinc-700"
+                                                     className="w-full py-3 px-4 bg-zinc-100/90 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-full font-bold text-sm text-zinc-800 dark:text-zinc-100 flex items-center justify-between transition-colors cursor-pointer"
                                                  >
                                                      <span>Edit Channel Profile Info</span>
-                                                     <Edit className="w-4 h-4 text-zinc-400" />
+                                                     <Icon name="edit" className="w-4 h-4 text-zinc-400" />
                                                  </button>
 
-                                                 <div className="border-t border-zinc-150 dark:border-zinc-800 pt-3">
+                                                 <div className="border-t border-zinc-100/80 dark:border-white/[0.05] pt-3">
                                                      {!confirmDeleteChannel ? (
                                                          <button 
+                                                             type="button"
                                                              onClick={() => setConfirmDeleteChannel(true)}
-                                                             className="w-full py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-red-500/10"
+                                                             className="w-full py-3 px-4 bg-rose-500 hover:bg-rose-600 text-white rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
                                                          >
-                                                             <Trash className="w-4 h-4" />
+                                                             <Icon name="trash" className="w-4 h-4" />
                                                              <span>Delete Channel Session</span>
                                                          </button>
                                                      ) : (
-                                                         <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 text-center space-y-3 animate-pulse">
-                                                             <p className="text-xs font-extrabold text-red-500 uppercase tracking-widest">⚠️ Critically Dangerous Action ⚠️</p>
+                                                         <div className="bg-rose-500/8 border-0 rounded-2xl p-4 text-center space-y-3">
+                                                             <p className="text-xs font-extrabold text-rose-500 uppercase tracking-widest">Critically Dangerous Action</p>
                                                              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                                                                  Are you absolutely certain? This will delete the channel cover, all messages, all subscriptions, and this operation CANNOT be undone!
                                                              </p>
                                                              <div className="flex gap-2">
                                                                  <button 
+                                                                     type="button"
                                                                      onClick={() => setConfirmDeleteChannel(false)}
-                                                                     className="flex-1 py-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 rounded-lg text-xs font-bold transition-all"
+                                                                     className="flex-1 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 rounded-full text-xs font-bold transition-all cursor-pointer"
                                                                  >
                                                                      Cancel
                                                                  </button>
                                                                  <button 
+                                                                     type="button"
                                                                      onClick={handleDeleteChannel}
-                                                                     className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all"
+                                                                     className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
                                                                  >
-                                                                     Yes, Delete Permanently
+                                                                     Yes, Delete
                                                                  </button>
                                                              </div>
                                                          </div>
@@ -6844,16 +6892,16 @@ const handleCreateChannel = async () => {
                  </div>
              ) : (
                  <>
-                      {/* Active Community Channel Header */}
+                      {/* Active Community Channel Header matching IMG_5472 */}
                       <div className="msg-inbox-header px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between shrink-0 z-10 cursor-pointer" onClick={() => setShowChannelDetailsModal(true)}>
                           <div className="flex items-center gap-3 min-w-0">
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); setSearchParams({}); }}
-                                className="md:hidden w-9 h-9 -ml-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-zinc-900 dark:text-zinc-100 transition shrink-0 cursor-pointer"
+                                className="md:hidden w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-white dark:hover:bg-zinc-700/60 active:scale-95 transition shrink-0 cursor-pointer"
                                 title="Back to Communities"
                               >
-                                  <MsgBackChevronIcon className="w-[22px] h-[22px]" />
+                                  <MsgBackChevronIcon className="w-5 h-5" />
                               </button>
 
                               <div className="relative w-11 h-11 shrink-0">
@@ -6879,7 +6927,7 @@ const handleCreateChannel = async () => {
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); setShowP2pSearch(!showP2pSearch); }}
-                                className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 items-center justify-center transition hidden sm:flex cursor-pointer"
+                                className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-900 dark:text-zinc-200 items-center justify-center hover:bg-white transition hidden sm:flex cursor-pointer"
                                 title="Search Chat"
                               >
                                   <MsgSearchIcon className="w-5 h-5" />
@@ -6888,30 +6936,30 @@ const handleCreateChannel = async () => {
                                   <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); handleStartLiveCall(); }}
-                                      className="w-9 h-9 rounded-full bg-amber-400 flex items-center justify-center text-white shadow-sm hover:scale-105 active:scale-95 transition cursor-pointer"
+                                      className="w-11 h-11 rounded-full bg-[#F246F5] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(242,70,245,0.28)] hover:scale-105 active:scale-95 transition cursor-pointer"
                                       title="Start Live Audio"
                                   >
-                                      <Radio className="w-4 h-4 fill-current animate-pulse" />
+                                      <Icon name="radio" className="w-4 h-4 animate-pulse" />
                                   </button>
                               )}
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); setShowChannelDetailsModal(true); }}
-                                className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-white/[0.08] flex items-center justify-center text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+                                className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-200 hover:bg-white transition cursor-pointer"
                                 title="More Options"
                               >
-                                  <MsgDotsHorizontalIcon className="w-5 h-5" />
+                                  <Icon name="more-vertical" className="w-5 h-5" />
                               </button>
                           </div>
                       </div>
 
                   {/* Pulsing Live Call Banner */}
                   {activeLiveCall && (
-                      <div className="bg-emerald-600 dark:bg-emerald-750 text-white px-4 py-2.5 flex items-center justify-between shrink-0 z-10 shadow-md">
+                      <div className="bg-gradient-to-r from-[#F246F5] to-purple-600 text-white px-4 py-2.5 flex items-center justify-between shrink-0 z-10 shadow-sm">
                           <div className="flex items-center gap-2">
                               <span className="relative flex h-2.5 w-2.5">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
                               </span>
                               <div className="text-xs text-left">
                                   <p className="font-extrabold text-[11px] uppercase tracking-wider">Live Discussion Active</p>
@@ -6928,10 +6976,10 @@ const handleCreateChannel = async () => {
                                           notify("Live Share Link copied!", "success");
                                       } catch(err) {}
                                   }}
-                                  className="px-3 py-1 bg-white/10 hover:bg-white/20 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 uppercase tracking-wider"
+                                  className="px-3 py-1 bg-white/15 hover:bg-white/25 text-[10px] font-bold rounded-full transition-all flex items-center gap-1 uppercase tracking-wider cursor-pointer"
                                   title="Share Live Link"
                               >
-                                  <Link className="w-3 h-3" />
+                                  <Icon name="link" className="w-3 h-3" />
                                   <span>Share Link</span>
                               </button>
                               
@@ -6939,7 +6987,7 @@ const handleCreateChannel = async () => {
                                   <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); setShowLiveCallModal(true); }}
-                                      className="px-3 py-1 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider"
+                                      className="px-3 py-1 bg-white text-[#F246F5] hover:bg-white/90 text-[10px] font-bold rounded-full transition-all uppercase tracking-wider cursor-pointer"
                                   >
                                       Joined
                                   </button>
@@ -6947,7 +6995,7 @@ const handleCreateChannel = async () => {
                                   <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); handleJoinLiveCall(); }}
-                                      className="px-3 py-1 bg-white text-emerald-600 hover:bg-zinc-100 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider animate-pulse"
+                                      className="px-3 py-1 bg-white text-[#F246F5] hover:bg-white/90 text-[10px] font-bold rounded-full transition-all uppercase tracking-wider animate-pulse cursor-pointer"
                                   >
                                       Join
                                   </button>
@@ -6961,7 +7009,7 @@ const handleCreateChannel = async () => {
                     if (pins.length === 0) return null;
                     const currentPin = pins[currentPinnedIndex % pins.length];
                     return (
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-zinc-900/90 dark:to-zinc-950/90 border-b border-amber-100 dark:border-zinc-800 px-4 py-2 flex items-center justify-between text-xs shrink-0 z-10 shadow-sm relative">
+                    <div className="mx-4 mt-2 bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs shrink-0 z-10 shadow-[0_4px_16px_rgba(120,90,160,0.05)] relative">
                       <div className="flex items-center gap-2 min-w-0 cursor-pointer flex-1" onClick={() => {
                         const targetMsg = channelMessages.find(m => m.id === currentPin.id);
                         if (targetMsg) {
@@ -6974,23 +7022,23 @@ const handleCreateChannel = async () => {
                             setCurrentPinnedIndex(prev => prev + 1);
                         }
                       }}>
-                        <Pin className="w-3.5 h-3.5 text-[#EF8020] rotate-45 shrink-0" />
+                        <Icon name="pin" className="w-3.5 h-3.5 text-[#F246F5] rotate-45 shrink-0" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                              <p className="font-bold text-[10px] text-[#EF8020] uppercase tracking-wider">Pinned Message {pins.length > 1 ? `(${ (currentPinnedIndex % pins.length) + 1 }/${pins.length})` : ""}</p>
+                              <p className="font-bold text-[10px] text-[#F246F5] uppercase tracking-wider">Pinned Message {pins.length > 1 ? `(${ (currentPinnedIndex % pins.length) + 1 }/${pins.length})` : ""}</p>
                               {pins.length > 1 && <span className="text-[9px] text-zinc-500 font-medium">Click to see next pin</span>}
                           </div>
-                          <p className="text-[11px] text-zinc-600 dark:text-zinc-300 truncate mt-0.5">{currentPin.text}</p>
+                          <p className="text-[11.5px] text-zinc-600 dark:text-zinc-300 truncate mt-0.5">{currentPin.text}</p>
                         </div>
                       </div>
                       {activeChannel.creatorId === user.uid && (
                         <button 
                           type="button" 
                           onClick={() => handleUnpinMessage(currentPin.id)}
-                          className="p-1 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 transition ml-2 shrink-0"
+                          className="p-1 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 transition ml-2 shrink-0 cursor-pointer"
                           title="Unpin Message"
                         >
-                          <X className="w-3 h-3" />
+                          <Icon name="x" className="w-3 h-3" />
                         </button>
                       )}
                     </div>
@@ -6999,16 +7047,16 @@ const handleCreateChannel = async () => {
 
                   {/* Group / Untrusted Safety Warning Banner */}
                   {!safetyNoticeDismissed && (
-                    <div className="mx-3 sm:mx-4 my-2 p-3 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-2.5 shadow-sm text-left shrink-0">
+                    <div className="mx-3 sm:mx-4 my-2 p-3.5 bg-white/85 dark:bg-zinc-900/75 backdrop-blur-md border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] flex items-center justify-between gap-2.5 text-left shrink-0">
                       <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                        <div className="p-1.5 rounded-xl bg-amber-500 text-white shrink-0 mt-0.5 shadow-sm">
-                          <ShieldAlert className="w-4 h-4" />
+                        <div className="p-1.5 rounded-full bg-amber-500 text-white shrink-0 mt-0.5">
+                          <Icon name="shield-alert" className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h5 className="font-bold text-xs text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                          <h5 className="font-bold text-xs text-zinc-900 dark:text-amber-300 flex items-center gap-1.5">
                             নিরাপত্তা সতর্কতা ও লেনদেন নির্দেশিকা
                           </h5>
-                          <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80 mt-0.5 leading-relaxed font-medium">
+                          <p className="text-[11px] text-zinc-600 dark:text-amber-200/80 mt-0.5 leading-relaxed font-medium">
                             গ্রুপে বা কারো পার্সোনাল ইনবক্সে অগ্রিম টাকা লেনদেন করার ক্ষেত্রে নিজ দায়িত্বে করবেন। প্ল্যাটফর্মের অফিশিয়াল চেকআউট ছাড়া যেকোনো ব্যক্তিগত লেনদেনের জন্য DEEP SHOP কর্তৃপক্ষ কোনোভাবেই দায়ী থাকবে না।
                           </p>
                         </div>
@@ -7019,20 +7067,20 @@ const handleCreateChannel = async () => {
                           localStorage.setItem('deepshop_safety_notice_dismissed', 'true');
                           setSafetyNoticeDismissed(true);
                         }}
-                        className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] shrink-0 self-center shadow-sm transition active:scale-95 flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10.5px] shrink-0 self-center transition active:scale-95 flex items-center gap-1 cursor-pointer"
                         title="Dismiss Safety Notice"
                       >
                         <span>বুঝেছি</span>
-                        <X className="w-3 h-3" />
+                        <Icon name="x" className="w-3 h-3" />
                       </button>
                     </div>
                   )}
 
                   {/* Channel Messages Scroll Area */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 space-y-3 msg-stream-default">
                       {channelMessages.length === 0 ? (
                           <div className="flex flex-col items-center justify-center h-full text-zinc-400 p-6 text-center">
-                              <Sparkles className="w-12 h-12 mb-3 text-emerald-500 fill-emerald-500 animate-pulse" />
+                              <Icon name="sparkles" className="w-12 h-12 mb-3 text-[#F246F5] animate-pulse" />
                               <p className="font-bold text-sm text-zinc-800 dark:text-zinc-200">Welcome to @{activeChannel.customLink}!</p>
                               <p className="text-xs mt-1 text-zinc-500 max-w-xs leading-relaxed">This is the community group channel. Members and sellers can share updates here.</p>
                           </div>
@@ -7052,7 +7100,7 @@ const handleCreateChannel = async () => {
                                      <React.Fragment key={`${msg.id || idx}-${idx}`}>
                                          {showDate && (
                                              <div className="flex justify-center my-4 select-none">
-                                                 <span className="px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full text-[10px] font-bold text-zinc-500 uppercase tracking-wider backdrop-blur-sm">
+                                                 <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500">
                                                      {formatDateSeparator(msg.timestamp)}
                                                  </span>
                                              </div>
@@ -7060,14 +7108,14 @@ const handleCreateChannel = async () => {
                                          <div className={cn("flex w-full mb-1", isMe ? "justify-end" : "justify-start")}>
                                               <div className="flex max-w-[85%] sm:max-w-[75%] flex-row items-start gap-2">
                                                   {!isMe && (
-                                                    <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0 overflow-hidden border border-zinc-300 dark:border-zinc-700">
+                                                    <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0 overflow-hidden">
                                                         <div className="w-full h-full bg-transparent" />
                                                     </div>
                                                   )}
                                                   <div className="flex flex-col relative">
-                                                      <div className="px-4 py-2 text-[13px] bg-zinc-100/60 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-400 italic">
+                                                      <div className="px-4 py-2 text-[13px] bg-white/60 dark:bg-zinc-800/40 rounded-[18px] text-zinc-400 italic">
                                                           <div className="flex items-center gap-1.5 opacity-75">
-                                                              <Trash className="w-3.5 h-3.5" />
+                                                              <Icon name="trash" className="w-3.5 h-3.5" />
                                                               <span>This message was deleted</span>
                                                           </div>
                                                       </div>
@@ -7082,7 +7130,7 @@ const handleCreateChannel = async () => {
                                   <React.Fragment key={`${msg.id || idx}-${idx}`}>
                                       {showDate && (
                                           <div className="flex justify-center my-4 select-none">
-                                              <span className="px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full text-[10px] font-bold text-zinc-500 uppercase tracking-wider backdrop-blur-sm">
+                                              <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500">
                                                   {formatDateSeparator(msg.timestamp)}
                                               </span>
                                           </div>
@@ -7092,17 +7140,17 @@ const handleCreateChannel = async () => {
                                         className={cn(
                                             "flex gap-2.5 relative pb-2 group transition-all duration-500 rounded-2xl p-1",
                                             isMe ? "justify-end" : "justify-start",
-                                            highlightedMessageId === msg.id && "bg-amber-500/10 dark:bg-amber-500/5 ring-2 ring-amber-500/50 scale-[1.01] shadow-md shadow-amber-500/10 animate-pulse"
+                                            highlightedMessageId === msg.id && "bg-[#F246F5]/10 ring-1 ring-[#F246F5]/40"
                                         )}
                                         onClick={() => setActiveMessageMenuId(null)}
                                       >
                                       {/* Other Member Avatar on Left */}
                                       {!isMe && (
-                                        <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0 self-start overflow-hidden border border-zinc-300 dark:border-zinc-700 shadow-sm mt-0.5">
+                                        <div className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0 self-end mb-4 overflow-hidden">
                                             {msg.senderPhoto ? (
                                                 <img src={msg.senderPhoto} alt="Avatar" className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 font-black text-xs">
+                                                <div className="w-full h-full flex items-center justify-center bg-[#F246F5]/12 text-[#F246F5] font-bold text-xs">
                                                     {(msg.senderName || 'U')[0].toUpperCase()}
                                                 </div>
                                             )}
@@ -7113,34 +7161,34 @@ const handleCreateChannel = async () => {
                                         {...getMsgHoldHandlers(msg.id)}
                                         className={cn("max-w-[80%] sm:max-w-[70%] flex flex-col relative group/bubble", isMe ? "items-end" : "items-start")}
                                       >
-                                          {/* Sender Label and Role Badge (Shown on incoming messages in group) */}
+                                          {/* Sender Label and Role Badge */}
                                           {!isMe && (
                                             <div className="flex items-center gap-1.5 mb-1 ml-1">
-                                                <span className={cn("font-bold text-[12px] flex items-center gap-1", getSenderColor(msg.senderId || msg.senderName))}>
+                                                <span className={cn("font-semibold text-[11.5px] flex items-center gap-1", getSenderColor(msg.senderId || msg.senderName))}>
                                                   <span>{msg.senderName || "Member"}</span>
                                                   {isSeller && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                                 </span>
                                                 {isCreator ? (
-                                                  <span className="bg-emerald-500 text-zinc-950 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none scale-90 shadow-sm">
+                                                  <span className="bg-[#F246F5] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
                                                       CREATOR
                                                   </span>
                                                 ) : isChannelAdmin ? (
-                                                  <span className="bg-indigo-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none scale-90 shadow-sm">
+                                                  <span className="bg-purple-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
                                                       ADMIN
                                                   </span>
                                                 ) : isSeller ? (
-                                                  <span className="bg-amber-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none scale-90 shadow-sm">
+                                                  <span className="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
                                                       SELLER
                                                   </span>
                                                 ) : (
-                                                  <span className="bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none scale-90">
+                                                  <span className="bg-white/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
                                                       MEMBER
                                                   </span>
                                                 )}
                                             </div>
                                           )}
 
-                                          {/* Quoted Reply Header (if any) */}
+                                          {/* Quoted Reply Header */}
                                           {msg.replyTo && (
                                               <MessageReplyPreview
                                                 replyTo={msg.replyTo}
@@ -7153,10 +7201,10 @@ const handleCreateChannel = async () => {
                                               />
                                           )}
 
-                                          {/* Forwarded Header (if any) */}
+                                          {/* Forwarded Header */}
                                           {msg.forwardedFrom && (
-                                            <div className="flex items-center gap-1 text-[10px] text-zinc-400 dark:text-zinc-500 font-bold mb-1 italic">
-                                              <Forward className="w-3 h-3 text-zinc-400" />
+                                            <div className="flex items-center gap-1 text-[10.5px] text-zinc-400 dark:text-zinc-500 font-medium mb-1">
+                                              <Icon name="forward" className="w-3 h-3 text-zinc-400" />
                                               <span>Forwarded from {msg.forwardedFrom}</span>
                                             </div>
                                           )}
@@ -7168,12 +7216,12 @@ const handleCreateChannel = async () => {
                                                       audioSrc={msg.audioUrl} 
                                                       duration={msg.audioDuration || 15} 
                                                       isMe={isMe}
-                                                      waveColor={isMe ? '#ffffff' : '#10b981'}
+                                                      waveColor={isMe ? '#ffffff' : '#F246F5'}
                                                   />
                                               </div>
                                           )}
 
-                                          {/* Images attachment (2nd Style Grid) */}
+                                          {/* Images attachment */}
                                           {((msg.images && msg.images.length > 0) || msg.imageUrl) && (
                                             <div className="mb-1">
                                               <MessageMediaGrid
@@ -7189,37 +7237,29 @@ const handleCreateChannel = async () => {
                                             </div>
                                           )}
 
-                                          {/* Post / Message Bubble text */}
+                                          {/* Post / Message Bubble matching IMG_5472 */}
                                           {msg.text && (
                                               <div 
                                                   onDoubleClick={(e) => { e.stopPropagation(); handleReactToChannelMessage(msg.id, '❤️'); }}
                                                   className={cn(
-                                                    "px-3.5 py-2 rounded-[20px] shadow-xs select-none relative flex flex-col transition-all",
+                                                    "px-4 py-3 rounded-[18px] select-none relative flex flex-col transition-all",
                                                     isMe 
-                                                      ? "bg-[#2F80ED] text-white rounded-br-[6px]" 
-                                                      : "bg-[#F2F4F7] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-[6px]"
+                                                      ? "msg-bubble-sent" 
+                                                      : "msg-bubble-received"
                                                   )}
                                               >
-                                                  <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words pr-10">
+                                                  <p className="text-[14.5px] leading-[1.48] whitespace-pre-wrap break-words">
                                                       {renderTextWithLinks(msg.text, isMe)}
                                                   </p>
-                                                  
-                                                  {/* URL Preview support */}
                                                   <LinkPreviewCard text={msg.text} />
-                                                  
-                                                  <div className="self-end mt-0.5 flex items-center gap-1">
-                                                      <span className={cn("text-[9px] font-medium", isMe ? "text-white/75" : "text-zinc-400 dark:text-zinc-500")}>
-                                                          {formatTime12h(msg.timestamp)}
-                                                      </span>
-                                                  </div>
                                               </div>
                                           )}
 
                                           {/* Reactions Badge / Add Reaction */}
                                           <div 
                                               className={cn(
-                                                "absolute -bottom-2 flex items-center gap-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm rounded-full px-2 py-0.5 z-10 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer",
-                                                isMe ? "right-2" : "right-2",
+                                                "absolute -bottom-2 flex items-center gap-1 bg-white/95 dark:bg-zinc-800 border-0 shadow-[0_4px_12px_rgba(120,90,160,0.12)] rounded-full px-2 py-0.5 z-10 hover:scale-105 transition cursor-pointer",
+                                                isMe ? "right-2" : "left-2",
                                                 reactionEntries.length > 0 ? "opacity-100 scale-100" : "opacity-0 scale-95 group-hover/bubble:opacity-100 group-hover/bubble:scale-100"
                                               )} 
                                               onClick={(e) => { e.stopPropagation(); setActiveMessageMenuId(msg.id); }}
@@ -7235,12 +7275,12 @@ const handleCreateChannel = async () => {
                                                   </>
                                               ) : (
                                                   <div className="flex items-center text-zinc-400 py-[2px]">
-                                                     <Plus className="w-3 h-3" />
+                                                     <Icon name="plus" className="w-3 h-3" />
                                                   </div>
                                               )}
                                           </div>
 
-                                          <span className={cn("text-[9px] font-semibold text-zinc-400 mx-1 block", reactionEntries.length > 0 ? "mt-3.5" : "mt-1")}>
+                                          <span className={cn("text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mx-1 block", reactionEntries.length > 0 ? "mt-3.5" : "mt-1")}>
                                               {formatTime12h(msg.timestamp)}
                                           </span>
                                       </div>
@@ -7249,7 +7289,6 @@ const handleCreateChannel = async () => {
                           );
                       })
                       )}
-                      {/* Real-time typing, voice recording, photo sending, GIF picking activity indicator */}
                       <ChatTypingIndicator
                         activity={otherActivity}
                         userName={activeChat?.otherUser?.shopName || activeChat?.otherUser?.displayName || "User"}
@@ -7259,22 +7298,22 @@ const handleCreateChannel = async () => {
                       <div ref={messagesEndRef} />
                   </div>
 
-                  {/* Channel Input Area */}
-                  <div className="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 p-3 sm:p-4 shrink-0 z-10">
+                  {/* Channel Input Area matching IMG_5472 Composer */}
+                  <div className="msg-composer-dock px-3.5 sm:px-6 pt-1.5 pb-[max(0.4rem,env(safe-area-inset-bottom,6px))] shrink-0 z-10">
                       <AnimatePresence>
                           {replyingTo && (
                                <motion.div 
                                    initial={{ opacity: 0, y: 10 }} 
                                    animate={{ opacity: 1, y: 0 }} 
                                    exit={{ opacity: 0, y: 10 }} 
-                                   className="mb-3 p-3 bg-zinc-50 dark:bg-white dark:bg-zinc-200 dark:bg-zinc-800/80 shadow-sm dark:shadow-none border-l-[4px] border-emerald-500 rounded-r-xl flex items-center justify-between text-left"
+                                   className="mb-2 px-3.5 py-2.5 bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] rounded-2xl flex items-center justify-between text-left"
                                >
                                    <div>
-                                       <p className="text-[11px] font-bold text-[#5B51D8] dark:text-[#7B73F0]">Replying to {replyingTo.senderName || (replyingTo.senderId === user?.uid ? "You" : "User")}</p>
+                                       <p className="text-[11px] font-bold text-[#F246F5]">Replying to {replyingTo.senderName || (replyingTo.senderId === user?.uid ? "You" : "User")}</p>
                                        <p className="text-xs text-zinc-600 dark:text-zinc-300 truncate max-w-xs sm:max-w-md mt-0.5">{replyingTo.text}</p>
                                    </div>
-                                   <button onClick={() => setReplyingTo(null)} className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition">
-                                       <X className="w-4 h-4" />
+                                   <button type="button" onClick={() => setReplyingTo(null)} className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer">
+                                       <Icon name="x" className="w-4 h-4" />
                                    </button>
                                </motion.div>
                           )}
@@ -7282,19 +7321,19 @@ const handleCreateChannel = async () => {
     <div className="flex flex-wrap items-center gap-2 mb-3">
         {previewUrls.map((url, idx) => (
             <motion.div key={idx} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative inline-block">
-                <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md relative">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-[#F246F5] shadow-md relative">
                     <img src={url} alt="Preview" className="w-full h-full object-cover" />
                     {isUploadingAttachment && (
                         <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center">
-                            <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+                            <Icon name="loader-2" className="w-5 h-5 animate-spin text-white" />
                         </div>
                     )}
                 </div>
-                <button onClick={() => { 
+                <button type="button" onClick={() => { 
                     setAttachments(prev => prev.filter((_, i) => i !== idx));
                     setPreviewUrls(prev => prev.filter((_, i) => i !== idx));
-                }} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md cursor-pointer transition">
-                    <X className="w-3.5 h-3.5" />
+                }} className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 hover:bg-rose-600 text-white rounded-full flex items-center justify-center shadow-md cursor-pointer transition">
+                    <Icon name="x" className="w-3.5 h-3.5" />
                 </button>
             </motion.div>
         ))}
@@ -7303,17 +7342,17 @@ const handleCreateChannel = async () => {
                       </AnimatePresence>
 
                       {activeChannel.creatorId === user.uid ? (
-                          <div className="flex items-center gap-3 w-full bg-zinc-50 dark:bg-[#0a0a0a] pt-2 pb-2 relative">
+                          <div className="flex items-center gap-2.5 w-full pt-1 pb-2 relative">
                               <input type="file" ref={fileInputRef} onChange={handleAttachmentChange} className="hidden" accept="image/*" multiple />
                               
                               {isRecording ? (
-                                  <div className="flex-1 flex items-center justify-between bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-full border border-zinc-200 dark:border-zinc-700/50 shadow-inner">
-                                      <div className="flex items-center gap-3 text-red-500 font-semibold text-sm">
+                                  <div className="flex-1 flex items-center justify-between bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl px-4 py-2.5 rounded-full border-0 shadow-[0_4px_18px_rgba(120,90,160,0.08)]">
+                                      <div className="flex items-center gap-3 text-[#F246F5] font-semibold text-sm">
                                           <div className="flex items-center gap-1.5 animate-pulse">
-                                              <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                                              <div className="w-2.5 h-2.5 rounded-full bg-[#F246F5]"></div>
                                               <div className="flex gap-0.5 items-center h-4">
                                               {[1,2,3,4,5].map(i => (
-                                                  <div key={i} className={`w-1 bg-red-500 rounded-full animate-pulse`} style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 0.1}s` }}></div>
+                                                  <div key={i} className="w-1 bg-[#F246F5] rounded-full animate-pulse" style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 0.1}s` }}></div>
                                               ))}
                                               </div>
                                           </div>
@@ -7323,13 +7362,13 @@ const handleCreateChannel = async () => {
                                       </div>
                                       <div className="flex items-center gap-3">
                                           <span className="text-xs text-zinc-400 animate-pulse hidden sm:block">&lt; Slide to cancel</span>
-                                          <button onClick={cancelRecording} className="text-zinc-500 hover:text-red-500 transition-colors bg-white dark:bg-zinc-700 p-1.5 rounded-full shadow-sm">
-                                              <X className="w-5 h-5" />
+                                          <button type="button" onClick={cancelRecording} className="text-zinc-500 hover:text-rose-500 transition-colors bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-full cursor-pointer">
+                                              <Icon name="x" className="w-5 h-5" />
                                           </button>
                                       </div>
                                   </div>
                               ) : (
-                                  <div className="flex-1 h-12 flex items-center bg-white dark:bg-zinc-800 px-4 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-zinc-100 dark:border-zinc-700/50">
+                                  <div className="flex-1 h-12 flex items-center bg-white/95 dark:bg-zinc-900/85 backdrop-blur-md px-4 rounded-full shadow-[0_4px_18px_rgba(120,90,160,0.06)] border-0">
                                       <textarea
                                           value={newMessage}
                                           onChange={(e) => setNewMessage(e.target.value)}
@@ -7343,20 +7382,21 @@ const handleCreateChannel = async () => {
                                           className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-[9px] text-[15px] text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 placeholder:font-medium leading-[20px] h-[38px] px-0 focus:outline-none outline-none focus-visible:outline-none"
                                           rows={1}
                                       />
-                                      <button onClick={() => fileInputRef.current?.click()} className="w-9 h-9 ml-1 rounded-full flex items-center justify-center text-zinc-400 hover:text-indigo-600 transition-colors shrink-0" title="Add Image">
-                                          <ImageIcon className="w-[21px] h-[21px]" />
+                                      <button type="button" onClick={() => fileInputRef.current?.click()} className="w-9 h-9 ml-1 rounded-full flex items-center justify-center text-zinc-400 hover:text-[#F246F5] transition-colors shrink-0 cursor-pointer" title="Add Image">
+                                          <Icon name="image" className="w-[21px] h-[21px]" />
                                       </button>
                                   </div>
                               )}
                               
                               <div className="relative flex items-center justify-center h-12">
                                   {isRecording && (
-                                      <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white dark:bg-zinc-800 text-zinc-500 rounded-full p-2 shadow-lg border border-zinc-200 dark:border-zinc-700 animate-bounce">
-                                          <Lock className="w-4 h-4" />
+                                      <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-zinc-800 text-zinc-500 rounded-full p-2 shadow-lg border-0 animate-bounce">
+                                          <Icon name="lock" className="w-4 h-4" />
                                       </div>
                                   )}
                                   <button 
-                                      onMouseDown={(e) => {
+                                      type="button"
+                                      onMouseDown={() => {
                                           if (isTouchActiveRef.current) return;
                                           if (!isRecording && !newMessage.trim() && previewUrls.length === 0) {
                                               startRecording();
@@ -7368,7 +7408,7 @@ const handleCreateChannel = async () => {
                                               stopRecording(true);
                                           }
                                       }}
-                                      onTouchStart={(e) => {
+                                      onTouchStart={() => {
                                           isTouchActiveRef.current = true;
                                           if (!isRecording && !newMessage.trim() && previewUrls.length === 0) {
                                               startRecording();
@@ -7388,38 +7428,36 @@ const handleCreateChannel = async () => {
                                           }
                                       }}
                                       disabled={isUploadingAttachment}
-                                      className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all shadow-[0_4px_12px_rgba(79,70,229,0.3)] ${
-                                          (newMessage.trim() || previewUrls.length > 0 || isRecording) ? 'bg-[#4E4AEB] hover:bg-[#3d39db] hover:scale-105 active:scale-95 text-white' : 'bg-[#4E4AEB] text-white hover:scale-105 active:scale-95'
-                                      }`}
+                                      className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all shadow-[0_6px_18px_rgba(242,70,245,0.28)] bg-[#F246F5] hover:bg-[#e135e4] hover:scale-105 active:scale-95 text-white cursor-pointer"
                                   >
                                       {isRecording ? (
                                           <Icon name="send" className="w-5 h-5 ml-0.5" />
                                       ) : newMessage.trim() || previewUrls.length > 0 ? (
                                           <Icon name="send" className="w-5 h-5 ml-0.5" />
                                       ) : (
-                                          <Mic className="w-5 h-5" />
+                                          <Icon name="mic" className="w-5 h-5" />
                                       )}
                                   </button>
                               </div>
                           </div>
                       ) : (
-                          <div className="flex justify-center w-full">
+                          <div className="flex justify-center w-full pb-2">
                               {userSubscription ? (
                                   <button
                                       type="button"
                                       onClick={() => handleToggleMuteChannel(activeChannel, userSubscription.muted)}
-                                      className="w-full max-w-sm py-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-2xl font-bold text-sm transition flex items-center justify-center gap-2"
+                                      className="w-full max-w-sm py-3 bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full font-bold text-sm shadow-[0_4px_16px_rgba(120,90,160,0.06)] transition flex items-center justify-center gap-2 cursor-pointer"
                                   >
-                                      {userSubscription.muted ? <Volume2 className="w-5 h-5 text-emerald-500" /> : <VolumeX className="w-5 h-5 text-zinc-500" />}
+                                      {userSubscription.muted ? <Icon name="volume-2" className="w-5 h-5 text-[#F246F5]" /> : <Icon name="volume-x" className="w-5 h-5 text-zinc-500" />}
                                       <span>{userSubscription.muted ? "Unmute" : "Mute"}</span>
                                   </button>
                               ) : (
                                   <button
                                       type="button"
                                       onClick={() => handleSubscribeToChannel(activeChannel)}
-                                      className="w-full max-w-sm py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-900 dark:text-white rounded-2xl font-bold text-sm transition flex items-center justify-center gap-2 shadow-md"
+                                      className="w-full max-w-sm py-3 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full font-bold text-sm transition flex items-center justify-center gap-2 shadow-[0_6px_18px_rgba(242,70,245,0.25)] cursor-pointer"
                                   >
-                                      <span>Join</span>
+                                      <span>Join Channel</span>
                                   </button>
                               )}
                           </div>
@@ -7429,10 +7467,10 @@ const handleCreateChannel = async () => {
              )
          ) : !activeChat ? (
              /* Desktop Split-Screen Empty Workspace */
-             <div className="flex-1 flex flex-col items-center justify-center msg-stream-default px-8 text-center select-none">
+             <div className="flex-1 flex flex-col items-center justify-center ambient-dynamic-bg px-8 text-center select-none">
                  <div className="max-w-md w-full flex flex-col items-center">
-                     <div className="w-16 h-16 rounded-[24px] bg-[#F4F6FA] dark:bg-white/[0.05] border border-zinc-200/70 dark:border-white/10 flex items-center justify-center mb-5">
-                         <MessageCircle className="w-7 h-7 text-[#2F80ED]" />
+                     <div className="w-16 h-16 rounded-[24px] bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_6px_24px_rgba(120,90,160,0.07)] flex items-center justify-center mb-5">
+                         <Icon name="message-circle" className="w-7 h-7 text-[#F246F5]" />
                      </div>
                      <h2 className="font-bold text-[22px] text-zinc-950 dark:text-white tracking-tight">
                          Select a conversation
@@ -7448,10 +7486,10 @@ const handleCreateChannel = async () => {
                                setNewMessageInitialStep('new_message');
                                setShowNewMessageModal(true);
                              }}
-                             className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#F7F8FA] hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200/60 dark:border-white/10 transition cursor-pointer"
+                             className="flex flex-col items-center gap-2 p-4 rounded-[22px] bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800/80 border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] transition cursor-pointer"
                          >
                              <div className="w-10 h-10 rounded-full bg-[#16181D] dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center">
-                                 <Plus className="w-5 h-5" />
+                                 <Icon name="plus" className="w-5 h-5" />
                              </div>
                              <span className="text-xs font-bold text-zinc-900 dark:text-white">New Chat</span>
                          </button>
@@ -7462,10 +7500,10 @@ const handleCreateChannel = async () => {
                                setNewChatPopupMode('new_contact');
                                setShowNewChatPopup(true);
                              }}
-                             className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#F7F8FA] hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200/60 dark:border-white/10 transition cursor-pointer"
+                             className="flex flex-col items-center gap-2 p-4 rounded-[22px] bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800/80 border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] transition cursor-pointer"
                          >
-                             <div className="w-10 h-10 rounded-full bg-[#2F80ED]/12 text-[#2F80ED] flex items-center justify-center">
-                                 <UserPlus className="w-5 h-5" />
+                             <div className="w-10 h-10 rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center">
+                                 <Icon name="user-plus" className="w-5 h-5" />
                              </div>
                              <span className="text-xs font-bold text-zinc-900 dark:text-white">New Contact</span>
                          </button>
@@ -7476,10 +7514,10 @@ const handleCreateChannel = async () => {
                                setNewChatPopupMode('new_community');
                                setShowNewChatPopup(true);
                              }}
-                             className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#F7F8FA] hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200/60 dark:border-white/10 transition cursor-pointer"
+                             className="flex flex-col items-center gap-2 p-4 rounded-[22px] bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800/80 border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] transition cursor-pointer"
                          >
                              <div className="w-10 h-10 rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                                 <Users className="w-5 h-5" />
+                                 <Icon name="users" className="w-5 h-5" />
                              </div>
                              <span className="text-xs font-bold text-zinc-900 dark:text-white">Community</span>
                          </button>
@@ -7494,10 +7532,10 @@ const handleCreateChannel = async () => {
                          <button
                             type="button"
                             onClick={() => setSearchParams({}, { replace: true })}
-                            className="md:hidden w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition shrink-0 cursor-pointer"
+                            className="md:hidden w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-white dark:hover:bg-zinc-700/60 active:scale-95 transition shrink-0 cursor-pointer"
                             title="Back to Messages"
                           >
-                              <ChevronLeft className="w-5 h-5 text-zinc-900 dark:text-white stroke-[2.2]" />
+                              <MsgBackChevronIcon className="w-5 h-5 text-zinc-900 dark:text-white" />
                           </button>
 
                          <div
@@ -7546,12 +7584,12 @@ const handleCreateChannel = async () => {
                                      </p>
                                  ) : otherActivity === 'recording' ? (
                                      <p className="text-[12.5px] font-medium text-rose-500 flex items-center gap-1 truncate">
-                                         <Mic className="w-3 h-3 text-rose-500 shrink-0" />
+                                         <Icon name="mic" className="w-3 h-3 text-rose-500 shrink-0" />
                                          <span>recording voice...</span>
                                      </p>
                                  ) : otherActivity === 'uploading_photo' ? (
                                      <p className="text-[12.5px] font-medium text-[#2F80ED] flex items-center gap-1 truncate">
-                                         <ImageIcon className="w-3 h-3 shrink-0" />
+                                         <Icon name="image" className="w-3 h-3 shrink-0" />
                                          <span>sending photo...</span>
                                      </p>
                                  ) : otherActivity === 'choosing_gif' ? (
@@ -7629,7 +7667,7 @@ const handleCreateChannel = async () => {
                               )}
                               title={activeChat?.aiDisabled ? 'Turn AI Auto-Reply On' : 'Stop AI Auto-Reply for this user (1-click)'}
                             >
-                              <Bot className="w-3.5 h-3.5 shrink-0" />
+                              <Icon name="bot" className="w-3.5 h-3.5 shrink-0" />
                               <span>{activeChat?.aiDisabled ? 'AI Off' : 'AI On'}</span>
                             </button>
                           )}
@@ -7637,22 +7675,22 @@ const handleCreateChannel = async () => {
                          <button
                            type="button"
                            onClick={() => startCall("audio")}
-                           className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+                           className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-900 dark:text-white hover:bg-white dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
                            title="Voice Call"
                            aria-label="Voice Call"
                          >
-                           <Phone className="w-5 h-5 text-zinc-900 dark:text-white" />
+                           <Icon name="phone" className="w-5 h-5 text-zinc-900 dark:text-white" />
                          </button>
 
                          {/* Video Call Button matching IMG_5472 */}
                          <button
                            type="button"
                            onClick={() => startCall("video")}
-                           className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 text-zinc-900 dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+                           className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-900 dark:text-white hover:bg-white dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
                            title="Video Call"
                            aria-label="Video Call"
                          >
-                           <Video className="w-5 h-5 text-zinc-900 dark:text-white" />
+                           <Icon name="video" className="w-5 h-5 text-zinc-900 dark:text-white" />
                          </button>
 
                          {/* Conversation details menu button matching IMG_5472 */}
@@ -7665,11 +7703,11 @@ const handleCreateChannel = async () => {
                                setShowUserInfoModal(true);
                              }
                            }}
-                           className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 border border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                           className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-900 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
                            title="Conversation details"
                            aria-label="Conversation details"
                          >
-                           <MoreVertical className="w-5 h-5 text-zinc-900 dark:text-white" />
+                           <Icon name="more-vertical" className="w-5 h-5 text-zinc-900 dark:text-white" />
                          </button>
                       </div>
                  </div>
@@ -7706,7 +7744,7 @@ const handleCreateChannel = async () => {
                   )}
 
                   {activeChat?.pinnedMessage && (
-                    <div className="msg-sidebar border rounded-2xl px-3.5 py-2.5 mb-3 flex items-center justify-between text-xs shrink-0 z-10 shadow-xs">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-2xl px-3.5 py-2.5 mb-3 flex items-center justify-between text-xs shrink-0 z-10">
                       <div className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1" onClick={() => {
                         const targetMsg = messages.find(m => m.id === activeChat?.pinnedMessage.id);
                         if (targetMsg) {
@@ -7716,9 +7754,9 @@ const handleCreateChannel = async () => {
                           notify(`Pinned: ${activeChat?.pinnedMessage.text}`, "info");
                         }
                       }}>
-                        <Pin className="w-3.5 h-3.5 text-[#2F80ED] rotate-45 shrink-0" />
+                        <Icon name="pin" className="w-3.5 h-3.5 text-[#F246F5] rotate-45 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-semibold text-[11px] text-[#2F80ED]">Pinned message</p>
+                          <p className="font-semibold text-[11px] text-[#F246F5]">Pinned message</p>
                           <p className="text-zinc-600 dark:text-zinc-300 truncate max-w-full mt-0.5">
                             {activeChat?.pinnedMessage.text || "Attachment"}
                           </p>
@@ -7837,15 +7875,15 @@ const handleCreateChannel = async () => {
                                          highlightedMessageId === msg.id && "bg-[#2F80ED]/10 ring-1 ring-[#2F80ED]/40 px-2 py-1.5"
                                      )}
                                  >
-                                     {/* Sender Avatar ONLY in Multi-member Group Chats (1-on-1 DMs align cleanly to left margin like IMG_5359 right) */}
-                                     {isGroupChat && !isMe && (
-                                         <div className="w-7 h-7 shrink-0 self-end">
+                                     {/* Sender Avatar aligned beside bubble bottom matching IMG_5472 */}
+                                     {!isMe && (
+                                         <div className="w-7 h-7 shrink-0 self-end mb-5">
                                              {isLastInCluster ? (
                                                  <div className="w-7 h-7 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800">
                                                      {senderPhoto ? (
                                                          <img src={senderPhoto} alt={senderName} className="w-full h-full object-cover" />
                                                      ) : (
-                                                         <div className="w-full h-full flex items-center justify-center font-semibold text-[11px] bg-[#2F80ED]/12 text-[#2F80ED]">
+                                                         <div className="w-full h-full flex items-center justify-center font-semibold text-[11px] bg-[#F246F5]/12 text-[#F246F5]">
                                                              {(senderName || "U")[0].toUpperCase()}
                                                          </div>
                                                      )}
@@ -8036,27 +8074,31 @@ const handleCreateChannel = async () => {
 
                                          {/* AI Generated Disclaimer Label */}
                                          {(msg.isAiGenerated || msg.isAi || msg.senderId === 'ai' || msg.isBotReply) && (
-                                             <div className={cn("flex items-center gap-1 mt-1 px-1 text-[10.5px] font-medium text-zinc-400 dark:text-zinc-500 select-none", isMe ? "justify-end" : "justify-start")}>
-                                                 <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                                             <div className={cn("flex items-center gap-1 mt-1 px-1 text-[10.5px] font-medium text-zinc-500 dark:text-zinc-400 select-none", isMe ? "justify-end" : "justify-start")}>
+                                                 <Icon name="sparkles" className="w-3 h-3 text-amber-500 shrink-0" />
                                                  <span>AI generated message · AI can make mistakes</span>
                                              </div>
                                          )}
 
-                                         {/* Quiet Read Receipt on Final Outgoing Message Only (Keeps bubble stream clean like IMG_5359 right) */}
-                                         {!privacySettings.minimalistBubbles && isMe && idx === filteredMessages.length - 1 && (
-                                             <div className={cn(
-                                                 "flex items-center gap-1 px-1 select-none",
-                                                 reactionEntries.length > 0 ? "mt-3.5" : "mt-1"
-                                             )}>
+                                         {/* 12h Time Timestamp + Quiet Read Receipt matching IMG_5472 */}
+                                         <div className={cn(
+                                             "flex items-center gap-1.5 px-1 select-none",
+                                             reactionEntries.length > 0 ? "mt-3.5" : "mt-1",
+                                             isMe ? "justify-end" : "justify-start"
+                                         )}>
+                                             <span className="text-[11px] font-medium text-zinc-700/80 dark:text-zinc-400 tabular-nums">
+                                                 {formatTime12h(msg.timestamp)}
+                                             </span>
+                                             {!privacySettings.minimalistBubbles && isMe && idx === filteredMessages.length - 1 && (
                                                  <span className={cn(
-                                                     "inline-flex items-center gap-1 text-[11px] font-medium",
-                                                     isSeenByOther ? "text-[#2F80ED]" : "text-zinc-400 dark:text-zinc-500"
+                                                     "inline-flex items-center gap-0.5 text-[10.5px] font-medium",
+                                                     isSeenByOther ? "text-[#F246F5]" : "text-zinc-400 dark:text-zinc-500"
                                                  )}>
                                                      <MsgCheckDoubleIcon className="w-3.5 h-3.5" />
                                                      <span>{isSeenByOther ? "Seen" : (otherUserPresence?.isOnline ? "Delivered" : "Sent")}</span>
                                                  </span>
-                                             </div>
-                                         )}
+                                             )}
+                                         </div>
                                      </div>
                                  </motion.div>
                              </React.Fragment>
@@ -8065,7 +8107,7 @@ const handleCreateChannel = async () => {
                      {!hasReviewed && activeChat?.otherUser?.id && activeChat?.otherUser?.id !== "system" && (!reviewDismissedAt || (Date.now() - reviewDismissedAt >= 24 * 60 * 60 * 1000)) && (messages.length >= 4 || (messages.length > 0 && (Date.now() - messages[messages.length - 1].timestamp) > 3600000)) && (
                        <div className="flex justify-center my-6">
                          <div
-                           className="msg-sidebar border rounded-2xl p-4 max-w-sm w-full text-center shadow-sm hover:shadow-md transition cursor-pointer relative"
+                           className="bg-white/90 dark:bg-zinc-900/80 border-0 rounded-[24px] p-4 max-w-sm w-full text-center shadow-[0_4px_20px_rgba(120,90,160,0.06)] hover:shadow-[0_6px_24px_rgba(120,90,160,0.1)] transition cursor-pointer relative"
                            onClick={() => { setShowReviewModal(true); }}
                          >
                            <button
@@ -8082,11 +8124,11 @@ const handleCreateChannel = async () => {
                              <MsgCloseIcon className="w-3.5 h-3.5" />
                            </button>
                            <div className="flex items-center justify-center gap-1 mb-2 text-amber-500">
-                             <Star className="w-4 h-4 fill-amber-500" />
-                             <Star className="w-4 h-4 fill-amber-500" />
-                             <Star className="w-4 h-4 fill-amber-500" />
-                             <Star className="w-4 h-4 fill-amber-500" />
-                             <Star className="w-4 h-4 fill-amber-500" />
+                             <Icon name="star" solid className="w-4 h-4 text-amber-500" />
+                             <Icon name="star" solid className="w-4 h-4 text-amber-500" />
+                             <Icon name="star" solid className="w-4 h-4 text-amber-500" />
+                             <Icon name="star" solid className="w-4 h-4 text-amber-500" />
+                             <Icon name="star" solid className="w-4 h-4 text-amber-500" />
                            </div>
                            <h4 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
                              Rate Your Experience
@@ -8137,7 +8179,7 @@ const handleCreateChannel = async () => {
                                      className="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition shrink-0 cursor-pointer"
                                      title="Cancel reply"
                                  >
-                                     <X className="w-4 h-4" />
+                                     <Icon name="x" className="w-4 h-4" />
                                  </button>
                              </motion.div>
                          )}
@@ -8198,10 +8240,10 @@ const handleCreateChannel = async () => {
               <button
                 type="button"
                 onClick={() => endCall()}
-                className="w-11 h-11 rounded-full bg-white dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-white/10 flex items-center justify-center text-zinc-900 dark:text-white hover:bg-zinc-50 active:scale-95 transition cursor-pointer"
+                className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.08)] flex items-center justify-center text-zinc-900 dark:text-white hover:bg-white active:scale-95 transition cursor-pointer"
                 title="Back"
               >
-                <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
+                <MsgBackChevronIcon className="w-5 h-5" />
               </button>
 
               <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
@@ -8308,58 +8350,58 @@ const handleCreateChannel = async () => {
               <button 
                 type="button" 
                 onClick={() => notify("Invite link copied to clipboard", "success")} 
-                className="w-12 h-12 rounded-full bg-white/90 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-white/10 text-zinc-800 dark:text-zinc-200 flex items-center justify-center hover:bg-zinc-100 active:scale-95 transition cursor-pointer"
+                className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.08)] text-zinc-800 dark:text-zinc-200 flex items-center justify-center hover:bg-white active:scale-95 transition cursor-pointer"
                 title="Invite to call"
               >
-                <UserPlus className="w-5 h-5" />
+                <Icon name="user-plus" className="w-5 h-5" />
               </button>
 
               {/* 2. Video Camera Toggle */}
               <button 
                 type="button" 
                 onClick={() => setCallType(prev => prev === "video" ? "audio" : "video")} 
-                className="w-12 h-12 rounded-full bg-white/90 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-white/10 text-zinc-800 dark:text-zinc-200 flex items-center justify-center hover:bg-zinc-100 active:scale-95 transition cursor-pointer"
+                className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.08)] text-zinc-800 dark:text-zinc-200 flex items-center justify-center hover:bg-white active:scale-95 transition cursor-pointer"
                 title="Camera"
               >
-                <Video className="w-5 h-5" />
+                <Icon name="video" className="w-5 h-5" />
               </button>
 
               {/* 3. Large Red End Call Button (IMG_5469 & IMG_5474) */}
               <button 
                 type="button" 
                 onClick={() => endCall()} 
-                className="w-16 h-16 rounded-full bg-[#FF3B30] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition cursor-pointer"
+                className="w-16 h-16 rounded-full bg-[#FF3B30] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition cursor-pointer shadow-[0_8px_24px_rgba(255,59,48,0.3)]"
                 title="End Call"
               >
-                <PhoneOff className="w-7 h-7 text-white" />
+                <Icon name="phone-off" className="w-7 h-7 text-white" />
               </button>
 
               {/* 4. Mic Toggle */}
               <button 
                 type="button" 
                 onClick={() => setIsMuted(!isMuted)} 
-                className={`w-12 h-12 rounded-full shadow-sm border flex items-center justify-center active:scale-95 transition cursor-pointer ${
+                className={`w-12 h-12 rounded-full border-0 shadow-[0_4px_16px_rgba(120,90,160,0.08)] flex items-center justify-center active:scale-95 transition cursor-pointer ${
                   isMuted 
-                    ? "bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/40 dark:border-rose-900" 
-                    : "bg-white/90 dark:bg-zinc-800/90 border-zinc-200/60 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                    ? "bg-rose-500 text-white" 
+                    : "bg-white/95 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200"
                 }`}
                 title={isMuted ? "Unmute" : "Mute"}
               >
-                {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                {isMuted ? <Icon name="mic-off" className="w-5 h-5" /> : <Icon name="mic" className="w-5 h-5" />}
               </button>
 
               {/* 5. Speaker Toggle */}
               <button 
                 type="button" 
                 onClick={() => setIsSpeaker(!isSpeaker)} 
-                className={`w-12 h-12 rounded-full shadow-sm border flex items-center justify-center active:scale-95 transition cursor-pointer ${
+                className={`w-12 h-12 rounded-full border-0 shadow-[0_4px_16px_rgba(120,90,160,0.08)] flex items-center justify-center active:scale-95 transition cursor-pointer ${
                   isSpeaker 
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-900" 
-                    : "bg-white/90 dark:bg-zinc-800/90 border-zinc-200/60 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                    ? "bg-[#F246F5] text-white" 
+                    : "bg-white/95 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200"
                 }`}
                 title="Speaker"
               >
-                <Volume2 className="w-5 h-5" />
+                <Icon name="volume-2" className="w-5 h-5" />
               </button>
             </div>
           </motion.div>
@@ -8484,24 +8526,24 @@ const handleCreateChannel = async () => {
       {/* Review Dialog Modal */}
       <AnimatePresence>
         {showReviewModal && (
-          <div className="fixed inset-0 z-[10000] bg-white dark:bg-zinc-950 overflow-y-auto">
+          <div className="fixed inset-0 z-[10000] ambient-dynamic-bg overflow-y-auto">
             <motion.div 
               initial={{ opacity: 0, y: "100%" }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: "100%" }}
-              className="bg-white dark:bg-zinc-950 min-h-screen w-full flex flex-col max-w-lg mx-auto p-6 font-inter"
+              className="min-h-screen w-full flex flex-col max-w-lg mx-auto p-6 font-inter relative"
             >
               <button 
                 type="button"
                 onClick={() => setShowReviewModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-400 hover:text-zinc-600 transition"
+                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-700 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <Icon name="x" className="w-5 h-5" />
               </button>
 
-              <div className="text-center mb-6">
-                <div className="inline-flex p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 mb-3 animate-pulse">
-                  <Star className="w-8 h-8 fill-amber-500" />
+              <div className="text-center mb-6 pt-4">
+                <div className="inline-flex p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 mb-3">
+                  <Icon name="star" solid className="w-8 h-8 text-amber-500" />
                 </div>
                 <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
                   Leave a Review
@@ -8518,11 +8560,13 @@ const handleCreateChannel = async () => {
                     key={star}
                     type="button"
                     onClick={() => setReviewRating(star)}
-                    className="p-1 hover:scale-110 active:scale-95 transition"
+                    className="p-1 hover:scale-110 active:scale-95 transition cursor-pointer"
                   >
-                    <Star 
+                    <Icon 
+                      name="star"
+                      solid={star <= reviewRating}
                       className={`w-10 h-10 ${
-                        star <= reviewRating ? "text-amber-500 fill-amber-500" : "text-zinc-300 dark:text-zinc-700"
+                        star <= reviewRating ? "text-amber-500" : "text-zinc-300 dark:text-zinc-700"
                       }`}
                     />
                   </button>
@@ -8539,7 +8583,7 @@ const handleCreateChannel = async () => {
                   onChange={(e) => setReviewText(e.target.value)}
                   placeholder="Tell us more about the trade, behavior, response time..."
                   rows={4}
-                  className="w-full text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 outline-none focus:ring-2 ring-emerald-500/50 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 resize-none"
+                  className="w-full text-sm bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-2xl p-4 outline-none focus:ring-2 ring-[#F246F5]/40 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 resize-none"
                 />
               </div>
 
@@ -8548,7 +8592,7 @@ const handleCreateChannel = async () => {
                 <button
                   type="button"
                   onClick={() => setShowReviewModal(false)}
-                  className="flex-1 py-3 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-2xl font-bold text-sm transition-colors"
+                  className="flex-1 py-3.5 bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full font-bold text-sm shadow-[0_4px_16px_rgba(120,90,160,0.05)] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -8556,10 +8600,10 @@ const handleCreateChannel = async () => {
                   type="button"
                   disabled={isSubmittingReview}
                   onClick={handleSubmitReview}
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-900 dark:text-white rounded-2xl font-bold text-sm transition-all shadow-md shadow-emerald-600/10 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-55"
+                  className="flex-1 py-3.5 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full font-bold text-sm transition-all shadow-[0_6px_18px_rgba(242,70,245,0.25)] active:scale-95 flex items-center justify-center gap-2 disabled:opacity-55 cursor-pointer"
                 >
                   {isSubmittingReview ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <Icon name="loader-2" className="w-5 h-5 animate-spin" />
                   ) : (
                     <span>Submit Review</span>
                   )}
@@ -8574,20 +8618,20 @@ const handleCreateChannel = async () => {
       <AnimatePresence>
         {showCreateChannelModal && (
           <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateChannelModal(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCreateChannelModal(false)} />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-              className="w-full max-w-md bg-white dark:bg-[#111111] rounded-3xl overflow-hidden relative z-10 font-inter shadow-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-[90vh]"
+              className="w-full max-w-md ambient-dynamic-bg rounded-[32px] overflow-hidden relative z-10 font-inter shadow-2xl border-0 flex flex-col max-h-[90vh]"
             >
-              <div className="p-6 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md z-20">
+              <div className="px-5 py-4 flex items-center justify-between sticky top-0 z-20">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    <div className="w-10 h-10 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center">
+                        <Icon name="sparkles" className="w-5 h-5 text-[#F246F5]" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-none mb-1">
+                        <h3 className="text-[17px] font-bold text-zinc-950 dark:text-zinc-100 leading-none mb-1">
                           {isEditingChannel ? 'Edit Channel' : 'New Channel'}
                         </h3>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">Broadcast your updates</p>
@@ -8596,26 +8640,26 @@ const handleCreateChannel = async () => {
                 <button 
                   type="button"
                   onClick={() => setShowCreateChannelModal(false)}
-                  className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800/50 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition"
+                  className="w-10 h-10 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-700 dark:text-zinc-300 hover:bg-white transition flex items-center justify-center cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <Icon name="x" className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-6 overflow-y-auto space-y-5">
+              <div className="px-5 pb-5 pt-2 overflow-y-auto space-y-5">
                 {/* Cover Image Upload (Stylish) */}
                 <div className="flex flex-col items-center justify-center">
                   <div 
                       onClick={() => { const el = document.getElementById('channel-img-upload'); if(el) el.click(); }}
-                      className="w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-emerald-500/50 flex items-center justify-center cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition group relative bg-zinc-50 dark:bg-zinc-900"
+                      className="w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-[#F246F5]/60 flex items-center justify-center cursor-pointer hover:bg-[#F246F5]/5 transition group relative bg-white/90 dark:bg-zinc-900/80 shadow-[0_4px_18px_rgba(120,90,160,0.08)]"
                   >
                       {chanImagePreview ? (
                           <img src={chanImagePreview} alt="Preview" className="w-full h-full object-cover group-hover:opacity-50 transition" />
                       ) : (
-                          <ImageIcon className="w-8 h-8 text-emerald-500/50 group-hover:text-emerald-500 transition" />
+                          <Icon name="image" className="w-8 h-8 text-[#F246F5]/60 group-hover:text-[#F246F5] transition" />
                       )}
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Plus className="w-6 h-6 text-white" />
+                          <Icon name="plus" className="w-6 h-6 text-white" />
                       </div>
                   </div>
                   <input
@@ -8643,7 +8687,7 @@ const handleCreateChannel = async () => {
                         value={chanName}
                         onChange={(e) => setChanName(e.target.value)}
                         placeholder="e.g. Vintage Gadgets Elite"
-                        className="w-full text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl px-4 py-3 outline-none focus:ring-2 ring-emerald-500/50 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+                        className="w-full text-sm bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-2xl px-4 py-3 outline-none focus:ring-2 ring-[#F246F5]/40 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
                       />
                     </div>
 
@@ -8652,13 +8696,13 @@ const handleCreateChannel = async () => {
                         Handle (Unique)
                       </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-[14px] text-zinc-400 text-sm font-bold">@</span>
+                        <span className="absolute left-4 top-[13px] text-zinc-400 text-sm font-bold">@</span>
                         <input
                           type="text"
                           value={chanLink}
                           onChange={(e) => setChanLink(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                           placeholder="vintage_elite"
-                          className="w-full text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl pl-8 pr-4 py-3 outline-none focus:ring-2 ring-emerald-500/50 text-zinc-900 dark:text-zinc-100 font-semibold placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+                          className="w-full text-sm bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-2xl pl-8 pr-4 py-3 outline-none focus:ring-2 ring-[#F246F5]/40 text-zinc-900 dark:text-zinc-100 font-semibold placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
                         />
                       </div>
                     </div>
@@ -8672,11 +8716,11 @@ const handleCreateChannel = async () => {
                         onChange={(e) => setChanDesc(e.target.value)}
                         placeholder="What is this channel about?"
                         rows={2}
-                        className="w-full text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-2xl px-4 py-3 outline-none focus:ring-2 ring-emerald-500/50 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 resize-none transition-all"
+                        className="w-full text-sm bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-2xl px-4 py-3 outline-none focus:ring-2 ring-[#F246F5]/40 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 resize-none transition-all"
                       />
                     </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Private Channel
@@ -8688,7 +8732,7 @@ const handleCreateChannel = async () => {
                       <button
                         type="button"
                         onClick={() => setChanIsPrivate(!chanIsPrivate)}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${chanIsPrivate ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${chanIsPrivate ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${chanIsPrivate ? 'translate-x-5' : 'translate-x-0'}`}
@@ -8698,21 +8742,21 @@ const handleCreateChannel = async () => {
                 </div>
               </div>
 
-              <div className="p-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900/50 flex gap-3">
+              <div className="p-5 flex gap-3">
                 <button
                   type="button"
                   onClick={() => setShowCreateChannelModal(false)}
-                  className="flex-1 py-3 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold transition hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                  className="flex-1 py-3 rounded-full bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] text-zinc-900 dark:text-white font-bold transition hover:bg-white dark:hover:bg-zinc-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateCommunityChannel}
                   disabled={isCreatingChannel || !chanName.trim() || !chanLink.trim()}
-                  className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2"
+                  className="flex-1 py-3 rounded-full bg-[#F246F5] hover:bg-[#e135e4] text-white font-bold shadow-[0_6px_18px_rgba(242,70,245,0.25)] disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2 cursor-pointer"
                 >
                   {isCreatingChannel ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Icon name="loader-2" className="w-5 h-5 animate-spin" />
                   ) : (
                       <>{isEditingChannel ? 'Save' : 'Create'}</>
                   )}
@@ -8840,20 +8884,20 @@ const handleCreateChannel = async () => {
       <AnimatePresence>
         {showPrivacySettingsModal && (
           <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPrivacySettingsModal(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowPrivacySettingsModal(false)} />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-              className="w-full max-w-md bg-white dark:bg-[#111111] rounded-3xl overflow-hidden relative z-10 font-inter shadow-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-[90vh]"
+              className="w-full max-w-md ambient-dynamic-bg rounded-[32px] overflow-hidden relative z-10 font-inter shadow-2xl border-0 flex flex-col max-h-[90vh]"
             >
-              <div className="p-6 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between sticky top-0 bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md z-20">
+              <div className="px-5 py-4 flex items-center justify-between sticky top-0 z-20">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                        <Settings className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    <div className="w-10 h-10 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center">
+                        <Icon name="settings" className="w-5 h-5 text-[#F246F5]" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-none mb-1">
+                        <h3 className="text-[17px] font-bold text-zinc-950 dark:text-zinc-100 leading-none mb-1">
                           Privacy & Settings
                         </h3>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">Manage your communication</p>
@@ -8862,20 +8906,20 @@ const handleCreateChannel = async () => {
                 <button 
                   type="button"
                   onClick={() => setShowPrivacySettingsModal(false)}
-                  className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800/50 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition"
+                  className="w-10 h-10 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-700 dark:text-zinc-300 hover:bg-white transition flex items-center justify-center cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <Icon name="x" className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-6 overflow-y-auto space-y-6">
+              <div className="px-5 pb-5 pt-2 overflow-y-auto space-y-6">
                 {/* Privacy & Security Section */}
                 <div className="space-y-3">
-                    <h4 className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest ml-1">
+                    <h4 className="text-[11px] font-extrabold text-[#F246F5] uppercase tracking-widest ml-1">
                         Privacy & Security
                     </h4>
                     
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Allow Direct Messages
@@ -8891,13 +8935,13 @@ const handleCreateChannel = async () => {
                           setPrivacySettings(prev => ({ ...prev, allowDirectMessages: val }));
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.allowDirectMessages': val });
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.allowDirectMessages ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.allowDirectMessages ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.allowDirectMessages ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Online Presence Indicator
@@ -8913,13 +8957,13 @@ const handleCreateChannel = async () => {
                           setPrivacySettings(prev => ({ ...prev, showOnlineStatus: val }));
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.showOnlineStatus': val });
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.showOnlineStatus ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.showOnlineStatus ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.showOnlineStatus ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Biometric & PIN Passcode Lock
@@ -8936,13 +8980,13 @@ const handleCreateChannel = async () => {
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.biometricLock': val });
                           notify(val ? "PIN Passcode Lock Enabled" : "PIN Lock Disabled", val ? "success" : "info");
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.biometricLock ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.biometricLock ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.biometricLock ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Disappearing Messages (24h)
@@ -8959,7 +9003,7 @@ const handleCreateChannel = async () => {
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.disappearingMessages': val });
                           notify(val ? "Disappearing Messages (24h) Turned On" : "Disappearing Messages Turned Off", "info");
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.disappearingMessages ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.disappearingMessages ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.disappearingMessages ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
@@ -8968,11 +9012,11 @@ const handleCreateChannel = async () => {
 
                 {/* Appearance & Themes Section */}
                 <div className="space-y-3">
-                    <h4 className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest ml-1">
+                    <h4 className="text-[11px] font-extrabold text-[#F246F5] uppercase tracking-widest ml-1">
                         Design & Styling
                     </h4>
                     
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Liquid Glass Mode
@@ -8988,13 +9032,13 @@ const handleCreateChannel = async () => {
                           setPrivacySettings(prev => ({ ...prev, liquidGlassMode: val }));
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.liquidGlassMode': val });
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.liquidGlassMode ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.liquidGlassMode ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.liquidGlassMode ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           High Contrast Typography
@@ -9010,7 +9054,7 @@ const handleCreateChannel = async () => {
                           setPrivacySettings(prev => ({ ...prev, highContrastFonts: val }));
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.highContrastFonts': val });
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.highContrastFonts ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.highContrastFonts ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.highContrastFonts ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
@@ -9019,11 +9063,11 @@ const handleCreateChannel = async () => {
 
                 {/* Interactive Controls */}
                 <div className="space-y-3">
-                    <h4 className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest ml-1">
+                    <h4 className="text-[11px] font-extrabold text-[#F246F5] uppercase tracking-widest ml-1">
                         Chat & Audio Controls
                     </h4>
                     
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Apple Haptic Feedback
@@ -9039,13 +9083,13 @@ const handleCreateChannel = async () => {
                           setPrivacySettings(prev => ({ ...prev, hapticTouchFeedback: val }));
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.hapticTouchFeedback': val });
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.hapticTouchFeedback ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.hapticTouchFeedback ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.hapticTouchFeedback ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Auto-Play Voice Notes
@@ -9061,13 +9105,13 @@ const handleCreateChannel = async () => {
                           setPrivacySettings(prev => ({ ...prev, autoPlayVoice: val }));
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.autoPlayVoice': val });
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.autoPlayVoice ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.autoPlayVoice ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.autoPlayVoice ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
-                    <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
                         <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
                           Do Not Disturb Mode
@@ -9083,7 +9127,7 @@ const handleCreateChannel = async () => {
                           setPrivacySettings(prev => ({ ...prev, doNotDisturb: val }));
                           if (user) await updateDoc(doc(db, 'users', user.uid), { 'privacy.doNotDisturb': val });
                         }}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.doNotDisturb ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${privacySettings.doNotDisturb ? 'bg-[#F246F5]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacySettings.doNotDisturb ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
@@ -9091,11 +9135,11 @@ const handleCreateChannel = async () => {
                 </div>
               </div>
 
-              <div className="p-6 border-t border-zinc-100 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900/50">
+              <div className="p-5">
                 <button
                   type="button"
                   onClick={() => setShowPrivacySettingsModal(false)}
-                  className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20 transition flex justify-center items-center"
+                  className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] text-white font-bold shadow-[0_6px_18px_rgba(242,70,245,0.25)] transition flex justify-center items-center cursor-pointer"
                 >
                   Close Settings
                 </button>
@@ -9155,15 +9199,15 @@ const handleCreateChannel = async () => {
                     setForwardSearchQuery('');
                     setForwardedTargetsMap({});
                   }}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-white/[0.08] hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-white/90 dark:bg-white/[0.08] shadow-[0_4px_14px_rgba(120,90,160,0.06)] text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer"
                   aria-label="Close forward sheet"
                 >
-                  <X className="w-4 h-4" />
+                  <Icon name="x" className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Message Preview Strip */}
-              <div className="mx-5 mt-3.5 p-3 rounded-2xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200/70 dark:border-white/[0.07] flex items-center gap-3 shrink-0">
+              <div className="mx-5 mt-3.5 p-3 rounded-2xl bg-white/85 dark:bg-white/[0.04] border-0 shadow-[0_4px_14px_rgba(120,90,160,0.04)] flex items-center gap-3 shrink-0">
                 {(forwardingMessage.images?.[0] || forwardingMessage.imageUrl) ? (
                   <ProgressiveImage
                     src={forwardingMessage.images?.[0] || forwardingMessage.imageUrl}
@@ -9173,8 +9217,8 @@ const handleCreateChannel = async () => {
                     className="w-full h-full object-cover"
                   />
                 ) : forwardingMessage.audioUrl ? (
-                  <div className="w-10 h-10 rounded-xl bg-[#2F80ED]/12 text-[#2F80ED] flex items-center justify-center shrink-0">
-                    <Mic className="w-4 h-4" />
+                  <div className="w-10 h-10 rounded-xl bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center shrink-0">
+                    <Icon name="mic" className="w-4 h-4" />
                   </div>
                 ) : (
                   <div className="w-10 h-10 rounded-xl bg-zinc-200/70 dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
@@ -9198,8 +9242,8 @@ const handleCreateChannel = async () => {
 
               {/* Instant Recipient Search */}
               <div className="px-5 pt-3 pb-2 shrink-0">
-                <div className="h-10 px-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.06] flex items-center gap-2.5">
-                  <Search className="w-4 h-4 text-zinc-400 shrink-0" />
+                <div className="h-10 px-3.5 rounded-full bg-white/85 dark:bg-white/[0.06] shadow-[0_4px_14px_rgba(120,90,160,0.04)] flex items-center gap-2.5">
+                  <Icon name="search" className="w-4 h-4 text-zinc-400 shrink-0" />
                   <input
                     type="text"
                     value={forwardSearchQuery}
@@ -9213,7 +9257,7 @@ const handleCreateChannel = async () => {
                       onClick={() => setForwardSearchQuery('')}
                       className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <Icon name="x" className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -9324,15 +9368,15 @@ const handleCreateChannel = async () => {
                                     disabled={isSent}
                                     onClick={() => handleSendForward(c, false)}
                                     className={cn(
-                                      'h-9 min-w-[74px] px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0',
+                                      'h-9 min-w-[74px] px-4 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0',
                                       isSent
                                         ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-300 cursor-default'
-                                        : 'bg-[#2F80ED] hover:bg-[#256FDB] text-white shadow-xs cursor-pointer'
+                                        : 'bg-[#F246F5] hover:bg-[#e135e4] text-white shadow-[0_4px_14px_rgba(242,70,245,0.25)] cursor-pointer'
                                     )}
                                   >
                                     {isSent ? (
                                       <>
-                                        <Check className="w-3.5 h-3.5" />
+                                        <Icon name="check" className="w-3.5 h-3.5" />
                                         <span>Sent</span>
                                       </>
                                     ) : (
@@ -9388,15 +9432,15 @@ const handleCreateChannel = async () => {
                                     disabled={isSent}
                                     onClick={() => handleSendForward(ch, true)}
                                     className={cn(
-                                      'h-9 min-w-[74px] px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0',
+                                      'h-9 min-w-[74px] px-4 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0',
                                       isSent
                                         ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-300 cursor-default'
-                                        : 'bg-[#2F80ED] hover:bg-[#256FDB] text-white shadow-xs cursor-pointer'
+                                        : 'bg-[#F246F5] hover:bg-[#e135e4] text-white shadow-[0_4px_14px_rgba(242,70,245,0.25)] cursor-pointer'
                                     )}
                                   >
                                     {isSent ? (
                                       <>
-                                        <Check className="w-3.5 h-3.5" />
+                                        <Icon name="check" className="w-3.5 h-3.5" />
                                         <span>Sent</span>
                                       </>
                                     ) : (
@@ -9522,15 +9566,15 @@ const handleCreateChannel = async () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl font-inter flex flex-col relative border border-zinc-200 dark:border-zinc-800"
+              className="ambient-dynamic-bg w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl font-inter flex flex-col relative border-0"
             >
-              <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
+              <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-[#EF8020]" />
+                  <Icon name="image" className="w-5 h-5 text-[#F246F5]" />
                   <h3 className="font-extrabold text-base text-zinc-900 dark:text-zinc-100">Change Chat Wallpaper</h3>
                 </div>
-                <button onClick={() => setShowWallpaperModal(false)} className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition">
-                  <X className="w-5 h-5" />
+                <button onClick={() => setShowWallpaperModal(false)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer">
+                  <Icon name="x" className="w-5 h-5" />
                 </button>
               </div>
 
@@ -9587,7 +9631,7 @@ const handleCreateChannel = async () => {
                       placeholder="Paste image address (https://...)"
                       className="flex-1 px-4 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 ring-[#EF8020] text-zinc-800 dark:text-zinc-200"
                     />
-                    <button type="submit" className="px-4 py-2 bg-[#EF8020] text-white text-xs font-bold rounded-xl hover:bg-[#d87018] transition-colors">
+                    <button type="submit" className="px-4 py-2 bg-[#F246F5] text-white text-xs font-bold rounded-full hover:bg-[#e135e4] transition-colors cursor-pointer">
                       Apply
                     </button>
                   </form>
@@ -9604,9 +9648,9 @@ const handleCreateChannel = async () => {
                         setShowWallpaperModal(false);
                       }
                     }}
-                    className="w-full py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 rounded-full text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Trash className="w-4 h-4" />
+                    <Icon name="trash" className="w-4 h-4" />
                     <span>Reset to Default Wallpaper</span>
                   </button>
                 )}
@@ -9633,8 +9677,8 @@ const handleCreateChannel = async () => {
                   </div>
                   <h3 className="font-bold text-[16px] text-zinc-900 dark:text-zinc-100">Call Unavailable</h3>
                 </div>
-                <button onClick={() => setDisabledCallUser(null)} className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">
-                  <X className="w-5 h-5 text-zinc-500" />
+                <button onClick={() => setDisabledCallUser(null)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
+                  <Icon name="x" className="w-5 h-5 text-zinc-500" />
                 </button>
               </div>
               <div className="mb-6">
@@ -9665,8 +9709,8 @@ const handleCreateChannel = async () => {
             >
               <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
                 <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Auto-Delete</h3>
-                <button onClick={() => setShowAutoDeleteModal(false)} className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-200 dark:bg-zinc-800 transition">
-                  <X className="w-5 h-5 text-zinc-500" />
+                <button onClick={() => setShowAutoDeleteModal(false)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
+                  <Icon name="x" className="w-5 h-5 text-zinc-500" />
                 </button>
               </div>
               <div className="p-4 space-y-2">
@@ -9727,8 +9771,8 @@ const handleCreateChannel = async () => {
             >
               <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
                 <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Clear Chat</h3>
-                <button onClick={() => setShowClearChatModal(false)} className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-200 dark:bg-zinc-800 transition">
-                  <X className="w-5 h-5 text-zinc-500" />
+                <button onClick={() => setShowClearChatModal(false)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
+                  <Icon name="x" className="w-5 h-5 text-zinc-500" />
                 </button>
               </div>
               <div className="p-6 space-y-4">
@@ -9836,9 +9880,9 @@ const handleCreateChannel = async () => {
                 </div>
                 <button 
                   onClick={() => setShowLiveCallModal(false)}
-                  className="p-1 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition"
+                  className="p-1.5 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <Icon name="x" className="w-5 h-5" />
                 </button>
               </div>
 
@@ -9907,7 +9951,7 @@ const handleCreateChannel = async () => {
                                 className={`p-1 rounded-lg text-xs font-bold transition ${p.muted ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"}`}
                                 title={p.muted ? "Unmute Participant" : "Mute Participant"}
                               >
-                                {p.muted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                                {p.muted ? <Icon name="mic-off" className="w-3.5 h-3.5" /> : <Icon name="mic" className="w-3.5 h-3.5" />}
                               </button>
                               <button
                                 onClick={() => handleRemoveParticipant(p.uid)}
@@ -9919,7 +9963,7 @@ const handleCreateChannel = async () => {
                             </>
                           ) : (
                             <span className={`p-1 ${p.muted ? "text-zinc-600" : "text-emerald-400"}`}>
-                              {p.muted ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 animate-pulse" />}
+                              {p.muted ? <Icon name="mic-off" className="w-3.5 h-3.5" /> : <Icon name="mic" className="w-3.5 h-3.5 animate-pulse" />}
                             </span>
                           )}
                         </div>
@@ -9945,7 +9989,7 @@ const handleCreateChannel = async () => {
                     className={`w-12 h-12 rounded-full flex items-center justify-center transition shadow-md ${isLiveMuted ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-emerald-500 text-zinc-950 hover:bg-emerald-400 scale-105 shadow-emerald-500/10"}`}
                     title={isLiveMuted ? "Unmute Microphone" : "Mute Microphone"}
                   >
-                    {isLiveMuted ? <MicOff className="w-5.5 h-5.5" /> : <Mic className="w-5.5 h-5.5" />}
+                    {isLiveMuted ? <Icon name="mic-off" className="w-5.5 h-5.5" /> : <Icon name="mic" className="w-5.5 h-5.5" />}
                   </button>
                   
                   {activeLiveCall.hostId === user?.uid ? (
@@ -9962,7 +10006,7 @@ const handleCreateChannel = async () => {
                       className="w-12 h-12 bg-red-600/10 hover:bg-red-600/20 text-red-500 rounded-full flex items-center justify-center transition"
                       title="Leave Stream"
                     >
-                      <LogOut className="w-5.5 h-5.5" />
+                      <Icon name="log-out" className="w-5.5 h-5.5" />
                     </button>
                   )}
                 </div>

@@ -2,41 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Shield,
-  ShieldAlert,
-  Palette,
-  Plus,
-  Smile,
-  SlidersHorizontal,
-  Image as ImageIcon,
-  Sparkles,
-  MoreVertical,
-  Globe,
-  Heart,
-  MessageCircle,
-  Send,
-  Bookmark,
-  ShoppingBag,
-  LayoutDashboard,
-  TrendingUp,
-  Search,
-  Edit3,
-  Trash2,
-  Eye as EyeIcon,
-  UserPlus,
-  UserCheck,
-  X,
-  User as UserIcon,
-  Clock,
-  MapPin,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Check,
-  Star,
-  Users,
-} from "lucide-react";
 import { CreateChooserModal } from "../components/CreateChooserModal";
 import { DottedGhostCatIcon } from "../components/ComposerLiquidGlassSheets";
 import {
@@ -46,6 +11,7 @@ import {
 import { AdPlacementSlot } from "../components/AdPlacementSlot";
 import { preloadImageUrl } from "../components/SmoothImage";
 import { LoopsSvgIcon } from "../components/LoopsSvgIcon";
+import Icon from "../components/Icon";
 
 const RepeatIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <LoopsSvgIcon name="loops-post-repost" className={className} />
@@ -92,7 +58,6 @@ import {
   FEED_THEMES, 
   getFeedThemeMeta 
 } from "../lib/feed-themes";
-import Icon from "../components/Icon";
 import {
   getSavedPostIdsLocal,
   toggleSavePostHelper,
@@ -1561,7 +1526,7 @@ export const NewsHub: React.FC = () => {
                   }}
                   className="w-full py-2.5 px-4 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-sm font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer whitespace-nowrap"
                 >
-                  <Plus className="w-4 h-4 shrink-0" />
+                  <Icon name="plus" className="w-4 h-4 shrink-0" />
                   <span>Create a Loop</span>
                 </button>
 
@@ -1571,7 +1536,7 @@ export const NewsHub: React.FC = () => {
                   className="w-full py-2.5 px-4 rounded-2xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm font-semibold flex items-center justify-between gap-3 text-left cursor-pointer whitespace-nowrap"
                 >
                   <span className="flex items-center gap-3">
-                    <Heart className="w-4 h-4 text-[#FF3040] shrink-0" />
+                    <Icon name="heart" className="w-4 h-4 text-[#FF3040] shrink-0" />
                     <span>My Activity</span>
                   </span>
                   {unreadNewsNotifications > 0 && (
@@ -1586,7 +1551,7 @@ export const NewsHub: React.FC = () => {
                   onClick={() => navigate("/creator-dashboard")}
                   className="w-full py-2.5 px-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 hover:bg-blue-100/80 dark:hover:bg-blue-900/40 text-sm font-bold text-[#0095F6] flex items-center gap-3 text-left cursor-pointer whitespace-nowrap"
                 >
-                  <LayoutDashboard className="w-4 h-4 shrink-0" />
+                  <Icon name="layout-dashboard" className="w-4 h-4 shrink-0" />
                   <span>Creator Dashboard</span>
                 </button>
 
@@ -1595,7 +1560,7 @@ export const NewsHub: React.FC = () => {
                   onClick={() => navigate("/loops/search")}
                   className="w-full py-2.5 px-4 rounded-2xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm font-medium flex items-center gap-3 text-left cursor-pointer whitespace-nowrap"
                 >
-                  <Search className="w-4 h-4 text-[#0095F6] shrink-0" />
+                  <Icon name="search" className="w-4 h-4 text-[#0095F6] shrink-0" />
                   <span>Explore & Search</span>
                 </button>
 
@@ -1604,7 +1569,7 @@ export const NewsHub: React.FC = () => {
                   onClick={() => navigate("/loops/personalization")}
                   className="w-full py-2.5 px-4 rounded-2xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm font-medium flex items-center gap-3 text-left cursor-pointer whitespace-nowrap"
                 >
-                  <Palette className="w-4 h-4 text-[#0095F6] shrink-0" />
+                  <Icon name="palette" className="w-4 h-4 text-[#0095F6] shrink-0" />
                   <span>Feed Personalization</span>
                 </button>
 
@@ -1613,7 +1578,7 @@ export const NewsHub: React.FC = () => {
                   onClick={() => navigate("/loops/saved")}
                   className="w-full py-2.5 px-4 rounded-2xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm font-medium flex items-center gap-3 text-left cursor-pointer whitespace-nowrap"
                 >
-                  <Bookmark className="w-4 h-4 text-[#0095F6] shrink-0" />
+                  <Icon name="bookmark" className="w-4 h-4 text-[#0095F6] shrink-0" />
                   <span>Saved Loops ({savedIds.length})</span>
                 </button>
 
@@ -1622,7 +1587,7 @@ export const NewsHub: React.FC = () => {
                   onClick={() => navigate("/")}
                   className="w-full py-2.5 px-4 rounded-2xl hover:bg-slate-100 dark:hover:bg-zinc-800 text-sm font-medium flex items-center gap-3 text-left cursor-pointer whitespace-nowrap"
                 >
-                  <ShoppingBag className="w-4 h-4 text-[#0095F6] shrink-0" />
+                  <Icon name="shopping-bag" className="w-4 h-4 text-[#0095F6] shrink-0" />
                   <span>Back to Shop</span>
                 </button>
               </div>
@@ -1643,7 +1608,7 @@ export const NewsHub: React.FC = () => {
                   className="w-10 h-10 -ml-1.5 rounded-full flex items-center justify-center text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-95 transition cursor-pointer"
                   aria-label="Back to Loops"
                 >
-                  <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
+                  <Icon name="chevron-left" className="w-6 h-6" />
                 </button>
 
                 <button
@@ -1667,7 +1632,7 @@ export const NewsHub: React.FC = () => {
                   className="w-9 h-9 rounded-full loops-gray-pill flex items-center justify-center text-zinc-950 dark:text-white active:scale-95 transition cursor-pointer"
                   aria-label="Create Ghost post"
                 >
-                  <Plus className="w-5 h-5 stroke-[2.2]" />
+                  <Icon name="plus" className="w-5 h-5" />
                 </button>
               </header>
             ) : (
@@ -1715,7 +1680,7 @@ export const NewsHub: React.FC = () => {
                           feedMenuOpen ? "rotate-180" : ""
                         }`}
                       >
-                        <ChevronDown className="w-[16px] h-[16px] stroke-[2.35]" />
+                        <LoopsSvgIcon name="loops-header-chevron" className="w-[16px] h-[16px]" />
                       </span>
                     </span>
                     {(activeFeedFilter || scamOnlyMode) && (
@@ -1755,9 +1720,9 @@ export const NewsHub: React.FC = () => {
                         >
                           <span>For you</span>
                           {!activeFeedFilter && !scamOnlyMode ? (
-                            <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                            <Icon name="check" className="w-[19px] h-[19px] text-zinc-950 dark:text-white" />
                           ) : (
-                            <Globe className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                            <Icon name="globe" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                           )}
                         </button>
 
@@ -1773,9 +1738,9 @@ export const NewsHub: React.FC = () => {
                         >
                           <span>Following</span>
                           {activeFeedFilter === "following" ? (
-                            <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                            <Icon name="check" className="w-[19px] h-[19px] text-zinc-950 dark:text-white" />
                           ) : (
-                            <Users className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                            <Icon name="users" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                           )}
                         </button>
 
@@ -1791,9 +1756,9 @@ export const NewsHub: React.FC = () => {
                         >
                           <span>Favourites</span>
                           {activeFeedFilter === "favourites" ? (
-                            <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                            <Icon name="check" className="w-[19px] h-[19px] text-zinc-950 dark:text-white" />
                           ) : (
-                            <Star className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                            <Icon name="star" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                           )}
                         </button>
 
@@ -1809,7 +1774,7 @@ export const NewsHub: React.FC = () => {
                           className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
                         >
                           <span>Visit Shop</span>
-                          <ShoppingBag className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                          <Icon name="shopping-bag" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                         </button>
                       </motion.div>
                     )}
@@ -1828,16 +1793,7 @@ export const NewsHub: React.FC = () => {
                     aria-label="Create post or story"
                     className="w-11 h-11 rounded-full bg-transparent border-0 shadow-none flex items-center justify-center text-zinc-950 dark:text-white active:scale-90 transition cursor-pointer"
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.15"
-                      strokeLinecap="round"
-                      className="w-[23px] h-[23px]"
-                    >
-                      <path d="M12 5v14M5 12h14" />
-                    </svg>
+                    <LoopsSvgIcon name="loops-header-create" className="w-[23px] h-[23px]" />
                   </button>
 
                   <button
@@ -1850,17 +1806,7 @@ export const NewsHub: React.FC = () => {
                     aria-label="Activity notifications"
                     className="relative w-11 h-11 -mr-1.5 rounded-full bg-transparent border-0 shadow-none flex items-center justify-center text-zinc-950 dark:text-white active:scale-90 transition cursor-pointer"
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.15"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-[23px] h-[23px]"
-                    >
-                      <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z" />
-                    </svg>
+                    <LoopsSvgIcon name="loops-header-activity" className="w-[23px] h-[23px]" />
                     {unreadNewsNotifications > 0 && (
                       <span
                         aria-hidden="true"
@@ -1920,16 +1866,7 @@ export const NewsHub: React.FC = () => {
                             aria-label="Create post or story"
                             className="loops-sticky-glass-circle pointer-events-auto w-[46px] h-[46px] rounded-full flex items-center justify-center active:scale-92 transition-transform duration-150 cursor-pointer shrink-0"
                           >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.15"
-                              strokeLinecap="round"
-                              className="w-[22px] h-[22px]"
-                            >
-                              <path d="M12 5v14M5 12h14" />
-                            </svg>
+                            <LoopsSvgIcon name="loops-header-create" className="w-[22px] h-[22px]" />
                           </button>
 
                           {/* Center: Bold "Loops ⌄" Wordmark + Feed Switcher Popover */}
@@ -1955,7 +1892,7 @@ export const NewsHub: React.FC = () => {
                                   stickyFeedMenuOpen ? "rotate-180" : ""
                                 }`}
                               >
-                                <ChevronDown className="w-[16px] h-[16px] stroke-[2.35]" />
+                                <LoopsSvgIcon name="loops-header-chevron" className="w-[16px] h-[16px]" />
                               </span>
                             </button>
 
@@ -1985,9 +1922,9 @@ export const NewsHub: React.FC = () => {
                                   >
                                     <span>For you</span>
                                     {!activeFeedFilter && !scamOnlyMode ? (
-                                      <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                                      <Icon name="check" className="w-[19px] h-[19px] text-zinc-950 dark:text-white" />
                                     ) : (
-                                      <Globe className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                                      <Icon name="globe" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                                     )}
                                   </button>
 
@@ -2003,9 +1940,9 @@ export const NewsHub: React.FC = () => {
                                   >
                                     <span>Following</span>
                                     {activeFeedFilter === "following" ? (
-                                      <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                                      <Icon name="check" className="w-[19px] h-[19px] text-zinc-950 dark:text-white" />
                                     ) : (
-                                      <Users className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                                      <Icon name="users" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                                     )}
                                   </button>
 
@@ -2021,9 +1958,9 @@ export const NewsHub: React.FC = () => {
                                   >
                                     <span>Favourites</span>
                                     {activeFeedFilter === "favourites" ? (
-                                      <Check className="w-[19px] h-[19px] text-zinc-950 dark:text-white stroke-[2.3]" />
+                                      <Icon name="check" className="w-[19px] h-[19px] text-zinc-950 dark:text-white" />
                                     ) : (
-                                      <Star className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                                      <Icon name="star" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                                     )}
                                   </button>
 
@@ -2039,7 +1976,7 @@ export const NewsHub: React.FC = () => {
                                     className="w-full flex items-center justify-between px-4 py-3 rounded-[18px] hover:bg-black/[0.045] dark:hover:bg-white/[0.08] text-[15.5px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
                                   >
                                     <span>Visit Shop</span>
-                                    <ShoppingBag className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300 stroke-[1.9]" />
+                                    <Icon name="shopping-bag" className="w-[19px] h-[19px] text-zinc-700 dark:text-zinc-300" />
                                   </button>
                                 </motion.div>
                               )}
@@ -2058,17 +1995,7 @@ export const NewsHub: React.FC = () => {
                             aria-label="Activity notifications"
                             className="loops-sticky-glass-circle pointer-events-auto relative w-[46px] h-[46px] rounded-full flex items-center justify-center active:scale-92 transition-transform duration-150 cursor-pointer shrink-0"
                           >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.15"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="w-[23px] h-[23px]"
-                            >
-                              <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z" />
-                            </svg>
+                            <LoopsSvgIcon name="loops-header-activity" className="w-[23px] h-[23px]" />
                             {unreadNewsNotifications > 0 && (
                               <span
                                 aria-hidden="true"
@@ -2140,7 +2067,7 @@ export const NewsHub: React.FC = () => {
                           />
                         ) : (
                           <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
-                            <UserIcon className="w-6 h-6" />
+                            <Icon name="user" className="w-6 h-6" />
                           </div>
                         )}
                       </button>
@@ -2273,7 +2200,7 @@ export const NewsHub: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <UserIcon className="w-5 h-5 text-zinc-400" />
+                  <Icon name="user" className="w-5 h-5 text-zinc-400" />
                 )}
               </button>
 
@@ -2457,7 +2384,7 @@ export const NewsHub: React.FC = () => {
                                   className="absolute top-2 right-2 w-6 h-6 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-600 cursor-pointer"
                                   aria-label="Dismiss profile"
                                 >
-                                  <X className="w-3.5 h-3.5" />
+                                  <Icon name="x" className="w-3.5 h-3.5" />
                                 </button>
                                 <div className="flex flex-col items-center gap-1.5 w-full pt-1">
                                   {prof.avatar?.trim() ? (
@@ -2512,7 +2439,7 @@ export const NewsHub: React.FC = () => {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#1877F2] flex items-center justify-center shrink-0">
-                    <TrendingUp className="w-4 h-4" />
+                    <Icon name="trending-up" className="w-4 h-4" />
                   </div>
                   <h3 className="text-sm font-bold truncate">Creator Studio</h3>
                 </div>
@@ -2529,7 +2456,7 @@ export const NewsHub: React.FC = () => {
                 onClick={() => navigate("/creator-dashboard")}
                 className="w-full py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
-                <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+                <Icon name="layout-dashboard" className="w-3.5 h-3.5 shrink-0" />
                 <span>Open Creator Dashboard</span>
               </button>
             </div>
@@ -2627,7 +2554,7 @@ export const NewsHub: React.FC = () => {
                 onClick={() => navigate("/loops/create?tab=scam")}
                 className="w-full py-2.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
-                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <Icon name="shield-alert" className="w-4 h-4 shrink-0" />
                 <span>Report a Scam</span>
               </button>
             </div>

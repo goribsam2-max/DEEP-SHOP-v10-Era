@@ -159,7 +159,7 @@ const WithdrawPage: React.FC<{ userData: UserProfile | null }> = ({
   const totalWithdrawn = withdrawals.filter(w => w.status === 'Completed').reduce((acc, curr) => acc + curr.amount, 0);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#121212] font-sans relative">
+    <div className="min-h-screen ambient-dynamic-bg font-sans relative">
       {/* Green Header Section */}
       <div className="bg-gradient-to-br from-[#1cdb5e] to-[#0ba340] dark:from-[#1cdb5e]/90 dark:to-[#0ba340]/90 pt-6 pb-20 px-6 rounded-b-[2rem] text-white overflow-hidden relative">
         <div className="absolute top-0 right-0 opacity-10 pointer-events-none">

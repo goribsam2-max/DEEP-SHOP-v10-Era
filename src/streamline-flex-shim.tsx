@@ -1,101 +1,195 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  getCustomIconFromCache,
+  initCustomIconsStore,
+  subscribeCustomIcons,
+} from '../lib/customIconStore';
+import { normalizeCustomSvg } from '../lib/svgNormalize';
 
-// Streamline Flex Remix Free SVG factory
-const c = (d: string[]) => React.forwardRef<SVGSVGElement, any>(({ size, strokeWidth = 1.5, className = '', ...props }, ref) => {
-  const hasSize = className && /\b(w-\d+|w-\[.*?\]|size-\d+|size-\[.*?\]|h-\d+|h-\[.*?\])\b/.test(className);
-  return (
-    <svg
-      ref={ref}
-      viewBox="0 0 24 24"
-      width={size || "24"}
-      height={size || "24"}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={hasSize ? className : `w-5 h-5 ${className}`}
-      {...props}
-    >
-      {d.map((p, i) => (
-        <path key={i} d={p} />
-      ))}
-    </svg>
+function useShimCustomSvg(keys?: string[]): string | null {
+  const keySignature = (keys || []).join('|');
+  const [svg, setSvg] = useState<string | null>(() =>
+    keys && keys.length > 0 ? getCustomIconFromCache(keys) : null
   );
-});
 
-// Geometry database for Streamline Flex Remix Free (Outline) style
-export const Activity = c(["M22 12h-4l-3 9L9 3 6 12H2"]);
-export const Archive = c(["M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8", "M23 3H1v5h22V3z", "M10 12h4"]);
-export const Terminal = c(["M4 17l6-6-6-6", "M12 19h8"]);
-export const Code = c(["M16 18l6-6-6-6", "M8 6l-6 6 6 6"]);
-export const Server = c(["M2 6h20v4H2z", "M2 14h20v4H2z", "M6 8h.01", "M6 16h.01"]);
-export const Database = c(["M3 5c0 2.21 4.03 4 9 4s9-1.79 9-4-4.03-4-9-4-9 1.79-9 4z", "M3 5v14c0 2.21 4.03 4 9 4s9-1.79 9-4V5", "M3 12c0 2.21 4.03 4 9 4s9-1.79 9-4"]);
-export const AlertCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 8v4", "M12 16h.01"]);
-export const AlertTriangle = c(["M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z", "M12 9v4", "M12 17h.01"]);
-export const ArrowDown = c(["M12 5v14", "M19 12l-7 7-7-7"]);
-export const ArrowDownLeft = c(["M17 7L7 17", "M17 17H7V7"]);
-export const ArrowLeft = c(["M19 12H5", "M12 19l-7-7 7-7"]);
-export const ArrowLeftRight = c(["M8 7h12", "M20 7l-4-4", "M20 7l-4 4", "M16 17H4", "M4 17l4-4", "M4 17l4 4"]);
-export const ArrowRight = c(["M5 12h14", "M12 5l7 7-7 7"]);
-export const ArrowUp = c(["M12 19V5", "M5 12l7-7 7 7"]);
-export const ArrowUpRight = c(["M7 17L17 7", "M7 7h10v10"]);
-export const AtSign = c(["M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0", "M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"]);
-export const Award = c(["M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M8.21 13.89L7 23l5-3 5 3-1.21-9.12"]);
-export const BarChart3 = c(["M18 20V10", "M12 20V4", "M6 20v-6"]);
-export const Bell = c(["M18 8a6 6 0 0 0-12 0v6l-2 3h16l-2-3V8z", "M9 19a3 3 0 0 0 6 0"]);
-export const Bike = c(["M5.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M18.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M15 17.5l-3-6H7.5l-2 6", "M12 11.5L16 6h2", "M12 11.5h3l3.5 6"]);
-export const Bitcoin = c(["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6", "M9 2v3", "M13 2v3", "M9 19v3", "M13 19v3"]);
-export const BookOpen = c(["M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z", "M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"]);
-export const Bookmark = c(["M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"]);
-export const Bot = c(["M3 11a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8z", "M12 2v4", "M8 6h8", "M6 11V9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2", "M9 15h.01", "M15 15h.01"]);
-export const Box = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8"]);
-export const Boxes = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M16 4.5l-4 2.5-4-2.5"]);
-export const Calendar = c(["M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z", "M16 2v4", "M8 2v4", "M3 10h18"]);
-export const CalendarDays = c(["M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z", "M16 2v4", "M8 2v4", "M3 10h18", "M8 14h.01", "M12 14h.01", "M16 14h.01", "M8 18h.01", "M12 18h.01", "M16 18h.01"]);
-export const Camera = c(["M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11z", "M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"]);
-export const Check = c(["M20 6L9 17l-5-5"]);
-export const CheckCheck = c(["M17 6L8.5 14.5 5 11", "M22 6L13.5 14.5 12 13"]);
-export const CheckCircle = c(["M22 11.08V12a10 10 0 1 1-5.93-9.14", "M22 4L12 14.01l-3-3"]);
-export const CheckCircle2 = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M8 12l3 3 5-5"]);
-export const CheckIcon = c(["M20 6L9 17l-5-5"]);
-export const ChevronDown = c(["M6 9l6 6 6-6"]);
-export const ChevronLeft = c(["M15 19l-7-7 7-7"]);
-export const ChevronRight = c(["M9 5l7 7-7 7"]);
-export const ChevronUp = c(["M18 15l-7-7-7 7"]);
-export const Circle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"]);
-export const CircleDollarSign = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M16 8h-4a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5h-4", "M12 6v12"]);
-export const Clipboard = c(["M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2", "M8 2h8v4H8z"]);
-export const ClipboardList = c(["M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2", "M8 2h8v4H8z", "M9 10h6", "M9 14h6", "M9 18h6"]);
-export const Clock = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 6v6l4 2"]);
-export const Coins = c(["M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12z", "M16 22a6 6 0 1 0 0-12 6 6 0 0 0 0 12z", "M12 8a6 6 0 0 1 6 6", "M6 16a6 6 0 0 1 6-6"]);
-export const Copy = c(["M9 9h13v13H9z", "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"]);
-export const CornerUpLeft = c(["M9 14L4 9l5-5", "M20 20v-7a4 4 0 0 0-4-4H4"]);
-export const CreditCard = c(["M1 6a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V6z", "M1 10h22"]);
-export const Crown = c(["M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"]);
-export const Diamond = c(["M12 2L2 12l10 10 10-10z"]);
-export const Disc = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"]);
-export const DollarSign = c(["M12 1v22", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"]);
-export const Download = c(["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10l5 5 5-5", "M12 15V3"]);
-export const Upload = c(["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M17 8l-5-5-5 5", "M12 3v12"]);
-export const Edit = c(["M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7", "M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"]);
+  useEffect(() => {
+    if (!keys || keys.length === 0) return;
+    initCustomIconsStore();
+    const sync = () => setSvg(getCustomIconFromCache(keys));
+    sync();
+    return subscribeCustomIcons(sync);
+  }, [keySignature]);
+
+  return svg;
+}
+
+function renderShimCustomSvg(
+  customSvg: string,
+  className: string,
+  size: number | string | undefined,
+  restProps: Record<string, any>
+) {
+  const {
+    strokeWidth: _sw,
+    absoluteStrokeWidth: _asw,
+    fill: _fill,
+    stroke: _stroke,
+    viewBox: _vb,
+    color: _color,
+    style,
+    ...domProps
+  } = restProps;
+
+  const hasSize =
+    className &&
+    /\b(w-\d+|w-\[.*?\]|size-\d+|size-\[.*?\]|h-\d+|h-\[.*?\])\b/.test(className);
+  const mergedStyle = size
+    ? { width: size, height: size, ...(style || {}) }
+    : style;
+  const clean = customSvg.trim();
+
+  if (
+    clean.startsWith('http://') ||
+    clean.startsWith('https://') ||
+    clean.startsWith('data:') ||
+    clean.startsWith('/')
+  ) {
+    return (
+      <span
+        className={`inline-flex shrink-0 items-center justify-center ${
+          hasSize ? className : `w-5 h-5 ${className}`
+        }`.trim()}
+        style={mergedStyle}
+        {...domProps}
+      >
+        <img src={clean} alt="" className="w-full h-full object-contain" />
+      </span>
+    );
+  }
+
+  const normalized = normalizeCustomSvg(clean);
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-full [&>svg]:max-h-full ${
+        hasSize ? className : `w-5 h-5 ${className}`
+      }`.trim()}
+      style={mergedStyle}
+      dangerouslySetInnerHTML={{ __html: normalized }}
+      {...domProps}
+    />
+  );
+}
+
+// Streamline Flex Remix Free SVG factory with universal ManageIcons live overrides
+const c = (d: string[], keys: string[] = []) =>
+  React.forwardRef<SVGSVGElement, any>(
+    ({ size, strokeWidth = 1.5, className = '', ...props }, ref) => {
+      const customSvg = useShimCustomSvg(keys);
+      if (customSvg) {
+        return renderShimCustomSvg(customSvg, className, size, props);
+      }
+
+      const hasSize =
+        className &&
+        /\b(w-\d+|w-\[.*?\]|size-\d+|size-\[.*?\]|h-\d+|h-\[.*?\])\b/.test(className);
+      return (
+        <svg
+          ref={ref}
+          viewBox="0 0 24 24"
+          width={size || '24'}
+          height={size || '24'}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={hasSize ? className : `w-5 h-5 ${className}`}
+          {...props}
+        >
+          {d.map((p, i) => (
+            <path key={i} d={p} />
+          ))}
+        </svg>
+      );
+    }
+  );
+
+// Geometry database for Streamline Flex Remix Free (Outline) style + ManageIcons override keys
+export const Activity = c(["M22 12h-4l-3 9L9 3 6 12H2"], ['activity', 'messages-activity']);
+export const Archive = c(["M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8", "M23 3H1v5h22V3z", "M10 12h4"], ['archive']);
+export const Terminal = c(["M4 17l6-6-6-6", "M12 19h8"], ['terminal']);
+export const Code = c(["M16 18l6-6-6-6", "M8 6l-6 6 6 6"], ['code']);
+export const Server = c(["M2 6h20v4H2z", "M2 14h20v4H2z", "M6 8h.01", "M6 16h.01"], ['server']);
+export const Database = c(["M3 5c0 2.21 4.03 4 9 4s9-1.79 9-4-4.03-4-9-4-9 1.79-9 4z", "M3 5v14c0 2.21 4.03 4 9 4s9-1.79 9-4V5", "M3 12c0 2.21 4.03 4 9 4s9-1.79 9-4"], ['database']);
+export const AlertCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 8v4", "M12 16h.01"], ['alert-circle', 'exclamation-circle']);
+export const AlertTriangle = c(["M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z", "M12 9v4", "M12 17h.01"], ['alert-triangle', 'exclamation-triangle']);
+export const ArrowDown = c(["M12 5v14", "M19 12l-7 7-7-7"], ['arrow-down']);
+export const ArrowDownLeft = c(["M17 7L7 17", "M17 17H7V7"], ['arrow-down-left']);
+export const ArrowLeft = c(["M19 12H5", "M12 19l-7-7 7-7"], ['arrow-left']);
+export const ArrowLeftRight = c(["M8 7h12", "M20 7l-4-4", "M20 7l-4 4", "M16 17H4", "M4 17l4-4", "M4 17l4 4"], ['arrow-left-right']);
+export const ArrowRight = c(["M5 12h14", "M12 5l7 7-7 7"], ['arrow-right']);
+export const ArrowUp = c(["M12 19V5", "M5 12l7-7 7 7"], ['arrow-up']);
+export const ArrowUpRight = c(["M7 17L17 7", "M7 7h10v10"], ['arrow-up-right']);
+export const AtSign = c(["M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0", "M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"], ['at-sign']);
+export const Award = c(["M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M8.21 13.89L7 23l5-3 5 3-1.21-9.12"], ['award']);
+export const BarChart3 = c(["M18 20V10", "M12 20V4", "M6 20v-6"], ['bar-chart', 'bar-chart-3']);
+export const Bell = c(["M18 8a6 6 0 0 0-12 0v6l-2 3h16l-2-3V8z", "M9 19a3 3 0 0 0 6 0"], ['bell']);
+export const Bike = c(["M5.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M18.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M15 17.5l-3-6H7.5l-2 6", "M12 11.5L16 6h2", "M12 11.5h3l3.5 6"], ['bike', 'motorcycle']);
+export const Bitcoin = c(["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6", "M9 2v3", "M13 2v3", "M9 19v3", "M13 19v3"], ['bitcoin']);
+export const BookOpen = c(["M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z", "M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"], ['book-open']);
+export const Bookmark = c(["M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"], ['bookmark', 'loops-post-save', 'loops-reel-save']);
+export const Bot = c(["M3 11a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8z", "M12 2v4", "M8 6h8", "M6 11V9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2", "M9 15h.01", "M15 15h.01"], ['bot']);
+export const Box = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8"], ['box', 'profile-order-receive']);
+export const Boxes = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M16 4.5l-4 2.5-4-2.5"], ['boxes', 'cubes']);
+export const Calendar = c(["M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z", "M16 2v4", "M8 2v4", "M3 10h18"], ['calendar', 'messages-activity']);
+export const CalendarDays = c(["M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z", "M16 2v4", "M8 2v4", "M3 10h18", "M8 14h.01", "M12 14h.01", "M16 14h.01", "M8 18h.01", "M12 18h.01", "M16 18h.01"], ['calendar-days', 'calendar']);
+export const Camera = c(["M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11z", "M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"], ['camera', 'msg-camera', 'loops-story-camera']);
+export const Check = c(["M20 6L9 17l-5-5"], ['check']);
+export const CheckCheck = c(["M17 6L8.5 14.5 5 11", "M22 6L13.5 14.5 12 13"], ['check-double', 'check-check', 'msg-check-double']);
+export const CheckCircle = c(["M22 11.08V12a10 10 0 1 1-5.93-9.14", "M22 4L12 14.01l-3-3"], ['check-circle']);
+export const CheckCircle2 = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M8 12l3 3 5-5"], ['check-circle-2', 'check-circle']);
+export const CheckIcon = c(["M20 6L9 17l-5-5"], ['check']);
+export const ChevronDown = c(["M6 9l6 6 6-6"], ['chevron-down', 'loops-header-chevron']);
+export const ChevronLeft = c(["M15 19l-7-7 7-7"], ['chevron-left', 'msg-back']);
+export const ChevronRight = c(["M9 5l7 7-7 7"], ['chevron-right']);
+export const ChevronUp = c(["M18 15l-7-7-7 7"], ['chevron-up']);
+export const Circle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"], ['circle']);
+export const CircleDollarSign = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M16 8h-4a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5h-4", "M12 6v12"], ['circle-dollar-sign', 'coins']);
+export const Clipboard = c(["M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2", "M8 2h8v4H8z"], ['clipboard']);
+export const ClipboardList = c(["M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2", "M8 2h8v4H8z", "M9 10h6", "M9 14h6", "M9 18h6"], ['clipboard-list']);
+export const Clock = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 6v6l4 2"], ['clock']);
+export const Coins = c(["M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12z", "M16 22a6 6 0 1 0 0-12 6 6 0 0 0 0 12z", "M12 8a6 6 0 0 1 6 6", "M6 16a6 6 0 0 1 6-6"], ['coins']);
+export const Copy = c(["M9 9h13v13H9z", "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"], ['copy', 'msg-copy']);
+export const CornerUpLeft = c(["M9 14L4 9l5-5", "M20 20v-7a4 4 0 0 0-4-4H4"], ['corner-up-left', 'msg-reply']);
+export const CreditCard = c(["M1 6a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V6z", "M1 10h22"], ['credit-card', 'profile-order-pay']);
+export const Crown = c(["M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"], ['crown']);
+export const Diamond = c(["M12 2L2 12l10 10 10-10z"], ['diamond', 'gem']);
+export const Disc = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"], ['disc']);
+export const DollarSign = c(["M12 1v22", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"], ['dollar-sign']);
+export const Download = c(["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10l5 5 5-5", "M12 15V3"], ['download']);
+export const Upload = c(["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M17 8l-5-5-5 5", "M12 3v12"], ['upload', 'cloud-upload']);
+export const Edit = c(["M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7", "M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"], ['edit', 'edit-3', 'pencil']);
 export const Edit2 = Edit;
 export const Edit3 = Edit;
-export const ExternalLink = c(["M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", "M15 3h6v6", "M10 14L21 3"]);
-export const Eye = c(["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"]);
-export const EyeOff = c(["M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19", "M1 1l22 22"]);
-export const FileText = c(["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z", "M14 2v6h6", "M16 13H8", "M16 17H8", "M10 9H8"]);
-export const Filter = c(["M22 3H2l8 9.46V19l4 2v-8.54L22 3z"]);
-export const Film = c(["M2 4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4z", "M7 2v20", "M17 2v20", "M2 12h20", "M2 7h5", "M2 17h5", "M17 17h5", "M17 7h5"]);
-export const Forward = c(["M15 17l5-5-5-5", "M4 18v-2a4 4 0 0 1 4-4h12"]);
-export const Gift = c(["M20 12v10H4V12", "M2 7h20v5H2z", "M12 22V7", "M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z", "M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"]);
-export const Globe = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M2 12h20", "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"]);
-export const Headphones = c(["M3 14c0-4.97 4.03-9 9-9s9 4.03 9 9v5a2 2 0 0 1-2 2h-1v-6h3v-1c0-3.87-3.13-7-7-7s-7 3.13-7 7v1h3v6h-1a2 2 0 0 1-2-2v-5z"]);
+export const ExternalLink = c(["M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", "M15 3h6v6", "M10 14L21 3"], ['external-link']);
+export const Eye = c(["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"], ['eye', 'loops-post-views', 'loops-reel-views']);
+export const EyeOff = c(["M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19", "M1 1l22 22"], ['eye-slash', 'eye-off']);
+export const FileText = c(["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z", "M14 2v6h6", "M16 13H8", "M16 17H8", "M10 9H8"], ['file-text', 'doc', 'loops-chooser-post']);
+export const Filter = c(["M22 3H2l8 9.46V19l4 2v-8.54L22 3z"], ['filter']);
+export const Film = c(["M2 4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4z", "M7 2v20", "M17 2v20", "M2 12h20", "M2 7h5", "M2 17h5", "M17 17h5", "M17 7h5"], ['film', 'loops-nav-reels', 'loops-chooser-reel']);
+export const Forward = c(["M15 17l5-5-5-5", "M4 18v-2a4 4 0 0 1 4-4h12"], ['forward', 'msg-forward']);
+export const Gift = c(["M20 12v10H4V12", "M2 7h20v5H2z", "M12 22V7", "M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z", "M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"], ['gift']);
+export const Globe = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M2 12h20", "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"], ['globe']);
+export const Headphones = c(["M3 14c0-4.97 4.03-9 9-9s9 4.03 9 9v5a2 2 0 0 1-2 2h-1v-6h3v-1c0-3.87-3.13-7-7-7s-7 3.13-7 7v1h3v6h-1a2 2 0 0 1-2-2v-5z"], ['headphones', 'headset']);
 export const Headset = Headphones;
-export const Heart = c(["M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"]);
-export const HelpCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3", "M12 17h.01"]);
-export const History = c(["M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", "M3 3v5h5", "M12 7v5l4 2"]);
+export const Heart = c(["M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35Z"], ['heart', 'loops-post-like', 'loops-reel-like', 'loops-header-activity']);
+export const HelpCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3", "M12 17h.01"], ['help-circle']);
+export const History = c(["M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", "M3 3v5h5", "M12 7v5l4 2"], ['history']);
 export const Home = React.forwardRef<SVGSVGElement, any>(({ size, strokeWidth, className = '', ...props }, ref) => {
+  const customSvg = useShimCustomSvg(['home', 'bottom-nav-home', 'loops-nav-home']);
+  if (customSvg) {
+    return renderShimCustomSvg(customSvg, className, size, props);
+  }
   const hasSize = className && /\b(w-\d+|w-\[.*?\]|size-\d+|size-\[.*?\]|h-\d+|h-\[.*?\])\b/.test(className);
   const strokeW = strokeWidth !== undefined ? strokeWidth : 1;
   return (
@@ -120,31 +214,40 @@ export const Home = React.forwardRef<SVGSVGElement, any>(({ size, strokeWidth, c
   );
 });
 export const HomeIcon = Home;
-export const Image = c(["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z", "M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M21 15l-5-5L5 21"]);
-export const ImagePlus = c(["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z", "M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M21 15l-5-5L5 21", "M12 5v6", "M9 8h6"]);
-export const Info = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 16v-4", "M12 8h.01"]);
+export const Image = c(["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z", "M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M21 15l-5-5L5 21"], ['image', 'msg-image', 'loops-composer-photo']);
+export const ImagePlus = c(["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z", "M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M21 15l-5-5L5 21", "M12 5v6", "M9 8h6"], ['image-plus', 'image']);
+export const Info = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 16v-4", "M12 8h.01"], ['info', 'info-circle']);
 export const InfoIcon = Info;
-export const KeyRound = c(["M21.5 2.5a6.5 6.5 0 1 0-7.73 7.73L9 15v3H6v3H3v3h5l5.27-5.27a6.5 6.5 0 0 0 7.23-11.23z", "M18.5 5.5h.01"]);
+export const KeyRound = c(["M21.5 2.5a6.5 6.5 0 1 0-7.73 7.73L9 15v3H6v3H3v3h5l5.27-5.27a6.5 6.5 0 0 0 7.23-11.23z", "M18.5 5.5h.01"], ['key-round']);
 export const Key = KeyRound;
-export const Layers = c(["M12 2L2 7l10 5 10-5-10-5z", "M2 17l10 5 10-5", "M2 12l10 5 10-5"]);
-export const Layout = c(["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z", "M3 9h18", "M9 21V9"]);
-export const LayoutDashboard = c(["M3 4h7v9H3zm11 0h7v5h-7zm0 9h7v7h-7zm-11 13h7v4H3z"]);
-export const LayoutGrid = c(["M3 3h7v7H3zm11 0h7v7h-7zm0 11h7v7h-7zm-11 0h7v7H3z"]);
+export const Layers = c(["M12 2L2 7l10 5 10-5-10-5z", "M2 17l10 5 10-5", "M2 12l10 5 10-5"], ['layers', 'layer-plus']);
+export const Layout = c(["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z", "M3 9h18", "M9 21V9"], ['layout']);
+export const LayoutDashboard = c(["M3 4h7v9H3zm11 0h7v5h-7zm0 9h7v7h-7zm-11 13h7v4H3z"], ['layout-dashboard']);
+export const LayoutGrid = c(["M3 3h7v7H3zm11 0h7v7h-7zm0 11h7v7h-7zm-11 0h7v7H3z"], ['layout-grid']);
 export const LayoutTemplate = Layout;
-export const Link = c(["M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71", "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"]);
+export const Link = c(["M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71", "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"], ['link', 'profile-affiliate']);
 export const Link2 = Link;
-export const ListOrdered = c(["M10 6h11", "M10 12h11", "M10 18h11", "M4 6h1", "M4 12h1", "M4 18h1"]);
-export const ListPlus = c(["M11 12H3", "M16 6H3", "M16 18H3", "M19 10v6", "M16 13h6"]);
-export const Loader2 = c(["M21 12a9 9 0 1 1-9-9"]);
-export const Lock = c(["M3 11a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9z", "M7 11V7a5 5 0 0 1 10 0v4"]);
-export const LogIn = c(["M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4", "M10 17l5-5-5-5", "M15 12H3"]);
+export const ListOrdered = c(["M10 6h11", "M10 12h11", "M10 18h11", "M4 6h1", "M4 12h1", "M4 18h1"], ['list-ol']);
+export const ListPlus = c(["M11 12H3", "M16 6H3", "M16 18H3", "M19 10v6", "M16 13h6"], ['list-plus']);
+export const Loader2 = c(["M21 12a9 9 0 1 1-9-9"], ['loader-2', 'spinner']);
+export const Lock = c(["M3 11a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9z", "M7 11V7a5 5 0 0 1 10 0v4"], ['lock']);
+export const LogIn = c(["M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4", "M10 17l5-5-5-5", "M15 12H3"], ['log-in', 'login']);
 export const LogInIcon = LogIn;
-export const LogOut = c(["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", "M16 17l5-5-5-5", "M21 12H9"]);
-export const Mail = c(["M3 5h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z", "M22 7l-10 7L2 7"]);
-export const MapPin = c(["M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z", "M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"]);
-export const Maximize2 = c(["M15 3h6v6", "M9 21H3v-6", "M21 3l-7 7", "M3 21l7-7"]);
-export const Menu = c(["M3 12h18", "M3 6h18", "M3 18h18"]);
+export const LogOut = c(["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", "M16 17l5-5-5-5", "M21 12H9"], ['log-out', 'sign-out-alt']);
+export const Mail = c(["M3 5h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z", "M22 7l-10 7L2 7"], ['envelope', 'mail']);
+export const MapPin = c(["M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z", "M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"], ['map-marker', 'map-pin']);
+export const Maximize2 = c(["M15 3h6v6", "M9 21H3v-6", "M21 3l-7 7", "M3 21l7-7"], ['maximize-2']);
+export const Menu = c(["M3 12h18", "M3 6h18", "M3 18h18"], ['bars', 'menu', 'loops-header-menu']);
 export const MessageSquare = React.forwardRef<SVGSVGElement, any>(({ size, strokeWidth = 1.5, className = '', ...props }, ref) => {
+  const customSvg = useShimCustomSvg([
+    'message-square',
+    'comment-dots',
+    'profile-messages',
+    'loops-nav-messages',
+  ]);
+  if (customSvg) {
+    return renderShimCustomSvg(customSvg, className, size, props);
+  }
   const hasSize = className && /\b(w-\d+|w-\[.*?\]|size-\d+|size-\[.*?\]|h-\d+|h-\[.*?\])\b/.test(className);
   return (
     <svg
@@ -167,53 +270,57 @@ export const MessageSquare = React.forwardRef<SVGSVGElement, any>(({ size, strok
   );
 });
 export const MessageCircle = MessageSquare;
-export const MessageSquareShare = c(["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", "M12 11V7l4 4", "M12 7l-4 4 4-4"]);
-export const Mic = c(["M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z", "M19 10v2a7 7 0 0 1-14 0v-2", "M12 19v4", "M8 23h8"]);
-export const MicOff = c(["M1 1l22 22", "M9 9v3a3 3 0 0 0 5.12 2.12", "M15 9.34V4a3 3 0 0 0-5.94-.6", "M17 11.5a7 7 0 0 1-12 0", "M12 19v4", "M8 23h8"]);
-export const Minimize2 = c(["M4 14h6v6", "M20 10h-6V4", "M14 10l7-7", "M10 14l-7 7"]);
-export const Minus = c(["M5 12h14"]);
-export const Monitor = c(["M2 4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4z", "M8 21h8", "M12 17v4"]);
-export const Moon = c(["M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"]);
-export const MoreHorizontal = c(["M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0", "M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0", "M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"]);
-export const MoreVertical = c(["M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0", "M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0", "M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"]);
-export const MousePointer2 = c(["M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z", "M13 13l6 6"]);
+export const MessageSquareShare = c(["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", "M12 11V7l4 4", "M12 7l-4 4 4-4"], ['message-square-share']);
+export const Mic = c(["M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z", "M19 10v2a7 7 0 0 1-14 0v-2", "M12 19v4", "M8 23h8"], ['mic', 'microphone', 'msg-mic']);
+export const MicOff = c(["M1 1l22 22", "M9 9v3a3 3 0 0 0 5.12 2.12", "M15 9.34V4a3 3 0 0 0-5.94-.6", "M17 11.5a7 7 0 0 1-12 0", "M12 19v4", "M8 23h8"], ['mic-off']);
+export const Minimize2 = c(["M4 14h6v6", "M20 10h-6V4", "M14 10l7-7", "M10 14l-7 7"], ['minimize-2']);
+export const Minus = c(["M5 12h14"], ['minus']);
+export const Monitor = c(["M2 4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4z", "M8 21h8", "M12 17v4"], ['monitor']);
+export const Moon = c(["M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"], ['moon']);
+export const MoreHorizontal = c(["M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0", "M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0", "M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"], ['more-horizontal', 'ellipsis-h', 'msg-dots-horizontal']);
+export const MoreVertical = c(["M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0", "M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0", "M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"], ['more-vertical']);
+export const MousePointer2 = c(["M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z", "M13 13l6 6"], ['mouse-pointer-2']);
 export const MoveDown = ArrowDown;
 export const MoveUp = ArrowUp;
-export const Music = c(["M9 18V5l12-2v13", "M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "M21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"]);
+export const Music = c(["M9 18V5l12-2v13", "M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", "M21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"], ['music', 'loops-reel-music', 'loops-story-music']);
 export const Music2 = Music;
-export const Newspaper = c(["M4 4h16v16H4V4z", "M8 8h8", "M8 12h8", "M8 16h4"]);
-export const Package = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8"]);
-export const PackageCheck = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M9 12l2 2 4-4"]);
-export const PackageOpen = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M8 5l8 5"]);
-export const PackageSearch = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M15 15l4 4"]);
-export const Paperclip = c(["M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"]);
-export const Pause = c(["M6 4h4v16H6z", "M14 4h4v16h-4z"]);
+export const Newspaper = c(["M4 4h16v16H4V4z", "M8 8h8", "M8 12h8", "M8 16h4"], ['newspaper']);
+export const Package = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8"], ['box', 'package']);
+export const PackageCheck = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M9 12l2 2 4-4"], ['box-check', 'package-check']);
+export const PackageOpen = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M8 5l8 5"], ['box-open', 'package-open']);
+export const PackageSearch = c(["M21 16V8l-9-5-9 5v8l9 5 9-5z", "M3 8l9 5 9-5", "M12 13v8", "M15 15l4 4"], ['package-search']);
+export const Paperclip = c(["M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"], ['paperclip']);
+export const Pause = c(["M6 4h4v16H6z", "M14 4h4v16h-4z"], ['pause']);
 export const Pen = Edit;
-export const Percent = c(["M6.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M17.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M19 5L5 19"]);
-export const Phone = c(["M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"]);
+export const Percent = c(["M6.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M17.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M19 5L5 19"], ['percent']);
+export const Phone = c(["M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"], ['phone', 'phone-call', 'msg-phone-call']);
 export const PhoneCall = Phone;
-export const PhoneOff = c(["M1 1l22 22", "M16.74 16.74a16.37 16.37 0 0 1-8.11-4.63 16.37 16.37 0 0 1-4.63-8.11M4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81L8.09 8.09M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-3.07-.48", "M14 14l3-3a2 2 0 0 1 2.11-.45c.95.27 1.89.5 2.81.7a2 2 0 0 1 1.72 2v3"]);
-export const Pin = c(["M12 17v5", "M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.12-2.65A2 2 0 0 1 16 10.12V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v5.12c0 .4-.12.8-.36 1.11L5.44 14a2 2 0 0 0-.44 1.24V17z"]);
-export const PinOff = Pin;
-export const Play = c(["M5 3l14 9-14 9V3z"]);
-export const Plus = c(["M12 5v14", "M5 12h14"]);
-export const Presentation = c(["M2 4h20v14H2z", "M12 18v4", "M4 22h16", "M6 8l4 4M10 8l4 4"]);
-export const QrCode = c(["M3 3h7v7H3zm11 0h7v7h-7zm0 11h7v7h-7zm-11 0h7v7H3z", "M7 17h.01", "M17 17h.01", "M17 7h.01", "M7 7h.01"]);
-export const Radio = c(["M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z", "M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"]);
-export const RefreshCw = c(["M23 4v6h-6M1 20v-6h6", "M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"]);
-export const Repeat = c(["M17 2l4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "M7 22l-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3"]);
-export const RotateCcw = c(["M1 4v6h6", "M3.51 15a9 9 0 1 0 2.13-9.36L1 10"]);
-export const RotateCw = c(["M23 4v6h-6", "M20.49 15a9 9 0 1 1-2.12-9.36L23 10"]);
-export const Save = c(["M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z", "M17 21v-8H7v8", "M7 3v5h8V3"]);
-export const Scissors = c(["M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M9.8 8.2L20 17", "M9.8 15.8L20 7"]);
-export const Search = c(["M11.5 18a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z", "M16 16l5 5"]);
-export const Send = c(["M22 2L11 13", "M22 2l-7 20-4-9-9-4 20-7z"]);
-export const Settings = c(["M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"]);
-export const Share2 = c(["M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M8.59 13.51l6.83 3.98", "M15.41 6.51L8.59 10.49"]);
-export const Shield = c(["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"]);
-export const ShieldAlert = Shield;
-export const ShieldCheck = c(["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", "M9 11l2 2 4-4"]);
+export const PhoneOff = c(["M1 1l22 22", "M16.74 16.74a16.37 16.37 0 0 1-8.11-4.63 16.37 16.37 0 0 1-4.63-8.11M4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81L8.09 8.09M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-3.07-.48", "M14 14l3-3a2 2 0 0 1 2.11-.45c.95.27 1.89.5 2.81.7a2 2 0 0 1 1.72 2v3"], ['phone-off']);
+export const Pin = c(["M12 17v5", "M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.12-2.65A2 2 0 0 1 16 10.12V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v5.12c0 .4-.12.8-.36 1.11L5.44 14a2 2 0 0 0-.44 1.24V17z"], ['pin']);
+export const PinOff = c(["M12 17v5", "M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.12-2.65A2 2 0 0 1 16 10.12V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v5.12c0 .4-.12.8-.36 1.11L5.44 14a2 2 0 0 0-.44 1.24V17z"], ['pin-off', 'pin']);
+export const Play = c(["M5 3l14 9-14 9V3z"], ['play']);
+export const Plus = c(["M12 5v14", "M5 12h14"], ['plus', 'msg-plus', 'messages-plus', 'loops-header-create']);
+export const Presentation = c(["M2 4h20v14H2z", "M12 18v4", "M4 22h16", "M6 8l4 4M10 8l4 4"], ['presentation', 'profile-creator-hub']);
+export const QrCode = c(["M3 3h7v7H3zm11 0h7v7h-7zm0 11h7v7h-7zm-11 0h7v7H3z", "M7 17h.01", "M17 17h.01", "M17 7h.01", "M7 7h.01"], ['qr-code']);
+export const Radio = c(["M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z", "M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"], ['radio']);
+export const RefreshCw = c(["M23 4v6h-6M1 20v-6h6", "M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"], ['refresh-cw', 'sync-alt']);
+export const Repeat = c(["M17 2l4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "M7 22l-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3"], ['repeat', 'loops-post-repost', 'loops-reel-repost']);
+export const RotateCcw = c(["M1 4v6h6", "M3.51 15a9 9 0 1 0 2.13-9.36L1 10"], ['rotate-ccw', 'undo']);
+export const RotateCw = c(["M23 4v6h-6", "M20.49 15a9 9 0 1 1-2.12-9.36L23 10"], ['rotate-cw']);
+export const Save = c(["M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z", "M17 21v-8H7v8", "M7 3v5h8V3"], ['save']);
+export const Scissors = c(["M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M9.8 8.2L20 17", "M9.8 15.8L20 7"], ['scissors']);
+export const Search = c(["M11.5 18a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13z", "M16 16l5 5"], ['search', 'msg-search', 'loops-nav-search']);
+export const Send = c(["M22 2L11 13", "M22 2l-7 20-4-9-9-4 20-7z"], ['send', 'paper-plane', 'msg-send']);
+export const Settings = c(["M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"], ['settings', 'cog', 'msg-settings']);
+export const Share2 = c(["M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M8.59 13.51l6.83 3.98", "M15.41 6.51L8.59 10.49"], ['share-alt', 'share-2']);
+export const Shield = c(["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"], ['shield', 'shield-alt']);
+export const ShieldAlert = c(["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"], ['shield-alert', 'shield']);
+export const ShieldCheck = c(["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", "M9 11l2 2 4-4"], ['shield-check', 'profile-kyc']);
 export const ShoppingCart = React.forwardRef<SVGSVGElement, any>(({ size, strokeWidth = 1.5, className = '', ...props }, ref) => {
+  const customSvg = useShimCustomSvg(['shopping-cart', 'cart', 'shopping-bag']);
+  if (customSvg) {
+    return renderShimCustomSvg(customSvg, className, size, props);
+  }
   const hasSize = className && /\b(w-\d+|w-\[.*?\]|size-\d+|size-\[.*?\]|h-\d+|h-\[.*?\])\b/.test(className);
   return (
     <svg
@@ -240,46 +347,46 @@ export const ShoppingCart = React.forwardRef<SVGSVGElement, any>(({ size, stroke
     </svg>
   );
 });
-export const ShoppingBag = ShoppingCart;
-export const Sliders = c(["M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h6M10 8h4M18 16h4"]);
+export const ShoppingBag = c(["M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z", "M3 6h18", "M16 10a4 4 0 0 1-8 0"], ['shopping-bag', 'shopping-cart']);
+export const Sliders = c(["M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h6M10 8h4M18 16h4"], ['sliders', 'sliders-h', 'sliders-horizontal']);
 export const SlidersHorizontal = Sliders;
-export const Smartphone = c(["M5 4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4z", "M12 18h.01"]);
-export const Sparkles = c(["M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z", "M6 3l.5 2 2 .5-2 .5L6 8l-.5-2-2-.5 2-.5z"]);
-export const SquareStack = c(["M4 4h16v16H4V4z", "M9 1h11a2 2 0 0 1 2 2v11"]);
-export const Star = c(["M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"]);
-export const Store = c(["M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z", "M9 14h6v8H9z"]);
-export const Sun = c(["M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z", "M12 1v2", "M12 21v2", "M4.22 4.22l1.42 1.42", "M18.36 18.36l1.42 1.42", "M1 12h2", "M21 12h2", "M4.22 19.78l1.42-1.42", "M18.36 5.64l1.42-1.42"]);
-export const Tag = c(["M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z", "M7 7h.01"]);
-export const Ticket = c(["M1.5 8.5C1.5 7.67 2.17 7 3 7h18c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5v-7z", "M10 7a2 2 0 0 0 0 4 2 2 0 0 0 0-4zm4 0a2 2 0 0 0 0 4 2 2 0 0 0 0-4z"]);
-export const Torus = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"]);
-export const Trash = c(["M3 6h18", "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"]);
+export const Smartphone = c(["M5 4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4z", "M12 18h.01"], ['smartphone', 'mobile']);
+export const Sparkles = c(["M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z", "M6 3l.5 2 2 .5-2 .5L6 8l-.5-2-2-.5 2-.5z"], ['sparkles', 'stars']);
+export const SquareStack = c(["M4 4h16v16H4V4z", "M9 1h11a2 2 0 0 1 2 2v11"], ['square-stack']);
+export const Star = c(["M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"], ['star']);
+export const Store = c(["M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z", "M9 14h6v8H9z"], ['store', 'profile-seller-dashboard']);
+export const Sun = c(["M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z", "M12 1v2", "M12 21v2", "M4.22 4.22l1.42 1.42", "M18.36 18.36l1.42 1.42", "M1 12h2", "M21 12h2", "M4.22 19.78l1.42-1.42", "M18.36 5.64l1.42-1.42"], ['sun']);
+export const Tag = c(["M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z", "M7 7h.01"], ['tag']);
+export const Ticket = c(["M1.5 8.5C1.5 7.67 2.17 7 3 7h18c.83 0 1.5.67 1.5 1.5v7c0 .83-.67 1.5-1.5 1.5H3c-.83 0-1.5-.67-1.5-1.5v-7z", "M10 7a2 2 0 0 0 0 4 2 2 0 0 0 0-4zm4 0a2 2 0 0 0 0 4 2 2 0 0 0 0-4z"], ['ticket']);
+export const Torus = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"], ['torus']);
+export const Trash = c(["M3 6h18", "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"], ['trash', 'trash-2', 'msg-trash']);
 export const Trash2 = Trash;
-export const TrendingUp = c(["M23 6L13.5 15.5l-5-5L1 18", "M17 6h6v6"]);
-export const TrendingDown = c(["M23 18l-9.5-9.5-5 5L1 6", "M17 18h6v-6"]);
+export const TrendingUp = c(["M23 6L13.5 15.5l-5-5L1 18", "M17 6h6v6"], ['trending-up', 'trend-up']);
+export const TrendingDown = c(["M23 18l-9.5-9.5-5 5L1 6", "M17 18h6v-6"], ['trending-down']);
 export const Handshake = Award;
 export const PieChart = BarChart3;
-export const Truck = c(["M1 3h15v13H1V3zm15 5h4l3 3v5h-7V8z", "M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"]);
-export const User = c(["M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M5 21a7 7 0 0 1 14 0"]);
-export const UserMinus = c(["M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm14.5 0h-6"]);
-export const UserPlus = c(["M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm11.5-3v6", "M17 11h6"]);
-export const UserX = c(["M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm9.5-3l4 4", "M22 8l-4 4"]);
-export const Users = c(["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M17 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M23 21v-2a4 4 0 0 0-3-3.87"]);
+export const Truck = c(["M1 3h15v13H1V3zm15 5h4l3 3v5h-7V8z", "M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"], ['truck', 'truck-fast']);
+export const User = c(["M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M5 21a7 7 0 0 1 14 0"], ['user', 'msg-user', 'messages-profile']);
+export const UserMinus = c(["M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm14.5 0h-6"], ['user-minus']);
+export const UserPlus = c(["M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm11.5-3v6", "M17 11h6"], ['user-plus']);
+export const UserX = c(["M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm9.5-3l4 4", "M22 8l-4 4"], ['user-x']);
+export const Users = c(["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M17 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M23 21v-2a4 4 0 0 0-3-3.87"], ['users', 'msg-community']);
 export const Users2 = Users;
-export const Video = c(["M23 7l-7 5 7 5V7z", "M1 5h15v14H1V5z"]);
-export const VideoOff = c(["M1 1l22 22", "M23 7l-7 5 7 5V7z", "M1 5h15v14H1V5z"]);
-export const Volume2 = c(["M11 5L6 9H2v6h4l5 4V5z", "M15.54 8.46a5 5 0 0 1 0 7.07", "M19.07 4.93a10 10 0 0 1 0 14.14"]);
-export const VolumeX = c(["M11 5L6 9H2v6h4l5 4V5z", "M23 9l-6 6", "M17 9l6 6"]);
-export const Wallet = c(["M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h12v4", "M4 6v12a2 2 0 0 0 2 2h14v-4", "M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6h-4z"]);
-export const Wifi = c(["M5 12.55a11 11 0 0 1 14.08 0", "M1.42 9a16 16 0 0 1 21.16 0", "M8.53 16.11a6 6 0 0 1 6.95 0", "M12 20h.01"]);
-export const WifiOff = c(["M1 1l22 22", "M5 12.55a11 11 0 0 1 14.08 0", "M1.42 9a16 16 0 0 1 21.16 0", "M8.53 16.11a6 6 0 0 1 6.95 0", "M12 20h.01"]);
-export const X = c(["M18 6L6 18", "M6 6l12 12"]);
-export const XCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M15 9l-6 6", "M9 9l6 6"]);
+export const Video = c(["M23 7l-7 5 7 5V7z", "M1 5h15v14H1V5z"], ['video', 'msg-video-call']);
+export const VideoOff = c(["M1 1l22 22", "M23 7l-7 5 7 5V7z", "M1 5h15v14H1V5z"], ['video-off']);
+export const Volume2 = c(["M11 5L6 9H2v6h4l5 4V5z", "M15.54 8.46a5 5 0 0 1 0 7.07", "M19.07 4.93a10 10 0 0 1 0 14.14"], ['volume-2', 'loops-reel-unmute']);
+export const VolumeX = c(["M11 5L6 9H2v6h4l5 4V5z", "M23 9l-6 6", "M17 9l6 6"], ['volume-x', 'volume-mute', 'loops-reel-mute']);
+export const Wallet = c(["M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h12v4", "M4 6v12a2 2 0 0 0 2 2h14v-4", "M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6h-4z"], ['wallet', 'profile-affiliate-dashboard-payment']);
+export const Wifi = c(["M5 12.55a11 11 0 0 1 14.08 0", "M1.42 9a16 16 0 0 1 21.16 0", "M8.53 16.11a6 6 0 0 1 6.95 0", "M12 20h.01"], ['wifi']);
+export const WifiOff = c(["M1 1l22 22", "M5 12.55a11 11 0 0 1 14.08 0", "M1.42 9a16 16 0 0 1 21.16 0", "M8.53 16.11a6 6 0 0 1 6.95 0", "M12 20h.01"], ['wifi-off']);
+export const X = c(["M18 6L6 18", "M6 6l12 12"], ['x', 'times', 'msg-close', 'loops-story-close']);
+export const XCircle = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M15 9l-6 6", "M9 9l6 6"], ['times-circle', 'x-circle']);
 export const XIcon = X;
-export const Zap = c(["M13 2L3 14h9l-1 8 10-12h-9z"]);
-export const ZoomIn = c(["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.35-4.35", "M11 8v6", "M8 11h6"]);
-export const ZoomOut = c(["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.35-4.35", "M8 11h6"]);
+export const Zap = c(["M13 2L3 14h9l-1 8 10-12h-9z"], ['zap', 'bolt']);
+export const ZoomIn = c(["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.35-4.35", "M11 8v6", "M8 11h6"], ['zoom-in', 'search-plus']);
+export const ZoomOut = c(["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M21 21l-4.35-4.35", "M8 11h6"], ['zoom-out']);
 export const Repeat2 = Repeat;
-export const Type = c(["M4 7V4h16v3", "M9 20h6", "M12 4v16"]);
+export const Type = c(["M4 7V4h16v3", "M9 20h6", "M12 4v16"], ['type', 'loops-reel-studio-text']);
 export const TypeIcon = Type;
 
 // Add fallbacks and aliases for all possible package naming variants
@@ -417,71 +524,71 @@ export const PaperclipIcon = Paperclip;
 export const RotateCcwIconCustom = RotateCcw;
 export const RotateCwIconCustom = RotateCw;
 
-// Added icons for chat experience
-export const Undo2 = c(["M9 14 4 9l5-5", "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"]);
-export const Eraser = c(["m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21", "M22 21H7", "m5 11 9 9"]);
-export const Palette = c(["M12 2a10 10 0 0 0-10 10c0 4.42 3.58 8 8 8h1a2 2 0 0 0 2-2 2 2 0 0 1 2-2h1a5 5 0 0 0 5-5c0-5-4.03-9-9-9z", "M7.5 10.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M12 7.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M16.5 10.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"]);
-export const MessageSquareMore = c(["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", "M8 10h.01", "M12 10h.01", "M16 10h.01"]);
-export const Pencil = c(["M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z", "m15 5 4 4"]);
-export const Smile = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M8 14s1.5 2 4 2 4-2 4-2", "M9 9h.01", "M15 9h.01"]);
-export const BellOff = c(["M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5", "M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7", "M10.3 21a1.94 1.94 0 0 0 3.4 0", "m2 2 20 20"]);
-export const Ban = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "m4.93 4.93 14.14 14.14"]);
-export const MessageSquareWarning = c(["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", "M12 7v3", "M12 13h.01"]);
-export const GraduationCap = c(["M22 10v6M2 10l10-5 10 5-10 5z", "M6 12v5c3 3 9 3 12 0v-5"]);
-export const Calculator = c(["M4 2v20h16V2H4zm4 4h8v2H8V6zm0 6h2v2H8v-2zm4 0h2v2h-2v-2zm-4 4h2v2H8v-2zm4 0h2v2h-2v-2zm4-4h2v6h-2v-6z"]);
+// Added icons for chat & shop experience
+export const Undo2 = c(["M9 14 4 9l5-5", "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"], ['undo', 'undo-2']);
+export const Eraser = c(["m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21", "M22 21H7", "m5 11 9 9"], ['eraser']);
+export const Palette = c(["M12 2a10 10 0 0 0-10 10c0 4.42 3.58 8 8 8h1a2 2 0 0 0 2-2 2 2 0 0 1 2-2h1a5 5 0 0 0 5-5c0-5-4.03-9-9-9z", "M7.5 10.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M12 7.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M16.5 10.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"], ['palette']);
+export const MessageSquareMore = c(["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", "M8 10h.01", "M12 10h.01", "M16 10h.01"], ['message-square-more', 'comment-dots']);
+export const Pencil = c(["M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z", "m15 5 4 4"], ['pencil', 'edit-3', 'edit']);
+export const Smile = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M8 14s1.5 2 4 2 4-2 4-2", "M9 9h.01", "M15 9h.01"], ['smile', 'loops-story-stickers']);
+export const BellOff = c(["M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5", "M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7", "M10.3 21a1.94 1.94 0 0 0 3.4 0", "m2 2 20 20"], ['bell-off', 'bell-slash']);
+export const Ban = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "m4.93 4.93 14.14 14.14"], ['ban']);
+export const MessageSquareWarning = c(["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", "M12 7v3", "M12 13h.01"], ['message-square-warning']);
+export const GraduationCap = c(["M22 10v6M2 10l10-5 10 5-10 5z", "M6 12v5c3 3 9 3 12 0v-5"], ['graduation-cap']);
+export const Calculator = c(["M4 2v20h16V2H4zm4 4h8v2H8V6zm0 6h2v2H8v-2zm4 0h2v2h-2v-2zm-4 4h2v2H8v-2zm4 0h2v2h-2v-2zm4-4h2v6h-2v-6z"], ['calculator']);
 export const Login = LogIn;
 
-export const Wrench = c(["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"]);
-export const Cpu = c(["M4 4h16v16H4z", "M9 9h6v6H9z", "M9 1v3", "M15 1v3", "M9 20v3", "M15 20v3", "M20 9h3", "M20 14h3", "M1 9h3", "M1 14h3"]);
-export const Battery = c(["M2 7h16v10H2z", "M22 11v2"]);
-export const Square = c(["M3 3h18v18H3z"]);
-export const ThumbsUp = c(["M7 10v12", "M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3"]);
-export const ThumbsDown = c(["M17 14V2", "M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3"]);
-export const Flame = c(["M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"]);
-export const Building = c(["M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z", "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2", "M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2", "M10 6h4", "M10 10h4", "M10 14h4", "M10 18h4"]);
-export const FileCheck = c(["M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", "M14 2v4a2 2 0 0 0 2 2h4", "m9 15 2 2 4-4"]);
-export const UserCheck = c(["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "m16 11 2 2 4-4"]);
-export const Reply = c(["M9 17 4 12l5-5", "M4 12h11a5 5 0 0 1 5 5v1"]);
-export const Target = c(["M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z", "M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"]);
-export const Hash = c(["M4 9h16", "M4 15h16", "M10 3L8 21", "M16 3l-2 18"]);
-export const ZapOff = c(["M12.41 6.75L13 2l-2.43 2.92", "M18.57 12.91L21 10h-5.34", "M8 8l-5 6h9l-1 8 5-6", "M1 1l22 22"]);
-export const MessageSquareOff = c(["M21 15V5a2 2 0 0 0-2-2H9", "M3 3l18 18", "M3.6 3.6A2 2 0 0 0 3 5v16l4-4h10"]);
+export const Wrench = c(["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"], ['wrench']);
+export const Cpu = c(["M4 4h16v16H4z", "M9 9h6v6H9z", "M9 1v3", "M15 1v3", "M9 20v3", "M15 20v3", "M20 9h3", "M20 14h3", "M1 9h3", "M1 14h3"], ['cpu']);
+export const Battery = c(["M2 7h16v10H2z", "M22 11v2"], ['battery']);
+export const Square = c(["M3 3h18v18H3z"], ['square']);
+export const ThumbsUp = c(["M7 10v12", "M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3"], ['thumbs-up']);
+export const ThumbsDown = c(["M17 14V2", "M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3"], ['thumbs-down']);
+export const Flame = c(["M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"], ['flame']);
+export const Building = c(["M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z", "M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2", "M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2", "M10 6h4", "M10 10h4", "M10 14h4", "M10 18h4"], ['building']);
+export const FileCheck = c(["M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", "M14 2v4a2 2 0 0 0 2 2h4", "m9 15 2 2 4-4"], ['file-check']);
+export const UserCheck = c(["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "m16 11 2 2 4-4"], ['user-check']);
+export const Reply = c(["M9 17 4 12l5-5", "M4 12h11a5 5 0 0 1 5 5v1"], ['reply', 'msg-reply']);
+export const Target = c(["M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z", "M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"], ['target']);
+export const Hash = c(["M4 9h16", "M4 15h16", "M10 3L8 21", "M16 3l-2 18"], ['hash']);
+export const ZapOff = c(["M12.41 6.75L13 2l-2.43 2.92", "M18.57 12.91L21 10h-5.34", "M8 8l-5 6h9l-1 8 5-6", "M1 1l22 22"], ['zap-off']);
+export const MessageSquareOff = c(["M21 15V5a2 2 0 0 0-2-2H9", "M3 3l18 18", "M3.6 3.6A2 2 0 0 0 3 5v16l4-4h10"], ['message-square-off']);
 export const BarChart2 = BarChart3;
-export const Frame = c(["M22 6H2", "M22 18H2", "M6 2v20", "M18 2v20"]);
-export const AlignLeft = c(["M17 10H3", "M21 6H3", "M21 14H3", "M17 18H3"]);
-export const AlignCenter = c(["M18 10H6", "M21 6H3", "M21 14H3", "M18 18H6"]);
-export const AlignRight = c(["M21 10H7", "M21 6H3", "M21 14H3", "M21 18H7"]);
-export const Infinity = c(["M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z"]);
-export const Timer = c(["M10 2h4", "M12 14l3-3", "M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"]);
-export const Utensils = c(["M18 2v20", "M21 2v6a3 3 0 0 1-3 3", "M14 2v6a3 3 0 0 0 3 3", "M3 2v7a4 4 0 0 0 4 4v9h2V13a4 4 0 0 0 4-4V2"]);
-export const Gamepad2 = c(["M6 11h4M8 9v4", "M15 12h.01M18 10h.01", "M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.84 7.56 4.2 11.41 9.298 11.41s10.138-3.85 9.298-11.41A4 4 0 0 0 17.32 5z"]);
-export const Laptop = c(["M20 16V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11M2 20h20"]);
-export const Shirt = c(["M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"]);
-export const Trophy = c(["M6 9H4.5a2.5 2.5 0 0 1 0-5H6", "M18 9h1.5a2.5 2.5 0 0 0 0-5H18", "M4 22h16", "M10 14.66V17", "M14 14.66V17", "M12 2a8 8 0 0 0-8 8v1a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V10a8 8 0 0 0-8-8z"]);
-export const Tv = c(["M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z", "M17 2l-5 5-5-5"]);
-export const Plane = c(["M17.8 19.2 16 11l3.5-3.5a2.12 2.12 0 0 0 0-3 2.12 2.12 0 0 0-3 0L13 8 4.8 6.2a1 1 0 0 0-1.12.37L2.4 8.2a.5.5 0 0 0 .12.67l6.68 4.63-2.6 2.6-2.4-.8a.5.5 0 0 0-.58.17l-.8 1.07a.5.5 0 0 0 .12.67l3.6 2.5 2.5 3.6a.5.5 0 0 0 .67.12l1.07-.8a.5.5 0 0 0 .17-.58l-.8-2.4 2.6-2.6 4.63 6.68a.5.5 0 0 0 .67.12l1.63-1.28a1 1 0 0 0 .37-1.12z"]);
-export const Dumbbell = c(["m6.5 6.5 11 11", "m21 21-1-1", "m3 3 1 1", "m18 22 4-4", "m2 6 4-4", "m3 10 7-7", "m14 21 7-7"]);
-export const Frown = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M16 16s-1.5-2-4-2-4 2-4 2", "M9 9h.01", "M15 9h.01"]);
-export const Angry = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M16 16s-1.5-2-4-2-4 2-4 2", "M7.5 8 10 9", "m14 9 2.5-1", "M9 10h.01", "M15 10h.01"]);
-export const Laugh = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z", "M9 9h.01", "M15 9h.01"]);
-export const Meh = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M8 15h8", "M9 9h.01", "M15 9h.01"]);
+export const Frame = c(["M22 6H2", "M22 18H2", "M6 2v20", "M18 2v20"], ['frame']);
+export const AlignLeft = c(["M17 10H3", "M21 6H3", "M21 14H3", "M17 18H3"], ['align-left']);
+export const AlignCenter = c(["M18 10H6", "M21 6H3", "M21 14H3", "M18 18H6"], ['align-center']);
+export const AlignRight = c(["M21 10H7", "M21 6H3", "M21 14H3", "M21 18H7"], ['align-right']);
+export const Infinity = c(["M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z"], ['infinity']);
+export const Timer = c(["M10 2h4", "M12 14l3-3", "M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"], ['timer', 'clock']);
+export const Utensils = c(["M18 2v20", "M21 2v6a3 3 0 0 1-3 3", "M14 2v6a3 3 0 0 0 3 3", "M3 2v7a4 4 0 0 0 4 4v9h2V13a4 4 0 0 0 4-4V2"], ['utensils']);
+export const Gamepad2 = c(["M6 11h4M8 9v4", "M15 12h.01M18 10h.01", "M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.84 7.56 4.2 11.41 9.298 11.41s10.138-3.85 9.298-11.41A4 4 0 0 0 17.32 5z"], ['gamepad-2']);
+export const Laptop = c(["M20 16V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11M2 20h20"], ['laptop']);
+export const Shirt = c(["M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"], ['shirt']);
+export const Trophy = c(["M6 9H4.5a2.5 2.5 0 0 1 0-5H6", "M18 9h1.5a2.5 2.5 0 0 0 0-5H18", "M4 22h16", "M10 14.66V17", "M14 14.66V17", "M12 2a8 8 0 0 0-8 8v1a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V10a8 8 0 0 0-8-8z"], ['trophy']);
+export const Tv = c(["M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z", "M17 2l-5 5-5-5"], ['tv']);
+export const Plane = c(["M17.8 19.2 16 11l3.5-3.5a2.12 2.12 0 0 0 0-3 2.12 2.12 0 0 0-3 0L13 8 4.8 6.2a1 1 0 0 0-1.12.37L2.4 8.2a.5.5 0 0 0 .12.67l6.68 4.63-2.6 2.6-2.4-.8a.5.5 0 0 0-.58.17l-.8 1.07a.5.5 0 0 0 .12.67l3.6 2.5 2.5 3.6a.5.5 0 0 0 .67.12l1.07-.8a.5.5 0 0 0 .17-.58l-.8-2.4 2.6-2.6 4.63 6.68a.5.5 0 0 0 .67.12l1.63-1.28a1 1 0 0 0 .37-1.12z"], ['plane']);
+export const Dumbbell = c(["m6.5 6.5 11 11", "m21 21-1-1", "m3 3 1 1", "m18 22 4-4", "m2 6 4-4", "m3 10 7-7", "m14 21 7-7"], ['dumbbell']);
+export const Frown = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M16 16s-1.5-2-4-2-4 2-4 2", "M9 9h.01", "M15 9h.01"], ['frown']);
+export const Angry = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M16 16s-1.5-2-4-2-4 2-4 2", "M7.5 8 10 9", "m14 9 2.5-1", "M9 10h.01", "M15 10h.01"], ['angry']);
+export const Laugh = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z", "M9 9h.01", "M15 9h.01"], ['laugh']);
+export const Meh = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M8 15h8", "M9 9h.01", "M15 9h.01"], ['meh']);
 export const Building2 = Building;
-export const BellRing = c(["M18 8a6 6 0 0 0-12 0v6l-2 3h16l-2-3V8z", "M9 19a3 3 0 0 0 6 0", "M4 2C2.8 3.7 2 5.7 2 8", "M22 8c0-2.3-.8-4.3-2-6"]);
-export const PartyPopper = c(["M5.8 11.3L2 22l10.7-3.8", "M4 3h.01", "M22 8h.01", "M15 2h.01", "M22 20h.01", "M22 2l-2.24.75a2.9 2.9 0 0 0-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10", "M22 13l-.82-.33c-.86-.34-1.82.2-1.98 1.11v0c-.11.7-.72 1.22-1.43 1.22H17", "M11 2l.33.82c.34.86-.2 1.82-1.11 1.98v0C9.52 4.9 9 5.52 9 6.23V7", "M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"]);
-export const Navigation = c(["M3 11l19-9-9 19-2-8-8-2z"]);
-export const Compass = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"]);
-export const Languages = c(["m5 8 6 6", "m4 14 6-6 2-3", "M2 5h12", "M7 2h1", "m22 22-5-10-5 10", "M14 18h6"]);
+export const BellRing = c(["M18 8a6 6 0 0 0-12 0v6l-2 3h16l-2-3V8z", "M9 19a3 3 0 0 0 6 0", "M4 2C2.8 3.7 2 5.7 2 8", "M22 8c0-2.3-.8-4.3-2-6"], ['bell-ring', 'bell']);
+export const PartyPopper = c(["M5.8 11.3L2 22l10.7-3.8", "M4 3h.01", "M22 8h.01", "M15 2h.01", "M22 20h.01", "M22 2l-2.24.75a2.9 2.9 0 0 0-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10", "M22 13l-.82-.33c-.86-.34-1.82.2-1.98 1.11v0c-.11.7-.72 1.22-1.43 1.22H17", "M11 2l.33.82c.34.86-.2 1.82-1.11 1.98v0C9.52 4.9 9 5.52 9 6.23V7", "M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"], ['party-popper']);
+export const Navigation = c(["M3 11l19-9-9 19-2-8-8-2z"], ['navigation']);
+export const Compass = c(["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"], ['compass']);
+export const Languages = c(["m5 8 6 6", "m4 14 6-6 2-3", "M2 5h12", "M7 2h1", "m22 22-5-10-5 10", "M14 18h6"], ['languages']);
 export const LanguagesIcon = Languages;
-export const BadgeCheck = c(["M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z", "m9 12 2 2 4-4"]);
+export const BadgeCheck = c(["M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z", "m9 12 2 2 4-4"], ['badge-check', 'shield-check']);
 export const BadgeCheckIcon = BadgeCheck;
-export const Folder = c(["M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"]);
+export const Folder = c(["M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"], ['folder']);
 export const FolderIcon = Folder;
-export const FolderPlus = c(["M12 10v6", "M9 13h6", "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"]);
+export const FolderPlus = c(["M12 10v6", "M9 13h6", "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"], ['folder-plus']);
 export const FolderPlusIcon = FolderPlus;
-export const CalendarClock = c(["M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5", "M16 2v4", "M8 2v4", "M3 10h5", "M17.5 17.5 16 16.3V14", "M16 22a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"]);
+export const CalendarClock = c(["M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5", "M16 2v4", "M8 2v4", "M3 10h5", "M17.5 17.5 16 16.3V14", "M16 22a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"], ['calendar-clock', 'calendar']);
 export const CalendarClockIcon = CalendarClock;
 export const PenLine = Pencil;
-export const Quote = c(["M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z", "M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"]);
+export const Quote = c(["M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z", "M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"], ['quote', 'quote-right']);
 
 export type LucideProps = React.SVGProps<SVGSVGElement> & {
   size?: number | string;
@@ -490,4 +597,3 @@ export type LucideProps = React.SVGProps<SVGSVGElement> & {
 export type LucideIcon = React.ForwardRefExoticComponent<
   LucideProps & React.RefAttributes<SVGSVGElement>
 >;
-

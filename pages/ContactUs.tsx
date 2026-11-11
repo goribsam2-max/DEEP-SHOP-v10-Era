@@ -47,7 +47,7 @@ const ContactUs: React.FC = () => {
   };
 
   return (
-    <div className="bg-zinc-50 dark:bg-[#121212] min-h-screen font-sans pb-24">
+    <div className="ambient-dynamic-bg min-h-screen font-sans pb-24">
       <SEO
         title="Contact Us | DEEP SHOP"
         description="Contact DEEP SHOP for inquiries, support, and help. Bangladesh's trusted platform for Border Cross Products + genuine mobiles."

@@ -1,22 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  X,
-  Radio,
-  Camera,
-  Monitor,
-  Mic,
-  MicOff,
-  RefreshCw,
-  Send,
-  Eye,
-  Heart,
-  Gift,
-  Sparkles,
-  AlertCircle,
-  Loader2,
-  Image as ImageIcon,
-  CheckCircle,
-} from "lucide-react";
+import Icon from "./Icon";
 import {
   collection,
   doc,
@@ -388,10 +371,10 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
               }}
               className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer transition active:scale-95"
             >
-              <X className="w-5 h-5" />
+              <Icon name="x" className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2">
-              <Radio className="w-5 h-5 text-red-500 animate-pulse" />
+              <Icon name="radio" className="w-5 h-5 text-red-500 animate-pulse" />
               <h2 className="text-base font-bold">Go Live Studio</h2>
             </div>
             <div className="w-10" />
@@ -415,7 +398,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                 title="Flip Camera (Front/Back)"
                 className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center justify-center text-white hover:bg-black/80 transition active:scale-95"
               >
-                <RefreshCw className="w-4 h-4" />
+                <Icon name="refresh-cw" className="w-4 h-4" />
               </button>
               <button
                 type="button"
@@ -423,7 +406,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                 title={streamSource === "camera" ? "Switch to Screen Share" : "Switch to Camera"}
                 className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center justify-center text-white hover:bg-black/80 transition active:scale-95"
               >
-                {streamSource === "camera" ? <Monitor className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+                {streamSource === "camera" ? <Icon name="monitor" className="w-4 h-4" /> : <Icon name="camera" className="w-4 h-4" />}
               </button>
               <button
                 type="button"
@@ -433,7 +416,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                   isMuted ? "bg-red-500/80 text-white" : "bg-black/60 text-white"
                 }`}
               >
-                {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                {isMuted ? <Icon name="mic-off" className="w-4 h-4" /> : <Icon name="mic" className="w-4 h-4" />}
               </button>
             </div>
 
@@ -486,12 +469,12 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                 disabled={isUploadingThumb}
                 className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-white flex items-center gap-1.5 border border-white/10 cursor-pointer"
               >
-                {isUploadingThumb ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                {isUploadingThumb ? <Icon name="loader-2" className="w-3.5 h-3.5 animate-spin" /> : <Icon name="image" className="w-3.5 h-3.5" />}
                 <span>{thumbnailUrl ? "Change Thumbnail" : "Add Thumbnail"}</span>
               </button>
               {thumbnailUrl && (
                 <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-                  <CheckCircle className="w-3.5 h-3.5" />
+                  <Icon name="check-circle" className="w-3.5 h-3.5" />
                   <span>Thumbnail attached</span>
                 </div>
               )}
@@ -504,7 +487,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
             onClick={handleGoLive}
             className="w-full py-4 rounded-full bg-red-600 hover:bg-red-500 text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 active:scale-98 transition cursor-pointer"
           >
-            <Radio className="w-5 h-5 animate-pulse" />
+            <Icon name="radio" className="w-5 h-5 animate-pulse" />
             <span>Go Live Now</span>
           </button>
         </div>
@@ -574,7 +557,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                 <span>LIVE</span>
               </div>
               <div className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white font-semibold text-xs flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5" />
+                <Icon name="eye" className="w-3.5 h-3.5" />
                 <span>{viewerCount}</span>
               </div>
 
@@ -597,14 +580,14 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                 onClick={toggleCameraFacing}
                 className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white hover:bg-black/70 active:scale-95 transition"
               >
-                <RefreshCw className="w-4 h-4" />
+                <Icon name="refresh-cw" className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={toggleStreamSource}
                 className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white hover:bg-black/70 active:scale-95 transition"
               >
-                {streamSource === "camera" ? <Monitor className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+                {streamSource === "camera" ? <Icon name="monitor" className="w-4 h-4" /> : <Icon name="camera" className="w-4 h-4" />}
               </button>
               <button
                 type="button"
@@ -613,7 +596,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                   isMuted ? "bg-red-500 text-white" : "bg-black/50 text-white"
                 }`}
               >
-                {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                {isMuted ? <Icon name="mic-off" className="w-4 h-4" /> : <Icon name="mic" className="w-4 h-4" />}
               </button>
             </div>
           )}
@@ -687,7 +670,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                   disabled={!commentInput.trim()}
                   className="w-10 h-10 rounded-full bg-white text-zinc-950 flex items-center justify-center hover:opacity-90 active:scale-95 transition disabled:opacity-40 cursor-pointer"
                 >
-                  <Send className="w-4 h-4" />
+                  <Icon name="send" className="w-4 h-4" />
                 </button>
               </form>
 
@@ -701,7 +684,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                 className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-pink-500 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-md cursor-pointer"
                 title="Send Gift"
               >
-                <Gift className="w-4 h-4" />
+                <Icon name="gift" className="w-4 h-4" />
               </button>
 
               {/* Heart Tap Button */}
@@ -711,7 +694,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                 className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition shadow-md cursor-pointer"
                 title="Send Love"
               >
-                <Heart className="w-4 h-4 fill-white" />
+                <Icon name="heart" className="w-4 h-4" />
               </button>
             </div>
 
@@ -720,7 +703,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
               <div className="bg-zinc-900/95 backdrop-blur-xl rounded-3xl p-4 border border-white/15 shadow-2xl animate-in slide-in-from-bottom duration-200">
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
                   <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Gift className="w-4 h-4 text-pink-400" />
+                    <Icon name="gift" className="w-4 h-4 text-pink-400" />
                     <span>Send a Gift to Creator</span>
                   </h4>
                   <button
@@ -728,7 +711,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                     onClick={() => setShowGiftDrawer(false)}
                     className="text-zinc-400 hover:text-white"
                   >
-                    <X className="w-4 h-4" />
+                    <Icon name="x" className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="grid grid-cols-5 gap-2 pt-3">

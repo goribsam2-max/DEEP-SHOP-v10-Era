@@ -64,7 +64,7 @@ const Wishlist: React.FC = () => {
   if (loading) return <CatalogPageSkeleton />;
 
   return (
-    <div className="w-full bg-zinc-50 dark:bg-[#000000] min-h-screen pb-[120px] md:pb-10">
+    <div className="w-full ambient-dynamic-bg min-h-screen pb-[120px] md:pb-10">
       <div className="px-6 md:px-12 py-10 max-w-7xl mx-auto">
       
 

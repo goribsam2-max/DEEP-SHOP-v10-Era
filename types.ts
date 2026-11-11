@@ -140,6 +140,7 @@ export interface UserProfile {
   loopsCopyrightStrikes?: any[];
   loopsStrikeCount?: number;
   loopsPostingBlocked?: boolean;
+  sessions?: any[];
 }
 
 export interface StoryHighlightSnapshot {
@@ -303,11 +304,12 @@ export type ReplyPermissionMode = 'anyone' | 'followers' | 'following' | 'mentio
 export interface PostPollOption {
   id: string;
   text: string;
-  votes: number;
+  votes?: number;
   voterIds?: string[];
 }
 
 export interface PostPoll {
+  id?: string;
   question?: string;
   options: PostPollOption[];
   endsAt?: number;
@@ -327,6 +329,7 @@ export interface PostQuoteBlock {
 export interface PostThreadItem {
   id: string;
   text: string;
+  imageUrl?: string;
 }
 
 export interface ScamPost {
