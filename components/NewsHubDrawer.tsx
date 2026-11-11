@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DottedGhostCatIcon } from "./ComposerLiquidGlassSheets";
 import { ReelsTuneAlgorithmIcon } from "./LoopsReelsView";
 import { triggerHaptic } from "../lib/haptics";
+import { useTheme } from "./ThemeContext";
 
 interface NewsHubDrawerProps {
   isOpen: boolean;
@@ -116,6 +117,7 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
+  const { isDark, toggleTheme: handleContextToggle } = useTheme();
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [prefs, setPrefs] = useState<DrawerMenuPrefs>(loadDrawerPrefs);
 
@@ -158,17 +160,10 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
     navigate(path);
   };
 
-  const toggleTheme = () => {
+  const toggleTheme = (e?: React.MouseEvent) => {
     if (isCustomizing) return;
     triggerHaptic();
-    const isDark = document.documentElement.classList.contains("dark");
-    if (isDark) {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    } else {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    }
+    handleContextToggle(e);
   };
 
   const moveItem = (
@@ -320,9 +315,12 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
       label: "Appearance",
       onClick: toggleTheme,
       trailing: (
-        <span className="text-zinc-700 dark:text-zinc-300 shrink-0">
-          <Sun className="w-[20px] h-[20px] stroke-[1.85] dark:hidden" />
-          <Moon className="w-[20px] h-[20px] stroke-[1.85] hidden dark:inline" />
+        <span className="inline-flex items-center justify-center shrink-0 w-5 h-5">
+          {isDark ? (
+            <Sun className="w-5 h-5 stroke-[1.85] text-amber-400 shrink-0" />
+          ) : (
+            <Moon className="w-5 h-5 stroke-[1.85] text-zinc-700 dark:text-zinc-300 shrink-0" />
+          )}
         </span>
       ),
     },
