@@ -50,9 +50,11 @@ export const auth = authInstance;
 let firestoreInstance: Firestore;
 try {
   firestoreInstance = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
+    localCache: isEmbeddedFrame
+      ? memoryLocalCache()
+      : persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
     experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
   });

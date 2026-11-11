@@ -804,103 +804,95 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
         return <div className="w-full h-full bg-black" />;
       }
       return (
-        <video
-          ref={videoRef}
-          data-active-reel-video={isActive ? "true" : undefined}
-          data-reel-user-paused={isPaused ? "true" : undefined}
-          src={src}
-          poster={posterImg?.trim() || undefined}
-          preload={isActive || shouldPreload ? "auto" : "metadata"}
-          playsInline
-          loop={!onVideoEnded}
-          muted={isMuted}
-          autoPlay={isActive}
-          onPlaying={() => {
-            if (bufferingTimerRef.current) {
-              window.clearTimeout(bufferingTimerRef.current);
-              bufferingTimerRef.current = null;
-            }
-            setHasLoadedFrame(true);
-            setIsBuffering(false);
-          }}
-          onWaiting={() => {
-            if (!isActive) return;
-            if (bufferingTimerRef.current) {
-              window.clearTimeout(bufferingTimerRef.current);
-            }
-            bufferingTimerRef.current = window.setTimeout(() => {
-              setIsBuffering(true);
-            }, 750);
-          }}
-          onCanPlay={(e) => {
-            if (bufferingTimerRef.current) {
-              window.clearTimeout(bufferingTimerRef.current);
-              bufferingTimerRef.current = null;
-            }
-            setHasLoadedFrame(true);
-            setIsBuffering(false);
-            const v = e.currentTarget;
-            if (isActive && !isPaused && v.paused) {
-              v.play().catch(() => {});
-            }
-          }}
-          onLoadedData={(e) => {
-            if (bufferingTimerRef.current) {
-              window.clearTimeout(bufferingTimerRef.current);
-              bufferingTimerRef.current = null;
-            }
-            setHasLoadedFrame(true);
-            setIsBuffering(false);
-            const v = e.currentTarget;
-            if (isActive && !isPaused && v.paused) {
-              v.muted = isMuted;
-              v.play().catch(() => {
-                v.muted = true;
-                v.play().catch(() => {});
-              });
-            }
-          }}
-          onLoadedMetadata={(e) => {
-            const v = e.currentTarget;
-            if (!posterImg && v.currentTime === 0 && v.paused) {
-              try {
-                v.currentTime = 0.001;
-              } catch {}
-            }
-          }}
-          onTimeUpdate={(e) => {
-            const v = e.currentTarget;
-            if (!hasLoadedFrame && v.currentTime > 0) {
+        <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
+          {posterImg && !hasLoadedFrame && (
+            <img
+              src={posterImg}
+              alt={post.title || "Reel thumbnail"}
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 z-[1] w-full h-full object-contain bg-black pointer-events-none transition-opacity duration-200"
+            />
+          )}
+          <video
+            ref={videoRef}
+            data-active-reel-video={isActive ? "true" : undefined}
+            data-reel-user-paused={isPaused ? "true" : undefined}
+            src={src}
+            poster={posterImg?.trim() || undefined}
+            preload={isActive || shouldPreload ? "auto" : "metadata"}
+            playsInline
+            loop={!onVideoEnded}
+            muted={isMuted}
+            autoPlay={isActive}
+            onPlaying={() => {
               setHasLoadedFrame(true);
-            }
-            if (isActive && v.duration > 0) {
-              onProgressUpdate?.(
-                Math.min(100, (v.currentTime / v.duration) * 100)
-              );
-            }
-          }}
-          onEnded={() => {
-            if (onVideoEnded) {
-              onVideoEnded();
-            } else if (videoRef.current) {
-              videoRef.current.currentTime = 0;
-              videoRef.current.play().catch(() => {});
-            }
-          }}
-          onError={() => {
-            if (
-              !useRawOriginFallback &&
-              proxyCandidate &&
-              proxyCandidate !== directCandidate
-            ) {
-              setUseRawOriginFallback(true);
-              return;
-            }
-            setIsBuffering(false);
-            setDirectFailed(true);
-          }}
-          className="w-full h-full object-contain bg-black"
-        />
+              setIsBuffering(false);
+            }}
+            onWaiting={() => {
+              setIsBuffering(false);
+            }}
+            onCanPlay={(e) => {
+              setHasLoadedFrame(true);
+              setIsBuffering(false);
+              const v = e.currentTarget;
+              if (isActive && !isPaused && v.paused) {
+                v.play().catch(() => {});
+              }
+            }}
+            onLoadedData={(e) => {
+              setHasLoadedFrame(true);
+              setIsBuffering(false);
+              const v = e.currentTarget;
+              if (isActive && !isPaused && v.paused) {
+                v.muted = isMuted;
+                v.play().catch(() => {
+                  v.muted = true;
+                  v.play().catch(() => {});
+                });
+              }
+            }}
+            onLoadedMetadata={(e) => {
+              const v = e.currentTarget;
+              if (!posterImg && v.currentTime === 0 && v.paused) {
+                try {
+                  v.currentTime = 0.001;
+                } catch {}
+              }
+            }}
+            onTimeUpdate={(e) => {
+              const v = e.currentTarget;
+              if (!hasLoadedFrame && (v.currentTime > 0 || v.readyState >= 2)) {
+                setHasLoadedFrame(true);
+              }
+              if (isActive && v.duration > 0) {
+                onProgressUpdate?.(
+                  Math.min(100, (v.currentTime / v.duration) * 100)
+                );
+              }
+            }}
+            onEnded={() => {
+              if (onVideoEnded) {
+                onVideoEnded();
+              } else if (videoRef.current) {
+                videoRef.current.currentTime = 0;
+                videoRef.current.play().catch(() => {});
+              }
+            }}
+            onError={() => {
+              if (
+                !useRawOriginFallback &&
+                proxyCandidate &&
+                proxyCandidate !== directCandidate
+              ) {
+                setUseRawOriginFallback(true);
+                return;
+              }
+              setIsBuffering(false);
+              setDirectFailed(true);
+            }}
+            className="w-full h-full object-contain bg-black"
+          />
+        </div>
       );
     }
 
@@ -1167,14 +1159,6 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
         );
       })()}
 
-      {/* Buffering Indicator for Active Native Reel — only shows if playback is genuinely stalled */}
-      {isActive && usesNativeVideo && isBuffering && !directFailed && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <div className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/15 flex items-center justify-center text-white">
-            <Loader2 className="w-5 h-5 animate-spin" />
-          </div>
-        </div>
-      )}
 
       {/* Tap-to-Play/Pause + Double-Tap-to-React Layer */}
       {supportsTapOverlay && !isDocked && (

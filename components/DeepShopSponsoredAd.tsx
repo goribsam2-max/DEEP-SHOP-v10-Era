@@ -537,6 +537,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [centerHud, setCenterHud] = useState<"play" | "pause" | null>(null);
   const [useProxyStream, setUseProxyStream] = useState(false);
+  const [hasLoadedFrame, setHasLoadedFrame] = useState(false);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [activePopup, setActivePopup] = useState<ActiveAdPopup>(null);
   const [expandedWhyRow, setExpandedWhyRow] = useState<
@@ -563,6 +564,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
   useEffect(() => {
     setMediaIdx(0);
     setUseProxyStream(false);
+    setHasLoadedFrame(false);
     setIsPaused(false);
     setCaptionExpanded(false);
   }, [ad.id]);
@@ -739,6 +741,12 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
 
     if (isVideo) {
       if (!effectiveVideoSrc) return null;
+      const adPosterImg =
+        activeMedia?.thumbnail ||
+        activeMedia?.poster ||
+        ad.media.find((m) => m.type === "photo")?.url ||
+        ad.thumbnailUrl ||
+        "";
       return (
         <div
           onClick={handleTapVideo}
@@ -748,15 +756,49 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
               : "relative w-full flex items-center justify-center bg-black cursor-pointer overflow-hidden"
           }
         >
+          {adPosterImg && !hasLoadedFrame && (
+            <img
+              src={adPosterImg}
+              alt={ad.title || "Sponsored Ad"}
+              referrerPolicy="no-referrer"
+              className="absolute inset-0 z-[1] w-full h-full object-contain bg-black pointer-events-none transition-opacity duration-200"
+            />
+          )}
           <video
             ref={videoRef}
             key={`${ad.id}-${mediaIdx}-${useProxyStream ? "p" : "d"}`}
             src={effectiveVideoSrc}
+            poster={adPosterImg || undefined}
             playsInline
             muted={effectiveMuted}
             autoPlay={isActive}
             loop={ad.media.length <= 1 && !onAdEnded}
-            preload={isActive ? "auto" : "metadata"}
+            preload="auto"
+            onPlaying={() => setHasLoadedFrame(true)}
+            onCanPlay={(e) => {
+              setHasLoadedFrame(true);
+              const v = e.currentTarget;
+              if (isActive && !isPaused && !activePopup && v.paused) {
+                v.play().catch(() => {});
+              }
+            }}
+            onLoadedData={(e) => {
+              setHasLoadedFrame(true);
+              const v = e.currentTarget;
+              if (isActive && !isPaused && !activePopup && v.paused) {
+                v.muted = effectiveMuted;
+                v.play().catch(() => {
+                  v.muted = true;
+                  v.play().catch(() => {});
+                });
+              }
+            }}
+            onTimeUpdate={(e) => {
+              const v = e.currentTarget;
+              if (!hasLoadedFrame && (v.currentTime > 0 || v.readyState >= 2)) {
+                setHasLoadedFrame(true);
+              }
+            }}
             onEnded={() => {
               if (ad.media.length > 1 && mediaIdx < ad.media.length - 1) {
                 setMediaIdx((i) => i + 1);

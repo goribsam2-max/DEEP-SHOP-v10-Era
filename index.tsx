@@ -50,7 +50,10 @@ const isBenignDevClientNoise = (msg: string, stack: string, filename = ""): bool
     combined.includes("resource-exhausted") ||
     combined.includes("quota exceeded") ||
     combined.includes("maximum backoff delay") ||
-    combined.includes("overloading the backend")
+    combined.includes("overloading the backend") ||
+    combined.includes("internal assertion failed") ||
+    combined.includes("key generator value") ||
+    combined.includes("firestore (12.")
   );
 };
 
