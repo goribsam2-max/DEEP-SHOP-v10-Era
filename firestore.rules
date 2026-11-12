@@ -222,5 +222,28 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
+
+    // User Notes (24h ephemeral notes with music, mood, reactions)
+    match /user_notes/{noteId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && (request.auth.uid == noteId || isAdmin());
+      allow delete: if isSignedIn() && (request.auth.uid == noteId || isAdmin());
+
+      match /reactions/{reactionId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+    }
+
+    // Live Streams (Go Live Studio)
+    match /live_streams/{streamId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() || isAdmin();
+
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn() || isAdmin();
+      }
+    }
   }
 }
+

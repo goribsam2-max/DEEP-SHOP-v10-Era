@@ -103,7 +103,10 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
         try {
           // Try with audio first
           stream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
+            video: {
+              cursor: "always",
+              displaySurface: "monitor"
+            } as any,
             audio: {
               echoCancellation: true,
               noiseSuppression: true
@@ -117,6 +120,15 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
             audio: false
           });
         }
+
+        // When user clicks 'Stop sharing' on browser's native share bar
+        const vTrack = stream.getVideoTracks()[0];
+        if (vTrack) {
+          vTrack.onended = () => {
+            setStreamSource("camera");
+            startBroadcasterMedia("camera", cameraFacing);
+          };
+        }
       } else {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -129,14 +141,35 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
       }
       setLocalMediaStream(stream);
       if (videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
-        videoPreviewRef.current.play().catch(() => {});
+        const v = videoPreviewRef.current;
+        v.srcObject = stream;
+        v.muted = true;
+        v.playsInline = true;
+        v.onloadedmetadata = () => {
+          v.play().catch(() => {});
+        };
+        v.play().catch(() => {});
       }
     } catch (err: any) {
       console.warn("Could not start media stream:", err);
       notify("Camera or Screen permission denied / unavailable.", "error");
     }
   };
+
+  // Synchronize localMediaStream to videoPreviewRef whenever stream or live stage changes
+  useEffect(() => {
+    if (videoPreviewRef.current && localMediaStream) {
+      const v = videoPreviewRef.current;
+      v.srcObject = localMediaStream;
+      v.muted = true;
+      v.playsInline = true;
+      v.onloadedmetadata = () => {
+        v.play().catch(() => {});
+      };
+      v.play().catch(() => {});
+    }
+  }, [localMediaStream, isLiveActive, streamSource]);
+
 
   // Switch camera facing
   const toggleCameraFacing = async () => {
@@ -394,13 +427,13 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
           </div>
 
           {/* Camera / Screen Preview */}
-          <div className="relative w-full aspect-[9/14] my-3 rounded-3xl overflow-hidden bg-zinc-900 border border-white/10 flex items-center justify-center shadow-2xl">
+          <div className="relative w-full aspect-[9/14] my-3 rounded-3xl overflow-hidden bg-black border border-white/10 flex items-center justify-center shadow-2xl">
             <video
               ref={videoPreviewRef}
               autoPlay
               playsInline
               muted
-              className="w-full h-full object-cover"
+              className={`w-full h-full ${streamSource === "screen" ? "object-contain bg-black" : "object-cover"}`}
             />
 
             {/* Quick Preview Controls */}
@@ -508,14 +541,14 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
         /* 2. ACTIVE BROADCAST / VIEWER STAGE */
         <div className="relative w-full h-full max-w-md mx-auto flex flex-col justify-between bg-black text-white overflow-hidden">
           {/* Video Layer */}
-          <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 z-0 bg-black">
             {isBroadcaster ? (
               <video
                 ref={videoPreviewRef}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className={`w-full h-full ${streamSource === "screen" ? "object-contain bg-black" : "object-cover"}`}
               />
             ) : streamData?.thumbnailUrl ? (
               <img

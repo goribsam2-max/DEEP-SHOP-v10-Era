@@ -69,6 +69,11 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (initialStep === 'new_note') {
+        window.dispatchEvent(new CustomEvent('open_note_creator', { detail: { replaceExisting: true } }));
+        onClose();
+        return;
+      }
       setStep(initialStep);
       setGroupType(initialGroupType);
     }
@@ -400,7 +405,10 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                   {/* Action 1: New note */}
                   <button 
                     type="button"
-                    onClick={() => setStep('new_note')}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('open_note_creator', { detail: { replaceExisting: true } }));
+                      handleModalClose();
+                    }}
                     className="w-full px-5 py-3 flex items-center justify-between hover:bg-zinc-100 dark:hover:bg-zinc-800/40 active:bg-zinc-200 dark:active:bg-zinc-800/60 transition-colors text-left group cursor-pointer"
                   >
                     <div className="flex items-center gap-3.5">

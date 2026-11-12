@@ -29,6 +29,7 @@ import { GroupDetailsModal } from '../components/chat/GroupDetailsModal';
 import { ChatBottomBar } from '../components/chat/ChatBottomBar';
 import { NewMessageModal, ModalStep, SuggestedContact } from '../components/chat/NewMessageModal';
 import { MessagesStoriesStrip } from '../components/chat/MessagesStoriesStrip';
+import { InstagramNotesBar } from '../components/chat/InstagramNotesBar';
 import { NewChatActionPopup, NewChatPopupMode } from '../components/chat/NewChatActionPopup';
 import { MessageHoldPopup } from '../components/chat/MessageHoldPopup';
 import { MessageReplyPreview } from '../components/chat/MessageReplyPreview';
@@ -72,6 +73,17 @@ const formatDateSeparator = (timestamp: any) => {
     if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
     
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+};
+
+const formatChatDateDivider = (timestamp: any) => {
+  if (!timestamp) return '';
+  const ms = typeof timestamp?.toMillis === 'function'
+    ? timestamp.toMillis()
+    : (timestamp?.seconds ? timestamp.seconds * 1000 : (Number(timestamp) || Date.now()));
+  const date = new Date(ms);
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase();
+  return `${weekday} ${time}`;
 };
 
 const formatTime12h = (timestamp: any) => {
@@ -218,38 +230,74 @@ const renderTextWithLinks = (text: string, isMe?: boolean) => {
   });
 };
 
-const CallBubble = ({ msg }: { msg: any }) => {
+const CallBubble = ({ msg, isMe, onCallback }: { msg: any; isMe?: boolean; onCallback?: () => void }) => {
   const isVideo = msg.text?.toLowerCase().includes('video') || msg.systemType === 'video';
-  const isMissed = msg.text?.includes('Missed');
-  const timestamp = formatTime12h(msg.timestamp);
+  const isMissed = Boolean(msg.text?.includes('Missed') || msg.isMissed);
   
-  let iconBg = "bg-zinc-100 dark:bg-zinc-800";
-  let iconColor = "text-zinc-500 dark:text-zinc-400";
   let title = isVideo ? "Video call" : "Audio call";
   let subtext = "Tap to call again";
+  let iconBg = "bg-[#8E8E93]";
+  let isCompleted = false;
 
   if (isMissed) {
-    iconBg = "bg-rose-500";
-    iconColor = "text-white";
-    title = isVideo ? "Missed video call" : "Missed audio call";
-    subtext = "Tap to call back";
-  } else {
-    // If it's a completed call, might show duration
-    if (msg.duration) {
-      const mins = Math.floor(msg.duration / 60);
-      const secs = msg.duration % 60;
-      subtext = mins > 0 ? `${mins} mins` : `${secs} secs`;
+    if (!isMe) {
+      // Receiver side of a missed call (IMG_5588 top left: red circle + "Missed audio call" + "Tap to call back")
+      iconBg = "bg-[#FA3E3E]";
+      title = isVideo ? "Missed video call" : "Missed audio call";
+      subtext = "Tap to call back";
+    } else {
+      // Caller side of missed/unanswered call (IMG_5588 middle right: grey circle + "Audio call" + "Tap to call again")
+      iconBg = "bg-[#8E8E93]";
+      title = isVideo ? "Video call" : "Audio call";
+      subtext = "Tap to call again";
     }
+  } else if (msg.duration || msg.callDuration) {
+    isCompleted = true;
+    const totalSecs = Number(msg.duration || msg.callDuration || 0);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    subtext = mins > 0 ? (secs > 0 ? `${mins} min${mins > 1 ? 's' : ''} ${secs}s` : `${mins} mins`) : `${secs} secs`;
+  } else if (msg.text?.includes('ended')) {
+    isCompleted = true;
+    const match = msg.text.match(/\((.*?)\)/);
+    subtext = match ? match[1].replace('m', ' mins').replace('s', 's') : "Call ended";
   }
 
   return (
-    <div className="flex items-center gap-3 p-3.5 pl-4 pr-6 rounded-[22px] bg-zinc-50 dark:bg-zinc-900 border border-black/[0.03] dark:border-white/[0.05] shadow-sm min-w-[210px] my-1 group active:scale-[0.98] transition-transform cursor-pointer">
-      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-xs", iconBg)}>
-        <Icon name={isMissed ? "phone-off" : (isVideo ? "video" : "phone")} className={cn("w-4.5 h-4.5", iconColor)} />
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        onCallback?.();
+      }}
+      className="flex items-center gap-3.5 px-4 py-3 rounded-[24px] bg-[#F2F4F7] dark:bg-[#25272A] min-w-[215px] max-w-[285px] shadow-none group active:scale-[0.98] transition-transform cursor-pointer select-none"
+    >
+      <div className={cn("w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-xs", iconBg)}>
+        {isMissed && !isMe ? (
+          /* Red circle with handset + 'x' matching IMG_5588 top left */
+          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+            <line x1="16" y1="3" x2="21" y2="8" stroke="white" strokeWidth="2.4" />
+            <line x1="21" y1="3" x2="16" y2="8" stroke="white" strokeWidth="2.4" />
+          </svg>
+        ) : isCompleted ? (
+          /* Grey circle with handset + top-right arrow matching IMG_5588 bottom right */
+          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+            <polyline points="15 3 21 3 21 9" stroke="white" strokeWidth="2.3" />
+            <line x1="14" y1="10" x2="21" y2="3" stroke="white" strokeWidth="2.3" />
+          </svg>
+        ) : (
+          /* Grey circle with handset + 'x' matching IMG_5588 middle right */
+          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+            <line x1="16" y1="3" x2="21" y2="8" stroke="white" strokeWidth="2.4" />
+            <line x1="21" y1="3" x2="16" y2="8" stroke="white" strokeWidth="2.4" />
+          </svg>
+        )}
       </div>
       <div className="flex flex-col">
-        <p className="font-bold text-[14.5px] text-zinc-900 dark:text-zinc-100 leading-tight tracking-tight">{title}</p>
-        <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">{subtext}</p>
+        <p className="font-bold text-[15.5px] sm:text-[16px] text-zinc-900 dark:text-zinc-100 leading-tight tracking-tight">{title}</p>
+        <p className="text-[13px] sm:text-[13.5px] text-zinc-500 dark:text-zinc-400 font-normal mt-0.5">{subtext}</p>
       </div>
     </div>
   );
@@ -5199,6 +5247,19 @@ const handleCreateChannel = async () => {
               {/* Stories & Active Contacts Strip matching IMG_5470 */}
               {sidebarTab === 'messages' && (
                 <>
+                  <InstagramNotesBar
+                    currentUser={user}
+                    onlineUsers={allStripContacts}
+                    onOpenChatWithUser={(u) => {
+                      if (u?.id || u?.uid) {
+                        setActiveMessagesTab('chats');
+                        setSearchParams({ chatId: u.id || u.uid || '' });
+                      }
+                    }}
+                    notify={notify}
+                    hideBar={true}
+                  />
+
                   <MessagesStoriesStrip
                     currentUser={user}
                     contacts={allStripContacts}
@@ -7675,7 +7736,7 @@ const handleCreateChannel = async () => {
 
                      {/* Header Actions: 1-Click Admin AI Toggle + Video Call + Voice Call */}
                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
-                          {userRole === 'admin' && !(activeChat?.isGroup || activeChat?.type === 'group') &&
+                          {Boolean(userRole === 'admin' || currentUserProfile?.role === 'admin' || user?.email?.toLowerCase() === 'deepshop@gmail.com' || user?.email?.toLowerCase() === 'goribsam2@gmail.com') && !(activeChat?.isGroup || activeChat?.type === 'group') &&
                             activeChat?.id && (
                             <button
                               type="button"
@@ -7835,7 +7896,7 @@ const handleCreateChannel = async () => {
                          const reactionEntries = Object.entries(msg.reactions || {});
                          const hasMedia = Boolean((msg.images && msg.images.length > 0) || msg.imageUrl);
                          const isMediaOnly = Boolean(hasMedia && !msg.text && !msg.replyTo && !msg.audioUrl);
-                         const isVoiceOnly = Boolean(msg.audioUrl && !msg.text && !msg.replyTo && !hasMedia);
+                         const isVoiceOnly = Boolean((msg._localAudioUrl || msg.audioUrl) && !msg.text && !msg.replyTo && !hasMedia);
                          const isEmojiOnly = Boolean(msg.text && isOnlyEmojis(msg.text) && !msg.replyTo && !msg.audioUrl && !hasMedia);
                          const isCustomTheme = Boolean(activeTheme?.id && activeTheme.id !== 'default');
                          const isSeenByOther = Boolean(activeChat?.seenBy && activeChat?.seenBy.includes(activeChat?.otherUser?.id));
@@ -7845,45 +7906,60 @@ const handleCreateChannel = async () => {
                                 <React.Fragment key={`${msg.id || idx}-${idx}`}>
                                     {showDate && (
                                         <div className="flex justify-center my-4 select-none">
-                                            <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500">
-                                                {formatDateSeparator(msg.timestamp)}
+                                            <span className="text-[12px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider select-none">
+                                                {formatChatDateDivider(msg.timestamp)}
                                             </span>
                                         </div>
                                     )}
-                                    <div className={`flex w-full mb-2.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                     <div className={`flex max-w-[82%] sm:max-w-[70%] items-end gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                                         {isGroupChat && !isMe && (
-                                             <div className="w-7 h-7 shrink-0 rounded-full overflow-hidden">
-                                                 {isLastInCluster ? (
-                                                     senderPhoto ?
-                                                         <img src={senderPhoto} alt="Avatar" className="w-full h-full object-cover rounded-full" /> :
-                                                         <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-[#2F80ED] bg-[#2F80ED]/12 rounded-full">
-                                                             {(senderName || 'U')[0].toUpperCase()}
-                                                         </div>
-                                                 ) : null}
-                                             </div>
-                                         )}
-                                         <div className="px-4 py-2.5 text-[14px] bg-zinc-100 dark:bg-zinc-800/60 rounded-[18px] text-zinc-500 dark:text-zinc-400 italic">
-                                             {isMe ? 'You' : (senderName || 'User')} deleted a message
-                                         </div>
-                                     </div>
-                                </div>
+                                    <div className={cn("flex w-full mb-3 items-end gap-2.5", isMe ? "justify-end" : "justify-start")}>
+                                        {!isMe && (
+                                            <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 self-end mb-1 bg-zinc-200 dark:bg-zinc-800">
+                                                {senderPhoto ? (
+                                                    <img src={senderPhoto} alt={senderName} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center font-semibold text-[11px] bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200">
+                                                        {(senderName || 'U')[0].toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        <div className="px-4 py-2.5 rounded-[22px] bg-[#F2F4F7] dark:bg-[#25272A] text-zinc-600 dark:text-zinc-300 font-medium italic text-[15px] select-none shadow-none">
+                                            {isMe ? 'You deleted a message' : `${senderName || 'User'} deleted a message`}
+                                        </div>
+                                    </div>
                                </React.Fragment>
                             );
                          }
 
                          if (isSystem) {
+                             const isMissed = Boolean(msg.text?.includes('Missed') || msg.isMissed);
+                             const alignRight = isMe && !isMissed;
                              return (
                                  <React.Fragment key={`${msg.id || idx}-${idx}`}>
                                      {showDate && (
                                          <div className="flex justify-center my-4 select-none">
-                                             <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500">
-                                                 {formatDateSeparator(msg.timestamp)}
+                                             <span className="text-[12px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider select-none">
+                                                 {formatChatDateDivider(msg.timestamp)}
                                              </span>
                                          </div>
                                      )}
-                                     <div className="flex justify-center my-3">
-                                         <CallBubble msg={msg} />
+                                     <div className={cn("flex w-full mb-3 items-end gap-2.5", alignRight ? "justify-end" : "justify-start")}>
+                                         {!alignRight && (
+                                             <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 self-end mb-1 bg-zinc-200 dark:bg-zinc-800">
+                                                 {senderPhoto ? (
+                                                     <img src={senderPhoto} alt={senderName} className="w-full h-full object-cover" />
+                                                 ) : (
+                                                     <div className="w-full h-full flex items-center justify-center font-semibold text-[11px] bg-zinc-300 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200">
+                                                         {(senderName || 'U')[0].toUpperCase()}
+                                                     </div>
+                                                 )}
+                                             </div>
+                                         )}
+                                         <CallBubble
+                                             msg={msg}
+                                             isMe={isMe}
+                                             onCallback={() => startCall(msg.systemType === 'video' || msg.text?.toLowerCase().includes('video') ? 'video' : 'audio')}
+                                         />
                                      </div>
                                  </React.Fragment>
                              );
@@ -7899,8 +7975,8 @@ const handleCreateChannel = async () => {
                              <React.Fragment key={msg.clientMsgId || msg.id || `${idx}`}>
                                  {showDate && (
                                      <div className="flex items-center justify-center my-4 select-none">
-                                         <span className="text-[12.5px] font-medium text-zinc-400 dark:text-zinc-500 tabular-nums">
-                                             {formatDateSeparator(msg.timestamp)}
+                                         <span className="text-[12px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider select-none tabular-nums">
+                                             {formatChatDateDivider(msg.timestamp)}
                                          </span>
                                      </div>
                                  )}

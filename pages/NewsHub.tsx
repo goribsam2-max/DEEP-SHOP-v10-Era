@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { cn } from "../lib/utils";
 import { CreateChooserModal } from "../components/CreateChooserModal";
 import { DottedGhostCatIcon } from "../components/ComposerLiquidGlassSheets";
 import {
@@ -229,6 +230,45 @@ export const NewsHub: React.FC = () => {
   );
   const [reelsOverlayOpen, setReelsOverlayOpen] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);
+  const [userNotes, setUserNotes] = useState<Record<string, any>>({});
+  const [viewingLoopNote, setViewingLoopNote] = useState<any | null>(null);
+  const [loopNoteAudioPlaying, setLoopNoteAudioPlaying] = useState<string | null>(null);
+  const loopNoteAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Real-time listener for user_notes to display notes in the Loops Story section
+  useEffect(() => {
+    try {
+      const qNotes = query(collection(db, "user_notes"), limit(30));
+      const unsub = onSnapshot(qNotes, (snap) => {
+        const map: Record<string, any> = {};
+        const now = Date.now();
+        snap.forEach((d) => {
+          const data = d.data();
+          if (data?.text && (!data.expiresAtMs || data.expiresAtMs > now)) {
+            map[d.id] = { ...data, userId: d.id };
+          }
+        });
+        setUserNotes(map);
+      });
+      return () => unsub();
+    } catch (e) {
+      console.warn("Error listening to user_notes in NewsHub:", e);
+    }
+  }, []);
+
+  const toggleLoopNoteAudio = (url: string) => {
+    if (loopNoteAudioPlaying === url) {
+      loopNoteAudioRef.current?.pause();
+      setLoopNoteAudioPlaying(null);
+    } else {
+      loopNoteAudioRef.current?.pause();
+      const a = new Audio(url);
+      loopNoteAudioRef.current = a;
+      a.play().catch(() => {});
+      a.onended = () => setLoopNoteAudioPlaying(null);
+      setLoopNoteAudioPlaying(url);
+    }
+  };
   const feedMenuRef = useRef<HTMLDivElement | null>(null);
 
   const activeFeedFilter = React.useMemo(() => {
@@ -2023,8 +2063,8 @@ export const NewsHub: React.FC = () => {
             {/* Top Banner Ad Placement Slot */}
             <AdPlacementSlot slot="header_top" />
 
-            {/* 2. Horizontal Circular Stories Row */}
-            <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1 px-4 sm:px-0.5 bg-transparent">
+            {/* 2. Horizontal Circular Stories Row with Real-Time Notes */}
+            <div className="flex items-start gap-3.5 overflow-x-auto no-scrollbar pt-0 pb-1.5 px-4 sm:px-0.5 bg-transparent -mt-1">
               {(() => {
                 const myActiveStories = currentUser?.uid
                   ? stories
@@ -2036,9 +2076,34 @@ export const NewsHub: React.FC = () => {
                 const myHasCloseFriends = myActiveStories.some(
                   (st) => st.isCloseFriends
                 );
+                const myNote = currentUser?.uid ? userNotes[currentUser.uid] : null;
 
                 return (
-                  <div className="flex flex-col items-center gap-1.5 shrink-0 group">
+                  <div className="flex flex-col items-center shrink-0 group">
+                    {/* Speech Bubble Slot Above Avatar (Prevents overlapping into top section) */}
+                    <div className="h-7 mb-1 flex items-center justify-center">
+                      {myNote?.text && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic();
+                            setViewingLoopNote(myNote);
+                          }}
+                          className="relative max-w-[94px] px-2.5 py-0.5 rounded-2xl text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center truncate flex items-center gap-1 cursor-pointer hover:scale-105 transition"
+                          title="View your note"
+                        >
+                          {myNote.moodEmojis?.[0] && (
+                            <span className="text-[10px]">{myNote.moodEmojis[0]}</span>
+                          )}
+                          <span className="truncate">{myNote.text}</span>
+                          <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
+                            <div className="w-2 h-2 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="relative w-[64px] h-[64px]">
                       <button
                         type="button"
@@ -2117,7 +2182,7 @@ export const NewsHub: React.FC = () => {
                           navigate("/loops/create-story?from=loops");
                         }
                       }}
-                      className="text-[11.5px] font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap cursor-pointer"
+                      className="text-[11.5px] font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap cursor-pointer mt-1"
                     >
                       Your story
                     </button>
@@ -2129,12 +2194,15 @@ export const NewsHub: React.FC = () => {
                 Array.from({ length: 4 }).map((_, sIdx) => (
                   <div
                     key={`story_skel_${sIdx}`}
-                    className="flex flex-col items-center gap-1.5 shrink-0"
+                    className="flex flex-col items-center shrink-0"
                   >
+                    <div className="h-7 mb-1" />
                     <div className="w-[64px] h-[64px] rounded-full ds-skeleton" />
-                    <div className="h-3 w-12 rounded-md ds-skeleton" />
+                    <div className="h-3 w-12 rounded-md ds-skeleton mt-1" />
                   </div>
                 ))}
+
+              {/* Grouped Active Stories */}
               {Array.from(
                 stories
                   .filter((st) => !currentUser?.uid || st.userId !== currentUser.uid)
@@ -2155,42 +2223,309 @@ export const NewsHub: React.FC = () => {
                     return acc;
                   }, new Map())
                   .values()
-              ).map((group: any) => (
-                <button
-                  key={group.userId}
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    navigate(`/loops/story/${group.id}`);
-                  }}
-                  className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-                >
-                  <div
-                    className={`w-[64px] h-[64px] rounded-full p-[2px] ${
-                      group.isCloseFriends
-                        ? "bg-gradient-to-tr from-green-500 to-emerald-400"
-                        : "bg-gradient-to-tr from-[#0095F6] to-[#38BDF8]"
-                    }`}
-                  >
-                    {group.avatar?.trim() ? (
-                      <img
-                        src={group.avatar.trim()}
-                        alt={group.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
-                        {(group.name || "U").charAt(0).toUpperCase()}
+              ).map((group: any) => {
+                const friendNote = userNotes[group.userId];
+                return (
+                  <div key={group.userId} className="flex flex-col items-center shrink-0">
+                    {/* Speech Bubble Slot Above Avatar: White in Light Mode */}
+                    <div className="h-7 mb-1 flex items-center justify-center">
+                      {friendNote?.text && (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic();
+                            setViewingLoopNote(friendNote);
+                          }}
+                          className="relative max-w-[94px] px-2.5 py-0.5 rounded-2xl text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center truncate flex items-center gap-1 cursor-pointer hover:scale-105 transition"
+                          title="View note"
+                        >
+                          {friendNote.moodEmojis?.[0] && (
+                            <span className="text-[10px]">{friendNote.moodEmojis[0]}</span>
+                          )}
+                          <span className="truncate">{friendNote.text}</span>
+                          <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
+                            <div className="w-2 h-2 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic();
+                        navigate(`/loops/story/${group.id}`);
+                      }}
+                      className="flex flex-col items-center cursor-pointer group"
+                    >
+                      <div
+                        className={`w-[64px] h-[64px] rounded-full p-[2px] ${
+                          group.isCloseFriends
+                            ? "bg-gradient-to-tr from-green-500 to-emerald-400"
+                            : "bg-gradient-to-tr from-[#0095F6] to-[#38BDF8]"
+                        }`}
+                      >
+                        {group.avatar?.trim() ? (
+                          <img
+                            src={group.avatar.trim()}
+                            alt={group.name}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                            {(group.name || "U").charAt(0).toUpperCase()}
+                          </div>
+                        )}
                       </div>
-                    )}
+                      <span className="text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[64px] truncate mt-1">
+                        {group.name}
+                      </span>
+                    </button>
                   </div>
-                  <span className="text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[64px] truncate">
-                    {group.name}
-                  </span>
-                </button>
-              ))}
+                );
+              })}
+
+              {/* Users who shared a real note but have no stories */}
+              {Object.values(userNotes)
+                .filter(
+                  (note: any) =>
+                    (!currentUser?.uid || note.userId !== currentUser.uid) &&
+                    !stories.some((st) => st.userId === note.userId)
+                )
+                .map((note: any) => (
+                  <div
+                    key={`note-only-${note.userId}`}
+                    onClick={() => {
+                      triggerHaptic();
+                      setViewingLoopNote(note);
+                    }}
+                    className="flex flex-col items-center shrink-0 cursor-pointer group"
+                  >
+                    {/* Note Thought Bubble Slot: Pure White in Light Mode */}
+                    <div className="h-7 mb-1 flex items-center justify-center">
+                      <div className="relative max-w-[94px] px-2.5 py-0.5 rounded-2xl text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center truncate flex items-center gap-1 group-hover:scale-105 transition">
+                        {note.moodEmojis?.[0] && (
+                          <span className="text-[10px]">{note.moodEmojis[0]}</span>
+                        )}
+                        <span className="truncate">{note.text}</span>
+                        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
+                          <div className="w-2 h-2 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="w-[64px] h-[64px] rounded-full p-[2px] bg-gradient-to-tr from-[#0064E0] to-sky-400">
+                      {note.photoURL ? (
+                        <img
+                          src={note.photoURL}
+                          alt=""
+                          className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                          {(note.displayName || "U")[0]?.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[11.5px] font-medium text-zinc-700 dark:text-zinc-300 max-w-[64px] truncate mt-1">
+                      {note.displayName?.split(" ")[0] || "Friend"}
+                    </span>
+                  </div>
+                ))}
             </div>
+
+            {/* Note Viewer Modal in Loops (Matching IMG_5578 & with reactions) */}
+            <AnimatePresence>
+              {viewingLoopNote && (
+                <div className="fixed inset-0 z-[10050] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
+                  {/* Top Bar: Author Avatar + Name | Close */}
+                  <div className="p-4 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700">
+                        {viewingLoopNote.photoURL ? (
+                          <img src={viewingLoopNote.photoURL} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-bold text-sm">
+                            {(viewingLoopNote.displayName || "U")[0]?.toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm text-zinc-900 dark:text-white leading-tight">
+                          {viewingLoopNote.displayName}
+                        </h3>
+                        <span className="text-[11px] text-zinc-400">Just now</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loopNoteAudioRef.current?.pause();
+                        setLoopNoteAudioPlaying(null);
+                        setViewingLoopNote(null);
+                      }}
+                      className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition cursor-pointer"
+                    >
+                      <Icon name="x" className="w-6 h-6 stroke-[2.5]" />
+                    </button>
+                  </div>
+
+                  {/* Center: Pure White Thought Bubble + Large Avatar */}
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 max-w-md mx-auto w-full">
+                    <div className="relative flex flex-col items-center text-center">
+                      <div className="relative mb-3 px-6 py-3 rounded-3xl bg-white dark:bg-zinc-800 shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-zinc-200/90 dark:border-zinc-700 flex flex-col items-center max-w-[280px]">
+                        {viewingLoopNote.moodEmojis && viewingLoopNote.moodEmojis.length > 0 && (
+                          <div className="flex items-center gap-1 mb-1 text-lg">
+                            {viewingLoopNote.moodEmojis.map((e: string, idx: number) => (
+                              <span key={idx}>{e}</span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-base font-semibold text-zinc-900 dark:text-white leading-relaxed">
+                          {viewingLoopNote.text}
+                        </p>
+                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                          <span className="w-3 h-3 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-xs" />
+                        </div>
+                      </div>
+
+                      <div className="w-32 h-32 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700 shadow-xl border-2 border-white dark:border-zinc-800">
+                        {viewingLoopNote.photoURL ? (
+                          <img src={viewingLoopNote.photoURL} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-bold text-3xl">
+                            {(viewingLoopNote.displayName || "U")[0]?.toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+
+                      <h2 className="text-lg font-bold text-zinc-900 dark:text-white mt-4">
+                        {viewingLoopNote.displayName}
+                      </h2>
+
+                      <p className="text-sm text-zinc-500 mt-1">
+                        Shared with <span className="font-bold text-zinc-800 dark:text-zinc-200">Friends</span>
+                      </p>
+                      <p className="text-sm text-zinc-400 mt-0.5">
+                        Expires in 24h
+                      </p>
+
+                      {/* Music Preview Chip */}
+                      {viewingLoopNote.musicTitle && (
+                        <div className="mt-4 flex items-center gap-3 px-4 py-2 rounded-2xl bg-[#F2F3F5] dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700">
+                          <div className="w-9 h-9 rounded-xl overflow-hidden bg-zinc-300 dark:bg-zinc-700 relative">
+                            {viewingLoopNote.musicCover ? (
+                              <img src={viewingLoopNote.musicCover} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <Icon name="music" className="w-5 h-5 m-auto text-zinc-500" />
+                            )}
+                            {viewingLoopNote.musicAudioUrl && (
+                              <button
+                                type="button"
+                                onClick={() => toggleLoopNoteAudio(viewingLoopNote.musicAudioUrl)}
+                                className="absolute inset-0 bg-black/40 flex items-center justify-center text-white cursor-pointer"
+                              >
+                                {loopNoteAudioPlaying === viewingLoopNote.musicAudioUrl ? (
+                                  <Icon name="pause" className="w-3.5 h-3.5 fill-white" />
+                                ) : (
+                                  <Icon name="play" className="w-3.5 h-3.5 fill-white ml-0.5" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          <div className="text-left">
+                            <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                              {viewingLoopNote.musicTitle}
+                            </p>
+                            <p className="text-[10px] text-zinc-500">
+                              {viewingLoopNote.musicArtist || "Music track"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Note Reactions Bar in Loops: "note aa react dite parbe" */}
+                  <div className="px-6 py-2 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <div className="flex items-center justify-around max-w-md mx-auto">
+                      {['❤️', '😂', '😮', '😢', '🔥', '👍', '👏', '🥳'].map((emoji) => {
+                        const hasReacted = viewingLoopNote.reactions?.[currentUser?.uid]?.emoji === emoji;
+                        return (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={async () => {
+                              if (!currentUser) {
+                                notify("Please sign in to react", "error");
+                                return;
+                              }
+                              triggerHaptic();
+                              try {
+                                const updatedReactions = {
+                                  ...(viewingLoopNote.reactions || {}),
+                                  [currentUser.uid]: {
+                                    emoji,
+                                    userName: currentUser.displayName || "Friend",
+                                    userAvatar: currentUser.photoURL || "",
+                                    createdAtMs: Date.now()
+                                  }
+                                };
+                                await setDoc(
+                                  doc(db, "user_notes", viewingLoopNote.userId),
+                                  { reactions: updatedReactions },
+                                  { merge: true }
+                                );
+                                setViewingLoopNote({
+                                  ...viewingLoopNote,
+                                  reactions: updatedReactions
+                                });
+                                setUserNotes((prev) => ({
+                                  ...prev,
+                                  [viewingLoopNote.userId]: {
+                                    ...(prev[viewingLoopNote.userId] || {}),
+                                    reactions: updatedReactions
+                                  }
+                                }));
+                                notify(`Reacted with ${emoji}`, "success");
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className={cn(
+                              "text-2xl p-1.5 rounded-full hover:scale-125 active:scale-95 transition cursor-pointer",
+                              hasReacted && "bg-blue-100 dark:bg-blue-950/60 ring-2 ring-[#0064E0]"
+                            )}
+                            title={`React ${emoji}`}
+                          >
+                            {emoji}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Bottom Close Button */}
+                  <div className="p-4 pb-8 border-t border-zinc-100 dark:border-zinc-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loopNoteAudioRef.current?.pause();
+                        setLoopNoteAudioPlaying(null);
+                        setViewingLoopNote(null);
+                      }}
+                      className="w-full max-w-md mx-auto py-3 rounded-full bg-[#0064E0] text-white font-bold text-sm block transition hover:bg-[#0057C2] cursor-pointer"
+                    >
+                      Close Note
+                    </button>
+                  </div>
+                </div>
+              )}
+            </AnimatePresence>
 
             {/* 3. Subtle Divider below Stories matching IMG_5123 */}
             <div className="border-b loops-divider sm:hidden" />

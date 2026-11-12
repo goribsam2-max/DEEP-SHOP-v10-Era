@@ -1142,15 +1142,57 @@ export const StickersBottomSheet: React.FC<{
 }> = ({ isOpen, onClose, onInsertText, onAttachSticker }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeDockTab, setActiveDockTab] = useState<
-    "hit0m0" | "emojis" | "cats" | "ruby" | "kaomoji"
+    "hit0m0" | "emojis" | "cats" | "ruby" | "kaomoji" | "emojihub"
   >("hit0m0");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [emojiHubStickers, setEmojiHubStickers] = useState<
+    Array<{ id: string; name: string; url: string; emoji: string }>
+  >([]);
+  const [loadingEmojiHub, setLoadingEmojiHub] = useState(false);
 
   const kaomojiRef = useRef<HTMLDivElement | null>(null);
   const hit0m0Ref = useRef<HTMLDivElement | null>(null);
   const emojisRef = useRef<HTMLDivElement | null>(null);
   const catsRef = useRef<HTMLDivElement | null>(null);
   const rubyRef = useRef<HTMLDivElement | null>(null);
+  const emojiHubRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch real-time EmojiHub stickers from https://emojihub.yurace.pro/api/all
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    setLoadingEmojiHub(true);
+    fetch("https://emojihub.yurace.pro/api/all")
+      .then((res) => res.json())
+      .then((data) => {
+        if (active && Array.isArray(data)) {
+          const mapped = data.slice(0, 160).map((item: any, idx: number) => {
+            const charCode = (item.unicode?.[0] || "").replace("U+", "0x");
+            let emoji = "✨";
+            try {
+              emoji = String.fromCodePoint(parseInt(charCode, 16));
+            } catch {
+              emoji = "✨";
+            }
+            return {
+              id: `eh_${idx}`,
+              name: item.name || "Sticker",
+              url: `https://emojicdn.elk.sh/${encodeURIComponent(emoji)}?style=microsoft`,
+              emoji,
+            };
+          });
+          setEmojiHubStickers(mapped);
+        }
+      })
+      .catch((e) => console.warn("EmojiHub fetch error:", e))
+      .finally(() => {
+        if (active) setLoadingEmojiHub(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
 
   const toggleCollapse = (key: string) => {
     triggerHaptic();
@@ -1158,7 +1200,7 @@ export const StickersBottomSheet: React.FC<{
   };
 
   const jumpToSection = (
-    tab: "hit0m0" | "emojis" | "cats" | "ruby" | "kaomoji",
+    tab: "hit0m0" | "emojis" | "cats" | "ruby" | "kaomoji" | "emojihub",
     ref: React.RefObject<HTMLDivElement | null>
   ) => {
     triggerHaptic();
@@ -1430,7 +1472,63 @@ export const StickersBottomSheet: React.FC<{
                   </div>
                 )}
               </div>
+
+              {/* 6. EmojiHub Sticker Pack (Microsoft 3D Graphic Stickers) */}
+              <div ref={emojiHubRef} className="pt-5 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => toggleCollapse("emojihub")}
+                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-bold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>EmojiHub Stickers</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      collapsed.emojihub ? "-rotate-90" : ""
+                    }`}
+                  />
+                </button>
+
+                {!collapsed.emojihub && (
+                  <div>
+                    {loadingEmojiHub && emojiHubStickers.length === 0 ? (
+                      <div className="flex items-center justify-center py-6 gap-2 text-xs text-zinc-400">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#0064E0]" />
+                        <span>Loading EmojiHub stickers...</span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                        {emojiHubStickers
+                          .filter((st) => !q || st.name.toLowerCase().includes(q))
+                          .map((st) => (
+                            <button
+                              key={st.id}
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic();
+                                onAttachSticker(st.url);
+                                onClose();
+                              }}
+                              className="aspect-square rounded-2xl bg-zinc-50 dark:bg-zinc-900/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center p-2 active:scale-90 transition cursor-pointer group"
+                              title={st.name}
+                            >
+                              <img
+                                src={st.url}
+                                alt={st.name}
+                                loading="lazy"
+                                className="w-12 h-12 object-contain group-hover:scale-110 transition-transform"
+                                onError={(ev) => {
+                                  ev.currentTarget.style.display = "none";
+                                }}
+                              />
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
 
             {/* Floating Prismatic Liquid Glass Bottom Category Dock (Exact IMG_4973 Bottom Bar) */}
             <div className="absolute bottom-4 inset-x-4 z-20 flex justify-center pointer-events-none">
@@ -1560,22 +1658,35 @@ export const GiphyBottomSheet: React.FC<{
 
     const catObj = GIF_CATEGORIES.find((c) => c.id === activeCategory);
     const effectiveQuery = searchQuery.trim() || catObj?.query || "";
+    const GIPHY_KEY = "dfU9Rj78ULWD8qWnvDuIXBWpnpawi6tl";
 
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(
-          `/api/gifs?q=${encodeURIComponent(effectiveQuery)}&limit=24`
-        );
+        const endpoint = effectiveQuery
+          ? `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(
+              effectiveQuery
+            )}&limit=28&rating=g`
+          : `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=28&rating=g`;
+
+        const res = await fetch(endpoint);
         if (res.ok) {
-          const data = await res.json();
-          if (active && Array.isArray(data?.items) && data.items.length > 0) {
-            setGifs(data.items);
+          const json = await res.json();
+          if (active && Array.isArray(json?.data) && json.data.length > 0) {
+            const mapped = json.data.map((g: any) => ({
+              id: g.id,
+              title: g.title || "GIF",
+              category: activeCategory,
+              url: g.images?.fixed_height?.url || g.images?.original?.url || g.url,
+            }));
+            setGifs(mapped);
             setLoading(false);
             return;
           }
         }
-      } catch {}
+      } catch (err) {
+        console.warn("Giphy API live fetch error:", err);
+      }
 
       if (active) {
         const filteredFallback = effectiveQuery
