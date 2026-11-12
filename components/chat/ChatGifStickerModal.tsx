@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { X, Search, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { X, Search, Sparkles, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ChatGifStickerModalProps {
   isOpen: boolean;
@@ -9,35 +9,7 @@ interface ChatGifStickerModalProps {
   onSelectMedia: (url: string, isSticker?: boolean) => void;
 }
 
-const POPULAR_GIFS = [
-  { id: 'g1', title: 'Thumbs Up', url: 'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif' },
-  { id: 'g2', title: 'Thank You', url: 'https://media.giphy.com/media/osAcIGVgETAY8/giphy.gif' },
-  { id: 'g3', title: 'Celebrate', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
-  { id: 'g4', title: 'Laughing', url: 'https://media.giphy.com/media/xr9AQyxLtjlxS/giphy.gif' },
-  { id: 'g5', title: 'Mind Blown', url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
-  { id: 'g6', title: 'Hello / Wave', url: 'https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif' },
-  { id: 'g7', title: 'Love / Hearts', url: 'https://media.giphy.com/media/26FLdm964upOuiqUE/giphy.gif' },
-  { id: 'g8', title: 'Agreed / Yes', url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif' },
-  { id: 'g9', title: 'Deal Done', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
-  { id: 'g10', title: 'Waiting', url: 'https://media.giphy.com/media/tXL4FHPSnVJ0A/giphy.gif' },
-  { id: 'g11', title: 'Confused', url: 'https://media.giphy.com/media/g01ZnwAUvutuK8GIQn/giphy.gif' },
-  { id: 'g12', title: 'Shopping Time', url: 'https://media.giphy.com/media/l0HFkA6omUyjVYqw8/giphy.gif' },
-];
-
-const POPULAR_STICKERS = [
-  { id: 's1', name: 'Thumbs Up', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=thumbsup' },
-  { id: 's2', name: 'Happy Star', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=happystar' },
-  { id: 's3', name: 'Rocket', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=rocket' },
-  { id: 's4', name: 'Party Cat', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=partycat' },
-  { id: 's5', name: 'Love Bot', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=love' },
-  { id: 's6', name: 'Cool Glasses', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=coolglasses' },
-  { id: 's7', name: 'Gift Box', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=giftbox' },
-  { id: 's8', name: 'Verified Shield', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=verifiedshield' },
-  { id: 's9', name: 'Quick Delivery', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=delivery' },
-  { id: 's10', name: 'Sale Fire', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=firedeal' },
-  { id: 's11', name: '100% Legit', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=hundredpercent' },
-  { id: 's12', name: 'Cash Handshake', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=handshake' },
-];
+const GIPHY_API_KEY = 'dfU9Rj78ULWD8qWnvDuIXBWpnpawi6tl';
 
 export const ChatGifStickerModal: React.FC<ChatGifStickerModalProps> = ({
   isOpen,
@@ -46,16 +18,80 @@ export const ChatGifStickerModal: React.FC<ChatGifStickerModalProps> = ({
   onSelectMedia,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-
-  if (!isOpen) return null;
+  const [results, setResults] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
   const isGif = type === 'gif';
-  const items = isGif ? POPULAR_GIFS : POPULAR_STICKERS;
-  const filtered = searchQuery.trim()
-    ? items.filter((item: any) =>
-        (item.title || item.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : items;
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        if (isGif) {
+          const endpoint = debouncedQuery.trim()
+            ? `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(debouncedQuery)}&limit=24&rating=g`
+            : `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=24&rating=g`;
+          
+          const res = await fetch(endpoint);
+          const data = await res.json();
+          if (data?.data) {
+            setResults(data.data.map((gif: any) => ({
+              id: gif.id,
+              title: gif.title,
+              url: gif.images.fixed_height.url
+            })));
+          }
+        } else {
+          // EmojiHub for Stickers
+          // Since EmojiHub is large, we fetch all once and filter if searching
+          // Or use their category API
+          const res = await fetch('https://emojihub.yurace.pro/api/all');
+          const data = await res.json();
+          
+          if (Array.isArray(data)) {
+            let mapped = data.map((item: any, idx: number) => {
+              // Extract the character from unicode or just use the first htmlCode
+              // Usually unicode is like ["U+1F600"]
+              const charCode = item.unicode[0].replace('U+', '0x');
+              const emoji = String.fromCodePoint(parseInt(charCode, 16));
+              return {
+                id: `emoji-${idx}`,
+                name: item.name,
+                url: `https://emojicdn.elk.sh/${emoji}?style=microsoft`, // Microsoft style looks like stickers
+                emoji: emoji
+              };
+            });
+
+            if (debouncedQuery.trim()) {
+              const q = debouncedQuery.toLowerCase();
+              mapped = mapped.filter(item => item.name.toLowerCase().includes(q));
+            }
+            
+            setResults(mapped.slice(0, 48));
+          }
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [isOpen, debouncedQuery, isGif]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[10010] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
@@ -95,51 +131,63 @@ export const ChatGifStickerModal: React.FC<ChatGifStickerModalProps> = ({
               placeholder={isGif ? 'Search GIFs...' : 'Search stickers...'}
               className="w-full bg-transparent text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
             />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+            {(searchQuery || isLoading) && (
+              <div className="flex items-center">
+                {isLoading && <Loader2 className="w-3.5 h-3.5 text-zinc-400 animate-spin mr-1.5" />}
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
 
         {/* Grid List */}
         <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
-          <div className={`grid ${isGif ? 'grid-cols-2 gap-2.5' : 'grid-cols-3 sm:grid-cols-4 gap-3'}`}>
-            {filtered.map((item: any, index: number) => (
-              <div
-                key={`${item.id || index}-${index}`}
-                onClick={() => {
-                  onSelectMedia(item.url, !isGif);
-                  onClose();
-                }}
-                className={`relative rounded-2xl overflow-hidden cursor-pointer group transition transform active:scale-95 ${
-                  isGif
-                    ? 'h-32 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'
-                    : 'p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 hover:border-blue-500/50 flex flex-col items-center justify-center'
-                }`}
-              >
-                <img
-                  src={item.url}
-                  alt={item.title || item.name}
-                  className={`${isGif ? 'w-full h-full object-cover group-hover:scale-105' : 'w-16 h-16 object-contain'} transition-transform duration-200`}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-                <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center truncate w-full mt-1.5 px-1 block">
-                  {item.title || item.name}
-                </span>
-              </div>
-            ))}
-          </div>
+          {isLoading && results.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="w-8 h-8 text-[#F246F5] animate-spin" />
+              <p className="text-xs text-zinc-500 font-medium">Loading collection...</p>
+            </div>
+          ) : (
+            <div className={`grid ${isGif ? 'grid-cols-2 gap-2.5' : 'grid-cols-3 sm:grid-cols-4 gap-3'}`}>
+              {results.map((item: any, index: number) => (
+                <div
+                  key={`${item.id || index}-${index}`}
+                  onClick={() => {
+                    onSelectMedia(item.url, !isGif);
+                    onClose();
+                  }}
+                  className={`relative rounded-2xl overflow-hidden cursor-pointer group transition transform active:scale-95 ${
+                    isGif
+                      ? 'h-32 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800'
+                      : 'p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 hover:border-blue-500/50 flex flex-col items-center justify-center'
+                  }`}
+                >
+                  <img
+                    src={item.url}
+                    alt={item.title || item.name}
+                    className={`${isGif ? 'w-full h-full object-cover group-hover:scale-105' : 'w-16 h-16 object-contain'} transition-transform duration-200`}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+                  <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center truncate w-full mt-1.5 px-1 block">
+                    {item.title || item.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {filtered.length === 0 && (
+          {!isLoading && results.length === 0 && (
             <div className="text-center py-12 text-zinc-400 text-xs">
-              No {isGif ? 'GIFs' : 'stickers'} found for &quot;{searchQuery}&quot;
+              No {isGif ? 'GIFs' : 'stickers'} found
             </div>
           )}
         </div>
@@ -147,3 +195,4 @@ export const ChatGifStickerModal: React.FC<ChatGifStickerModalProps> = ({
     </div>
   );
 };
+

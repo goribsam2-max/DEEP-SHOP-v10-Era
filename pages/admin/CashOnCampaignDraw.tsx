@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { collection, getDocs, query, where, limit } from "firebase/firestore";
+import { db } from "../../firebase";
 import { triggerHaptic } from "../../lib/haptics";
 import { useNotify } from "../../components/Notifications";
 import SEO from "../../components/SEO";
@@ -13,6 +15,7 @@ import {
   Zap,
   ShoppingBag,
   UserCheck,
+  Loader2,
 } from "lucide-react";
 
 interface DemoWinner {
@@ -25,58 +28,12 @@ interface DemoWinner {
   location: string;
 }
 
-const DEMO_WINNERS_POOL: DemoWinner[] = [
-  {
-    id: "winner_1",
-    name: "Tasmia Rahman",
-    email: "tasmia29837@gmail.com",
-    phone: "01789-432109",
-    tiktokUsername: "@tasmia_official",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-    location: "Dhaka, Bangladesh",
-  },
-  {
-    id: "winner_2",
-    name: "Sabbir Hossain",
-    email: "sabbir84729@gmail.com",
-    phone: "01812-987654",
-    tiktokUsername: "@sabbir_vlogs",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80",
-    location: "Chittagong, Bangladesh",
-  },
-  {
-    id: "winner_3",
-    name: "Nusrat Jahan Tanha",
-    email: "tanha49215@gmail.com",
-    phone: "01955-123456",
-    tiktokUsername: "@tanha_style",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80",
-    location: "Sylhet, Bangladesh",
-  },
-  {
-    id: "winner_4",
-    name: "Mahmudul Hasan",
-    email: "mahmud81734@gmail.com",
-    phone: "01633-876543",
-    tiktokUsername: "@mahmud_tech",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80",
-    location: "Rajshahi, Bangladesh",
-  },
-  {
-    id: "winner_5",
-    name: "Anika Tabassum",
-    email: "anika58193@gmail.com",
-    phone: "01522-345678",
-    tiktokUsername: "@anika_tabassum",
-    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80",
-    location: "Khulna, Bangladesh",
-  },
-];
-
 export default function CashOnCampaignDraw() {
   const navigate = useNavigate();
   const notify = useNotify();
 
+  const [pool, setPool] = useState<DemoWinner[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [tickerIndex, setTickerIndex] = useState(0);
@@ -84,11 +41,43 @@ export default function CashOnCampaignDraw() {
   const [revealedWinners, setRevealedWinners] = useState<DemoWinner[]>([]);
   const [latestWinner, setLatestWinner] = useState<DemoWinner | null>(null);
 
+  // Fetch demo users pool on mount
+  useEffect(() => {
+    const fetchPool = async () => {
+      try {
+        const q = query(
+          collection(db, "cash_on_applications"),
+          where("isDemo", "==", true),
+          limit(2000)
+        );
+        const snap = await getDocs(q);
+        const fetchedPool = snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            name: data.applicantName || "Demo User",
+            email: data.email || "",
+            phone: data.phone || "",
+            tiktokUsername: data.tiktokUsername || "",
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${d.id}`,
+            location: data.address || "Bangladesh",
+          };
+        });
+        setPool(fetchedPool);
+      } catch (err) {
+        console.error("Pool fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPool();
+  }, []);
+
   useEffect(() => {
     let timer: any;
     let ticker: any;
 
-    if (isDrawing) {
+    if (isDrawing && pool.length > 0) {
       // 10-second countdown timer
       setCountdown(10);
       timer = setInterval(() => {
@@ -103,7 +92,7 @@ export default function CashOnCampaignDraw() {
 
       // Shuffling ticker effect
       ticker = setInterval(() => {
-        setTickerIndex((prev) => (prev + 1) % DEMO_WINNERS_POOL.length);
+        setTickerIndex((prev) => (prev + 1) % pool.length);
       }, 120);
     }
 
@@ -111,23 +100,24 @@ export default function CashOnCampaignDraw() {
       clearInterval(timer);
       clearInterval(ticker);
     };
-  }, [isDrawing]);
+  }, [isDrawing, pool.length]);
 
   // When countdown hits 0, finish selection
   useEffect(() => {
-    if (isDrawing && countdown === 0) {
+    if (isDrawing && countdown === 0 && pool.length > 0) {
       setIsDrawing(false);
 
-      // Pick next unrevealed winner or loop
-      const nextIndex = revealedWinners.length % DEMO_WINNERS_POOL.length;
-      const winner = DEMO_WINNERS_POOL[nextIndex];
+      // Pick a random winner from the pool that hasn't been picked yet if possible
+      const available = pool.filter(p => !revealedWinners.some(rw => rw.id === p.id));
+      const poolToPickFrom = available.length > 0 ? available : pool;
+      const winner = poolToPickFrom[Math.floor(Math.random() * poolToPickFrom.length)];
 
       setLatestWinner(winner);
-      setRevealedWinners((prev) => [winner, ...prev.filter((w) => w.id !== winner.id)]);
+      setRevealedWinners((prev) => [winner, ...prev.filter((w) => w.id !== winner.id)].slice(0, 10));
       triggerHaptic();
       notify(`🎉 Winner Selected: ${winner.name}!`, "success");
     }
-  }, [countdown, isDrawing, revealedWinners.length]);
+  }, [countdown, isDrawing, pool, revealedWinners]);
 
   const handleStartDraw = () => {
     if (isDrawing) return;
@@ -158,7 +148,12 @@ export default function CashOnCampaignDraw() {
         {/* Selection Stage Box */}
         <div className="bg-white dark:bg-[#141720] border border-zinc-200/80 dark:border-white/10 rounded-[36px] p-6 sm:p-10 text-center space-y-6 relative overflow-hidden shadow-sm">
           {/* Shuffling Screen Animation */}
-          {isDrawing ? (
+          {loading ? (
+            <div className="py-12 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
+              <p className="text-zinc-500 text-xs font-medium animate-pulse">Initializing Pool...</p>
+            </div>
+          ) : isDrawing && pool.length > 0 ? (
             <div className="space-y-6 py-6">
               <div className="w-24 h-24 rounded-full bg-pink-500/10 border-2 border-pink-500 p-1 mx-auto flex items-center justify-center">
                 <div className="w-full h-full rounded-full bg-zinc-50 dark:bg-[#141720] flex items-center justify-center text-3xl font-black text-amber-500">
@@ -171,10 +166,10 @@ export default function CashOnCampaignDraw() {
                   Selecting Random Winner ...
                 </span>
                 <div className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-                  {DEMO_WINNERS_POOL[tickerIndex].name}
+                  {pool[tickerIndex]?.name || "Searching..."}
                 </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                  {DEMO_WINNERS_POOL[tickerIndex].tiktokUsername}
+                  {pool[tickerIndex]?.tiktokUsername || "@username"}
                 </div>
               </div>
 
@@ -255,7 +250,7 @@ export default function CashOnCampaignDraw() {
           <div className="bg-white dark:bg-[#141720] border border-zinc-200/80 dark:border-white/10 rounded-[32px] p-6 space-y-4 shadow-sm">
             <h3 className="text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-2">
               <Trophy className="w-4 h-4 text-amber-500" />
-              <span>Selected Campaign Winners ({revealedWinners.length} / 5)</span>
+              <span>Selected Campaign Winners ({revealedWinners.length} / 10)</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

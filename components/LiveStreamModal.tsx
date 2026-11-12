@@ -97,13 +97,26 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
       let stream: MediaStream;
       if (source === "screen") {
         if (!navigator.mediaDevices?.getDisplayMedia) {
-          notify("Screen sharing is not supported on this browser/device.", "error");
+          notify("Screen sharing is not supported on this browser/device. Try using Chrome on a Desktop.", "error");
           return;
         }
-        stream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true,
-        });
+        try {
+          // Try with audio first
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true
+            },
+          });
+        } catch (audioErr) {
+          // Fallback to video only if audio sharing is refused or fails
+          console.warn("Screen share with audio failed, falling back to video only:", audioErr);
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: false
+          });
+        }
       } else {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
