@@ -23,7 +23,7 @@ import {
 import { auth, db } from "../firebase";
 import { useNotify } from "./Notifications";
 import { triggerHaptic } from "../lib/haptics";
-import { toPlayableMediaUrl, toProxiedMediaStreamUrl } from "../lib/videoEmbed";
+import { prewarmVideoFirstChunk, toPlayableMediaUrl, toProxiedMediaStreamUrl } from "../lib/videoEmbed";
 
 export interface DeepShopAdMediaItem {
   url: string;
@@ -584,6 +584,14 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
   const activeMedia =
     ad.media[mediaIdx % Math.max(1, ad.media.length)] || ad.media[0];
   const isVideo = activeMedia?.type === "video";
+
+  useEffect(() => {
+    ad.media.forEach((m) => {
+      if (m.type === "video" && m.url) {
+        prewarmVideoFirstChunk(m.url);
+      }
+    });
+  }, [ad.id, ad.media]);
 
   // Sync video playback with active state & popup state
   useEffect(() => {

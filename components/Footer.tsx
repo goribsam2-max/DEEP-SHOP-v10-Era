@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import Icon from "./Icon";
@@ -491,14 +492,14 @@ export const Footer: React.FC = () => {
         </div>
       </footer>
 
-      {/* Contact Options Popup */}
-      {isContactOpen && (
+      {/* Contact Options Popup (Portaled above BottomNav on PWA/Mobile) */}
+      {isContactOpen && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-[10060] flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-black/60 backdrop-blur-xs"
           onClick={() => setIsContactOpen(false)}
         >
           <div
-            className="bg-white dark:bg-zinc-900 w-full sm:max-w-sm rounded-[24px] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800"
+            className="bg-white dark:bg-zinc-900 w-full sm:max-w-sm rounded-[24px] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-5">
@@ -545,17 +546,18 @@ export const Footer: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* WhatsApp Reason Popup */}
-      {isWhatsAppOpen && (
+      {/* WhatsApp Reason Popup (Portaled above BottomNav on PWA/Mobile) */}
+      {isWhatsAppOpen && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-[210] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-[10070] flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-black/60 backdrop-blur-xs"
           onClick={() => setIsWhatsAppOpen(false)}
         >
           <div
-            className="bg-white dark:bg-zinc-900 w-full sm:max-w-sm rounded-[24px] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800"
+            className="bg-white dark:bg-zinc-900 w-full sm:max-w-sm rounded-[24px] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-5">
@@ -641,7 +643,8 @@ export const Footer: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

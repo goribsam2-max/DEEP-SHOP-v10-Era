@@ -302,6 +302,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   </span>
                 </div>
               )}
+              {!isOutOfStock && (
+                <div className="absolute inset-x-1.5 bottom-1.5 z-20 flex justify-center pointer-events-none">
+                  <button
+                    type="button"
+                    onClick={handleSellerVisit}
+                    aria-label={`Visit seller ${sellerMeta.name}`}
+                    className="pointer-events-auto inline-flex items-center justify-center gap-1 max-w-full rounded-[50px] bg-slate-900/75 dark:bg-black/75 backdrop-blur-md text-white border border-white/15 px-2 py-0.5 text-[9.5px] font-semibold shadow-sm cursor-pointer hover:bg-slate-900/90 transition"
+                  >
+                    <span className="truncate">{sellerMeta.name}</span>
+                    {sellerMeta.isVerified && (
+                      <VerifiedIcon className="w-3 h-3 text-emerald-400 shrink-0" />
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
@@ -325,21 +340,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <h3 className="text-[14px] font-bold text-slate-900 dark:text-white leading-snug line-clamp-1">
                   {product.name}
                 </h3>
-
-                {/* Posting Seller Name (Subtly Highlighted) + Verified Badge */}
-                <div className="flex items-center gap-1 min-w-0">
-                  <button
-                    type="button"
-                    onClick={handleSellerVisit}
-                    aria-label={`Visit seller ${sellerMeta.name}`}
-                    className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-2 py-1 text-[10.5px] font-semibold cursor-pointer"
-                  >
-                    <span className="truncate">{sellerMeta.name}</span>
-                    {sellerMeta.isVerified && (
-                      <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    )}
-                  </button>
-                </div>
 
                 {/* Product Meta Description Excerpt */}
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug line-clamp-2">
@@ -412,6 +412,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   </span>
                 </div>
               )}
+              {!isOutOfStock && (
+                <div className="absolute inset-x-2 bottom-2 z-20 flex justify-center pointer-events-none">
+                  <button
+                    type="button"
+                    onClick={handleSellerVisit}
+                    aria-label={`Visit seller ${sellerMeta.name}`}
+                    className="pointer-events-auto inline-flex items-center justify-center gap-1 max-w-full rounded-[50px] bg-slate-900/75 dark:bg-black/75 backdrop-blur-md text-white border border-white/15 px-2.5 py-1 text-[11px] font-semibold shadow-sm cursor-pointer hover:bg-slate-900/90 transition"
+                  >
+                    <span className="truncate">{sellerMeta.name}</span>
+                    {sellerMeta.isVerified && (
+                      <VerifiedIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0 space-y-2">
@@ -419,18 +434,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <span className="font-medium text-slate-700 dark:text-slate-300">
                   {cleanCategory}
                 </span>
-                <span aria-hidden="true">·</span>
-                <button
-                  type="button"
-                  onClick={handleSellerVisit}
-                  aria-label={`Visit seller ${sellerMeta.name}`}
-                  className="ds-seller-highlight inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold cursor-pointer max-w-[240px]"
-                >
-                  <span className="truncate">{sellerMeta.name}</span>
-                  {sellerMeta.isVerified && (
-                    <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  )}
-                </button>
                 <span aria-hidden="true">·</span>
                 <span className="inline-flex items-center gap-1 tabular-nums text-slate-700 dark:text-slate-200 font-semibold whitespace-nowrap">
                   <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
@@ -591,6 +594,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 }`}
               />
             </button>
+
+            {/* Posting Seller Pill (Inside Bottom Image Stage with side padding & 50px radius) */}
+            {!isOutOfStock && (
+              <div className="absolute inset-x-2 bottom-2 z-20 flex justify-center pointer-events-none">
+                <button
+                  type="button"
+                  onClick={handleSellerVisit}
+                  aria-label={`Visit seller ${sellerMeta.name}`}
+                  className="pointer-events-auto inline-flex items-center justify-center gap-1 max-w-full rounded-[50px] bg-slate-900/75 dark:bg-black/75 backdrop-blur-md text-white border border-white/15 px-2.5 py-1 text-[10px] font-semibold shadow-sm cursor-pointer hover:bg-slate-900/90 transition"
+                >
+                  <span className="truncate">{sellerMeta.name}</span>
+                  {sellerMeta.isVerified && (
+                    <VerifiedIcon className="w-3 h-3 text-emerald-400 shrink-0" />
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Mobile Card Body */}
@@ -609,21 +629,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <h3 className="text-[13px] font-bold text-slate-900 dark:text-slate-100 leading-snug line-clamp-2">
                 {product.name}
               </h3>
-
-              {/* Posting Seller Name (Subtly Highlighted) + Verified Badge */}
-              <div className="flex items-center min-w-0">
-                <button
-                  type="button"
-                  onClick={handleSellerVisit}
-                  aria-label={`Visit seller ${sellerMeta.name}`}
-                  className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-2 py-1 text-[10.5px] font-semibold cursor-pointer"
-                >
-                  <span className="truncate">{sellerMeta.name}</span>
-                  {sellerMeta.isVerified && (
-                    <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  )}
-                </button>
-              </div>
 
               {/* Product Meta Description Excerpt */}
               <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug line-clamp-2">
@@ -712,6 +717,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               />
             </button>
 
+            {/* Posting Seller Pill (Inside Bottom Image Stage with side padding & 50px radius; hides smoothly on hover Quick-Add) */}
+            {!isOutOfStock && (
+              <div className="absolute inset-x-2.5 bottom-2.5 z-20 flex justify-center pointer-events-none group-hover:opacity-0 transition-opacity duration-200">
+                <button
+                  type="button"
+                  onClick={handleSellerVisit}
+                  aria-label={`Visit seller ${sellerMeta.name}`}
+                  className="pointer-events-auto inline-flex items-center justify-center gap-1 max-w-full rounded-[50px] bg-slate-900/75 dark:bg-black/75 backdrop-blur-md text-white border border-white/15 px-3 py-1 text-[11px] font-semibold shadow-sm cursor-pointer hover:bg-slate-900/90 transition"
+                >
+                  <span className="truncate">{sellerMeta.name}</span>
+                  {sellerMeta.isVerified && (
+                    <VerifiedIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  )}
+                </button>
+              </div>
+            )}
+
             {/* Desktop Hover Quick-Add Glass Bar */}
             {!isOutOfStock && (
               <div className="absolute inset-x-3 bottom-3 z-20 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out pointer-events-none group-hover:pointer-events-auto">
@@ -767,21 +789,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                 {product.name}
               </h3>
-
-              {/* Posting Seller Name (Subtly Highlighted) + Verified Badge */}
-              <div className="flex items-center gap-1.5 min-w-0 pt-0.5">
-                <button
-                  type="button"
-                  onClick={handleSellerVisit}
-                  aria-label={`Visit seller ${sellerMeta.name}`}
-                  className="ds-seller-highlight inline-flex items-center gap-1 max-w-full px-2.5 py-1 text-[11.5px] font-semibold cursor-pointer"
-                >
-                  <span className="truncate">{sellerMeta.name}</span>
-                  {sellerMeta.isVerified && (
-                    <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  )}
-                </button>
-              </div>
 
               {/* Product Meta Description Excerpt */}
               <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed pt-0.5">

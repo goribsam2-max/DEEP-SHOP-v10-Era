@@ -488,7 +488,10 @@ export const NewsPhotoViewerPage: React.FC = () => {
             ? `${post.title} — Photo`
             : `${headerTitle} on Loops`
         }
-        description="Fullscreen photo viewer"
+        description="Fullscreen photo viewer on Loops"
+        image={photoUrl || (post as any)?.thumbnailUrl || post?.images?.[0]}
+        siteName="Loops"
+        exactTitle
       />
 
       {/* Top Floating Liquid-Glass Chrome */}
@@ -1104,7 +1107,16 @@ export const NewsSharePage: React.FC = () => {
       <SEO
         title={exactShareTitle}
         description={exactShareDescription || exactShareTitle}
-        image={post?.images?.[0]}
+        image={
+          (post as any)?.thumbnailUrl ||
+          (post as any)?.videoThumbnail ||
+          (post as any)?.coverUrl ||
+          post?.images?.[0] ||
+          post?.music?.cover ||
+          post?.music?.coverUrl ||
+          post?.reporterAvatar
+        }
+        siteName="Loops"
         exactTitle
       />
 
@@ -1796,7 +1808,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
 
     return (
       <div className="min-h-screen loops-surface text-zinc-900 dark:text-zinc-100 pb-28">
-        <SEO title="Saved — Loops" description="View your saved community loops and collections." />
+        <SEO title="Saved — Loops" description="View your saved community loops and collections." siteName="Loops" exactTitle />
         <div className="max-w-[620px] mx-auto pt-3 sm:pt-5">
           <header className="flex items-center justify-between gap-2 px-4 pb-3 border-b loops-divider">
             <div className="flex items-center gap-2">
@@ -1962,7 +1974,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
 
   return (
     <div className="min-h-screen loops-surface text-zinc-900 dark:text-zinc-100 pb-28">
-      <SEO title="Search — Loops" description="Search people, topics, and loops." />
+      <SEO title="Search — Loops" description="Search people, topics, and loops." siteName="Loops" exactTitle />
 
       <div className="max-w-[620px] mx-auto pt-3 sm:pt-5">
         {!isCompactMode ? (
@@ -4446,7 +4458,10 @@ export const NewsStoryViewerPage: React.FC = () => {
     <div className="story-studio-shell h-[100dvh] max-h-[100dvh] overflow-hidden bg-black text-white flex flex-col justify-between select-none">
       <SEO
         title={`${story?.authorName || "Story"} — Loops`}
-        description="Story viewer"
+        description="Story viewer on Loops"
+        image={story?.mediaType !== "video" ? story?.mediaUrl : undefined}
+        siteName="Loops"
+        exactTitle
       />
 
       {/* Main Centered Mobile Story Viewport */}

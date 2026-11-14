@@ -1309,6 +1309,12 @@ app.use(async (req, res, next) => {
       return res.status(403).json({ error: "Media host not permitted" });
     }
 
+    // Never tunnel media streams through Vercel Serverless Functions (prevents Fast Origin Transfer spikes)
+    if (process.env.VERCEL) {
+      res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=604800");
+      return res.redirect(307, parsedInitial.toString());
+    }
+
     const browserUA =
       "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36";
 
@@ -2391,22 +2397,31 @@ const normalizeDocData = (raw: any): Record<string, any> | null => {
   return out;
 };
 
-const fetchProductData = async (productIdOrSlug: string) => {
-  if (!productIdOrSlug) return null;
+const fetchProductData = async (
+  productIdOrSlug: string
+): Promise<{ product: Record<string, any> | null; confirmedMissing: boolean }> => {
+  if (!productIdOrSlug) return { product: null, confirmedMissing: true };
   if (hasValidFirebaseAdmin) {
     try {
       const docSnap = await admin.firestore().collection("products").doc(productIdOrSlug).get();
       if (docSnap.exists) {
-        return normalizeDocData(docSnap.data());
+        return {
+          product: { id: docSnap.id, ...(normalizeDocData(docSnap.data()) || {}) },
+          confirmedMissing: false,
+        };
       }
       const allProds = await admin.firestore().collection("products").get();
       for (const d of allProds.docs) {
         const data = d.data();
         const slug = toSlug(data.title || data.name || "");
         if (slug === productIdOrSlug || d.id === productIdOrSlug) {
-          return normalizeDocData(data);
+          return {
+            product: { id: d.id, ...(normalizeDocData(data) || {}) },
+            confirmedMissing: false,
+          };
         }
       }
+      return { product: null, confirmedMissing: true };
     } catch (e) {
       console.error("Firebase Admin product fetch error:", e);
     }
@@ -2418,7 +2433,13 @@ const fetchProductData = async (productIdOrSlug: string) => {
     );
     if (res.ok) {
       const data = await res.json();
-      if (data?.fields) return normalizeDocData(data.fields);
+      if (data?.fields) {
+        const docId = String(data.name || "").split("/").pop() || productIdOrSlug;
+        return {
+          product: { id: docId, ...(normalizeDocData(data.fields) || {}) },
+          confirmedMissing: false,
+        };
+      }
     }
 
     // Fallback slug lookup via Firestore REST list
@@ -2434,14 +2455,99 @@ const fetchProductData = async (productIdOrSlug: string) => {
         const docId = String(docItem.name || "").split("/").pop() || "";
         const slug = toSlug(parsed.title || parsed.name || "");
         if (docId === productIdOrSlug || slug === productIdOrSlug) {
-          return parsed;
+          return {
+            product: { id: docId, ...parsed },
+            confirmedMissing: false,
+          };
         }
       }
+      return { product: null, confirmedMissing: res.status === 404 };
     }
   } catch (e) {
     console.error(e);
   }
-  return null;
+  return { product: null, confirmedMissing: false };
+};
+
+let cachedSeoProductsList: { items: Array<Record<string, any>>; expiresAt: number } | null = null;
+const fetchSeoProductsList = async (): Promise<Array<Record<string, any>>> => {
+  if (cachedSeoProductsList && Date.now() < cachedSeoProductsList.expiresAt) {
+    return cachedSeoProductsList.items;
+  }
+  try {
+    let items: Array<Record<string, any>> = [];
+    if (hasValidFirebaseAdmin) {
+      const snap = await admin.firestore().collection("products").limit(250).get();
+      items = snap.docs.map((d) => ({ id: d.id, ...(normalizeDocData(d.data()) || {}) }));
+    } else {
+      const listRes = await fetch(
+        `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/products?pageSize=250`,
+      );
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const docs = Array.isArray(listData?.documents) ? listData.documents : [];
+        items = docs
+          .map((docItem: any) => {
+            const parsed = normalizeDocData(docItem.fields);
+            if (!parsed) return null;
+            const docId = String(docItem.name || "").split("/").pop() || "";
+            return { id: docId, ...parsed };
+          })
+          .filter(Boolean) as Array<Record<string, any>>;
+      }
+    }
+    if (items.length > 0) {
+      cachedSeoProductsList = { items, expiresAt: Date.now() + 10 * 60 * 1000 };
+    }
+    return items;
+  } catch (e) {
+    return cachedSeoProductsList?.items || [];
+  }
+};
+
+let cachedSeoLoopsList: { items: Array<Record<string, any>>; expiresAt: number } | null = null;
+const fetchSeoLoopsList = async (): Promise<Array<Record<string, any>>> => {
+  if (cachedSeoLoopsList && Date.now() < cachedSeoLoopsList.expiresAt) {
+    return cachedSeoLoopsList.items;
+  }
+  try {
+    let items: Array<Record<string, any>> = [];
+    if (hasValidFirebaseAdmin) {
+      const snap = await admin.firestore().collection("scam_posts").limit(200).get();
+      items = snap.docs.map((d) => ({ id: d.id, ...(normalizeDocData(d.data()) || {}) }));
+    } else {
+      const listRes = await fetch(
+        `https://firestore.googleapis.com/v1/projects/deep-shop-bd/databases/(default)/documents/scam_posts?pageSize=200`,
+      );
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const docs = Array.isArray(listData?.documents) ? listData.documents : [];
+        items = docs
+          .map((docItem: any) => {
+            const parsed = normalizeDocData(docItem.fields);
+            if (!parsed) return null;
+            const docId = String(docItem.name || "").split("/").pop() || "";
+            return { id: docId, ...parsed };
+          })
+          .filter(Boolean) as Array<Record<string, any>>;
+      }
+    }
+    const visibleItems = items.filter(
+      (p) =>
+        p?.id &&
+        !p.isRemovedByAdmin &&
+        !p.isDeleted &&
+        p.status !== "removed" &&
+        p.status !== "rejected" &&
+        p.privacy !== "only_me"
+    );
+    if (visibleItems.length > 0) {
+      cachedSeoLoopsList = { items: visibleItems, expiresAt: Date.now() + 10 * 60 * 1000 };
+    }
+    return visibleItems;
+  } catch (e) {
+    return cachedSeoLoopsList?.items || [];
+  }
 };
 
 const fetchNewsPostData = async (postId: string) => {
@@ -2603,9 +2709,157 @@ export async function initializeAppAsync() {
     res.status(204).end();
   });
 
-  // Explicit XML sitemap route for Google Search Console and crawlers
-  app.get("/sitemap.xml", async (_req, res) => {
+  // Explicit robots.txt handler so Express never falls back to index.html
+  app.get("/robots.txt", (req, res) => {
+    const publicRobots = path.join(process.cwd(), "public", "robots.txt");
+    const forwardedHost = String(req.headers["x-forwarded-host"] || req.headers.host || "www.deepshop.top").split(",")[0].trim();
+    const proto = forwardedHost.startsWith("localhost") || forwardedHost.startsWith("127.0.0.1") ? "http" : "https";
+    const baseOrigin = `${proto}://${forwardedHost}`;
+
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    if (fs.existsSync(publicRobots)) {
+      return res.status(200).send(fs.readFileSync(publicRobots, "utf-8"));
+    }
+    return res.status(200).send(
+      `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /seller/\nDisallow: /courier/\nDisallow: /checkout\nDisallow: /cart\nDisallow: /payment/\nDisallow: /api/\n\nSitemap: ${baseOrigin}/sitemap.xml\n`
+    );
+  });
+
+  // Dynamic XML sitemap route for Google Search Console and crawlers (canonical /product/:slug/:id URLs)
+  const handleSitemapRequest = async (_req: express.Request, res: express.Response) => {
     try {
+      const today = new Date().toISOString().split("T")[0];
+      const getSitemapDate = (val: any): string | null => {
+        if (!val) return null;
+        if (typeof val?.toMillis === "function") {
+          return new Date(val.toMillis()).toISOString().split("T")[0];
+        }
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          return d.toISOString().split("T")[0];
+        }
+        return null;
+      };
+
+      const [products, loopsPosts] = await Promise.all([
+        Promise.race([
+          fetchSeoProductsList(),
+          new Promise<Array<Record<string, any>>>((resolve) => setTimeout(() => resolve([]), 2500)),
+        ]),
+        Promise.race([
+          fetchSeoLoopsList(),
+          new Promise<Array<Record<string, any>>>((resolve) => setTimeout(() => resolve([]), 2500)),
+        ]),
+      ]);
+
+      if (products.length > 0 || loopsPosts.length > 0) {
+        const productUrlsXml = products
+          .filter((p) => p?.id && (p?.name || p?.title))
+          .map((p) => {
+            const slug = toSlug(p.name || p.title) || "item";
+            const lastMod = getSitemapDate(p.updatedAt) || getSitemapDate(p.createdAt) || today;
+            return `  <url>\n    <loc>https://www.deepshop.top/product/${slug}/${encodeURIComponent(String(p.id))}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>`;
+          })
+          .join("\n");
+
+        const loopUrlsXml = loopsPosts
+          .filter((p) => p?.id)
+          .slice(0, 200)
+          .map((p) => {
+            const lastMod = getSitemapDate(p.updatedAt) || getSitemapDate(p.createdAt) || today;
+            return `  <url>\n    <loc>https://www.deepshop.top/loops/post/${encodeURIComponent(String(p.id))}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>`;
+          })
+          .join("\n");
+
+        const dynamicXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.deepshop.top/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/all-products</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/flash-sale</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/bundles</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/loops</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/loops?filter=video</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/messages</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/blog</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/about</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/contact</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/faq</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/privacy</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/terms</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+${productUrlsXml}
+${loopUrlsXml}
+</urlset>`;
+        res.setHeader("Content-Type", "application/xml; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=1800, s-maxage=3600, stale-while-revalidate=86400");
+        return res.status(200).send(dynamicXml);
+      }
+
       const publicSitemap = path.join(process.cwd(), "public", "sitemap.xml");
       const distSitemap = path.join(process.cwd(), "dist", "sitemap.xml");
       let xmlContent = "";
@@ -2621,7 +2875,6 @@ export async function initializeAppAsync() {
         return res.status(200).send(xmlContent);
       }
 
-      const today = new Date().toISOString().split("T")[0];
       const fallbackXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -2634,7 +2887,13 @@ export async function initializeAppAsync() {
     <loc>https://www.deepshop.top/all-products</loc>
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/messages</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/flash-sale</loc>
@@ -2649,7 +2908,8 @@ export async function initializeAppAsync() {
       console.error("Sitemap route error:", err);
       res.status(500).send("Error generating sitemap");
     }
-  });
+  };
+  app.get("/sitemap.xml", handleSitemapRequest);
 
   // Bing IndexNow static verification key file
   const BING_INDEXNOW_VERIFICATION_KEY = "0f6cbbdfe0864710868cb5500f5b8e54";
@@ -2925,6 +3185,22 @@ export async function initializeAppAsync() {
         ? candidatePath
         : `/${candidatePath}`;
 
+      if (reqPath === "/robots.txt") {
+        const publicRobots = path.join(process.cwd(), "public", "robots.txt");
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        if (fs.existsSync(publicRobots)) {
+          return res.status(200).send(fs.readFileSync(publicRobots, "utf-8"));
+        }
+        return res.status(200).send(
+          `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /seller/\nDisallow: /courier/\nDisallow: /checkout\nDisallow: /cart\nDisallow: /payment/\nDisallow: /api/\n\nSitemap: https://www.deepshop.top/sitemap.xml\n`
+        );
+      }
+
+      if (reqPath === "/sitemap.xml") {
+        return handleSitemapRequest(req, res);
+      }
+
       if (reqPath === `/${BING_INDEXNOW_VERIFICATION_KEY}.txt`) {
         res.setHeader("Content-Type", "text/plain; charset=utf-8");
         res.setHeader("Cache-Control", "public, max-age=86400");
@@ -2966,9 +3242,17 @@ export async function initializeAppAsync() {
         }
         const cleaned = html
           .replace(/<title>[\s\S]*?<\/title>/gi, "")
-          .replace(/<meta\s+[^>]*?(?:name=["'](?:description|keywords|twitter:[^"']+)["']|property=["'](?:og:[^"']+|product:[^"']+)["'])[^>]*?>/gi, "")
+          .replace(/<meta\s+[^>]*?(?:name=["'](?:description|keywords|robots|twitter:[^"']+)["']|property=["'](?:og:[^"']+|product:[^"']+)["'])[^>]*?>/gi, "")
           .replace(/<link\s+[^>]*?rel=["']canonical["'][^>]*?>/gi, "");
         return cleaned.replace("</head>", `${dynamicMeta}\n</head>`);
+      };
+
+      const injectBotBodyHtml = (html: string, semanticInnerHtml: string): string => {
+        if (!semanticInnerHtml) return html;
+        return html.replace(
+          /<div\s+id=["']root["']\s*><\/div>/i,
+          `<div id="root">${semanticInnerHtml}</div>`
+        );
       };
 
       const knownAppRoutes = [
@@ -2990,12 +3274,21 @@ export async function initializeAppAsync() {
       const hasExtension = reqPath.includes(".");
 
       const newsPostMatch = reqPath.match(/^\/(?:(?:loops|news-hub)\/(?:post|share)|news|scam)\/([^/?#]+)/);
+      const isLoopsSectionPath =
+        reqPath === "/loops" ||
+        reqPath.startsWith("/loops/") ||
+        reqPath === "/news-hub" ||
+        reqPath.startsWith("/news-hub/") ||
+        reqPath === "/scam" ||
+        reqPath === "/scam-alert" ||
+        reqPath === "/news";
+      const queryPostId = String(req.query.postId || req.query.post || req.query.reel || "").trim();
       const productMatch = reqPath.match(/^\/product\/(.+)/);
       const blogMatch = reqPath.match(/^\/blog\/(.+)/);
       const isSlugMatch = !isKnownRoute && !hasExtension && !reqPath.startsWith("/api");
 
       const userAgent = String(req.headers["user-agent"] || "");
-      const isSocialOrSearchBot = /bot|crawl|spider|slurp|facebookexternalhit|facebot|whatsapp|telegram|twitter|discord|linkedin|slack|pinterest|skype|embedly|reddit|bingpreview|lighthouse|curl|python/i.test(userAgent);
+      const isSocialOrSearchBot = /bot|crawl|spider|slurp|facebookexternalhit|facebot|whatsapp|telegram|twitter|discord|linkedin|slack|pinterest|skype|embedly|reddit|bingpreview|lighthouse|applebot|imessage|cfnetwork|viber|google-inspectiontool|curl|python/i.test(userAgent);
 
       const withSsrTimeout = <T>(promise: Promise<T>, ms = 1200): Promise<T | null> =>
         Promise.race([
@@ -3005,15 +3298,19 @@ export async function initializeAppAsync() {
 
       const protoHeader = String(req.headers["x-forwarded-proto"] || req.protocol || "https").split(",")[0].trim();
       const hostHeader = String(req.headers["x-forwarded-host"] || req.get("host") || "www.deepshop.top").split(",")[0].trim();
-      const requestOrigin = `${protoHeader}://${hostHeader}`;
+      const requestOrigin =
+        hostHeader === "deepshop.top" || hostHeader === "www.deepshop.top"
+          ? "https://www.deepshop.top"
+          : `${protoHeader}://${hostHeader}`;
 
       let newsPost: any = null;
       let product: any = null;
       let blog: any = null;
+      let isConfirmedMissingPage = false;
 
-      if (newsPostMatch && newsPostMatch[1]) {
-        const decodedPostId = decodeURIComponent(newsPostMatch[1]);
-        newsPost = await withSsrTimeout(fetchNewsPostData(decodedPostId), 1200);
+      if ((newsPostMatch && newsPostMatch[1]) || (isLoopsSectionPath && queryPostId)) {
+        const decodedPostId = decodeURIComponent(newsPostMatch?.[1] || queryPostId);
+        newsPost = await withSsrTimeout(fetchNewsPostData(decodedPostId), 3500);
         if (newsPost && !newsPost.id) {
           newsPost = { id: decodedPostId, ...newsPost };
         }
@@ -3021,22 +3318,74 @@ export async function initializeAppAsync() {
         const segments = productMatch[1].split("/").filter(Boolean);
         const lastPart = decodeURIComponent(segments[segments.length - 1]);
         const firstPart = decodeURIComponent(segments[0]);
-        product = await withSsrTimeout(fetchProductData(lastPart), 1200);
-        if (!product && lastPart !== firstPart) {
-          product = await withSsrTimeout(fetchProductData(firstPart), 1200);
+        const lookupLast = await withSsrTimeout(fetchProductData(lastPart), 4500);
+        if (lookupLast?.product) {
+          product = lookupLast.product;
+        } else if (lastPart !== firstPart) {
+          const lookupFirst = await withSsrTimeout(fetchProductData(firstPart), 3000);
+          if (lookupFirst?.product) {
+            product = lookupFirst.product;
+          } else if (lookupLast?.confirmedMissing && lookupFirst?.confirmedMissing) {
+            isConfirmedMissingPage = true;
+          }
+        } else if (lookupLast?.confirmedMissing) {
+          isConfirmedMissingPage = true;
         }
       } else if (isSocialOrSearchBot && blogMatch && blogMatch[1]) {
         const blogSlug = decodeURIComponent(blogMatch[1].split("/")[0]);
-        blog = await withSsrTimeout(fetchBlogData(blogSlug), 1200);
+        blog = await withSsrTimeout(fetchBlogData(blogSlug), 3500);
       } else if (isSocialOrSearchBot && isSlugMatch) {
         const cleanSlug = decodeURIComponent(reqPath.replace(/^\//, ""));
-        product = await withSsrTimeout(fetchProductData(cleanSlug), 1200);
-        if (!product) {
-          blog = await withSsrTimeout(fetchBlogData(cleanSlug), 1200);
+        const prodLookup = await withSsrTimeout(fetchProductData(cleanSlug), 4000);
+        if (prodLookup?.product) {
+          product = prodLookup.product;
+        } else {
+          blog = await withSsrTimeout(fetchBlogData(cleanSlug), 3000);
+          if (!blog && prodLookup?.confirmedMissing) {
+            isConfirmedMissingPage = true;
+          }
         }
       }
 
-      if (newsPost) {
+      const noindexPrefixes = [
+        "/admin",
+        "/seller",
+        "/courier",
+        "/checkout",
+        "/cart",
+        "/payment",
+        "/signin",
+        "/signup",
+        "/verify",
+        "/devices",
+        "/settings",
+        "/onboarding",
+        "/auth-selector",
+        "/forgot-password",
+        "/new-password",
+        "/complete-profile",
+      ];
+      const isPrivateOrNoindexRoute = noindexPrefixes.some(
+        (prefix) => reqPath === prefix || reqPath.startsWith(`${prefix}/`)
+      );
+
+      let responseStatus = 200;
+
+      if (isConfirmedMissingPage) {
+        responseStatus = 404;
+        const safeUrl = escapeHtmlAttr(`${requestOrigin}${reqPath}`);
+        const metaTags = `
+          <title>Page Not Found (404) | DEEP SHOP</title>
+          <meta name="description" content="The requested product or page could not be found on DEEP SHOP." />
+          <meta name="robots" content="noindex, nofollow" />
+          <meta property="og:url" content="${safeUrl}" />
+        `;
+        template = injectDynamicHeadMeta(template, metaTags);
+        template = injectBotBodyHtml(
+          template,
+          `<main><h1>Product Not Found</h1><p>This listing has been removed or is no longer available.</p><nav><a href="${escapeHtmlAttr(requestOrigin)}/all-products">Browse All Products</a></nav></main>`
+        );
+      } else if (newsPost) {
         const storedTitle = String(newsPost.title || "").trim();
         const rawTitle = storedTitle === "Feed Post" ? "" : storedTitle;
         const rawDesc = String(newsPost.description || "").trim();
@@ -3044,18 +3393,33 @@ export async function initializeAppAsync() {
         const firstLine = rawDesc
           ? rawDesc.split(/\r?\n/)[0].trim().slice(0, 90)
           : "";
-        const authorFallback = String(newsPost.reporterName || "News Hub").trim();
+        const authorFallback = String(newsPost.reporterName || "Loops").trim();
         const postTitle =
-          rawTitle || firstLine || `${authorFallback}'s Post`;
+          rawTitle || firstLine || `${authorFallback} on Loops`;
         const postDescription = (
           cleanDesc ||
           rawTitle ||
-          `Post shared by ${authorFallback} on News Hub.`
+          `Shared by ${authorFallback} on Loops.`
         ).slice(0, 300);
 
+        const videoSourceText = String(newsPost.videoUrl || rawDesc || "");
+        const ytMatch = videoSourceText.match(
+          /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/))([a-zA-Z0-9_-]{6,20})/i
+        );
+        const ytFallbackThumb = ytMatch?.[1]
+          ? `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`
+          : "";
+
         let imageUrl =
+          newsPost.thumbnailUrl ||
+          newsPost.videoThumbnail ||
+          newsPost.coverUrl ||
+          newsPost.posterUrl ||
           (Array.isArray(newsPost.images) && newsPost.images[0]) ||
           newsPost.image ||
+          newsPost.music?.cover ||
+          newsPost.music?.coverUrl ||
+          ytFallbackThumb ||
           newsPost.reporterAvatar ||
           `${requestOrigin}/favicon.png`;
 
@@ -3063,22 +3427,45 @@ export async function initializeAppAsync() {
           imageUrl = `${requestOrigin}${imageUrl}`;
         }
 
+        const directVideoCandidate = String(newsPost.videoUrl || "").trim();
+        const normalizedOgVideo =
+          directVideoCandidate &&
+          /^https?:\/\//i.test(directVideoCandidate) &&
+          /\.(?:mp4|webm|mov|m4v)(?:$|[?#])|(?:catbox\.moe|firebasestorage\.googleapis\.com)/i.test(
+            directVideoCandidate
+          )
+            ? directVideoCandidate.replace(/^http:\/\//i, "https://")
+            : "";
+
+        const postIdForCanonical = String(newsPost.id || newsPostMatch?.[1] || queryPostId || "").trim();
+        const canonicalPostUrl = postIdForCanonical
+          ? `${requestOrigin}/loops/post/${encodeURIComponent(postIdForCanonical)}`
+          : `${requestOrigin}${reqPath}`;
+
         const safeTitle = escapeHtmlAttr(postTitle);
         const safeDesc = escapeHtmlAttr(postDescription);
         const safeImg = escapeHtmlAttr(imageUrl);
-        const safeUrl = escapeHtmlAttr(`${requestOrigin}${reqPath}`);
+        const safeUrl = escapeHtmlAttr(
+          queryPostId
+            ? `${requestOrigin}${reqPath}${req.query.filter ? `?filter=${encodeURIComponent(String(req.query.filter))}&postId=${encodeURIComponent(queryPostId)}` : `?postId=${encodeURIComponent(queryPostId)}`}`
+            : canonicalPostUrl
+        );
+        const safeCanonical = escapeHtmlAttr(canonicalPostUrl);
         const serializedInitialPost = JSON.stringify(newsPost).replace(/</g, "\\u003c");
 
         const metaTags = `
-          <title>${safeTitle}</title>
+          <title>${safeTitle} | Loops</title>
           <meta name="description" content="${safeDesc}" />
+          <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+          <meta property="og:site_name" content="Loops" />
           <meta property="og:title" content="${safeTitle}" />
           <meta property="og:description" content="${safeDesc}" />
           <meta property="og:image" content="${safeImg}" />
           <meta property="og:image:alt" content="${safeTitle}" />
-          <meta property="og:type" content="article" />
+          ${normalizedOgVideo ? `<meta property="og:video" content="${escapeHtmlAttr(normalizedOgVideo)}" />` : ""}
+          <meta property="og:type" content="${normalizedOgVideo ? "video.other" : "article"}" />
           <meta property="og:url" content="${safeUrl}" />
-          <link rel="canonical" href="${safeUrl}" />
+          <link rel="canonical" href="${safeCanonical}" />
           <meta name="twitter:card" content="summary_large_image" />
           <meta name="twitter:title" content="${safeTitle}" />
           <meta name="twitter:description" content="${safeDesc}" />
@@ -3091,7 +3478,11 @@ export async function initializeAppAsync() {
             "headline": ${JSON.stringify(postTitle)},
             "articleBody": ${JSON.stringify(postDescription)},
             "image": [${JSON.stringify(imageUrl)}],
-            "url": ${JSON.stringify(`${requestOrigin}${reqPath}`)},
+            "url": ${JSON.stringify(canonicalPostUrl)},
+            "publisher": {
+              "@type": "Organization",
+              "name": "Loops"
+            },
             "author": {
               "@type": "Person",
               "name": ${JSON.stringify(authorFallback)}
@@ -3101,14 +3492,25 @@ export async function initializeAppAsync() {
         `;
 
         template = injectDynamicHeadMeta(template, metaTags);
+        if (isSocialOrSearchBot) {
+          template = injectBotBodyHtml(
+            template,
+            `<main><article><h1>${safeTitle}</h1><p>By ${escapeHtmlAttr(authorFallback)} on Loops</p><img src="${safeImg}" alt="${safeTitle}" /><p>${safeDesc}</p><a href="${escapeHtmlAttr(requestOrigin)}/loops">Back to Loops</a></article></main>`
+          );
+        }
       } else if (product) {
         const rawTitle = String(product.name || product.title || "Product").trim();
+        const prodId = String(product.id || productMatch?.[1]?.split("/").pop() || "").trim();
+        const prodSlug = toSlug(rawTitle) || "item";
+        const canonicalProductUrl = prodId
+          ? `${requestOrigin}/product/${prodSlug}/${prodId}`
+          : `${requestOrigin}${reqPath}`;
         const rawDesc =
           String(product.description || "")
             .replace(/<[^>]*>/g, " ")
             .replace(/\s+/g, " ")
             .trim()
-            .slice(0, 300) || rawTitle;
+            .slice(0, 300) || `Buy ${rawTitle} at DEEP SHOP. 100% authentic border cross phones and gadgets in Bangladesh.`;
         let imageUrl =
           product.image ||
           (Array.isArray(product.images) ? product.images[0] : null) ||
@@ -3117,16 +3519,26 @@ export async function initializeAppAsync() {
         if (typeof imageUrl === "string" && imageUrl.startsWith("/")) {
           imageUrl = `${requestOrigin}${imageUrl}`;
         }
-        const price = typeof product.price === "number" ? product.price : Number(product.price || 0);
+        const rawPrice =
+          product.isOffer && product.offerPrice
+            ? Number(product.offerPrice)
+            : typeof product.price === "number"
+              ? product.price
+              : Number(product.price || 0);
+        const price = Number.isFinite(rawPrice) ? rawPrice : 0;
+        const inStock = product.stock === undefined || Number(product.stock) > 0;
 
         const safeTitle = escapeHtmlAttr(rawTitle);
         const safeDesc = escapeHtmlAttr(rawDesc);
         const safeImg = escapeHtmlAttr(imageUrl);
-        const safeUrl = escapeHtmlAttr(`${requestOrigin}${reqPath}`);
+        const safeUrl = escapeHtmlAttr(canonicalProductUrl);
+        const safeBrand = escapeHtmlAttr(String(product.brand || "DEEP SHOP"));
+        const safeCategory = escapeHtmlAttr(String(product.category || "Electronics"));
 
         const metaTags = `
           <title>${safeTitle}</title>
           <meta name="description" content="${safeDesc}" />
+          <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
           <meta property="og:title" content="${safeTitle}" />
           <meta property="og:description" content="${safeDesc}" />
           <meta property="og:image" content="${safeImg}" />
@@ -3136,7 +3548,7 @@ export async function initializeAppAsync() {
           <link rel="canonical" href="${safeUrl}" />
           <meta property="product:price:amount" content="${price}" />
           <meta property="product:price:currency" content="BDT" />
-          <meta property="product:availability" content="instock" />
+          <meta property="product:availability" content="${inStock ? "in stock" : "out of stock"}" />
           <meta name="twitter:card" content="summary_large_image" />
           <meta name="twitter:title" content="${safeTitle}" />
           <meta name="twitter:description" content="${safeDesc}" />
@@ -3148,21 +3560,31 @@ export async function initializeAppAsync() {
             "name": ${JSON.stringify(rawTitle)},
             "image": [${JSON.stringify(imageUrl)}],
             "description": ${JSON.stringify(rawDesc)},
-            "sku": ${JSON.stringify(productMatch?.[1]?.split("/")[0] || "DS-PROD")},
+            "sku": ${JSON.stringify(prodId || "DS-PROD")},
+            "brand": {
+              "@type": "Brand",
+              "name": ${JSON.stringify(product.brand || "DEEP SHOP")}
+            },
             "offers": {
               "@type": "Offer",
-              "url": ${JSON.stringify(`${requestOrigin}${reqPath}`)},
+              "url": ${JSON.stringify(canonicalProductUrl)},
               "priceCurrency": "BDT",
-              "price": ${price || 0},
+              "price": ${price},
               "priceValidUntil": "2027-12-31",
-              "availability": "https://schema.org/InStock",
-              "itemCondition": "https://schema.org/NewCondition"
+              "availability": ${JSON.stringify(inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock")},
+              "itemCondition": "https://schema.org/UsedCondition"
             }
           }
           </script>
         `;
 
         template = injectDynamicHeadMeta(template, metaTags);
+        if (isSocialOrSearchBot) {
+          template = injectBotBodyHtml(
+            template,
+            `<main><article><h1>${safeTitle}</h1><p>Brand: ${safeBrand} | Category: ${safeCategory}</p><p>Price: ৳${price} BDT | Availability: ${inStock ? "In Stock" : "Out of Stock"}</p><img src="${safeImg}" alt="${safeTitle}" /><p>${safeDesc}</p><nav><a href="${escapeHtmlAttr(requestOrigin)}/">Home</a> | <a href="${escapeHtmlAttr(requestOrigin)}/all-products">All Products</a></nav></article></main>`
+          );
+        }
       } else if (blog) {
         const rawTitle = String(blog.title || "Blog Post").trim();
         const rawContent = String(blog.content || "");
@@ -3185,6 +3607,7 @@ export async function initializeAppAsync() {
         const metaTags = `
           <title>${safeTitle}</title>
           <meta name="description" content="${safeDesc}" />
+          <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
           <meta property="og:title" content="${safeTitle}" />
           <meta property="og:description" content="${safeDesc}" />
           <meta property="og:image" content="${safeImg}" />
@@ -3198,6 +3621,41 @@ export async function initializeAppAsync() {
         `;
 
         template = injectDynamicHeadMeta(template, metaTags);
+        if (isSocialOrSearchBot) {
+          template = injectBotBodyHtml(
+            template,
+            `<main><article><h1>${safeTitle}</h1><img src="${safeImg}" alt="${safeTitle}" /><p>${safeDesc}</p><a href="${escapeHtmlAttr(requestOrigin)}/blog">All Articles</a></article></main>`
+          );
+        }
+      } else if (reqPath === "/messages" || reqPath.startsWith("/messages/")) {
+        const canonicalUrl = `${requestOrigin}/messages`;
+        const safeUrl = escapeHtmlAttr(canonicalUrl);
+        const safeTitle = "Messages &amp; Chat | DEEP SHOP";
+        const safeDesc = "Chat and connect directly with verified sellers, friends, and customer support on DEEP SHOP.";
+        const safeImg = escapeHtmlAttr(`${requestOrigin}/favicon.png`);
+
+        const metaTags = `
+          <title>${safeTitle}</title>
+          <meta name="description" content="${safeDesc}" />
+          <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+          <meta property="og:title" content="${safeTitle}" />
+          <meta property="og:description" content="${safeDesc}" />
+          <meta property="og:image" content="${safeImg}" />
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content="${safeUrl}" />
+          <link rel="canonical" href="${safeUrl}" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content="${safeTitle}" />
+          <meta name="twitter:description" content="${safeDesc}" />
+          <meta name="twitter:image" content="${safeImg}" />
+        `;
+        template = injectDynamicHeadMeta(template, metaTags);
+        if (isSocialOrSearchBot) {
+          template = injectBotBodyHtml(
+            template,
+            `<main><h1>DEEP SHOP Messages &amp; Direct Chat</h1><p>${safeDesc}</p><p>Send instant messages, voice notes, images, and real-time order updates with trusted DEEP SHOP sellers and friends.</p><nav><a href="${escapeHtmlAttr(requestOrigin)}/">Home</a> | <a href="${escapeHtmlAttr(requestOrigin)}/all-products">All Products</a> | <a href="${escapeHtmlAttr(requestOrigin)}/loops">Loops</a></nav></main>`
+          );
+        }
       } else if (reqPath === "/all-products") {
         const category = req.query.category ? String(req.query.category) : "All";
         const canonicalUrl = category !== "All" ? `${requestOrigin}/all-products?category=${encodeURIComponent(category)}` : `${requestOrigin}/all-products`;
@@ -3207,6 +3665,7 @@ export async function initializeAppAsync() {
         const metaTags = `
           <title>${safeTitle}</title>
           <meta name="description" content="Browse our collection of authentic border cross devices and tech products at DEEP SHOP." />
+          <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
           <meta property="og:title" content="${safeTitle}" />
           <meta property="og:description" content="Browse our collection of authentic border cross devices and tech products at DEEP SHOP." />
           <meta property="og:image" content="${escapeHtmlAttr(`${requestOrigin}/favicon.png`)}" />
@@ -3216,6 +3675,97 @@ export async function initializeAppAsync() {
         `;
 
         template = injectDynamicHeadMeta(template, metaTags);
+        if (isSocialOrSearchBot) {
+          const catalogProducts = await withSsrTimeout(fetchSeoProductsList(), 1200);
+          const linksHtml = (catalogProducts || [])
+            .slice(0, 60)
+            .filter((p) => p?.id && (p?.name || p?.title))
+            .map((p) => {
+              const name = String(p.name || p.title);
+              const slug = toSlug(name) || "item";
+              const href = escapeHtmlAttr(`${requestOrigin}/product/${slug}/${p.id}`);
+              return `<li><a href="${href}">${escapeHtmlAttr(name)}</a></li>`;
+            })
+            .join("");
+          template = injectBotBodyHtml(
+            template,
+            `<main><h1>${safeTitle}</h1><p>Browse our collection of authentic border cross devices and tech products at DEEP SHOP.</p><ul>${linksHtml}</ul></main>`
+          );
+        }
+      } else if (isLoopsSectionPath) {
+        const isReelsTab = String(req.query.filter || "").toLowerCase() === "video";
+        const loopsTitle = isReelsTab
+          ? "Reels — Loops"
+          : "Loops — Community, Reels & Discussions";
+        const loopsDesc = isReelsTab
+          ? "Watch trending vertical Reels, music clips, and creator videos on Loops."
+          : "Join real-time community Loops, Notes, Reels, discussions, and trending topics.";
+        const canonicalLoopsUrl = isReelsTab
+          ? `${requestOrigin}/loops?filter=video`
+          : `${requestOrigin}/loops`;
+
+        const latestLoops = isSocialOrSearchBot
+          ? await withSsrTimeout(fetchSeoLoopsList(), 1200)
+          : [];
+        const firstThumbPost = (latestLoops || []).find(
+          (p) =>
+            p?.thumbnailUrl ||
+            p?.videoThumbnail ||
+            p?.coverUrl ||
+            (Array.isArray(p?.images) && p.images[0]) ||
+            p?.music?.cover
+        );
+        let loopsImg =
+          firstThumbPost?.thumbnailUrl ||
+          firstThumbPost?.videoThumbnail ||
+          firstThumbPost?.coverUrl ||
+          (Array.isArray(firstThumbPost?.images) && firstThumbPost.images[0]) ||
+          firstThumbPost?.music?.cover ||
+          `${requestOrigin}/favicon.png`;
+        if (typeof loopsImg === "string" && loopsImg.startsWith("/")) {
+          loopsImg = `${requestOrigin}${loopsImg}`;
+        }
+
+        const safeTitle = escapeHtmlAttr(loopsTitle);
+        const safeDesc = escapeHtmlAttr(loopsDesc);
+        const safeImg = escapeHtmlAttr(loopsImg);
+        const safeUrl = escapeHtmlAttr(canonicalLoopsUrl);
+
+        const metaTags = `
+          <title>${safeTitle}</title>
+          <meta name="description" content="${safeDesc}" />
+          <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+          <meta property="og:site_name" content="Loops" />
+          <meta property="og:title" content="${safeTitle}" />
+          <meta property="og:description" content="${safeDesc}" />
+          <meta property="og:image" content="${safeImg}" />
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content="${safeUrl}" />
+          <link rel="canonical" href="${safeUrl}" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content="${safeTitle}" />
+          <meta name="twitter:description" content="${safeDesc}" />
+          <meta name="twitter:image" content="${safeImg}" />
+        `;
+        template = injectDynamicHeadMeta(template, metaTags);
+        if (isSocialOrSearchBot) {
+          const loopLinksHtml = (latestLoops || [])
+            .slice(0, 40)
+            .map((p) => {
+              const label = String(
+                (p.title && p.title !== "Feed Post" ? p.title : "") ||
+                  (p.description || "").split(/\r?\n/)[0]?.slice(0, 80) ||
+                  `${p.reporterName || "Creator"} on Loops`
+              ).trim();
+              const href = escapeHtmlAttr(`${requestOrigin}/loops/post/${encodeURIComponent(String(p.id))}`);
+              return `<li><a href="${href}">${escapeHtmlAttr(label)}</a></li>`;
+            })
+            .join("");
+          template = injectBotBodyHtml(
+            template,
+            `<main><h1>${safeTitle}</h1><p>${safeDesc}</p><nav><a href="${escapeHtmlAttr(requestOrigin)}/loops">Loops Feed</a> | <a href="${escapeHtmlAttr(requestOrigin)}/loops?filter=video">Loops Reels</a> | <a href="${escapeHtmlAttr(requestOrigin)}/messages">Messages</a></nav>${loopLinksHtml ? `<ul>${loopLinksHtml}</ul>` : ""}</main>`
+          );
+        }
       } else {
         // Website link ("/" or general pages without specific item metadata)
         let title = "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site";
@@ -3239,29 +3789,52 @@ export async function initializeAppAsync() {
         const safeDesc = escapeHtmlAttr(description);
         const safeImg = escapeHtmlAttr(imageUrl);
         const safeUrl = escapeHtmlAttr(`${requestOrigin}${reqPath || "/"}`);
+        const robotsContent = isPrivateOrNoindexRoute
+          ? "noindex, nofollow"
+          : "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1";
 
         const metaTags = `
           <title>${safeTitle}</title>
           <meta name="description" content="${safeDesc}" />
+          <meta name="robots" content="${robotsContent}" />
           <meta property="og:title" content="${safeTitle}" />
           <meta property="og:description" content="${safeDesc}" />
           <meta property="og:image" content="${safeImg}" />
           <meta property="og:type" content="website" />
           <meta property="og:url" content="${safeUrl}" />
-          <link rel="canonical" href="${safeUrl}" />
+          ${!isPrivateOrNoindexRoute ? `<link rel="canonical" href="${safeUrl}" />` : ""}
           <meta name="twitter:card" content="summary_large_image" />
           <meta name="twitter:title" content="${safeTitle}" />
           <meta name="twitter:description" content="${safeDesc}" />
           <meta name="twitter:image" content="${safeImg}" />
         `;
         template = injectDynamicHeadMeta(template, metaTags);
+        if (isSocialOrSearchBot && !isPrivateOrNoindexRoute) {
+          const homeProducts = reqPath === "/" ? await withSsrTimeout(fetchSeoProductsList(), 1200) : [];
+          const homeLinksHtml = (homeProducts || [])
+            .slice(0, 30)
+            .filter((p) => p?.id && (p?.name || p?.title))
+            .map((p) => {
+              const name = String(p.name || p.title);
+              const slug = toSlug(name) || "item";
+              const href = escapeHtmlAttr(`${requestOrigin}/product/${slug}/${p.id}`);
+              return `<li><a href="${href}">${escapeHtmlAttr(name)}</a></li>`;
+            })
+            .join("");
+          template = injectBotBodyHtml(
+            template,
+            `<main><h1>${safeTitle}</h1><p>${safeDesc}</p><nav><a href="${escapeHtmlAttr(requestOrigin)}/all-products">All Products</a> | <a href="${escapeHtmlAttr(requestOrigin)}/flash-sale">Flash Sale</a> | <a href="${escapeHtmlAttr(requestOrigin)}/loops">Loops</a> | <a href="${escapeHtmlAttr(requestOrigin)}/messages">Messages</a> | <a href="${escapeHtmlAttr(requestOrigin)}/blog">Blog</a></nav>${homeLinksHtml ? `<ul>${homeLinksHtml}</ul>` : ""}</main>`
+          );
+        }
       }
 
       res
-        .status(200)
+        .status(responseStatus)
         .set({
           "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "public, max-age=0, must-revalidate",
+          "Cache-Control": isSocialOrSearchBot
+            ? "public, max-age=120, s-maxage=600, stale-while-revalidate=3600"
+            : "public, max-age=0, must-revalidate",
         })
         .end(template);
     } catch (e: any) {

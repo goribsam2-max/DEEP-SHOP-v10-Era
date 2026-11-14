@@ -15,6 +15,7 @@ interface SEOProps {
   canonical?: string;
   noindex?: boolean;
   exactTitle?: boolean;
+  siteName?: string;
 }
 
 const SEO: React.FC<SEOProps> = ({ 
@@ -30,16 +31,32 @@ const SEO: React.FC<SEOProps> = ({
   availability,
   canonical,
   noindex = false,
-  exactTitle = false
+  exactTitle = false,
+  siteName
 }) => {
   const fullTitle = exactTitle ? title : `${title} | DEEP SHOP`;
+  const resolvedSiteName = siteName || (exactTitle ? 'Loops' : 'DEEP SHOP');
+  const resolvedPath = canonical
+    ? canonical.startsWith('http')
+      ? canonical
+      : `https://www.deepshop.top${canonical.startsWith('/') ? canonical : `/${canonical}`}`
+    : typeof window !== 'undefined' && !noindex
+      ? `https://www.deepshop.top${window.location.pathname}`
+      : undefined;
+  const resolvedUrl = url && url.startsWith('http')
+    ? url
+    : resolvedPath || (typeof window !== 'undefined' ? window.location.href : 'https://www.deepshop.top/');
+  const resolvedImage = image && image.startsWith('http')
+    ? image
+    : `https://www.deepshop.top${image?.startsWith('/') ? image : `/${image || 'favicon.png'}`}`;
+
   return (
     <Helmet>
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
       
-      {canonical && <link rel="canonical" href={`https://www.deepshop.top${canonical}`} />}
+      {!noindex && resolvedPath && <link rel="canonical" href={resolvedPath} />}
       {noindex ? (
         <meta name="robots" content="noindex, nofollow" />
       ) : (
@@ -48,10 +65,10 @@ const SEO: React.FC<SEOProps> = ({
 
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
-      <meta property="og:image" content={image} />
-      <meta property="og:url" content={url} />
+      <meta property="og:image" content={resolvedImage} />
+      <meta property="og:url" content={resolvedUrl} />
       <meta property="og:type" content={type} />
-      {!exactTitle && <meta property="og:site_name" content="DEEP SHOP" />}
+      <meta property="og:site_name" content={resolvedSiteName} />
 
       {price !== undefined && <meta property="product:price:amount" content={price.toString()} />}
       {price !== undefined && <meta property="product:price:currency" content={currency} />}
@@ -60,7 +77,7 @@ const SEO: React.FC<SEOProps> = ({
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={image} />
+      <meta name="twitter:image" content={resolvedImage} />
 
       {jsonLd && (
         <script type="application/ld+json">

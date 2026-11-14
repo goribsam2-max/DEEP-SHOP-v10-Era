@@ -1506,6 +1506,7 @@ export const NewsDetails: React.FC = () => {
         <SEO
           title="Loop — Loops"
           description="Read this community post on Loops."
+          siteName="Loops"
           exactTitle
         />
         <NewsPostDetailPageSkeleton />
@@ -1519,6 +1520,8 @@ export const NewsDetails: React.FC = () => {
         <SEO
           title="Loop Not Found — Loops"
           description="This Loop is no longer available."
+          siteName="Loops"
+          noindex
           exactTitle
         />
         <div className="rounded-3xl border loops-divider p-8 max-w-md w-full text-center space-y-4">
@@ -2013,7 +2016,19 @@ export const NewsDetails: React.FC = () => {
           (post.title && post.title !== "Feed Post" ? post.title.trim() : "") ||
           `Loop shared by ${authorHandle} on Loops.`
         }
-        image={post.images?.[0] || authorAvatarUrl || undefined}
+        image={
+          (post as any).thumbnailUrl ||
+          (post as any).videoThumbnail ||
+          (post as any).coverUrl ||
+          (post as any).posterUrl ||
+          post.images?.[0] ||
+          post.music?.cover ||
+          post.music?.coverUrl ||
+          authorAvatarUrl ||
+          undefined
+        }
+        canonical={`/loops/post/${post.id}`}
+        siteName="Loops"
         type="article"
         exactTitle
       />

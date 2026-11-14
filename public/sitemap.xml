@@ -2,536 +2,314 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://www.deepshop.top/</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/all-products</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/flash-sale</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://www.deepshop.top/bundles</loc>
+    <lastmod>2026-11-14</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/loops</loc>
+    <lastmod>2026-11-14</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/messages</loc>
+    <lastmod>2026-11-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.deepshop.top/blog</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/about</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/contact</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/faq</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/privacy</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/terms</loc>
-    <lastmod>2026-11-11</lastmod>
+    <lastmod>2026-11-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/iphone-xs-max</loc>
+    <loc>https://www.deepshop.top/product/iphone-xs-max/0eK1FD8Cf3IQABP7INXq</loc>
     <lastmod>2026-11-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/0eK1FD8Cf3IQABP7INXq</loc>
-    <lastmod>2026-11-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-14-pro-max</loc>
+    <loc>https://www.deepshop.top/product/iphone-14-pro-max/1Q7qc2odO2kVhBdXpqXN</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/1Q7qc2odO2kVhBdXpqXN</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s20-ultra</loc>
+    <loc>https://www.deepshop.top/product/samsung-s20-ultra/1oqBtsBTx09QxYbPfc1P</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/1oqBtsBTx09QxYbPfc1P</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s22</loc>
+    <loc>https://www.deepshop.top/product/samsung-s22/48fGvZOQzrmh3h5LgVR7</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/48fGvZOQzrmh3h5LgVR7</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-11-pro-max-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-11-pro-max-border-cross/6X5XgpGXLg2WSKD6ouq5</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/6X5XgpGXLg2WSKD6ouq5</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s24</loc>
+    <loc>https://www.deepshop.top/product/samsung-s24/6kklF50bUuwEsxSCISxl</loc>
     <lastmod>2026-11-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/6kklF50bUuwEsxSCISxl</loc>
-    <lastmod>2026-11-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-12-pro-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-12-pro-border-cross/E6yqIIaSbNqMcSALAQTO</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/E6yqIIaSbNqMcSALAQTO</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-12-pro-max-display</loc>
+    <loc>https://www.deepshop.top/product/iphone-12-pro-max-display/EVe8jZ9KmWFrisLbq2wX</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/EVe8jZ9KmWFrisLbq2wX</loc>
-    <lastmod>2026-10-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-16-pro-max</loc>
+    <loc>https://www.deepshop.top/product/iphone-16-pro-max/GaKl5Y6e6HRFt9W7ZwSN</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/GaKl5Y6e6HRFt9W7ZwSN</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-13-back-camera</loc>
+    <loc>https://www.deepshop.top/product/iphone-13-back-camera/JxJR51g15ETA9FGGNgzJ</loc>
     <lastmod>2026-10-13</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/JxJR51g15ETA9FGGNgzJ</loc>
-    <lastmod>2026-10-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s23</loc>
+    <loc>https://www.deepshop.top/product/samsung-s23/MYz9oy3l6EDhINaCs2dn</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/MYz9oy3l6EDhINaCs2dn</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s25</loc>
+    <loc>https://www.deepshop.top/product/samsung-s25/OjgXsCGipbqyCoZe3K6G</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/OjgXsCGipbqyCoZe3K6G</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-12-pro-max-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-12-pro-max-border-cross/P2BapIo3Vw8NUcg7gVSk</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/P2BapIo3Vw8NUcg7gVSk</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s22-ultra</loc>
+    <loc>https://www.deepshop.top/product/samsung-s22-ultra/Q2YwoERozKggKGCVpphS</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/Q2YwoERozKggKGCVpphS</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-11-display</loc>
+    <loc>https://www.deepshop.top/product/iphone-11-display/S7iSjZs98sxK3Nfbh6HC</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/S7iSjZs98sxK3Nfbh6HC</loc>
-    <lastmod>2026-10-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s21-ultra</loc>
+    <loc>https://www.deepshop.top/product/samsung-s21-ultra/SBoI2fIcNVRdpsRD59ol</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/SBoI2fIcNVRdpsRD59ol</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-14-pro</loc>
+    <loc>https://www.deepshop.top/product/iphone-14-pro/TVlUpczA8qCwyaaWkx09</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/TVlUpczA8qCwyaaWkx09</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-11-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-11-border-cross/WMacTzRGbySBpkMOoV80</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/WMacTzRGbySBpkMOoV80</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s21</loc>
+    <loc>https://www.deepshop.top/product/samsung-s21/WhEhj51dGRI4APuHcSlp</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/WhEhj51dGRI4APuHcSlp</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s25-ultra</loc>
+    <loc>https://www.deepshop.top/product/samsung-s25-ultra/YFc6bqCWUmF0jtmxcM22</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/YFc6bqCWUmF0jtmxcM22</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-12-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-12-border-cross/YKpNDtNfKo6atKo39KxS</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/YKpNDtNfKo6atKo39KxS</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-12-display</loc>
+    <loc>https://www.deepshop.top/product/iphone-12-display/fycyFXfRXwk7NTud80Pg</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/fycyFXfRXwk7NTud80Pg</loc>
-    <lastmod>2026-10-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-14-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-14-border-cross/g0Wdjxn001so9ZGRoEj0</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/g0Wdjxn001so9ZGRoEj0</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-15-pro-max</loc>
+    <loc>https://www.deepshop.top/product/iphone-15-pro-max/i6EDoQeTkAdKbuMIQ0wh</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/i6EDoQeTkAdKbuMIQ0wh</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-13-display</loc>
+    <loc>https://www.deepshop.top/product/iphone-13-display/iPh6w5UJEOR5PGroZvIe</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/iPh6w5UJEOR5PGroZvIe</loc>
-    <lastmod>2026-10-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-11-pro-display</loc>
+    <loc>https://www.deepshop.top/product/iphone-11-pro-display/imrOpXblWVb5SMsRPvLd</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/imrOpXblWVb5SMsRPvLd</loc>
-    <lastmod>2026-10-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-13-pro-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-13-pro-border-cross/jAwbWeTH8iVTNhUUypzo</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/jAwbWeTH8iVTNhUUypzo</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-13-pro-max-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-13-pro-max-border-cross/krx2iX6Ur8bMIBKS7vYw</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/krx2iX6Ur8bMIBKS7vYw</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-13-pro-max-display</loc>
+    <loc>https://www.deepshop.top/product/iphone-13-pro-max-display/lnanM4GE3fRWV02TxO3E</loc>
     <lastmod>2026-10-13</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/lnanM4GE3fRWV02TxO3E</loc>
-    <lastmod>2026-10-13</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-12-pro-display</loc>
+    <loc>https://www.deepshop.top/product/iphone-12-pro-display/mZ0h9mBea864jKDvrvTz</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/mZ0h9mBea864jKDvrvTz</loc>
-    <lastmod>2026-10-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-16-pro</loc>
+    <loc>https://www.deepshop.top/product/iphone-16-pro/oRk1EELBXvTWp2QczJT6</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/oRk1EELBXvTWp2QczJT6</loc>
-    <lastmod>2026-10-30</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-15-pro-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-15-pro-border-cross/ootVrMWhxTXTANZrDzKj</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/ootVrMWhxTXTANZrDzKj</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s23-ultra</loc>
+    <loc>https://www.deepshop.top/product/samsung-s23-ultra/pXQwSw66h5kTppx0KDCo</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/pXQwSw66h5kTppx0KDCo</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/samsung-s24-ultra</loc>
+    <loc>https://www.deepshop.top/product/samsung-s24-ultra/qDj6N0GanAAa8fzbQEWL</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/qDj6N0GanAAa8fzbQEWL</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-16-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-16-border-cross/u55pL6wzEvlWtEjRKWP4</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/u55pL6wzEvlWtEjRKWP4</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-15-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-15-border-cross/v1kia6c5GWvAU4ev8iom</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/v1kia6c5GWvAU4ev8iom</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-13-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-13-border-cross/vpZg3hQgapWKr8O9FK1k</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/vpZg3hQgapWKr8O9FK1k</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-11-pro-max-display</loc>
+    <loc>https://www.deepshop.top/product/iphone-11-pro-max-display/wmeN41nEPq4ZYajWj12c</loc>
     <lastmod>2026-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/wmeN41nEPq4ZYajWj12c</loc>
-    <lastmod>2026-10-14</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-11-pro-border-cross</loc>
+    <loc>https://www.deepshop.top/product/iphone-11-pro-border-cross/xHSzLeQCd3PLICPAKf4z</loc>
     <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.deepshop.top/product/xHSzLeQCd3PLICPAKf4z</loc>
-    <lastmod>2026-10-04</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/iphone-xs</loc>
+    <loc>https://www.deepshop.top/product/iphone-xs/ziGEutuHGCapPW1QHSAP</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://www.deepshop.top/product/ziGEutuHGCapPW1QHSAP</loc>
-    <lastmod>2026-11-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
   </url>
 </urlset>

@@ -110,15 +110,82 @@ const playTapticAudioFeedback = (type: HapticPattern) => {
   }
 };
 
+const isIosTouchDevice = (): boolean => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return true;
+  return navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1;
+};
+
+let iosSwitchLabelEl: HTMLLabelElement | null = null;
+let isTriggeringIosSwitch = false;
+let lastIosSwitchTriggerAt = 0;
+
+const getOrCreateIosSwitchTrigger = (): HTMLLabelElement | null => {
+  if (typeof document === 'undefined' || !document.body) return null;
+  if (iosSwitchLabelEl && document.body.contains(iosSwitchLabelEl)) {
+    return iosSwitchLabelEl;
+  }
+  const existing = document.getElementById('ds-ios-haptic-switch-trigger') as HTMLLabelElement | null;
+  if (existing) {
+    iosSwitchLabelEl = existing;
+    return existing;
+  }
+
+  const label = document.createElement('label');
+  label.id = 'ds-ios-haptic-switch-trigger';
+  label.setAttribute('data-no-haptic', 'true');
+  label.setAttribute('aria-hidden', 'true');
+  label.style.cssText =
+    'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0.01;pointer-events:none;overflow:hidden;z-index:-1;';
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.setAttribute('switch', '');
+  input.setAttribute('data-no-haptic', 'true');
+  input.setAttribute('aria-hidden', 'true');
+  input.tabIndex = -1;
+  input.style.cssText = 'width:1px;height:1px;margin:0;padding:0;appearance:auto;';
+
+  label.appendChild(input);
+  document.body.appendChild(label);
+  iosSwitchLabelEl = label;
+  return label;
+};
+
+const triggerIosPhysicalHaptic = () => {
+  if (isTriggeringIosSwitch) return;
+  const now = Date.now();
+  if (now - lastIosSwitchTriggerAt < 45) return;
+  const label = getOrCreateIosSwitchTrigger();
+  if (!label) return;
+  isTriggeringIosSwitch = true;
+  lastIosSwitchTriggerAt = now;
+  try {
+    label.click();
+  } catch {
+    // Ignore
+  } finally {
+    isTriggeringIosSwitch = false;
+  }
+};
+
 /**
  * Trigger Apple-like Haptic Feedback
- * Works natively on Android & iOS devices with physical motor via navigator.vibrate,
- * and synthesizes Apple Taptic clicks via Web Audio API on Mac/Windows/Desktops.
+ * Uses native iOS 17.4+/18+ <input type="checkbox" switch> Taptic Engine feedback on iOS,
+ * navigator.vibrate on Android/supported browsers, and Web Audio Taptic clicks on Desktop.
  */
 export const triggerHaptic = (type: HapticPattern = 'light') => {
   if (typeof window === 'undefined') return;
 
-  // 1. Try Physical Vibration API (Android, Mobile Chrome, Safari PWA if supported)
+  const isIos = isIosTouchDevice();
+
+  // 1. Native iOS 17.4+/18+ Hardware Taptic Engine Switch Trigger
+  if (isIos) {
+    triggerIosPhysicalHaptic();
+  }
+
+  // 2. Physical Vibration API (Android, Mobile Chrome)
   if (window.navigator && typeof window.navigator.vibrate === 'function') {
     try {
       switch (type) {
@@ -153,8 +220,10 @@ export const triggerHaptic = (type: HapticPattern = 'light') => {
     }
   }
 
-  // 2. Play Web Audio Taptic click on desktop or as fallback/enhancement
-  playTapticAudioFeedback(type);
+  // 3. Play Web Audio Taptic click on desktop only (avoid ducking Reels/Music audio on iOS)
+  if (!isIos) {
+    playTapticAudioFeedback(type);
+  }
 };
 
 // Shorthand helpers

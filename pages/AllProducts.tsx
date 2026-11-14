@@ -424,17 +424,24 @@ const AllProducts: React.FC = () => {
       <SEO
         title={`${activeDetails.bnTitle} | Catalog`}
         description="Browse our vast collection of premium border cross phones, original mobiles, phone parts, chargers, and tech at DEEP SHOP."
+        canonical="/all-products"
         jsonLd={
           products.length > 0
             ? {
                 "@context": "https://schema.org",
                 "@type": "ItemList",
-                itemListElement: products.slice(0, 15).map((product, index) => ({
-                  "@type": "ListItem",
-                  position: index + 1,
-                  name: product.name,
-                  url: `https://www.deepshop.top/product/${product.id}`,
-                })),
+                itemListElement: products.slice(0, 15).map((product, index) => {
+                  const slug = (product.name || "item")
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/(^-|-$)/g, "") || "item";
+                  return {
+                    "@type": "ListItem",
+                    position: index + 1,
+                    name: product.name,
+                    url: `https://www.deepshop.top/product/${slug}/${product.id}`,
+                  };
+                }),
               }
             : undefined
         }

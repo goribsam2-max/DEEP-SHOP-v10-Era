@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -31,11 +32,41 @@ import {
   onSnapshot,
   serverTimestamp,
   query,
-  limit
+  limit,
+  getDocs,
+  addDoc,
+  updateDoc,
+  where
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { cn } from '../../lib/utils';
 import { triggerHaptic } from '../../lib/haptics';
+import { hasImmediateAdminOrStaffRole } from '../../lib/admin';
+import { sendPushNotification } from '../../lib/push';
+
+const MAX_NOTE_AGE_MS = 24 * 60 * 60 * 1000;
+
+function isNoteActiveWithin24h(data: any, now: number): boolean {
+  if (!data || !String(data.text || '').trim()) return false;
+  const createdMs =
+    typeof data.createdAtMs === 'number'
+      ? data.createdAtMs
+      : data.createdAt?.toMillis
+      ? data.createdAt.toMillis()
+      : 0;
+  if (!createdMs) {
+    return (
+      typeof data.expiresAtMs === 'number' &&
+      data.expiresAtMs > now &&
+      data.expiresAtMs - now <= MAX_NOTE_AGE_MS
+    );
+  }
+  if (now - createdMs > MAX_NOTE_AGE_MS) return false;
+  if (typeof data.expiresAtMs === 'number' && data.expiresAtMs > 0 && data.expiresAtMs <= now) {
+    return false;
+  }
+  return true;
+}
 
 export interface UserNoteData {
   userId: string;
@@ -183,9 +214,12 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
   const [noteAudience, setNoteAudience] = useState<'public' | 'friends_connections' | 'friends' | 'custom'>('friends');
   const [noteDurationHours, setNoteDurationHours] = useState<number>(24);
   const [isSaving, setIsSaving] = useState(false);
+  const [noteReplyText, setNoteReplyText] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isAdmin = useMemo(() => hasImmediateAdminOrStaffRole(null, currentUser), [currentUser]);
 
   // Loops Music Library (background_music, story_songs, reel video audio)
   const [loopsTracks, setLoopsTracks] = useState<any[]>([]);
@@ -271,7 +305,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
     return list;
   }, [loopsTracks, musicSearchQuery]);
 
-  // Real-time listener for user_notes from Firestore
+  // Real-time listener for user_notes from Firestore (strict 24h TTL + Admin auto-cleanup)
   useEffect(() => {
     try {
       const q = query(collection(db, 'user_notes'), limit(50));
@@ -281,9 +315,10 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
 
         snapshot.forEach((d) => {
           const data = d.data() as UserNoteData;
-          const createdMs = data.createdAtMs || (data.createdAt?.toMillis ? data.createdAt.toMillis() : 0);
-          const isExpired = (data.expiresAtMs && data.expiresAtMs < now) || (createdMs > 0 && (now - createdMs > 24 * 60 * 60 * 1000));
-          if (!data.text || isExpired) {
+          if (!isNoteActiveWithin24h(data, now)) {
+            if (isAdmin) {
+              deleteDoc(doc(db, 'user_notes', d.id)).catch(() => {});
+            }
             return;
           }
           notesMap[d.id] = { ...data, userId: d.id };
@@ -303,7 +338,32 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
     } catch (e) {
       console.error('Error listening to user_notes:', e);
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, isAdmin]);
+
+  // Hide mobile/PWA bottom navigation whenever any Note add/view/sub-sheet is open
+  const isAnyNoteOverlayOpen = Boolean(
+    showNoteCreator ||
+    showNoteSettings ||
+    showMoodPicker ||
+    showMusicPicker ||
+    showGiphyModal ||
+    viewingNote ||
+    showActivitySheet
+  );
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (isAnyNoteOverlayOpen) {
+      document.body.dataset.hideBottomNav = 'true';
+    } else {
+      delete document.body.dataset.hideBottomNav;
+    }
+    window.dispatchEvent(new CustomEvent('deepshop:bottom-nav-visibility'));
+    return () => {
+      delete document.body.dataset.hideBottomNav;
+      window.dispatchEvent(new CustomEvent('deepshop:bottom-nav-visibility'));
+    };
+  }, [isAnyNoteOverlayOpen]);
 
   // Global event listener to open Note Creator when triggered elsewhere in app (e.g. NewMessageModal)
   useEffect(() => {
@@ -322,6 +382,39 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
       window.removeEventListener('open_note_viewer', handleOpenCustomViewer);
     };
   }, [myNote]);
+
+  // Auto-play attached music immediately when viewing a Note
+  useEffect(() => {
+    setNoteReplyText('');
+    if (!viewingNote) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setPlayingAudioUrl(null);
+      return;
+    }
+    const url = viewingNote.musicAudioUrl;
+    if (!url) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setPlayingAudioUrl(null);
+      return;
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    setPlayingAudioUrl(url);
+    audio.play().catch(() => {
+      setPlayingAudioUrl(null);
+    });
+    audio.onended = () => setPlayingAudioUrl(null);
+    return () => {
+      audio.pause();
+    };
+  }, [viewingNote?.userId, viewingNote?.musicAudioUrl]);
 
   // Audio helper
   const handleTogglePlayAudio = (url: string) => {
@@ -433,8 +526,12 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
     }
   };
 
-  // Delete note
+  // Delete note (Strictly Admin only)
   const handleDeleteNote = async (noteId?: string) => {
+    if (!isAdmin) {
+      notify('Only admins can delete notes', 'error');
+      return;
+    }
     const targetId = noteId || currentUser?.uid;
     if (!targetId) return;
     triggerHaptic();
@@ -450,6 +547,88 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
     } catch (e) {
       console.error('Error deleting note:', e);
       notify('Failed to delete note', 'error');
+    }
+  };
+
+  // Reply to Note -> sends real DM in p2p_chats + push notification
+  const handleReplyToNote = async (note: UserNoteData) => {
+    const trimmed = noteReplyText.trim();
+    if (!trimmed) return;
+    if (!currentUser?.uid) {
+      notify('Please sign in to reply', 'error');
+      return;
+    }
+    if (!note?.userId || note.userId === currentUser.uid) return;
+
+    setIsSendingReply(true);
+    triggerHaptic();
+    try {
+      const qExisting = query(
+        collection(db, 'p2p_chats'),
+        where('participants', 'array-contains', currentUser.uid)
+      );
+      const snapExisting = await getDocs(qExisting);
+      let chatId = '';
+      const foundDoc = snapExisting.docs.find((d) => {
+        const data = d.data();
+        const p = data.participants;
+        return Array.isArray(p) && p.includes(note.userId) && !data.isGroup && data.type !== 'group';
+      });
+      if (foundDoc) {
+        chatId = foundDoc.id;
+      }
+
+      const lastMsgPreview = `Replied to your note: ${trimmed}`.slice(0, 140);
+      if (!chatId) {
+        const chatRef = await addDoc(collection(db, 'p2p_chats'), {
+          participants: [currentUser.uid, note.userId],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          lastMessage: lastMsgPreview,
+          lastSenderId: currentUser.uid,
+          seenBy: [currentUser.uid]
+        });
+        chatId = chatRef.id;
+      }
+
+      const senderName =
+        currentUser.displayName || currentUser.email?.split('@')[0] || 'Friend';
+      await Promise.all([
+        addDoc(collection(db, 'p2p_chats', chatId, 'messages'), {
+          text: trimmed,
+          senderId: currentUser.uid,
+          senderName,
+          senderPhoto: currentUser.photoURL || '',
+          createdAt: Date.now(),
+          timestamp: serverTimestamp(),
+          seenBy: [currentUser.uid],
+          noteReply: {
+            noteText: note.text,
+            noteOwnerId: note.userId,
+            noteOwnerName: note.displayName || 'Friend'
+          }
+        }),
+        updateDoc(doc(db, 'p2p_chats', chatId), {
+          updatedAt: serverTimestamp(),
+          lastMessage: lastMsgPreview,
+          lastSenderId: currentUser.uid,
+          seenBy: [currentUser.uid]
+        }).catch(() => {})
+      ]);
+
+      sendPushNotification(note.userId, {
+        title: `${senderName} replied to your note`,
+        body: trimmed,
+        url: `/messages?chatId=${chatId}`
+      });
+
+      setNoteReplyText('');
+      notify('Reply sent to Messages', 'success');
+    } catch (e) {
+      console.error('Error replying to note:', e);
+      notify('Failed to send reply', 'error');
+    } finally {
+      setIsSendingReply(false);
     }
   };
 
@@ -510,27 +689,30 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
           onClick={() => handleOpenCreator(false)}
           className="flex flex-col items-center shrink-0 cursor-pointer group"
         >
-          {/* Speech Bubble Pill: Pure White in Light Mode! */}
-          <div className="h-7 mb-1.5 flex items-center justify-center">
+          {/* Speech Bubble Pill: Pure White Cloud in Light Mode */}
+          <div className="h-8 mb-1.5 flex items-center justify-center">
             {myNote?.text ? (
-              <div className="relative max-w-[96px] px-2.5 py-1 rounded-2xl text-[11px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center truncate flex items-center gap-1 group-hover:scale-105 transition">
+              <div className="relative max-w-[104px] px-3 py-1 rounded-[18px] text-[11px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-[0_4px_14px_rgba(0,0,0,0.08)] leading-tight text-center flex items-center gap-1 group-hover:scale-105 transition">
+                {myNote.musicTitle && (
+                  <span className="flex items-end gap-[1.5px] h-2.5 shrink-0" aria-hidden="true">
+                    <span className="w-[2px] h-1.5 bg-[#0064E0] rounded-full animate-pulse" />
+                    <span className="w-[2px] h-2.5 bg-[#0064E0] rounded-full animate-pulse [animation-delay:150ms]" />
+                    <span className="w-[2px] h-1 bg-[#0064E0] rounded-full animate-pulse [animation-delay:300ms]" />
+                  </span>
+                )}
                 {myNote.moodEmojis && myNote.moodEmojis.length > 0 && (
-                  <span className="text-[10px]">{myNote.moodEmojis[0]}</span>
+                  <span className="text-[10px] shrink-0">{myNote.moodEmojis[0]}</span>
                 )}
                 <span className="truncate">{myNote.text}</span>
-                {/* 2 cloud/thought connector dots pointing down to avatar */}
-                <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
-                  <div className="w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
-                </div>
+                {/* Staggered 2-circle comic cloud tail */}
+                <span className="absolute -bottom-[6px] left-3.5 w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
+                <span className="absolute -bottom-[11px] left-2.5 w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
               </div>
             ) : (
-              <div className="relative px-2.5 py-1 rounded-2xl bg-white dark:bg-[#2C2D31] text-[11px] font-medium text-zinc-700 dark:text-zinc-300 border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center group-hover:scale-105 transition">
+              <div className="relative px-3 py-1 rounded-[18px] bg-white dark:bg-[#2C2D31] text-[11px] font-medium text-zinc-600 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/10 shadow-[0_4px_14px_rgba(0,0,0,0.08)] leading-tight text-center group-hover:scale-105 transition">
                 <span>Note...</span>
-                <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
-                  <div className="w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
-                </div>
+                <span className="absolute -bottom-[6px] left-3.5 w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
+                <span className="absolute -bottom-[11px] left-2.5 w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
               </div>
             )}
           </div>
@@ -564,7 +746,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
         </div>
 
         {/* ======================================================== */}
-        {/* OTHER USERS WITH REAL ACTIVE NOTES (Pure White Pills) */}
+        {/* OTHER USERS WITH REAL ACTIVE NOTES (Pure White Cloud Pills) */}
         {/* ======================================================== */}
         {Object.values(allNotes)
           .filter((note) => !currentUser?.uid || note.userId !== currentUser.uid)
@@ -577,17 +759,22 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
               }}
               className="flex flex-col items-center shrink-0 cursor-pointer group"
             >
-              {/* Friend's thought bubble: Pure White in Light Mode */}
-              <div className="h-7 mb-1.5 flex items-center justify-center">
-                <div className="relative max-w-[96px] px-2.5 py-1 rounded-2xl text-[11px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center truncate flex items-center gap-1 group-hover:scale-105 transition">
+              {/* Friend's thought bubble: Pure White Cloud in Light Mode */}
+              <div className="h-8 mb-1.5 flex items-center justify-center">
+                <div className="relative max-w-[104px] px-3 py-1 rounded-[18px] text-[11px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-[0_4px_14px_rgba(0,0,0,0.08)] leading-tight text-center flex items-center gap-1 group-hover:scale-105 transition">
+                  {note.musicTitle && (
+                    <span className="flex items-end gap-[1.5px] h-2.5 shrink-0" aria-hidden="true">
+                      <span className="w-[2px] h-1.5 bg-[#0064E0] rounded-full animate-pulse" />
+                      <span className="w-[2px] h-2.5 bg-[#0064E0] rounded-full animate-pulse [animation-delay:150ms]" />
+                      <span className="w-[2px] h-1 bg-[#0064E0] rounded-full animate-pulse [animation-delay:300ms]" />
+                    </span>
+                  )}
                   {note.moodEmojis && note.moodEmojis.length > 0 && (
-                    <span className="text-[10px]">{note.moodEmojis[0]}</span>
+                    <span className="text-[10px] shrink-0">{note.moodEmojis[0]}</span>
                   )}
                   <span className="truncate">{note.text}</span>
-                  <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
-                    <div className="w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
-                    <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
-                  </div>
+                  <span className="absolute -bottom-[6px] left-3.5 w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
+                  <span className="absolute -bottom-[11px] left-2.5 w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
                 </div>
               </div>
 
@@ -649,11 +836,12 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
   )}
 
       {/* ========================================================================= */}
-      {/* 1. NEW NOTE CREATOR MODAL (Exact Screenshot IMG_5573.jpeg) */}
+      {/* 1. NEW NOTE CREATOR MODAL (Portaled above BottomNav) */}
       {/* ========================================================================= */}
-      <AnimatePresence>
-        {showNoteCreator && (
-          <div className="fixed inset-0 z-[10020] flex flex-col bg-white dark:bg-[#121214] text-zinc-900 dark:text-white font-sans animate-fadeIn">
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showNoteCreator && (
+            <div className="fixed inset-0 z-[10020] flex flex-col bg-white dark:bg-[#121214] text-zinc-900 dark:text-white font-sans animate-fadeIn">
             {/* Top Bar: Close (X) | "New note" | "Share" */}
             <div className="p-4 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80">
               <button
@@ -890,13 +1078,16 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
           </div>
         )}
       </AnimatePresence>
+      , document.body
+      )}
 
       {/* ========================================================================= */}
-      {/* 2. NOTE SETTINGS SHEET (Exact IMG_5574.png) */}
+      {/* 2. NOTE SETTINGS SHEET (Portaled above BottomNav) */}
       {/* ========================================================================= */}
-      <AnimatePresence>
-        {showNoteSettings && (
-          <div className="fixed inset-0 z-[10030] flex flex-col bg-[#F2F2F7] dark:bg-black font-sans animate-fadeIn">
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showNoteSettings && (
+            <div className="fixed inset-0 z-[10030] flex flex-col bg-[#F2F2F7] dark:bg-black font-sans animate-fadeIn">
             {/* Header: Cancel | Note settings | Save */}
             <div className="p-4 flex items-center justify-between bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
               <button
@@ -1017,13 +1208,16 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
           </div>
         )}
       </AnimatePresence>
+      , document.body
+      )}
 
       {/* ========================================================================= */}
-      {/* 3. MOOD EMOJI PICKER (Exact Screenshot IMG_5577.jpeg) */}
+      {/* 3. MOOD EMOJI PICKER (Portaled above BottomNav) */}
       {/* ========================================================================= */}
-      <AnimatePresence>
-        {showMoodPicker && (
-          <div className="fixed inset-0 z-[10030] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showMoodPicker && (
+            <div className="fixed inset-0 z-[10030] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
             {/* Header: X | New note | Share */}
             <div className="p-4 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80">
               <button
@@ -1113,7 +1307,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
 
               {/* Notice under avatar */}
               <p className="text-[11px] text-zinc-500 text-center px-4 mb-4">
-                Friends can see your note on Messenger and Facebook for 24 hours.{' '}
+                Friends can see your note on Loops for 24 hours.{' '}
                 <button
                   type="button"
                   onClick={() => setShowNoteSettings(true)}
@@ -1169,13 +1363,16 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
           </div>
         )}
       </AnimatePresence>
+      , document.body
+      )}
 
       {/* ========================================================================= */}
-      {/* 4. NOTE VIEWER MODAL (Exact Screenshots IMG_5578.jpeg & IMG_5579.jpeg) */}
+      {/* 4. NOTE VIEWER MODAL (Portaled, Auto-play music, Admin-only delete, Reply) */}
       {/* ========================================================================= */}
-      <AnimatePresence>
-        {viewingNote && (
-          <div className="fixed inset-0 z-[10030] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {viewingNote && (
+            <div className="fixed inset-0 z-[10060] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
             {/* Top Bar: Author (Avatar + Name + "Just now") | "..." | "X" */}
             <div className="p-4 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80">
               <div className="flex items-center gap-2.5">
@@ -1230,13 +1427,24 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                       {/* Bubble tail pointing up to ... */}
                       <div className="absolute -top-2 right-4 w-0 h-0 border-x-6 border-x-transparent border-b-8 border-b-[#F2F3F5] dark:border-b-zinc-900" />
 
-                      {viewingNote.userId === currentUser?.uid ? (
+                      {isAdmin ? (
                         <button
                           type="button"
                           onClick={() => handleDeleteNote(viewingNote.userId)}
                           className="w-full py-3 px-6 rounded-2xl bg-[#E4E6EB] dark:bg-zinc-800 text-red-500 font-bold text-sm text-center hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
                         >
                           Delete
+                        </button>
+                      ) : viewingNote.userId === currentUser?.uid ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowOptionsMenu(false);
+                            handleOpenCreator(true);
+                          }}
+                          className="w-full py-3 px-6 rounded-2xl bg-[#E4E6EB] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm text-center hover:bg-zinc-300 dark:hover:bg-zinc-700 transition cursor-pointer"
+                        >
+                          Replace Note
                         </button>
                       ) : (
                         <button
@@ -1256,11 +1464,11 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
               </div>
             </div>
 
-            {/* Center Area: Pure White Thought Bubble + Avatar + Details (Exact IMG_5578.jpeg) */}
-            <div className="flex-1 flex flex-col items-center justify-center px-6 max-w-md mx-auto w-full">
+            {/* Center Area: Redesigned Pure White Cloud Thought Bubble + Avatar + Auto-playing Music */}
+            <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-6 max-w-md mx-auto w-full">
               <div className="relative flex flex-col items-center text-center">
-                {/* White Speech Bubble Pill (IMG_5578) */}
-                <div className="relative mb-3 px-6 py-3 rounded-3xl bg-white dark:bg-zinc-800 shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-zinc-200/90 dark:border-zinc-700 flex flex-col items-center max-w-[280px]">
+                {/* Redesigned White Cloud Thought Bubble */}
+                <div className="relative mb-5 px-6 py-3.5 rounded-[26px] bg-white dark:bg-zinc-800 shadow-[0_8px_30px_rgba(0,0,0,0.08)] border border-zinc-200/80 dark:border-zinc-700 flex flex-col items-center max-w-[290px]">
                   {viewingNote.moodEmojis && viewingNote.moodEmojis.length > 0 && (
                     <div className="flex items-center gap-1 mb-1 text-lg">
                       {viewingNote.moodEmojis.map((e, idx) => (
@@ -1271,10 +1479,9 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   <p className="text-base font-semibold text-zinc-900 dark:text-white leading-relaxed">
                     {viewingNote.text}
                   </p>
-                  {/* Connector Dots */}
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                    <span className="w-3 h-3 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-xs" />
-                  </div>
+                  {/* Staggered Cloud Connector Circles */}
+                  <span className="w-3.5 h-3.5 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-xs absolute -bottom-2.5 left-8 pointer-events-none" />
+                  <span className="w-2 h-2 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-xs absolute -bottom-4 left-6 pointer-events-none" />
                 </div>
 
                 {/* Large Avatar */}
@@ -1301,10 +1508,15 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   Expires in {formatExpiresIn(viewingNote.expiresAtMs)}
                 </p>
 
-                {/* Attached Music Chip (if present) */}
+                {/* Attached Music Chip with Auto-play + Spinning Vinyl Cover + 4-bar Equalizer */}
                 {viewingNote.musicTitle && (
-                  <div className="mt-4 flex items-center gap-3 px-4 py-2 rounded-2xl bg-[#F2F3F5] dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700">
-                    <div className="w-9 h-9 rounded-xl overflow-hidden bg-zinc-300 dark:bg-zinc-700 relative">
+                  <div className="mt-4 flex items-center gap-3 px-3.5 py-2 rounded-2xl bg-[#F2F3F5] dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700 shadow-xs">
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-full overflow-hidden bg-zinc-300 dark:bg-zinc-700 relative shrink-0 ring-2 ring-white dark:ring-zinc-900",
+                        playingAudioUrl === viewingNote.musicAudioUrl && "animate-[spin_6s_linear_infinite]"
+                      )}
+                    >
                       {viewingNote.musicCover ? (
                         <img src={viewingNote.musicCover} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -1314,7 +1526,8 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                         <button
                           type="button"
                           onClick={() => handleTogglePlayAudio(viewingNote.musicAudioUrl!)}
-                          className="absolute inset-0 bg-black/40 flex items-center justify-center text-white cursor-pointer"
+                          className="absolute inset-0 bg-black/35 flex items-center justify-center text-white cursor-pointer"
+                          aria-label="Toggle music"
                         >
                           {playingAudioUrl === viewingNote.musicAudioUrl ? (
                             <Pause className="w-3.5 h-3.5 fill-white" />
@@ -1324,13 +1537,37 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                         </button>
                       )}
                     </div>
-                    <div className="text-left">
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                    <div className="text-left min-w-0 max-w-[165px]">
+                      <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
                         {viewingNote.musicTitle}
                       </p>
-                      <p className="text-[10px] text-zinc-500">
+                      <p className="text-[10px] text-zinc-500 truncate">
                         {viewingNote.musicArtist || 'Music track'}
                       </p>
+                    </div>
+                    {/* 4-Bar Animated Music Equalizer */}
+                    <div className="flex items-end gap-[2.5px] h-4 px-1 shrink-0" aria-hidden="true">
+                      {[0, 1, 2, 3].map((barIdx) => (
+                        <motion.span
+                          key={barIdx}
+                          className="w-[2.5px] rounded-full bg-[#0064E0]"
+                          animate={
+                            playingAudioUrl === viewingNote.musicAudioUrl
+                              ? { height: ['4px', '15px', '7px', '14px', '5px'] }
+                              : { height: '5px' }
+                          }
+                          transition={
+                            playingAudioUrl === viewingNote.musicAudioUrl
+                              ? {
+                                  duration: 0.85,
+                                  repeat: Infinity,
+                                  repeatType: 'reverse',
+                                  delay: barIdx * 0.14
+                                }
+                              : { duration: 0.2 }
+                          }
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1386,44 +1623,76 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
               </div>
             </div>
 
-            {/* Bottom Actions Bar (Exact Screenshot IMG_5578.jpeg) */}
-            <div className="p-4 pb-8 border-t border-zinc-100 dark:border-zinc-800/80 bg-white dark:bg-[#121214]">
-              <div className="flex items-center justify-around max-w-md mx-auto">
-                {/* 1. See activity (Left Button) */}
-                <button
-                  type="button"
-                  onClick={() => setShowActivitySheet(true)}
-                  className="flex flex-col items-center gap-1 text-zinc-900 dark:text-white cursor-pointer group hover:opacity-80 transition"
-                >
-                  <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                    <User className="w-5 h-5 fill-current" />
-                  </div>
-                  <span className="text-xs font-bold">See activity</span>
-                </button>
+            {/* Bottom Actions Bar: Own note -> Activity + Replace; Friend note -> Reply DM Input */}
+            <div className="p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] border-t border-zinc-100 dark:border-zinc-800/80 bg-white dark:bg-[#121214]">
+              {viewingNote.userId === currentUser?.uid ? (
+                <div className="flex items-center justify-around max-w-md mx-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowActivitySheet(true)}
+                    className="flex flex-col items-center gap-1 text-zinc-900 dark:text-white cursor-pointer group hover:opacity-80 transition"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                      <User className="w-5 h-5 fill-current" />
+                    </div>
+                    <span className="text-xs font-bold">See activity</span>
+                  </button>
 
-                {/* 2. Replace note (Right Button) */}
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreator(true)}
-                  className="flex flex-col items-center gap-1 text-zinc-900 dark:text-white cursor-pointer group hover:opacity-80 transition"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreator(true)}
+                    className="flex flex-col items-center gap-1 text-zinc-900 dark:text-white cursor-pointer group hover:opacity-80 transition"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                      <PlusCircle className="w-5 h-5 fill-current" />
+                    </div>
+                    <span className="text-xs font-bold">Replace note</span>
+                  </button>
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleReplyToNote(viewingNote);
+                  }}
+                  className="flex items-center gap-2 max-w-md mx-auto"
                 >
-                  <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                    <PlusCircle className="w-5 h-5 fill-current" />
-                  </div>
-                  <span className="text-xs font-bold">Replace note</span>
-                </button>
-              </div>
+                  <input
+                    type="text"
+                    value={noteReplyText}
+                    onChange={(e) => setNoteReplyText(e.target.value)}
+                    placeholder={`Reply to ${viewingNote.displayName?.split(' ')[0] || 'Friend'}'s note...`}
+                    className="flex-1 h-11 px-4 rounded-full bg-[#F2F3F5] dark:bg-zinc-800 border border-zinc-200/70 dark:border-zinc-700 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-[#0064E0]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!noteReplyText.trim() || isSendingReply}
+                    className={cn(
+                      "w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition cursor-pointer",
+                      noteReplyText.trim() && !isSendingReply
+                        ? "bg-[#0064E0] text-white hover:bg-[#0057C2] active:scale-95"
+                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed"
+                    )}
+                    aria-label="Send note reply"
+                  >
+                    {isSendingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         )}
       </AnimatePresence>
+      , document.body
+      )}
 
       {/* ========================================================================= */}
-      {/* 5. "SEE ACTIVITY" SHEET (Exact Screenshot IMG_5580.jpeg) */}
+      {/* 5. "SEE ACTIVITY" SHEET (Portaled above BottomNav) */}
       {/* ========================================================================= */}
-      <AnimatePresence>
-        {showActivitySheet && viewingNote && (
-          <div className="fixed inset-0 z-[10040] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showActivitySheet && viewingNote && (
+            <div className="fixed inset-0 z-[10070] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
             {/* Top Bar: Done (Right) (Exact IMG_5580) */}
             <div className="p-4 flex items-center justify-end border-b border-zinc-100 dark:border-zinc-800/80">
               <button
@@ -1511,13 +1780,16 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
           </div>
         )}
       </AnimatePresence>
+      , document.body
+      )}
 
       {/* ========================================================================= */}
-      {/* 6. MUSIC SEARCH MODAL (Exact Screenshot IMG_5575.png) */}
+      {/* 6. MUSIC SEARCH MODAL (Portaled above BottomNav) */}
       {/* ========================================================================= */}
-      <AnimatePresence>
-        {showMusicPicker && (
-          <div className="fixed inset-0 z-[10030] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showMusicPicker && (
+            <div className="fixed inset-0 z-[10030] flex flex-col bg-white dark:bg-[#121214] font-sans animate-fadeIn">
             {/* Search Bar + Cancel (Exact IMG_5575) */}
             <div className="p-4 flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800/80">
               <div className="flex-1 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-[#F2F3F5] dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700">
@@ -1601,22 +1873,27 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
           </div>
         )}
       </AnimatePresence>
+      , document.body
+      )}
 
       {/* ========================================================================= */}
-      {/* 7. GIPHY SEARCH MODAL (Exact Screenshot IMG_5576.png) */}
+      {/* 7. GIPHY SEARCH MODAL (Portaled above BottomNav) */}
       {/* ========================================================================= */}
-      <AnimatePresence>
-        {showGiphyModal && (
-          <NoteGiphySheet
-            isOpen={showGiphyModal}
-            onClose={() => setShowGiphyModal(false)}
-            onSelectGif={(url) => {
-              setSelectedGifUrl(url);
-              setShowGiphyModal(false);
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showGiphyModal && (
+            <NoteGiphySheet
+              isOpen={showGiphyModal}
+              onClose={() => setShowGiphyModal(false)}
+              onSelectGif={(url) => {
+                setSelectedGifUrl(url);
+                setShowGiphyModal(false);
+              }}
+            />
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 };

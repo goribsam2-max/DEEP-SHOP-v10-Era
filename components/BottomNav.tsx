@@ -91,8 +91,28 @@ const BottomNav: React.FC = () => {
     return () => window.removeEventListener("update_cart", updateCount);
   }, []);
 
-  // Hide BottomNav on full-screen detail views
+  const [hideForModal, setHideForModal] = React.useState(
+    () =>
+      typeof document !== "undefined" &&
+      (document.body?.dataset?.hideBottomNav === "true" ||
+        document.body?.dataset?.hideLoopNoteNav === "true")
+  );
+
+  React.useEffect(() => {
+    const syncVisibility = () => {
+      setHideForModal(
+        typeof document !== "undefined" &&
+          (document.body?.dataset?.hideBottomNav === "true" ||
+            document.body?.dataset?.hideLoopNoteNav === "true")
+      );
+    };
+    window.addEventListener("deepshop:bottom-nav-visibility", syncVisibility);
+    return () => window.removeEventListener("deepshop:bottom-nav-visibility", syncVisibility);
+  }, []);
+
+  // Hide BottomNav on full-screen detail views or active full-screen Note overlays
   if (
+    hideForModal ||
     location.pathname.startsWith("/product/") ||
     location.pathname.startsWith("/messages") ||
     location.pathname.startsWith("/seller") ||

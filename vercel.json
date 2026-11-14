@@ -48,6 +48,7 @@
     { "source": "/sw.js", "destination": "/sw.js" },
     { "source": "/workbox-(.*)", "destination": "/workbox-$1" },
     { "source": "/manifest.webmanifest", "destination": "/manifest.webmanifest" },
+    { "source": "/sitemap.xml", "destination": "/api/index?__pathname=/sitemap.xml" },
     { "source": "/api/(.*)", "destination": "/api/index?__pathname=/api/$1" },
     {
       "source": "/((?!api/|assets/|.*\\.(?:js|mjs|cjs|css|map|wasm|json|webmanifest|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|mp4|webm|mp3|wav|txt|xml)$).*)",
@@ -55,7 +56,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*([Bb]ot|[Cc]rawl|[Ss]pider|[Ss]lurp|facebookexternalhit|[Ff]acebot|[Ww]hats[Aa]pp|[Tt]elegram|[Tt]witter|[Dd]iscord|[Ll]inked[Ii]n|[Ss]lack|[Pp]interest|[Ss]kype|[Ee]mbedly|[Rr]eddit|[Bb]ing[Pp]review|[Ll]ighthouse|curl|python).*"
+          "value": ".*([Bb]ot|[Cc]rawl|[Ss]pider|[Ss]lurp|facebookexternalhit|[Ff]acebot|[Ww]hats[Aa]pp|[Tt]elegram|[Tt]witter|[Dd]iscord|[Ll]inked[Ii]n|[Ss]lack|[Pp]interest|[Ss]kype|[Ee]mbedly|[Rr]eddit|[Bb]ing[Pp]review|[Ll]ighthouse|Applebot|iMessage|CFNetwork|Viber|Google-InspectionTool|curl|python).*"
         }
       ],
       "destination": "/api/index?__pathname=/$1"

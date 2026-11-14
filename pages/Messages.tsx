@@ -4481,7 +4481,7 @@ const handleCreateChannel = async () => {
   if (!user) {
     return (
         <div className="min-h-screen w-full bg-[#4E4AEB] flex flex-col items-center justify-center p-4 sm:p-6 font-inter select-none">
-            <SEO title="Chat and Connect" description="Sign in to chat with sellers and friends easily" noindex />
+            <SEO title="Messages & Chat" description="Chat and connect directly with verified sellers, friends, and customer support on DEEP SHOP." canonical="/messages" />
             <div className="bg-white text-zinc-900 rounded-[36px] w-full max-w-sm h-[740px] shadow-2xl flex flex-col p-8 relative overflow-hidden">
                 {/* Main Heading styled exactly like the mockup */}
                 <div className="flex flex-col text-left mt-8">
@@ -4854,7 +4854,7 @@ const handleCreateChannel = async () => {
 
   return (
     <div className="msg-shell ambient-dynamic-bg fixed inset-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full font-inter overflow-hidden overscroll-none transition-colors duration-200">
-      <SEO title="Messages" description="Chat with sellers and support" noindex />
+      <SEO title="Messages" description="Chat and connect directly with verified sellers, friends, and customer support on DEEP SHOP." canonical="/messages" />
 
       {/* =====================================================================
           COLUMN 1 (DESKTOP ONLY): Left Navigation Rail mirroring Bottom Nav + Power Tools

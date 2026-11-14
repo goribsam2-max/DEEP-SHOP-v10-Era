@@ -227,7 +227,7 @@ service cloud.firestore {
     match /user_notes/{noteId} {
       allow read: if true;
       allow create, update: if isSignedIn() && (request.auth.uid == noteId || isAdmin());
-      allow delete: if isSignedIn() && (request.auth.uid == noteId || isAdmin());
+      allow delete: if isAdmin();
 
       match /reactions/{reactionId} {
         allow read: if true;

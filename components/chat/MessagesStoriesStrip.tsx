@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, onSnapshot, query, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { hasImmediateAdminOrStaffRole } from '../../lib/admin';
 import { cn } from '../../lib/utils';
@@ -32,6 +32,29 @@ interface MessagesStoriesStripProps {
 }
 
 const STORY_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_NOTE_AGE_MS = 24 * 60 * 60 * 1000;
+
+function isNoteActiveWithin24h(data: any, now: number): boolean {
+  if (!data || !String(data.text || '').trim()) return false;
+  const createdMs =
+    typeof data.createdAtMs === 'number'
+      ? data.createdAtMs
+      : data.createdAt?.toMillis
+      ? data.createdAt.toMillis()
+      : 0;
+  if (!createdMs) {
+    return (
+      typeof data.expiresAtMs === 'number' &&
+      data.expiresAtMs > now &&
+      data.expiresAtMs - now <= MAX_NOTE_AGE_MS
+    );
+  }
+  if (now - createdMs > MAX_NOTE_AGE_MS) return false;
+  if (typeof data.expiresAtMs === 'number' && data.expiresAtMs > 0 && data.expiresAtMs <= now) {
+    return false;
+  }
+  return true;
+}
 
 export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
   currentUser,
@@ -43,8 +66,9 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
   const [activeLiveStreams, setActiveLiveStreams] = useState<Map<string, any>>(new Map());
   const [userNotes, setUserNotes] = useState<Record<string, any>>({});
   const [watchingStreamId, setWatchingStreamId] = useState<string | null>(null);
+  const isAdmin = hasImmediateAdminOrStaffRole(null, currentUser);
 
-  // 0. Listen to active user notes in real time
+  // 0. Listen to active user notes in real time (strict 24h TTL + Admin auto-cleanup)
   useEffect(() => {
     try {
       const qNotes = query(collection(db, 'user_notes'), limit(50));
@@ -53,10 +77,10 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
         const now = Date.now();
         snap.forEach((d) => {
           const data = d.data();
-          const createdMs = data.createdAtMs || (data.createdAt?.toMillis ? data.createdAt.toMillis() : 0);
-          const isExpired = (data.expiresAtMs && data.expiresAtMs < now) || (createdMs > 0 && (now - createdMs > 24 * 60 * 60 * 1000));
-          if (data?.text && !isExpired) {
+          if (isNoteActiveWithin24h(data, now)) {
             map[d.id] = { ...data, userId: d.id };
+          } else if (isAdmin) {
+            deleteDoc(doc(db, 'user_notes', d.id)).catch(() => {});
           }
         });
         setUserNotes(map);
@@ -65,7 +89,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
     } catch (e) {
       console.error("Error fetching user notes in story strip:", e);
     }
-  }, []);
+  }, [isAdmin]);
 
   // 1. Listen to active live streams in real time
   useEffect(() => {
@@ -282,23 +306,28 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                   style={{ marginTop: `${offsetY}px` }}
                   className="flex flex-col items-center shrink-0 w-[58px] sm:w-[64px] group"
                 >
-                  {/* Thought note bubble above friend avatar */}
-                  <div className="h-7 mb-1 flex items-center justify-center">
+                  {/* Thought cloud note bubble above friend avatar */}
+                  <div className="h-8 mb-1.5 flex items-center justify-center">
                     {friendNote?.text && (
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
                           window.dispatchEvent(new CustomEvent('open_note_viewer', { detail: friendNote }));
                         }}
-                        className="relative max-w-[90px] px-2.5 py-0.5 rounded-2xl text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center truncate flex items-center gap-1 cursor-pointer hover:scale-105 transition"
+                        className="relative max-w-[96px] px-2.5 py-1 rounded-[18px] text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-[0_4px_14px_rgba(0,0,0,0.08)] leading-tight text-center flex items-center gap-1 cursor-pointer hover:scale-105 transition"
                         title="View note"
                       >
-                        {friendNote.moodEmojis?.[0] && <span className="text-[10px]">{friendNote.moodEmojis[0]}</span>}
+                        {friendNote.musicTitle && (
+                          <span className="flex items-end gap-[1.5px] h-2.5 shrink-0" aria-hidden="true">
+                            <span className="w-[2px] h-1.5 bg-[#0064E0] rounded-full animate-pulse" />
+                            <span className="w-[2px] h-2.5 bg-[#0064E0] rounded-full animate-pulse [animation-delay:150ms]" />
+                            <span className="w-[2px] h-1 bg-[#0064E0] rounded-full animate-pulse [animation-delay:300ms]" />
+                          </span>
+                        )}
+                        {friendNote.moodEmojis?.[0] && <span className="text-[10px] shrink-0">{friendNote.moodEmojis[0]}</span>}
                         <span className="truncate">{friendNote.text}</span>
-                        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
-                          <div className="w-2 h-2 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
-                          <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
-                        </div>
+                        <span className="absolute -bottom-[6px] left-3 w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
+                        <span className="absolute -bottom-[11px] left-2 w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
                       </div>
                     )}
                   </div>
@@ -379,23 +408,28 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
 
         {/* Center FIXED Prominent User Avatar + Note Bubble + White Add Story (+) Pill */}
         <div className="flex flex-col items-center shrink-0 mx-1.5 sm:mx-3 z-10">
-          {/* User's thought note bubble directly above center avatar */}
-          <div className="h-7 mb-1 flex items-center justify-center">
+          {/* User's thought cloud note bubble directly above center avatar */}
+          <div className="h-8 mb-1.5 flex items-center justify-center">
             {myNote?.text ? (
               <div
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.dispatchEvent(new CustomEvent('open_note_creator', { detail: { replaceExisting: true } }));
+                  window.dispatchEvent(new CustomEvent('open_note_viewer', { detail: myNote }));
                 }}
-                className="relative max-w-[96px] px-2.5 py-0.5 rounded-2xl text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center truncate flex items-center gap-1 cursor-pointer hover:scale-105 transition"
-                title="View or edit your note"
+                className="relative max-w-[104px] px-3 py-1 rounded-[18px] text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-[0_4px_14px_rgba(0,0,0,0.08)] leading-tight text-center flex items-center gap-1 cursor-pointer hover:scale-105 transition"
+                title="View or update your note"
               >
-                {myNote.moodEmojis?.[0] && <span className="text-[10px]">{myNote.moodEmojis[0]}</span>}
+                {myNote.musicTitle && (
+                  <span className="flex items-end gap-[1.5px] h-2.5 shrink-0" aria-hidden="true">
+                    <span className="w-[2px] h-1.5 bg-[#0064E0] rounded-full animate-pulse" />
+                    <span className="w-[2px] h-2.5 bg-[#0064E0] rounded-full animate-pulse [animation-delay:150ms]" />
+                    <span className="w-[2px] h-1 bg-[#0064E0] rounded-full animate-pulse [animation-delay:300ms]" />
+                  </span>
+                )}
+                {myNote.moodEmojis?.[0] && <span className="text-[10px] shrink-0">{myNote.moodEmojis[0]}</span>}
                 <span className="truncate">{myNote.text}</span>
-                <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
-                  <div className="w-2 h-2 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
-                </div>
+                <span className="absolute -bottom-[6px] left-3.5 w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
+                <span className="absolute -bottom-[11px] left-2.5 w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
               </div>
             ) : (
               <div
@@ -403,14 +437,12 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                   e.stopPropagation();
                   window.dispatchEvent(new CustomEvent('open_note_creator', { detail: { replaceExisting: false } }));
                 }}
-                className="relative px-2.5 py-0.5 rounded-2xl bg-white dark:bg-[#2C2D31] text-[10.5px] font-semibold text-zinc-800 dark:text-zinc-200 border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center cursor-pointer hover:scale-105 transition"
+                className="relative px-3 py-1 rounded-[18px] bg-white dark:bg-[#2C2D31] text-[10.5px] font-semibold text-zinc-600 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/10 shadow-[0_4px_14px_rgba(0,0,0,0.08)] leading-tight text-center cursor-pointer hover:scale-105 transition"
                 title="Share a note"
               >
                 <span>Note...</span>
-                <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
-                  <div className="w-2 h-2 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
-                </div>
+                <span className="absolute -bottom-[6px] left-3.5 w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
+                <span className="absolute -bottom-[11px] left-2.5 w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
               </div>
             )}
           </div>
@@ -517,23 +549,28 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                   style={{ marginTop: `${offsetY}px` }}
                   className="flex flex-col items-center shrink-0 w-[58px] sm:w-[64px] group"
                 >
-                  {/* Thought note bubble above friend avatar */}
-                  <div className="h-7 mb-1 flex items-center justify-center">
+                  {/* Thought cloud note bubble above friend avatar */}
+                  <div className="h-8 mb-1.5 flex items-center justify-center">
                     {friendNote?.text && (
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
                           window.dispatchEvent(new CustomEvent('open_note_viewer', { detail: friendNote }));
                         }}
-                        className="relative max-w-[90px] px-2.5 py-0.5 rounded-2xl text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-[0_2px_8px_rgba(0,0,0,0.08)] leading-tight text-center truncate flex items-center gap-1 cursor-pointer hover:scale-105 transition"
+                        className="relative max-w-[96px] px-2.5 py-1 rounded-[18px] text-[10.5px] font-semibold text-zinc-900 dark:text-white bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-[0_4px_14px_rgba(0,0,0,0.08)] leading-tight text-center flex items-center gap-1 cursor-pointer hover:scale-105 transition"
                         title="View note"
                       >
-                        {friendNote.moodEmojis?.[0] && <span className="text-[10px]">{friendNote.moodEmojis[0]}</span>}
+                        {friendNote.musicTitle && (
+                          <span className="flex items-end gap-[1.5px] h-2.5 shrink-0" aria-hidden="true">
+                            <span className="w-[2px] h-1.5 bg-[#0064E0] rounded-full animate-pulse" />
+                            <span className="w-[2px] h-2.5 bg-[#0064E0] rounded-full animate-pulse [animation-delay:150ms]" />
+                            <span className="w-[2px] h-1 bg-[#0064E0] rounded-full animate-pulse [animation-delay:300ms]" />
+                          </span>
+                        )}
+                        {friendNote.moodEmojis?.[0] && <span className="text-[10px] shrink-0">{friendNote.moodEmojis[0]}</span>}
                         <span className="truncate">{friendNote.text}</span>
-                        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-[1px] pointer-events-none">
-                          <div className="w-2 h-2 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs" />
-                          <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/90 dark:border-white/10 shadow-xs -mt-0.5 ml-1" />
-                        </div>
+                        <span className="absolute -bottom-[6px] left-3 w-2.5 h-2.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
+                        <span className="absolute -bottom-[11px] left-2 w-1.5 h-1.5 rounded-full bg-white dark:bg-[#2C2D31] border border-zinc-200/80 dark:border-white/10 shadow-xs pointer-events-none" />
                       </div>
                     )}
                   </div>

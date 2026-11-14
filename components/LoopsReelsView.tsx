@@ -51,6 +51,7 @@ import {
   toPlayableMediaUrl,
   toPlayableAudioUrl,
   toProxiedMediaStreamUrl,
+  prewarmVideoFirstChunk,
 } from "../lib/videoEmbed";
 import {
   CURATED_SUGGESTED_TOPICS,
@@ -734,7 +735,13 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
 
   const posterImg =
     resolved.thumbnailUrl ||
+    (post as any).thumbnailUrl ||
+    (post as any).videoThumbnail ||
+    (post as any).coverUrl ||
+    (post as any).posterUrl ||
     post.images?.[0] ||
+    post.music?.cover ||
+    post.music?.coverUrl ||
     (resolved.platform === "youtube" && resolved.videoId
       ? `https://i.ytimg.com/vi/${resolved.videoId}/hqdefault.jpg`
       : "");
@@ -3741,6 +3748,26 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
   }, [reelItems, location.search]);
 
   const activeItem = reelItems[activeIndex] || null;
+
+  // Pre-warm first 320KB video chunks of active + next 2 Reels & Sponsored Video Ads for ~0s start
+  useEffect(() => {
+    const candidates = reelItems.slice(activeIndex, activeIndex + 3);
+    candidates.forEach(({ post, videoSource }) => {
+      const url =
+        resolvedMap[post.id]?.directStreamUrl ||
+        videoSource?.directStreamUrl ||
+        videoSource?.canonicalUrl ||
+        post.videoUrl;
+      if (url) prewarmVideoFirstChunk(url);
+    });
+    sponsoredAds.slice(0, 2).forEach((adItem) => {
+      adItem.media.forEach((m) => {
+        if (m.type === "video" && m.url) {
+          prewarmVideoFirstChunk(m.url);
+        }
+      });
+    });
+  }, [activeIndex, reelItems, resolvedMap, sponsoredAds]);
 
   // Reset progress bar & record real view count when switching active reel
   useEffect(() => {

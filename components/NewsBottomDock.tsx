@@ -79,6 +79,24 @@ export const NewsBottomDock: React.FC<{
 
   const [isScrolledCompact, setIsScrolledCompact] = useState(false);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [hideForModal, setHideForModal] = useState(
+    () =>
+      typeof document !== "undefined" &&
+      (document.body?.dataset?.hideBottomNav === "true" ||
+        document.body?.dataset?.hideLoopNoteNav === "true")
+  );
+
+  useEffect(() => {
+    const syncVisibility = () => {
+      setHideForModal(
+        typeof document !== "undefined" &&
+          (document.body?.dataset?.hideBottomNav === "true" ||
+            document.body?.dataset?.hideLoopNoteNav === "true")
+      );
+    };
+    window.addEventListener("deepshop:bottom-nav-visibility", syncVisibility);
+    return () => window.removeEventListener("deepshop:bottom-nav-visibility", syncVisibility);
+  }, []);
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -196,6 +214,10 @@ export const NewsBottomDock: React.FC<{
         ),
     },
   ];
+
+  if (hideForModal) {
+    return null;
+  }
 
   return (
     <nav

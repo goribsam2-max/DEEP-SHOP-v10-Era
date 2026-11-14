@@ -275,8 +275,10 @@ const ProductDetails: React.FC = () => {
             setProduct(matchedProduct);
             setResolvedId(snap.id);
             setIsNotFound(false);
-            if (!slug || slug !== toSlug(matchedProduct.name)) {
-              window.history.replaceState(null, "", `/${toSlug(matchedProduct.name)}`);
+            const prodSlug = toSlug(matchedProduct.name) || "item";
+            const targetPath = `/product/${prodSlug}/${snap.id}`;
+            if (window.location.pathname !== targetPath) {
+              window.history.replaceState(null, "", targetPath);
             }
             if (!didIncrement) {
               didIncrement = true;
@@ -310,8 +312,10 @@ const ProductDetails: React.FC = () => {
             setProduct(matchedProduct);
             setResolvedId(matchedProduct.id);
             setIsNotFound(false);
-            if (slug !== toSlug(matchedProduct.name)) {
-              window.history.replaceState(null, "", `/${toSlug(matchedProduct.name)}`);
+            const prodSlug = toSlug(matchedProduct.name) || "item";
+            const targetPath = `/product/${prodSlug}/${matchedProduct.id}`;
+            if (window.location.pathname !== targetPath) {
+              window.history.replaceState(null, "", targetPath);
             }
             if (!didIncrement) {
               didIncrement = true;
@@ -844,7 +848,7 @@ const ProductDetails: React.FC = () => {
       review: finalReviews,
       offers: {
         "@type": "Offer",
-        url: typeof window !== 'undefined' ? window.location.href : `https://www.deepshop.top/product/${product.id}`,
+        url: `https://www.deepshop.top/product/${toSlug(product.name) || "item"}/${product.id}`,
         priceCurrency: "BDT",
         price: Number(basePrice) || 0,
         priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -922,7 +926,7 @@ const ProductDetails: React.FC = () => {
           "@type": "ListItem",
           "position": 3,
           "name": product.name,
-          "item": window.location.href,
+          "item": `https://www.deepshop.top/product/${toSlug(product.name) || "item"}/${product.id}`,
         },
       ],
     },
@@ -1257,7 +1261,8 @@ const ProductDetails: React.FC = () => {
         jsonLd={jsonLd}
         price={basePrice}
         availability={product.stock > 0 ? "in stock" : "out of stock"}
-        canonical={`/product/${product.id}`}
+        canonical={`/product/${toSlug(product.name) || "item"}/${product.id}`}
+        url={`https://www.deepshop.top/product/${toSlug(product.name) || "item"}/${product.id}`}
         exactTitle
       />
 

@@ -53,22 +53,47 @@ async function generateSitemap() {
       snapshot.forEach((doc) => {
         const data = doc.data();
         if (data.name) {
-          const slug = toSlug(data.name);
+          const slug = toSlug(data.name) || "item";
           const lastMod = getSitemapDate(data.updatedAt) || getSitemapDate(data.createdAt) || today;
           urls += `
   <url>
-    <loc>https://www.deepshop.top/${slug}</loc>
+    <loc>https://www.deepshop.top/product/${slug}/${doc.id}</loc>
     <lastmod>${lastMod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
-  </url>
+  </url>`;
+        }
+      });
+    }
+
+    const loopsRef = collection(db, "scam_posts");
+    const loopsSnapshot = await Promise.race([
+      getDocs(loopsRef),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Loops sitemap fetch timed out after 8s")), 8000)
+      ),
+    ]).catch((timeoutErr) => {
+      console.warn(timeoutErr.message || timeoutErr);
+      return null;
+    });
+
+    if (loopsSnapshot) {
+      let loopsCount = 0;
+      loopsSnapshot.forEach((doc) => {
+        if (loopsCount >= 200) return;
+        const data = doc.data();
+        if (data.isRemovedByAdmin || data.isDeleted || data.status === "removed" || data.status === "rejected" || data.privacy === "only_me") {
+          return;
+        }
+        const lastMod = getSitemapDate(data.updatedAt) || getSitemapDate(data.createdAt) || today;
+        urls += `
   <url>
-    <loc>https://www.deepshop.top/product/${doc.id}</loc>
+    <loc>https://www.deepshop.top/loops/post/${encodeURIComponent(doc.id)}</loc>
     <lastmod>${lastMod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`;
-        }
+        loopsCount += 1;
       });
     }
 
@@ -84,13 +109,37 @@ async function generateSitemap() {
     <loc>https://www.deepshop.top/all-products</loc>
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/flash-sale</loc>
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/bundles</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/loops</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/loops?filter=video</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.deepshop.top/messages</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.deepshop.top/blog</loc>

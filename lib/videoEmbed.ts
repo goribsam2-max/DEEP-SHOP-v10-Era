@@ -181,15 +181,7 @@ export function toProxiedMediaStreamUrl(rawUrl?: string | null): string {
     return unwrapped;
   }
   try {
-    const normalized = ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
-    const parsed = new URL(normalized);
-    if (
-      typeof window !== "undefined" &&
-      parsed.origin === window.location.origin
-    ) {
-      return normalized;
-    }
-    return `/api/stream-media?url=${encodeURIComponent(normalized)}`;
+    return ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
   } catch {
     return unwrapped;
   }
@@ -207,28 +199,50 @@ export function toPlayableMediaUrl(rawUrl?: string | null): string {
   }
 
   try {
-    const normalized = ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
-    const parsed = new URL(normalized);
-    const host = parsed.hostname.toLowerCase();
-
-    // Hosts with strict cross-origin restrictions, SAMEORIGIN headers, or ISP blocks in Bangladesh/mobile networks:
-    // Route them through the local /api/stream-media proxy to ensure immediate playback with full range support.
-    if (
-      host.includes("pomf") ||
-      host.includes("catbox.moe") ||
-      host.includes("qu.ax") ||
-      host.includes("uguu") ||
-      host.includes("0x0.st") ||
-      host.includes("tmpfiles") ||
-      host.includes("file.io")
-    ) {
-      return toProxiedMediaStreamUrl(normalized);
-    }
-
-    return normalized;
+    return ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
   } catch {
     return unwrapped;
   }
+}
+
+const prewarmedVideoUrls = new Set<string>();
+
+export function prewarmVideoFirstChunk(rawUrl?: string | null): void {
+  if (typeof window === "undefined" || typeof fetch !== "function") return;
+  if (!rawUrl || !rawUrl.trim()) return;
+
+  const parsed = parseVideoEmbed(rawUrl, { allowFallbackDirectVideo: true });
+  const candidate = parsed?.directStreamUrl || toPlayableMediaUrl(rawUrl);
+  if (
+    !candidate ||
+    candidate.startsWith("blob:") ||
+    candidate.startsWith("data:") ||
+    candidate.startsWith("/api/stream-media")
+  ) {
+    return;
+  }
+
+  const isDirectVideoOrCdn =
+    parsed?.platform === "direct" ||
+    DIRECT_VIDEO_EXT_REGEX.test(candidate) ||
+    /(catbox\.moe|firebasestorage\.googleapis\.com|cloudinary\.com|res\.cloudinary\.com|pomf|uguu|qu\.ax)/i.test(
+      candidate
+    );
+  if (!isDirectVideoOrCdn) return;
+
+  if (prewarmedVideoUrls.has(candidate)) return;
+  if (prewarmedVideoUrls.size > 80) {
+    const oldest = prewarmedVideoUrls.values().next().value;
+    if (oldest) prewarmedVideoUrls.delete(oldest);
+  }
+  prewarmedVideoUrls.add(candidate);
+
+  fetch(candidate, {
+    method: "GET",
+    headers: { Range: "bytes=0-327679" },
+    mode: "cors",
+    credentials: "omit",
+  }).catch(() => {});
 }
 
 export function toPlayableAudioUrl(rawUrl?: string | null): string {

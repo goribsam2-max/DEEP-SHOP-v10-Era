@@ -17,6 +17,7 @@ import {
   toPlayableMediaUrl,
   toPlayableAudioUrl,
   toProxiedMediaStreamUrl,
+  prewarmVideoFirstChunk,
 } from "../lib/videoEmbed";
 import { triggerHaptic } from "../lib/haptics";
 
@@ -481,6 +482,12 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   // Sync video volume & separate background music <audio> element
   const rawNativeStreamUrl =
     resolvedEmbed.directStreamUrl || resolvedEmbed.canonicalUrl || "";
+
+  useEffect(() => {
+    if ((hasEnteredView || isInView) && usesNativeStream && rawNativeStreamUrl) {
+      prewarmVideoFirstChunk(rawNativeStreamUrl);
+    }
+  }, [hasEnteredView, isInView, usesNativeStream, rawNativeStreamUrl]);
   const hasSeparateBgMusic = Boolean(
     bgMusicUrl &&
       bgMusicUrl.trim() &&
