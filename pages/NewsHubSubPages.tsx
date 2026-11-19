@@ -489,7 +489,7 @@ export const NewsPhotoViewerPage: React.FC = () => {
             : `${headerTitle} on Loops`
         }
         description="Fullscreen photo viewer on Loops"
-        image={photoUrl || (post as any)?.thumbnailUrl || post?.images?.[0]}
+        image={currentImg || (post as any)?.thumbnailUrl || post?.images?.[0]}
         siteName="Loops"
         exactTitle
       />

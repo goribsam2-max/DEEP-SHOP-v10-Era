@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Phone, Video, VideoOff, Paperclip, Send, X, PhoneOff, Mic, MicOff, Volume2, Image as ImageIcon, CheckCheck, Clock, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { subscribeToWebPush } from '../lib/push';
 import SEO from '../components/SEO';
 import { audioHelper } from '../lib/AudioHelper';
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from '../lib/shoppingRoute';
+import { triggerHaptic } from '../lib/haptics';
 
 import { useNotify } from '../components/Notifications';
 import { db, auth } from '../firebase';
@@ -56,15 +59,15 @@ const CallBubble = ({ msg }: { msg: any }) => {
 
   return (
     <div className="flex justify-center my-2 w-full">
-      <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl max-w-xs w-full bg-white dark:bg-zinc-900 border ${bgClass} shadow-sm transition-all hover:shadow-md`}>
+      <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl max-w-xs w-full ds-apple-surface border ${bgClass} transition-shadow`}>
         <div className={`p-2 rounded-full ${iconBg} flex items-center justify-center shrink-0`}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">{title}</p>
-          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium">{subtitle}</p>
+          <p className="text-xs font-semibold text-[#1D1D1F] dark:text-white truncate">{title}</p>
+          <p className="text-[11px] ds-apple-muted mt-0.5 font-medium tabular-nums">{subtitle}</p>
         </div>
-        <div className="text-[9px] text-zinc-400 self-end shrink-0 font-mono">
+        <div className="text-[10px] ds-apple-muted self-end shrink-0 tabular-nums">
           {timestamp}
         </div>
       </div>
@@ -82,6 +85,7 @@ const HelpCenter: React.FC = () => {
   const user = auth.currentUser;
   const notify = useNotify();
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
 
   const query = new URLSearchParams(window.location.search);
   const acceptCallParam = query.get('accept_call') === 'true';
@@ -98,6 +102,7 @@ const HelpCenter: React.FC = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputMsg, setInputMsg] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   
   // Call states
   const [callState, setCallState] = useState<'idle' | 'calling' | 'incoming' | 'active'>(
@@ -150,6 +155,7 @@ const HelpCenter: React.FC = () => {
 
   const toggleVideo = () => {
     if (localStreamRef.current) {
+      triggerHaptic('toggle');
       localStreamRef.current.getVideoTracks().forEach(t => t.enabled = isVideoOff);
       setIsVideoOff(!isVideoOff);
     }
@@ -367,6 +373,7 @@ const HelpCenter: React.FC = () => {
 
   const sendMessage = async (text: string, imageUrl?: string) => {
     if ((!text.trim() && !imageUrl) || !chatId) return;
+    triggerHaptic('light');
     
     const docRef = doc(db, 'helpline_chats', chatId);
     const newMsg = {
@@ -459,6 +466,7 @@ const HelpCenter: React.FC = () => {
   };
 
   const startCall = async (type: 'audio' | 'video') => {
+    triggerHaptic('medium');
     setCallType(type);
     setCallState('calling');
     audioHelper.playCalling();
@@ -499,6 +507,7 @@ const HelpCenter: React.FC = () => {
   };
 
   const acceptCall = async () => {
+    triggerHaptic('success');
     try {
       const callRef = doc(db, 'helpline_calls', chatId);
       const callSnap = await getDoc(callRef);
@@ -648,6 +657,7 @@ const HelpCenter: React.FC = () => {
   };
 
   const declineCall = async () => {
+    triggerHaptic('warning');
     endCallLocal();
     const callRef = doc(db, 'helpline_calls', chatId);
     try {
@@ -742,6 +752,7 @@ const HelpCenter: React.FC = () => {
 
   const toggleMute = () => {
     if (localStreamRef.current) {
+      triggerHaptic('toggle');
       localStreamRef.current.getAudioTracks().forEach(t => t.enabled = isMuted);
       setIsMuted(!isMuted);
     }
@@ -752,71 +763,100 @@ const HelpCenter: React.FC = () => {
   };
 
   return (
-    <div className="h-[100dvh] bg-zinc-50 dark:bg-black w-full flex flex-col">
+    <div className="ds-apple-shop-canvas h-[100dvh] bg-[#F5F5F7] dark:bg-black w-full flex flex-col">
       <SEO title="Helpline | DEEP SHOP" description="Live support and help center." />
       
       <div className="w-full h-full flex">
-        <div className="bg-white dark:bg-zinc-900 h-full w-full flex overflow-hidden">
+        <div className="bg-[#F5F5F7] dark:bg-black h-full w-full flex overflow-hidden">
           
-          {/* Left Sidebar - Chat List */}
-          <div className="w-full md:w-80 border-r border-zinc-200 dark:border-zinc-800 flex flex-col hidden md:flex">
-            <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-              <h2 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">VG Helpline</h2>
-              <p className="text-xs text-zinc-500 font-medium mt-1">Live Support & Chat</p>
+          {/* Left Sidebar - Department List */}
+          <div className="w-full md:w-80 border-r border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#1C1C1E] flex-col hidden md:flex">
+            <div className="p-6 border-b border-black/[0.06] dark:border-white/[0.08]">
+              <p className="ds-apple-eyebrow">Support</p>
+              <h2 className="text-xl font-semibold text-[#1D1D1F] dark:text-white tracking-[-0.02em] mt-0.5">DEEP SHOP Helpline</h2>
+              <p className="text-xs ds-apple-muted font-medium mt-1">Live Support & Audio/Video Care</p>
             </div>
             
-            <div className="flex-1 overflow-y-auto">
-              {DEPARTMENTS.map((dept) => (
-                <button
-                  key={dept.id}
-                  onClick={() => setActiveChat(dept)}
-                  className={`w-full p-4 flex items-center gap-4 transition-colors ${activeChat.id === dept.id ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800 border-l-4 border-transparent'}`}
-                >
-                  <div className="relative">
-                    <img src={dept.avatar} alt={dept.name} className="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-                    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-zinc-900 ${dept.status === 'Online' ? 'bg-green-500' : 'bg-zinc-400'}`} />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <h3 className={`font-bold text-sm ${activeChat.id === dept.id ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-zinc-100'}`}>{dept.name}</h3>
-                    <p className="text-xs text-zinc-500 truncate mt-0.5">{dept.status === 'Online' ? 'Typically replies instantly' : 'Currently offline'}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="flex-1 overflow-y-auto p-2.5 space-y-1">
+              {DEPARTMENTS.map((dept) => {
+                const isSelected = activeChat.id === dept.id;
+                return (
+                  <button
+                    key={dept.id}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('selection');
+                      setActiveChat(dept);
+                    }}
+                    className={`w-full p-3.5 rounded-2xl flex items-center gap-3.5 transition-all cursor-pointer active:scale-[0.98] ${
+                      isSelected
+                        ? 'bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 ring-1 ring-[#0071E3]/25 dark:ring-[#0A84FF]/30'
+                        : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="relative shrink-0">
+                      <img src={dept.avatar} alt={dept.name} className="w-11 h-11 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E]" />
+                      <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-[#1C1C1E] ${dept.status === 'Online' ? 'bg-emerald-500' : 'bg-[#8E8E93]'}`} />
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <h3 className={`font-semibold text-sm truncate ${isSelected ? 'text-[#0071E3] dark:text-[#0A84FF]' : 'text-[#1D1D1F] dark:text-white'}`}>{dept.name}</h3>
+                      <p className="text-xs ds-apple-muted truncate mt-0.5">{dept.status === 'Online' ? 'Typically replies instantly' : 'Currently offline'}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Right Area - Chat Window */}
-          <div className="flex-1 flex flex-col bg-[#f0f2f5] dark:bg-black relative">
+          <div className="flex-1 flex flex-col bg-[#F5F5F7] dark:bg-black relative">
             {/* Chat Header */}
-            <div className="h-16 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-6 flex items-center justify-between z-10">
-              <div className="flex items-center gap-3">
-                <button onClick={() => navigate("/")} className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                  <ChevronLeft className="w-6 h-6" />
+            <header className="ds-apple-topbar h-16 px-4 sm:px-6 flex items-center justify-between z-10 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    navigate('/');
+                  }}
+                  className="ds-apple-icon-btn w-10 h-10 flex items-center justify-center shrink-0"
+                  aria-label="Back to Store"
+                >
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-                <img src={activeChat.avatar} alt={activeChat.name} className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-                <div>
-                  <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{activeChat.name}</h3>
-                  <p className="text-xs text-green-500 font-semibold">{activeChat.status}</p>
+                <div className="relative shrink-0">
+                  <img src={activeChat.avatar} alt={activeChat.name} className="w-10 h-10 rounded-full bg-black/[0.05] dark:bg-white/[0.08]" />
+                  <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#1C1C1E] ${activeChat.status === 'Online' ? 'bg-emerald-500' : 'bg-[#8E8E93]'}`} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-[#1D1D1F] dark:text-white text-sm sm:text-[15px] tracking-[-0.01em] truncate">{activeChat.name}</h3>
+                  <p className={`text-xs font-medium ${activeChat.status === 'Online' ? 'text-emerald-600 dark:text-emerald-400' : 'ds-apple-muted'}`}>{activeChat.status}</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2">
-                <button onClick={() => startCall('audio')} disabled={activeChat.status !== 'Online' || callState !== 'idle'} className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50">
-                  <Phone className="w-5 h-5" />
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => startCall('audio')}
+                  disabled={activeChat.status !== 'Online' || callState !== 'idle'}
+                  className="ds-apple-icon-btn w-10 h-10 flex items-center justify-center disabled:opacity-40"
+                  aria-label="Start Audio Call"
+                >
+                  <Phone className="w-4.5 h-4.5" />
                 </button>
               </div>
-            </div>
+            </header>
 
             {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cubes.png")', backgroundBlendMode: 'overlay', opacity: 0.9 }}>
-              <div className="text-center my-4">
-                <span className="bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full backdrop-blur-sm">Today</span>
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-3.5">
+              <div className="text-center my-3">
+                <span className="ds-apple-surface-subtle text-[#6E6E73] dark:text-[#98989D] text-[10px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full">Today</span>
               </div>
               
               <div className="flex justify-start">
-                <div className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 p-3 rounded-2xl rounded-tl-sm max-w-[75%] shadow-sm text-sm">
-                  <p>Welcome to VG Helpline! I'm your assistant from {activeChat.name}. How can I help you today?</p>
-                  <p className="text-[10px] text-zinc-400 text-right mt-1">{formatTime(Date.now())}</p>
+                <div className="ds-apple-surface text-[#1D1D1F] dark:text-[#F5F5F7] px-4 py-3 rounded-[20px] rounded-tl-md max-w-[78%] text-sm leading-relaxed">
+                  <p>Welcome to DEEP SHOP Helpline! I'm your assistant from {activeChat.name}. How can I help you today?</p>
+                  <p className="text-[10px] ds-apple-muted text-right mt-1 tabular-nums">{formatTime(Date.now())}</p>
                 </div>
               </div>
 
@@ -827,14 +867,29 @@ const HelpCenter: React.FC = () => {
                 const isMe = msg.senderId === myId;
                 return (
                   <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`p-3 rounded-2xl max-w-[75%] shadow-sm text-sm ${isMe ? 'bg-[#dcf8c6] dark:bg-[#005c4b] text-zinc-900 dark:text-white rounded-tr-sm' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-sm'}`}>
+                    <div
+                      className={`px-4 py-2.5 rounded-[20px] max-w-[78%] text-sm leading-relaxed ${
+                        isMe
+                          ? 'bg-[#0071E3] dark:bg-[#0A84FF] text-white rounded-tr-md shadow-sm'
+                          : 'ds-apple-surface text-[#1D1D1F] dark:text-[#F5F5F7] rounded-tl-md'
+                      }`}
+                    >
                       {msg.imageUrl && (
-                        <img src={msg.imageUrl} alt="Attachment" className="max-w-full rounded-xl mb-2 cursor-pointer hover:opacity-90" onClick={() => window.open(msg.imageUrl, '_blank')} />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setPreviewImageUrl(msg.imageUrl);
+                          }}
+                          className="block mb-2 rounded-xl overflow-hidden cursor-pointer hover:opacity-95 active:scale-[0.99] transition-transform"
+                        >
+                          <img src={msg.imageUrl} alt="Attachment" className="max-w-full max-h-64 object-cover rounded-xl" />
+                        </button>
                       )}
-                      {msg.text && <p>{msg.text}</p>}
+                      {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
                       <div className="flex items-center justify-end gap-1 mt-1">
-                        <span className={`text-[10px] ${isMe ? 'text-green-700 dark:text-green-200' : 'text-zinc-400'}`}>{formatTime(msg.timestamp)}</span>
-                        {isMe && <CheckCheck className={`w-3 h-3 ${isMe ? 'text-blue-500' : 'text-zinc-400'}`} />}
+                        <span className={`text-[10px] tabular-nums ${isMe ? 'text-white/75' : 'ds-apple-muted'}`}>{formatTime(msg.timestamp)}</span>
+                        {isMe && <CheckCheck className="w-3.5 h-3.5 text-white/90" />}
                       </div>
                     </div>
                   </div>
@@ -844,7 +899,7 @@ const HelpCenter: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-zinc-100 dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 flex items-end gap-2">
+            <div className="ds-apple-topbar border-t border-black/[0.06] dark:border-white/[0.08] border-b-0 px-3 sm:px-5 py-3 flex items-center gap-2.5 shrink-0">
               <input 
                 type="file" 
                 id="file-upload" 
@@ -852,27 +907,33 @@ const HelpCenter: React.FC = () => {
                 accept="image/*"
                 onChange={handleImageUpload}
               />
-              <label htmlFor="file-upload" className={`p-3 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                {isUploading ? <div className="w-5 h-5 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" /> : <Paperclip className="w-5 h-5" />}
+              <label
+                htmlFor="file-upload"
+                onClick={() => triggerHaptic('light')}
+                className={`ds-apple-icon-btn w-10 h-10 flex items-center justify-center cursor-pointer shrink-0 ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+              >
+                {isUploading ? <div className="w-4 h-4 border-2 border-[#0071E3] border-t-transparent rounded-full animate-spin" /> : <Paperclip className="w-4.5 h-4.5" />}
               </label>
               
-              <div className="flex-1 bg-white dark:bg-zinc-800 rounded-3xl min-h-[44px] flex items-center px-4 shadow-sm">
+              <div className="flex-1 ds-apple-input rounded-full min-h-[42px] flex items-center px-4">
                 <input
                   type="text"
                   value={inputMsg}
                   onChange={e => setInputMsg(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && sendMessage(inputMsg)}
                   placeholder="Type a message..."
-                  className="w-full bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-100"
+                  className="w-full bg-transparent border-none outline-none text-sm text-[#1D1D1F] dark:text-white placeholder:text-[#8E8E93]"
                 />
               </div>
               
               <button 
+                type="button"
                 onClick={() => sendMessage(inputMsg)}
                 disabled={!inputMsg.trim() && !isUploading}
-                className="p-3 bg-[#00a884] text-white rounded-full flex items-center justify-center shadow-md hover:bg-[#008f6f] transition-colors disabled:opacity-50 disabled:bg-zinc-300 dark:disabled:bg-zinc-700"
+                className="w-10 h-10 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white flex items-center justify-center shadow-sm hover:opacity-95 active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0"
+                aria-label="Send Message"
               >
-                <Send className="w-5 h-5 ml-1" />
+                <Send className="w-4.5 h-4.5 ml-0.5" />
               </button>
             </div>
 
@@ -883,16 +944,23 @@ const HelpCenter: React.FC = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
                   onClick={() => setShowControls(p => !p)}
-                  className="absolute inset-0 bg-black/95 z-50 flex flex-col"
+                  className="absolute inset-0 bg-black/92 backdrop-blur-2xl z-50 flex flex-col"
                 >
                   {/* Call Header */}
                   <AnimatePresence>
                     {showControls && (
-                      <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }} className="p-8 text-center mt-10">
-                        <img src={activeChat.avatar} alt="Avatar" className="w-24 h-24 rounded-full mx-auto mb-4 bg-zinc-800 border-4 border-zinc-700" />
-                        <h2 className="text-2xl font-bold text-white">{activeChat.name}</h2>
-                        <p className="text-emerald-400 mt-2 font-mono text-sm tracking-wider uppercase">
+                      <motion.div
+                        initial={prefersReducedMotion ? { opacity: 0 } : { y: -16, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={prefersReducedMotion ? { opacity: 0 } : { y: -16, opacity: 0 }}
+                        transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+                        className="p-8 text-center mt-10"
+                      >
+                        <img src={activeChat.avatar} alt="Avatar" className="w-24 h-24 rounded-full mx-auto mb-4 bg-[#1C1C1E] border-2 border-white/15 shadow-lg" />
+                        <h2 className="text-2xl font-semibold tracking-[-0.02em] text-white">{activeChat.name}</h2>
+                        <p className="text-[#0A84FF] mt-2 text-sm font-medium tracking-wide uppercase tabular-nums">
                           {callState === 'calling' && 'Calling Support...'}
                           {callState === 'ringing' && 'Ringing...'}
                           {callState === 'incoming' && 'Incoming Call...'}
@@ -904,7 +972,7 @@ const HelpCenter: React.FC = () => {
 
                   {/* Video Area (if active video call) */}
                   {(callState === 'active' || callState === 'calling' || callState === 'ringing' || callState === 'incoming') && callType === 'video' && (
-                    <div className="flex-1 relative p-4 flex items-center justify-center bg-zinc-950">
+                    <div className="flex-1 relative p-4 flex items-center justify-center bg-black">
                       <video 
                         ref={(el) => {
                           remoteVideoRef.current = el;
@@ -914,13 +982,13 @@ const HelpCenter: React.FC = () => {
                         }} 
                         autoPlay 
                         playsInline 
-                        className="w-full h-full object-cover rounded-3xl bg-zinc-900" 
+                        className="w-full h-full object-cover rounded-[24px] bg-[#1C1C1E]" 
                       />
                       
-                      <div className="absolute bottom-8 right-8 w-32 h-48 rounded-2xl overflow-hidden border-2 border-zinc-700 bg-zinc-900 shadow-xl">
+                      <div className="absolute bottom-8 right-8 w-32 h-48 rounded-[20px] overflow-hidden border border-white/20 bg-[#1C1C1E] shadow-2xl">
                         {isVideoOff ? (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-500 text-xs gap-2">
-                            <VideoOff className="w-5 h-5 text-zinc-600" />
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-[#1C1C1E] text-[#8E8E93] text-xs gap-2">
+                            <VideoOff className="w-5 h-5 text-[#8E8E93]" />
                             <span>Video Off</span>
                           </div>
                         ) : (
@@ -944,39 +1012,47 @@ const HelpCenter: React.FC = () => {
                   {/* Controls */}
                   <AnimatePresence>
                     {showControls && (
-                      <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} onClick={e => e.stopPropagation()} className="mt-auto p-12 flex justify-center gap-6">
+                      <motion.div
+                        initial={prefersReducedMotion ? { opacity: 0 } : { y: 32, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={prefersReducedMotion ? { opacity: 0 } : { y: 32, opacity: 0 }}
+                        transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+                        onClick={e => e.stopPropagation()}
+                        className="mt-auto p-10 flex justify-center gap-5"
+                      >
                         {callState === 'incoming' ? (
                           <>
-                            {/* Decline/Reject Button */}
-                            <button onClick={declineCall} className="w-14 h-14 rounded-full bg-red-600 text-white flex items-center justify-center hover:scale-105 transition-transform shadow-lg shadow-red-600/30">
+                            <button type="button" onClick={declineCall} className="w-14 h-14 rounded-full bg-[#FF3B30] text-white flex items-center justify-center active:scale-95 transition-transform shadow-lg">
                               <PhoneOff className="w-6 h-6" />
                             </button>
-                            {/* Accept Button */}
-                            <button onClick={acceptCall} className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:scale-105 transition-transform shadow-lg shadow-emerald-500/40 animate-pulse">
+                            <button type="button" onClick={acceptCall} className="w-14 h-14 rounded-full bg-[#34C759] text-white flex items-center justify-center active:scale-95 transition-transform shadow-lg">
                               <Phone className="w-6 h-6" />
                             </button>
                           </>
                         ) : (
                           <>
-                            {/* Mute Mic Button */}
-                            <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isMuted ? 'bg-white text-black' : 'bg-zinc-800 text-white hover:bg-zinc-700'}`}>
+                            <button type="button" onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-all ${isMuted ? 'bg-white text-black' : 'bg-[#2C2C2E] text-white hover:bg-[#3A3A3C]'}`}>
                               {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                             </button>
                             
-                            {/* Toggle Video Button (Only if video call type) */}
                             {callType === 'video' && (
-                              <button onClick={toggleVideo} className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isVideoOff ? 'bg-red-500 text-white' : 'bg-zinc-800 text-white hover:bg-zinc-700'}`}>
+                              <button type="button" onClick={toggleVideo} className={`w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-all ${isVideoOff ? 'bg-[#FF3B30] text-white' : 'bg-[#2C2C2E] text-white hover:bg-[#3A3A3C]'}`}>
                                 {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
                               </button>
                             )}
 
-                            {/* Speaker Button */}
-                            <button onClick={() => setIsSpeaker(!isSpeaker)} className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isSpeaker ? 'bg-white text-black' : 'bg-zinc-800 text-white hover:bg-zinc-700'}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('toggle');
+                                setIsSpeaker(!isSpeaker);
+                              }}
+                              className={`w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-all ${isSpeaker ? 'bg-white text-black' : 'bg-[#2C2C2E] text-white hover:bg-[#3A3A3C]'}`}
+                            >
                               <Volume2 className="w-6 h-6" />
                             </button>
 
-                            {/* Decline/Hang Up Button */}
-                            <button onClick={declineCall} className="w-14 h-14 rounded-full bg-red-600 text-white flex items-center justify-center hover:scale-105 transition-transform shadow-lg shadow-red-600/30 ml-4">
+                            <button type="button" onClick={declineCall} className="w-14 h-14 rounded-full bg-[#FF3B30] text-white flex items-center justify-center active:scale-95 transition-transform shadow-lg ml-2">
                               <PhoneOff className="w-6 h-6" />
                             </button>
                           </>
@@ -991,6 +1067,56 @@ const HelpCenter: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Portaled Image Lightbox Modal */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {previewImageUrl && (
+              <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => setPreviewImageUrl(null)}
+                  className="ds-apple-backdrop fixed inset-0"
+                />
+                <motion.div
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                  transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+                  className="ds-apple-modal relative z-10 max-w-2xl w-full p-3 sm:p-4 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <span className="text-xs font-semibold ds-apple-muted flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4" />
+                      Attachment Preview
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setPreviewImageUrl(null);
+                      }}
+                      className="ds-apple-icon-btn w-8 h-8 flex items-center justify-center"
+                      aria-label="Close Preview"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <img
+                    src={previewImageUrl}
+                    alt="Attachment Preview"
+                    className="w-full max-h-[75vh] object-contain rounded-[16px] bg-black/5 dark:bg-black/40"
+                  />
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </div>
   );
 };

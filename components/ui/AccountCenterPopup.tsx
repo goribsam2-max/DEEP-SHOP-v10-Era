@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X, Plus, User, Check, Loader2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNotify } from '../Notifications';
 import { GoogleIcon, AppleIcon, FacebookIcon } from './BrandIcons';
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from '../../lib/shoppingRoute';
 
 export interface SavedAccount {
   uid: string;
@@ -27,6 +28,7 @@ interface AccountCenterPopupProps {
 export function AccountCenterPopup({ isOpen, onClose, savedAccounts, currentUid }: AccountCenterPopupProps) {
   const navigate = useNavigate();
   const notify = useNotify();
+  const prefersReducedMotion = useReducedMotion();
   const [loadingUid, setLoadingUid] = useState<string | null>(null);
   const [requirePasswordUid, setRequirePasswordUid] = useState<string | null>(null);
   const [manualPassword, setManualPassword] = useState('');
@@ -109,144 +111,204 @@ export function AccountCenterPopup({ isOpen, onClose, savedAccounts, currentUid 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[99999] flex items-end justify-center sm:items-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          onClick={onClose}
+          className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[99999] flex items-end justify-center sm:items-center p-0 sm:p-4"
+        >
           <motion.div
-            initial={{ opacity: 0, y: "100%" }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="w-full sm:max-w-md bg-white dark:bg-zinc-900 rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl flex flex-col"
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 48, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 48, scale: 0.98 }}
+            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+            drag={prefersReducedMotion ? false : "y"}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.12, bottom: 0.45 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 110 || info.velocity.y > 420) {
+                onClose();
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="ds-apple-sheet w-full sm:max-w-md rounded-t-[28px] sm:rounded-[28px] overflow-hidden flex flex-col touch-pan-y"
           >
-            <div className="p-6 pb-2 relative flex items-center justify-between">
-               <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Choose Account</h2>
-               <button onClick={onClose} className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
-                  <X className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-               </button>
+            <div className="sm:hidden flex justify-center pt-2.5 pb-1">
+              <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/25" />
             </div>
-            
-            <div className="p-4 overflow-y-auto max-h-[50vh]">
-               {savedAccounts.length === 0 && (
-                   <div className="text-center py-8 text-zinc-500">
-                      No saved accounts found.
-                   </div>
-               )}
-               <div className="space-y-3">
-                   {savedAccounts.map((account) => {
-                       const isCurrent = account.uid === currentUid;
-                       const requiresPass = requirePasswordUid === account.uid;
-                       const isLoading = loadingUid === account.uid;
-                       
-                       return (
-                          <div 
-                              key={account.uid}
-                              className={`border ${isCurrent ? 'border-[#109E92] bg-[#109E92]/5' : 'border-zinc-200 dark:border-zinc-800'} rounded-2xl p-4 transition-all`}
-                          >
-                              <div 
-                                onClick={() => !requiresPass && handleSelectAccount(account)} 
-                                className={`flex items-center justify-between ${!requiresPass ? 'cursor-pointer' : ''}`}
-                              >
-                                  <div className="flex items-center space-x-4">
-                                      <div className="w-12 h-12 relative rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-                                          {account.photoURL ? (
-                                              <img src={account.photoURL} alt={account.displayName} className="w-full h-full object-cover" />
-                                          ) : (
-                                              <User className="w-6 h-6 text-zinc-400" />
-                                          )}
-                                          {account.provider === 'google' && (
-                                            <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center">
-                                              <GoogleIcon className="w-6 h-6" />
-                                            </div>
-                                          )}
-                                          {account.provider === 'facebook' && (
-                                            <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center">
-                                              <FacebookIcon className="w-6 h-6" />
-                                            </div>
-                                          )}
-                                          {account.provider === 'apple' && (
-                                            <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center">
-                                              <AppleIcon className="w-6 h-6" />
-                                            </div>
-                                          )}
-                                      </div>
-                                      <div>
-                                          <p className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px]">{account.displayName}</p>
-                                          <p className="text-xs text-zinc-500 truncate max-w-[160px] sm:max-w-[180px]">{(account.email.endsWith('@phone.deepshop.top') || account.email.endsWith('@phone.vibegadget.com')) ? account.email.split('@')[0] : account.email}</p>
-                                      </div>
-                                  </div>
-                                  
-                                  {isCurrent ? (
-                                      <div className="w-8 h-8 rounded-full bg-[#109E92] flex items-center justify-center">
-                                          <Check className="w-4 h-4 text-white" />
-                                      </div>
-                                  ) : (
-                                      !requiresPass && (
-                                          <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                                              {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-zinc-500" /> : <ArrowRight className="w-4 h-4 text-zinc-500" />}
-                                          </div>
-                                      )
-                                  )}
-                              </div>
 
-                              <AnimatePresence>
-                               {requiresPass && (
-                                    <motion.div 
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
-                                        exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                                        className="overflow-hidden"
-                                    >
-                                        <div className="p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl mb-3 text-xs text-red-600 dark:text-red-400">
-                                            Password might have been changed {account.lastPasswordChange ? new Date(account.lastPasswordChange).toLocaleDateString() : 'recently'}. Please enter new password.
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <input 
-                                                type="password"
-                                                autoFocus
-                                                placeholder="Enter password"
-                                                className="flex-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 text-sm outline-none focus:border-[#109E92]"
-                                                value={manualPassword}
-                                                onChange={(e) => setManualPassword(e.target.value)}
-                                            />
-                                            <button 
-                                                onClick={() => handleSelectAccount(account)}
-                                                disabled={isLoading || !manualPassword}
-                                                className="bg-[#109E92] text-white px-4 rounded-xl text-sm font-semibold hover:bg-[#0D8A7D] flex items-center justify-center disabled:opacity-50"
-                                            >
-                                                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Login"}
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                               )}
-                              </AnimatePresence>
+            <div className="px-6 pt-3 sm:pt-6 pb-3 relative flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08]">
+              <h2 className="ds-apple-display text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                Choose Account
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-black/[0.05] dark:bg-white/[0.1] hover:bg-black/[0.09] dark:hover:bg-white/[0.16] flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4 text-[#6E6E73] dark:text-[#98989D]" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto max-h-[60vh]">
+              {savedAccounts.length === 0 && (
+                <div className="text-center py-8 text-sm text-[#6E6E73] dark:text-[#98989D]">
+                  No saved accounts found.
+                </div>
+              )}
+              <div className="space-y-2.5">
+                {savedAccounts.map((account) => {
+                  const isCurrent = account.uid === currentUid;
+                  const requiresPass = requirePasswordUid === account.uid;
+                  const isLoading = loadingUid === account.uid;
+
+                  return (
+                    <div
+                      key={account.uid}
+                      className={`border rounded-2xl p-3.5 transition-all ${
+                        isCurrent
+                          ? "border-[#0071E3] dark:border-[#0A84FF] bg-[#0071E3]/[0.06] dark:bg-[#0A84FF]/[0.12]"
+                          : "border-black/[0.08] dark:border-white/[0.1] bg-white/60 dark:bg-white/[0.04]"
+                      }`}
+                    >
+                      <div
+                        onClick={() => !requiresPass && handleSelectAccount(account)}
+                        className={`flex items-center justify-between ${
+                          !requiresPass ? "cursor-pointer active:scale-[0.99] transition-transform" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="w-11 h-11 relative rounded-full overflow-hidden border border-black/[0.08] dark:border-white/[0.12] bg-[#F2F2F7] dark:bg-[#2C2C2E] flex items-center justify-center shrink-0">
+                            {account.photoURL ? (
+                              <img
+                                src={account.photoURL}
+                                alt={account.displayName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <User className="w-5 h-5 text-[#6E6E73] dark:text-[#98989D]" />
+                            )}
+                            {account.provider === "google" && (
+                              <div className="absolute inset-0 bg-white/55 backdrop-blur-[2px] flex items-center justify-center">
+                                <GoogleIcon className="w-5 h-5" />
+                              </div>
+                            )}
+                            {account.provider === "facebook" && (
+                              <div className="absolute inset-0 bg-white/55 backdrop-blur-[2px] flex items-center justify-center">
+                                <FacebookIcon className="w-5 h-5" />
+                              </div>
+                            )}
+                            {account.provider === "apple" && (
+                              <div className="absolute inset-0 bg-white/55 backdrop-blur-[2px] flex items-center justify-center">
+                                <AppleIcon className="w-5 h-5" />
+                              </div>
+                            )}
                           </div>
-                       )
-                   })}
-               </div>
-               
-               <button 
-                  onClick={handleAddAccount}
-                  className="w-full flex items-center justify-center space-x-2 p-4 mt-4 bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-medium"
-               >
-                  <Plus className="w-5 h-5" />
-                  <span>Add another account</span>
-               </button>
-               
-               {currentUid && (
-                 <button 
-                    onClick={() => {
-                       auth.signOut();
-                       localStorage.removeItem("f_cart");
-                       onClose();
-                       navigate("/");
-                    }}
-                    className="w-full flex items-center justify-center space-x-2 p-4 mt-2 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors rounded-2xl text-red-600 dark:text-red-400 font-medium"
-                 >
-                    <span>Log out</span>
-                 </button>
-               )}
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-[15px] truncate">
+                              {account.displayName}
+                            </p>
+                            <p className="text-xs text-[#6E6E73] dark:text-[#98989D] truncate max-w-[180px]">
+                              {account.email.endsWith("@phone.deepshop.top") ||
+                              account.email.endsWith("@phone.vibegadget.com")
+                                ? account.email.split("@")[0]
+                                : account.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        {isCurrent ? (
+                          <div className="w-7 h-7 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] flex items-center justify-center shrink-0">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        ) : (
+                          !requiresPass && (
+                            <div className="w-8 h-8 rounded-full bg-black/[0.05] dark:bg-white/[0.08] flex items-center justify-center shrink-0">
+                              {isLoading ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-[#6E6E73]" />
+                              ) : (
+                                <ArrowRight className="w-4 h-4 text-[#6E6E73] dark:text-[#98989D]" />
+                              )}
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      <AnimatePresence>
+                        {requiresPass && (
+                          <motion.div
+                            initial={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1, marginTop: 14 }}
+                            exit={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0, marginTop: 0 }}
+                            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-3 bg-[#FF3B30]/10 border border-[#FF3B30]/20 rounded-xl mb-3 text-xs text-[#D70015] dark:text-[#FF453A]">
+                              Password might have been changed{" "}
+                              {account.lastPasswordChange
+                                ? new Date(account.lastPasswordChange).toLocaleDateString()
+                                : "recently"}
+                              . Please enter new password.
+                            </div>
+                            <div className="flex gap-2">
+                              <input
+                                type="password"
+                                autoFocus
+                                placeholder="Enter password"
+                                className="ds-apple-input flex-1 rounded-xl px-3.5 py-2.5 text-sm outline-none"
+                                value={manualPassword}
+                                onChange={(e) => setManualPassword(e.target.value)}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSelectAccount(account)}
+                                disabled={isLoading || !manualPassword}
+                                className="ds-apple-btn-primary px-4 rounded-xl text-sm font-semibold flex items-center justify-center disabled:opacity-50 cursor-pointer"
+                              >
+                                {isLoading ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  "Sign In"
+                                )}
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddAccount}
+                className="w-full flex items-center justify-center gap-2 p-3.5 mt-4 bg-[#F2F2F7] dark:bg-[#2C2C2E] hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C] active:scale-[0.98] transition-all rounded-2xl text-[#1D1D1F] dark:text-[#F5F5F7] text-sm font-semibold cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Another Account</span>
+              </button>
+
+              {currentUid && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    auth.signOut();
+                    localStorage.removeItem("f_cart");
+                    onClose();
+                    navigate("/");
+                  }}
+                  className="w-full flex items-center justify-center gap-2 p-3.5 mt-2 bg-[#FF3B30]/10 hover:bg-[#FF3B30]/15 active:scale-[0.98] transition-all rounded-2xl text-[#D70015] dark:text-[#FF453A] text-sm font-semibold cursor-pointer"
+                >
+                  <span>Log out</span>
+                </button>
+              )}
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

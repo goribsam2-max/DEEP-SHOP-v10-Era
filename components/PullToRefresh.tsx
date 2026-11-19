@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
+import { triggerHaptic } from '../lib/haptics';
+import { isAppleShoppingRoute, rubberbandOffset } from '../lib/shoppingRoute';
 
 export const PullToRefresh: React.FC<{
   children: React.ReactNode;
@@ -8,6 +10,7 @@ export const PullToRefresh: React.FC<{
 }> = ({ children, onRefresh }) => {
   const location = useLocation();
   const isMessagesRoute = location.pathname.startsWith('/messages');
+  const isAppleShop = isAppleShoppingRoute(location.pathname);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
@@ -18,23 +21,31 @@ export const PullToRefresh: React.FC<{
   const startXRef = useRef(0);
   const pullingRef = useRef(false);
   const refreshingRef = useRef(false);
+  const thresholdHapticFiredRef = useRef(false);
   const pullHeightRef = useRef(0);
   const rafIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     const maxPull = 108;
     const triggerHeight = 64;
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     const applyIndicatorTransform = (y: number, animate: boolean) => {
       const el = indicatorRef.current;
       const iconEl = iconWrapRef.current;
       if (!el) return;
       el.style.transition = animate
-        ? 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease'
+        ? prefersReducedMotion
+          ? 'opacity 160ms ease'
+          : 'transform 340ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease'
         : 'none';
-      el.style.transform = `translate3d(0, ${y}px, 0)`;
+      el.style.transform = prefersReducedMotion
+        ? `translate3d(0, ${y > 0 ? 52 : 0}px, 0)`
+        : `translate3d(0, ${y}px, 0)`;
       el.style.opacity = y > 4 ? String(Math.min(1, y / 36)) : '0';
-      if (iconEl && !refreshingRef.current) {
+      if (iconEl && !refreshingRef.current && !prefersReducedMotion) {
         iconEl.style.transform = `rotate(${Math.round(y * 3.2)}deg)`;
       }
     };
@@ -75,6 +86,7 @@ export const PullToRefresh: React.FC<{
       startYRef.current = e.touches[0].clientY;
       startXRef.current = e.touches[0].clientX;
       pullHeightRef.current = 0;
+      thresholdHapticFiredRef.current = false;
       pullingRef.current = true;
     };
 
@@ -103,8 +115,17 @@ export const PullToRefresh: React.FC<{
 
       if (dy < 12) return;
 
-      const damped = Math.min((dy - 12) * 0.45, maxPull);
+      const rawPull = dy - 12;
+      const damped = isAppleShoppingRoute(window.location.pathname)
+        ? Math.min(rubberbandOffset(rawPull, maxPull * 1.35, 0.52), maxPull)
+        : Math.min(rawPull * 0.45, maxPull);
       pullHeightRef.current = damped;
+      if (damped >= triggerHeight && !thresholdHapticFiredRef.current) {
+        thresholdHapticFiredRef.current = true;
+        if (isAppleShoppingRoute(window.location.pathname)) {
+          triggerHaptic('selection');
+        }
+      }
       if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = requestAnimationFrame(() => {
         applyIndicatorTransform(damped, false);
@@ -118,6 +139,9 @@ export const PullToRefresh: React.FC<{
       if (pullHeightRef.current >= triggerHeight) {
         refreshingRef.current = true;
         setIsRefreshing(true);
+        if (isAppleShoppingRoute(window.location.pathname)) {
+          triggerHaptic('light');
+        }
         if (iconWrapRef.current) {
           iconWrapRef.current.style.transform = '';
         }
@@ -166,11 +190,21 @@ export const PullToRefresh: React.FC<{
         className="fixed left-0 right-0 flex justify-center items-center z-[99999] pointer-events-none opacity-0 will-change-transform"
         style={{ height: '50px', top: '-54px', transform: 'translate3d(0, 0, 0)' }}
       >
-        <div className="bg-white dark:bg-zinc-800 shadow-lg border border-zinc-200/70 dark:border-zinc-700/70 rounded-full w-11 h-11 flex items-center justify-center">
+        <div
+          className={
+            isAppleShop
+              ? 'ds-apple-popover w-11 h-11 rounded-full flex items-center justify-center'
+              : 'bg-white dark:bg-zinc-800 shadow-lg border border-zinc-200/70 dark:border-zinc-700/70 rounded-full w-11 h-11 flex items-center justify-center'
+          }
+        >
           <div ref={iconWrapRef} className="flex items-center justify-center">
             <RefreshCw
               size={20}
-              className={`text-[#1877F2] ${isRefreshing ? 'animate-spin' : ''}`}
+              className={`${
+                isAppleShop
+                  ? 'text-[#0071E3] dark:text-[#0A84FF]'
+                  : 'text-[#1877F2]'
+              } ${isRefreshing ? 'animate-spin' : ''}`}
             />
           </div>
         </div>

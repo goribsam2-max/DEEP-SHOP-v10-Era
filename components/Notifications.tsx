@@ -1,10 +1,33 @@
 import React, { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { gooeyToast, GooeyToaster } from 'goey-toast';
 import 'goey-toast/styles.css';
 import { LiquidGlassPopup } from './ui/liquid-glass-popup';
 import { showIsland } from './ui/dynamic-island';
+import { APPLE_SPRING_SNAPPY } from '../lib/shoppingRoute';
+import { triggerHaptic } from '../lib/haptics';
 
 type ToastType = 'success' | 'error' | 'info';
+
+function cleanErrorMessage(raw: string): { title: string; description?: string } {
+  const msg = String(raw || '').trim();
+  if (!msg) return { title: 'Something went wrong' };
+  const stripped = msg
+    .replace(/^Firebase:\s*Error\s*\([^)]+\)\.?\s*/i, '')
+    .replace(/^FirebaseError:\s*/i, '')
+    .replace(/\(auth\/[^)]+\)\.?/gi, '')
+    .trim();
+  if (/network-request-failed|offline/i.test(msg)) {
+    return { title: 'Network unavailable', description: 'Check your connection and try again.' };
+  }
+  if (/permission-denied/i.test(msg)) {
+    return { title: 'Action not allowed', description: 'Please sign in or verify access.' };
+  }
+  if (/wrong-password|invalid-credential/i.test(msg)) {
+    return { title: 'Incorrect credentials', description: 'Check your email and password.' };
+  }
+  return { title: stripped || 'Something went wrong' };
+}
 
 interface ConfirmOptions {
   title: string;
@@ -83,6 +106,7 @@ export function notify(
 }
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const prefersReducedMotion = useReducedMotion();
   const [confirmModal, setConfirmModal] = useState<ConfirmOptions | null>(null);
   const [alertModal, setAlertModal] = useState<AlertOptions | null>(null);
   const [promptModal, setPromptModal] = useState<PromptOptions | null>(null);
@@ -125,12 +149,6 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
 
-      const config = {
-        preset: 'bouncy' as const,
-        showProgress: true,
-        description: finalDesc || undefined,
-      };
-
       if (type === 'success') {
         if (finalTitle.toLowerCase().includes('cart')) {
           showIsland({ state: 'cart_add', title: finalTitle, subtitle: finalDesc });
@@ -138,13 +156,19 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           showIsland({ state: 'success', title: finalTitle, subtitle: finalDesc });
         }
         return;
+      } else if (type === 'error') {
+        showIsland({ state: 'error', title: finalTitle, subtitle: finalDesc, duration: 4800 });
+        return;
       } else if (type === 'info') {
         showIsland({ state: 'notification', title: finalTitle, subtitle: finalDesc });
         return;
       }
 
-      if (type === 'error') gooeyToast.error(finalTitle, config);
-      else gooeyToast.info(finalTitle, config);
+      gooeyToast.info(finalTitle, {
+        preset: 'bouncy' as const,
+        showProgress: true,
+        description: finalDesc || undefined,
+      });
     },
     []
   );
@@ -257,7 +281,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       >
         <input
           type="text"
-          className="ds-liquid-input w-full px-4 py-3.5 rounded-2xl text-[15px] outline-none focus:ring-2 focus:ring-[#0074f8]/50 transition"
+          className="ds-liquid-input ds-apple-input w-full px-4 py-3.5 rounded-2xl text-[15px] outline-none transition"
           placeholder={promptModal?.placeholder || "Enter details..."}
           value={promptVal}
           onChange={(e) => setPromptVal(e.target.value)}
@@ -281,26 +305,34 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }}
       />
 
-      {/* Dark Frosted Glass Undo Snackbar matching IMG_5384 */}
-      {undoBar && (
-        <div className="fixed bottom-[74px] inset-x-3.5 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-[440px] z-[210000] rounded-[18px] bg-zinc-900/95 backdrop-blur-2xl border border-white/15 px-4 py-3.5 shadow-2xl flex items-center justify-between gap-4 text-white animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <span className="text-sm font-medium text-zinc-100 truncate">
-            {undoBar.message}
-          </span>
-          <button
-            type="button"
-            onClick={async () => {
-              const fn = undoBar.onUndo;
-              setUndoBar(null);
-              if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-              if (fn) await fn();
-            }}
-            className="text-sm font-bold text-white hover:text-blue-400 active:scale-95 transition-all shrink-0 px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20"
+      <AnimatePresence>
+        {undoBar && (
+          <motion.div
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 18, scale: 0.96 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.96 }}
+            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+            className="ds-apple-portal fixed bottom-[76px] inset-x-3.5 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-[440px] z-[210000] rounded-[22px] bg-[#1C1C1E]/95 backdrop-blur-2xl border border-white/15 px-4 py-3 shadow-2xl flex items-center justify-between gap-4 text-white"
           >
-            {undoBar.undoLabel || 'Undo'}
-          </button>
-        </div>
-      )}
+            <span className="text-[14px] font-medium text-[#F5F5F7] truncate">
+              {undoBar.message}
+            </span>
+            <button
+              type="button"
+              onPointerDown={() => triggerHaptic('light')}
+              onClick={async () => {
+                const fn = undoBar.onUndo;
+                setUndoBar(null);
+                if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+                if (fn) await fn();
+              }}
+              className="text-[13.5px] font-semibold text-[#0A84FF] hover:opacity-85 active:scale-95 transition-all shrink-0 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 cursor-pointer whitespace-nowrap"
+            >
+              {undoBar.undoLabel || 'Undo'}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ToastContext.Provider>
   );
 };

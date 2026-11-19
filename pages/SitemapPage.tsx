@@ -1,10 +1,10 @@
 import React from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import SEO from "../components/SEO";
-import Icon from "../components/Icon";
+import { ArrowUpRight } from "lucide-react";
+import { triggerHaptic } from "../lib/haptics";
 
 const SitemapPage: React.FC = () => {
-  const navigate = useNavigate();
 
   const sections = [
     {
@@ -43,33 +43,43 @@ const SitemapPage: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 md:p-12 animate-fade-in bg-zinc-50 dark:bg-zinc-800 max-w-4xl mx-auto min-h-screen">
+    <div className="ds-apple-shop-canvas bg-[#F5F5F7] dark:bg-black min-h-screen pb-24">
       <SEO
         title="Site Map"
         description="Navigate through all pages of DEEP SHOP."
       />
-      
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-        {sections.map((section, idx) => (
-          <div key={idx}>
-            <h2 className="text-lg font-semibold  tracking-normal text-zinc-900 dark:text-zinc-100 mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-2">
-              {section.title}
-            </h2>
-            <ul className="space-y-4">
-              {section.links.map((link, i) => (
-                <li key={i}>
-                  <Link
-                    to={link.path}
-                    className="text-zinc-600 dark:text-zinc-400 hover:text-black dark:text-white font-bold transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
+        <div className="mb-6">
+          <p className="ds-apple-eyebrow mb-1.5">Directory</p>
+          <h1 className="ds-apple-display text-[24px] sm:text-[30px] leading-tight font-semibold text-[#1D1D1F] dark:text-white">
+            Site Map
+          </h1>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {sections.map((section, idx) => (
+            <div key={idx} className="ds-apple-surface rounded-[22px] p-6">
+              <h2 className="text-base font-semibold tracking-[-0.015em] text-[#1D1D1F] dark:text-white mb-4 pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
+                {section.title}
+              </h2>
+              <ul className="space-y-3">
+                {section.links.map((link, i) => (
+                  <li key={i}>
+                    <Link
+                      to={link.path}
+                      onClick={() => triggerHaptic("selection")}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0071E3] dark:text-[#0A84FF] hover:underline transition-colors"
+                    >
+                      <span>{link.label}</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 opacity-75" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

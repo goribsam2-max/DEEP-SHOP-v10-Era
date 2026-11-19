@@ -1,11 +1,11 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Card, CardContent } from "../components/ui/card";
-import { ChevronLeft, Globe } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Check, Globe } from "lucide-react";
 import { useRegion } from "../components/RegionContext";
 import { auth, db } from "../firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { getRegionFlagSvg } from "../components/RegionFlags";
+import { triggerHaptic } from "../lib/haptics";
 
 const regions = [
   { id: "BD", name: "Bangladesh", currency: "BDT (৳)" },
@@ -18,61 +18,71 @@ export default function RegionSelect() {
   const { region, setRegion } = useRegion();
 
   const handleSelect = (rId: "BD" | "IN" | "PK") => {
+    triggerHaptic("selection");
     setRegion(rId);
-    
-    // Attempt to update firestore if user is logged in
+
     if (auth.currentUser) {
       updateDoc(doc(db, "users", auth.currentUser.uid), {
-        region: rId
+        region: rId,
       }).catch((err) => {
         console.error("Failed to update user region in DB:", err);
       });
     }
-    
-    // Always navigate to home, avoid going back to signup/login screens
-    navigate('/');
+
+    navigate("/");
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-inter py-8 px-4">
-      <div className="max-w-md mx-auto space-y-6 pt-10">
-        <div className="flex items-center justify-center pb-4 border-b border-zinc-200 dark:border-zinc-800">
-          <div className="font-bold flex items-center gap-2 text-zinc-900 dark:text-zinc-100 text-xl">
-            <Globe className="w-6 h-6" /> Select Your Region
+    <div className="ds-apple-shop-canvas min-h-screen pb-28">
+      <div className="max-w-md mx-auto px-4 pt-8 space-y-6">
+        <div className="text-center space-y-2">
+          <div className="mx-auto w-12 h-12 rounded-[16px] bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center">
+            <Globe className="w-6 h-6" />
           </div>
-        </div>
-
-        <div className="space-y-4 pt-4">
-          <p className="text-sm font-medium text-zinc-500 text-center">
+          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+            Choose Your Country
+          </h1>
+          <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D]">
             Select your region to adjust currency and shipping policies.
           </p>
+        </div>
 
-          <div className="space-y-3">
-            {regions.map((r) => (
-              <Card
+        <div className="ds-apple-surface rounded-[22px] overflow-hidden divide-y divide-black/[0.06] dark:divide-white/[0.06]">
+          {regions.map((r) => {
+            const active = region === r.id;
+            return (
+              <button
                 key={r.id}
-                onClick={() => handleSelect(r.id as any)}
-                className={`cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors ${region === r.id ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-100 dark:bg-zinc-800' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900'}`}
+                type="button"
+                onClick={() => handleSelect(r.id as "BD" | "IN" | "PK")}
+                className={`w-full p-4 sm:p-5 flex items-center justify-between text-left transition-colors active:bg-black/[0.03] dark:active:bg-white/[0.04] ${
+                  active ? "bg-[#0071E3]/[0.04] dark:bg-[#0A84FF]/[0.08]" : ""
+                }`}
               >
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-6 overflow-hidden flex items-center justify-center shrink-0">
-                      {getRegionFlagSvg(r.id)}
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-6 overflow-hidden rounded-[4px] flex items-center justify-center shrink-0">
+                    {getRegionFlagSvg(r.id)}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-[16px] text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {r.name}
                     </div>
-                    <div>
-                      <div className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{r.name}</div>
-                      <div className="text-xs text-zinc-500">Currency: {r.currency}</div>
+                    <div className="text-[12px] text-[#6E6E73] dark:text-[#98989D] tabular-nums">
+                      Currency: {r.currency}
                     </div>
                   </div>
-                  {region === r.id && (
-                    <div className="w-4 h-4 rounded-full bg-zinc-900 dark:bg-zinc-100" />
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+                {active && (
+                  <div className="w-6 h-6 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
+

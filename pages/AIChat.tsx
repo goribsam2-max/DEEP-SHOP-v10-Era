@@ -2,8 +2,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { useNotify } from "../components/Notifications";
-import { motion, AnimatePresence } from "framer-motion";
-import Icon from "../components/Icon";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { ArrowUp, Lightbulb, Mic, Phone, Square } from "lucide-react";
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 interface GenAIBlob {
   data: string;
@@ -13,18 +15,19 @@ interface GenAIBlob {
 const AIChat: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
   const [messages, setMessages] = useState<
     { role: "user" | "bot"; text: string; isThinking?: boolean }[]
   >([
     {
       role: "bot",
-      text: "Hello! I am the Vibe Assistant. How can I help you with our premium border cross phones and mobiles today?",
+      text: "Hello! I am the Deep Shop Assistant. How can I help you with products, orders, or support today?",
     },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(false);
-  const [useThinking, setUseThinking] = useState(true);
+  const [useThinking] = useState(true);
 
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -87,6 +90,7 @@ const AIChat: React.FC = () => {
   };
 
   const startRecording = async () => {
+    triggerHaptic("medium");
     if (isLiveMode) stopLiveSession();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -104,11 +108,13 @@ const AIChat: React.FC = () => {
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err) {
+      triggerHaptic("error");
       notify("Microphone access denied", "error");
     }
   };
 
   const stopRecording = () => {
+    triggerHaptic("light");
     mediaRecorderRef.current?.stop();
     setIsRecording(false);
   };
@@ -135,6 +141,7 @@ const AIChat: React.FC = () => {
   };
 
   const startLiveSession = async () => {
+    triggerHaptic("medium");
     if (isRecording) stopRecording();
     setIsLiveMode(true);
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -214,6 +221,7 @@ const AIChat: React.FC = () => {
 
   const handleSendMessage = async () => {
     if (!input.trim() || isTyping) return;
+    triggerHaptic("light");
     const userMessage = input.trim();
     setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
     setInput("");
@@ -247,8 +255,24 @@ const AIChat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#FDFDFD] max-w-7xl mx-auto overflow-hidden shadow-sm relative">
-      
+    <div className="ds-apple-shop-canvas flex flex-col h-[calc(100dvh-56px)] md:h-[calc(100dvh-64px)] relative overflow-hidden">
+      <div className="max-w-3xl w-full mx-auto px-4 sm:px-6 pt-4 pb-2 flex items-center justify-between gap-3 shrink-0">
+        <div className="min-w-0">
+          <p className="ds-apple-eyebrow mb-0.5">Assistant</p>
+          <h1 className="ds-apple-display font-bold text-[20px] sm:text-[22px] leading-tight tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+            Shopping Assistant
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={startLiveSession}
+          aria-label="Start live voice call"
+          className="ds-apple-btn-secondary h-9 px-3.5 rounded-full flex items-center gap-1.5 text-xs font-semibold text-[#0071E3] dark:text-[#0A84FF] whitespace-nowrap shrink-0 active:scale-95 transition-transform cursor-pointer"
+        >
+          <Phone className="w-3.5 h-3.5 shrink-0" />
+          <span>Voice Call</span>
+        </button>
+      </div>
 
       <AnimatePresence>
         {isLiveMode && (
@@ -256,21 +280,22 @@ const AIChat: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-zinc-900/95 z-[60] flex flex-col items-center justify-center p-10 backdrop-blur-3xl"
+            transition={shouldReduceMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+            className="ds-apple-portal fixed inset-0 bg-[#1C1C1E]/95 z-[60] flex flex-col items-center justify-center p-10 backdrop-blur-2xl"
           >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 4 }}
-              className="w-48 h-48 rounded-full border border-white/10 flex items-center justify-center glass-dark shadow-sm"
-            >
-              <Icon name="microphone" className="text-lg text-white" />
-            </motion.div>
-            <h3 className="text-white text-xs font-semibold mt-12  tracking-normal animate-pulse">
-              I am listening...
+            <div className="w-36 h-36 rounded-full bg-white/10 border border-white/15 flex items-center justify-center">
+              <Mic className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-white text-[15px] font-medium mt-8">
+              Listening...
             </h3>
             <button
-              onClick={stopLiveSession}
-              className="mt-16 px-12 py-4 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full font-semibold text-[10px] tracking-normal  shadow-sm"
+              type="button"
+              onClick={() => {
+                triggerHaptic("medium");
+                stopLiveSession();
+              }}
+              className="mt-10 px-8 py-3 bg-[#FF3B30] text-white rounded-full font-semibold text-[14px] whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
             >
               End Voice Call
             </button>
@@ -278,23 +303,28 @@ const AIChat: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 overflow-y-auto p-6 md:p-12 space-y-8 no-scrollbar bg-zinc-50 dark:bg-zinc-800/10">
-        <div className="max-w-4xl mx-auto space-y-8">
+      <div className="flex-1 overflow-y-auto px-4 py-6 no-scrollbar">
+        <div className="max-w-3xl mx-auto space-y-3.5">
           <AnimatePresence initial={false}>
             {messages.map((msg, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 10 }}
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={shouldReduceMotion ? { duration: 0.15 } : APPLE_SPRING_SNAPPY}
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] px-6 py-4 rounded-full text-sm font-medium shadow-sm leading-relaxed ${msg.role === "user" ? "bg-zinc-900 text-white rounded-tr-none" : "glass text-zinc-900 dark:text-zinc-100 rounded-tl-none border border-zinc-100 dark:border-zinc-800"}`}
+                  className={`max-w-[82%] px-4 py-3 text-[14px] leading-relaxed ${
+                    msg.role === "user"
+                      ? "bg-[#0071E3] dark:bg-[#0A84FF] text-white rounded-[20px] rounded-br-[6px]"
+                      : "ds-apple-surface text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[20px] rounded-bl-[6px]"
+                  }`}
                 >
                   {msg.isThinking && msg.role === "bot" && (
-                    <div className="flex items-center space-x-2 mb-2 opacity-40 text-[8px] font-semibold  tracking-normal">
-                      <Icon name="lightbulb" />
-                      <span>Reasoning</span>
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-medium text-[#6E6E73] dark:text-[#98989D]">
+                      <Lightbulb className="w-3 h-3" />
+                      <span>Assistant</span>
                     </div>
                   )}
                   {msg.text}
@@ -302,55 +332,53 @@ const AIChat: React.FC = () => {
               </motion.div>
             ))}
           </AnimatePresence>
+
           {isTyping && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="px-6 py-3 rounded-full bg-zinc-100 dark:bg-zinc-800 w-fit text-[9px] font-semibold  tracking-normal text-zinc-400"
-            >
-              Vibe Assistant is typing...
-            </motion.div>
+            <div className="inline-flex px-4 py-2.5 rounded-[18px] ds-apple-surface text-[13px] text-[#6E6E73] dark:text-[#98989D]">
+              Typing...
+            </div>
           )}
         </div>
         <div ref={scrollRef} />
       </div>
 
-      <div className="p-6 md:p-10 bg-zinc-50 dark:bg-zinc-800 border-t border-zinc-100 dark:border-zinc-800">
-        <div className="flex items-end space-x-4 max-w-4xl mx-auto">
-          <div className="flex space-x-2">
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={startLiveSession}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-sm ${isLiveMode ? "bg-red-500 text-white" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-400"}`}
+      <div className="ds-apple-topbar border-t border-black/[0.06] dark:border-white/[0.08] px-4 py-3 pb-safe">
+        <div className="flex items-center gap-2.5 max-w-3xl mx-auto">
+          <button
+            type="button"
+            onClick={isRecording ? stopRecording : startRecording}
+            aria-label={isRecording ? "Stop recording" : "Start voice input"}
+            className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-transform ${
+              isRecording
+                ? "bg-[#FF3B30] text-white"
+                : "ds-apple-icon-btn text-[#6E6E73] dark:text-[#98989D]"
+            }`}
+          >
+            {isRecording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+
+          <div className="flex-1 flex items-center ds-apple-input rounded-full pl-4 pr-1.5 py-1">
+            <input
+              type="text"
+              placeholder="Message..."
+              className="flex-1 bg-transparent py-2 outline-none text-[14px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#8E8E93]"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+            />
+            <button
+              type="button"
+              onClick={handleSendMessage}
+              disabled={!input.trim() || isTyping}
+              aria-label="Send message"
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95 ${
+                input.trim()
+                  ? "bg-[#0071E3] dark:bg-[#0A84FF] text-white"
+                  : "bg-[#E8E8ED] dark:bg-[#3A3A3C] text-[#8E8E93]"
+              }`}
             >
-              <Icon name="phone-alt" />
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-sm ${isRecording ? "bg-red-500 text-white animate-pulse" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-400"}`}
-            >
-              <Icon name={isRecording ? "stop" : "microphone"} />
-            </motion.button>
-          </div>
-          <div className="flex-1 flex flex-col space-y-3">
-            <div className="flex items-center bg-zinc-50 dark:bg-zinc-800 rounded-full p-1.5 border border-zinc-100 dark:border-zinc-800 shadow-inner">
-              <input
-                type="text"
-                placeholder="Type a message..."
-                className="flex-1 bg-transparent px-5 py-3 outline-none text-sm font-bold"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              />
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={handleSendMessage}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${input.trim() ? "bg-zinc-900 text-white" : "bg-zinc-200 text-zinc-400"}`}
-              >
-                <Icon name="arrow-up" className="text-xs" />
-              </motion.button>
-            </div>
+              <ArrowUp className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -359,3 +387,4 @@ const AIChat: React.FC = () => {
 };
 
 export default AIChat;
+

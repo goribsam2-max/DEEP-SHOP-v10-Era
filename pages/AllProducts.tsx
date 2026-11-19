@@ -1,13 +1,20 @@
 import { formatPrice } from "@/lib/utils";
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { Product } from "../types";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ProductCard } from "../components/ui/ProductCard";
 import SEO from "../components/SEO";
 import { ProductSkeleton } from "../components/Skeletons";
+import { triggerHaptic } from "../lib/haptics";
+import {
+  APPLE_SPRING_DEFAULT,
+  APPLE_SPRING_SNAPPY,
+  projectMomentum,
+} from "../lib/shoppingRoute";
 import {
   Search,
   SlidersHorizontal,
@@ -265,6 +272,7 @@ function matchesCategoryTab(p: Product, tab: string): boolean {
 const AllProducts: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const shouldReduceMotion = useReducedMotion();
   const searchParams = new URLSearchParams(location.search);
   const initialCategory =
     searchParams.get("category") || (location.state as any)?.category || "All";
@@ -287,6 +295,7 @@ const AllProducts: React.FC = () => {
   }, [location.search]);
 
   const handleTabChange = (tab: string) => {
+    triggerHaptic("selection");
     setActiveTab(tab);
     navigate(
       `/all-products${tab === "All" ? "" : `?category=${encodeURIComponent(tab)}`}`,
@@ -412,6 +421,7 @@ const AllProducts: React.FC = () => {
     offersOnly;
 
   const resetAllFilters = () => {
+    triggerHaptic("light");
     handleTabChange("All");
     setSearchQuery("");
     setSortBy("featured");
@@ -557,19 +567,25 @@ const AllProducts: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => setMobileFilterSheetOpen(true)}
-              className="ds-liquid-dock h-10 px-3.5 rounded-2xl flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap shrink-0"
+              onClick={() => {
+                triggerHaptic("light");
+                setMobileFilterSheetOpen(true);
+              }}
+              className="ds-liquid-dock h-10 px-3.5 rounded-2xl flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.97]"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
               <span>ফিল্টার</span>
             </button>
 
             <div className="ds-liquid-dock h-10 p-1 rounded-2xl flex items-center shrink-0">
               <button
                 type="button"
-                onClick={() => setViewMode("grid")}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setViewMode("grid");
+                }}
                 aria-label="Grid view"
-                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
                   viewMode === "grid"
                     ? "ds-liquid-dock-pill text-slate-900 dark:text-white"
                     : "text-slate-500 dark:text-slate-400"
@@ -579,9 +595,12 @@ const AllProducts: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode("list")}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setViewMode("list");
+                }}
                 aria-label="Detailed list view"
-                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
                   viewMode === "list"
                     ? "ds-liquid-dock-pill text-slate-900 dark:text-white"
                     : "text-slate-500 dark:text-slate-400"
@@ -831,14 +850,17 @@ const AllProducts: React.FC = () => {
                   <span className="whitespace-nowrap">সাজান:</span>
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    onChange={(e) => {
+                      triggerHaptic("selection");
+                      setSortBy(e.target.value as SortOption);
+                    }}
                     className="ds-liquid-input px-3.5 py-2 text-xs font-semibold outline-none cursor-pointer"
                   >
                     {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
                       <option
                         key={key}
                         value={key}
-                        className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                        className="bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7]"
                       >
                         {SORT_LABELS[key]}
                       </option>
@@ -849,7 +871,10 @@ const AllProducts: React.FC = () => {
                 <div className="ds-liquid-dock p-1 rounded-2xl flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => setViewMode("grid")}
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setViewMode("grid");
+                    }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer ${
                       viewMode === "grid"
                         ? "ds-liquid-dock-pill text-slate-900 dark:text-white"
@@ -861,7 +886,10 @@ const AllProducts: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setViewMode("list")}
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setViewMode("list");
+                    }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer ${
                       viewMode === "list"
                         ? "ds-liquid-dock-pill text-slate-900 dark:text-white"
@@ -1008,145 +1036,189 @@ const AllProducts: React.FC = () => {
       </div>
 
       {/* ====================================================================
-          MOBILE FILTER & SORT BOTTOM SHEET (< lg)
+          MOBILE FILTER & SORT BOTTOM SHEET (< lg) — Portal + Drag/Momentum Dismiss
           ==================================================================== */}
-      <AnimatePresence>
-        {mobileFilterSheetOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setMobileFilterSheetOpen(false)}
-            className="lg:hidden fixed inset-0 z-50 ds-liquid-backdrop flex items-end justify-center p-3"
-          >
-            <motion.div
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 40, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 360, damping: 30 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md ds-liquid-panel p-5 space-y-5"
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-900/[0.07] dark:border-white/[0.08]">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  সর্টিং ও ফিল্টার
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setMobileFilterSheetOpen(false)}
-                  aria-label="Close filters"
-                  className="w-8 h-8 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-600 dark:text-slate-300"
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {mobileFilterSheetOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                onClick={() => {
+                  triggerHaptic("light");
+                  setMobileFilterSheetOpen(false);
+                }}
+                className="ds-apple-portal ds-apple-backdrop lg:hidden fixed inset-0 z-[1000] flex items-end justify-center p-2 sm:p-3"
+              >
+                <motion.div
+                  initial={shouldReduceMotion ? { opacity: 0 } : { y: "100%" }}
+                  animate={shouldReduceMotion ? { opacity: 1 } : { y: 0 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { y: "100%" }}
+                  transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+                  drag={shouldReduceMotion ? false : "y"}
+                  dragConstraints={{ top: 0 }}
+                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  onDragEnd={(_, info) => {
+                    const projected = info.offset.y + projectMomentum(info.velocity.y, 0.99);
+                    if (projected > 110) {
+                      triggerHaptic("light");
+                      setMobileFilterSheetOpen(false);
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="ds-apple-sheet w-full max-w-md rounded-t-[26px] rounded-b-[24px] p-5 pb-[calc(20px+env(safe-area-inset-bottom))] space-y-5 shadow-2xl"
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+                  {/* Grabber */}
+                  <div className="flex justify-center -mt-1 pb-1" aria-hidden="true">
+                    <div className="w-9 h-1 rounded-full bg-black/[0.16] dark:bg-white/[0.22]" />
+                  </div>
 
-              <div className="space-y-2">
-                <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  পণ্য সাজানোর ক্রম
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
+                  <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
+                    <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                      সর্টিং ও ফিল্টার
+                    </h3>
                     <button
-                      key={key}
                       type="button"
-                      onClick={() => setSortBy(key)}
-                      className={`px-3 py-2.5 text-xs font-semibold text-left transition-all whitespace-nowrap ${
-                        sortBy === key
-                          ? "ds-liquid-subpanel-active text-slate-900 dark:text-white"
-                          : "ds-liquid-subpanel text-slate-600 dark:text-slate-300"
-                      }`}
+                      onClick={() => {
+                        triggerHaptic("light");
+                        setMobileFilterSheetOpen(false);
+                      }}
+                      aria-label="Close filters"
+                      className="ds-apple-icon-btn w-8 h-8 rounded-full flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] cursor-pointer active:scale-95"
                     >
-                      {SORT_LABELS[key]}
+                      <X className="w-4 h-4" />
                     </button>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              <div className="space-y-2.5 pt-2 border-t border-slate-900/[0.07] dark:border-white/[0.08]">
-                <label className="flex items-center justify-between py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
-                  <span>শুধু স্টকে থাকা পণ্য দেখান</span>
-                  <input
-                    type="checkbox"
-                    checked={inStockOnly}
-                    onChange={(e) => setInStockOnly(e.target.checked)}
-                    className="w-4 h-4 accent-sky-600 rounded"
-                  />
-                </label>
+                  <div className="space-y-2">
+                    <div className="text-xs font-bold text-[#6E6E73] dark:text-[#98989D]">
+                      পণ্য সাজানোর ক্রম
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic("selection");
+                            setSortBy(key);
+                          }}
+                          className={`px-3 py-2.5 rounded-2xl text-xs font-semibold text-left transition-all whitespace-nowrap cursor-pointer active:scale-[0.97] border ${
+                            sortBy === key
+                              ? "bg-[#0071E3]/[0.08] dark:bg-[#0A84FF]/[0.15] border-[#0071E3]/40 dark:border-[#0A84FF]/45 text-[#0071E3] dark:text-[#0A84FF]"
+                              : "bg-[#F5F5F7] dark:bg-[#2C2C2E] border-black/[0.05] dark:border-white/[0.08] text-[#1D1D1F] dark:text-[#F5F5F7]"
+                          }`}
+                        >
+                          {SORT_LABELS[key]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                <label className="flex items-center justify-between py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
-                  <span>শুধু স্পেশাল অফার পণ্য দেখান</span>
-                  <input
-                    type="checkbox"
-                    checked={offersOnly}
-                    onChange={(e) => setOffersOnly(e.target.checked)}
-                    className="w-4 h-4 accent-sky-600 rounded"
-                  />
-                </label>
-              </div>
+                  <div className="space-y-2.5 pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
+                    <label className="flex items-center justify-between py-1 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] cursor-pointer">
+                      <span>শুধু স্টকে থাকা পণ্য দেখান</span>
+                      <input
+                        type="checkbox"
+                        checked={inStockOnly}
+                        onChange={(e) => {
+                          triggerHaptic("toggle");
+                          setInStockOnly(e.target.checked);
+                        }}
+                        className="w-4 h-4 accent-[#0071E3] dark:accent-[#0A84FF] rounded cursor-pointer"
+                      />
+                    </label>
 
-              <div className="flex items-center gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={resetAllFilters}
-                  className="flex-1 ds-liquid-btn-secondary !min-h-[44px] !text-xs whitespace-nowrap"
-                >
-                  রিসেট করুন
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMobileFilterSheetOpen(false)}
-                  className="flex-1 ds-liquid-btn-primary !min-h-[44px] !text-xs whitespace-nowrap"
-                >
-                  ফলাফল দেখুন ({catalogMetrics.totalCount})
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+                    <label className="flex items-center justify-between py-1 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] cursor-pointer">
+                      <span>শুধু স্পেশাল অফার পণ্য দেখান</span>
+                      <input
+                        type="checkbox"
+                        checked={offersOnly}
+                        onChange={(e) => {
+                          triggerHaptic("toggle");
+                          setOffersOnly(e.target.checked);
+                        }}
+                        className="w-4 h-4 accent-[#0071E3] dark:accent-[#0A84FF] rounded cursor-pointer"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={resetAllFilters}
+                      className="flex-1 ds-apple-btn-secondary !min-h-[44px] !text-xs whitespace-nowrap rounded-full cursor-pointer"
+                    >
+                      রিসেট করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("light");
+                        setMobileFilterSheetOpen(false);
+                      }}
+                      className="flex-1 ds-apple-btn-primary !min-h-[44px] !text-xs whitespace-nowrap rounded-full cursor-pointer tabular-nums"
+                    >
+                      ফলাফল দেখুন ({catalogMetrics.totalCount})
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
 
       {/* Quick Preview Modal */}
-      <AnimatePresence>
-        {quickViewImg && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 ds-liquid-backdrop z-[1000] flex items-center justify-center p-6"
-            onClick={() => setQuickViewImg(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.92, opacity: 0, y: 14 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 10 }}
-              transition={{
-                type: "spring",
-                stiffness: 380,
-                damping: 28,
-                mass: 0.85,
-              }}
-              className="relative w-full max-w-lg ds-liquid-glass-popup p-7 flex flex-col items-center gap-5"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="w-full aspect-square ds-liquid-section p-6 flex items-center justify-center overflow-hidden">
-                <img
-                  src={quickViewImg}
-                  className="max-w-full max-h-full object-contain rounded-xl"
-                  alt="Quick preview"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setQuickViewImg(null)}
-                className="w-full ds-liquid-btn-secondary flex items-center justify-center"
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {quickViewImg && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[1000] flex items-center justify-center p-6"
+                onClick={() => {
+                  triggerHaptic("light");
+                  setQuickViewImg(null);
+                }}
               >
-                Close Preview
-              </button>
-            </motion.div>
-          </motion.div>
+                <motion.div
+                  initial={shouldReduceMotion ? { opacity: 0 } : { scale: 0.94, opacity: 0, y: 12 }}
+                  animate={shouldReduceMotion ? { opacity: 1 } : { scale: 1, opacity: 1, y: 0 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0, y: 8 }}
+                  transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_SNAPPY}
+                  className="ds-apple-modal relative w-full max-w-lg p-6 sm:p-7 flex flex-col items-center gap-5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="w-full aspect-square rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] p-6 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={quickViewImg}
+                      className="max-w-full max-h-full object-contain rounded-xl"
+                      alt="Quick preview"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic("light");
+                      setQuickViewImg(null);
+                    }}
+                    className="w-full ds-apple-btn-secondary py-3 rounded-full text-xs font-semibold flex items-center justify-center cursor-pointer"
+                  >
+                    Close Preview
+                  </button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 };

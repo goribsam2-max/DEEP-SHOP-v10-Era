@@ -11,6 +11,7 @@ import {
   DeepShopBottomBrand,
   DeepShopFloatingInput,
 } from "../components/DeepShopAuthShell";
+import { triggerHaptic } from "../lib/haptics";
 
 const NewPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -70,7 +71,7 @@ const NewPassword: React.FC = () => {
     return (
       <DeepShopAuthShell onBack={() => navigate("/signin")}>
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-7 h-7 animate-spin text-[#0064e0]" />
+          <Loader2 className="w-7 h-7 animate-spin text-[#0071E3] dark:text-[#0A84FF]" />
         </div>
       </DeepShopAuthShell>
     );
@@ -90,12 +91,12 @@ const NewPassword: React.FC = () => {
       >
         <form onSubmit={handleReset} className="space-y-4 pt-1">
           <div className="space-y-2">
-            <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+            <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Create a new password
             </h1>
-            <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
+            <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
               Create a new password with at least six letters or numbers for{" "}
-              <span className="font-semibold">{email}</span>.
+              <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{email}</span>.
             </p>
           </div>
 
@@ -118,9 +119,10 @@ const NewPassword: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+            onClick={() => triggerHaptic("medium")}
+            className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
           >
-            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+            {loading && <Loader2 className="w-5 h-5 animate-spin shrink-0" />}
             <span>{loading ? "Saving..." : "Continue"}</span>
           </button>
         </form>

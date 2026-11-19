@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
+import { APPLE_SPRING_DEFAULT, isAppleShoppingRoute } from '../../lib/shoppingRoute';
+import { triggerHaptic } from '../../lib/haptics';
 
 export interface LiquidGlassAction {
   label: React.ReactNode;
@@ -50,6 +52,10 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
   zIndexClass = 'z-[9999]',
   pureGlass = false,
 }) => {
+  const prefersReducedMotion = useReducedMotion();
+  const isAppleShop =
+    typeof window !== 'undefined' && isAppleShoppingRoute(window.location.pathname);
+
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -84,42 +90,49 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
+          transition={{ duration: prefersReducedMotion ? 0.14 : 0.18, ease: 'easeOut' }}
           onClick={() => {
-            if (closeOnBackdrop && onClose) onClose();
+            if (closeOnBackdrop && onClose) {
+              triggerHaptic('light');
+              onClose();
+            }
           }}
-          className={`fixed inset-0 ${zIndexClass} flex items-center justify-center p-4 sm:p-6 ds-liquid-backdrop overflow-y-auto`}
+          className={`fixed inset-0 ${zIndexClass} flex items-center justify-center p-4 sm:p-6 ${
+            isAppleShop ? 'ds-apple-portal ds-apple-backdrop' : 'ds-liquid-backdrop'
+          } overflow-y-auto`}
         >
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ opacity: 0, scale: 0.93, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
-            transition={{
-              type: 'spring',
-              stiffness: 400,
-              damping: 30,
-              mass: 0.85,
-            }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 10 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 6 }}
+            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
             onClick={(e) => e.stopPropagation()}
-            className={`relative w-full ${maxWidthClass} ds-liquid-glass-popup ${
-              pureGlass ? 'ds-modal-pure-glass' : ''
+            className={`relative w-full ${maxWidthClass} ${
+              isAppleShop
+                ? 'ds-apple-portal ds-apple-modal rounded-[26px]'
+                : `ds-liquid-glass-popup ${pureGlass ? 'ds-modal-pure-glass' : ''}`
             } px-6 pt-6 pb-6 my-auto ${className}`}
           >
             {showCloseButton && onClose && (
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic('light')}
                 onClick={onClose}
                 aria-label="Close popup"
-                className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center ds-liquid-btn-secondary !min-h-0 p-0"
+                className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center ds-liquid-btn-secondary !min-h-0 p-0 cursor-pointer active:scale-95 transition-transform"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
 
             {title && (
-              <h2 className={`ds-liquid-popup-title text-left ${showCloseButton ? 'pr-9' : ''}`}>
+              <h2
+                className={`ds-liquid-popup-title ds-apple-display text-left ${
+                  showCloseButton ? 'pr-9' : ''
+                }`}
+              >
                 {title}
               </h2>
             )}
@@ -147,9 +160,12 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
                 {effectivePrimary && (
                   <button
                     type={effectivePrimary.type || 'button'}
+                    onPointerDown={() => triggerHaptic('light')}
                     onClick={effectivePrimary.onClick}
                     disabled={effectivePrimary.disabled || effectivePrimary.loading}
-                    className="w-full px-4 py-2.5 ds-liquid-btn-primary flex items-center justify-center gap-1.5 disabled:opacity-60 text-center leading-tight cursor-pointer"
+                    className={`w-full px-4 py-2.5 min-h-[46px] rounded-full font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 text-center leading-tight cursor-pointer active:scale-[0.97] transition-transform ${
+                      isAppleShop ? 'ds-apple-btn-primary' : 'ds-liquid-btn-primary'
+                    }`}
                   >
                     {effectivePrimary.loading ? (
                       <span className="w-16 h-4 rounded-full ds-skeleton inline-block" />
@@ -162,9 +178,12 @@ export const LiquidGlassPopup: React.FC<LiquidGlassPopupProps> = ({
                 {effectiveSecondary && (
                   <button
                     type={effectiveSecondary.type || 'button'}
+                    onPointerDown={() => triggerHaptic('light')}
                     onClick={effectiveSecondary.onClick}
                     disabled={effectiveSecondary.disabled}
-                    className="w-full px-4 py-2.5 ds-liquid-btn-secondary flex items-center justify-center gap-1.5 disabled:opacity-60 text-center leading-tight cursor-pointer"
+                    className={`w-full px-4 py-2.5 min-h-[46px] rounded-full font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60 text-center leading-tight cursor-pointer active:scale-[0.97] transition-transform ${
+                      isAppleShop ? 'ds-apple-btn-secondary' : 'ds-liquid-btn-secondary'
+                    }`}
                   >
                     {effectiveSecondary.label}
                   </button>

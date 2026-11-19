@@ -35,6 +35,7 @@ import { canAccessSellerDashboard, isSuperAdminOrAdmin } from "../../lib/admin";
 import { uploadToImgbb } from "../../services/imgbb";
 import { useNotify } from "../../components/Notifications";
 import { formatPrice } from "../../lib/utils";
+import { triggerHaptic } from "../../lib/haptics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -276,6 +277,7 @@ const CreateCustomOrder: React.FC = () => {
   }, [customerSearchQuery, allUsersCache]);
 
   const handleSelectCustomerAccount = (u: any) => {
+    triggerHaptic("selection");
     const resolvedUid = u.uid || u.id;
     setSelectedCustomerUser({ ...u, uid: resolvedUid, id: u.id || resolvedUid });
     setCustomerSearchQuery("");
@@ -343,6 +345,7 @@ const CreateCustomOrder: React.FC = () => {
     };
 
     setOrderItems((prev) => [...prev, newItem]);
+    triggerHaptic("success");
     setItemForm({
       selectedProductId: "",
       name: "",
@@ -355,6 +358,7 @@ const CreateCustomOrder: React.FC = () => {
   };
 
   const handleRemoveItem = (idx: number) => {
+    triggerHaptic("light");
     setOrderItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
@@ -393,6 +397,7 @@ const CreateCustomOrder: React.FC = () => {
     }
 
     setSavingOrder(true);
+    triggerHaptic("medium");
     try {
       let resolvedUid =
         selectedCustomerUser?.uid || selectedCustomerUser?.id || "";
@@ -530,38 +535,41 @@ const CreateCustomOrder: React.FC = () => {
 
   if (checkingAccess) {
     return (
-      <div className="min-h-screen orders-v2-shell flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+      <div className="ds-apple-shop-canvas min-h-screen bg-[#F5F5F7] dark:bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0071E3] dark:text-[#0A84FF]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen orders-v2-shell pb-24">
+    <div className="ds-apple-shop-canvas min-h-screen bg-[#F5F5F7] dark:bg-black pb-24">
       {/* Top Sticky Page Header */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#090a0f]/95 backdrop-blur-md border-b border-zinc-200/80 dark:border-white/10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-3">
+      <header className="ds-apple-topbar sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
-              onClick={() => navigate("/seller/dashboard?tab=orders")}
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 active:scale-95 transition shrink-0 cursor-pointer"
+              onClick={() => {
+                triggerHaptic("light");
+                navigate("/seller/dashboard?tab=orders");
+              }}
+              className="ds-apple-icon-btn w-10 h-10 flex items-center justify-center shrink-0 cursor-pointer"
               aria-label="Back to Seller Orders"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-white truncate">
+              <h1 className="text-base sm:text-lg font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-white truncate">
                 Create Custom Order
               </h1>
-              <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 truncate">
+              <p className="text-[11.5px] ds-apple-muted truncate">
                 কাস্টমার অ্যাকাউন্ট লিংক, প্রোডাক্ট ও পেমেন্ট হিসাবসহ নতুন অর্ডার
               </p>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300 shrink-0">
-            <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-800 text-white flex items-center justify-center overflow-hidden shrink-0">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white flex items-center justify-center overflow-hidden shrink-0">
               {shopLogo ? (
                 <img
                   src={shopLogo}
@@ -579,17 +587,17 @@ const CreateCustomOrder: React.FC = () => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-5 space-y-5">
         {/* SECTION 1: CUSTOMER ACCOUNT & DELIVERY DETAILS */}
-        <section className="orders-v2-card rounded-2xl p-4 sm:p-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 dark:border-white/10 pb-3">
+        <section className="ds-apple-surface rounded-[22px] p-4 sm:p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center shrink-0">
                 <Users className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                <h2 className="text-sm sm:text-base font-semibold tracking-[-0.015em] text-[#1D1D1F] dark:text-white">
                   1. Customer Account & Delivery Info
                 </h2>
-                <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                <p className="text-[11.5px] ds-apple-muted">
                   রেজিস্টার্ড কাস্টমার সার্চ করে সিলেক্ট করলে অর্ডারটি সরাসরি তার অ্যাকাউন্টে দেখাবে
                 </p>
               </div>
@@ -598,11 +606,11 @@ const CreateCustomOrder: React.FC = () => {
 
           {/* Search Registered Customer Box */}
           <div className="space-y-2.5">
-            <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+            <Label className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
               Search Customer Account (নাম, ইমেইল, ফোন নম্বর বা UID দিয়ে খুঁজুন)
             </Label>
             <div className="relative">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-[#8E8E93] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <Input
                 value={customerSearchQuery}
                 onChange={(e) => setCustomerSearchQuery(e.target.value)}
@@ -610,15 +618,15 @@ const CreateCustomOrder: React.FC = () => {
                   if (allUsersCache.length === 0) ensureUsersLoaded();
                 }}
                 placeholder="কাস্টমারের নাম, ইমেইল বা 01XXXXXXXXX লিখে সার্চ করুন..."
-                className="pl-10 pr-9 h-11 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
+                className="ds-apple-input pl-10 pr-9 h-11 text-sm rounded-xl"
               />
               {isSearchingCustomers ? (
-                <Loader2 className="w-4 h-4 animate-spin text-zinc-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                <Loader2 className="w-4 h-4 animate-spin text-[#8E8E93] absolute right-3.5 top-1/2 -translate-y-1/2" />
               ) : customerSearchQuery ? (
                 <button
                   type="button"
                   onClick={() => setCustomerSearchQuery("")}
-                  className="w-6 h-6 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
+                  className="w-6 h-6 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center text-[#8E8E93] absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -627,7 +635,7 @@ const CreateCustomOrder: React.FC = () => {
 
             {/* Search Dropdown Results */}
             {customerSearchResults.length > 0 && (
-              <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 divide-y divide-zinc-100 dark:divide-zinc-800 shadow-lg max-h-60 overflow-y-auto">
+              <div className="ds-apple-popover rounded-2xl divide-y divide-black/[0.06] dark:divide-white/[0.08] max-h-60 overflow-y-auto">
                 {customerSearchResults.map((u) => {
                   const display =
                     u.displayName || u.fullName || u.shopName || "Customer";
@@ -792,30 +800,33 @@ const CreateCustomOrder: React.FC = () => {
         </section>
 
         {/* SECTION 2: ORDER PRODUCTS */}
-        <section className="orders-v2-card rounded-2xl p-4 sm:p-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 dark:border-white/10 pb-3">
+        <section className="ds-apple-surface rounded-[22px] p-4 sm:p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#EF8020]/12 text-[#EF8020] flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center shrink-0">
                 <Package className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                <h2 className="text-sm sm:text-base font-semibold tracking-[-0.015em] text-[#1D1D1F] dark:text-white">
                   2. Order Products (প্রোডাক্টসমূহ)
                 </h2>
-                <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                <p className="text-[11.5px] ds-apple-muted">
                   স্টোরের প্রোডাক্ট অথবা যেকোনো কাস্টম প্রোডাক্ট অর্ডারে যোগ করুন
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 text-xs font-semibold">
+            <div className="ds-apple-segmented flex items-center gap-1 p-1 rounded-xl text-xs font-semibold">
               <button
                 type="button"
-                onClick={() => setItemMode("store")}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setItemMode("store");
+                }}
                 className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                   itemMode === "store"
-                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400"
+                    ? "bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs"
+                    : "ds-apple-muted"
                 }`}
               >
                 Store Catalog
@@ -823,13 +834,14 @@ const CreateCustomOrder: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("selection");
                   setItemMode("custom");
                   setItemForm((prev) => ({ ...prev, selectedProductId: "" }));
                 }}
                 className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                   itemMode === "custom"
-                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400"
+                    ? "bg-white dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-white shadow-xs"
+                    : "ds-apple-muted"
                 }`}
               >
                 + Custom Item
@@ -1032,7 +1044,7 @@ const CreateCustomOrder: React.FC = () => {
               <Button
                 type="button"
                 onClick={handleAddProductItem}
-                className="w-full h-11 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="ds-apple-btn-primary w-full h-11 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Item</span>
@@ -1042,16 +1054,16 @@ const CreateCustomOrder: React.FC = () => {
         </section>
 
         {/* SECTION 3: PAYMENT, STATUS & CALCULATION */}
-        <section className="orders-v2-card rounded-2xl p-4 sm:p-6 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-zinc-100 dark:border-white/10 pb-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600/12 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+        <section className="ds-apple-surface rounded-[22px] p-4 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2.5 border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center shrink-0">
               <CreditCard className="w-4.5 h-4.5" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+              <h2 className="text-sm sm:text-base font-semibold tracking-[-0.015em] text-[#1D1D1F] dark:text-white">
                 3. Payment & Calculation (পেমেন্ট ও হিসাব)
               </h2>
-              <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+              <p className="text-[11.5px] ds-apple-muted">
                 অগ্রিম জমা, ডেলিভারি চার্জ ও অর্ডারের বর্তমান স্ট্যাটাস নির্ধারণ করুন
               </p>
             </div>
@@ -1251,14 +1263,14 @@ const CreateCustomOrder: React.FC = () => {
         </section>
 
         {/* Bottom Submit Bar */}
-        <div className="orders-v2-card rounded-2xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="ds-apple-surface rounded-[22px] p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center justify-between sm:justify-start gap-4 px-1">
             <div>
-              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">
+              <span className="text-[11px] ds-apple-muted block">
                 Grand Total ({orderItems.length} item
                 {orderItems.length === 1 ? "" : "s"})
               </span>
-              <span className="text-lg font-extrabold text-zinc-900 dark:text-white tabular-nums">
+              <span className="text-lg font-semibold text-[#1D1D1F] dark:text-white tabular-nums tracking-[-0.015em]">
                 {formatPrice(grandTotal)}
               </span>
             </div>
@@ -1268,8 +1280,11 @@ const CreateCustomOrder: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate("/seller/dashboard?tab=orders")}
-              className="flex-1 sm:flex-none h-11 px-5 rounded-xl font-semibold text-xs border-zinc-200 dark:border-zinc-700 cursor-pointer"
+              onClick={() => {
+                triggerHaptic("light");
+                navigate("/seller/dashboard?tab=orders");
+              }}
+              className="ds-apple-btn-secondary flex-1 sm:flex-none h-11 px-5 rounded-full font-semibold text-xs whitespace-nowrap cursor-pointer"
             >
               Cancel
             </Button>
@@ -1277,16 +1292,16 @@ const CreateCustomOrder: React.FC = () => {
               type="button"
               disabled={savingOrder}
               onClick={handleSaveCustomOrder}
-              className="flex-1 sm:flex-none h-11 px-6 rounded-xl orders-v2-btn-explore font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              className="ds-apple-btn-primary flex-1 sm:flex-none h-11 px-5 rounded-full font-semibold text-xs sm:text-[13px] whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
               {savingOrder ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                   <span>অর্ডার সেভ হচ্ছে...</span>
                 </>
               ) : (
                 <>
-                  <ListPlus className="w-4 h-4" />
+                  <ListPlus className="w-4 h-4 shrink-0" />
                   <span>Save & Create Custom Order</span>
                 </>
               )}

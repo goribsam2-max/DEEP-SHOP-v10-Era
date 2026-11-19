@@ -6,8 +6,10 @@ import { useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
 import SEO from "../components/SEO";
 import { PostCard } from "../components/ui/post-card";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useConfirm } from "../components/Notifications";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 const BlogList: React.FC = () => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -15,9 +17,9 @@ const BlogList: React.FC = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const confirm = useConfirm();
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    // Check if current user is admin
     const checkAdmin = async () => {
       import("../firebase").then(({ auth, db }) => {
         import("firebase/auth").then(({ onAuthStateChanged }) => {
@@ -50,50 +52,56 @@ const BlogList: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="ds-apple-shop-canvas min-h-screen bg-[#F5F5F7] dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] pb-24">
       <SEO
         title="Tech Blog & Gadget Reviews | DEEP SHOP"
         description="Read our latest top 5 gadget lists, tech tips, and product reviews."
       />
 
-      <div className="bg-zinc-900 dark:bg-zinc-950 text-white p-8 md:p-12 mb-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-zinc-900/20 z-0"></div>
-        <div className="relative z-10 max-w-6xl mx-auto flex justify-between items-start">
-          <div>
-            
-            <h1 className="text-xl md:text-3xl font-semibold tracking-tight mb-2 text-white truncate max-w-2xl">
-              Tech Insights & Hacks
-            </h1>
-            <p className="text-zinc-300 max-w-2xl text-sm md:text-base leading-relaxed opacity-90 truncate">
-              Stay updated with our latest gadgets review, tips to extend your battery life, smart home tutorials, and more.
-            </p>
+      <div className="max-w-3xl mx-auto px-4 md:px-6 pt-6 sm:pt-8">
+        <div className="ds-apple-surface rounded-[24px] p-6 sm:p-8 mb-8 relative overflow-hidden">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <span className="ds-apple-eyebrow text-[11px] text-[#0071E3] dark:text-[#0A84FF] block">
+              DEEP SHOP Editorial
+            </span>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  navigate("/blog/create");
+                }}
+                className="ds-apple-btn-primary h-8.5 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Icon name="plus" />
+                <span>New Post</span>
+              </button>
+            )}
           </div>
-          {isAdmin && (
-            <button
-              onClick={() => navigate("/blog/create")}
-              className="mt-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-6 py-3 rounded-full text-xs font-bold tracking-wider hover:bg-zinc-800 dark:bg-zinc-200 transition-colors shadow-lg flex items-center space-x-2 relative z-20"
-            >
-              <Icon name="plus" />
-              <span>New Post</span>
-            </button>
-          )}
+          <h1 className="ds-apple-display text-[22px] sm:text-[30px] leading-tight font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2.5">
+            Tech Insights &amp; Hacks
+          </h1>
+          <p className="ds-apple-muted text-[14.5px] sm:text-[15.5px] leading-relaxed max-w-2xl">
+            Stay updated with our latest gadget reviews, battery longevity tips, smart home tutorials, and buyer guides.
+          </p>
         </div>
-        <div className="absolute -bottom-10 -right-10 text-9xl opacity-5 pointer-events-none text-white">
-          <Icon name="newspaper" />
-        </div>
-      </div>
 
-      <div className="max-w-3xl mx-auto px-4 md:px-8 mb-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground whitespace-nowrap">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="ds-apple-display text-xl sm:text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
             Latest Posts
           </h2>
+          {!loading && (
+            <span className="ds-apple-muted text-xs font-medium tabular-nums">
+              {blogs.length} {blogs.length === 1 ? "article" : "articles"}
+            </span>
+          )}
         </div>
+
         {loading ? (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-6">
             {Array.from({ length: 3 }).map((_, idx) => (
-              <div key={idx} className="rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 p-4 sm:p-6 space-y-4">
-                <div className="w-full h-52 sm:h-64 rounded-2xl ds-skeleton" />
+              <div key={idx} className="ds-apple-surface rounded-[24px] p-4 sm:p-6 space-y-4">
+                <div className="w-full h-52 sm:h-64 rounded-[18px] ds-skeleton" />
                 <div className="h-3.5 w-32 rounded-lg ds-skeleton" />
                 <div className="h-6 w-4/5 rounded-xl ds-skeleton" />
                 <div className="space-y-2">
@@ -104,20 +112,28 @@ const BlogList: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-6">
             {blogs.map((blog, i) => (
               <motion.div
                 key={blog.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
+                transition={
+                  prefersReducedMotion
+                    ? { duration: 0.14 }
+                    : { ...APPLE_SPRING_DEFAULT, delay: Math.min(i * 0.05, 0.2) }
+                }
               >
                 <PostCard
                   blog={blog}
                   isAdmin={isAdmin}
-                  onEdit={() => navigate(`/blog/edit/${blog.slug}`)}
+                  onEdit={() => {
+                    triggerHaptic("selection");
+                    navigate(`/blog/edit/${blog.slug}`);
+                  }}
                   onDelete={() => {
+                    triggerHaptic("warning");
                     confirm({
                       title: "Delete Blog Post",
                       message: "Are you sure you want to delete this post?",

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, ShoppingBag, Bell, X, Info } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { CheckCircle, ShoppingBag, Bell, X, Info, AlertCircle } from 'lucide-react';
+import { APPLE_SPRING_SNAPPY } from '../../lib/shoppingRoute';
+import { triggerHaptic } from '../../lib/haptics';
 
-export type IslandState = 'idle' | 'cart_add' | 'notification' | 'success' | 'alert';
+export type IslandState = 'idle' | 'cart_add' | 'notification' | 'success' | 'alert' | 'error';
 
 export interface IslandData {
   title: string;
@@ -27,7 +29,7 @@ class IslandController {
   }
 
   static close() {
-      this.listeners.forEach(l => l(null));
+    this.listeners.forEach(l => l(null));
   }
 }
 
@@ -51,16 +53,17 @@ export const hideIsland = () => {
 
 export const DynamicIsland = () => {
   const [data, setData] = useState<IslandData | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     return IslandController.subscribe((newData) => {
       setData(newData);
       if (timeout) clearTimeout(timeout);
-      
+
       if (newData && newData.state !== 'idle') {
         timeout = setTimeout(() => {
-           hideIsland();
+          hideIsland();
         }, newData.duration || 4000);
       }
     });
@@ -71,67 +74,73 @@ export const DynamicIsland = () => {
       <AnimatePresence>
         {data && (
           <motion.div
-            layout
+            layout={!prefersReducedMotion}
             key="island-container"
-            initial={{ width: 16, height: 16, opacity: 0, borderRadius: 16 }}
-            animate={{ 
+            initial={prefersReducedMotion ? { opacity: 0 } : { width: 18, height: 18, opacity: 0, borderRadius: 18 }}
+            animate={{
               width: 'auto',
               height: 'auto',
               opacity: 1,
               borderRadius: 36,
             }}
-            exit={{ width: 16, height: 16, opacity: 0, borderRadius: 16, transition: { duration: 0.2, ease: "easeInOut" } }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30, mass: 0.8 }}
-            className="bg-black backdrop-blur-md overflow-hidden pointer-events-auto border border-white/10 origin-center flex items-center justify-center shadow-2xl min-w-[16px] min-h-[16px]"
+            exit={prefersReducedMotion ? { opacity: 0 } : { width: 18, height: 18, opacity: 0, borderRadius: 18, transition: { duration: 0.18, ease: 'easeInOut' } }}
+            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+            className="bg-[#1C1C1E]/95 backdrop-blur-2xl overflow-hidden pointer-events-auto border border-white/12 origin-center flex items-center justify-center shadow-2xl min-w-[18px] min-h-[18px]"
           >
             <AnimatePresence mode="wait">
               <motion.div
-                layout
+                layout={!prefersReducedMotion}
                 key={data.state + data.title}
-                initial={{ opacity: 0, filter: 'blur(8px)', scale: 0.8 }}
-                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1, transition: { delay: 0.1, duration: 0.3 } }}
-                exit={{ opacity: 0, filter: 'blur(8px)', scale: 0.8, transition: { duration: 0.15 } }}
-                className="px-2.5 py-1.5 flex items-center gap-2.5 w-max max-w-[90vw] md:max-w-[400px]"
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1, transition: { delay: 0.05, duration: 0.22 } }}
+                exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.14 } }}
+                className="px-3 py-1.5 flex items-center gap-2.5 w-max max-w-[90vw] md:max-w-[400px]"
               >
-                <motion.div layout className="flex-shrink-0">
+                <motion.div layout={!prefersReducedMotion} className="flex-shrink-0">
                   {data.image ? (
                     <img src={data.image} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" />
                   ) : data.state === 'cart_add' ? (
-                    <div className="w-6 h-6 rounded-full bg-[#1cdb5e]/20 flex items-center justify-center text-[#1cdb5e]">
-                       <ShoppingBag className="w-3.5 h-3.5" />
+                    <div className="w-6 h-6 rounded-full bg-[#30D158]/20 flex items-center justify-center text-[#30D158]">
+                      <ShoppingBag className="w-3.5 h-3.5" />
                     </div>
                   ) : data.state === 'success' ? (
-                    <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
+                    <div className="w-6 h-6 rounded-full bg-[#30D158]/20 flex items-center justify-center text-[#30D158]">
                       <CheckCircle className="w-3.5 h-3.5" />
                     </div>
+                  ) : data.state === 'error' ? (
+                    <div className="w-6 h-6 rounded-full bg-[#FF453A]/20 flex items-center justify-center text-[#FF453A]">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                    </div>
                   ) : data.state === 'alert' ? (
-                    <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400">
+                    <div className="w-6 h-6 rounded-full bg-[#FF9F0A]/20 flex items-center justify-center text-[#FF9F0A]">
                       <Info className="w-3.5 h-3.5" />
                     </div>
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                    <div className="w-6 h-6 rounded-full bg-[#0A84FF]/20 flex items-center justify-center text-[#0A84FF]">
                       <Bell className="w-3.5 h-3.5" />
                     </div>
                   )}
                 </motion.div>
-                
-                <motion.div layout className="flex flex-col flex-1 overflow-hidden mr-1">
-                  <motion.span layout className="text-white text-[13px] font-semibold tracking-tight truncate leading-tight">
+
+                <motion.div layout={!prefersReducedMotion} className="flex flex-col flex-1 overflow-hidden mr-1">
+                  <motion.span layout={!prefersReducedMotion} className="text-[#F5F5F7] text-[13px] font-semibold tracking-tight truncate leading-tight">
                     {data.title}
                   </motion.span>
                   {data.subtitle && (
-                    <motion.span layout className="text-white/60 text-[11px] font-medium tracking-tight truncate mt-0.5">
+                    <motion.span layout={!prefersReducedMotion} className="text-[#98989D] text-[11px] font-medium tracking-tight truncate mt-0.5">
                       {data.subtitle}
                     </motion.span>
                   )}
                 </motion.div>
 
-                <motion.button 
-                  layout 
-                  onClick={() => hideIsland()} 
-                  className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors shrink-0"
+                <motion.button
+                  layout={!prefersReducedMotion}
+                  onPointerDown={() => triggerHaptic('light')}
+                  onClick={() => hideIsland()}
+                  aria-label="Dismiss notification"
+                  className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white active:scale-90 transition-all shrink-0 cursor-pointer"
                 >
-                    <X className="w-3.5 h-3.5" />
+                  <X className="w-3.5 h-3.5" />
                 </motion.button>
               </motion.div>
             </AnimatePresence>

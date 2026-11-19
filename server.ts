@@ -2871,7 +2871,7 @@ ${loopUrlsXml}
 
       if (xmlContent) {
         res.setHeader("Content-Type", "application/xml; charset=utf-8");
-        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800");
         return res.status(200).send(xmlContent);
       }
 
@@ -3833,7 +3833,7 @@ ${loopUrlsXml}
         .set({
           "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": isSocialOrSearchBot
-            ? "public, max-age=120, s-maxage=600, stale-while-revalidate=3600"
+            ? "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800"
             : "public, max-age=0, must-revalidate",
         })
         .end(template);

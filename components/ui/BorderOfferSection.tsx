@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { Product } from "../../types";
 import { BorderOfferOrderModal } from "./BorderOfferOrderModal";
 import AnimatedCardStack from "./animate-card-animation";
-import { Zap, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { triggerHaptic } from "../../lib/haptics";
 
 interface BorderOfferSectionProps {
   products: Product[];
@@ -18,7 +19,6 @@ export const BorderOfferSection: React.FC<BorderOfferSectionProps> = ({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Filter products that are border offers or categorized under border/phone offers (cap to 6 for fast rendering)
   const borderOffers = products
     .filter(
       (p) =>
@@ -33,53 +33,36 @@ export const BorderOfferSection: React.FC<BorderOfferSectionProps> = ({
   if (borderOffers.length === 0) return null;
 
   const handleBuyNow = (prod: Product) => {
+    triggerHaptic();
     setSelectedProduct(prod);
     setIsModalOpen(true);
   };
 
   return (
-    <section className="mb-12 w-full relative">
-      {/* Section Header with Liquid Glass Styling */}
-      <div className="bg-white/70 dark:bg-zinc-900/80 backdrop-blur-2xl p-4 sm:p-5 rounded-3xl border border-white/60 dark:border-zinc-700/60 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.35)] mb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-amber-500/25 shrink-0">
-              <Zap className="w-5 h-5 fill-white stroke-none" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-white bg-amber-500 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  HOT DEALS
-                </span>
-                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
-                  বর্ডার স্টক স্পেশাল
-                </span>
-              </div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight mt-0.5">
-                {title}
-              </h2>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-center">
-            <button
-              type="button"
-              onClick={() => navigate("/all-products?category=border_offer")}
-              className="px-3.5 py-2 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1 transition cursor-pointer"
-            >
-              <span>সকল অফার</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
+    <section className="mb-10 w-full relative">
+      <div className="flex items-end justify-between gap-4 mb-4">
+        <div className="min-w-0">
+          <p className="ds-apple-eyebrow ds-apple-muted text-[11px] mb-1">
+            Border Stock Intake
+          </p>
+          <h2 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold">
+            {title}
+          </h2>
         </div>
+
+        <button
+          type="button"
+          onPointerDown={() => triggerHaptic()}
+          onClick={() => navigate("/all-products?category=border_offer")}
+          className="ds-apple-accent-text inline-flex items-center gap-0.5 text-[13px] font-semibold hover:underline whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
+        >
+          <span>See All</span>
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Primary Animated Card Stack View */}
       <AnimatedCardStack products={borderOffers} onBuyNow={handleBuyNow} />
 
-      {/* Dedicated Border Stock Order Modal */}
       <BorderOfferOrderModal
         product={selectedProduct}
         isOpen={isModalOpen}

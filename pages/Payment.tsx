@@ -26,6 +26,9 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useNotify } from "../components/Notifications";
 import { formatPrice } from "@/lib/utils";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { triggerHaptic } from "../lib/haptics";
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
 import { validateBangladeshiPhone, detectAbuse, recordAbuseStrike } from "../src/lib/abuseProtection";
 import AuthVoiceToggle from "../components/AuthVoiceToggle";
 import { isAuthVoiceMuted, playAuthVoice } from "../lib/authVoiceAndValidation";
@@ -77,6 +80,7 @@ const Payment: React.FC = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
 
   // Multi-step Payment Gateway Flow (IMG_3928 -> IMG_3929 -> IMG_3930)
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -152,6 +156,7 @@ const Payment: React.FC = () => {
   // Copy helper with feedback
   const handleCopy = (text: string, key: string, label: string) => {
     if (!text) return;
+    triggerHaptic("light");
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     notify(`${label} কপি হয়েছে!`, "success");
@@ -380,8 +385,10 @@ const Payment: React.FC = () => {
 
     const phoneValidation = validateBangladeshiPhone(senderNumber);
     if (!phoneValidation.isValid) {
+      triggerHaptic("error");
       return notify(phoneValidation.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন।", "error");
     }
+    triggerHaptic("selection");
     setSenderNumber(phoneValidation.normalized);
     setStep(3);
     speakPaymentStep(3);
@@ -391,6 +398,7 @@ const Payment: React.FC = () => {
   const jumpToPaymentStep = (targetStep: 1 | 2 | 3) => {
     if (targetStep === step) return;
     if (targetStep === 1) {
+      triggerHaptic("light");
       setStep(1);
       speakPaymentStep(1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -398,13 +406,16 @@ const Payment: React.FC = () => {
     }
     if (targetStep === 2) {
       if (selectedMethod === "bkash" && !hasBkashNumber) {
+        triggerHaptic("error");
         notify("বিকাশ নম্বর সক্রিয় নেই।", "error");
         return;
       }
       if (selectedMethod === "nagad" && !hasNagadNumber) {
+        triggerHaptic("error");
         notify("নগদ নম্বর সক্রিয় নেই।", "error");
         return;
       }
+      triggerHaptic("selection");
       setStep(2);
       speakPaymentStep(2);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -428,16 +439,19 @@ const Payment: React.FC = () => {
 
     const phoneValidation = validateBangladeshiPhone(senderNumber);
     if (!phoneValidation.isValid) {
+      triggerHaptic("error");
       notify(phoneValidation.error || "অনুগ্রহ করে সঠিক প্রেরক নম্বর লিখুন।", "error");
       setStep(2);
       return;
     }
     const cleanTrx = trxId.trim();
     if (!cleanTrx || cleanTrx.length < 4) {
+      triggerHaptic("warning");
       notify("অনুগ্রহ করে TrxID অথবা ট্রানজেকশনের শেষ ৪টি ডিজিট লিখুন।", "error");
       setShowTrxAccordion(true);
       return;
     }
+    triggerHaptic("medium");
 
     setSubmitting(true);
     try {
@@ -575,19 +589,19 @@ const Payment: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell py-6 px-4 sm:px-6">
+      <div className="ds-apple-shop-canvas w-full min-h-[calc(100vh-56px)] py-6 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="ds-liquid-panel p-5 flex items-center justify-between gap-4">
+          <div className="ds-apple-surface rounded-[22px] p-5 flex items-center justify-between gap-4">
             <div className="h-7 w-44 rounded-full ds-skeleton" />
             <div className="h-10 w-64 rounded-full ds-skeleton hidden sm:block" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-7">
-            <div className="lg:col-span-7 ds-liquid-panel p-6 space-y-4">
+            <div className="lg:col-span-7 ds-apple-surface rounded-[26px] p-6 space-y-4">
               <div className="h-6 w-48 rounded-full ds-skeleton" />
               <div className="h-28 w-full rounded-2xl ds-skeleton" />
               <div className="h-28 w-full rounded-2xl ds-skeleton" />
             </div>
-            <div className="hidden lg:block lg:col-span-5 ds-liquid-panel p-6 space-y-4">
+            <div className="hidden lg:block lg:col-span-5 ds-apple-surface rounded-[26px] p-6 space-y-4">
               <div className="h-6 w-40 rounded-full ds-skeleton" />
               <div className="h-24 w-full rounded-2xl ds-skeleton" />
               <div className="h-32 w-full rounded-2xl ds-skeleton" />
@@ -600,30 +614,36 @@ const Payment: React.FC = () => {
 
   if (!order) {
     return (
-      <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell flex items-center justify-center p-4">
-        <div className="ds-liquid-panel p-7 sm:p-9 text-center max-w-md w-full space-y-4">
-          <div className="w-14 h-14 rounded-2xl ds-liquid-callout-rose flex items-center justify-center mx-auto">
-            <AlertCircle className="w-7 h-7 text-rose-600 dark:text-rose-400" />
+      <div className="ds-apple-shop-canvas w-full min-h-[calc(100vh-56px)] flex items-center justify-center p-4">
+        <motion.div
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+          className="ds-apple-surface rounded-[28px] p-7 sm:p-9 text-center max-w-md w-full space-y-4"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-[#FF3B30]/10 dark:bg-[#FF453A]/15 flex items-center justify-center mx-auto">
+            <AlertCircle className="w-7 h-7 text-[#FF3B30] dark:text-[#FF453A]" />
           </div>
-          <h2 className="text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+          <h2 className="ds-apple-display text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
             অর্ডার পাওয়া যায়নি
           </h2>
-          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
             আপনার অর্ডার লিংকটি সঠিক নয় অথবা অর্ডারটি বাতিল করা হয়েছে।
           </p>
           <button
             type="button"
+            onPointerDown={() => triggerHaptic("light")}
             onClick={() => navigate("/")}
-            className="w-full ds-liquid-btn-primary px-6 py-3 text-sm font-bold cursor-pointer whitespace-nowrap"
+            className="w-full ds-apple-btn-primary rounded-full px-6 py-3 text-sm font-semibold cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
           >
             হোমে ফিরে যান
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
-  // Success & Verification Pending View (Liquid Glass Responsive Mobile & Desktop Layout)
+  // Success & Verification Pending View (Apple Studio Neutral & Optical Layout)
   if (paymentSuccess) {
     const activeUser =
       auth?.currentUser ||
@@ -631,35 +651,40 @@ const Payment: React.FC = () => {
     const isGuest = !activeUser;
 
     return (
-      <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell py-6 sm:py-10 px-3.5 sm:px-6 flex items-center justify-center">
-        <div className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left / Main Verification Status Glass Panel */}
-          <div className="lg:col-span-7 ds-liquid-panel p-6 sm:p-8 space-y-6">
+      <div className="ds-apple-shop-canvas w-full min-h-[calc(100vh-56px)] py-6 sm:py-10 px-3.5 sm:px-6 flex items-center justify-center">
+        <motion.div
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+          className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
+        >
+          {/* Left / Main Verification Status Card */}
+          <div className="lg:col-span-7 ds-apple-surface rounded-[28px] p-6 sm:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl ds-liquid-subpanel-active flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 flex items-center justify-center text-[#0071E3] dark:text-[#0A84FF] shrink-0">
                 <Clock className="w-7 h-7" />
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                <p className="text-xs font-semibold text-[#FF9500] dark:text-[#FF9F0A]">
                   যাচাইকরণ প্রক্রিয়া চলমান · ১-৭ ঘণ্টা
                 </p>
-                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+                <h2 className="ds-apple-display text-xl sm:text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                   পেমেন্ট তথ্য জমা হয়েছে
                 </h2>
-                <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
                   আপনার প্রেরিত ট্রানজেকশন ম্যানুয়ালি যাচাই করা হচ্ছে। সাধারণত{" "}
-                  <strong className="text-zinc-900 dark:text-white">১-৭ ঘণ্টার</strong>{" "}
+                  <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">১-৭ ঘণ্টার</strong>{" "}
                   মধ্যে অর্ডার স্ট্যাটাস আপডেট হয়ে যাবে।
                 </p>
               </div>
             </div>
 
             {isGuest && (
-              <div className="ds-liquid-callout-amber p-4 space-y-1.5">
-                <p className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200">
+              <div className="rounded-2xl bg-[#FF9500]/10 dark:bg-[#FF9F0A]/12 border border-[#FF9500]/20 p-4 space-y-1.5">
+                <p className="text-xs sm:text-sm font-bold text-[#9A5B00] dark:text-[#FFD60A]">
                   অ্যাকাউন্ট খুলে অর্ডার ট্র্যাক করুন
                 </p>
-                <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                <p className="text-xs text-[#7D4B00] dark:text-[#FFE57F] leading-relaxed">
                   আপনার কোনো অ্যাকাউন্ট খোলা নেই। নতুন অ্যাকাউন্ট খুললেই এই অর্ডারটি স্বয়ংক্রিয়ভাবে আপনার{" "}
                   <strong>My Orders</strong> তালিকায় যুক্ত হয়ে যাবে।
                 </p>
@@ -667,22 +692,22 @@ const Payment: React.FC = () => {
             )}
 
             {/* 30-Second Auto-redirect countdown */}
-            <div className="ds-liquid-subpanel p-4 space-y-2.5">
-              <div className="flex items-center justify-between gap-2 text-xs font-bold text-zinc-800 dark:text-zinc-200 whitespace-nowrap">
+            <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 space-y-2.5">
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
                 <span className="truncate">
                   {isGuest ? "অ্যাকাউন্ট পেজে নিয়ে যাওয়া হচ্ছে..." : "My Orders পেজে নিয়ে যাওয়া হচ্ছে..."}
                 </span>
-                <span className="font-mono tabular-nums text-sky-600 dark:text-sky-400 shrink-0">
+                <span className="font-mono tabular-nums text-[#0071E3] dark:text-[#0A84FF] shrink-0">
                   {successCountdown}s বাকি
                 </span>
               </div>
-              <div className="w-full bg-slate-900/10 dark:bg-white/10 h-2 rounded-full overflow-hidden">
+              <div className="w-full bg-black/[0.08] dark:bg-white/[0.12] h-2 rounded-full overflow-hidden">
                 <div
-                  className="bg-sky-500 h-full rounded-full transition-all duration-1000 ease-linear"
+                  className="bg-[#0071E3] dark:bg-[#0A84FF] h-full rounded-full transition-all duration-1000 ease-linear"
                   style={{ width: `${(successCountdown / 30) * 100}%` }}
                 />
               </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D]">
                 ৩০ সেকেন্ড পর স্বয়ংক্রিয়ভাবে পরবর্তী পেজে রিডাইরেক্ট হবে।
               </p>
             </div>
@@ -692,18 +717,20 @@ const Payment: React.FC = () => {
               {isGuest ? (
                 <button
                   type="button"
+                  onPointerDown={() => triggerHaptic("light")}
                   onClick={() =>
                     navigate(`/auth-selector?redirect=/my-orders&guestOrder=${orderId}`)
                   }
-                  className="w-full ds-liquid-btn-primary px-6 py-3.5 text-sm font-bold cursor-pointer whitespace-nowrap"
+                  className="w-full ds-apple-btn-primary rounded-full px-6 py-3.5 text-sm font-semibold cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
                 >
                   নতুন অ্যাকাউন্ট খুলুন ও অর্ডার দেখুন
                 </button>
               ) : (
                 <button
                   type="button"
+                  onPointerDown={() => triggerHaptic("light")}
                   onClick={() => navigate("/my-orders")}
-                  className="w-full ds-liquid-btn-primary px-6 py-3.5 text-sm font-bold cursor-pointer whitespace-nowrap"
+                  className="w-full ds-apple-btn-primary rounded-full px-6 py-3.5 text-sm font-semibold cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
                 >
                   এখনই My Orders পেজে যান
                 </button>
@@ -711,62 +738,62 @@ const Payment: React.FC = () => {
             </div>
           </div>
 
-          {/* Right / Receipt Breakdown Glass Panel */}
-          <div className="lg:col-span-5 ds-liquid-panel p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-900/[0.08] dark:border-white/[0.1] pb-3.5">
+          {/* Right / Receipt Breakdown Card */}
+          <div className="lg:col-span-5 ds-apple-surface rounded-[28px] p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] pb-3.5">
               <div>
-                <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   পেমেন্ট রিসিপ্ট সামারি
                 </h3>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono tabular-nums mt-0.5">
+                <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] font-mono tabular-nums mt-0.5">
                   #{orderId?.slice(0, 10).toUpperCase()}
                 </p>
               </div>
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+              <CheckCircle2 className="w-5 h-5 text-[#248A3D] dark:text-[#30D158] shrink-0" />
             </div>
 
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-zinc-500 dark:text-zinc-400">গ্রহণকারী স্টোর</span>
-                <span className="font-bold text-zinc-900 dark:text-white truncate max-w-[180px]">
+                <span className="text-[#6E6E73] dark:text-[#98989D]">গ্রহণকারী স্টোর</span>
+                <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate max-w-[180px]">
                   {storeName}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-zinc-500 dark:text-zinc-400">জমাকৃত অর্থ</span>
-                <span className="font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                <span className="text-[#6E6E73] dark:text-[#98989D]">জমাকৃত অর্থ</span>
+                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {formatPrice(calculations.amountToPay)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-zinc-500 dark:text-zinc-400">পেমেন্ট মাধ্যম</span>
-                <span className="font-bold uppercase text-zinc-900 dark:text-white">
+                <span className="text-[#6E6E73] dark:text-[#98989D]">পেমেন্ট মাধ্যম</span>
+                <span className="font-semibold uppercase text-[#1D1D1F] dark:text-[#F5F5F7]">
                   {selectedMethod === "bkash" ? "bKash" : "Nagad"}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-zinc-500 dark:text-zinc-400">প্রেরক নম্বর</span>
-                <span className="font-mono font-bold text-zinc-900 dark:text-white tabular-nums">
+                <span className="text-[#6E6E73] dark:text-[#98989D]">প্রেরক নম্বর</span>
+                <span className="font-mono font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {senderNumber}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-zinc-500 dark:text-zinc-400">Transaction ID</span>
-                <span className="font-mono font-bold text-zinc-900 dark:text-white uppercase truncate max-w-[170px]">
+                <span className="text-[#6E6E73] dark:text-[#98989D]">Transaction ID</span>
+                <span className="font-mono font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] uppercase truncate max-w-[170px]">
                   {trxId}
                 </span>
               </div>
               {calculations.dueOnDelivery > 0 && (
-                <div className="pt-2.5 border-t border-slate-900/[0.08] dark:border-white/[0.1] flex items-center justify-between gap-2 text-xs">
-                  <span className="text-zinc-500 dark:text-zinc-400">ডেলিভারিতে বাকি</span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
+                <div className="pt-2.5 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2 text-xs">
+                  <span className="text-[#6E6E73] dark:text-[#98989D]">ডেলিভারিতে বাকি</span>
+                  <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                     {formatPrice(calculations.dueOnDelivery)}
                   </span>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -840,24 +867,23 @@ const Payment: React.FC = () => {
   );
 
   return (
-    <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell py-4 sm:py-7 lg:py-9 px-3.5 sm:px-6 pb-16">
+    <div className="ds-apple-shop-canvas w-full min-h-[calc(100vh-56px)] py-4 sm:py-7 lg:py-9 px-3.5 sm:px-6 pb-16">
       <div className="max-w-6xl mx-auto space-y-5 lg:space-y-7">
         {/* =====================================================================
-            DESKTOP LIQUID GLASS TOP BAR (lg and up)
-            Architectural header + 3-Segment Liquid Glass Stepper Dock + Voice
+            DESKTOP APPLE TRANSLUCENT TOP BAR (lg and up)
            ===================================================================== */}
-        <div className="hidden lg:flex items-center justify-between gap-6 ds-liquid-panel px-7 py-4">
+        <div className="hidden lg:flex items-center justify-between gap-6 ds-apple-topbar rounded-[22px] px-7 py-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">
+            <h1 className="ds-apple-display text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
               সুরক্ষিত পেমেন্ট গেটওয়ে
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
+            <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5 tabular-nums">
               {storeName} · রেফারেন্স {displayTrxRef} · সেশন বাকি {formatCountdown(secondsLeft)}
             </p>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <div className="ds-liquid-dock rounded-full p-1.5 flex items-center gap-1">
+            <div className="ds-apple-segmented p-1 rounded-full flex items-center gap-1">
               {paymentStepsMeta.map(({ stepNum, fullLabel, icon: StepIcon }) => {
                 const isActive = step === stepNum;
                 const isDone = step > stepNum;
@@ -867,13 +893,16 @@ const Payment: React.FC = () => {
                     key={stepNum}
                     type="button"
                     disabled={isDisabled}
+                    onPointerDown={() => {
+                      if (!isDisabled) triggerHaptic("light");
+                    }}
                     onClick={() => jumpToPaymentStep(stepNum)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed ${
+                    className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed ${
                       isActive
-                        ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
+                        ? "bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-2xs"
                         : isDone
-                          ? "text-sky-600 dark:text-sky-400 hover:opacity-80"
-                          : "text-zinc-400 dark:text-zinc-500"
+                          ? "text-[#0071E3] dark:text-[#0A84FF] hover:opacity-80"
+                          : "text-[#6E6E73] dark:text-[#98989D]"
                     }`}
                   >
                     {isDone ? (
@@ -892,25 +921,25 @@ const Payment: React.FC = () => {
         </div>
 
         {/* =====================================================================
-            MOBILE & TABLET LIQUID GLASS HEADER + COLLAPSIBLE RECEIPT (< lg)
+            MOBILE & TABLET HEADER + COLLAPSIBLE RECEIPT (< lg)
            ===================================================================== */}
         <div className="flex lg:hidden flex-col gap-3">
           {/* Mobile Title + Countdown + Voice Row */}
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900 dark:text-white truncate">
+              <h1 className="ds-apple-display text-lg sm:text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                 পেমেন্ট গেটওয়ে
               </h1>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 tabular-nums">
-                <Clock className="w-3 h-3 text-amber-500 shrink-0" />
+              <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] flex items-center gap-1.5 tabular-nums">
+                <Clock className="w-3 h-3 text-[#FF9500] shrink-0" />
                 <span>{formatCountdown(secondsLeft)} বাকি · ধাপ {step}/3</span>
               </p>
             </div>
             <AuthVoiceToggle isInline />
           </div>
 
-          {/* Mobile 3-Segment Liquid Glass Stepper */}
-          <div className="ds-liquid-dock rounded-full p-1 grid grid-cols-3 gap-1">
+          {/* Mobile 3-Segment Stepper */}
+          <div className="ds-apple-segmented rounded-full p-1 grid grid-cols-3 gap-1">
             {paymentStepsMeta.map(({ stepNum, shortLabel, icon: StepIcon }) => {
               const isActive = step === stepNum;
               const isDone = step > stepNum;
@@ -920,13 +949,16 @@ const Payment: React.FC = () => {
                   key={stepNum}
                   type="button"
                   disabled={isDisabled}
+                  onPointerDown={() => {
+                    if (!isDisabled) triggerHaptic("light");
+                  }}
                   onClick={() => jumpToPaymentStep(stepNum)}
-                  className={`py-2 px-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed ${
+                  className={`py-2 px-2 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed ${
                     isActive
-                      ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
+                      ? "bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-2xs"
                       : isDone
-                        ? "text-sky-600 dark:text-sky-400"
-                        : "text-zinc-400 dark:text-zinc-500"
+                        ? "text-[#0071E3] dark:text-[#0A84FF]"
+                        : "text-[#6E6E73] dark:text-[#98989D]"
                   }`}
                 >
                   {isDone ? (
@@ -941,14 +973,15 @@ const Payment: React.FC = () => {
           </div>
 
           {/* Mobile Collapsible Merchant & Amount Receipt Sheet */}
-          <div className="ds-liquid-panel overflow-hidden">
+          <div className="ds-apple-surface rounded-[22px] overflow-hidden">
             <button
               type="button"
+              onPointerDown={() => triggerHaptic("light")}
               onClick={() => setShowAmountDropdown((prev) => !prev)}
               className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-full ds-liquid-subpanel flex items-center justify-center font-extrabold text-xs text-zinc-900 dark:text-white shrink-0 overflow-hidden">
+                <div className="w-9 h-9 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center font-bold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] shrink-0 overflow-hidden">
                   {sellerProfile?.photoURL || sellerProfile?.avatarUrl ? (
                     <img
                       src={sellerProfile.photoURL || sellerProfile.avatarUrl}
@@ -961,45 +994,45 @@ const Payment: React.FC = () => {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate">
+                  <div className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                     {storeName}
                   </div>
-                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono tabular-nums truncate">
+                  <div className="text-[11px] text-[#6E6E73] dark:text-[#98989D] font-mono tabular-nums truncate">
                     {displayTrxRef} · হিসাব বিস্তারিত
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                <span className="text-sm sm:text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {formatPrice(calculations.amountToPay)}
                 </span>
                 {showAmountDropdown ? (
-                  <ChevronUp className="w-4 h-4 text-zinc-500" />
+                  <ChevronUp className="w-4 h-4 text-[#6E6E73]" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-zinc-500" />
+                  <ChevronDown className="w-4 h-4 text-[#6E6E73]" />
                 )}
               </div>
             </button>
 
             {showAmountDropdown && (
-              <div className="px-4 pb-4 pt-3 border-t border-slate-900/[0.08] dark:border-white/[0.08] space-y-3">
+              <div className="px-4 pb-4 pt-3 border-t border-black/[0.06] dark:border-white/[0.08] space-y-3">
                 {orderItemsList.length > 0 && (
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                     {orderItemsList.map((item: any, idx: number) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between gap-2.5 text-xs ds-liquid-subpanel p-2.5"
+                        className="flex items-center justify-between gap-2.5 text-xs rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] p-2.5"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-zinc-900 dark:text-white truncate">
+                          <p className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                             {item.name || item.title || "পণ্য"}
                           </p>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                          <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] tabular-nums">
                             পরিমাণ: {item.quantity || 1}
                           </p>
                         </div>
-                        <span className="font-bold text-zinc-900 dark:text-white tabular-nums shrink-0">
+                        <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
                           {formatPrice((Number(item.price) || 0) * (Number(item.quantity) || 1))}
                         </span>
                       </div>
@@ -1055,38 +1088,48 @@ const Payment: React.FC = () => {
             {/* ==============================================================
                 STEP 1: PAYMENT METHOD SELECTION
                ============================================================== */}
+            <AnimatePresence mode="wait">
             {step === 1 && (
-              <div className="ds-liquid-panel p-5 sm:p-7 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-900/[0.07] dark:border-white/[0.08] pb-4">
+              <motion.div
+                key="payment-step-1"
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+                className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-6"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                   <div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                    <h2 className="ds-apple-display text-base sm:text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                       পেমেন্ট মাধ্যম নির্বাচন করুন
                     </h2>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
                       আপনার সুবিধাজনক মোবাইল ব্যাংকিং অ্যাকাউন্ট বেছে নিন
                     </p>
                   </div>
 
                   {/* Category Filter Dock */}
-                  <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-1 self-start sm:self-auto">
+                  <div className="ds-apple-segmented rounded-full p-1 flex items-center gap-1 self-start sm:self-auto">
                     <button
                       type="button"
+                      onPointerDown={() => triggerHaptic("light")}
                       onClick={() => setActiveTab("all")}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                         activeTab === "all"
-                          ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
-                          : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                          ? "bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-2xs"
+                          : "text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7]"
                       }`}
                     >
                       সব পদ্ধতি
                     </button>
                     <button
                       type="button"
+                      onPointerDown={() => triggerHaptic("light")}
                       onClick={() => setActiveTab("mfs")}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                         activeTab === "mfs"
-                          ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
-                          : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                          ? "bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-2xs"
+                          : "text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7]"
                       }`}
                     >
                       মোবাইল ব্যাংকিং
@@ -1100,6 +1143,9 @@ const Payment: React.FC = () => {
                   <button
                     type="button"
                     disabled={!hasBkashNumber}
+                    onPointerDown={() => {
+                      if (hasBkashNumber) triggerHaptic("light");
+                    }}
                     onClick={() => {
                       if (!hasBkashNumber) {
                         notify("বর্তমানে কোনো বিকাশ পেমেন্ট নম্বর যুক্ত নেই।", "error");
@@ -1107,12 +1153,12 @@ const Payment: React.FC = () => {
                       }
                       setSelectedMethod("bkash");
                     }}
-                    className={`p-5 text-left transition-all relative flex flex-col justify-between min-h-[132px] ${
+                    className={`p-5 rounded-[22px] text-left transition-all relative flex flex-col justify-between min-h-[132px] active:scale-[0.98] ${
                       !hasBkashNumber
-                        ? "ds-liquid-subpanel opacity-45 cursor-not-allowed"
+                        ? "bg-[#F5F5F7] dark:bg-[#2C2C2E] opacity-45 cursor-not-allowed"
                         : selectedMethod === "bkash"
                           ? "ds-liquid-method-bkash cursor-pointer"
-                          : "ds-liquid-subpanel hover:opacity-95 cursor-pointer"
+                          : "bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] hover:opacity-95 cursor-pointer"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 w-full">
@@ -1144,6 +1190,9 @@ const Payment: React.FC = () => {
                   <button
                     type="button"
                     disabled={!hasNagadNumber}
+                    onPointerDown={() => {
+                      if (hasNagadNumber) triggerHaptic("light");
+                    }}
                     onClick={() => {
                       if (!hasNagadNumber) {
                         notify("বর্তমানে কোনো নগদ পেমেন্ট নম্বর যুক্ত নেই।", "error");
@@ -1151,12 +1200,12 @@ const Payment: React.FC = () => {
                       }
                       setSelectedMethod("nagad");
                     }}
-                    className={`p-5 text-left transition-all relative flex flex-col justify-between min-h-[132px] ${
+                    className={`p-5 rounded-[22px] text-left transition-all relative flex flex-col justify-between min-h-[132px] active:scale-[0.98] ${
                       !hasNagadNumber
-                        ? "ds-liquid-subpanel opacity-45 cursor-not-allowed"
+                        ? "bg-[#F5F5F7] dark:bg-[#2C2C2E] opacity-45 cursor-not-allowed"
                         : selectedMethod === "nagad"
                           ? "ds-liquid-method-nagad cursor-pointer"
-                          : "ds-liquid-subpanel hover:opacity-95 cursor-pointer"
+                          : "bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] hover:opacity-95 cursor-pointer"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 w-full">
@@ -1199,6 +1248,7 @@ const Payment: React.FC = () => {
                       (!hasBkashNumber && selectedMethod === "bkash") ||
                       (!hasNagadNumber && selectedMethod === "nagad")
                     }
+                    onPointerDown={() => triggerHaptic("medium")}
                     onClick={() => {
                       if (selectedMethod === "bkash" && !hasBkashNumber) {
                         notify("বিকাশ নম্বর সক্রিয় নেই।", "error");
@@ -1212,7 +1262,7 @@ const Payment: React.FC = () => {
                       speakPaymentStep(2);
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
-                    className={`w-full px-6 py-3.5 text-sm sm:text-base flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed tabular-nums ${
+                    className={`w-full rounded-full px-6 py-3.5 text-sm sm:text-base font-semibold flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed tabular-nums active:scale-[0.98] transition-transform ${
                       selectedMethod === "bkash"
                         ? "ds-liquid-btn-bkash"
                         : "ds-liquid-btn-nagad"
@@ -1224,47 +1274,56 @@ const Payment: React.FC = () => {
                   <div className="text-center">
                     <button
                       type="button"
+                      onPointerDown={() => triggerHaptic("light")}
                       onClick={() => navigate("/my-orders")}
-                      className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+                      className="text-xs font-semibold text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] transition-colors cursor-pointer whitespace-nowrap"
                     >
                       বাতিল করে অর্ডার তালিকায় ফিরে যান
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* ==============================================================
                 STEP 2: SENDER PHONE INPUT
                ============================================================== */}
             {step === 2 && (
-              <div className="ds-liquid-panel p-5 sm:p-7 space-y-6">
-                <div className="flex items-center justify-between gap-3 border-b border-slate-900/[0.07] dark:border-white/[0.08] pb-4">
+              <motion.div
+                key="payment-step-2"
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+                className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-6"
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                   <div className="flex items-center gap-3">
                     {selectedMethod === "bkash" ? (
                       <BkashLogo className="h-7 w-auto" />
                     ) : (
                       <NagadLogo className="h-7 w-auto" />
                     )}
-                    <span className="text-xs text-zinc-400">·</span>
-                    <span className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200 whitespace-nowrap">
+                    <span className="text-xs text-[#86868B]">·</span>
+                    <span className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
                       প্রেরক নম্বর যাচাই
                     </span>
                   </div>
 
                   <button
                     type="button"
+                    onPointerDown={() => triggerHaptic("light")}
                     onClick={() => jumpToPaymentStep(1)}
-                    className="px-3 py-1.5 ds-liquid-btn-secondary !min-h-0 !text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                    className="px-3.5 py-1.5 ds-apple-btn-secondary rounded-full !min-h-0 !text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>মাধ্যম বদলান</span>
                   </button>
                 </div>
 
-                {/* Refractive Brand-Tinted Phone Input Well */}
+                {/* Brand-Tinted Phone Input Well */}
                 <div
-                  className={`p-5 sm:p-6 space-y-4 ${
+                  className={`p-5 sm:p-6 rounded-[22px] space-y-4 ${
                     selectedMethod === "bkash"
                       ? "ds-liquid-method-bkash"
                       : "ds-liquid-method-nagad"
@@ -1273,11 +1332,11 @@ const Payment: React.FC = () => {
                   <div className="space-y-1 text-center">
                     <label
                       htmlFor="sender-phone-input"
-                      className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 block"
+                      className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D] block"
                     >
                       আপনার প্রেরক মোবাইল নম্বর
                     </label>
-                    <p className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                    <p className="text-xs sm:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                       যে {selectedMethod === "bkash" ? "বিকাশ" : "নগদ"} নম্বর থেকে টাকা পাঠাবেন সেটি লিখুন
                     </p>
                   </div>
@@ -1295,11 +1354,11 @@ const Payment: React.FC = () => {
                       }
                     }}
                     placeholder="01XXXXXXXXX"
-                    className="w-full h-13 px-4 text-center text-lg sm:text-2xl font-extrabold font-mono tabular-nums tracking-wider ds-liquid-input outline-none focus:ring-2 focus:ring-sky-500/40"
+                    className="ds-apple-input w-full h-13 px-4 rounded-2xl text-center text-lg sm:text-2xl font-bold font-mono tabular-nums tracking-wider outline-none"
                     autoFocus
                   />
 
-                  <p className="text-[11px] text-center text-zinc-500 dark:text-zinc-400">
+                  <p className="text-[11px] text-center text-[#6E6E73] dark:text-[#98989D]">
                     পেমেন্ট ভেরিফিকেশনের সময় এই নম্বরের সাথে আপনার লেনদেন মেলানো হবে
                   </p>
                 </div>
@@ -1307,44 +1366,54 @@ const Payment: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
+                    onPointerDown={() => triggerHaptic("light")}
                     onClick={() => jumpToPaymentStep(1)}
-                    className="sm:w-40 px-5 py-3 ds-liquid-btn-secondary text-xs sm:text-sm font-bold cursor-pointer whitespace-nowrap"
+                    className="sm:w-40 px-5 py-3 ds-apple-btn-secondary rounded-full text-xs sm:text-sm font-semibold cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
                   >
                     পূর্ববর্তী ধাপ
                   </button>
                   <button
                     type="button"
+                    onPointerDown={() => triggerHaptic("medium")}
                     onClick={handleProceedToStep3}
-                    className="flex-1 px-6 py-3 ds-liquid-btn-primary text-sm sm:text-base font-bold cursor-pointer whitespace-nowrap"
+                    className="flex-1 px-6 py-3 ds-apple-btn-primary rounded-full text-sm sm:text-base font-semibold cursor-pointer whitespace-nowrap active:scale-[0.98] transition-transform"
                   >
                     জমা দিন ও পরবর্তী ধাপে যান
                   </button>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* ==============================================================
                 STEP 3: SEND MONEY DETAILS & TRXID VERIFICATION
                ============================================================== */}
             {step === 3 && (
-              <div className="ds-liquid-panel p-5 sm:p-7 space-y-5">
-                <div className="flex items-center justify-between gap-3 border-b border-slate-900/[0.07] dark:border-white/[0.08] pb-4">
+              <motion.div
+                key="payment-step-3"
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+                className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-5"
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                   <div className="flex items-center gap-2.5 min-w-0">
                     {selectedMethod === "bkash" ? (
                       <BkashLogo className="h-7 w-auto shrink-0" />
                     ) : (
                       <NagadLogo className="h-7 w-auto shrink-0" />
                     )}
-                    <span className="text-xs text-zinc-400">·</span>
-                    <span className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200 truncate">
+                    <span className="text-xs text-[#86868B]">·</span>
+                    <span className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                       টাকা পাঠান ও TrxID নিশ্চিত করুন
                     </span>
                   </div>
 
                   <button
                     type="button"
+                    onPointerDown={() => triggerHaptic("light")}
                     onClick={() => jumpToPaymentStep(2)}
-                    className="px-3 py-1.5 ds-liquid-btn-secondary !min-h-0 !text-xs flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
+                    className="px-3.5 py-1.5 ds-apple-btn-secondary rounded-full !min-h-0 !text-xs flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap active:scale-[0.97] transition-transform"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>নম্বর বদলান</span>
@@ -1367,22 +1436,23 @@ const Payment: React.FC = () => {
                 {/* 2-Column Copyable Receiver Number & Exact Amount Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Receiver Number Card */}
-                  <div className="ds-liquid-subpanel p-4 flex flex-col justify-between gap-2.5">
-                    <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                  <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#6E6E73] dark:text-[#98989D]">
                       <span>{currentActionLabel} নম্বর</span>
                       <span>{currentAccountTypeLabel}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-lg sm:text-xl font-extrabold font-mono tabular-nums text-zinc-900 dark:text-white tracking-wide">
+                      <span className="text-lg sm:text-xl font-bold font-mono tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7] tracking-wide">
                         {currentReceiverNumber}
                       </span>
                       <button
                         type="button"
+                        onPointerDown={() => triggerHaptic("light")}
                         onClick={() => handleCopy(currentReceiverNumber, "phone", "নম্বর")}
-                        className="px-3.5 py-1.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer whitespace-nowrap"
+                        className="px-3.5 py-1.5 ds-apple-btn-secondary rounded-full !min-h-0 !text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer whitespace-nowrap active:scale-[0.96] transition-transform"
                       >
                         {copiedKey === "phone" ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <Check className="w-3.5 h-3.5 text-[#248A3D] dark:text-[#30D158]" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -1392,24 +1462,25 @@ const Payment: React.FC = () => {
                   </div>
 
                   {/* Exact Amount Card */}
-                  <div className="ds-liquid-subpanel p-4 flex flex-col justify-between gap-2.5">
-                    <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                  <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 flex flex-col justify-between gap-2.5">
+                    <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#6E6E73] dark:text-[#98989D]">
                       <span>পাঠানোর পরিমাণ</span>
                       <span>সঠিক অংক</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-lg sm:text-xl font-extrabold tabular-nums text-sky-600 dark:text-sky-400 tracking-tight">
+                      <span className="text-lg sm:text-xl font-bold tabular-nums text-[#0071E3] dark:text-[#0A84FF] tracking-tight">
                         {formatPrice(calculations.amountToPay)}
                       </span>
                       <button
                         type="button"
+                        onPointerDown={() => triggerHaptic("light")}
                         onClick={() =>
                           handleCopy(String(calculations.amountToPay), "amount", "পরিমাণ")
                         }
-                        className="px-3.5 py-1.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer whitespace-nowrap"
+                        className="px-3.5 py-1.5 ds-apple-btn-secondary rounded-full !min-h-0 !text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer whitespace-nowrap active:scale-[0.96] transition-transform"
                       >
                         {copiedKey === "amount" ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <Check className="w-3.5 h-3.5 text-[#248A3D] dark:text-[#30D158]" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -1420,32 +1491,33 @@ const Payment: React.FC = () => {
                 </div>
 
                 {/* Confirmed Sender Number Summary Row */}
-                <div className="ds-liquid-subpanel px-4 py-3 flex items-center justify-between gap-2 text-xs">
-                  <span className="text-zinc-500 dark:text-zinc-400">
+                <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] px-4 py-3 flex items-center justify-between gap-2 text-xs">
+                  <span className="text-[#6E6E73] dark:text-[#98989D]">
                     আপনার প্রেরক নম্বর:{" "}
-                    <strong className="font-mono tabular-nums text-zinc-900 dark:text-white ml-1">
+                    <strong className="font-mono tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7] ml-1">
                       {senderNumber}
                     </strong>
                   </span>
                   <button
                     type="button"
+                    onPointerDown={() => triggerHaptic("light")}
                     onClick={() => jumpToPaymentStep(2)}
-                    className="text-sky-600 dark:text-sky-400 font-bold hover:underline cursor-pointer whitespace-nowrap"
+                    className="text-[#0071E3] dark:text-[#0A84FF] font-semibold hover:underline cursor-pointer whitespace-nowrap"
                   >
                     পরিবর্তন করুন
                   </button>
                 </div>
 
                 {/* TrxID Input & Final Submit */}
-                <div className="ds-liquid-subpanel p-4 sm:p-5 space-y-3.5">
+                <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 sm:p-5 space-y-3.5">
                   <div className="flex items-center justify-between gap-2">
                     <label
                       htmlFor="trx-id-input"
-                      className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white"
+                      className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]"
                     >
                       Transaction ID (TrxID)
                     </label>
-                    <span className="text-[11px] font-mono tabular-nums text-zinc-500 dark:text-zinc-400">
+                    <span className="text-[11px] font-mono tabular-nums text-[#6E6E73] dark:text-[#98989D]">
                       সময় বাকি {formatCountdown(secondsLeft)}
                     </span>
                   </div>
@@ -1462,18 +1534,19 @@ const Payment: React.FC = () => {
                       }
                     }}
                     placeholder="যেমন: 9J4K2LX9 অথবা শেষ ৪ ডিজিট"
-                    className="h-12 px-4 text-sm sm:text-base font-mono uppercase ds-liquid-input"
+                    className="h-12 px-4 rounded-xl text-sm sm:text-base font-mono uppercase ds-apple-input"
                   />
 
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
                     টাকা পাঠানোর পর ফিরতি এসএমএস অথবা অ্যাপের ইনবক্স থেকে পাওয়া TrxID বা শেষ ৪টি ডিজিট লিখুন।
                   </p>
 
                   <button
                     type="button"
+                    onPointerDown={() => triggerHaptic("medium")}
                     onClick={handleConfirmFinalPayment}
                     disabled={submitting}
-                    className={`w-full px-6 py-3.5 text-sm sm:text-base flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={`w-full rounded-full px-6 py-3.5 text-sm sm:text-base font-semibold flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform ${
                       selectedMethod === "bkash"
                         ? "ds-liquid-btn-bkash"
                         : "ds-liquid-btn-nagad"
@@ -1486,26 +1559,28 @@ const Payment: React.FC = () => {
                 </div>
 
                 {/* Rotation Security Note */}
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#6E6E73] dark:text-[#98989D] text-center">
                   <RefreshCw className="w-3 h-3 shrink-0" />
                   <span>
                     নিরাপত্তার স্বার্থে প্রতিবার পেজ রিফ্রেশ করলে পেমেন্ট নম্বর পরিবর্তিত হতে পারে
                   </span>
                 </div>
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
 
             {/* Mobile Support Bar (< lg) */}
-            <div className="flex lg:hidden items-center justify-between px-4 py-3 ds-liquid-panel text-xs text-zinc-600 dark:text-zinc-300">
+            <div className="flex lg:hidden items-center justify-between px-4 py-3 ds-apple-surface rounded-[20px] text-xs text-[#6E6E73] dark:text-[#98989D]">
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic("light")}
                 onClick={() => navigate("/help-center")}
-                className="flex items-center gap-1.5 font-semibold hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+                className="flex items-center gap-1.5 font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] hover:text-[#0071E3] dark:hover:text-[#0A84FF] transition-colors cursor-pointer whitespace-nowrap"
               >
-                <Headphones className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                <Headphones className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF]" />
                 <span>সাপোর্ট কেন্দ্র</span>
               </button>
-              <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+              <div className="flex items-center gap-1.5 text-[#6E6E73] dark:text-[#98989D] whitespace-nowrap">
                 <Lock className="w-3.5 h-3.5" />
                 <span>সুরক্ষিত গেটওয়ে · বাংলা</span>
               </div>
@@ -1516,11 +1591,11 @@ const Payment: React.FC = () => {
               RIGHT COLUMN: STICKY DESKTOP ORDER & RECEIPT CONSOLE (lg+)
              ============================================================== */}
           <aside className="hidden lg:block lg:col-span-5 lg:sticky lg:top-24 space-y-5">
-            <div className="ds-liquid-panel p-6 space-y-5">
+            <div className="ds-apple-surface rounded-[26px] p-6 space-y-5">
               {/* Recipient Store Identity */}
-              <div className="flex items-center justify-between gap-3 border-b border-slate-900/[0.08] dark:border-white/[0.1] pb-4">
+              <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-2xl ds-liquid-subpanel flex items-center justify-center font-extrabold text-sm text-zinc-900 dark:text-white shrink-0 overflow-hidden">
+                  <div className="w-11 h-11 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center font-bold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] shrink-0 overflow-hidden">
                     {sellerProfile?.photoURL || sellerProfile?.avatarUrl ? (
                       <img
                         src={sellerProfile.photoURL || sellerProfile.avatarUrl}
@@ -1533,20 +1608,20 @@ const Payment: React.FC = () => {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">
+                    <span className="text-[11px] text-[#6E6E73] dark:text-[#98989D] block">
                       পেমেন্ট গ্রহণকারী স্টোর
                     </span>
-                    <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white truncate">
+                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                       {storeName}
                     </h3>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">
+                  <span className="text-[11px] text-[#6E6E73] dark:text-[#98989D] block">
                     রেফারেন্স
                   </span>
-                  <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
+                  <span className="text-xs font-mono font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                     {displayTrxRef}
                   </span>
                 </div>
@@ -1554,23 +1629,23 @@ const Payment: React.FC = () => {
 
               {/* Order Items / Subscription Plan Preview */}
               {order.type === "subscription" ? (
-                <div className="ds-liquid-subpanel p-3.5 flex items-center justify-between gap-3">
+                <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] p-3.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                    <p className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                       {order.planName || "VIP Pass Subscription"}
                     </p>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                    <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] tabular-nums">
                       মেয়াদ: {order.durationDays || 30} দিন
                     </p>
                   </div>
-                  <span className="text-sm font-extrabold text-zinc-900 dark:text-white tabular-nums shrink-0">
+                  <span className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
                     {formatPrice(calculations.amountToPay)}
                   </span>
                 </div>
               ) : (
                 orderItemsList.length > 0 && (
                   <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                    <div className="flex items-center justify-between text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                    <div className="flex items-center justify-between text-xs font-semibold text-[#6E6E73] dark:text-[#98989D]">
                       <span className="flex items-center gap-1.5">
                         <ShoppingBag className="w-3.5 h-3.5" />
                         <span>অর্ডারকৃত পণ্যসমূহ</span>
@@ -1580,29 +1655,29 @@ const Payment: React.FC = () => {
                     {orderItemsList.map((item: any, idx: number) => (
                       <div
                         key={idx}
-                        className="ds-liquid-subpanel p-3 flex items-center gap-3"
+                        className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] p-3 flex items-center gap-3"
                       >
                         {item.image ? (
                           <img
                             src={item.image}
                             alt={item.name || "Product"}
                             referrerPolicy="no-referrer"
-                            className="w-11 h-11 rounded-xl object-contain bg-white/60 dark:bg-white/5 p-1 shrink-0"
+                            className="w-11 h-11 rounded-xl object-contain bg-white dark:bg-[#1C1C1E] p-1 shrink-0"
                           />
                         ) : (
-                          <div className="w-11 h-11 rounded-xl ds-liquid-section flex items-center justify-center shrink-0">
-                            <ShoppingBag className="w-4 h-4 text-zinc-400" />
+                          <div className="w-11 h-11 rounded-xl bg-white dark:bg-[#1C1C1E] flex items-center justify-center shrink-0">
+                            <ShoppingBag className="w-4 h-4 text-[#86868B]" />
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-1">
+                          <p className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] line-clamp-1">
                             {item.name || item.title || "পণ্য"}
                           </p>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums mt-0.5">
+                          <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] tabular-nums mt-0.5">
                             {item.quantity || 1} × {formatPrice(Number(item.price) || 0)}
                           </p>
                         </div>
-                        <span className="text-xs font-extrabold text-zinc-900 dark:text-white tabular-nums shrink-0">
+                        <span className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
                           {formatPrice((Number(item.price) || 0) * (Number(item.quantity) || 1))}
                         </span>
                       </div>
@@ -1612,20 +1687,21 @@ const Payment: React.FC = () => {
               )}
 
               {/* Financial Breakdown */}
-              <div className="ds-liquid-subpanel p-4">
+              <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] p-4">
                 {renderOrderFinancialBreakdown()}
               </div>
 
               {/* Trust & Support Footer inside Desktop Console */}
-              <div className="pt-1 flex items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="pt-1 flex items-center justify-between gap-3 text-xs text-[#6E6E73] dark:text-[#98989D]">
                 <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                  <ShieldCheck className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
                   <span>যাচাই সময় ১-৭ ঘণ্টা</span>
                 </div>
                 <button
                   type="button"
+                  onPointerDown={() => triggerHaptic("light")}
                   onClick={() => navigate("/help-center")}
-                  className="flex items-center gap-1.5 font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer whitespace-nowrap"
+                  className="flex items-center gap-1.5 font-semibold text-[#0071E3] dark:text-[#0A84FF] hover:underline cursor-pointer whitespace-nowrap"
                 >
                   <Headphones className="w-3.5 h-3.5" />
                   <span>সাপোর্ট কেন্দ্র</span>

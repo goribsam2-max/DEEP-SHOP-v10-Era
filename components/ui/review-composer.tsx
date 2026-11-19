@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { auth, db } from "../../firebase";
 import { collection, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { uploadToImgbb } from "../../services/imgbb";
 import { useNotify } from "../Notifications";
 import { isScamReview } from "../../lib/reviewModeration";
 import { checkContainsBannedWord } from "../../lib/wordFilter";
+import { triggerHaptic } from "../../lib/haptics";
+import { APPLE_SPRING_DEFAULT } from "../../lib/shoppingRoute";
 import { Star, ImagePlus, X, Pencil, Loader2, Send } from "lucide-react";
 
 const RATING_LABELS: Record<number, string> = {
@@ -33,6 +36,7 @@ export function ReviewComposer({
 }: ReviewComposerProps) {
   const notify = useNotify();
   const navigate = useNavigate();
+  const shouldReduceMotion = useReducedMotion();
 
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isControlled = isOpen !== undefined;
@@ -61,6 +65,7 @@ export function ReviewComposer({
   }, [imageFiles]);
 
   const handleOpenClick = () => {
+    triggerHaptic("light");
     if (!auth.currentUser) {
       notify("Please sign in to write a review.", "info");
       navigate("/signin");
@@ -76,6 +81,7 @@ export function ReviewComposer({
     e.target.value = "";
     if (selected.length === 0) return;
 
+    triggerHaptic("selection");
     if (imageFiles.length + selected.length > 3) {
       notify("You can attach up to 3 photos per review.", "info");
       setImageFiles((prev) => [...prev, ...selected].slice(0, 3));
@@ -91,17 +97,21 @@ export function ReviewComposer({
       return;
     }
     if (rating === 0) {
+      triggerHaptic("error");
       notify("Please tap a star rating first.", "error");
       return;
     }
     if (!comment.trim()) {
+      triggerHaptic("error");
       notify("Please share a few words about the product.", "error");
       return;
     }
     if (!productId || !product) return;
 
+    triggerHaptic("medium");
     const bannedWord = await checkContainsBannedWord(comment);
     if (bannedWord) {
+      triggerHaptic("error");
       notify(
         `Your review contains prohibited words ("${bannedWord}"). Please edit your review.`,
         "error"
@@ -110,6 +120,7 @@ export function ReviewComposer({
     }
 
     if (isScamReview(comment)) {
+      triggerHaptic("success");
       notify("Review posted!", "success");
       setComment("");
       setRating(0);
@@ -176,6 +187,7 @@ export function ReviewComposer({
         });
       } catch {}
 
+      triggerHaptic("success");
       notify("Thank you! Your review is live.", "success");
       setComment("");
       setRating(0);
@@ -184,6 +196,7 @@ export function ReviewComposer({
       setExpanded(false);
       onReviewAdded?.();
     } catch {
+      triggerHaptic("error");
       notify("Could not publish review. Please try again.", "error");
     } finally {
       setLoading(false);
@@ -195,7 +208,7 @@ export function ReviewComposer({
       <button
         type="button"
         onClick={handleOpenClick}
-        className="w-full sm:w-auto px-5 py-3 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs sm:text-sm font-semibold hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shadow-xs"
+        className="w-full sm:w-auto px-5 py-3 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] hover:bg-[#0077ED] dark:hover:bg-[#1E8EFF] text-white text-xs sm:text-sm font-semibold active:scale-[0.97] transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer shadow-xs"
       >
         <Pencil className="w-4 h-4 shrink-0" />
         <span>Write a Review</span>
@@ -206,20 +219,28 @@ export function ReviewComposer({
   const activeStars = hoverRating || rating;
 
   return (
-    <div className="w-full rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6 shadow-sm">
+    <motion.div
+      initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+      animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+      className="w-full rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] p-5 sm:p-6 shadow-sm"
+    >
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+          <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
             Write a Customer Review
           </h3>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+          <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
             Share your honest experience with this product
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setExpanded(false)}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+          onClick={() => {
+            triggerHaptic("light");
+            setExpanded(false);
+          }}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors cursor-pointer shrink-0 active:scale-95"
           aria-label="Close review composer"
         >
           <X className="w-4 h-4" />
@@ -227,8 +248,8 @@ export function ReviewComposer({
       </div>
 
       {/* Interactive Star Selector */}
-      <div className="flex flex-wrap items-center gap-3 mb-4 py-2.5 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/70 dark:border-zinc-800/80">
-        <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+      <div className="flex flex-wrap items-center gap-3 mb-4 py-2.5 px-3.5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E]/80 border border-black/[0.06] dark:border-white/[0.08]">
+        <span className="text-xs font-semibold text-[#6E6E73] dark:text-[#98989D]">
           Your Rating:
         </span>
         <div
@@ -242,15 +263,18 @@ export function ReviewComposer({
                 key={star}
                 type="button"
                 onMouseEnter={() => setHoverRating(star)}
-                onClick={() => setRating(star)}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setRating(star);
+                }}
                 className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer"
                 aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
               >
                 <Star
                   className={`w-6 h-6 transition-colors ${
                     filled
-                      ? "text-amber-400 fill-amber-400"
-                      : "text-zinc-300 dark:text-zinc-700"
+                      ? "text-[#FF9500] dark:text-[#FF9F0A] fill-[#FF9500] dark:fill-[#FF9F0A]"
+                      : "text-black/[0.16] dark:text-white/[0.2]"
                   }`}
                 />
               </button>
@@ -258,7 +282,7 @@ export function ReviewComposer({
           })}
         </div>
         {activeStars > 0 && (
-          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+          <span className="text-xs font-bold text-[#FF9500] dark:text-[#FF9F0A]">
             {RATING_LABELS[activeStars]}
           </span>
         )}
@@ -266,7 +290,7 @@ export function ReviewComposer({
 
       {/* Review Textarea */}
       <textarea
-        className="w-full rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 focus:border-zinc-400 dark:focus:border-zinc-600 outline-none resize-none min-h-[110px] p-3.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 leading-relaxed transition-colors"
+        className="w-full rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E]/80 border border-black/[0.08] dark:border-white/[0.1] focus:border-[#0071E3] dark:focus:border-[#0A84FF] outline-none resize-none min-h-[110px] p-3.5 text-sm text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] leading-relaxed transition-colors"
         placeholder="What did you like about build quality, condition, battery, or packaging?"
         value={comment}
         onChange={(e) => setComment(e.target.value)}
@@ -278,7 +302,7 @@ export function ReviewComposer({
           {previewUrls.map((src, idx) => (
             <div
               key={src}
-              className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800"
+              className="relative w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-black/[0.08] dark:border-white/[0.1] bg-[#F5F5F7] dark:bg-[#2C2C2E]"
             >
               <img
                 src={src}
@@ -287,10 +311,11 @@ export function ReviewComposer({
               />
               <button
                 type="button"
-                onClick={() =>
-                  setImageFiles((files) => files.filter((_, i) => i !== idx))
-                }
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("light");
+                  setImageFiles((files) => files.filter((_, i) => i !== idx));
+                }}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center hover:bg-[#FF3B30] transition-colors cursor-pointer"
                 aria-label="Remove photo"
               >
                 <X className="w-3 h-3" />
@@ -301,7 +326,7 @@ export function ReviewComposer({
       )}
 
       {/* Footer Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 border-t border-black/[0.06] dark:border-white/[0.08]">
         <div className="flex items-center gap-2">
           <input
             type="file"
@@ -313,21 +338,27 @@ export function ReviewComposer({
           />
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              triggerHaptic("light");
+              fileInputRef.current?.click();
+            }}
             disabled={imageFiles.length >= 3 || loading}
-            className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
+            className="px-3.5 py-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-[#F5F5F7] dark:bg-[#2C2C2E] hover:bg-black/[0.06] dark:hover:bg-white/[0.12] text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap active:scale-[0.97]"
           >
-            <ImagePlus className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
-            <span>Add Photos ({imageFiles.length}/3)</span>
+            <ImagePlus className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
+            <span className="tabular-nums">Add Photos ({imageFiles.length}/3)</span>
           </button>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
           <button
             type="button"
-            onClick={() => setExpanded(false)}
+            onClick={() => {
+              triggerHaptic("light");
+              setExpanded(false);
+            }}
             disabled={loading}
-            className="px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer whitespace-nowrap"
+            className="px-4 py-2.5 rounded-full text-xs font-semibold text-[#6E6E73] dark:text-[#98989D] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors cursor-pointer whitespace-nowrap active:scale-[0.97]"
           >
             Cancel
           </button>
@@ -335,7 +366,7 @@ export function ReviewComposer({
             type="button"
             onClick={handleSubmit}
             disabled={loading || !comment.trim() || rating === 0}
-            className="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-bold flex items-center gap-2 hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-45 cursor-pointer whitespace-nowrap shrink-0"
+            className="px-5 py-2.5 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] hover:bg-[#0077ED] dark:hover:bg-[#1E8EFF] text-white text-xs font-semibold flex items-center gap-2 active:scale-[0.97] transition-all disabled:opacity-45 cursor-pointer whitespace-nowrap shrink-0"
           >
             {loading ? (
               <>
@@ -351,6 +382,6 @@ export function ReviewComposer({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

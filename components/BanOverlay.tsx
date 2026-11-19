@@ -86,18 +86,24 @@ export default function BanOverlay() {
   if (!isBanned) return null;
 
   return (
-    <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center select-none" style={{ pointerEvents: 'all' }}>
-      <div className="bg-zinc-900 border border-red-500/40 p-8 rounded-3xl max-w-sm w-full shadow-[0_0_100px_rgba(239,68,68,0.3)]">
-        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <ShieldAlert className="w-10 h-10 text-red-500 animate-pulse" />
+    <div className="ds-apple-portal fixed inset-0 z-[999999] bg-black/94 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center select-none pointer-events-auto">
+      <div className="bg-[#1C1C1E] border border-red-500/30 p-7 rounded-[28px] max-w-sm w-full shadow-2xl">
+        <div className="w-16 h-16 bg-red-500/12 rounded-2xl border border-red-500/20 flex items-center justify-center mx-auto mb-5">
+          <ShieldAlert className="w-8 h-8 text-[#FF453A]" />
         </div>
-        <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Access Denied (ব্যান করা হয়েছে)</h1>
-        <p className="text-sm font-semibold text-zinc-300 mb-6 leading-relaxed">
+        <h1 className="ds-apple-display text-[22px] font-bold text-[#F5F5F7] mb-2 tracking-tight">
+          Access Denied (ব্যান করা হয়েছে)
+        </h1>
+        <p className="text-[14px] text-[#98989D] mb-6 leading-relaxed">
           আপনার অ্যাকাউন্ট বা ডিভাইস থেকে এই সাইটে প্রবেশ সম্পূর্ণ নিষিদ্ধ করা হয়েছে। ৩ বার গালিগালাজ বা আপত্তিকর তথ্য ব্যবহার করার কারণে আপনার ডিভাইস স্থায়ীভাবে ব্যান করা হয়েছে।
         </p>
-        <div className="bg-black/60 p-4 rounded-2xl border border-red-500/20">
-          <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Status: Permanently Banned</p>
-          <p className="text-[11px] text-zinc-500 mt-1">Policy: Zero Tolerance for Abuse & Fake Details</p>
+        <div className="bg-[#2C2C2E] p-4 rounded-2xl border border-red-500/20">
+          <p className="text-xs font-bold text-[#FF453A] uppercase tracking-wider">
+            Status: Permanently Banned
+          </p>
+          <p className="text-[11px] text-[#98989D] mt-1">
+            Policy: Zero Tolerance for Abuse & Fake Details
+          </p>
         </div>
       </div>
     </div>

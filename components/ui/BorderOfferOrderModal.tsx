@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Product } from "../../types";
 import { formatPrice } from "../../lib/utils";
-import { X, Zap, ShieldCheck, Lock, ArrowRight, Smartphone, MapPin, Phone, User } from "lucide-react";
+import { X, Zap, Lock, ArrowRight, MapPin, Phone, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 import { useNotify } from "../Notifications";
 import { triggerHaptic } from "../../lib/haptics";
 import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
+import { AnimatePresence, motion, PanInfo, useReducedMotion } from "framer-motion";
+import { APPLE_SPRING_DEFAULT, projectMomentum } from "../../lib/shoppingRoute";
 
 interface BorderOfferOrderModalProps {
   product: Product | null;
@@ -22,6 +24,7 @@ export const BorderOfferOrderModal: React.FC<BorderOfferOrderModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const prefersReducedMotion = useReducedMotion();
 
   const [customerName, setCustomerName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
@@ -32,23 +35,39 @@ export const BorderOfferOrderModal: React.FC<BorderOfferOrderModalProps> = ({
 
   if (!isOpen || !product) return null;
 
-  const displayPrice = product.offerPrice && product.offerPrice < product.price ? product.offerPrice : product.price;
+  const displayPrice =
+    product.offerPrice && product.offerPrice < product.price
+      ? product.offerPrice
+      : product.price;
   const deliveryFee = district.toLowerCase().includes("dhaka") ? 80 : 130;
   const grandTotal = displayPrice + deliveryFee;
 
-  const dedicatedAdvance = (product.borderOfferAdvanceAmount !== undefined && product.borderOfferAdvanceAmount !== null && Number(product.borderOfferAdvanceAmount) > 0)
-    ? Number(product.borderOfferAdvanceAmount)
-    : ((product.advanceAmount !== undefined && product.advanceAmount !== null && Number(product.advanceAmount) > 0)
+  const dedicatedAdvance =
+    product.borderOfferAdvanceAmount !== undefined &&
+    product.borderOfferAdvanceAmount !== null &&
+    Number(product.borderOfferAdvanceAmount) > 0
+      ? Number(product.borderOfferAdvanceAmount)
+      : product.advanceAmount !== undefined &&
+          product.advanceAmount !== null &&
+          Number(product.advanceAmount) > 0
         ? Number(product.advanceAmount)
-        : grandTotal);
+        : grandTotal;
 
   const payableAdvance = Math.min(grandTotal, dedicatedAdvance);
   const dueAmount = Math.max(0, grandTotal - payableAdvance);
   const isFullAdvance = payableAdvance >= grandTotal;
 
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const projectedY = info.offset.y + projectMomentum(info.velocity.y, 0.994);
+    if (projectedY > 110 || info.velocity.y > 420) {
+      triggerHaptic("light");
+      onClose();
+    }
+  };
+
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    triggerHaptic();
+    triggerHaptic("medium");
 
     if (!customerName.trim()) {
       notify("অনুগ্রহ করে আপনার নাম লিখুন", "error");
@@ -114,190 +133,226 @@ export const BorderOfferOrderModal: React.FC<BorderOfferOrderModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-[#141416] text-white rounded-t-[28px] sm:rounded-[28px] border border-amber-500/30 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col font-inter">
-        
-        {/* Header */}
-        <div className="p-4 bg-gradient-to-r from-amber-950/80 via-zinc-900 to-amber-950/80 border-b border-amber-500/20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <Zap className="w-4 h-4 fill-amber-400 stroke-none" />
+    <AnimatePresence>
+      <div className="ds-apple-portal fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-0 sm:p-5">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: prefersReducedMotion ? 0.14 : 0.18 }}
+          onClick={() => {
+            triggerHaptic("light");
+            onClose();
+          }}
+          className="ds-apple-backdrop fixed inset-0"
+        />
+
+        <motion.div
+          role="dialog"
+          aria-modal="true"
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 28, scale: 0.97 }}
+          animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+          exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.97 }}
+          transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+          drag={prefersReducedMotion ? false : "y"}
+          dragConstraints={{ top: 0 }}
+          dragElastic={{ top: 0.06, bottom: 0.5 }}
+          onDragEnd={handleDragEnd}
+          onClick={(e) => e.stopPropagation()}
+          className="ds-apple-sheet relative z-10 w-full max-w-lg rounded-t-[28px] sm:rounded-[28px] overflow-hidden max-h-[90dvh] flex flex-col"
+        >
+          {/* Mobile Grabber */}
+          <div className="sm:hidden flex justify-center pt-2.5 pb-1">
+            <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+          </div>
+
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-black/8 dark:border-white/10 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-2xl bg-amber-500/12 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <Zap className="w-4 h-4 fill-current" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="ds-apple-display font-bold text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                  বর্ডার স্টক ফোন অফার বুকিং
+                </h3>
+                <p className="text-[11px] text-[#6e6e73] dark:text-[#98989d] truncate">
+                  ১০০% নিরাপদ এডভান্স পেমেন্ট অর্ডারের মাধ্যমে বুক করুন
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-sm text-amber-300">
-                বর্ডার স্টক ফোন অফার বুকিং
-              </h3>
-              <p className="text-[10px] text-zinc-400">
-                ১০০% ফুল এডভান্স পেমেন্ট অর্ডারের মাধ্যমে বুক করুন
+
+            <button
+              type="button"
+              onPointerDown={() => triggerHaptic("light")}
+              onClick={onClose}
+              aria-label="Close"
+              className="w-8 h-8 rounded-full bg-black/[0.06] dark:bg-white/[0.1] hover:bg-black/[0.1] dark:hover:bg-white/[0.16] text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center justify-center transition-transform active:scale-95 cursor-pointer shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Form */}
+          <form
+            onSubmit={handleSubmitOrder}
+            className="p-5 overflow-y-auto space-y-4 text-xs hide-scrollbar"
+          >
+            {/* Selected Product Summary Card */}
+            <div className="rounded-2xl bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] p-3 flex items-center gap-3">
+              <img
+                src={getProductDisplayImage(product)}
+                alt={product.name}
+                className="w-16 h-16 object-contain bg-white dark:bg-[#1c1c1e] rounded-xl p-1.5 border border-black/[0.06] dark:border-white/[0.08] shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <span className="inline-block text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/12 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                  Border Offer
+                </span>
+                <h4 className="font-bold text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] truncate mt-1">
+                  {product.name}
+                </h4>
+                <div className="flex items-baseline gap-2 mt-0.5 tabular-nums">
+                  <span className="font-bold text-[#0071E3] dark:text-[#0A84FF] text-[15px]">
+                    {formatPrice(displayPrice)}
+                  </span>
+                  <span className="text-[11px] text-[#6e6e73] dark:text-[#98989d]">
+                    + ডেলিভারি ৳{deliveryFee}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Advance Notice */}
+            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3.5 space-y-1">
+              <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold text-xs">
+                <Lock className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  {isFullAdvance ? "১০০% ফুল এডভান্স প্রযোজ্য" : "অফার বুকিং এডভান্স প্রযোজ্য"}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#6e6e73] dark:text-[#d1d1d6] leading-relaxed">
+                {isFullAdvance
+                  ? `বর্ডার স্টক লিমিটেড ফোন অফারের ক্ষেত্রে সম্পূর্ণ ${formatPrice(payableAdvance)} টাকা এডভান্স পেমেন্ট করতে হবে। পেমেন্ট সম্পন্ন হওয়ার পর ডেলিভারি নিশ্চিত করা হবে।`
+                  : `বর্ডার স্টক অফার কনফার্মেশনের জন্য নির্ধারিত ${formatPrice(payableAdvance)} টাকা এডভান্স পেমেন্ট করতে হবে। বাকি ${formatPrice(dueAmount)} টাকা ডেলিভারির সময় প্রদেয় হবে।`}
               </p>
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-zinc-300 flex items-center justify-center transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmitOrder} className="p-4 overflow-y-auto space-y-4 text-xs no-scrollbar">
-          
-          {/* Selected Product Summary Card */}
-          <div className="bg-zinc-900/90 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
-            <img
-              src={getProductDisplayImage(product)}
-              alt={product.name}
-              className="w-16 h-16 object-contain bg-zinc-950 rounded-xl p-1 border border-zinc-800"
-            />
-            <div className="flex-1 min-w-0">
-              <span className="text-[9px] font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-wider">
-                BORDER PHONE OFFER
-              </span>
-              <h4 className="font-bold text-sm text-zinc-100 truncate mt-0.5">
-                {product.name}
-              </h4>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="font-black text-amber-400 text-sm">
-                  {formatPrice(displayPrice)}
-                </span>
-                <span className="text-[10px] text-zinc-500">
-                  + ডেলিভারি ৳{deliveryFee}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Advance Mandatory Alert Box */}
-          <div className="bg-amber-500/10 border border-amber-500/40 rounded-2xl p-3.5 space-y-1">
-            <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
-              <Lock className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>{isFullAdvance ? "১০০% ফুল এডভান্স প্রযোজ্য" : "অফার বুকিং এডভান্স প্রযোজ্য"}</span>
-            </div>
-            <p className="text-[11px] text-zinc-300 leading-relaxed">
-              {isFullAdvance
-                ? `বর্ডার স্টক লিমিটেড ফোন অফারের ক্ষেত্রে সম্পূর্ণ ${formatPrice(payableAdvance)} টাকা এডভান্স পেমেন্ট করতে হবে। পেমেন্ট সম্পন্ন হওয়ার পর ডেলিভারি নিশ্চিত করা হবে।`
-                : `বর্ডার স্টক অফার কনফার্মেশনের জন্য নির্ধারিত ${formatPrice(payableAdvance)} টাকা এডভান্স পেমেন্ট করতে হবে। বাকি ${formatPrice(dueAmount)} টাকা ডেলিভারির সময় প্রদেয় হবে।`}
-            </p>
-          </div>
-
-          {/* User Address Inputs */}
-          <div className="space-y-3">
-            <div>
-              <label className="block text-zinc-300 font-bold mb-1 flex items-center gap-1">
-                <User className="w-3.5 h-3.5 text-amber-400" />
-                <span>আপনার নাম *</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="উদাহরণ: তানজিম আহমেদ"
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500/80"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Inputs */}
+            <div className="space-y-3">
               <div>
-                <label className="block text-zinc-300 font-bold mb-1 flex items-center gap-1">
-                  <Phone className="w-3.5 h-3.5 text-amber-400" />
-                  <span>ফোন নম্বর *</span>
+                <label className="block text-[#1d1d1f] dark:text-[#f5f5f7] font-semibold mb-1.5 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
+                  <span>আপনার নাম *</span>
                 </label>
                 <input
-                  type="tel"
+                  type="text"
                   required
-                  value={contactNumber}
-                  onChange={(e) => setContactNumber(e.target.value)}
-                  placeholder="01XXXXXXXXX"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500/80"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="উদাহরণ: তানজিম আহমেদ"
+                  className="ds-apple-input w-full rounded-xl px-3.5 py-2.5 text-[13px] outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#1d1d1f] dark:text-[#f5f5f7] font-semibold mb-1.5 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
+                    <span>ফোন নম্বর *</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value)}
+                    placeholder="01XXXXXXXXX"
+                    className="ds-apple-input w-full rounded-xl px-3.5 py-2.5 text-[13px] outline-none tabular-nums"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[#6e6e73] dark:text-[#98989d] font-medium mb-1.5">
+                    বিকল্প ফোন নম্বর (ঐচ্ছিক)
+                  </label>
+                  <input
+                    type="tel"
+                    value={altNumber}
+                    onChange={(e) => setAltNumber(e.target.value)}
+                    placeholder="01XXXXXXXXX"
+                    className="ds-apple-input w-full rounded-xl px-3.5 py-2.5 text-[13px] outline-none tabular-nums"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[#1d1d1f] dark:text-[#f5f5f7] font-semibold mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
+                  <span>সম্পূর্ণ ডেলিভারি ঠিকানা *</span>
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={shippingAddress}
+                  onChange={(e) => setShippingAddress(e.target.value)}
+                  placeholder="বাসা/হোল্ডিং নং, রোড নং, এরিয়া, থানা..."
+                  className="ds-apple-input w-full rounded-xl p-3 text-[13px] outline-none resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-zinc-400 font-medium mb-1">
-                  বিকল্প ফোন নম্বর (ঐচ্ছিক)
+                <label className="block text-[#1d1d1f] dark:text-[#f5f5f7] font-semibold mb-1.5">
+                  জেলা / বিভাগ সিলেক্ট করুন
                 </label>
-                <input
-                  type="tel"
-                  value={altNumber}
-                  onChange={(e) => setAltNumber(e.target.value)}
-                  placeholder="01XXXXXXXXX"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500/80"
-                />
+                <select
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  className="ds-apple-input w-full rounded-xl px-3.5 py-2.5 text-[13px] outline-none cursor-pointer"
+                >
+                  <option value="Dhaka">ঢাকার ভেতরে (ডেলিভারি চার্জ ৳৮০)</option>
+                  <option value="Outside Dhaka">ঢাকার বাহিরে (ডেলিভারি চার্জ ৳১৩০)</option>
+                </select>
               </div>
             </div>
 
-            <div>
-              <label className="block text-zinc-300 font-bold mb-1 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                <span>সম্পুর্ন ডেলিভারি ঠিকানা *</span>
-              </label>
-              <textarea
-                rows={2}
-                required
-                value={shippingAddress}
-                onChange={(e) => setShippingAddress(e.target.value)}
-                placeholder="বাসা/হোল্ডিং নং, রোড নং, এরিয়া, থানা..."
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500/80 resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-zinc-300 font-bold mb-1">
-                জেলা / বিভাগ সিলেক্ট করুন
-              </label>
-              <select
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/80 cursor-pointer"
-              >
-                <option value="Dhaka">ঢাকার ভেতরে (ডেলিভারি চার্জ ৳৮০)</option>
-                <option value="Outside Dhaka">ঢাকার বাহিরে (ডেলিভারি চার্জ ৳১৩০)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Pricing Summary */}
-          <div className="bg-zinc-900/60 rounded-2xl p-3 border border-zinc-800 space-y-1.5 text-xs">
-            <div className="flex justify-between text-zinc-400">
-              <span>ফোনের দাম:</span>
-              <span>{formatPrice(displayPrice)}</span>
-            </div>
-            <div className="flex justify-between text-zinc-400">
-              <span>ডেলিভারি চার্জ:</span>
-              <span>৳{deliveryFee}</span>
-            </div>
-            <div className="flex justify-between text-zinc-400 pt-1 border-t border-zinc-800/80">
-              <span>সর্বমোট মূল্য:</span>
-              <span>{formatPrice(grandTotal)}</span>
-            </div>
-            <div className="flex justify-between font-black text-amber-400 text-sm pt-1 border-t border-zinc-800">
-              <span>প্রদেয় এডভান্স টাকা:</span>
-              <span>{formatPrice(payableAdvance)}</span>
-            </div>
-            {dueAmount > 0 && (
-              <div className="flex justify-between text-zinc-400 text-[11px]">
-                <span>বাকি (ডেলিভারির সময় প্রদেয়):</span>
-                <span>{formatPrice(dueAmount)}</span>
+            {/* Pricing Summary */}
+            <div className="bg-[#f5f5f7] dark:bg-[#2c2c2e] rounded-2xl p-3.5 border border-black/[0.06] dark:border-white/[0.08] space-y-1.5 text-xs tabular-nums">
+              <div className="flex justify-between text-[#6e6e73] dark:text-[#98989d]">
+                <span>ফোনের দাম:</span>
+                <span>{formatPrice(displayPrice)}</span>
               </div>
-            )}
-          </div>
+              <div className="flex justify-between text-[#6e6e73] dark:text-[#98989d]">
+                <span>ডেলিভারি চার্জ:</span>
+                <span>৳{deliveryFee}</span>
+              </div>
+              <div className="flex justify-between text-[#1d1d1f] dark:text-[#f5f5f7] pt-1.5 border-t border-black/[0.06] dark:border-white/[0.08]">
+                <span>সর্বমোট মূল্য:</span>
+                <span className="font-semibold">{formatPrice(grandTotal)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-[#0071E3] dark:text-[#0A84FF] text-[14px] pt-1.5 border-t border-black/[0.06] dark:border-white/[0.08]">
+                <span>প্রদেয় এডভান্স টাকা:</span>
+                <span>{formatPrice(payableAdvance)}</span>
+              </div>
+              {dueAmount > 0 && (
+                <div className="flex justify-between text-[#6e6e73] dark:text-[#98989d] text-[11px]">
+                  <span>বাকি (ডেলিভারির সময় প্রদেয়):</span>
+                  <span>{formatPrice(dueAmount)}</span>
+                </div>
+              )}
+            </div>
 
-          {/* Action Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:brightness-110 text-black font-black text-xs shadow-lg shadow-amber-500/20 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
-          >
-            <span>পেমেন্ট পেইজে যান (এডভান্স {formatPrice(payableAdvance)})</span>
-            <ArrowRight className="w-4 h-4 stroke-[3]" />
-          </button>
-        </form>
-
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              onPointerDown={() => triggerHaptic("light")}
+              className="ds-apple-btn-primary w-full min-h-[48px] rounded-full font-semibold text-[14px] active:scale-[0.97] transition-transform flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 pb-[env(safe-area-inset-bottom,0px)]"
+            >
+              <span>পেমেন্ট পেইজে যান (এডভান্স {formatPrice(payableAdvance)})</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 };

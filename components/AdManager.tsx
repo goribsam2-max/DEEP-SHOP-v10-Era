@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { doc, runTransaction } from "firebase/firestore";
 import { X } from "lucide-react";
 import { auth, db } from "../firebase";
+import { APPLE_SPRING_DEFAULT, isAppleShoppingRoute } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 import { useNotify } from "./Notifications";
 import {
   DeepShopAdItem,
@@ -23,6 +25,8 @@ export const AdManager: React.FC = () => {
 
   const location = useLocation();
   const notify = useNotify();
+  const prefersReducedMotion = useReducedMotion();
+  const isAppleShop = isAppleShoppingRoute(location.pathname);
   const pageViewsRef = useRef(0);
   const openedAtRef = useRef<number>(0);
   const rewardClaimedRef = useRef<Record<string, boolean>>({});
@@ -195,31 +199,41 @@ export const AdManager: React.FC = () => {
   return (
     <AnimatePresence>
       {isOpen && activeAd && (
-        <div
-          className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4"
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: prefersReducedMotion ? 0.14 : 0.18 }}
+          className={`fixed inset-0 z-[9998] flex items-center justify-center p-4 ${
+            isAppleShop ? "ds-apple-portal ds-apple-backdrop" : "bg-black/65 backdrop-blur-sm"
+          }`}
           onClick={() => {
-            if (canClose) handleCloseModal();
+            if (canClose) {
+              triggerHaptic("light");
+              handleCloseModal();
+            }
           }}
         >
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ opacity: 0, scale: 0.94, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
-            transition={{ type: "spring", stiffness: 360, damping: 28 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 10 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 8 }}
+            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-[420px]"
           >
             {/* Top-Left Close / Skip Timer Pill (Never overlaps Top-Right "Tap to see details") */}
             <div className="absolute top-3.5 left-3.5 z-30">
               {!canClose ? (
-                <div className="ds-sponsored-pill px-3 py-1.5 rounded-full text-[12px] font-semibold backdrop-blur-md shadow">
+                <div className="ds-sponsored-pill px-3 py-1.5 rounded-full text-[12px] font-semibold backdrop-blur-md shadow tabular-nums">
                   Skip in {countdown}s
                 </div>
               ) : (
                 <button
                   type="button"
+                  onPointerDown={() => triggerHaptic("light")}
                   onClick={handleCloseModal}
                   aria-label="Close ad"
                   className="ds-sponsored-pill w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md shadow active:scale-90 transition cursor-pointer"
@@ -249,7 +263,7 @@ export const AdManager: React.FC = () => {
               }}
             />
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

@@ -1,63 +1,71 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import Icon from "../components/Icon";
+import { Search } from "lucide-react";
 import Logo from "../components/Logo";
 import SEO from "../components/SEO";
 import { useIllustrations } from "../lib/useIllustrations";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 const NotFound: React.FC = () => {
   const navigate = useNavigate();
   const illustrations = useIllustrations();
+  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#121212] flex flex-col items-center justify-center p-6 text-center">
+    <div className="ds-apple-shop-canvas min-h-screen flex flex-col items-center justify-center p-6 text-center">
       <SEO
         title="Page Not Found (404)"
         description="The page you are looking for does not exist or has been removed."
         noindex={true}
       />
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="max-w-md w-full bg-white dark:bg-zinc-900 dark:bg-white p-10 sm:p-14 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800"
+        initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={shouldReduceMotion ? { duration: 0.2 } : APPLE_SPRING_DEFAULT}
+        className="ds-apple-surface max-w-md w-full p-8 sm:p-10 rounded-[28px]"
       >
-        <div className="flex justify-center mb-10">
-          <Logo scale={1.2} centerOrigin />
+        <div className="flex justify-center mb-8">
+          <Logo scale={1.15} centerOrigin />
         </div>
 
         {illustrations.notFound ? (
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="w-48 h-48 mx-auto mb-8 rounded-[20px] overflow-hidden"
-            >
-              <img src={illustrations.notFound} alt="Not Found" className="w-full h-full object-cover" />
-            </motion.div>
+          <div className="w-44 h-44 mx-auto mb-6 rounded-[20px] overflow-hidden">
+            <img
+              src={illustrations.notFound}
+              alt="Page not found"
+              className="w-full h-full object-cover"
+            />
+          </div>
         ) : (
-            <motion.div
-              animate={{ rotate: [-2, 2, -2] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="w-24 h-24 mx-auto bg-zinc-100 dark:bg-zinc-900 rounded-full flex items-center justify-center mb-8 shadow-inner"
-            >
-              <Icon name="search" className="text-lg text-zinc-400" />
-            </motion.div>
+          <div className="w-16 h-16 mx-auto bg-[#F5F5F7] dark:bg-[#2C2C2E] rounded-full flex items-center justify-center mb-6">
+            <Search className="w-7 h-7 text-[#6E6E73] dark:text-[#98989D]" />
+          </div>
         )}
 
-        <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-3">
+        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
           Page Not Found
         </h1>
 
-        <p className="text-sm text-zinc-500 font-medium mb-10 leading-relaxed">
-          The page you are looking for might have been removed, had its name
-          changed, or is temporarily unavailable.
+        <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] mb-8 leading-relaxed">
+          The page you are looking for might have been removed, renamed, or is temporarily unavailable.
         </p>
 
-        </motion.div>
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic("light");
+            navigate("/");
+          }}
+          className="ds-apple-btn-primary w-full py-3.5 px-5 rounded-full text-[15px] font-semibold whitespace-nowrap active:scale-[0.98] transition-transform"
+        >
+          Back to Home
+        </button>
+      </motion.div>
     </div>
   );
 };
 
 export default NotFound;
+

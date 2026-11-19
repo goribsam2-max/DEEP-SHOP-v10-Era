@@ -1,10 +1,11 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button, ButtonProps } from "@/components/ui/button-1";
 import clsx from "clsx";
 import { Drawer } from "@/components/ui/drawer";
 import useBreakpoints from "@/components/ui/use-breakpoints";
+import { APPLE_SPRING_DEFAULT, isAppleShoppingRoute } from "@/lib/shoppingRoute";
 
 interface ModalProps {
   active: boolean;
@@ -41,6 +42,9 @@ const ModalModal = ({
   const focusRef = useRef<HTMLButtonElement | null>(null);
   const { isMobile } = useBreakpoints();
   const [mounted, setMounted] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const isAppleShop =
+    typeof window !== "undefined" && isAppleShoppingRoute(window.location.pathname);
 
   useEffect(() => {
     setMounted(true);
@@ -126,24 +130,27 @@ const ModalModal = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            transition={{ duration: prefersReducedMotion ? 0.14 : 0.18, ease: "easeOut" }}
             onClick={onClickOutside}
-            className="fixed inset-0 ds-liquid-backdrop"
+            className={clsx(
+              "fixed inset-0",
+              isAppleShop ? "ds-apple-portal ds-apple-backdrop" : "ds-liquid-backdrop"
+            )}
           />
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ opacity: 0, scale: 0.91, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 8 }}
-            transition={{
-              type: "spring",
-              stiffness: 380,
-              damping: 28,
-              mass: 0.85,
-            }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 12 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 8 }}
+            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
             onClick={(e) => e.stopPropagation()}
-            className="ds-liquid-glass-popup relative z-10 flex flex-col font-sans w-full max-w-[420px] sm:max-w-[480px] max-h-[min(820px,84dvh)] overflow-y-auto"
+            className={clsx(
+              isAppleShop
+                ? "ds-apple-portal ds-apple-modal rounded-[26px]"
+                : "ds-liquid-glass-popup",
+              "relative z-10 flex flex-col font-sans w-full max-w-[420px] sm:max-w-[480px] max-h-[min(820px,84dvh)] overflow-y-auto"
+            )}
           >
             {React.Children.map(children, (child) =>
               (child as React.ReactElement)?.type === ModalBody

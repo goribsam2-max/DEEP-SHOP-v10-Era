@@ -1,7 +1,10 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Star, CheckCircle2, Trash2, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from "../../lib/shoppingRoute";
+import { triggerHaptic } from "../../lib/haptics";
 
 export interface ReviewCardProps {
   name: string;
@@ -44,6 +47,7 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
   ) => {
     const [avatarFailed, setAvatarFailed] = React.useState(false);
     const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
+    const shouldReduceMotion = useReducedMotion();
 
     const safeRating = Math.min(5, Math.max(1, Number(rating || 5)));
     const formattedDate = React.useMemo(() => {
@@ -64,15 +68,64 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
       ? images.filter((u) => typeof u === "string" && u.trim().length > 0)
       : [];
 
+    const cardTransition = shouldReduceMotion
+      ? { duration: 0.16 }
+      : APPLE_SPRING_DEFAULT;
+
+    const lightboxNode =
+      typeof document !== "undefined"
+        ? createPortal(
+            <AnimatePresence>
+              {lightboxSrc && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setLightboxSrc(null);
+                  }}
+                  className="ds-apple-portal fixed inset-0 z-[220] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic("light");
+                      setLightboxSrc(null);
+                    }}
+                    className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+                    aria-label="Close photo preview"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <motion.img
+                    initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                    animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+                    transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_SNAPPY}
+                    src={lightboxSrc}
+                    alt="Customer review attachment"
+                    referrerPolicy="no-referrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="max-w-full max-h-[86vh] object-contain rounded-[22px] shadow-2xl"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )
+        : null;
+
     return (
       <>
         <motion.article
           ref={ref}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+          animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+          transition={cardTransition}
           className={cn(
-            "rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 p-5 sm:p-6 shadow-2xs transition-colors hover:border-zinc-300 dark:hover:border-zinc-700 w-full",
+            "rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] p-5 sm:p-6 shadow-xs transition-colors hover:border-black/[0.12] dark:hover:border-white/[0.18] w-full",
             className
           )}
         >
@@ -85,22 +138,22 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
                   alt={name}
                   referrerPolicy="no-referrer"
                   onError={() => setAvatarFailed(true)}
-                  className="w-10 h-10 rounded-full object-cover border border-zinc-200 dark:border-zinc-700 shrink-0 bg-zinc-100 dark:bg-zinc-800"
+                  className="w-10 h-10 rounded-full object-cover border border-black/[0.08] dark:border-white/[0.12] shrink-0 bg-[#F5F5F7] dark:bg-[#2C2C2E]"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-zinc-900 dark:bg-zinc-800 text-white dark:text-zinc-100 flex items-center justify-center text-xs font-bold tracking-tight shrink-0 border border-zinc-200/20">
+                <div className="w-10 h-10 rounded-full bg-[#1D1D1F] dark:bg-[#2C2C2E] text-white flex items-center justify-center text-xs font-bold tracking-tight shrink-0 border border-white/10">
                   {getInitials(name)}
                 </div>
               )}
 
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                  <h3 className="text-sm sm:text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
                     {name || "Verified Customer"}
                   </h3>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#248A3D] dark:text-[#30D158] shrink-0" />
                 </div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                <p className="text-xs text-[#6E6E73] dark:text-[#98989D] truncate mt-0.5 tabular-nums">
                   <span>{handle || "Verified Buyer"}</span>
                   <span className="mx-1.5">·</span>
                   <span>{formattedDate}</span>
@@ -117,13 +170,13 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
                       className={cn(
                         "w-3.5 h-3.5 sm:w-4 sm:h-4",
                         starIdx <= Math.round(safeRating)
-                          ? "text-amber-400 fill-amber-400"
-                          : "text-zinc-200 dark:text-zinc-700"
+                          ? "text-[#FF9500] dark:text-[#FF9F0A] fill-[#FF9500] dark:fill-[#FF9F0A]"
+                          : "text-black/[0.12] dark:text-white/[0.16]"
                       )}
                     />
                   ))}
                 </div>
-                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 tabular-nums ml-1">
+                <span className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums ml-1">
                   {safeRating.toFixed(1)}
                 </span>
               </div>
@@ -131,8 +184,11 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
               {canDelete && onDelete && (
                 <button
                   type="button"
-                  onClick={onDelete}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic("warning");
+                    onDelete();
+                  }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[#6E6E73] dark:text-[#98989D] hover:text-[#FF3B30] hover:bg-[#FF3B30]/10 transition-colors cursor-pointer active:scale-95"
                   aria-label="Delete review"
                   title="Delete review"
                 >
@@ -144,7 +200,7 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
 
           {/* Review Body */}
           {review && (
-            <p className="mt-3.5 text-sm sm:text-[15px] leading-relaxed text-zinc-700 dark:text-zinc-200 whitespace-pre-line break-words">
+            <p className="mt-3.5 text-sm sm:text-[15px] leading-relaxed text-[#1D1D1F]/85 dark:text-[#F5F5F7]/85 whitespace-pre-line break-words">
               {review}
             </p>
           )}
@@ -156,8 +212,11 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
                 <button
                   key={`${img}-${idx}`}
                   type="button"
-                  onClick={() => setLightboxSrc(img)}
-                  className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shrink-0 bg-zinc-100 dark:bg-zinc-800 group cursor-zoom-in"
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setLightboxSrc(img);
+                  }}
+                  className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border border-black/[0.08] dark:border-white/[0.12] shrink-0 bg-[#F5F5F7] dark:bg-[#2C2C2E] group cursor-zoom-in active:scale-95 transition-transform"
                 >
                   <img
                     src={img}
@@ -172,34 +231,7 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
           )}
         </motion.article>
 
-        {/* Fullscreen Review Photo Lightbox */}
-        <AnimatePresence>
-          {lightboxSrc && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setLightboxSrc(null)}
-              className="fixed inset-0 z-[220] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
-            >
-              <button
-                type="button"
-                onClick={() => setLightboxSrc(null)}
-                className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer"
-                aria-label="Close photo preview"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              <img
-                src={lightboxSrc}
-                alt="Customer review attachment"
-                referrerPolicy="no-referrer"
-                onClick={(e) => e.stopPropagation()}
-                className="max-w-full max-h-[86vh] object-contain rounded-2xl shadow-2xl"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {lightboxNode}
       </>
     );
   }

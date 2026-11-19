@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useNotify } from "../components/Notifications";
 import { Loader2 } from "lucide-react";
 import { updateProfile, EmailAuthProvider, linkWithCredential } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { getFriendlyErrorMessage } from "../lib/firebaseErrorMapper";
+import { triggerHaptic } from "../lib/haptics";
 
 const VerifyCode: React.FC = () => {
   const navigate = useNavigate();
@@ -105,46 +105,55 @@ const VerifyCode: React.FC = () => {
   };
 
   return (
-    <div className="p-8 animate-fade-in h-screen flex flex-col bg-white dark:bg-zinc-950">
-      <div className="text-center flex-1 max-w-md mx-auto w-full pt-12">
-        <h1 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">Verify Code</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-10">
-          Please enter the 6-digit code we sent to{" "}
-          <span className="text-black dark:text-white font-bold block mt-1 text-lg">
-            {phone || "your phone"}
-          </span>
-        </p>
+    <div className="ds-apple-shop-canvas min-h-[100dvh] flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-5 py-8">
+        <div className="ds-apple-surface w-full max-w-md rounded-[28px] p-6 sm:p-8 text-center">
+          <h1 className="ds-apple-display text-[26px] font-bold tracking-[-0.025em] mb-2 text-[#1D1D1F] dark:text-[#F5F5F7]">
+            Verify Code
+          </h1>
+          <p className="ds-apple-muted text-[14.5px] mb-8">
+            Please enter the 6-digit code we sent to{" "}
+            <span className="text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold block mt-1 text-[16px] tabular-nums">
+              {phone || "your phone"}
+            </span>
+          </p>
 
-        <form onSubmit={handleVerify} className="space-y-8">
-          <input
-            type="text"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="000000"
-            className="w-full text-center text-4xl tracking-[1em] font-bold bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl h-24 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all"
-            autoFocus
-          />
+          <form onSubmit={handleVerify} className="space-y-6">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              className="ds-apple-input w-full text-center text-[32px] tracking-[0.65em] font-bold tabular-nums rounded-2xl h-20 outline-none"
+              autoFocus
+            />
 
-          <Button
-            type="submit"
-            disabled={loading || code.length !== 6}
-            className="w-full h-14 text-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 dark:text-zinc-900 text-white rounded-xl font-semibold transition-all"
-          >
-            {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-            {loading ? "Verifying..." : "Verify & Continue"}
-          </Button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading || code.length !== 6}
+              onClick={() => triggerHaptic("medium")}
+              className="ds-apple-btn-primary w-full min-h-[50px] px-5 text-[16px] rounded-full font-semibold flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98] transition-transform disabled:opacity-50 cursor-pointer"
+            >
+              {loading && <Loader2 className="h-5 w-5 shrink-0 animate-spin" />}
+              <span>{loading ? "Verifying..." : "Verify & Continue"}</span>
+            </button>
+          </form>
 
-        <p className="text-sm mt-10 text-zinc-500">
-          Didn't receive OTP?{" "}
-          <button 
-            type="button"
-            onClick={() => navigate("/signup")}
-            className="font-bold text-black dark:text-white underline hover:opacity-80 transition-opacity"
-          >
-            Go back and try again
-          </button>
-        </p>
+          <p className="text-[14px] mt-8 ds-apple-muted">
+            Didn&apos;t receive OTP?{" "}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic("selection");
+                navigate("/signup");
+              }}
+              className="font-semibold text-[#0071E3] dark:text-[#0A84FF] hover:underline cursor-pointer"
+            >
+              Go back and try again
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Input } from "./ui/input";
 import { AtSign, Phone, ChevronDown } from "lucide-react";
 import { cn } from "../lib/utils";
+import { triggerHaptic } from "../lib/haptics";
 
 const ALLOWED_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "icloud.com"];
 const COUNTRY_CODES = [
@@ -139,28 +140,34 @@ export const AuthInputs: React.FC<AuthInputsProps> = ({
     COUNTRY_CODES.find((c) => c.code === countryCode) || COUNTRY_CODES[0];
 
   return (
-    <div className="space-y-3">
-      <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 pl-1 rounded-xl">
+    <div className="space-y-3.5">
+      <div className="ds-apple-segmented flex p-1 rounded-[12px]">
         <button
           type="button"
-          onClick={() => setAuthType("email")}
+          onClick={() => {
+            triggerHaptic("selection");
+            setAuthType("email");
+          }}
           className={cn(
-            "flex-1 text-xs font-semibold py-2 rounded-lg transition-colors",
+            "flex-1 text-[13px] font-semibold py-2 rounded-[9px] transition-all cursor-pointer",
             authType === "email"
-              ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100"
-              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300",
+              ? "bg-white dark:bg-[#1C1C1E] shadow-xs text-[#1D1D1F] dark:text-[#F5F5F7]"
+              : "text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7]",
           )}
         >
           Email
         </button>
         <button
           type="button"
-          onClick={() => setAuthType("phone")}
+          onClick={() => {
+            triggerHaptic("selection");
+            setAuthType("phone");
+          }}
           className={cn(
-            "flex-1 text-xs font-semibold py-2 rounded-lg transition-colors",
+            "flex-1 text-[13px] font-semibold py-2 rounded-[9px] transition-all cursor-pointer",
             authType === "phone"
-              ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100"
-              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300",
+              ? "bg-white dark:bg-[#1C1C1E] shadow-xs text-[#1D1D1F] dark:text-[#F5F5F7]"
+              : "text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7]",
           )}
         >
           Phone Number
@@ -169,13 +176,13 @@ export const AuthInputs: React.FC<AuthInputsProps> = ({
 
       {authType === "email" ? (
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          <label className="block text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
             Email Address
           </label>
           <div className="relative h-max" ref={containerRef}>
             <Input
               placeholder="name@gmail.com"
-              className="peer ps-10 h-12 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 rounded-xl"
+              className="ds-apple-input peer ps-10 h-12 rounded-[14px]"
               type="email"
               value={email}
               onChange={(e) => {
@@ -185,18 +192,19 @@ export const AuthInputs: React.FC<AuthInputsProps> = ({
               onFocus={() => setShowSuggestions(true)}
               required
             />
-            <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3.5 peer-disabled:opacity-50">
+            <div className="text-[#6E6E73] dark:text-[#98989D] pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3.5 peer-disabled:opacity-50">
               <AtSign className="size-4" aria-hidden="true" />
             </div>
 
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="ds-apple-popover absolute z-10 w-full mt-1.5 rounded-[14px] overflow-hidden">
                 {suggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800/50 last:border-0"
+                    className="w-full text-left px-4 py-3 text-[13.5px] text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors border-b border-black/[0.05] dark:border-white/[0.06] last:border-0 cursor-pointer"
                     onClick={() => {
+                      triggerHaptic("selection");
                       setEmail(suggestion);
                       setShowSuggestions(false);
                     }}
@@ -207,44 +215,48 @@ export const AuthInputs: React.FC<AuthInputsProps> = ({
               </div>
             )}
           </div>
-          <p className="text-[10px] text-zinc-500 pl-1">
+          <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] pl-1">
             Real emails only (Gmail, Yahoo, Outlook, iCloud)
           </p>
         </div>
       ) : (
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+          <label className="block text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
             Phone Number
           </label>
           <div className="flex gap-2 relative">
             <div className="relative" ref={countryDropdownRef}>
               <button
                 type="button"
-                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                className="h-12 px-3 flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 outline-none"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setShowCountryDropdown(!showCountryDropdown);
+                }}
+                className="ds-apple-input h-12 px-3 flex items-center gap-1.5 rounded-[14px] text-[13.5px] font-medium cursor-pointer"
               >
                 {selectedCountry.flag}
-                <span className="text-zinc-800 dark:text-zinc-200">
+                <span className="text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {selectedCountry.code}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-500 ml-0.5" />
+                <ChevronDown className="w-3.5 h-3.5 text-[#6E6E73] dark:text-[#98989D] ml-0.5" />
               </button>
 
               {showCountryDropdown && (
-                <div className="absolute z-20 w-[180px] top-full left-0 mt-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1.5 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="ds-apple-popover absolute z-20 w-[184px] top-full left-0 mt-1.5 p-1.5 rounded-[16px]">
                   {COUNTRY_CODES.map((c) => (
                     <button
                       key={c.code}
                       type="button"
                       onClick={() => {
+                        triggerHaptic("selection");
                         setCountryCode(c.code);
                         setShowCountryDropdown(false);
                       }}
                       className={cn(
-                        "w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg transition-colors text-left",
+                        "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] rounded-[10px] transition-colors text-left cursor-pointer",
                         countryCode === c.code
-                          ? "bg-zinc-100 dark:bg-zinc-800 font-semibold text-zinc-900 dark:text-zinc-100"
-                          : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800",
+                          ? "bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 font-semibold text-[#0071E3] dark:text-[#0A84FF]"
+                          : "text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
                       )}
                     >
                       {c.flag}
@@ -252,7 +264,7 @@ export const AuthInputs: React.FC<AuthInputsProps> = ({
                         <span className="text-[13px] leading-tight">
                           {c.name}
                         </span>
-                        <span className="text-[11px] text-zinc-500 leading-tight">
+                        <span className="text-[11px] tabular-nums text-[#6E6E73] dark:text-[#98989D] leading-tight">
                           {c.code}
                         </span>
                       </div>
@@ -271,7 +283,7 @@ export const AuthInputs: React.FC<AuthInputsProps> = ({
                       ? "9xxxxxxxxx"
                       : "3xxxxxxxxx"
                 }
-                className="peer ps-10 h-12 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 rounded-xl flex-1 w-full"
+                className="ds-apple-input peer ps-10 h-12 rounded-[14px] flex-1 w-full tabular-nums"
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) =>
@@ -279,7 +291,7 @@ export const AuthInputs: React.FC<AuthInputsProps> = ({
                 }
                 required
               />
-              <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3.5 peer-disabled:opacity-50">
+              <div className="text-[#6E6E73] dark:text-[#98989D] pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3.5 peer-disabled:opacity-50">
                 <Phone className="size-4" aria-hidden="true" />
               </div>
             </div>

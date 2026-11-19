@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Plus, Trash2 } from "lucide-react";
+import { MapPin, Plus, Trash2, Check } from "lucide-react";
 import { useNotify } from "../components/Notifications";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { auth, db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { triggerHaptic } from "../lib/haptics";
 import { cn } from "@/lib/utils";
 import { BangladeshAddressSelector } from "../components/BangladeshAddressSelector";
 import {
@@ -270,131 +270,140 @@ const ShippingAddress: React.FC = () => {
   if (loading) return <ProfileSettingsPageSkeleton />;
 
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-zinc-50/80 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 py-5 sm:py-8 px-4 sm:px-6 pb-24">
-      <div className="max-w-2xl mx-auto flex flex-col gap-6">
-        {/* Responsive Top Header Bar with Voice Assistant Toggle */}
-        <div className="flex items-center justify-between gap-3 pb-4 border-b border-zinc-200/80 dark:border-zinc-800">
+    <div className="ds-apple-shop-canvas min-h-[calc(100vh-56px)] pb-24">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 flex flex-col gap-5">
+        <div className="flex items-start justify-between gap-3 px-1">
           <div className="min-w-0">
-            <h1 className="text-base sm:text-xl font-bold tracking-tight text-zinc-900 dark:text-white truncate">
+            <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
               {isAdding ? "নতুন ডেলিভারি ঠিকানা" : "ডেলিভারি ঠিকানা"}
             </h1>
-            <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 truncate">
+            <p className="text-xs sm:text-[13px] ds-apple-muted mt-1">
               {isAdding
                 ? "সঠিক নাম, নম্বর ও লোকেশন পূরণ করুন"
                 : "পার্সেল গ্রহণের ঠিকানা নির্বাচন বা যোগ করুন"}
             </p>
           </div>
-
-          {/* Responsive Inline Voice Assistant Toggle */}
-          <AuthVoiceToggle isInline />
+          <div className="shrink-0">
+            <AuthVoiceToggle isInline />
+          </div>
         </div>
 
         {/* Main Content */}
-        <div className="space-y-6 flex-1">
+        <div className="space-y-5 flex-1">
           {savedAddresses.length > 0 && !isAdding ? (
             <div className="space-y-3.5">
-              {savedAddresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  onClick={() => {
-                    setSelectedAddressId(addr.id);
-                    speakIfUnmuted(`${addr.name} এর ঠিকানা নির্বাচন করা হয়েছে।`);
-                  }}
-                  className={cn(
-                    "p-4 sm:p-5 rounded-2xl border cursor-pointer transition-all bg-white dark:bg-zinc-900",
-                    selectedAddressId === addr.id
-                      ? "border-emerald-600 dark:border-emerald-500 ring-1 ring-emerald-500/20 shadow-xs"
-                      : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
-                  )}
-                >
-                  <div className="flex justify-between items-start gap-3 mb-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                          selectedAddressId === addr.id
-                            ? "border-emerald-600 dark:border-emerald-500"
-                            : "border-zinc-300 dark:border-zinc-600"
-                        )}
-                      >
-                        {selectedAddressId === addr.id && (
-                          <div className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-500" />
+              {savedAddresses.map((addr) => {
+                const isSelected = selectedAddressId === addr.id;
+                return (
+                  <div
+                    key={addr.id}
+                    onClick={() => {
+                      triggerHaptic();
+                      setSelectedAddressId(addr.id);
+                      speakIfUnmuted(`${addr.name} এর ঠিকানা নির্বাচন করা হয়েছে।`);
+                    }}
+                    className={cn(
+                      "ds-apple-surface p-4 sm:p-5 rounded-[22px] cursor-pointer transition-all",
+                      isSelected && "ds-liquid-subpanel-active"
+                    )}
+                  >
+                    <div className="flex justify-between items-start gap-3 mb-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                            isSelected
+                              ? "border-[#0071E3] dark:border-[#0A84FF]"
+                              : "border-black/20 dark:border-white/25"
+                          )}
+                        >
+                          {isSelected && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-[#0071E3] dark:bg-[#0A84FF]" />
+                          )}
+                        </div>
+                        <h4 className="font-semibold text-[15px] truncate">
+                          {addr.name}
+                        </h4>
+                        {addr.category && (
+                          <span className="text-xs ds-apple-muted shrink-0">
+                            · {addr.category}
+                          </span>
                         )}
                       </div>
-                      <h4 className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                        {addr.name}
-                      </h4>
-                      {addr.category && (
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
-                          · {addr.category}
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          triggerHaptic("warning");
+                          handleRemove(addr.id, e);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#FF3B30] dark:text-[#FF453A] hover:bg-[#FF3B30]/10 px-2.5 py-1 rounded-full transition-colors cursor-pointer shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>মুছুন</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => handleRemove(addr.id, e)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>মুছুন</span>
-                    </button>
+                    <div className="pl-8 space-y-1">
+                      <p className="text-sm font-medium ds-apple-muted tabular-nums">
+                        {addr.phone}
+                      </p>
+                      <p className="text-sm leading-relaxed">
+                        {addr.address}
+                      </p>
+                    </div>
                   </div>
-                  <div className="pl-7 space-y-1">
-                    <p className="text-sm font-medium text-zinc-500 tabular-nums">
-                      {addr.phone}
-                    </p>
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                      {addr.address}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              <Button
-                variant="outline"
+                );
+              })}
+              <button
                 type="button"
-                className="w-full border-dashed border-emerald-500/60 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 py-6 rounded-2xl font-bold flex items-center justify-center gap-2 cursor-pointer"
-                onClick={handleOpenAddForm}
+                className="ds-apple-surface w-full border border-dashed border-[#0071E3]/45 ds-apple-accent-text hover:bg-[#0071E3]/5 min-h-[52px] py-3.5 px-5 rounded-[20px] font-semibold text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer transition-colors"
+                onClick={() => {
+                  triggerHaptic();
+                  handleOpenAddForm();
+                }}
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 shrink-0" />
                 <span>নতুন ডেলিভারি ঠিকানা যোগ করুন</span>
-              </Button>
+              </button>
             </div>
           ) : (
             !isAdding && (
-              <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <div className="ds-apple-surface flex flex-col items-center justify-center py-16 px-6 text-center rounded-[26px] space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 ds-apple-accent-text flex items-center justify-center">
                   <MapPin className="w-6 h-6" />
                 </div>
                 <div className="space-y-1 max-w-sm">
-                  <p className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  <p className="text-base font-semibold">
                     কোনো ডেলিভারি ঠিকানা সেভ করা নেই
                   </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-xs ds-apple-muted leading-relaxed">
                     আপনার অর্ডার দ্রুত ও সঠিকভাবে পৌঁছে দিতে একটি ডেলিভারি ঠিকানা যোগ করুন।
                   </p>
                 </div>
-                <Button
+                <button
                   type="button"
-                  className="mt-2 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 rounded-full px-6 py-5 font-bold cursor-pointer"
-                  onClick={handleOpenAddForm}
+                  className="ds-apple-btn-primary mt-2 rounded-full px-6 min-h-[48px] py-3 text-sm font-semibold inline-flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic();
+                    handleOpenAddForm();
+                  }}
                 >
-                  <Plus className="w-4 h-4 mr-1.5" />
+                  <Plus className="w-4 h-4 shrink-0" />
                   <span>নতুন ডেলিভারি ঠিকানা যোগ করুন</span>
-                </Button>
+                </button>
               </div>
             )
           )}
 
           {isAdding && (
-            <div className="flex flex-col gap-5 bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xs">
+            <div className="ds-apple-surface flex flex-col gap-5 p-5 sm:p-6 rounded-[24px]">
               {/* Contact name */}
               <div className="space-y-2">
-                <Label className="font-semibold text-zinc-700 dark:text-zinc-300">
+                <Label className="font-medium text-xs ds-apple-muted">
                   প্রাপকের নাম (Contact Name){" "}
-                  <span className="text-rose-500">*</span>
+                  <span className="text-[#FF3B30]">*</span>
                 </Label>
                 <Input
-                  className="py-6 rounded-xl border-zinc-200 dark:border-zinc-800 focus-visible:ring-emerald-500 bg-transparent text-base"
+                  className="ds-apple-input h-12 rounded-2xl text-base"
                   placeholder="যার নামে পার্সেল রিসিভ হবে তার পূর্ণ নাম"
                   value={newAddress.name}
                   onFocus={() =>
@@ -410,12 +419,12 @@ const ShippingAddress: React.FC = () => {
 
               {/* Contact number */}
               <div className="space-y-2">
-                <Label className="font-semibold text-zinc-700 dark:text-zinc-300">
+                <Label className="font-medium text-xs ds-apple-muted">
                   সচল মোবাইল নম্বর (Contact Number){" "}
-                  <span className="text-rose-500">*</span>
+                  <span className="text-[#FF3B30]">*</span>
                 </Label>
-                <div className="flex border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
-                  <div className="flex items-center gap-2 px-3.5 sm:px-4 bg-zinc-50 dark:bg-zinc-800/50 border-r border-zinc-200 dark:border-zinc-800 shrink-0">
+                <div className="ds-apple-input flex rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-3.5 sm:px-4 border-r border-black/[0.06] dark:border-white/[0.08] shrink-0">
                     <div className="w-5 h-3.5 bg-green-600 relative overflow-hidden flex items-center justify-center rounded-[2px]">
                       <div className="w-2 h-2 bg-red-500 rounded-full" />
                     </div>
@@ -435,7 +444,7 @@ const ShippingAddress: React.FC = () => {
                     onChange={(e) =>
                       setNewAddress({ ...newAddress, phone: e.target.value })
                     }
-                    className="flex-1 min-w-0 px-3.5 sm:px-4 py-3 text-base bg-transparent outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 tabular-nums"
+                    className="flex-1 min-w-0 px-3.5 sm:px-4 py-3 text-base bg-transparent outline-none tabular-nums"
                   />
                 </div>
               </div>
@@ -456,7 +465,7 @@ const ShippingAddress: React.FC = () => {
 
               {/* Category */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-2 gap-3">
-                <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                <span className="text-sm font-medium ds-apple-muted">
                   ঠিকানার ধরন (Address Category)
                 </span>
                 <div className="flex flex-wrap gap-4">
@@ -481,9 +490,12 @@ const ShippingAddress: React.FC = () => {
                       key={cat.id}
                       className="flex items-center gap-2 cursor-pointer group"
                     >
-                      <div className="relative flex items-center justify-center w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-700 group-hover:border-emerald-500 transition-colors">
+                      <div className={cn(
+                        "relative flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors",
+                        newAddress.category === cat.id ? "border-[#0071E3] dark:border-[#0A84FF]" : "border-black/20 dark:border-white/25"
+                      )}>
                         {newAddress.category === cat.id && (
-                          <div className="w-2.5 h-2.5 bg-emerald-600 rounded-full" />
+                          <div className="w-2.5 h-2.5 bg-[#0071E3] dark:bg-[#0A84FF] rounded-full" />
                         )}
                       </div>
                       <input
@@ -491,12 +503,13 @@ const ShippingAddress: React.FC = () => {
                         name="addressCat"
                         checked={newAddress.category === cat.id}
                         onChange={() => {
+                          triggerHaptic();
                           setNewAddress({ ...newAddress, category: cat.id });
                           speakIfUnmuted(cat.voice);
                         }}
                         className="sr-only"
                       />
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
+                      <span className="text-sm font-medium whitespace-nowrap">
                         {cat.label}
                       </span>
                     </label>
@@ -506,7 +519,7 @@ const ShippingAddress: React.FC = () => {
 
               {/* Default */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                <span className="text-sm font-medium ds-apple-muted">
                   ডিফল্ট ডেলিভারি ঠিকানা
                 </span>
                 <div className="flex gap-4">
@@ -515,24 +528,28 @@ const ShippingAddress: React.FC = () => {
                       key={opt}
                       className="flex items-center gap-2 cursor-pointer group"
                     >
-                      <div className="relative flex items-center justify-center w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-700 group-hover:border-emerald-500 transition-colors">
+                      <div className={cn(
+                        "relative flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors",
+                        (newAddress.isDefault ? "On" : "Off") === opt ? "border-[#0071E3] dark:border-[#0A84FF]" : "border-black/20 dark:border-white/25"
+                      )}>
                         {(newAddress.isDefault ? "On" : "Off") === opt && (
-                          <div className="w-2.5 h-2.5 bg-emerald-600 rounded-full" />
+                          <div className="w-2.5 h-2.5 bg-[#0071E3] dark:bg-[#0A84FF] rounded-full" />
                         )}
                       </div>
                       <input
                         type="radio"
                         name="isDefaultAddr"
                         checked={(newAddress.isDefault ? "On" : "Off") === opt}
-                        onChange={() =>
+                        onChange={() => {
+                          triggerHaptic();
                           setNewAddress({
                             ...newAddress,
                             isDefault: opt === "On",
-                          })
-                        }
+                          });
+                        }}
                         className="sr-only"
                       />
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      <span className="text-sm font-medium">
                         {opt === "On" ? "হ্যাঁ (On)" : "না (Off)"}
                       </span>
                     </label>
@@ -540,36 +557,45 @@ const ShippingAddress: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-4 pt-2 flex flex-col sm:flex-row gap-3">
-                <Button
+              <div className="mt-4 pt-3 border-t border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row gap-3">
+                <button
                   type="button"
-                  onClick={handleAdd}
-                  className="flex-1 py-6 text-base bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-xs cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic("success");
+                    handleAdd();
+                  }}
+                  className="ds-apple-btn-primary w-full sm:w-auto sm:flex-1 min-h-[50px] py-3.5 px-6 text-[15px] font-semibold rounded-full inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                  ঠিকানা সেভ করুন (Save Address)
-                </Button>
-                <Button
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>ঠিকানা সেভ করুন</span>
+                </button>
+                <button
                   type="button"
-                  variant="outline"
-                  onClick={() => setIsAdding(false)}
-                  className="sm:w-36 py-6 rounded-2xl font-semibold cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic();
+                    setIsAdding(false);
+                  }}
+                  className="ds-apple-btn-secondary w-full sm:w-36 min-h-[50px] py-3.5 px-6 rounded-full text-[15px] font-semibold inline-flex items-center justify-center whitespace-nowrap shrink-0 active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                  বাতিল (Cancel)
-                </Button>
+                  <span>বাতিল</span>
+                </button>
               </div>
             </div>
           )}
         </div>
 
         {!isAdding && (
-          <Button
+          <button
             type="button"
-            onClick={() => navigate("/checkout")}
+            onClick={() => {
+              triggerHaptic();
+              navigate("/checkout");
+            }}
             disabled={!selectedAddressId}
-            className="w-full mt-2 shadow-xs disabled:opacity-50 tracking-normal py-6 rounded-2xl text-base font-bold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 cursor-pointer"
+            className="ds-apple-btn-primary w-full mt-2 disabled:opacity-45 min-h-[52px] py-3.5 px-6 rounded-full text-[15px] font-semibold inline-flex items-center justify-center whitespace-nowrap shrink-0 cursor-pointer"
           >
-            চেকআউটে ফিরে যান (Proceed to Checkout)
-          </Button>
+            <span>চেকআউটে ফিরে যান</span>
+          </button>
         )}
       </div>
     </div>

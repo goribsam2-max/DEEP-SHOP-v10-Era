@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotify } from "../components/Notifications";
-import Icon from "../components/Icon";
-import { Button } from "@/components/ui/button";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import { Smartphone } from "lucide-react";
+import { Smartphone, Coins, CreditCard } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { triggerHaptic } from "../lib/haptics";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
 
 const PaymentMethods: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
   const [selected, setSelected] = useState(
     localStorage.getItem("vibe_preferred_payment") || "bKash or Nagad",
   );
@@ -21,111 +23,122 @@ const PaymentMethods: React.FC = () => {
     });
   }, []);
 
+  void settings;
+
   const methods = [
     {
       id: "bKash or Nagad",
-      FallbackIcon: Smartphone
+      subtitle: "Digital Payment",
+      Icon: Smartphone,
     },
     {
       id: "DP Coin",
-      svg: (
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-      ),
+      subtitle: "DP Coin Wallet",
+      Icon: Coins,
     },
     {
       id: "Cash on Delivery",
-      svg: (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      ),
+      subtitle: "Doorstep Pay",
+      Icon: CreditCard,
     },
   ];
 
   const handleSave = () => {
+    triggerHaptic("success");
     localStorage.setItem("vibe_preferred_payment", selected);
     notify("Payment preference saved!", "success");
     navigate(-1);
   };
 
   return (
-    <div className="p-6 animate-fade-in min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-800 max-w-md mx-auto">
-      
-
-      <div className="flex-1">
-        <div className="mb-10">
-          <h2 className="text-[10px] font-bold text-zinc-500 tracking-normal mb-2">
-            Policy Notice
-          </h2>
-          <p className="text-xs leading-relaxed text-gray-500 font-medium">
-            Digital payments (bKash & Nagad) help us process your order faster.
-            Complete your payment to the corresponding mobile number to complete your transaction.
+    <div className="ds-apple-shop-canvas min-h-screen flex flex-col pb-24">
+      <motion.div
+        initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+        className="w-full max-w-md mx-auto px-4 pt-5 sm:pt-7 flex-1 flex flex-col"
+      >
+        <div className="px-1 mb-5">
+          <h1 className="ds-apple-display text-[24px] font-bold tracking-tight">
+            Payment Methods
+          </h1>
+          <p className="text-xs ds-apple-muted mt-0.5">
+            Select your default checkout payment method
           </p>
         </div>
+        <div className="flex-1 space-y-6">
+          <div className="ds-apple-surface rounded-[22px] p-4 sm:p-5">
+            <h2 className="ds-apple-eyebrow ds-apple-muted text-[11px] mb-1.5">
+              Policy Notice
+            </h2>
+            <p className="text-xs leading-relaxed ds-apple-muted font-medium">
+              Digital payments (bKash &amp; Nagad) help us process your order faster.
+              Complete your payment to the corresponding mobile number to confirm your transaction.
+            </p>
+          </div>
 
-        <p className="text-[10px] font-bold text-gray-400  tracking-normal mb-4">
-          Methods
-        </p>
-        <div className="space-y-4">
-          {methods.map((m) => (
-            <div
-              key={m.id}
-              onClick={() => setSelected(m.id)}
-              className={`p-5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${selected === m.id ? "border-black bg-zinc-100 dark:bg-zinc-800 shadow-sm shadow-black/5" : "border-zinc-200 bg-zinc-50 dark:bg-zinc-800 hover:border-gray-200"}`}
-            >
-              <div className="flex items-center space-x-4">
-                {m.image ? (
-                  <div className="w-14 h-14 bg-zinc-50 dark:bg-zinc-800 rounded-full flex flex-shrink-0 flex-grow-0 items-center justify-center shadow-sm border border-gray-50 overflow-hidden">
-                    <img src={m.image} alt={m.id} className="w-full h-full object-cover rounded-full" />
+          <div className="space-y-3">
+            <p className="ds-apple-eyebrow ds-apple-muted text-[11px] px-1">
+              Preferred Method
+            </p>
+            {methods.map((m) => {
+              const IconComp = m.Icon;
+              const isSelected = selected === m.id;
+              return (
+                <motion.button
+                  key={m.id}
+                  type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+                  onClick={() => {
+                    triggerHaptic();
+                    setSelected(m.id);
+                  }}
+                  className={`ds-apple-surface w-full p-4 rounded-[22px] flex items-center justify-between cursor-pointer text-left transition-all ${
+                    isSelected ? "ds-liquid-subpanel-active" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                      isSelected
+                        ? "bg-[#0071E3]/12 dark:bg-[#0A84FF]/18 ds-apple-accent-text"
+                        : "ds-apple-surface-subtle ds-apple-muted"
+                    }`}>
+                      <IconComp className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-semibold text-[15px] truncate">{m.id}</span>
+                      <span className="text-xs ds-apple-muted truncate">
+                        {m.subtitle}
+                      </span>
+                    </div>
                   </div>
-                ) : m.FallbackIcon ? (
-                  <div className="w-14 h-14 bg-zinc-50 dark:bg-zinc-800 rounded-full flex flex-shrink-0 flex-grow-0  items-center justify-center p-3 border border-gray-50 shadow-sm">
-                    <m.FallbackIcon className="w-full h-full text-zinc-400" />
+                  <div
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
+                      isSelected ? "border-[#0071E3] dark:border-[#0A84FF]" : "border-black/15 dark:border-white/20"
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="w-3 h-3 bg-[#0071E3] dark:bg-[#0A84FF] rounded-full" />
+                    )}
                   </div>
-                ) : (
-                  <div className="w-14 h-14 bg-zinc-50 dark:bg-zinc-800 rounded-full flex flex-shrink-0 flex-grow-0  items-center justify-center border border-gray-50 shadow-sm">
-                    <svg
-                      className="w-6 h-6 text-black dark:text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      {m.svg}
-                    </svg>
-                  </div>
-                )}
-                <div className="flex flex-col">
-                  <span className="font-bold text-sm">{m.id}</span>
-                  <span className="text-[8px] font-bold text-gray-400  tracking-tight">
-                    {m.id === "Cash on Delivery"
-                      ? "Doorstep Pay"
-                      : m.id === "bKash or Nagad" ? "Digital Payment" : "DP Coin Wallet"}
-                  </span>
-                </div>
-              </div>
-              <div
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selected === m.id ? "border-black" : "border-gray-200"}`}
-              >
-                {selected === m.id && (
-                  <div className="w-3 h-3 bg-zinc-900 dark:bg-zinc-50 dark:text-black rounded-full animate-fade-in"></div>
-                )}
-              </div>
-            </div>
-          ))}
+                </motion.button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      <Button
-        onClick={handleSave}
-        variant="primary" className="w-full mt-10 shadow-sm shadow-black/20"
-      >
-        Apply & Save
-      </Button>
+        <motion.button
+          type="button"
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+          onClick={handleSave}
+          className="ds-apple-btn-primary w-full h-12 rounded-full text-sm font-semibold mt-8 cursor-pointer"
+        >
+          Apply &amp; Save
+        </motion.button>
+      </motion.div>
     </div>
   );
 };
 
 export default PaymentMethods;
+

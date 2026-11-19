@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { auth, db } from "../firebase";
 import { collection, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
@@ -7,11 +8,12 @@ import { Product } from "../types";
 import { uploadToImgbb } from "../services/imgbb";
 import { isScamReview } from "../lib/reviewModeration";
 import { checkContainsBannedWord } from "../lib/wordFilter";
+import { triggerHaptic } from "../lib/haptics";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
 import {
   Box,
   Star,
   ImagePlus,
-  ChevronLeft,
   X,
   Loader2,
   Send,
@@ -22,6 +24,7 @@ import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 const LeaveReview: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
   const [searchParams] = useSearchParams();
   const productId = searchParams.get("productId");
 
@@ -67,12 +70,20 @@ const LeaveReview: React.FC = () => {
       navigate("/signin");
       return;
     }
-    if (rating === 0) return notify("Please select a star rating.", "error");
-    if (!comment.trim()) return notify("Please write your review.", "error");
+    if (rating === 0) {
+      triggerHaptic("error");
+      return notify("Please select a star rating.", "error");
+    }
+    if (!comment.trim()) {
+      triggerHaptic("error");
+      return notify("Please write your review.", "error");
+    }
     if (!productId || !product) return;
 
+    triggerHaptic("medium");
     const bannedWord = await checkContainsBannedWord(comment);
     if (bannedWord) {
+      triggerHaptic("error");
       return notify(
         `Your review contains prohibited content ("${bannedWord}"). Please edit your review.`,
         "error"
@@ -80,6 +91,7 @@ const LeaveReview: React.FC = () => {
     }
 
     if (isScamReview(comment)) {
+      triggerHaptic("success");
       notify("Review submitted! Thank you for your feedback.", "success");
       navigate(`/product/${productId}`);
       return;
@@ -136,9 +148,11 @@ const LeaveReview: React.FC = () => {
         });
       } catch {}
 
+      triggerHaptic("success");
       notify("Review posted!", "success");
       navigate(`/product/${productId}`);
     } catch {
+      triggerHaptic("error");
       notify("Failed to post review.", "error");
     } finally {
       setLoading(false);
@@ -147,14 +161,17 @@ const LeaveReview: React.FC = () => {
 
   if (errorLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
-        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F5F7] dark:bg-black px-4">
+        <h2 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
           Product not found
         </h2>
         <button
           type="button"
-          onClick={() => navigate("/orders")}
-          className="mt-4 px-5 py-2.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl text-xs font-bold cursor-pointer"
+          onClick={() => {
+            triggerHaptic("light");
+            navigate("/orders");
+          }}
+          className="mt-4 px-6 py-2.5 bg-[#0071E3] dark:bg-[#0A84FF] text-white rounded-full text-xs font-semibold cursor-pointer active:scale-[0.97] transition-transform"
         >
           Back to Orders
         </button>
@@ -164,32 +181,29 @@ const LeaveReview: React.FC = () => {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <Loader2 className="w-7 h-7 animate-spin text-zinc-500" />
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] dark:bg-black">
+        <Loader2 className="w-7 h-7 animate-spin text-[#0071E3] dark:text-[#0A84FF]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 py-6 px-4 sm:px-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-900 dark:text-zinc-100 cursor-pointer"
-            aria-label="Go back"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-black py-6 px-4 sm:px-6 pb-20 ds-apple-shop-canvas">
+      <motion.div
+        initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+        animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+        className="max-w-2xl mx-auto space-y-5"
+      >
+        <div>
+          <h1 className="text-[22px] sm:text-[26px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.022em] leading-tight">
             Leave a Product Review
           </h1>
         </div>
 
         {/* Product Summary Card */}
-        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4 shadow-2xs">
-          <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-xl overflow-hidden p-2 border border-zinc-100 dark:border-zinc-700 shrink-0">
+        <div className="bg-white dark:bg-[#1C1C1E] p-5 rounded-[22px] border border-black/[0.06] dark:border-white/[0.1] flex items-center gap-4 shadow-xs">
+          <div className="w-20 h-20 bg-[#F5F5F7] dark:bg-[#2C2C2E] rounded-2xl overflow-hidden p-2 border border-black/[0.05] dark:border-white/[0.08] shrink-0">
             <img
               src={getProductDisplayImage(product)}
               className="w-full h-full object-contain"
@@ -202,18 +216,18 @@ const LeaveReview: React.FC = () => {
                 <StatusBadge leftIcon={Box} leftLabel={product.category} />
               </div>
             )}
-            <h2 className="font-bold text-base sm:text-lg text-zinc-900 dark:text-zinc-100 truncate">
+            <h2 className="font-bold text-base sm:text-lg text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
               {product.name}
             </h2>
           </div>
         </div>
 
         {/* Star Rating Card */}
-        <div className="bg-white dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 text-center shadow-2xs">
-          <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+        <div className="bg-white dark:bg-[#1C1C1E] p-6 sm:p-8 rounded-[22px] border border-black/[0.06] dark:border-white/[0.1] text-center shadow-xs">
+          <h3 className="text-base sm:text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1 tracking-tight">
             Rate Your Experience
           </h3>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+          <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mb-6">
             Tap a star to rate this product
           </p>
 
@@ -224,11 +238,14 @@ const LeaveReview: React.FC = () => {
                 <button
                   key={star}
                   type="button"
-                  onClick={() => setRating(star)}
-                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all cursor-pointer border ${
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    setRating(star);
+                  }}
+                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all cursor-pointer border active:scale-95 ${
                     active
-                      ? "bg-amber-400/15 border-amber-400 text-amber-400 scale-105"
-                      : "bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-300 dark:text-zinc-600 hover:border-zinc-300"
+                      ? "bg-[#FF9500]/12 border-[#FF9500] dark:border-[#FF9F0A] text-[#FF9500] dark:text-[#FF9F0A] scale-105"
+                      : "bg-[#F5F5F7] dark:bg-[#2C2C2E] border-black/[0.08] dark:border-white/[0.1] text-black/[0.2] dark:text-white/[0.25] hover:border-black/[0.2] dark:hover:border-white/[0.22]"
                   }`}
                 >
                   <Star
@@ -241,7 +258,7 @@ const LeaveReview: React.FC = () => {
           </div>
 
           {rating > 0 && (
-            <p className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-4">
+            <p className="text-xs font-bold text-[#FF9500] dark:text-[#FF9F0A] mt-4">
               {
                 [
                   "Poor",
@@ -256,10 +273,10 @@ const LeaveReview: React.FC = () => {
         </div>
 
         {/* Review Text & Photo Upload Card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-2xs space-y-4">
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-[22px] p-5 border border-black/[0.06] dark:border-white/[0.1] shadow-xs space-y-4">
           <textarea
             placeholder="Share details about the product quality, condition, and packaging..."
-            className="w-full rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 focus:border-zinc-400 dark:focus:border-zinc-600 p-4 min-h-[130px] outline-none text-sm leading-relaxed text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 resize-none"
+            className="w-full rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.08] dark:border-white/[0.1] focus:border-[#0071E3] dark:focus:border-[#0A84FF] p-4 min-h-[130px] outline-none text-sm leading-relaxed text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] resize-none transition-colors"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
           />
@@ -269,7 +286,7 @@ const LeaveReview: React.FC = () => {
               {previewUrls.map((src, i) => (
                 <div
                   key={src}
-                  className="relative w-20 h-20 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shrink-0"
+                  className="relative w-20 h-20 rounded-2xl border border-black/[0.08] dark:border-white/[0.1] overflow-hidden shrink-0"
                 >
                   <img
                     src={src}
@@ -278,10 +295,11 @@ const LeaveReview: React.FC = () => {
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      setImageFiles((prev) => prev.filter((_, idx) => idx !== i))
-                    }
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-600 cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic("light");
+                      setImageFiles((prev) => prev.filter((_, idx) => idx !== i));
+                    }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center hover:bg-[#FF3B30] cursor-pointer"
                     aria-label="Remove photo"
                   >
                     <X className="w-3 h-3" />
@@ -291,8 +309,11 @@ const LeaveReview: React.FC = () => {
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            <label className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+          <div className="flex items-center justify-between pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
+            <label
+              onClick={() => triggerHaptic("light")}
+              className="px-4 py-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-[#F5F5F7] dark:bg-[#2C2C2E] hover:bg-black/[0.06] dark:hover:bg-white/[0.12] text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-[0.97] transition-all"
+            >
               <input
                 type="file"
                 multiple
@@ -304,12 +325,13 @@ const LeaveReview: React.FC = () => {
                   );
                   e.target.value = "";
                   if (files.length > 0) {
+                    triggerHaptic("selection");
                     setImageFiles((prev) => [...prev, ...files].slice(0, 3));
                   }
                 }}
               />
-              <ImagePlus className="w-4 h-4 text-zinc-500" />
-              <span>Attach Photos ({imageFiles.length}/3)</span>
+              <ImagePlus className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF]" />
+              <span className="tabular-nums">Attach Photos ({imageFiles.length}/3)</span>
             </label>
           </div>
         </div>
@@ -318,7 +340,7 @@ const LeaveReview: React.FC = () => {
           type="button"
           disabled={loading || rating === 0 || !comment.trim()}
           onClick={handleSubmit}
-          className="w-full py-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-bold text-sm hover:opacity-95 active:scale-[0.99] disabled:opacity-45 flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap"
+          className="w-full py-4 bg-[#0071E3] dark:bg-[#0A84FF] hover:bg-[#0077ED] dark:hover:bg-[#1E8EFF] text-white rounded-full font-semibold text-sm active:scale-[0.98] disabled:opacity-45 flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap shadow-xs"
         >
           {loading ? (
             <>
@@ -332,7 +354,7 @@ const LeaveReview: React.FC = () => {
             </>
           )}
         </button>
-      </div>
+      </motion.div>
     </div>
   );
 };

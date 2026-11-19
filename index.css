@@ -3003,58 +3003,1048 @@ html.dark .ds-theme-icon-btn svg {
   color: #ffffff !important;
 }
 
+/* ==========================================================================
+   APPLE DESIGN SHOP BOTTOM NAVIGATION DOCK (Liquid Glass Floating Capsule)
+   ========================================================================== */
 html:not(.dark) .ds-shop-bottom-dock {
-  background-color: #ffffff !important;
-  border: 1px solid rgba(9, 9, 11, 0.09) !important;
-  box-shadow: 0 12px 32px rgba(9, 9, 11, 0.12) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(242, 243, 247, 0.70) 100%) !important;
+  backdrop-filter: blur(32px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.88) !important;
+  box-shadow:
+    0 16px 40px -12px rgba(0, 0, 0, 0.16),
+    0 4px 12px -4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.07) !important;
 }
 
 html.dark .ds-shop-bottom-dock {
-  background-color: #09090b !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65) !important;
+  background: linear-gradient(180deg, rgba(38, 38, 42, 0.78) 0%, rgba(24, 24, 26, 0.74) 100%) !important;
+  backdrop-filter: blur(32px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    0 20px 44px -10px rgba(0, 0, 0, 0.72),
+    0 4px 14px -2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -0.5px 0 rgba(0, 0, 0, 0.35) !important;
+}
+
+html:not(.dark) .ds-shop-bottom-lens {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(242, 247, 255, 0.92) 100%) !important;
+  border: 1px solid rgba(0, 113, 227, 0.15) !important;
+  box-shadow:
+    0 4px 14px -3px rgba(0, 113, 227, 0.16),
+    0 2px 6px -1px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+}
+
+html.dark .ds-shop-bottom-lens {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.11) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow:
+    0 6px 18px -4px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
 }
 
 html:not(.dark) .ds-shop-bottom-btn {
-  background-color: #ffffff !important;
-  color: #09090b !important;
-  border: 1px solid transparent !important;
+  background-color: transparent !important;
+  color: #48484a !important;
+  border: none !important;
   box-shadow: none !important;
-}
-html:not(.dark) .ds-shop-bottom-btn:hover {
-  background-color: #f4f4f5 !important;
 }
 html:not(.dark) .ds-shop-bottom-btn *,
 html:not(.dark) .ds-shop-bottom-btn svg {
-  color: #09090b !important;
+  color: #48484a !important;
 }
 
 html.dark .ds-shop-bottom-btn {
-  background-color: #09090b !important;
-  color: #ffffff !important;
-  border: 1px solid transparent !important;
+  background-color: transparent !important;
+  color: #aeaeb2 !important;
+  border: none !important;
   box-shadow: none !important;
-}
-html.dark .ds-shop-bottom-btn:hover {
-  background-color: #18181b !important;
 }
 html.dark .ds-shop-bottom-btn *,
 html.dark .ds-shop-bottom-btn svg {
+  color: #aeaeb2 !important;
+}
+
+html:not(.dark) .ds-shop-bottom-btn-active {
+  background-color: transparent !important;
+  color: #0066cc !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+html:not(.dark) .ds-shop-bottom-btn-active *,
+html:not(.dark) .ds-shop-bottom-btn-active svg {
+  color: #0066cc !important;
+}
+
+html.dark .ds-shop-bottom-btn-active {
+  background-color: transparent !important;
+  color: #409cff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+html.dark .ds-shop-bottom-btn-active *,
+html.dark .ds-shop-bottom-btn-active svg {
+  color: #409cff !important;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  html:not(.dark) .ds-shop-bottom-dock {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid rgba(0, 0, 0, 0.14) !important;
+  }
+  html.dark .ds-shop-bottom-dock {
+    background: #1c1c1e !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  }
+}
+
+/* ==========================================================================
+   APPLE DESIGN SHOPPING HOME CANVAS, TYPOGRAPHY & GALLERY SURFACES
+   Restrained studio neutrals (#F5F5F7 / #000000), crisp hairline borders,
+   optical SF Pro type hierarchy, and Apple Blue (#0071E3 / #0A84FF) accent.
+   ========================================================================== */
+.ds-apple-shop-canvas {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Plus Jakarta Sans", "Hind Siliguri", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html:not(.dark) .ds-apple-shop-canvas {
+  background-color: #f5f5f7 !important;
+  color: #1d1d1f !important;
+}
+
+html.dark .ds-apple-shop-canvas {
+  background-color: #000000 !important;
+  color: #f5f5f7 !important;
+}
+
+.ds-apple-display {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", "Hind Siliguri", system-ui, sans-serif !important;
+  letter-spacing: -0.026em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.ds-apple-eyebrow {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Plus Jakarta Sans", "Hind Siliguri", system-ui, sans-serif !important;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+html:not(.dark) .ds-apple-surface {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.065) !important;
+  box-shadow: 0 2px 16px -4px rgba(0, 0, 0, 0.05) !important;
+  color: #1d1d1f !important;
+}
+
+html.dark .ds-apple-surface {
+  background-color: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 28px -8px rgba(0, 0, 0, 0.52) !important;
+  color: #f5f5f7 !important;
+}
+
+html:not(.dark) .ds-apple-surface-subtle {
+  background-color: #f5f5f7 !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  color: #1d1d1f !important;
+}
+
+html.dark .ds-apple-surface-subtle {
+  background-color: #2c2c2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f5f5f7 !important;
+}
+
+html:not(.dark) .ds-apple-muted {
+  color: #6e6e73 !important;
+}
+
+html.dark .ds-apple-muted {
+  color: #98989d !important;
+}
+
+html:not(.dark) .ds-apple-accent-text {
+  color: #0071e3 !important;
+}
+
+html.dark .ds-apple-accent-text {
+  color: #0a84ff !important;
+}
+
+html:not(.dark) .ds-apple-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  background-color: #0071e3 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    0 4px 14px -3px rgba(0, 113, 227, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease, opacity 0.16s ease;
+}
+
+html.dark .ds-apple-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  background-color: #0a84ff !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    0 6px 18px -4px rgba(10, 132, 255, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease, opacity 0.16s ease;
+}
+
+html:not(.dark) .ds-apple-btn-primary *,
+html.dark .ds-apple-btn-primary * {
   color: #ffffff !important;
 }
 
-html:not(.dark) .ds-shop-bottom-btn-active,
-html.dark .ds-shop-bottom-btn-active {
-  background-color: #1877F2 !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(24, 119, 242, 0.35) !important;
-  box-shadow: 0 6px 18px rgba(24, 119, 242, 0.36) !important;
+html:not(.dark) .ds-apple-btn-primary:hover:not(:disabled) {
+  background-color: #0077ed !important;
 }
-html:not(.dark) .ds-shop-bottom-btn-active *,
-html:not(.dark) .ds-shop-bottom-btn-active svg,
-html.dark .ds-shop-bottom-btn-active *,
-html.dark .ds-shop-bottom-btn-active svg {
+html.dark .ds-apple-btn-primary:hover:not(:disabled) {
+  background-color: #2190ff !important;
+}
+
+.ds-apple-btn-primary:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+html:not(.dark) .ds-apple-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  background-color: #e8e8ed !important;
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: none !important;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+}
+html:not(.dark) .ds-apple-btn-secondary * {
+  color: #1d1d1f !important;
+}
+html:not(.dark) .ds-apple-btn-secondary:hover:not(:disabled) {
+  background-color: #dcdce2 !important;
+}
+
+html.dark .ds-apple-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  background-color: #2c2c2e !important;
+  color: #f5f5f7 !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
+  box-shadow: none !important;
+  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+}
+html.dark .ds-apple-btn-secondary * {
+  color: #f5f5f7 !important;
+}
+html.dark .ds-apple-btn-secondary:hover:not(:disabled) {
+  background-color: #3a3a3c !important;
+}
+
+/* Scope clean Apple studio card surfaces for ProductCards rendered inside Shopping Home */
+.ds-apple-shop-canvas .ds-liquid-product-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.065) !important;
+  box-shadow: 0 2px 14px -4px rgba(0, 0, 0, 0.05) !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-product-card {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.55) !important;
+}
+@media (hover: hover) {
+  html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0, 113, 227, 0.28) !important;
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.09) !important;
+  }
+  html.dark .ds-apple-shop-canvas .ds-liquid-product-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(10, 132, 255, 0.36) !important;
+    box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.72) !important;
+  }
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-media {
+  background: #f5f5f7 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-product-media {
+  background: #2c2c2e !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Keep ProductCard ink pure Apple neutral inside Shopping Home */
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-card .text-slate-900,
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-card .text-zinc-900 {
+  color: #1d1d1f !important;
+}
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-card .text-slate-700,
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-card .text-slate-600,
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-card .text-slate-500,
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-product-card .text-slate-400 {
+  color: #6e6e73 !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-product-card .dark\:text-white,
+html.dark .ds-apple-shop-canvas .ds-liquid-product-card .dark\:text-slate-100,
+html.dark .ds-apple-shop-canvas .ds-liquid-product-card .dark\:text-slate-200 {
+  color: #f5f5f7 !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-product-card .dark\:text-slate-300,
+html.dark .ds-apple-shop-canvas .ds-liquid-product-card .dark\:text-slate-300\/90,
+html.dark .ds-apple-shop-canvas .ds-liquid-product-card .dark\:text-slate-400 {
+  color: #98989d !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-apple-shop-canvas *,
+  .ds-shop-bottom-dock *,
+  .ds-apple-portal * {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.14s !important;
+  }
+}
+
+/* ==========================================================================
+   APPLE DESIGN SHOPPING STUDIO — SCOPED NEUTRAL OVERRIDES (A-Z SHOPPING)
+   Excludes Loops, Messages, Story Studio, and Admin completely.
+   Overrides legacy global purple/lilac rules cleanly via higher specificity.
+   Light: Canvas #F5F5F7 | Surface #FFFFFF | Grouped #F2F2F7 | Accent #0071E3
+   Dark:  Canvas #000000 | Surface #1C1C1E | Grouped #2C2C2E | Accent #0A84FF
+   ========================================================================== */
+html:not(.dark):has(.ds-apple-shop-canvas),
+html:not(.dark):has(.ds-apple-shop-canvas) body,
+html:not(.dark):has(.ds-apple-shop-canvas) #root,
+html:not(.dark) .ds-apple-shop-canvas,
+html:not(.dark) .ds-apple-shop-canvas main,
+html:not(.dark) .ds-apple-shop-canvas.ambient-dynamic-bg {
+  background-color: #f5f5f7 !important;
+  background-image: none !important;
+  color: #1d1d1f !important;
+}
+
+html.dark:has(.ds-apple-shop-canvas),
+html.dark:has(.ds-apple-shop-canvas) body,
+html.dark:has(.ds-apple-shop-canvas) #root,
+html.dark .ds-apple-shop-canvas,
+html.dark .ds-apple-shop-canvas main,
+html.dark .ds-apple-shop-canvas.ambient-dynamic-bg {
+  background-color: #000000 !important;
+  background-image: none !important;
+  color: #f5f5f7 !important;
+}
+
+/* Suppress Comfortaa cursive inside Shopping — use Apple SF Pro optical hierarchy */
+.ds-apple-shop-canvas .font-brand,
+.ds-apple-portal .font-brand {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", "Hind Siliguri", system-ui, sans-serif !important;
+  letter-spacing: -0.025em;
+}
+
+/* Numeric tabular alignment across Shopping prices, KPIs, countdowns & order tables */
+.ds-apple-shop-canvas .tabular-nums,
+.ds-apple-portal .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Neutralize legacy PlusUI / XML heavy card & button shadows in Shopping */
+html:not(.dark) .ds-apple-shop-canvas .plusui-card,
+html:not(.dark) .ds-apple-shop-canvas .plusui-section,
+html:not(.dark) .ds-apple-shop-canvas .bX {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.065) !important;
+  box-shadow: 0 2px 14px -4px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 20px;
+}
+
+html.dark .ds-apple-shop-canvas .plusui-card,
+html.dark .ds-apple-shop-canvas .plusui-section,
+html.dark .ds-apple-shop-canvas .bX {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 28px -8px rgba(0, 0, 0, 0.55) !important;
+  border-radius: 20px;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .button:not(.ln),
+html:not(.dark) .ds-apple-shop-canvas .btn-plusui:not(.ln),
+html:not(.dark) .ds-apple-shop-canvas .btn-loadmore {
+  background: #0071e3 !important;
   color: #ffffff !important;
+  box-shadow: 0 2px 10px -2px rgba(0, 113, 227, 0.34) !important;
+}
+
+html.dark .ds-apple-shop-canvas .button:not(.ln),
+html.dark .ds-apple-shop-canvas .btn-plusui:not(.ln),
+html.dark .ds-apple-shop-canvas .btn-loadmore {
+  background: #0a84ff !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px -4px rgba(10, 132, 255, 0.42) !important;
+}
+
+/* Primary surfaces inside Shopping & Apple Portals (neutralize light lilac / dark #181822) */
+html:not(.dark) .ds-apple-shop-canvas .bg-white,
+html:not(.dark) .ds-apple-shop-canvas .bg-zinc-50,
+html:not(.dark) .ds-apple-shop-canvas .bg-gray-50,
+html:not(.dark) .ds-apple-shop-canvas .bg-slate-50,
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#fffdfc\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#ffffff\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#fff\],
+html:not(.dark) .ds-apple-shop-canvas footer,
+html:not(.dark) .ds-apple-portal .bg-white,
+html:not(.dark) .ds-apple-portal .bg-zinc-50 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .bg-white\/95,
+html:not(.dark) .ds-apple-shop-canvas .bg-white\/90,
+html:not(.dark) .ds-apple-shop-canvas .bg-white\/80,
+html:not(.dark) .ds-apple-shop-canvas .bg-white\/75,
+html:not(.dark) .ds-apple-shop-canvas .bg-white\/70 {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .bg-zinc-100,
+html:not(.dark) .ds-apple-shop-canvas .bg-gray-100,
+html:not(.dark) .ds-apple-shop-canvas .bg-slate-100,
+html:not(.dark) .ds-apple-shop-canvas .bg-zinc-200\/80,
+html:not(.dark) .ds-apple-shop-canvas .bg-zinc-100\/90,
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#f4f4f5\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#f8fafc\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#f1f5f9\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#F0F2F5\],
+html:not(.dark) .ds-apple-portal .bg-zinc-100,
+html:not(.dark) .ds-apple-portal .bg-zinc-200\/80 {
+  background-color: #f2f2f7 !important;
+}
+
+/* Light inks (replace purple #43336d with Apple slate gray #6E6E73) */
+html:not(.dark) .ds-apple-shop-canvas .text-zinc-950,
+html:not(.dark) .ds-apple-shop-canvas .text-zinc-900,
+html:not(.dark) .ds-apple-shop-canvas .text-zinc-800,
+html:not(.dark) .ds-apple-shop-canvas .text-gray-900,
+html:not(.dark) .ds-apple-shop-canvas .text-gray-800,
+html:not(.dark) .ds-apple-shop-canvas .text-slate-900,
+html:not(.dark) .ds-apple-shop-canvas .text-slate-800,
+html:not(.dark) .ds-apple-shop-canvas .text-black,
+html:not(.dark) .ds-apple-shop-canvas .text-\[\#08102b\],
+html:not(.dark) .ds-apple-portal .text-zinc-950,
+html:not(.dark) .ds-apple-portal .text-zinc-900,
+html:not(.dark) .ds-apple-portal .text-zinc-800 {
+  color: #1d1d1f !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .text-zinc-700,
+html:not(.dark) .ds-apple-shop-canvas .text-zinc-600,
+html:not(.dark) .ds-apple-shop-canvas .text-zinc-500,
+html:not(.dark) .ds-apple-shop-canvas .text-gray-700,
+html:not(.dark) .ds-apple-shop-canvas .text-gray-600,
+html:not(.dark) .ds-apple-shop-canvas .text-gray-500,
+html:not(.dark) .ds-apple-shop-canvas .text-slate-600,
+html:not(.dark) .ds-apple-shop-canvas .text-slate-500,
+html:not(.dark) .ds-apple-portal .text-zinc-700,
+html:not(.dark) .ds-apple-portal .text-zinc-600,
+html:not(.dark) .ds-apple-portal .text-zinc-500 {
+  color: #6e6e73 !important;
+}
+
+/* Light crisp hairline borders (replace cyan #d8f1fc) */
+html:not(.dark) .ds-apple-shop-canvas .border-zinc-200,
+html:not(.dark) .ds-apple-shop-canvas .border-zinc-300,
+html:not(.dark) .ds-apple-shop-canvas .border-gray-200,
+html:not(.dark) .ds-apple-shop-canvas .border-slate-200,
+html:not(.dark) .ds-apple-shop-canvas .border-zinc-200\/80,
+html:not(.dark) .ds-apple-shop-canvas .border-zinc-300\/60,
+html:not(.dark) .ds-apple-portal .border-zinc-200,
+html:not(.dark) .ds-apple-portal .border-zinc-300,
+html:not(.dark) .ds-apple-portal .border-zinc-200\/80 {
+  border-color: rgba(0, 0, 0, 0.085) !important;
+}
+
+/* Dark surfaces inside Shopping & Apple Portals (#000000 canvas, #1C1C1E surface, #2C2C2E grouped) */
+html.dark .ds-apple-shop-canvas .dark\:bg-black,
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-950,
+html.dark .ds-apple-shop-canvas .dark\:bg-gray-950,
+html.dark .ds-apple-shop-canvas .dark\:bg-slate-950,
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#08102b\],
+html.dark .ds-apple-portal .dark\:bg-zinc-950 {
+  background-color: #000000 !important;
+  color: #f5f5f7 !important;
+}
+
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-900,
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-850,
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#121214\],
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#141518\],
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#1E1F24\],
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#18181b\],
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#252526\],
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#2d2d30\],
+html.dark .ds-apple-shop-canvas .dark\:bg-gray-900,
+html.dark .ds-apple-shop-canvas .dark\:bg-slate-900,
+html.dark .ds-apple-shop-canvas footer,
+html.dark .ds-apple-portal .dark\:bg-zinc-900 {
+  background-color: #1c1c1e !important;
+  color: #f5f5f7 !important;
+}
+
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-900\/90,
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-900\/80,
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-900\/70 {
+  background-color: rgba(28, 28, 30, 0.82) !important;
+  color: #f5f5f7 !important;
+}
+
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-800,
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-800\/80,
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-800\/60,
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-700,
+html.dark .ds-apple-shop-canvas .dark\:bg-zinc-750,
+html.dark .ds-apple-shop-canvas .dark\:bg-gray-800,
+html.dark .ds-apple-shop-canvas .dark\:bg-slate-800,
+html.dark .ds-apple-shop-canvas input:not(.ds-liquid-input):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark .ds-apple-shop-canvas textarea:not(.ds-liquid-input),
+html.dark .ds-apple-shop-canvas select:not(.ds-liquid-input),
+html.dark .ds-apple-portal .dark\:bg-zinc-800,
+html.dark .ds-apple-portal .dark\:bg-zinc-800\/80,
+html.dark .ds-apple-portal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark .ds-apple-portal textarea,
+html.dark .ds-apple-portal select {
+  background-color: #2c2c2e !important;
+  color: #f5f5f7 !important;
+}
+
+/* Dark crisp hairline borders (replace purple #3E065F) */
+html.dark .ds-apple-shop-canvas .dark\:border-zinc-800,
+html.dark .ds-apple-shop-canvas .dark\:border-zinc-800\/80,
+html.dark .ds-apple-shop-canvas .dark\:border-zinc-800\/90,
+html.dark .ds-apple-shop-canvas .dark\:border-zinc-750,
+html.dark .ds-apple-shop-canvas .dark\:border-zinc-700,
+html.dark .ds-apple-shop-canvas .dark\:border-zinc-600,
+html.dark .ds-apple-shop-canvas .dark\:border-gray-800,
+html.dark .ds-apple-shop-canvas .dark\:border-slate-800,
+html.dark .ds-apple-shop-canvas .dark\:border-\[\#1E1F24\],
+html.dark .ds-apple-portal .dark\:border-zinc-800,
+html.dark .ds-apple-portal .dark\:border-zinc-700 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Dark inks (replace lilac #C8B8E8 with Apple #98989D) */
+html.dark .ds-apple-shop-canvas .dark\:text-white,
+html.dark .ds-apple-shop-canvas .dark\:text-zinc-100,
+html.dark .ds-apple-shop-canvas .dark\:text-zinc-200,
+html.dark .ds-apple-shop-canvas .dark\:text-gray-100,
+html.dark .ds-apple-shop-canvas .dark\:text-slate-100,
+html.dark .ds-apple-portal .dark\:text-white,
+html.dark .ds-apple-portal .dark\:text-zinc-100,
+html.dark .ds-apple-portal .dark\:text-zinc-200 {
+  color: #f5f5f7 !important;
+}
+
+html.dark .ds-apple-shop-canvas .dark\:text-zinc-300,
+html.dark .ds-apple-shop-canvas .dark\:text-zinc-400,
+html.dark .ds-apple-shop-canvas .dark\:text-zinc-500,
+html.dark .ds-apple-shop-canvas .dark\:text-gray-300,
+html.dark .ds-apple-shop-canvas .dark\:text-gray-400,
+html.dark .ds-apple-shop-canvas .dark\:text-slate-300,
+html.dark .ds-apple-shop-canvas .dark\:text-slate-400,
+html.dark .ds-apple-portal .dark\:text-zinc-300,
+html.dark .ds-apple-portal .dark\:text-zinc-400,
+html.dark .ds-apple-portal .dark\:text-zinc-500 {
+  color: #98989d !important;
+}
+
+/* Apple Blue Primary Accent (#0071E3 Light / #0A84FF Dark) across legacy colored buttons in Shopping */
+html:not(.dark) .ds-apple-shop-canvas .bg-indigo-600,
+html:not(.dark) .ds-apple-shop-canvas .bg-indigo-500,
+html:not(.dark) .ds-apple-shop-canvas .bg-violet-600,
+html:not(.dark) .ds-apple-shop-canvas .bg-violet-500,
+html:not(.dark) .ds-apple-shop-canvas .bg-purple-600,
+html:not(.dark) .ds-apple-shop-canvas .bg-blue-600,
+html:not(.dark) .ds-apple-shop-canvas .bg-blue-500,
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#5F2CFF\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#5B51D8\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#482dff\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#204ecf\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#007AFF\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#1cdb5e\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#22c55e\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#10b981\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#16a34a\],
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#059669\],
+html:not(.dark) .ds-apple-shop-canvas .bg-emerald-600,
+html:not(.dark) .ds-apple-shop-canvas .bg-emerald-500,
+html:not(.dark) .ds-apple-shop-canvas .bg-green-600,
+html:not(.dark) .ds-apple-shop-canvas .bg-green-500,
+html:not(.dark) .ds-apple-portal .bg-indigo-600,
+html:not(.dark) .ds-apple-portal .bg-blue-600,
+html:not(.dark) .ds-apple-portal .bg-\[\#5F2CFF\],
+html:not(.dark) .ds-apple-portal .bg-\[\#1877F2\] {
+  background-color: #0071e3 !important;
+  color: #ffffff !important;
+}
+
+html.dark .ds-apple-shop-canvas .dark\:bg-indigo-600,
+html.dark .ds-apple-shop-canvas .dark\:bg-indigo-500,
+html.dark .ds-apple-shop-canvas .dark\:bg-violet-600,
+html.dark .ds-apple-shop-canvas .dark\:bg-violet-500,
+html.dark .ds-apple-shop-canvas .dark\:bg-purple-600,
+html.dark .ds-apple-shop-canvas .dark\:bg-blue-600,
+html.dark .ds-apple-shop-canvas .dark\:bg-blue-500,
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#5F2CFF\],
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#8E05C2\],
+html.dark .ds-apple-shop-canvas .dark\:bg-\[\#1cdb5e\],
+html.dark .ds-apple-shop-canvas .bg-indigo-600,
+html.dark .ds-apple-shop-canvas .bg-violet-600,
+html.dark .ds-apple-shop-canvas .bg-blue-600,
+html.dark .ds-apple-shop-canvas .bg-\[\#5F2CFF\],
+html.dark .ds-apple-portal .dark\:bg-indigo-600,
+html.dark .ds-apple-portal .bg-blue-600,
+html.dark .ds-apple-portal .bg-\[\#0071E3\],
+html.dark .ds-apple-portal .bg-\[\#1877F2\] {
+  background-color: #0a84ff !important;
+  color: #ffffff !important;
+}
+
+/* Preserve white ink on Apple primary fills */
+html:not(.dark) .ds-apple-shop-canvas .bg-indigo-600 *,
+html:not(.dark) .ds-apple-shop-canvas .bg-blue-600 *,
+html:not(.dark) .ds-apple-shop-canvas .bg-\[\#5F2CFF\] *,
+html.dark .ds-apple-shop-canvas .dark\:bg-indigo-600 *,
+html.dark .ds-apple-shop-canvas .bg-blue-600 *,
+html.dark .ds-apple-portal .bg-\[\#0071E3\] * {
+  color: #ffffff !important;
+}
+
+/* Semantic Apple Green / Blue / Indigo Text Inks (never Chrome Violet/Purple) */
+html:not(.dark) .ds-apple-shop-canvas .text-indigo-600,
+html:not(.dark) .ds-apple-shop-canvas .text-indigo-500,
+html:not(.dark) .ds-apple-shop-canvas .text-violet-600,
+html:not(.dark) .ds-apple-shop-canvas .text-violet-500,
+html:not(.dark) .ds-apple-shop-canvas .text-purple-600,
+html:not(.dark) .ds-apple-shop-canvas .text-blue-600,
+html:not(.dark) .ds-apple-shop-canvas .text-blue-500,
+html:not(.dark) .ds-apple-shop-canvas .text-\[\#5F2CFF\],
+html:not(.dark) .ds-apple-shop-canvas .text-\[\#5B51D8\],
+html:not(.dark) .ds-apple-shop-canvas .text-\[\#204ecf\],
+html:not(.dark) .ds-apple-shop-canvas .text-\[\#007AFF\],
+html:not(.dark) .ds-apple-portal .text-indigo-600,
+html:not(.dark) .ds-apple-portal .text-blue-600 {
+  color: #0071e3 !important;
+}
+
+html.dark .ds-apple-shop-canvas .dark\:text-indigo-400,
+html.dark .ds-apple-shop-canvas .dark\:text-indigo-500,
+html.dark .ds-apple-shop-canvas .dark\:text-violet-400,
+html.dark .ds-apple-shop-canvas .dark\:text-purple-400,
+html.dark .ds-apple-shop-canvas .dark\:text-blue-400,
+html.dark .ds-apple-shop-canvas .dark\:text-blue-500,
+html.dark .ds-apple-shop-canvas .dark\:text-\[\#5F2CFF\],
+html.dark .ds-apple-shop-canvas .dark\:text-\[\#8E05C2\],
+html.dark .ds-apple-portal .dark\:text-indigo-400,
+html.dark .ds-apple-portal .dark\:text-blue-400 {
+  color: #0a84ff !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .text-emerald-600,
+html:not(.dark) .ds-apple-shop-canvas .text-emerald-500,
+html:not(.dark) .ds-apple-shop-canvas .text-green-600,
+html:not(.dark) .ds-apple-shop-canvas .text-green-500,
+html:not(.dark) .ds-apple-shop-canvas .text-\[\#1cdb5e\],
+html:not(.dark) .ds-apple-shop-canvas .text-\[\#10b981\],
+html:not(.dark) .ds-apple-shop-canvas .text-\[\#22c55e\],
+html:not(.dark) .ds-apple-portal .text-emerald-600,
+html:not(.dark) .ds-apple-portal .text-green-600 {
+  color: #248a3d !important;
+}
+
+html.dark .ds-apple-shop-canvas .dark\:text-emerald-400,
+html.dark .ds-apple-shop-canvas .dark\:text-emerald-500,
+html.dark .ds-apple-shop-canvas .dark\:text-green-400,
+html.dark .ds-apple-shop-canvas .dark\:text-\[\#1cdb5e\],
+html.dark .ds-apple-portal .dark\:text-emerald-400 {
+  color: #30d158 !important;
+}
+
+/* ==========================================================================
+   STANDALONE APPLE PORTAL & CHROME PRIMITIVES
+   (Top bar, Modals, Bottom Sheets, Popovers, Inputs, Segmented Controls)
+   ========================================================================== */
+html:not(.dark) .ds-apple-topbar {
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(24px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(185%) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03) !important;
+}
+
+html.dark .ds-apple-topbar {
+  background: rgba(28, 28, 30, 0.78) !important;
+  backdrop-filter: blur(24px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(185%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45) !important;
+}
+
+html:not(.dark) .ds-apple-icon-btn {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1px solid rgba(0, 0, 0, 0.07) !important;
+  color: #1d1d1f !important;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.07) !important;
+}
+html:not(.dark) .ds-apple-icon-btn:hover {
+  background: #ffffff !important;
+}
+html.dark .ds-apple-icon-btn {
+  background: rgba(44, 44, 46, 0.86) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f5f5f7 !important;
+  box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.5) !important;
+}
+html.dark .ds-apple-icon-btn:hover {
+  background: rgba(58, 58, 60, 0.94) !important;
+}
+
+.ds-apple-backdrop {
+  background: rgba(0, 0, 0, 0.42) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+html.dark .ds-apple-backdrop {
+  background: rgba(0, 0, 0, 0.64) !important;
+}
+
+html:not(.dark) .ds-apple-modal,
+html:not(.dark) .ds-apple-sheet {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(28px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(185%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow:
+    0 24px 64px -16px rgba(0, 0, 0, 0.18),
+    0 4px 16px -4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  color: #1d1d1f !important;
+}
+
+html.dark .ds-apple-modal,
+html.dark .ds-apple-sheet {
+  background: rgba(28, 28, 30, 0.92) !important;
+  backdrop-filter: blur(28px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(185%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
+  box-shadow:
+    0 28px 72px -16px rgba(0, 0, 0, 0.78),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  color: #f5f5f7 !important;
+}
+
+html:not(.dark) .ds-apple-popover {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow:
+    0 18px 46px -12px rgba(0, 0, 0, 0.16),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+  color: #1d1d1f !important;
+}
+
+html.dark .ds-apple-popover {
+  background: rgba(36, 36, 38, 0.9) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    0 22px 54px -12px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  color: #f5f5f7 !important;
+}
+
+html:not(.dark) .ds-apple-input {
+  background-color: #f2f2f7 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #1d1d1f !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+html:not(.dark) .ds-apple-input:focus {
+  background-color: #ffffff !important;
+  border-color: #0071e3 !important;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.16) !important;
+}
+
+html.dark .ds-apple-input {
+  background-color: #2c2c2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f5f5f7 !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+html.dark .ds-apple-input:focus {
+  background-color: #1c1c1e !important;
+  border-color: #0a84ff !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.24) !important;
+}
+
+html:not(.dark) .ds-apple-segmented {
+  background-color: rgba(118, 118, 128, 0.12) !important;
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+html.dark .ds-apple-segmented {
+  background-color: rgba(118, 118, 128, 0.24) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  html:not(.dark) .ds-apple-topbar,
+  html:not(.dark) .ds-apple-modal,
+  html:not(.dark) .ds-apple-sheet,
+  html:not(.dark) .ds-apple-popover {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+  }
+  html.dark .ds-apple-topbar,
+  html.dark .ds-apple-modal,
+  html.dark .ds-apple-sheet,
+  html.dark .ds-apple-popover {
+    background: #1c1c1e !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-color: rgba(255, 255, 255, 0.22) !important;
+  }
+}
+
+/* Map .ds-liquid-* tokens to Apple Studio Neutral & Apple Blue inside Shopping & Apple Portals */
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-checkout-shell {
+  background-color: #f5f5f7 !important;
+  background-image: none !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-checkout-shell {
+  background-color: #000000 !important;
+  background-image: none !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-panel,
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-gallery-stage {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.065) !important;
+  box-shadow: 0 2px 16px -4px rgba(0, 0, 0, 0.05) !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-panel,
+html.dark .ds-apple-shop-canvas .ds-liquid-gallery-stage {
+  background: #1c1c1e !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55) !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-subpanel,
+html:not(.dark) .ds-apple-portal .ds-liquid-subpanel {
+  background: #f5f5f7 !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: none !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-subpanel,
+html.dark .ds-apple-portal .ds-liquid-subpanel {
+  background: #2c2c2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-subpanel-active,
+html:not(.dark) .ds-apple-portal .ds-liquid-subpanel-active {
+  background: rgba(0, 113, 227, 0.07) !important;
+  border: 1.5px solid #0071e3 !important;
+  box-shadow: 0 4px 14px -4px rgba(0, 113, 227, 0.18) !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-subpanel-active,
+html.dark .ds-apple-portal .ds-liquid-subpanel-active {
+  background: rgba(10, 132, 255, 0.14) !important;
+  border: 1.5px solid #0a84ff !important;
+  box-shadow: 0 6px 18px -4px rgba(10, 132, 255, 0.25) !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-dock {
+  background: rgba(242, 242, 247, 0.9) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: none !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-dock {
+  background: rgba(44, 44, 46, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-dock-pill {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-dock-pill {
+  background: #3a3a3c !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45) !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-bottom-bar {
+  background: rgba(255, 255, 255, 0.86) !important;
+  backdrop-filter: blur(24px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(185%) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 -8px 24px -10px rgba(0, 0, 0, 0.08) !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-bottom-bar {
+  background: rgba(28, 28, 30, 0.86) !important;
+  backdrop-filter: blur(24px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(185%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 -10px 28px -10px rgba(0, 0, 0, 0.65) !important;
+}
+
+html:not(.dark) .ds-apple-portal.ds-liquid-backdrop,
+html:not(.dark) .ds-apple-portal .ds-liquid-backdrop {
+  background-color: rgba(0, 0, 0, 0.38) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+html.dark .ds-apple-portal.ds-liquid-backdrop,
+html.dark .ds-apple-portal .ds-liquid-backdrop {
+  background-color: rgba(0, 0, 0, 0.64) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+html:not(.dark) .ds-apple-portal.ds-liquid-glass-popup,
+html:not(.dark) .ds-apple-portal .ds-liquid-glass-popup {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(28px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(185%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 26px !important;
+  box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  color: #1d1d1f !important;
+}
+html.dark .ds-apple-portal.ds-liquid-glass-popup,
+html.dark .ds-apple-portal .ds-liquid-glass-popup {
+  background: rgba(28, 28, 30, 0.94) !important;
+  backdrop-filter: blur(28px) saturate(185%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(185%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
+  border-radius: 26px !important;
+  box-shadow: 0 28px 72px -16px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  color: #f5f5f7 !important;
+}
+
+html:not(.dark) .ds-apple-portal .ds-liquid-popup-title,
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-popup-title {
+  color: #1d1d1f !important;
+  letter-spacing: -0.02em;
+}
+html.dark .ds-apple-portal .ds-liquid-popup-title,
+html.dark .ds-apple-shop-canvas .ds-liquid-popup-title {
+  color: #f5f5f7 !important;
+  letter-spacing: -0.02em;
+}
+
+html:not(.dark) .ds-apple-portal .ds-liquid-popup-desc,
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-popup-desc {
+  color: #6e6e73 !important;
+}
+html.dark .ds-apple-portal .ds-liquid-popup-desc,
+html.dark .ds-apple-shop-canvas .ds-liquid-popup-desc {
+  color: #98989d !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-btn-primary,
+html:not(.dark) .ds-apple-portal .ds-liquid-btn-primary {
+  background: #0071e3 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 10px -2px rgba(0, 113, 227, 0.34) !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-btn-primary,
+html.dark .ds-apple-portal .ds-liquid-btn-primary {
+  background: #0a84ff !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px -4px rgba(10, 132, 255, 0.42) !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-btn-secondary,
+html:not(.dark) .ds-apple-portal .ds-liquid-btn-secondary {
+  background-color: #e8e8ed !important;
+  color: #1d1d1f !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-btn-secondary *,
+html:not(.dark) .ds-apple-portal .ds-liquid-btn-secondary * {
+  color: #1d1d1f !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-btn-secondary,
+html.dark .ds-apple-portal .ds-liquid-btn-secondary {
+  background-color: #2c2c2e !important;
+  color: #f5f5f7 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-btn-secondary *,
+html.dark .ds-apple-portal .ds-liquid-btn-secondary * {
+  color: #f5f5f7 !important;
+}
+
+html:not(.dark) .ds-apple-portal .ds-liquid-section {
+  background-color: transparent !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+html.dark .ds-apple-portal .ds-liquid-section {
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+html:not(.dark) .ds-apple-shop-canvas .ds-liquid-input,
+html:not(.dark) .ds-apple-portal .ds-liquid-input {
+  background-color: #f2f2f7 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #1d1d1f !important;
+}
+html.dark .ds-apple-shop-canvas .ds-liquid-input,
+html.dark .ds-apple-portal .ds-liquid-input {
+  background-color: #2c2c2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f5f5f7 !important;
 }
 
 /* ==========================================================================
@@ -3119,4 +4109,35 @@ html:not(.dark) .ds-sponsored-link {
 }
 html.dark .ds-sponsored-link {
   color: #60a5fa !important;
+}
+
+/* ==========================================================================
+   DEEP SHOP APPLE DESIGN REFINEMENTS:
+   - Prevent button text overflow & enforce single-line / compact labels
+   - Dynamic heading/title 2-line clamp
+   ========================================================================== */
+.ds-apple-shop-canvas button {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ds-apple-shop-canvas button svg {
+  flex-shrink: 0;
+}
+
+.ds-apple-shop-canvas button span,
+.ds-apple-shop-canvas button p {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.ds-apple-shop-canvas h1,
+.ds-apple-shop-canvas h2,
+.ds-apple-shop-canvas h3 {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }

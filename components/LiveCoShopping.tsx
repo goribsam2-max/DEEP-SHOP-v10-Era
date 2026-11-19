@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { Users, Phone, PhoneOff, Mic, MicOff, X, Send, MousePointer2 } from 'lucide-react';
 import { useNotify } from './Notifications';
 import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, getDoc, collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from '../lib/shoppingRoute';
+import { triggerHaptic } from '../lib/haptics';
 
 const LiveCoShopping = () => {
+  const prefersReducedMotion = useReducedMotion();
   const [isActive, setIsActive] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [inCall, setInCall] = useState(false);
@@ -219,9 +222,14 @@ const LiveCoShopping = () => {
   if (!isActive && !isSession) {
     return (
       <div className="fixed bottom-24 right-4 z-[90]">
-        <button 
-          onClick={handleInvite}
-          className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 p-3.5 rounded-full shadow-2xl flex items-center justify-center hover:scale-105 transition-all"
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('light');
+            handleInvite();
+          }}
+          className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] border border-black/[0.1] dark:border-white/[0.14] p-3.5 rounded-full shadow-[0_10px_28px_rgba(0,0,0,0.14)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer"
+          aria-label="Start Co-Shopping"
         >
           <Users className="w-5 h-5" />
         </button>
@@ -235,72 +243,107 @@ const LiveCoShopping = () => {
         <motion.div
           key={f.id}
           animate={{ y: f.scrollY - window.scrollY + (window.innerHeight / 2) }}
-          transition={{ type: 'spring', stiffness: 50 }}
-          className="fixed right-2 z-[80] pointer-events-none flex items-center gap-1 opacity-70"
+          transition={prefersReducedMotion ? { duration: 0.1 } : APPLE_SPRING_SNAPPY}
+          className="fixed right-2 z-[80] pointer-events-none flex items-center gap-1 opacity-85"
         >
-          <div className="bg-blue-500 text-white text-[10px] px-2 py-1 rounded-full font-bold shadow-md whitespace-nowrap">
+          <div className="bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] px-2.5 py-1 rounded-full font-semibold shadow-md whitespace-nowrap">
             {f.name} here
           </div>
-          <MousePointer2 className="w-4 h-4 text-blue-500 fill-blue-500" />
+          <MousePointer2 className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF] fill-current" />
         </motion.div>
       ))}
 
       <div className="fixed bottom-24 right-4 z-[90] flex flex-col items-end pointer-events-none">
         <AnimatePresence>
           {isOpen && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              className="bg-white dark:bg-zinc-900 w-80 rounded-[2rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 mb-4 overflow-hidden flex flex-col pointer-events-auto h-[400px]"
+            <motion.div
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.94 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.96 }}
+              transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+              className="bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl w-80 rounded-[26px] shadow-[0_24px_60px_rgba(0,0,0,0.2)] border border-black/[0.08] dark:border-white/[0.12] mb-4 overflow-hidden flex flex-col pointer-events-auto h-[400px]"
             >
-              <div className="bg-zinc-100 dark:bg-zinc-800 p-4 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between z-10">
+              <div className="bg-[#F5F5F7]/90 dark:bg-[#2C2C2E]/85 backdrop-blur-xl px-4 py-3.5 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between z-10">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                    <div className="w-10 h-10 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] flex items-center justify-center text-white font-semibold text-sm shadow-sm">
                       {friends.length > 0 ? friends[0].name.charAt(0) : 'F'}
                     </div>
                     {friends.length > 0 && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-zinc-800 rounded-full"></div>
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#30D158] border-2 border-white dark:border-[#1C1C1E] rounded-full"></div>
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-tight">Co-Shopping</p>
-                    <p className="text-[10px] text-zinc-500 font-semibold">
+                    <p className="text-[14px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight tracking-[-0.01em]">
+                      Co-Shopping
+                    </p>
+                    <p className="text-[11px] text-[#6E6E73] dark:text-[#A1A1A6] font-medium">
                       {friends.length > 0 ? 'Online' : 'Waiting...'}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   {!inCall ? (
-                    <button onClick={startCall} className="p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('medium');
+                        startCall();
+                      }}
+                      className="p-2 rounded-full bg-[#248A3D]/12 text-[#248A3D] dark:bg-[#30D158]/18 dark:text-[#30D158] hover:opacity-85 active:scale-95 transition-all cursor-pointer"
+                    >
                       <Phone className="w-4 h-4" />
                     </button>
                   ) : (
                     <>
-                      <button onClick={toggleMute} className={`p-2 rounded-full transition-colors ${isMuted ? 'bg-orange-100 text-orange-600' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'}`}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          toggleMute();
+                        }}
+                        className={`p-2 rounded-full transition-all active:scale-95 cursor-pointer ${
+                          isMuted
+                            ? 'bg-[#FF9500]/15 text-[#FF9500]'
+                            : 'bg-black/[0.07] dark:bg-white/[0.12] text-[#1D1D1F] dark:text-[#F5F5F7]'
+                        }`}
+                      >
                         {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                       </button>
-                      <button onClick={endCall} className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('medium');
+                          endCall();
+                        }}
+                        className="p-2 rounded-full bg-[#FF3B30]/12 text-[#FF3B30] dark:bg-[#FF453A]/18 dark:text-[#FF453A] active:scale-95 transition-all cursor-pointer"
+                      >
                         <PhoneOff className="w-4 h-4" />
                       </button>
                     </>
                   )}
-                  <button onClick={() => setIsOpen(false)} className="p-2 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setIsOpen(false);
+                    }}
+                    className="p-2 rounded-full bg-black/[0.06] dark:bg-white/[0.1] text-[#6E6E73] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white active:scale-95 transition-all cursor-pointer"
+                  >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-zinc-900 relative">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white dark:bg-[#1C1C1E] relative">
                 {inCall && (
-                  <div className="sticky top-0 mb-4 bg-green-500/10 border border-green-500/20 text-green-600 text-[10px] font-bold text-center py-1.5 rounded-full flex items-center justify-center gap-1.5 backdrop-blur-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Call in progress
+                  <div className="sticky top-0 mb-3 bg-[#248A3D]/10 dark:bg-[#30D158]/15 border border-[#248A3D]/20 text-[#248A3D] dark:text-[#30D158] text-[11px] font-semibold text-center py-1.5 rounded-full flex items-center justify-center gap-1.5 backdrop-blur-md">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#30D158] animate-pulse" /> Call in progress
                   </div>
                 )}
                 {messages.length === 0 && (
                   <div className="h-full flex items-center justify-center">
-                    <div className="text-center text-zinc-400 text-xs font-medium">
+                    <div className="text-center text-[#86868B] text-xs font-medium">
                       Send a message to your friend
                     </div>
                   </div>
@@ -309,7 +352,13 @@ const LiveCoShopping = () => {
                   const isMe = m.senderId === myIdRef.current;
                   return (
                     <div key={i} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                      <div className={`px-3.5 py-2.5 rounded-2xl text-[13px] max-w-[85%] shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-sm'}`}>
+                      <div
+                        className={`px-3.5 py-2 rounded-[18px] text-[13px] max-w-[85%] ${
+                          isMe
+                            ? 'bg-[#0071E3] dark:bg-[#0A84FF] text-white rounded-br-[4px]'
+                            : 'bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] rounded-bl-[4px]'
+                        }`}
+                      >
                         {m.text}
                       </div>
                     </div>
@@ -318,18 +367,26 @@ const LiveCoShopping = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex gap-2">
-                <input 
+              <div className="p-3 border-t border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] flex gap-2">
+                <input
                   value={inputMsg}
                   onChange={e => setInputMsg(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                  placeholder="Message..." 
-                  className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-full px-4 py-2 text-sm outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
+                  placeholder="Message..."
+                  className="flex-1 bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] rounded-full px-4 py-2 text-[13px] outline-none text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B]"
                 />
-                <button 
-                  onClick={sendMessage} 
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    sendMessage();
+                  }}
                   disabled={!inputMsg.trim()}
-                  className={`p-2.5 rounded-full flex items-center justify-center transition-colors ${inputMsg.trim() ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400'}`}
+                  className={`p-2.5 rounded-full flex items-center justify-center transition-all active:scale-95 ${
+                    inputMsg.trim()
+                      ? 'bg-[#0071E3] dark:bg-[#0A84FF] text-white cursor-pointer'
+                      : 'bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#86868B]'
+                  }`}
                 >
                   <Send className="w-4 h-4 ml-0.5" />
                 </button>
@@ -340,13 +397,17 @@ const LiveCoShopping = () => {
 
         <div className="flex gap-2 pointer-events-auto">
           {!isOpen && (
-            <button 
-              onClick={() => setIsOpen(true)}
-              className="bg-blue-600 text-white px-5 py-3.5 rounded-full shadow-2xl flex items-center justify-center gap-2 hover:scale-105 transition-all"
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setIsOpen(true);
+              }}
+              className="bg-[#0071E3] dark:bg-[#0A84FF] text-white px-5 py-3 rounded-full shadow-[0_12px_32px_rgba(0,113,227,0.34)] flex items-center justify-center gap-2 hover:scale-[1.03] active:scale-[0.96] transition-all cursor-pointer"
             >
               {inCall && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
               <Users className="w-4 h-4" />
-              <span className="text-sm font-bold">Co-Shopping</span>
+              <span className="text-[13px] font-semibold">Co-Shopping</span>
             </button>
           )}
         </div>

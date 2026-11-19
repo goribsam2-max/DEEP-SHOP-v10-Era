@@ -7,6 +7,7 @@ import { useTheme } from './ThemeContext';
 import { Header } from './ui/header-3';
 import { HeaderNotification } from './HeaderNotification';
 import { PageLoadingContext } from '../App';
+import { isAppleShoppingRoute } from '../lib/shoppingRoute';
 
 const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -97,10 +98,13 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     isPageLoading;
 
   const isMessagesPage = location.pathname.startsWith('/messages');
+  const isShoppingRoute = isAppleShoppingRoute(location.pathname);
 
   return (
     <div
-      className={`ambient-dynamic-bg relative flex flex-col transition-all duration-300 ${
+      className={`${
+        isShoppingRoute ? 'ds-apple-shop-canvas' : 'ambient-dynamic-bg'
+      } relative flex flex-col transition-colors duration-200 ${
         isMessagesPage
           ? 'h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none'
           : 'min-h-screen'

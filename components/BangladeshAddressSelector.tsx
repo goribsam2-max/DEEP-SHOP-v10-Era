@@ -11,6 +11,7 @@ import {
 import { detectAbuse } from "../src/lib/abuseProtection";
 import { MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { isAuthVoiceMuted, playAuthVoice } from "../lib/authVoiceAndValidation";
+import { triggerHaptic } from "../lib/haptics";
 
 interface BangladeshAddressSelectorProps {
   onAddressChange: (fullAddress: string, structuredData: {
@@ -125,19 +126,18 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
   }, [selectedDivisionId, selectedDistrictId, selectedUpazilaId, areaUnion, detailedHouseRoad]);
 
   return (
-    <div className="space-y-4 bg-zinc-50 dark:bg-zinc-900/60 p-4 md:p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-      <div className="flex items-center gap-2 pb-2 border-b border-zinc-200 dark:border-zinc-800">
-        <MapPin className="w-5 h-5 text-emerald-500" />
-        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+    <div className="space-y-4 bg-white dark:bg-[#1C1C1E] p-4 md:p-5 rounded-[22px] border border-black/[0.08] dark:border-white/[0.1] shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-none">
+      <div className="flex items-center gap-2 pb-2.5 border-b border-black/[0.06] dark:border-white/[0.08]">
+        <MapPin className="w-5 h-5 text-[#0071E3] dark:text-[#0A84FF]" />
+        <h4 className="text-[14px] font-semibold tracking-[-0.01em] text-[#1D1D1F] dark:text-[#F5F5F7]">
           বাংলাদেশ ডেলিভারি ঠিকানা (A-Z Official BD Location)
         </h4>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Division */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
-          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-            ১. বিভাগ (Division) <span className="text-red-500">*</span>
+          <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
+            ১. বিভাগ (Division) <span className="text-[#FF3B30]">*</span>
           </label>
           <select
             value={selectedDivisionId}
@@ -146,8 +146,11 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
                 playAuthVoice("আপনার বিভাগ নির্বাচন করুন।");
               }
             }}
-            onChange={(e) => handleDivisionChange(e.target.value)}
-            className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs md:text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            onChange={(e) => {
+              triggerHaptic("selection");
+              handleDivisionChange(e.target.value);
+            }}
+            className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.08] dark:border-white/[0.1] rounded-xl px-3 py-2.5 text-xs md:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/25 focus:border-[#0071E3] cursor-pointer"
           >
             {BD_DIVISIONS.map((div) => (
               <option key={div.id} value={div.id}>
@@ -157,10 +160,9 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           </select>
         </div>
 
-        {/* District */}
         <div>
-          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-            ২. জেলা (District / Zila) <span className="text-red-500">*</span>
+          <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
+            ২. জেলা (District / Zila) <span className="text-[#FF3B30]">*</span>
           </label>
           <select
             value={selectedDistrictId}
@@ -169,8 +171,11 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
                 playAuthVoice("আপনার জেলা নির্বাচন করুন।");
               }
             }}
-            onChange={(e) => handleDistrictChange(e.target.value)}
-            className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs md:text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            onChange={(e) => {
+              triggerHaptic("selection");
+              handleDistrictChange(e.target.value);
+            }}
+            className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.08] dark:border-white/[0.1] rounded-xl px-3 py-2.5 text-xs md:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/25 focus:border-[#0071E3] cursor-pointer"
           >
             {availableDistricts.map((dist) => (
               <option key={dist.id} value={dist.id}>
@@ -180,10 +185,9 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           </select>
         </div>
 
-        {/* Upazila / Thana */}
         <div>
-          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-            ৩. উপজেলা / থানা (Upazila / Thana) <span className="text-red-500">*</span>
+          <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
+            ৩. উপজেলা / থানা (Upazila / Thana) <span className="text-[#FF3B30]">*</span>
           </label>
           <select
             value={selectedUpazilaId}
@@ -193,13 +197,14 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
               }
             }}
             onChange={(e) => {
+              triggerHaptic("selection");
               setSelectedUpazilaId(e.target.value);
               const upz = BD_UPAZILAS.find((u) => u.id === e.target.value);
               if (upz?.areas && upz.areas.length > 0) {
                 setAreaUnion(upz.areas[0]);
               }
             }}
-            className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs md:text-sm font-medium text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.08] dark:border-white/[0.1] rounded-xl px-3 py-2.5 text-xs md:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/25 focus:border-[#0071E3] cursor-pointer"
           >
             {availableUpazilas.map((upz) => (
               <option key={upz.id} value={upz.id}>
@@ -209,10 +214,9 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           </select>
         </div>
 
-        {/* Area / Union / Ward */}
         <div>
-          <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-            ৪. ইউনিয়ন / এলাকা / ডাকঘর (Union / Area) <span className="text-red-500">*</span>
+          <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
+            ৪. ইউনিয়ন / এলাকা / ডাকঘর (Union / Area) <span className="text-[#FF3B30]">*</span>
           </label>
           <div className="relative">
             <input
@@ -226,7 +230,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
               }}
               onChange={(e) => setAreaUnion(e.target.value)}
               placeholder="এলাকা বা ইউনিয়ন লিখুন অথবা সিলেক্ট করুন"
-              className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs md:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.08] dark:border-white/[0.1] rounded-xl px-3 py-2.5 text-xs md:text-sm text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/25 focus:border-[#0071E3]"
             />
             {currentUpazila?.areas && currentUpazila.areas.length > 0 && (
               <datalist id="bd_area_suggestions">
@@ -237,17 +241,20 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
             )}
           </div>
           {currentUpazila?.areas && currentUpazila.areas.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              <span className="text-[10px] text-zinc-500 self-center">জনপ্রিয় এলাকা:</span>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <span className="text-[10px] text-[#86868B] self-center">জনপ্রিয় এলাকা:</span>
               {currentUpazila.areas.slice(0, 4).map((a, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setAreaUnion(a)}
-                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    setAreaUnion(a);
+                  }}
+                  className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
                     areaUnion === a
-                      ? "bg-emerald-500 text-white border-emerald-500 font-bold"
-                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-emerald-500"
+                      ? "bg-[#0071E3] dark:bg-[#0A84FF] text-white border-transparent font-semibold"
+                      : "bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#6E6E73] dark:text-[#A1A1A6] border-black/[0.08] dark:border-white/[0.1] hover:border-[#0071E3]"
                   }`}
                 >
                   {a}
@@ -258,10 +265,9 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
         </div>
       </div>
 
-      {/* Detailed House / Road / Village */}
       <div>
-        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-          ৫. বাসা নং / রোড / হোল্ডিং / গ্রাম / পাড়া / মহল্লা (House, Road, Village, Moholla) <span className="text-red-500">*</span>
+        <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
+          ৫. বাসা নং / রোড / হোল্ডিং / গ্রাম / পাড়া / মহল্লা (House, Road, Village, Moholla) <span className="text-[#FF3B30]">*</span>
         </label>
         <textarea
           rows={2}
@@ -275,27 +281,26 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           }}
           onChange={(e) => setDetailedHouseRoad(e.target.value)}
           placeholder="যেমন: বাসা #১২, রোড #০৪, ব্লক-বি, গ্রাম: রসুলপুর, পাড়া: পূর্ব পাড়া"
-          className={`w-full bg-white dark:bg-zinc-800 border rounded-xl px-3 py-2.5 text-xs md:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 resize-none ${
+          className={`w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border rounded-xl px-3 py-2.5 text-xs md:text-sm text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 resize-none ${
             detectAbuse(detailedHouseRoad).hasAbuse
-              ? "border-red-500 focus:ring-red-500 bg-red-50/20"
-              : "border-zinc-200 dark:border-zinc-700 focus:ring-emerald-500"
+              ? "border-[#FF3B30] focus:ring-[#FF3B30]/25 bg-[#FF3B30]/5"
+              : "border-black/[0.08] dark:border-white/[0.1] focus:ring-[#0071E3]/25 focus:border-[#0071E3]"
           }`}
         />
         {detectAbuse(detailedHouseRoad).hasAbuse && (
-          <p className="text-[11px] text-red-500 font-bold mt-1 flex items-center gap-1">
+          <p className="text-[11px] text-[#FF3B30] dark:text-[#FF453A] font-semibold mt-1 flex items-center gap-1">
             <AlertTriangle className="w-3.5 h-3.5" />
             সতর্কতা: আপত্তিকর বা গালিযুক্ত শব্দ ব্যবহার করবেন না! ৩ বার ব্যবহারে চিরতরে ব্যান করা হবে।
           </p>
         )}
       </div>
 
-      {/* Live Preview */}
-      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs">
-        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold mb-1">
+      <div className="bg-[#248A3D]/8 dark:bg-[#30D158]/10 border border-[#248A3D]/20 dark:border-[#30D158]/20 rounded-2xl p-3.5 text-xs">
+        <div className="flex items-center gap-1.5 text-[#248A3D] dark:text-[#30D158] font-semibold mb-1">
           <CheckCircle2 className="w-3.5 h-3.5" />
           সম্পূর্ণ ঠিকানা প্রিভিউ:
         </div>
-        <p className="text-zinc-700 dark:text-zinc-300 font-medium break-words">
+        <p className="text-[#1D1D1F] dark:text-[#F5F5F7] font-medium break-words">
           {detailedHouseRoad.trim() ? detailedHouseRoad.trim() + ", " : ""}
           {areaUnion.trim() ? areaUnion.trim() + ", " : ""}
           {currentUpazila?.name ? `${currentUpazila.name} (${currentUpazila.bnName}), ` : ""}

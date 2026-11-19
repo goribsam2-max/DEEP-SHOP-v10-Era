@@ -3,14 +3,15 @@ import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { Product } from "../types";
 import { ProductCard } from "../components/ui/ProductCard";
-import { ChevronLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Zap, Clock } from "lucide-react";
 import { ProductSkeleton } from "../components/Skeletons";
+import { motion, useReducedMotion } from "framer-motion";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
 
 export default function FlashSale() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const qProds = query(collection(db, "products"));
@@ -32,27 +33,35 @@ export default function FlashSale() {
   }, []);
 
   return (
-    <div className="min-h-screen ambient-dynamic-bg pb-20">
-      <div className="bg-[#ff0800] text-white pt-8 pb-12 px-4 rounded-b-[40px] relative overflow-hidden shadow-lg border-b border-red-500">
-        <div className="absolute top-0 right-10 w-32 h-[200%] bg-yellow-400 rotate-[35deg] transform -translate-y-1/4 opacity-90 blur-[1px]"></div>
-        <div className="absolute top-10 right-0 w-8 h-[200%] bg-white rotate-[35deg] transform -translate-y-1/4 opacity-60 blur-[1px]"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-[#ff0800] via-[#ff0800]/90 to-[#ff0800]/50 pointer-events-none"></div>
-        
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex items-center mb-6">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <span className="text-yellow-400 font-black text-3xl">⚡</span> 
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] pb-24 transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7 space-y-6 sm:space-y-8">
+        {/* Studio Neutral Editorial Hero */}
+        <motion.section
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+          className="ds-apple-surface rounded-[28px] p-5 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="space-y-1.5 max-w-xl">
+            <p className="ds-apple-eyebrow text-[11px] text-[#FF3B30] dark:text-[#FF453A] flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>Limited-Time Offers</span>
+            </p>
+            <h1 className="ds-apple-display text-2xl sm:text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
               Flash Sale
             </h1>
+            <p className="ds-apple-muted text-sm leading-relaxed">
+              Exclusive markdowns on verified gadgets, accessories, and everyday essentials while supplies last.
+            </p>
           </div>
-          <p className="text-white/90 text-sm md:text-base font-medium max-w-lg mb-2 leading-relaxed">
-            Grab our exclusive limited-time deals before they run out! 
-            Discounts on premium gadgets, accessories, and more.
-          </p>
-        </div>
-      </div>
+          {!loading && products.length > 0 && (
+            <div className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F2F2F7] dark:bg-[#2C2C2E] text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums whitespace-nowrap">
+              <span>{products.length} Active Deals</span>
+            </div>
+          )}
+        </motion.section>
 
-      <div className="max-w-7xl mx-auto px-4 -mt-6 relative z-20">
+        {/* Product Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {loading ? (
             Array(10)
@@ -60,15 +69,24 @@ export default function FlashSale() {
               .map((_, i) => <ProductSkeleton key={i} />)
           ) : products.length > 0 ? (
             products.map((product, index) => (
-              <div key={product.id} className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col justify-between">
+              <div
+                key={product.id}
+                className="bg-white dark:bg-[#1C1C1E] rounded-[20px] border border-black/[0.05] dark:border-white/[0.08] overflow-hidden flex flex-col justify-between"
+              >
                 <ProductCard product={product} index={index} />
               </div>
             ))
           ) : (
-            <div className="col-span-full py-16 text-center text-zinc-500 font-medium bg-white rounded-2xl shadow-sm border border-zinc-100">
-              <div className="text-4xl mb-3">🕒</div>
-              <p>No flash sales available at the moment.</p>
-              <p className="text-sm mt-1">Check back later for exciting offers!</p>
+            <div className="col-span-full py-16 px-6 text-center bg-white dark:bg-[#1C1C1E] rounded-[28px] border border-black/[0.06] dark:border-white/[0.1] shadow-sm flex flex-col items-center">
+              <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center mb-3 text-[#6E6E73] dark:text-[#8E8E93]">
+                <Clock className="w-6 h-6" />
+              </div>
+              <p className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                No flash sales available right now.
+              </p>
+              <p className="text-sm text-[#6E6E73] dark:text-[#8E8E93] mt-1">
+                Check back later for upcoming offers.
+              </p>
             </div>
           )}
         </div>

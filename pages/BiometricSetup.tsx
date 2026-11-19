@@ -3,8 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
-import { ArrowLeft, Lock, Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader2 } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import SEO from "../components/SEO";
+import { triggerHaptic } from "../lib/haptics";
+import { APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
 
 const KeyIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
   <svg 
@@ -44,6 +47,7 @@ const FingerprintIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
 export const BiometricSetup: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
   const [isSupported, setIsSupported] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [passcode, setPasscode] = useState("");
@@ -144,7 +148,7 @@ export const BiometricSetup: React.FC = () => {
         setBiometricEnabled(true);
         notify("Sandbox Biometrics enabled! (Simulated for iframe preview)", "success");
       } else {
-        notify("Could not register biometrics. You can still secure your app using the 4-Digit Passcode PIN.", "warning");
+        notify("Could not register biometrics. You can still secure your app using the 4-Digit Passcode PIN.", "info");
       }
     } finally {
       setSetupLoading(false);
@@ -172,48 +176,43 @@ export const BiometricSetup: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#F0F2F5] dark:bg-zinc-950 font-sans min-h-screen pb-[120px]">
+    <div className="ds-apple-shop-canvas min-h-screen pb-[120px]">
       <SEO 
         title="Biometric & Security Lock" 
         description="Secure your account using your phone's biometric fingerprint, face recognition, or a passcode PIN." 
         noindex={true}
       />
 
-      {/* Header Banner */}
-      <div className="bg-[#0a2e15] dark:bg-[#071f0f] pt-12 pb-20 px-6 rounded-b-[40px] relative overflow-hidden">
-        <div className="max-w-lg mx-auto relative z-10">
-          <div>
-            <h2 className="text-white text-xl font-bold tracking-tight">Security Lock</h2>
-            <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Fingerprint, Face ID & PIN</p>
-          </div>
-        </div>
-      </div>
-
       {/* Main Container */}
-      <div className="-mt-10 px-4 md:px-6 relative z-30 max-w-lg mx-auto space-y-6">
+      <div className="px-4 md:px-6 pt-6 max-w-lg mx-auto space-y-5">
+        <div className="px-1">
+          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+            Face ID &amp; Passcode
+          </h1>
+        </div>
         
         {/* Info card */}
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-[28px] p-5 shadow-xl border border-gray-100 dark:border-zinc-800 flex items-start gap-4">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0 text-[#1cdb5e]">
+        <div className="ds-apple-surface rounded-[24px] p-5 flex items-start gap-4">
+          <div className="w-10 h-10 rounded-2xl bg-[#34C759]/12 dark:bg-[#30D158]/15 flex items-center justify-center shrink-0 text-[#248A3D] dark:text-[#30D158]">
             <Shield className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-1">Local App Protection</h4>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+            <h4 className="text-[15px] font-semibold mb-1">Local App Protection</h4>
+            <p className="text-xs ds-apple-muted leading-relaxed">
               Prevent unauthorized access to your account on this device. If active, you will be prompted to verify your identity every time you launch or open the application.
             </p>
           </div>
         </div>
 
         {/* Step 1: 4-digit Passcode configuration */}
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-[32px] p-6 shadow-xl border border-gray-100 dark:border-zinc-800 space-y-5">
+        <div className="ds-apple-surface rounded-[24px] p-5 sm:p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-950/20 text-orange-500 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-[#FF9500]/12 dark:bg-[#FF9F0A]/15 text-[#C93400] dark:text-[#FF9F0A] flex items-center justify-center shrink-0">
               <KeyIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-zinc-800 dark:text-white uppercase tracking-wider">1. Backup Passcode PIN</h3>
-              <p className="text-[11px] text-zinc-400 font-bold">Must be configured first to enable biometrics</p>
+              <h3 className="text-[15px] font-semibold tracking-tight">1. Backup Passcode PIN</h3>
+              <p className="text-xs ds-apple-muted">Must be configured first to enable biometrics</p>
             </div>
           </div>
 
@@ -227,12 +226,16 @@ export const BiometricSetup: React.FC = () => {
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
                 placeholder="Enter 4-digit PIN"
-                className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-center text-lg font-semibold tracking-normal text-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1cdb5e]"
+                className="ds-apple-input w-full px-5 h-13 rounded-2xl text-center text-lg font-semibold tabular-nums outline-none"
               />
               <button
                 type="button"
-                onClick={() => setShowPasscode(!showPasscode)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                onClick={() => {
+                  triggerHaptic();
+                  setShowPasscode(!showPasscode);
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 ds-apple-muted cursor-pointer"
+                aria-label="Toggle PIN visibility"
               >
                 {showPasscode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -240,74 +243,91 @@ export const BiometricSetup: React.FC = () => {
 
             <div className="flex gap-3">
               {isPasscodeEnabled && (
-                <button
-                  onClick={handleRemovePasscode}
-                  className="flex-1 py-3.5 bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-950/10 dark:hover:bg-red-950/20 rounded-2xl text-xs font-bold transition"
+                <motion.button
+                  type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+                  onClick={() => {
+                    triggerHaptic("warning");
+                    handleRemovePasscode();
+                  }}
+                  className="flex-1 h-11 px-4 bg-[#FF3B30]/10 hover:bg-[#FF3B30]/15 text-[#FF3B30] dark:text-[#FF453A] rounded-full text-xs font-semibold whitespace-nowrap transition cursor-pointer"
                 >
                   Remove Lock
-                </button>
+                </motion.button>
               )}
-              <button
-                onClick={handleSavePasscode}
-                className="flex-1 py-3.5 bg-[#1cdb5e] hover:bg-[#19c052] text-white rounded-2xl text-xs font-bold transition shadow-lg shadow-emerald-500/20"
+              <motion.button
+                type="button"
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+                onClick={() => {
+                  triggerHaptic("success");
+                  handleSavePasscode();
+                }}
+                className="ds-apple-btn-primary flex-1 h-11 px-4 rounded-full text-xs font-semibold whitespace-nowrap transition cursor-pointer"
               >
                 {isPasscodeEnabled ? "Update Passcode" : "Set & Enable Passcode"}
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
 
         {/* Step 2: Biometric fingerprint / Face ID configuration */}
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-[32px] p-6 shadow-xl border border-gray-100 dark:border-zinc-800 space-y-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-950/20 text-teal-500 flex items-center justify-center">
+        <div className="ds-apple-surface rounded-[24px] p-5 sm:p-6 space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 ds-apple-accent-text flex items-center justify-center shrink-0">
                 <FingerprintIcon className="w-5 h-5" />
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-zinc-800 dark:text-white uppercase tracking-wider">2. Biometric Authentication</h3>
-                <p className="text-[11px] text-zinc-400 font-bold">Use Fingerprint, Face ID or device unlock</p>
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-semibold tracking-tight truncate">2. Biometric Authentication</h3>
+                <p className="text-xs ds-apple-muted truncate">Use Fingerprint, Face ID or device unlock</p>
               </div>
             </div>
 
-            {/* Toggle switch */}
+            {/* Apple Toggle switch */}
             <button
-              onClick={handleToggleBiometrics}
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                handleToggleBiometrics();
+              }}
               disabled={setupLoading || !isPasscodeEnabled}
-              className={`w-14 h-8 rounded-full p-1 transition-colors duration-200 focus:outline-none ${
-                !isPasscodeEnabled ? "bg-zinc-200 dark:bg-zinc-800 cursor-not-allowed opacity-50" : biometricEnabled ? "bg-[#1cdb5e]" : "bg-zinc-300 dark:bg-zinc-700"
+              aria-label="Toggle Biometric Authentication"
+              className={`w-13 h-8 rounded-full p-1 transition-colors duration-200 focus:outline-none shrink-0 flex items-center cursor-pointer ${
+                !isPasscodeEnabled ? "bg-[#E5E5EA] dark:bg-[#3A3A3C] cursor-not-allowed opacity-50" : biometricEnabled ? "bg-[#34C759] dark:bg-[#30D158]" : "bg-[#E5E5EA] dark:bg-[#3A3A3C]"
               }`}
             >
-              <div
-                className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-200 ${
-                  biometricEnabled ? "translate-x-6" : "translate-x-0"
+              <motion.div
+                layout
+                transition={shouldReduceMotion ? { duration: 0.1 } : APPLE_SPRING_SNAPPY}
+                className={`w-6 h-6 rounded-full bg-white shadow-sm ${
+                  biometricEnabled ? "ml-auto" : "mr-auto"
                 }`}
               />
             </button>
           </div>
 
           {!isPasscodeEnabled && (
-            <div className="bg-amber-50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-4 flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold leading-relaxed">
+            <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-2xl p-4 flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-[#C93400] dark:text-[#FF9F0A] shrink-0 mt-0.5" />
+              <p className="text-xs text-[#C93400] dark:text-[#FF9F0A] font-medium leading-relaxed">
                 You must set a 4-digit backup passcode PIN first before enabling fingerprint or facial recognition unlock.
               </p>
             </div>
           )}
 
           {isPasscodeEnabled && !isSupported && (
-            <div className="bg-amber-50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-4 flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold leading-relaxed">
+            <div className="bg-[#FF9500]/10 border border-[#FF9500]/20 rounded-2xl p-4 flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-[#C93400] dark:text-[#FF9F0A] shrink-0 mt-0.5" />
+              <p className="text-xs text-[#C93400] dark:text-[#FF9F0A] font-medium leading-relaxed">
                 Web biometrics is not fully supported in this browser. However, your account remains secured with the custom 4-digit backup passcode PIN lock.
               </p>
             </div>
           )}
 
           {isPasscodeEnabled && isSupported && (
-            <div className="bg-emerald-50/50 dark:bg-emerald-950/5 border border-emerald-100 dark:border-emerald-900/10 rounded-2xl p-4 flex gap-3">
-              <CheckCircle className="w-5 h-5 text-[#1cdb5e] shrink-0 mt-0.5" />
-              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold leading-relaxed">
+            <div className="bg-[#34C759]/10 border border-[#34C759]/20 rounded-2xl p-4 flex gap-3">
+              <CheckCircle className="w-5 h-5 text-[#248A3D] dark:text-[#30D158] shrink-0 mt-0.5" />
+              <p className="text-xs text-[#248A3D] dark:text-[#30D158] font-medium leading-relaxed">
                 Biometrics is fully supported on this device. You can verify with your phone's face scanner or physical fingerprint scanner.
               </p>
             </div>
@@ -315,8 +335,8 @@ export const BiometricSetup: React.FC = () => {
 
           {setupLoading && (
             <div className="flex items-center justify-center gap-2 py-2">
-              <Loader2 className="w-4 h-4 text-[#1cdb5e] animate-spin" />
-              <span className="text-xs text-zinc-400 font-bold">Scanning on device...</span>
+              <Loader2 className="w-4 h-4 ds-apple-accent-text animate-spin" />
+              <span className="text-xs ds-apple-muted font-medium">Scanning on device...</span>
             </div>
           )}
         </div>

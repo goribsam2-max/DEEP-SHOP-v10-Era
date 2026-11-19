@@ -4,6 +4,12 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { isAppleShoppingRoute } from "../../lib/shoppingRoute";
+import { triggerHaptic } from "../../lib/haptics";
+
+function isShoppingPortalActive() {
+  return typeof window !== "undefined" && isAppleShoppingRoute(window.location.pathname);
+}
 
 function Dialog({
   ...props
@@ -33,11 +39,13 @@ function DialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+  const isAppleShop = isShoppingPortalActive();
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "ds-liquid-backdrop fixed inset-0 z-[200] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        isAppleShop ? "ds-apple-portal ds-apple-backdrop" : "ds-liquid-backdrop",
+        "fixed inset-0 z-[200] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
       )}
       {...props}
@@ -50,13 +58,17 @@ function DialogContent({
   children,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+  const isAppleShop = isShoppingPortalActive();
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "ds-liquid-glass-popup fixed top-[50%] left-[50%] z-[201] w-full max-h-[calc(100dvh-2.5rem)] overflow-y-auto max-w-[calc(100%-2.5rem)] translate-x-[-50%] translate-y-[-50%] duration-200 sm:max-w-lg flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          isAppleShop
+            ? "ds-apple-portal ds-apple-modal rounded-[26px]"
+            : "ds-liquid-glass-popup",
+          "fixed top-[50%] left-[50%] z-[201] w-full max-h-[calc(100dvh-2.5rem)] overflow-y-auto max-w-[calc(100%-2.5rem)] translate-x-[-50%] translate-y-[-50%] duration-200 sm:max-w-lg flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className
         )}
         {...props}
@@ -94,7 +106,10 @@ function DialogHeader({
     >
       {children}
       {!hideCloseButton && (
-        <DialogPrimitive.Close className="ds-liquid-btn-secondary absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-95 focus:outline-hidden disabled:pointer-events-none cursor-pointer">
+        <DialogPrimitive.Close
+          onPointerDown={() => triggerHaptic("light")}
+          className="ds-liquid-btn-secondary absolute top-5 right-5 w-9 h-9 !min-h-0 rounded-full flex items-center justify-center transition-transform active:scale-95 focus:outline-hidden disabled:pointer-events-none cursor-pointer"
+        >
           <XIcon className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

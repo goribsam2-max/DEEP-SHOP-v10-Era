@@ -37,6 +37,7 @@ import {
   validateInappropriateContent,
   validateRealEmail,
 } from "../lib/authVoiceAndValidation";
+import { triggerHaptic } from "../lib/haptics";
 
 const GOOGLE_CLIENT_ID =
   (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
@@ -55,8 +56,11 @@ const GoogleLoginPill: React.FC<{
     <button
       type="button"
       disabled={disabled}
-      onClick={() => login()}
-      className="w-full h-[46px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[15px] flex items-center justify-center gap-2.5 transition cursor-pointer disabled:opacity-50"
+      onClick={() => {
+        triggerHaptic("selection");
+        login();
+      }}
+      className="w-full h-[46px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[14.5px] whitespace-nowrap flex items-center justify-center gap-2.5 transition cursor-pointer disabled:opacity-50"
     >
       <GoogleIcon className="w-4 h-4 shrink-0" />
       <span>Continue with Google</span>
@@ -346,8 +350,11 @@ const SignIn: React.FC = () => {
           <div className="space-y-3">
             <button
               type="button"
-              onClick={() => navigate(`/signup${querySuffix}`)}
-              className="w-full h-[48px] rounded-full border border-[#0064e0] dark:border-[#4599ff] hover:bg-[#0064e0]/5 active:scale-[0.99] text-[#0064e0] dark:text-[#4599ff] font-semibold text-[16px] transition cursor-pointer"
+              onClick={() => {
+                triggerHaptic("selection");
+                navigate(`/signup${querySuffix}`);
+              }}
+              className="w-full h-[48px] px-5 rounded-full border border-[#0071E3] dark:border-[#0A84FF] hover:bg-[#0071E3]/6 active:scale-[0.98] text-[#0071E3] dark:text-[#0A84FF] font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
             >
               Create new account
             </button>
@@ -360,11 +367,11 @@ const SignIn: React.FC = () => {
         </div>
 
         {hasPendingOrder && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 text-xs text-blue-900 dark:text-blue-200">
+          <div className="mb-4 p-3.5 rounded-2xl bg-[#0071E3]/8 dark:bg-[#0A84FF]/14 border border-[#0071E3]/20 dark:border-[#0A84FF]/25 text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">
             <p className="font-bold">
               অর্ডারটি দেখতে লগইন করুন অথবা নতুন অ্যাকাউন্ট খুলুন
             </p>
-            <p className="mt-0.5 text-[11px] opacity-85">
+            <p className="mt-0.5 text-[11px] opacity-80">
               লগইন করার সাথে সাথেই আপনার অর্ডারটি স্বয়ংক্রিয়ভাবে যুক্ত হয়ে যাবে।
             </p>
           </div>
@@ -398,9 +405,10 @@ const SignIn: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              onClick={() => triggerHaptic("medium")}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+              {loading && <Loader2 className="w-5 h-5 animate-spin shrink-0" />}
               <span>{loading ? "Logging in..." : "Log in"}</span>
             </button>
           </div>
@@ -408,8 +416,11 @@ const SignIn: React.FC = () => {
           <div className="pt-2 flex justify-center">
             <button
               type="button"
-              onClick={() => navigate(`/find-account${querySuffix}`)}
-              className="min-h-[44px] px-3 text-[15px] font-semibold text-[#0a1317] dark:text-zinc-200 hover:underline cursor-pointer"
+              onClick={() => {
+                triggerHaptic("selection");
+                navigate(`/find-account${querySuffix}`);
+              }}
+              className="min-h-[44px] px-3 text-[14.5px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] hover:underline whitespace-nowrap cursor-pointer"
             >
               Forgotten password?
             </button>
@@ -427,8 +438,11 @@ const SignIn: React.FC = () => {
                 <button
                   type="button"
                   disabled={loading}
-                  onClick={handleFallbackGooglePopup}
-                  className="w-full h-[46px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[15px] flex items-center justify-center gap-2.5 transition cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    handleFallbackGooglePopup();
+                  }}
+                  className="w-full h-[46px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[14.5px] whitespace-nowrap flex items-center justify-center gap-2.5 transition cursor-pointer"
                 >
                   <GoogleIcon className="w-4 h-4 shrink-0" />
                   <span>Continue with Google</span>

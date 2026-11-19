@@ -1,48 +1,49 @@
 import React from "react";
 import { Spinner } from "@/components/ui/spinner-1";
 import clsx from "clsx";
+import { triggerHaptic } from "../../lib/haptics";
 
 const sizes = [
   {
-    tiny: "px-1.5 h-6 text-sm",
-    small: "px-1.5 h-8 text-sm",
-    medium: "px-2.5 h-10 text-sm",
-    large: "px-3.5 h-12 text-base"
+    tiny: "px-2.5 h-7 text-xs",
+    small: "px-3 h-9 text-xs",
+    medium: "px-4 h-10 text-sm",
+    large: "px-5 h-12 text-[15px]"
   },
   {
-    tiny: "w-6 h-6 text-sm",
-    small: "w-8 h-8 text-sm",
+    tiny: "w-7 h-7 text-xs",
+    small: "w-9 h-9 text-xs",
     medium: "w-10 h-10 text-sm",
-    large: "w-12 h-12 text-base"
+    large: "w-12 h-12 text-[15px]"
   }
 ];
 
 const types = {
-  primary: "bg-gray-1000 hover:bg-gray-1000-h text-background-100 fill-background-100",
-  secondary: "bg-background-100 hover:bg-gray-alpha-200 text-gray-1000 fill-gray-1000 border border-gray-alpha-400 dark:border-zinc-700",
-  tertiary: "bg-none hover:bg-gray-alpha-200 text-gray-1000 fill-gray-1000",
-  error: "bg-red-800 hover:bg-red-900 text-white fill-white",
-  warning: "bg-amber-800 hover:bg-amber-850 text-black fill-black"
+  primary: "bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] dark:hover:bg-[#1E8FFF] text-white fill-white shadow-[0_2px_10px_-2px_rgba(0,113,227,0.34)]",
+  secondary: "bg-[#E8E8ED] hover:bg-[#DCDCE2] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-[#1D1D1F] dark:text-[#F5F5F7] fill-current border border-black/[0.06] dark:border-white/[0.1]",
+  tertiary: "bg-transparent hover:bg-black/[0.05] dark:hover:bg-white/[0.08] text-[#1D1D1F] dark:text-[#F5F5F7] fill-current",
+  error: "bg-[#FF3B30] hover:bg-[#E0352B] dark:bg-[#FF453A] dark:hover:bg-[#FF584E] text-white fill-white",
+  warning: "bg-[#FF9500] hover:bg-[#E68600] dark:bg-[#FF9F0A] text-white fill-white"
 };
 
 const shapes = {
   square: {
-    tiny: "rounded",
-    small: "rounded-md",
-    medium: "rounded-md",
-    large: "rounded-lg"
+    tiny: "rounded-lg",
+    small: "rounded-xl",
+    medium: "rounded-xl",
+    large: "rounded-2xl"
   },
   circle: {
-    tiny: "rounded-[100%]",
-    small: "rounded-[100%]",
-    medium: "rounded-[100%]",
-    large: "rounded-[100%]"
+    tiny: "rounded-full",
+    small: "rounded-full",
+    medium: "rounded-full",
+    large: "rounded-full"
   },
   rounded: {
-    tiny: "rounded-[100px]",
-    small: "rounded-[100px]",
-    medium: "rounded-[100px]",
-    large: "rounded-[100px]"
+    tiny: "rounded-full",
+    small: "rounded-full",
+    medium: "rounded-full",
+    large: "rounded-full"
   }
 };
 
@@ -87,30 +88,35 @@ export const Button = ({
       ref={ref}
       type={(rest as any).type || "button"}
       disabled={disabled}
+      onPointerDown={() => {
+        if (!disabled && !loading) triggerHaptic("light");
+      }}
       onClick={onClick}
       tabIndex={0}
       className={clsx(
-        "flex justify-center items-center gap-0.5 duration-150",
+        "inline-flex justify-center items-center gap-1 max-w-full font-semibold tracking-tight transition-all duration-150 active:scale-[0.97] cursor-pointer",
         sizes[+svgOnly][size],
-        (disabled || loading) ? "bg-gray-100 text-gray-700 border border-gray-400 cursor-not-allowed" : types[type],
+        (disabled || loading) ? "bg-black/[0.06] dark:bg-white/[0.08] text-[#86868B] border border-black/[0.06] dark:border-white/[0.08] cursor-not-allowed active:scale-100" : types[type],
         shapes[shape][size],
-        shadow && "shadow-border-small border-none",
+        shadow && "shadow-sm",
         fullWidth && "w-full",
-        variant === "unstyled" ? "outline-none px-0 h-fit bg-transparent hover:bg-transparent text-gray-1000" : "focus:shadow-focus-ring focus:outline-0",
+        variant === "unstyled" ? "outline-none px-0 h-fit bg-transparent hover:bg-transparent text-[#1D1D1F] dark:text-[#F5F5F7] shadow-none" : "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/60 dark:focus-visible:ring-[#0A84FF]/60",
         className
       )}
       {...rest}
     >
       {loading
-        ? <Spinner size={size === "large" ? 24 : 16} />
+        ? <Spinner size={size === "large" ? 20 : 16} />
         : prefix
       }
-      <span className={clsx(
-        "relative overflow-hidden whitespace-nowrap overflow-ellipsis font-sans mb-0",
-        size !== "tiny" && variant !== "unstyled" && "px-1.5"
-      )}>
-        {children}
-      </span>
+      {children != null && (
+        <span className={clsx(
+          "relative overflow-hidden whitespace-nowrap text-ellipsis mb-0",
+          size !== "tiny" && variant !== "unstyled" && "px-1"
+        )}>
+          {children}
+        </span>
+      )}
       {!loading && suffix}
     </button>
   );

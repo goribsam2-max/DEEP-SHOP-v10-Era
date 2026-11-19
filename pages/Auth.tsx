@@ -8,6 +8,9 @@ import {
 import { doc, setDoc } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -18,13 +21,16 @@ const AuthPage: React.FC = () => {
 
   const notify = useNotify();
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    triggerHaptic("medium");
     setLoading(true);
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
+        triggerHaptic("success");
         notify("Logged in successfully!", "success");
       } else {
         const userCredential = await createUserWithEmailAndPassword(
@@ -43,10 +49,12 @@ const AuthPage: React.FC = () => {
           isBanned: false,
           createdAt: Date.now(),
         }, { merge: true });
+        triggerHaptic("success");
         notify("Account created successfully!", "success");
       }
       navigate("/");
     } catch (error: any) {
+      triggerHaptic("error");
       notify(error.message, "error");
     } finally {
       setLoading(false);
@@ -54,24 +62,31 @@ const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-800 flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-md">
-        <div className="mb-10 text-center">
-          <h1 className="text-xl font-bold text-[#1F2029] mb-2">
-            {isLogin ? "Welcome Back!" : "Create Account"}
+    <div className="ds-apple-shop-canvas min-h-[100dvh] flex flex-col items-center justify-center px-5 py-8">
+      <motion.div
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+        className="ds-apple-surface w-full max-w-md rounded-[28px] p-6 sm:p-8"
+      >
+        <div className="mb-8 text-center">
+          <h1 className="ds-apple-display text-[26px] font-bold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+            {isLogin ? "Welcome Back" : "Create Account"}
           </h1>
-          <p className="text-gray-400">Experience premium border cross phones & devices</p>
+          <p className="ds-apple-muted text-[14.5px]">
+            Experience premium border cross phones &amp; devices
+          </p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
                 Full Name
               </label>
               <input
                 type="text"
-                className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-[#704F38]"
+                className="ds-apple-input w-full px-4 py-3.5 rounded-2xl text-[15px] outline-none"
                 placeholder="John Doe"
                 required
                 value={name}
@@ -80,10 +95,12 @@ const AuthPage: React.FC = () => {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
+              Email
+            </label>
             <input
               type="email"
-              className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-[#704F38]"
+              className="ds-apple-input w-full px-4 py-3.5 rounded-2xl text-[15px] outline-none"
               placeholder="example@mail.com"
               required
               value={email}
@@ -91,10 +108,12 @@ const AuthPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label className="block text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
+              Password
+            </label>
             <input
               type="password"
-              className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-[#704F38]"
+              className="ds-apple-input w-full px-4 py-3.5 rounded-2xl text-[15px] outline-none"
               placeholder="••••••••"
               required
               value={password}
@@ -103,25 +122,30 @@ const AuthPage: React.FC = () => {
           </div>
 
           <button
+            type="submit"
             disabled={loading}
-            className="w-full py-4 bg-[#1F2029] text-white rounded-full font-bold shadow-lg hover:shadow-sm transition-all disabled:opacity-50"
+            className="ds-apple-btn-primary w-full min-h-[50px] px-5 mt-2 rounded-full text-[16px] font-semibold whitespace-nowrap active:scale-[0.98] transition-transform disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Processing..." : isLogin ? "Sign In" : "Sign Up"}
           </button>
         </form>
 
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
+        <div className="mt-7 text-center">
+          <p className="text-[14px] ds-apple-muted">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
             <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-[#704F38] font-bold"
+              type="button"
+              onClick={() => {
+                triggerHaptic("selection");
+                setIsLogin(!isLogin);
+              }}
+              className="text-[#0071E3] dark:text-[#0A84FF] font-semibold hover:underline cursor-pointer"
             >
               {isLogin ? "Sign Up" : "Sign In"}
             </button>
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

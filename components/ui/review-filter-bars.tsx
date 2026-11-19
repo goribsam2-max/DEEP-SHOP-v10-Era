@@ -2,6 +2,7 @@ import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import * as React from "react";
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "../../lib/haptics";
 
 const ReviewFilterGroup = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Root>,
@@ -28,24 +29,25 @@ const ReviewFilterItem = React.forwardRef<
   return (
     <RadioGroupPrimitive.Item
       ref={ref}
+      onClick={() => triggerHaptic("selection")}
       className={cn(
-        "group relative flex items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left transition-all cursor-pointer",
-        "hover:bg-zinc-100/90 dark:hover:bg-zinc-800/70",
-        "data-[state=checked]:border-zinc-300 dark:data-[state=checked]:border-zinc-700 data-[state=checked]:bg-white dark:data-[state=checked]:bg-zinc-800/90 data-[state=checked]:shadow-2xs",
+        "group relative flex items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left transition-all cursor-pointer active:scale-[0.985]",
+        "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
+        "data-[state=checked]:border-[#0071E3]/40 dark:data-[state=checked]:border-[#0A84FF]/45 data-[state=checked]:bg-[#0071E3]/[0.06] dark:data-[state=checked]:bg-[#0A84FF]/[0.12]",
         className
       )}
       {...props}
     >
       {/* Numeric Star Label */}
       <div className="flex items-center gap-1 w-11 shrink-0 tabular-nums">
-        <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+        <span className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
           {stars}
         </span>
-        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+        <Star className="w-3.5 h-3.5 text-[#FF9500] dark:text-[#FF9F0A] fill-[#FF9500] dark:fill-[#FF9F0A] shrink-0" />
       </div>
 
       {/* Zero-Inline-Style SVG Progress Track */}
-      <div className="flex-1 h-2 rounded-full bg-zinc-200/80 dark:bg-zinc-800 overflow-hidden">
+      <div className="flex-1 h-2 rounded-full bg-black/[0.08] dark:bg-white/[0.1] overflow-hidden">
         <svg
           viewBox="0 0 100 8"
           preserveAspectRatio="none"
@@ -57,17 +59,17 @@ const ReviewFilterItem = React.forwardRef<
             width={percentage}
             height="8"
             rx="4"
-            className="fill-amber-400 transition-all duration-500"
+            className="fill-[#FF9500] dark:fill-[#FF9F0A] transition-all duration-500"
           />
         </svg>
       </div>
 
       {/* Percentage & Count */}
       <div className="flex items-center justify-end gap-1.5 w-20 shrink-0 tabular-nums text-xs">
-        <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+        <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
           {percentage}%
         </span>
-        <span className="text-zinc-400 dark:text-zinc-500">
+        <span className="text-[#6E6E73] dark:text-[#98989D]">
           ({count.toLocaleString()})
         </span>
       </div>

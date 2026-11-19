@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion, PanInfo } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "./button";
 import { useNavigate } from "react-router-dom";
 import { PixelImage } from "./PixelImage";
+import { triggerHaptic } from "../../lib/haptics";
 
 interface Card {
   id: string;
@@ -23,12 +23,13 @@ interface HeroSliderProps {
 
 export function HeroSlider({
   cards,
-  autoSlideDelay = 4000,
+  autoSlideDelay = 4500,
   pauseDurationAfterInteract = 10000,
 }: HeroSliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [direction, setDirection] = useState(1);
+  const shouldReduceMotion = useReducedMotion();
   const navigate = useNavigate();
 
   const interactTimeRef = useRef<number>(0);
@@ -50,7 +51,6 @@ export function HeroSlider({
     interactTimeRef.current = Date.now();
   };
 
-  // Resume autoplay after user pause window expires
   useEffect(() => {
     if (isAutoPlaying || cards.length <= 1) return;
     const remaining = Math.max(
@@ -63,7 +63,6 @@ export function HeroSlider({
     return () => clearTimeout(timer);
   }, [isAutoPlaying, pauseDurationAfterInteract, cards.length]);
 
-  // Single timer per slide — zero 50ms main-thread re-render polling
   useEffect(() => {
     if (!isAutoPlaying || cards.length <= 1) return;
     const timer = setTimeout(() => {
@@ -77,31 +76,44 @@ export function HeroSlider({
 
   const variants = {
     enter: (dir: number) => ({
-      x: dir > 0 ? 180 : -180,
+      x: shouldReduceMotion ? 0 : dir > 0 ? 120 : -120,
       opacity: 0,
     }),
     center: {
-      z: 1,
       x: 0,
       opacity: 1,
     },
     exit: (dir: number) => ({
-      z: 0,
-      x: dir < 0 ? 180 : -180,
+      x: shouldReduceMotion ? 0 : dir < 0 ? 120 : -120,
       opacity: 0,
     }),
   };
 
   const activeCard = cards[currentIndex] || cards[0];
 
+  const handleDragEnd = (_: any, info: PanInfo) => {
+    if (cards.length <= 1) return;
+    const swipeThreshold = 45;
+    const velocityThreshold = 280;
+    if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+      triggerHaptic();
+      handleInteract();
+      nextSlide();
+    } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+      triggerHaptic();
+      handleInteract();
+      prevSlide();
+    }
+  };
+
   return (
     <div
-      className="relative w-full overflow-hidden bg-zinc-50 dark:bg-zinc-900 rounded-3xl"
+      className="ds-apple-surface relative w-full overflow-hidden rounded-[24px] md:rounded-[28px]"
       onMouseEnter={handleInteract}
       onTouchStart={handleInteract}
     >
-      <div className="relative h-[250px] md:h-[400px] w-full flex items-center justify-center">
-        <AnimatePresence initial={false} custom={direction}>
+      <div className="relative h-[300px] md:h-[380px] w-full flex items-center justify-center">
+        <AnimatePresence initial={false} custom={direction} mode="popLayout">
           <motion.div
             key={currentIndex}
             custom={direction}
@@ -109,102 +121,117 @@ export function HeroSlider({
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{
-              x: { type: "tween", duration: 0.28, ease: "easeOut" },
-              opacity: { duration: 0.24 },
-            }}
-            className="absolute inset-0 flex flex-col md:flex-row items-center justify-between p-6 md:p-12 w-full h-full cursor-pointer"
+            drag={cards.length > 1 ? "x" : false}
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.18}
+            onDragEnd={handleDragEnd}
+            transition={
+              shouldReduceMotion
+                ? { duration: 0.18 }
+                : {
+                    x: { type: "spring", bounce: 0, duration: 0.42 },
+                    opacity: { duration: 0.24 },
+                  }
+            }
+            className="absolute inset-0 flex flex-col md:flex-row items-center justify-between p-6 md:px-14 md:py-10 w-full h-full cursor-pointer select-none"
             onClick={() => navigate(`/product/${activeCard.id}`)}
           >
-            <div className="flex-1 text-center md:text-left z-10">
-              <span className="inline-block px-3 py-1 rounded-full bg-zinc-900/10 dark:bg-zinc-100/10 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold tracking-wider mb-2 uppercase">
-                {activeCard.category}
-              </span>
-              <h3
-                className="text-xl md:text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 md:mb-4 tracking-tight leading-tight line-clamp-2"
-                style={{ fontFamily: "'Comfortaa', cursive" }}
-              >
+            <div className="flex-1 text-center md:text-left z-10 min-w-0 max-w-xl">
+              <p className="ds-apple-eyebrow ds-apple-muted text-[11px] mb-2 truncate">
+                {activeCard.category || "Featured"}
+              </p>
+              <h3 className="ds-apple-display text-[22px] sm:text-[26px] md:text-[36px] font-semibold mb-2 md:mb-3 line-clamp-2">
                 {activeCard.title}
               </h3>
-              <p className="text-zinc-600 dark:text-zinc-400 text-sm md:text-base line-clamp-1 md:line-clamp-2 overflow-hidden text-ellipsis mb-4 md:mb-6 max-w-lg hidden md:[display:-webkit-box]">
+              <p className="ds-apple-muted text-sm md:text-[15px] leading-relaxed line-clamp-2 mb-4 md:mb-6 max-w-md hidden md:block">
                 {activeCard.description?.replace(/<[^>]*>?/gm, "")}
               </p>
               <div className="flex items-center justify-center md:justify-start gap-4">
-                <span className="text-lg md:text-2xl font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                <span className="text-lg md:text-2xl font-semibold tabular-nums tracking-tight">
                   {activeCard.date}
                 </span>
-                <Button
-                  size="sm"
-                  className="rounded-full bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 shadow-lg shadow-black/20 dark:shadow-white/10"
+                <motion.button
+                  type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/product/${activeCard.id}`);
+                  }}
+                  className="ds-apple-btn-primary rounded-full px-5 h-9 md:h-10 text-xs md:text-sm font-medium inline-flex items-center justify-center cursor-pointer whitespace-nowrap"
                 >
-                  {activeCard.actionText}
-                </Button>
+                  {activeCard.actionText || "Buy"}
+                </motion.button>
               </div>
             </div>
 
-            <div className="flex-1 w-full h-full relative z-0 flex justify-center items-center mt-4 md:mt-0">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 dark:from-emerald-900/40 dark:to-teal-900/40 blur-3xl rounded-full scale-110 -z-10" />
-              <div className="max-h-[140px] md:max-h-[260px] w-full max-w-[280px] md:max-w-[340px] h-[140px] md:h-[260px] flex items-center justify-center">
+            <div className="flex-1 w-full h-full relative z-0 flex justify-center items-center mt-3 md:mt-0">
+              <div className="max-h-[135px] md:max-h-[260px] w-full max-w-[260px] md:max-w-[340px] h-[135px] md:h-[260px] flex items-center justify-center">
                 <PixelImage
                   src={activeCard.image}
                   alt={activeCard.title}
                   className="bg-transparent rounded-2xl"
-                  imgClassName="max-h-[130px] md:max-h-[250px] w-auto object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
+                  imgClassName="max-h-[130px] md:max-h-[250px] w-auto object-contain transition-transform duration-300"
                 />
               </div>
             </div>
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation Arrows with explicit accessible names */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="Previous featured product"
-          title="Previous featured product"
-          className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/75 dark:bg-zinc-800/75 backdrop-blur-md opacity-0 hover:opacity-100 focus-visible:opacity-100 md:opacity-100 md:hover:bg-white dark:md:hover:bg-zinc-800 transition-all shadow-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleInteract();
-            prevSlide();
-          }}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="Next featured product"
-          title="Next featured product"
-          className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white/75 dark:bg-zinc-800/75 backdrop-blur-md opacity-0 hover:opacity-100 focus-visible:opacity-100 md:opacity-100 md:hover:bg-white dark:md:hover:bg-zinc-800 transition-all shadow-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleInteract();
-            nextSlide();
-          }}
-        >
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+        {cards.length > 1 && (
+          <>
+            <motion.button
+              type="button"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.9 }}
+              aria-label="Previous featured product"
+              className="ds-apple-surface-subtle hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center opacity-85 hover:opacity-100 transition cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic();
+                handleInteract();
+                prevSlide();
+              }}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </motion.button>
+            <motion.button
+              type="button"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.9 }}
+              aria-label="Next featured product"
+              className="ds-apple-surface-subtle hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center opacity-85 hover:opacity-100 transition cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerHaptic();
+                handleInteract();
+                nextSlide();
+              }}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </motion.button>
+          </>
+        )}
       </div>
 
-      {/* Visual Slide Progress Dots (aria-hidden since Prev/Next buttons provide accessible navigation) */}
-      <div
-        aria-hidden="true"
-        className="absolute bottom-3 left-0 w-full flex items-center justify-center px-4 py-2 gap-2 z-20 pointer-events-none"
-      >
-        {cards.slice(0, 10).map((_, i) => (
-          <span
-            key={i}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i === currentIndex % 10
-                ? "w-7 bg-zinc-900 dark:bg-white"
-                : "w-1.5 bg-zinc-400/80 dark:bg-zinc-600"
-            }`}
-          />
-        ))}
-      </div>
+      {cards.length > 1 && (
+        <div
+          aria-hidden="true"
+          className="absolute bottom-3.5 left-0 w-full flex items-center justify-center gap-1.5 z-20 pointer-events-none"
+        >
+          {cards.slice(0, 10).map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === currentIndex % 10
+                  ? "w-6 bg-zinc-900 dark:bg-white"
+                  : "w-1.5 bg-zinc-400/50 dark:bg-zinc-600/70"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

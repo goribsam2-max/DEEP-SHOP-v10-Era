@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Volume2, VolumeX, Sparkles } from "lucide-react";
+import { triggerHaptic } from "../lib/haptics";
 
 interface BanglaVoiceAssistantProps {
   customMessage?: string;
@@ -24,6 +25,7 @@ export const BanglaVoiceAssistant: React.FC<BanglaVoiceAssistantProps> = ({
 
   const toggleSpeech = () => {
     if (!speechSupported || !("speechSynthesis" in window)) return;
+    triggerHaptic("selection");
 
     if (isPlaying) {
       window.speechSynthesis.cancel();
@@ -31,14 +33,13 @@ export const BanglaVoiceAssistant: React.FC<BanglaVoiceAssistantProps> = ({
       return;
     }
 
-    window.speechSynthesis.cancel(); // Stop ongoing speech
+    window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(messageToRead);
-    utterance.lang = "bn-BD"; // Bengali language locale
+    utterance.lang = "bn-BD";
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
 
-    // Pick Bengali voice if available
     const voices = window.speechSynthesis.getVoices();
     const bnVoice = voices.find(
       (v) => v.lang.includes("bn") || v.name.toLowerCase().includes("bengali")
@@ -55,19 +56,19 @@ export const BanglaVoiceAssistant: React.FC<BanglaVoiceAssistantProps> = ({
   };
 
   return (
-    <div className="bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-indigo-500/10 dark:from-pink-900/20 dark:via-purple-900/20 dark:to-indigo-900/20 border border-pink-500/20 dark:border-pink-500/30 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3">
+    <div className="bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] rounded-[20px] p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-xs">
       <div className="flex items-center gap-3 min-w-0">
-        <div className="w-10 h-10 rounded-full bg-pink-500 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+        <div className="w-10 h-10 rounded-full bg-[#0071E3]/12 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center shrink-0">
           <Sparkles className="w-5 h-5" />
         </div>
         <div className="text-left min-w-0">
-          <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+          <h4 className="text-[13px] sm:text-[14px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-1.5">
             <span>ভয়েস নির্দেশিকা (Bangla Voice Guide)</span>
-            <span className="px-1.5 py-0.5 rounded-md bg-pink-500/15 text-pink-600 dark:text-pink-400 text-[10px] font-bold">
-              AI Audio
+            <span className="px-1.5 py-0.5 rounded-md bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF] text-[10px] font-semibold">
+              Audio
             </span>
           </h4>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+          <p className="text-[12px] text-[#6E6E73] dark:text-[#98989D] truncate mt-0.5">
             ফর্ম পূরণের নিয়ম বাংলায় শুনতে স্পিকার বাটনে চাপুন
           </p>
         </div>
@@ -76,15 +77,15 @@ export const BanglaVoiceAssistant: React.FC<BanglaVoiceAssistantProps> = ({
       <button
         type="button"
         onClick={toggleSpeech}
-        className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shrink-0 ${
+        className={`px-4 py-2 rounded-full text-[12px] font-semibold flex items-center gap-1.5 transition-transform active:scale-[0.96] cursor-pointer shrink-0 ${
           isPlaying
-            ? "bg-rose-500 text-white shadow-md shadow-rose-500/25"
-            : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-90"
+            ? "bg-[#FF3B30] dark:bg-[#FF453A] text-white"
+            : "bg-[#0071E3] dark:bg-[#0A84FF] text-white hover:opacity-95"
         }`}
       >
         {isPlaying ? (
           <>
-            <VolumeX className="w-4 h-4 animate-bounce" />
+            <VolumeX className="w-4 h-4" />
             <span>থামুন (Stop)</span>
           </>
         ) : (

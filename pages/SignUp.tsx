@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createUserWithEmailAndPassword,
@@ -6,8 +7,10 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Bell, Check, Loader2, Store, Home, X } from "lucide-react";
+import { APPLE_SPRING_DEFAULT, projectMomentum } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 import { auth, db } from "../firebase";
 import { useNotify } from "../components/Notifications";
 import { getFriendlyErrorMessage } from "../lib/firebaseErrorMapper";
@@ -167,6 +170,7 @@ const SignUp: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const notify = useNotify();
+  const prefersReducedMotion = useReducedMotion();
 
   const searchParams = new URLSearchParams(location.search);
   const roleParam = searchParams.get("role") || "customer";
@@ -1080,15 +1084,18 @@ const SignUp: React.FC = () => {
     <div className="flex justify-center pt-2">
       <button
         type="button"
-        onClick={goToFindAccount}
-        className="min-h-[44px] px-4 text-[15px] font-semibold text-[#0064e0] dark:text-[#4599ff] hover:underline cursor-pointer"
+        onClick={() => {
+          triggerHaptic("selection");
+          goToFindAccount();
+        }}
+        className="min-h-[44px] px-4 text-[15px] font-semibold text-[#0071E3] dark:text-[#0A84FF] hover:underline cursor-pointer"
       >
         Find my account
       </button>
     </div>
   );
 
-  // STEP 0: Welcome / Get Started (IMG_5021)
+  // STEP 0: Welcome / Get Started
   if (currentStep === "welcome") {
     return (
       <>
@@ -1106,23 +1113,32 @@ const SignUp: React.FC = () => {
             <div className="space-y-3">
               <button
                 type="button"
-                onClick={() => navigate(`/signup/name${querySuffix}`)}
-                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  navigate(`/signup/name${querySuffix}`);
+                }}
+                className="w-full h-[48px] rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[16px] transition cursor-pointer"
               >
                 Get Started
               </button>
               <button
                 type="button"
-                onClick={goToFindAccount}
-                className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  goToFindAccount();
+                }}
+                className="w-full h-[48px] rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[16px] transition cursor-pointer"
               >
                 Find my account
               </button>
-              <div className="flex items-center justify-center gap-4 pt-1 text-xs text-[#5e6c77] dark:text-zinc-400">
+              <div className="flex items-center justify-center gap-4 pt-1 text-xs text-[#6E6E73] dark:text-[#98989D]">
                 <button
                   type="button"
-                  onClick={() => navigate("/signup/seller?role=seller")}
-                  className="hover:text-[#0064e0] dark:hover:text-[#4599ff] font-medium cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    navigate("/signup/seller?role=seller");
+                  }}
+                  className="hover:text-[#0071E3] dark:hover:text-[#0A84FF] font-medium cursor-pointer"
                 >
                   Become a Seller Partner
                 </button>
@@ -1133,10 +1149,10 @@ const SignUp: React.FC = () => {
           <div className="flex-1 flex flex-col justify-center">
             <DeepShopEcosystemHero />
             <div className="mt-4 space-y-3">
-              <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              <h1 className="text-[26px] sm:text-[28px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Get started on DEEP SHOP with a DEEP SHOP account
               </h1>
-              <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
+              <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
                 A DEEP SHOP Account lets you access DEEP SHOP products, orders,
                 community alerts, and messages easily and securely.
               </p>
@@ -1164,10 +1180,10 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromSeller} className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <h1 className="text-[25px] font-bold tracking-tight text-[#0a1317] dark:text-white">
+              <h1 className="text-[25px] font-bold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Set up your seller profile
               </h1>
-              <p className="text-[15px] text-[#46545e] dark:text-zinc-300">
+              <p className="text-[15px] text-[#6E6E73] dark:text-[#98989D]">
                 Enter your store and contact details to register as a merchant.
               </p>
             </div>
@@ -1202,14 +1218,15 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("selection");
                   updateDraft({ storeType: "online" });
                   if (fieldError) setFieldError("");
                   playAuthVoice("অনলাইন স্টোর নির্বাচন করা হয়েছে।");
                 }}
                 className={`h-11 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   draft.storeType === "online"
-                    ? "border-[#0064e0] bg-[#0064e0]/10 text-[#0064e0] dark:text-[#4599ff]"
-                    : "border-[#cbd2d9] dark:border-zinc-700 text-[#46545e] dark:text-zinc-300"
+                    ? "border-[#0071E3] dark:border-[#0A84FF] bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF]"
+                    : "border-black/[0.1] dark:border-white/[0.12] text-[#6E6E73] dark:text-[#98989D]"
                 }`}
               >
                 <Home className="w-4 h-4" />
@@ -1218,6 +1235,7 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("selection");
                   updateDraft({ storeType: "physical" });
                   if (fieldError) setFieldError("");
                   playAuthVoice(
@@ -1226,8 +1244,8 @@ const SignUp: React.FC = () => {
                 }}
                 className={`h-11 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   draft.storeType === "physical"
-                    ? "border-[#0064e0] bg-[#0064e0]/10 text-[#0064e0] dark:text-[#4599ff]"
-                    : "border-[#cbd2d9] dark:border-zinc-700 text-[#46545e] dark:text-zinc-300"
+                    ? "border-[#0071E3] dark:border-[#0A84FF] bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF]"
+                    : "border-black/[0.1] dark:border-white/[0.12] text-[#6E6E73] dark:text-[#98989D]"
                 }`}
               >
                 <Store className="w-4 h-4" />
@@ -1288,9 +1306,10 @@ const SignUp: React.FC = () => {
             <button
               type="submit"
               disabled={checkingAccount}
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              onClick={() => triggerHaptic("medium")}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              {checkingAccount && <Loader2 className="w-5 h-5 animate-spin" />}
+              {checkingAccount && <Loader2 className="w-5 h-5 animate-spin shrink-0" />}
               <span>{checkingAccount ? "Checking..." : "Next"}</span>
             </button>
           </form>
@@ -1305,7 +1324,7 @@ const SignUp: React.FC = () => {
     );
   }
 
-  // STEP 1: Name (IMG_5022)
+  // STEP 1: Name
   if (currentStep === "name") {
     return (
       <>
@@ -1322,10 +1341,10 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromName} className="space-y-5 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your name?
               </h1>
-              <p className="text-[15px] leading-[1.4] text-[#1c2b33] dark:text-zinc-300">
+              <p className="text-[15px] leading-[1.4] text-[#6E6E73] dark:text-[#98989D]">
                 Enter the name you use in real life.
               </p>
             </div>
@@ -1365,7 +1384,8 @@ const SignUp: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+              onClick={() => triggerHaptic("medium")}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
             >
               Next
             </button>
@@ -1381,7 +1401,7 @@ const SignUp: React.FC = () => {
     );
   }
 
-  // STEP 2: Date of birth (IMG_5023 + IMG_5024 sheet)
+  // STEP 2: Date of birth
   if (currentStep === "birthday") {
     return (
       <>
@@ -1399,16 +1419,19 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromBirthday} className="space-y-5 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your date of birth?
               </h1>
-              <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
+              <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
                 Choose your date of birth. You can always make this private
                 later.{" "}
                 <button
                   type="button"
-                  onClick={() => setShowBirthdayInfo(true)}
-                  className="text-[#0064e0] dark:text-[#4599ff] font-medium hover:underline inline text-left cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    setShowBirthdayInfo(true);
+                  }}
+                  className="text-[#0071E3] dark:text-[#0A84FF] font-medium hover:underline inline text-left cursor-pointer"
                 >
                   Why do I need to provide my date of birth?
                 </button>
@@ -1418,17 +1441,18 @@ const SignUp: React.FC = () => {
             <button
               type="button"
               onClick={() => {
+                triggerHaptic("selection");
                 setShowDatePickerSheet(true);
                 playAuthVoice(
                   "দিন, মাস এবং জন্ম সাল নির্বাচন করে সেট বাটনে ট্যাপ করুন।"
                 );
               }}
-              className="w-full h-[60px] rounded-[16px] border border-[#1c2b33] dark:border-zinc-300 bg-white dark:bg-[#121820] px-4 flex flex-col justify-center text-left transition cursor-pointer"
+              className="w-full h-[60px] rounded-[16px] border border-black/[0.14] dark:border-white/[0.18] bg-white dark:bg-[#1C1C1E] px-4 flex flex-col justify-center text-left transition cursor-pointer"
             >
-              <span className="text-[12px] font-medium text-[#1c2b33] dark:text-zinc-400">
+              <span className="text-[12px] font-medium tabular-nums text-[#6E6E73] dark:text-[#98989D]">
                 Date of birth ({age} years old)
               </span>
-              <span className="text-[16px] font-normal text-[#0a1317] dark:text-zinc-100 mt-0.5">
+              <span className="text-[16px] font-normal tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7] mt-0.5">
                 {formattedBirthDate}
               </span>
             </button>
@@ -1441,7 +1465,8 @@ const SignUp: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+              onClick={() => triggerHaptic("medium")}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
             >
               Next
             </button>
@@ -1453,120 +1478,144 @@ const SignUp: React.FC = () => {
           onClose={() => setShowBirthdayInfo(false)}
         />
 
-        <AnimatePresence>
-          {showDatePickerSheet && (
-            <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowDatePickerSheet(false)}
-                className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
-              />
-              <motion.div
-                initial={{ y: "100%", opacity: 0.6 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ type: "spring", stiffness: 320, damping: 30 }}
-                className="relative z-10 w-full sm:max-w-[420px] bg-white dark:bg-[#182028] rounded-t-[28px] sm:rounded-[28px] p-5 pb-7 shadow-2xl border-t sm:border border-zinc-200 dark:border-zinc-800"
-              >
-                <div className="w-10 h-1 rounded-full bg-[#cbd2d9] dark:bg-zinc-600 mx-auto mb-3" />
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-[17px] font-bold text-[#0a1317] dark:text-white">
-                    Select date of birth
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowDatePickerSheet(false)}
-                    className="min-w-[40px] min-h-[40px] rounded-full flex items-center justify-center text-[#5e6c77] hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2.5">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5e6c77] dark:text-zinc-400 mb-1.5">
-                      Day
-                    </label>
-                    <select
-                      value={Math.min(draft.birthDay, daysInSelectedMonth)}
-                      onChange={(e) =>
-                        updateDraft({ birthDay: Number(e.target.value) })
+        {typeof document !== "undefined" &&
+          createPortal(
+            <AnimatePresence>
+              {showDatePickerSheet && (
+                <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: prefersReducedMotion ? 0.12 : 0.2 }}
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setShowDatePickerSheet(false);
+                    }}
+                    className="ds-apple-backdrop fixed inset-0"
+                  />
+                  <motion.div
+                    initial={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.6 }}
+                    animate={prefersReducedMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
+                    transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+                    drag={prefersReducedMotion ? false : "y"}
+                    dragConstraints={{ top: 0 }}
+                    dragElastic={{ top: 0.08, bottom: 0.45 }}
+                    onDragEnd={(_, info) => {
+                      const projected = info.offset.y + projectMomentum(info.velocity.y);
+                      if (projected > 100 || info.velocity.y > 400) {
+                        triggerHaptic("light");
+                        setShowDatePickerSheet(false);
                       }
-                      className="w-full h-12 rounded-xl border border-[#cbd2d9] dark:border-zinc-700 bg-[#f7f8fa] dark:bg-zinc-900 px-3 text-[15px] font-semibold text-[#0a1317] dark:text-zinc-100 outline-none"
-                    >
-                      {Array.from(
-                        { length: daysInSelectedMonth },
-                        (_, idx) => idx + 1
-                      ).map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    }}
+                    className="ds-apple-sheet relative z-10 w-full sm:max-w-[420px] rounded-t-[28px] sm:rounded-[28px] p-5 pb-7"
+                  >
+                    <div className="w-10 h-1 rounded-full bg-black/[0.15] dark:bg-white/[0.2] mx-auto mb-3" />
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-[17px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        Select date of birth
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic("selection");
+                          setShowDatePickerSheet(false);
+                        }}
+                        className="ds-apple-icon-btn w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5e6c77] dark:text-zinc-400 mb-1.5">
-                      Month
-                    </label>
-                    <select
-                      value={draft.birthMonth}
-                      onChange={(e) => {
-                        const newM = Number(e.target.value);
-                        const maxD = getDaysInMonth(newM, draft.birthYear);
-                        updateDraft({
-                          birthMonth: newM,
-                          birthDay: Math.min(draft.birthDay, maxD),
-                        });
-                      }}
-                      className="w-full h-12 rounded-xl border border-[#cbd2d9] dark:border-zinc-700 bg-[#f7f8fa] dark:bg-zinc-900 px-2.5 text-[15px] font-semibold text-[#0a1317] dark:text-zinc-100 outline-none"
-                    >
-                      {MONTH_NAMES.map((mName, idx) => (
-                        <option key={mName} value={idx}>
-                          {mName.slice(0, 3)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    <div className="grid grid-cols-3 gap-2.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#98989D] mb-1.5">
+                          Day
+                        </label>
+                        <select
+                          value={Math.min(draft.birthDay, daysInSelectedMonth)}
+                          onChange={(e) =>
+                            updateDraft({ birthDay: Number(e.target.value) })
+                          }
+                          className="ds-apple-input w-full h-12 rounded-xl px-3 text-[15px] font-semibold tabular-nums outline-none"
+                        >
+                          {Array.from(
+                            { length: daysInSelectedMonth },
+                            (_, idx) => idx + 1
+                          ).map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[#5e6c77] dark:text-zinc-400 mb-1.5">
-                      Year
-                    </label>
-                    <select
-                      value={draft.birthYear}
-                      onChange={(e) => {
-                        const newY = Number(e.target.value);
-                        const maxD = getDaysInMonth(draft.birthMonth, newY);
-                        updateDraft({
-                          birthYear: newY,
-                          birthDay: Math.min(draft.birthDay, maxD),
-                        });
+                      <div>
+                        <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#98989D] mb-1.5">
+                          Month
+                        </label>
+                        <select
+                          value={draft.birthMonth}
+                          onChange={(e) => {
+                            const newM = Number(e.target.value);
+                            const maxD = getDaysInMonth(newM, draft.birthYear);
+                            updateDraft({
+                              birthMonth: newM,
+                              birthDay: Math.min(draft.birthDay, maxD),
+                            });
+                          }}
+                          className="ds-apple-input w-full h-12 rounded-xl px-2.5 text-[15px] font-semibold outline-none"
+                        >
+                          {MONTH_NAMES.map((mName, idx) => (
+                            <option key={mName} value={idx}>
+                              {mName.slice(0, 3)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#98989D] mb-1.5">
+                          Year
+                        </label>
+                        <select
+                          value={draft.birthYear}
+                          onChange={(e) => {
+                            const newY = Number(e.target.value);
+                            const maxD = getDaysInMonth(draft.birthMonth, newY);
+                            updateDraft({
+                              birthYear: newY,
+                              birthDay: Math.min(draft.birthDay, maxD),
+                            });
+                          }}
+                          className="ds-apple-input w-full h-12 rounded-xl px-3 text-[15px] font-semibold tabular-nums outline-none"
+                        >
+                          {yearsList.map((yr) => (
+                            <option key={yr} value={yr}>
+                              {yr}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("medium");
+                        setShowDatePickerSheet(false);
                       }}
-                      className="w-full h-12 rounded-xl border border-[#cbd2d9] dark:border-zinc-700 bg-[#f7f8fa] dark:bg-zinc-900 px-3 text-[15px] font-semibold text-[#0a1317] dark:text-zinc-100 outline-none"
+                      className="w-full mt-5 h-[46px] rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[16px] tabular-nums transition cursor-pointer"
                     >
-                      {yearsList.map((yr) => (
-                        <option key={yr} value={yr}>
-                          {yr}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      Set ({age} years old)
+                    </button>
+                  </motion.div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowDatePickerSheet(false)}
-                  className="w-full mt-5 h-[46px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] text-white font-semibold text-[16px] cursor-pointer"
-                >
-                  Set ({age} years old)
-                </button>
-              </motion.div>
-            </div>
+              )}
+            </AnimatePresence>,
+            document.body
           )}
-        </AnimatePresence>
 
         <StopCreatingAccountModal
           isOpen={showStopModal}
@@ -1577,7 +1626,7 @@ const SignUp: React.FC = () => {
     );
   }
 
-  // STEP 3: Gender (IMG_5025)
+  // STEP 3: Gender
   if (currentStep === "gender") {
     return (
       <>
@@ -1595,32 +1644,33 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromGender} className="space-y-5 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your gender?
               </h1>
-              <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
+              <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
                 You can change who sees your gender on your profile later.
               </p>
             </div>
 
-            <div className="rounded-[20px] border border-[#dce1e7] dark:border-zinc-800 divide-y divide-[#e5e8ec] dark:divide-zinc-800 bg-white dark:bg-[#121820] overflow-hidden">
+            <div className="rounded-[20px] border border-black/[0.08] dark:border-white/[0.1] divide-y divide-black/[0.06] dark:divide-white/[0.08] bg-white dark:bg-[#1C1C1E] overflow-hidden">
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("selection");
                   updateDraft({ gender: "female" });
                   setFieldError("");
                   playAuthVoice("নারী নির্বাচন করা হয়েছে।");
                 }}
-                className="w-full min-h-[58px] px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#f7f8fa] dark:hover:bg-zinc-800/60 transition cursor-pointer"
+                className="w-full min-h-[58px] px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] transition cursor-pointer"
               >
-                <span className="text-[16px] font-medium text-[#0a1317] dark:text-zinc-100">
+                <span className="text-[16px] font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                   Female
                 </span>
                 <span
                   className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center shrink-0 transition ${
                     draft.gender === "female"
-                      ? "border-[#0064e0] border-[6px]"
-                      : "border-[#65737e] dark:border-zinc-500 border-[1.8px]"
+                      ? "border-[#0071E3] dark:border-[#0A84FF] border-[6px]"
+                      : "border-[#6E6E73] dark:border-[#98989D] border-[1.8px]"
                   }`}
                 />
               </button>
@@ -1628,20 +1678,21 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("selection");
                   updateDraft({ gender: "male" });
                   setFieldError("");
                   playAuthVoice("পুরুষ নির্বাচন করা হয়েছে।");
                 }}
-                className="w-full min-h-[58px] px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#f7f8fa] dark:hover:bg-zinc-800/60 transition cursor-pointer"
+                className="w-full min-h-[58px] px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] transition cursor-pointer"
               >
-                <span className="text-[16px] font-medium text-[#0a1317] dark:text-zinc-100">
+                <span className="text-[16px] font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                   Male
                 </span>
                 <span
                   className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center shrink-0 transition ${
                     draft.gender === "male"
-                      ? "border-[#0064e0] border-[6px]"
-                      : "border-[#65737e] dark:border-zinc-500 border-[1.8px]"
+                      ? "border-[#0071E3] dark:border-[#0A84FF] border-[6px]"
+                      : "border-[#6E6E73] dark:border-[#98989D] border-[1.8px]"
                   }`}
                 />
               </button>
@@ -1650,17 +1701,18 @@ const SignUp: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
+                    triggerHaptic("selection");
                     updateDraft({ gender: "more" });
                     setFieldError("");
                     playAuthVoice("অন্যান্য অপশন নির্বাচন করা হয়েছে।");
                   }}
-                  className="w-full px-4 py-4 flex items-center justify-between gap-4 text-left hover:bg-[#f7f8fa] dark:hover:bg-zinc-800/60 transition cursor-pointer"
+                  className="w-full px-4 py-4 flex items-center justify-between gap-4 text-left hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] transition cursor-pointer"
                 >
                   <div>
-                    <span className="block text-[16px] font-medium text-[#0a1317] dark:text-zinc-100">
+                    <span className="block text-[16px] font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                       More options
                     </span>
-                    <span className="block text-[13px] leading-[1.35] text-[#5e6c77] dark:text-zinc-400 mt-1">
+                    <span className="block text-[13px] leading-[1.35] text-[#6E6E73] dark:text-[#98989D] mt-1">
                       Select More options to choose another gender or if
                       you&apos;d rather not say.
                     </span>
@@ -1668,8 +1720,8 @@ const SignUp: React.FC = () => {
                   <span
                     className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center shrink-0 transition ${
                       draft.gender === "more"
-                        ? "border-[#0064e0] border-[6px]"
-                        : "border-[#65737e] dark:border-zinc-500 border-[1.8px]"
+                        ? "border-[#0071E3] dark:border-[#0A84FF] border-[6px]"
+                        : "border-[#6E6E73] dark:border-[#98989D] border-[1.8px]"
                     }`}
                   />
                 </button>
@@ -1681,13 +1733,14 @@ const SignUp: React.FC = () => {
                         <button
                           key={choice}
                           type="button"
-                          onClick={() =>
-                            updateDraft({ moreGenderChoice: choice })
-                          }
+                          onClick={() => {
+                            triggerHaptic("selection");
+                            updateDraft({ moreGenderChoice: choice });
+                          }}
                           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
                             draft.moreGenderChoice === choice
-                              ? "border-[#0064e0] bg-[#0064e0]/10 text-[#0064e0] dark:text-[#4599ff]"
-                              : "border-[#cbd2d9] dark:border-zinc-700 text-[#46545e] dark:text-zinc-300"
+                              ? "border-[#0071E3] dark:border-[#0A84FF] bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF]"
+                              : "border-black/[0.1] dark:border-white/[0.12] text-[#6E6E73] dark:text-[#98989D]"
                           }`}
                         >
                           {choice}
@@ -1707,7 +1760,8 @@ const SignUp: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+              onClick={() => triggerHaptic("medium")}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
             >
               Next
             </button>
@@ -1723,7 +1777,7 @@ const SignUp: React.FC = () => {
     );
   }
 
-  // STEP 4A: Mobile Number (IMG_5026 — NO OTP)
+  // STEP 4A: Mobile Number
   if (currentStep === "mobile") {
     return (
       <>
@@ -1741,10 +1795,10 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromMobile} className="space-y-4 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your mobile number?
               </h1>
-              <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
+              <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
                 Enter the mobile number on which you can be contacted. No one
                 will see this on your profile.
               </p>
@@ -1767,12 +1821,12 @@ const SignUp: React.FC = () => {
               />
             </div>
 
-            <p className="text-[13px] leading-[1.4] text-[#5e6c77] dark:text-zinc-400">
+            <p className="text-[13px] leading-[1.4] text-[#6E6E73] dark:text-[#98989D]">
               You may receive order updates and account notifications from DEEP
               SHOP.{" "}
               <Link
                 to="/privacy"
-                className="text-[#0064e0] dark:text-[#4599ff] font-medium hover:underline"
+                className="text-[#0071E3] dark:text-[#0A84FF] font-medium hover:underline"
               >
                 Learn more
               </Link>
@@ -1782,10 +1836,11 @@ const SignUp: React.FC = () => {
               <button
                 type="submit"
                 disabled={checkingAccount}
-                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+                onClick={() => triggerHaptic("medium")}
+                className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 {checkingAccount && (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin shrink-0" />
                 )}
                 <span>{checkingAccount ? "Checking..." : "Next"}</span>
               </button>
@@ -1793,10 +1848,11 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("selection");
                   updateDraft({ contactMode: "email" });
                   navigate(`/signup/email${querySuffix}`);
                 }}
-                className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                className="w-full h-[48px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
               >
                 Sign up with email address
               </button>
@@ -1831,10 +1887,10 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromEmail} className="space-y-4 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your email address?
               </h1>
-              <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
+              <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
                 Enter the email address at which you can be contacted. No one
                 will see this on your profile.
               </p>
@@ -1859,12 +1915,13 @@ const SignUp: React.FC = () => {
               />
             </div>
 
-            <p className="text-[13px] leading-[1.4] text-[#5e6c77] dark:text-zinc-400">
+            <p className="text-[13px] leading-[1.4] text-[#6E6E73] dark:text-[#98989D]">
               You&apos;ll also receive emails from DEEP SHOP and can opt out at
               any time.{" "}
               <Link
                 to="/privacy"
-                className="text-[#0064e0] dark:text-[#4599ff] font-medium hover:underline"
+                onClick={() => triggerHaptic("selection")}
+                className="text-[#0071E3] dark:text-[#0A84FF] font-medium hover:underline"
               >
                 Learn more
               </Link>
@@ -1874,10 +1931,11 @@ const SignUp: React.FC = () => {
               <button
                 type="submit"
                 disabled={checkingAccount}
-                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+                onClick={() => triggerHaptic("medium")}
+                className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 {checkingAccount && (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin shrink-0" />
                 )}
                 <span>{checkingAccount ? "Checking..." : "Next"}</span>
               </button>
@@ -1885,10 +1943,11 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("selection");
                   updateDraft({ contactMode: "mobile" });
                   navigate(`/signup/mobile${querySuffix}`);
                 }}
-                className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                className="w-full h-[48px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
               >
                 Sign up with mobile number
               </button>
@@ -1923,13 +1982,16 @@ const SignUp: React.FC = () => {
       return (
         <DeepShopAuthShell onBack={handleBackNavigation}>
           <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-12">
-            <p className="text-[15px] text-[#5e6c77] dark:text-zinc-400">
+            <p className="text-[15px] text-[#6E6E73] dark:text-[#98989D]">
               Continue setting up your DEEP SHOP account.
             </p>
             <button
               type="button"
-              onClick={() => navigate(`/signup/password${querySuffix}`)}
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] text-white font-semibold text-[16px] cursor-pointer"
+              onClick={() => {
+                triggerHaptic("medium");
+                navigate(`/signup/password${querySuffix}`);
+              }}
+              className="w-full h-[48px] rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[16px] transition cursor-pointer"
             >
               Continue
             </button>
@@ -1952,10 +2014,10 @@ const SignUp: React.FC = () => {
         >
           <div className="flex-1 flex flex-col pt-2 pb-4">
             <div className="text-center space-y-2.5 px-1">
-              <h1 className="text-[25px] sm:text-[27px] font-bold tracking-tight leading-[1.22] text-[#0a1317] dark:text-white [text-wrap:balance]">
+              <h1 className="ds-apple-display text-[25px] sm:text-[27px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7] [text-wrap:balance]">
                 You already have a DEEP SHOP account
               </h1>
-              <p className="text-[15px] leading-[1.42] text-[#1c2b33] dark:text-zinc-300 max-w-[340px] mx-auto">
+              <p className="text-[15px] leading-[1.42] text-[#6E6E73] dark:text-[#98989D] max-w-[340px] mx-auto">
                 We can log you in to your existing account or you can continue
                 creating a new one.
               </p>
@@ -1968,11 +2030,11 @@ const SignUp: React.FC = () => {
                 sizeClass="w-[168px] h-[168px] sm:w-[176px] sm:h-[176px]"
               />
 
-              <h2 className="mt-5 text-[23px] sm:text-[24px] font-bold tracking-tight text-center text-[#0a1317] dark:text-white">
+              <h2 className="ds-apple-display mt-5 text-[23px] sm:text-[24px] font-bold tracking-tight text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {realFullName}
               </h2>
               {realContactLabel && (
-                <p className="mt-1 text-[16px] font-normal text-center text-[#1c2b33] dark:text-zinc-300">
+                <p className="mt-1 text-[16px] font-normal text-center text-[#6E6E73] dark:text-[#98989D] tabular-nums">
                   {realContactLabel}
                 </p>
               )}
@@ -1982,22 +2044,26 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 disabled={loading}
-                onClick={handleLoginExistingAccount}
-                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[15.5px] sm:text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  handleLoginExistingAccount();
+                }}
+                className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
               >
-                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                <span>Yes, log in as {firstNameLabel}</span>
+                {loading && <Loader2 className="w-5 h-5 animate-spin shrink-0" />}
+                <span className="truncate">Yes, log in as {firstNameLabel}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("selection");
                   playAuthVoice(
                     "নতুন অ্যাকাউন্ট তৈরি চালিয়ে যেতে পাসওয়ার্ড তৈরি করুন।"
                   );
                   navigate(`/signup/password${querySuffix}`);
                 }}
-                className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[15.5px] sm:text-[16px] transition cursor-pointer"
+                className="w-full h-[48px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
               >
                 Continue creating account
               </button>
@@ -2025,54 +2091,61 @@ const SignUp: React.FC = () => {
           footer={bottomFindAccountLink}
         >
           <div className="space-y-4 pt-1">
-            <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+            <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Agree to DEEP SHOP&apos;s terms and policies
             </h1>
 
-            <div className="space-y-4 text-[15px] leading-[1.45] text-[#0a1317] dark:text-zinc-200 pt-1">
+            <div className="space-y-4 text-[15px] leading-[1.48] text-[#1D1D1F] dark:text-[#F5F5F7] pt-1">
               <p>
                 People who use our service may have uploaded your contact
                 information to DEEP SHOP.{" "}
                 <button
                   type="button"
-                  onClick={() => setShowTermsLearnMoreSheet(true)}
-                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline font-normal cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    setShowTermsLearnMoreSheet(true);
+                  }}
+                  className="text-[#0071E3] dark:text-[#0A84FF] hover:underline font-medium cursor-pointer"
                 >
                   Learn more
                 </button>
               </p>
 
               <p>
-                By tapping <strong className="font-bold">I agree</strong>, you
+                By tapping <strong className="font-semibold">I agree</strong>, you
                 agree to create an account and to DEEP SHOP&apos;s{" "}
                 <Link
                   to="/terms"
-                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
+                  onClick={() => triggerHaptic("selection")}
+                  className="text-[#0071E3] dark:text-[#0A84FF] hover:underline"
                 >
                   terms
                 </Link>
                 ,{" "}
                 <Link
                   to="/privacy"
-                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
+                  onClick={() => triggerHaptic("selection")}
+                  className="text-[#0071E3] dark:text-[#0A84FF] hover:underline"
                 >
                   Privacy Policy
                 </Link>{" "}
                 and{" "}
                 <Link
                   to="/cookie-policy"
-                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
+                  onClick={() => triggerHaptic("selection")}
+                  className="text-[#0071E3] dark:text-[#0A84FF] hover:underline"
                 >
                   Cookies Policy
                 </Link>
                 .
               </p>
 
-              <p>
+              <p className="text-[#6E6E73] dark:text-[#98989D]">
                 The{" "}
                 <Link
                   to="/privacy"
-                  className="text-[#0064e0] dark:text-[#4599ff] hover:underline"
+                  onClick={() => triggerHaptic("selection")}
+                  className="text-[#0071E3] dark:text-[#0A84FF] hover:underline"
                 >
                   Privacy Policy
                 </Link>{" "}
@@ -2086,61 +2159,84 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 disabled={loading}
-                onClick={handleAgreeAndCreateAccount}
-                className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  handleAgreeAndCreateAccount();
+                }}
+                className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
               >
-                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                {loading && <Loader2 className="w-5 h-5 animate-spin shrink-0" />}
                 <span>{loading ? "Creating account..." : "I agree"}</span>
               </button>
             </div>
           </div>
         </DeepShopAuthShell>
 
-        <AnimatePresence>
-          {showTermsLearnMoreSheet && (
-            <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowTermsLearnMoreSheet(false)}
-                className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
-              />
-              <motion.div
-                initial={{ y: "100%", opacity: 0.6 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ type: "spring", stiffness: 320, damping: 30 }}
-                className="relative z-10 w-full sm:max-w-[430px] bg-white dark:bg-[#182028] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl border-t sm:border border-zinc-200 dark:border-zinc-800"
-              >
-                <div className="w-10 h-1 rounded-full bg-[#cbd2d9] dark:bg-zinc-600 mx-auto mb-2" />
-                <div className="relative flex items-center justify-center h-12 px-4 border-b border-[#e5e8ec] dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => setShowTermsLearnMoreSheet(false)}
-                    className="absolute left-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+        {typeof document !== "undefined" &&
+          createPortal(
+            <AnimatePresence>
+              {showTermsLearnMoreSheet && (
+                <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: prefersReducedMotion ? 0.14 : 0.22 }}
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setShowTermsLearnMoreSheet(false);
+                    }}
+                    className="ds-apple-backdrop fixed inset-0"
+                  />
+                  <motion.div
+                    initial={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
+                    transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                    drag={prefersReducedMotion ? false : "y"}
+                    dragConstraints={{ top: 0 }}
+                    dragElastic={{ top: 0.08, bottom: 0.45 }}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.y + projectMomentum(info.velocity.y) > 100 || info.velocity.y > 400) {
+                        triggerHaptic("selection");
+                        setShowTermsLearnMoreSheet(false);
+                      }
+                    }}
+                    className="ds-apple-sheet relative z-10 w-full sm:max-w-[430px] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl"
                   >
-                    <X className="w-5 h-5" />
-                  </button>
-                  <h3 className="text-[17px] font-bold text-[#0a1317] dark:text-white">
-                    Contact information on DEEP SHOP
-                  </h3>
+                    <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-2" />
+                    <div className="relative flex items-center justify-center h-12 px-4 border-b border-black/[0.08] dark:border-white/[0.1]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic("selection");
+                          setShowTermsLearnMoreSheet(false);
+                        }}
+                        className="ds-apple-icon-btn absolute left-2 w-10 h-10 flex items-center justify-center rounded-full active:scale-[0.95] cursor-pointer"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                      <h3 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        Contact information on DEEP SHOP
+                      </h3>
+                    </div>
+                    <div className="px-6 pt-5 text-[15px] leading-relaxed text-[#6E6E73] dark:text-[#98989D] space-y-3">
+                      <p>
+                        DEEP SHOP uses your phone number or email address to link
+                        your marketplace orders, delivery updates, and account
+                        security alerts accurately.
+                      </p>
+                      <p>
+                        Your contact details remain private and are never displayed
+                        publicly on your Loops profile.
+                      </p>
+                    </div>
+                  </motion.div>
                 </div>
-                <div className="px-6 pt-5 text-[15px] leading-relaxed text-[#1c2b33] dark:text-zinc-200 space-y-3">
-                  <p>
-                    DEEP SHOP uses your phone number or email address to link
-                    your marketplace orders, delivery updates, and account
-                    security alerts accurately.
-                  </p>
-                  <p>
-                    Your contact details remain private and are never displayed
-                    publicly on your Loops profile.
-                  </p>
-                </div>
-              </motion.div>
-            </div>
+              )}
+            </AnimatePresence>,
+            document.body
           )}
-        </AnimatePresence>
 
         <StopCreatingAccountModal
           isOpen={showStopModal}
@@ -2172,23 +2268,27 @@ const SignUp: React.FC = () => {
           desktopHeadline="Make your DEEP SHOP profile yours."
           desktopSubtext="Upload a profile photo so buyers, sellers, and friends on Loops recognize you right away."
           footer={
-            <div className="border-t border-[#e5e8ec] dark:border-zinc-800 pt-3.5 -mx-5 sm:-mx-7 lg:-mx-8 px-5 sm:px-7 lg:px-8 space-y-2.5">
+            <div className="border-t border-black/[0.08] dark:border-white/[0.1] pt-3.5 -mx-5 sm:-mx-7 lg:-mx-8 px-5 sm:px-7 lg:px-8 space-y-2.5">
               {uploadedPhotoUrl ? (
                 <>
                   <button
                     type="button"
-                    onClick={() =>
-                      navigate(`/signup/notifications${querySuffix}`)
-                    }
-                    className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] transition cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic("medium");
+                      navigate(`/signup/notifications${querySuffix}`);
+                    }}
+                    className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
                   >
                     Continue
                   </button>
                   <button
                     type="button"
                     disabled={uploadingPicture}
-                    onClick={() => profilePhotoInputRef.current?.click()}
-                    className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      profilePhotoInputRef.current?.click();
+                    }}
+                    className="w-full h-[48px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
                   >
                     Change picture
                   </button>
@@ -2198,11 +2298,14 @@ const SignUp: React.FC = () => {
                   <button
                     type="button"
                     disabled={uploadingPicture}
-                    onClick={() => profilePhotoInputRef.current?.click()}
-                    className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic("medium");
+                      profilePhotoInputRef.current?.click();
+                    }}
+                    className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
                   >
                     {uploadingPicture && (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin shrink-0" />
                     )}
                     <span>
                       {uploadingPicture ? "Uploading picture..." : "Add picture"}
@@ -2211,10 +2314,11 @@ const SignUp: React.FC = () => {
                   <button
                     type="button"
                     disabled={uploadingPicture}
-                    onClick={() =>
-                      navigate(`/signup/notifications${querySuffix}`)
-                    }
-                    className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      navigate(`/signup/notifications${querySuffix}`);
+                    }}
+                    className="w-full h-[48px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
                   >
                     Skip
                   </button>
@@ -2225,10 +2329,10 @@ const SignUp: React.FC = () => {
         >
           <div className="flex-1 flex flex-col pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Add a profile picture
               </h1>
-              <p className="text-[15px] leading-[1.45] text-[#0a1317] dark:text-zinc-300">
+              <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
                 Add a profile picture so that your friends know it&apos;s you.
                 Everyone will be able to see your picture.
               </p>
@@ -2238,9 +2342,12 @@ const SignUp: React.FC = () => {
               <button
                 type="button"
                 disabled={uploadingPicture}
-                onClick={() => profilePhotoInputRef.current?.click()}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  profilePhotoInputRef.current?.click();
+                }}
                 aria-label="Choose profile picture"
-                className="relative w-[188px] h-[188px] rounded-full overflow-hidden flex items-center justify-center transition active:scale-[0.98] cursor-pointer focus:outline-none"
+                className="relative w-[188px] h-[188px] rounded-full overflow-hidden flex items-center justify-center transition active:scale-[0.97] cursor-pointer focus:outline-none border border-black/[0.08] dark:border-white/[0.12]"
               >
                 {uploadedPhotoUrl ? (
                   <img
@@ -2258,17 +2365,17 @@ const SignUp: React.FC = () => {
                       cx="100"
                       cy="100"
                       r="100"
-                      className="fill-[#cbd2d9] dark:fill-zinc-700"
+                      className="fill-[#E8E8ED] dark:fill-[#2C2C2E]"
                     />
                     <circle
                       cx="100"
                       cy="78"
                       r="28"
-                      className="fill-[#eef1f4] dark:fill-zinc-400"
+                      className="fill-[#FFFFFF] dark:fill-[#636366]"
                     />
                     <path
                       d="M32 184c9-36 35-58 68-58s59 22 68 58"
-                      className="fill-[#eef1f4] dark:fill-zinc-400"
+                      className="fill-[#FFFFFF] dark:fill-[#636366]"
                     />
                   </svg>
                 )}
@@ -2301,18 +2408,21 @@ const SignUp: React.FC = () => {
           desktopSubtext="Turn on push notifications so you never miss delivery status updates, seller replies, or Loops activity."
           footer={
             <div className="space-y-3">
-              <p className="text-[12.5px] leading-[1.4] text-center text-[#5e6c77] dark:text-zinc-400 px-1">
+              <p className="text-[12.5px] leading-[1.4] text-center text-[#6E6E73] dark:text-[#98989D] px-1">
                 Notifications are delivered instantly to your device. You can
                 manage notification preferences at any time in Settings.
               </p>
               <button
                 type="button"
                 disabled={requestingPush}
-                onClick={handleRequestNotificationsAndFinish}
-                className="w-full h-[48px] rounded-[12px] bg-[#0064ff] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  handleRequestNotificationsAndFinish();
+                }}
+                className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 {requestingPush && (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin shrink-0" />
                 )}
                 <span>{requestingPush ? "Allowing..." : "Next"}</span>
               </button>
@@ -2321,17 +2431,20 @@ const SignUp: React.FC = () => {
         >
           <div className="flex-1 flex flex-col pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+              <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 To get updates faster, allow notifications
               </h1>
-              <p className="text-[15px] leading-[1.42] text-[#5e6c77] dark:text-zinc-300">
+              <p className="text-[15px] leading-[1.42] text-[#6E6E73] dark:text-[#98989D]">
                 Get instant alerts for your DEEP SHOP orders, messages, and
                 community activity. Next, you can decide if you want to allow
                 push notifications.{" "}
                 <button
                   type="button"
-                  onClick={() => setShowNotificationsInfoSheet(true)}
-                  className="text-[#0064e0] dark:text-[#4599ff] font-semibold hover:underline cursor-pointer"
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    setShowNotificationsInfoSheet(true);
+                  }}
+                  className="text-[#0071E3] dark:text-[#0A84FF] font-semibold hover:underline cursor-pointer"
                 >
                   Learn more
                 </button>
@@ -2340,27 +2453,33 @@ const SignUp: React.FC = () => {
 
             {/* Center Permission Preview Card matching IMG_5167 */}
             <div className="flex-1 flex items-center justify-center py-8">
-              <div className="w-[264px] sm:w-[276px] rounded-[20px] border border-[#dfe3e8] dark:border-zinc-700/80 bg-[#f8f9fa] dark:bg-zinc-900/90 p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+              <div className="w-[264px] sm:w-[276px] rounded-[22px] border border-black/[0.08] dark:border-white/[0.1] bg-[#F5F5F7] dark:bg-[#2C2C2E] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
                 <div className="space-y-3 pt-1">
-                  <div className="h-[13px] w-full rounded-full bg-[#cfd4da] dark:bg-zinc-700" />
-                  <div className="h-[13px] w-full rounded-full bg-[#cfd4da] dark:bg-zinc-700" />
-                  <div className="h-[13px] w-[76%] rounded-full bg-[#cfd4da] dark:bg-zinc-700" />
+                  <div className="h-[13px] w-full rounded-full bg-[#D1D1D6] dark:bg-[#48484A]" />
+                  <div className="h-[13px] w-full rounded-full bg-[#D1D1D6] dark:bg-[#48484A]" />
+                  <div className="h-[13px] w-[76%] rounded-full bg-[#D1D1D6] dark:bg-[#48484A]" />
                 </div>
 
                 <div className="mt-9 space-y-2.5">
                   <button
                     type="button"
                     disabled={requestingPush}
-                    onClick={handleDeclinePushPrompt}
-                    className="w-full h-[40px] rounded-full bg-[#cfd4da] hover:bg-[#c2c8cf] dark:bg-zinc-700 dark:hover:bg-zinc-600 text-[#0a1317] dark:text-zinc-100 text-[14px] font-medium flex items-center justify-center transition cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      handleDeclinePushPrompt();
+                    }}
+                    className="w-full h-[40px] rounded-full bg-[#E5E5EA] hover:bg-[#D1D1D6] dark:bg-[#3A3A3C] dark:hover:bg-[#48484A] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] text-[14px] font-medium flex items-center justify-center transition cursor-pointer"
                   >
                     Don&apos;t allow
                   </button>
                   <button
                     type="button"
                     disabled={requestingPush}
-                    onClick={handleRequestNotificationsAndFinish}
-                    className="w-full h-[40px] rounded-full bg-[#000000] hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black text-[14px] font-medium flex items-center justify-center transition cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic("medium");
+                      handleRequestNotificationsAndFinish();
+                    }}
+                    className="w-full h-[40px] rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white text-[14px] font-medium flex items-center justify-center transition cursor-pointer"
                   >
                     Allow
                   </button>
@@ -2370,110 +2489,137 @@ const SignUp: React.FC = () => {
           </div>
         </DeepShopAuthShell>
 
-        <AnimatePresence>
-          {showPushPromptModal && (
-            <div className="fixed inset-0 z-[10000] flex items-center justify-center px-5">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/55 backdrop-blur-[2px]"
-              />
-              <motion.div
-                initial={{ scale: 0.94, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.94, opacity: 0 }}
-                transition={{ duration: 0.18, ease: "easeOut" }}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="deepshop-push-dialog-title"
-                className="relative z-10 w-full max-w-[330px] rounded-[24px] bg-white dark:bg-[#1c242c] border border-zinc-200/80 dark:border-zinc-700/80 shadow-2xl overflow-hidden"
-              >
-                <div className="px-6 pt-6 pb-5 text-center space-y-2.5">
-                  <div className="w-11 h-11 rounded-full bg-[#0064ff]/10 dark:bg-[#4599ff]/15 text-[#0064ff] dark:text-[#4599ff] flex items-center justify-center mx-auto">
-                    <Bell className="w-5 h-5" />
-                  </div>
-                  <h3
-                    id="deepshop-push-dialog-title"
-                    className="text-[17px] font-bold leading-snug text-[#0a1317] dark:text-white"
+        {typeof document !== "undefined" &&
+          createPortal(
+            <AnimatePresence>
+              {showPushPromptModal && (
+                <div className="ds-apple-portal fixed inset-0 z-[10000] flex items-center justify-center px-5">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: prefersReducedMotion ? 0.14 : 0.22 }}
+                    className="ds-apple-backdrop fixed inset-0"
+                  />
+                  <motion.div
+                    initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.94, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { scale: 0.94, opacity: 0 }}
+                    transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="deepshop-push-dialog-title"
+                    className="ds-apple-modal relative z-10 w-full max-w-[330px] rounded-[24px] shadow-2xl overflow-hidden"
                   >
-                    &ldquo;DEEP SHOP&rdquo; Would Like to Send You Notifications
-                  </h3>
-                  <p className="text-[13.5px] leading-relaxed text-[#5e6c77] dark:text-zinc-300">
-                    Notifications may include order status alerts, direct
-                    messages, and community activity updates. These can be
-                    configured in Settings.
-                  </p>
+                    <div className="px-6 pt-6 pb-5 text-center space-y-2.5">
+                      <div className="w-11 h-11 rounded-full bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center mx-auto">
+                        <Bell className="w-5 h-5" />
+                      </div>
+                      <h3
+                        id="deepshop-push-dialog-title"
+                        className="text-[17px] font-semibold leading-snug tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      >
+                        &ldquo;DEEP SHOP&rdquo; Would Like to Send You Notifications
+                      </h3>
+                      <p className="text-[13.5px] leading-relaxed text-[#6E6E73] dark:text-[#98989D]">
+                        Notifications may include order status alerts, direct
+                        messages, and community activity updates. These can be
+                        configured in Settings.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 border-t border-black/[0.08] dark:border-white/[0.1] divide-x divide-black/[0.08] dark:divide-white/[0.1]">
+                      <button
+                        type="button"
+                        disabled={requestingPush}
+                        onClick={() => {
+                          triggerHaptic("selection");
+                          handleDeclinePushPrompt();
+                        }}
+                        className="min-h-[48px] text-[15px] font-medium text-[#6E6E73] dark:text-[#98989D] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition cursor-pointer"
+                      >
+                        Don&apos;t Allow
+                      </button>
+                      <button
+                        type="button"
+                        disabled={requestingPush}
+                        onClick={() => {
+                          triggerHaptic("medium");
+                          handleConfirmFallbackPushAllow();
+                        }}
+                        className="min-h-[48px] text-[15px] font-semibold text-[#0071E3] dark:text-[#0A84FF] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        {requestingPush && (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        )}
+                        <span>Allow</span>
+                      </button>
+                    </div>
+                  </motion.div>
                 </div>
-                <div className="grid grid-cols-2 border-t border-zinc-200 dark:border-zinc-700/80 divide-x divide-zinc-200 dark:divide-zinc-700/80">
-                  <button
-                    type="button"
-                    disabled={requestingPush}
-                    onClick={handleDeclinePushPrompt}
-                    className="min-h-[48px] text-[15px] font-medium text-[#5e6c77] dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 transition cursor-pointer"
-                  >
-                    Don&apos;t Allow
-                  </button>
-                  <button
-                    type="button"
-                    disabled={requestingPush}
-                    onClick={handleConfirmFallbackPushAllow}
-                    className="min-h-[48px] text-[15px] font-bold text-[#0064ff] dark:text-[#4599ff] hover:bg-zinc-100 dark:hover:bg-zinc-800/70 transition flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    {requestingPush && (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    )}
-                    <span>Allow</span>
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
+              )}
 
-          {showNotificationsInfoSheet && (
-            <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowNotificationsInfoSheet(false)}
-                className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
-              />
-              <motion.div
-                initial={{ y: "100%", opacity: 0.6 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ type: "spring", stiffness: 320, damping: 30 }}
-                className="relative z-10 w-full sm:max-w-[430px] bg-white dark:bg-[#182028] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl border-t sm:border border-zinc-200 dark:border-zinc-800"
-              >
-                <div className="w-10 h-1 rounded-full bg-[#cbd2d9] dark:bg-zinc-600 mx-auto mb-2" />
-                <div className="relative flex items-center justify-center h-12 px-4 border-b border-[#e5e8ec] dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => setShowNotificationsInfoSheet(false)}
-                    className="absolute left-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              {showNotificationsInfoSheet && (
+                <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: prefersReducedMotion ? 0.14 : 0.22 }}
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setShowNotificationsInfoSheet(false);
+                    }}
+                    className="ds-apple-backdrop fixed inset-0"
+                  />
+                  <motion.div
+                    initial={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
+                    transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                    drag={prefersReducedMotion ? false : "y"}
+                    dragConstraints={{ top: 0 }}
+                    dragElastic={{ top: 0.08, bottom: 0.45 }}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.y + projectMomentum(info.velocity.y) > 100 || info.velocity.y > 400) {
+                        triggerHaptic("selection");
+                        setShowNotificationsInfoSheet(false);
+                      }
+                    }}
+                    className="ds-apple-sheet relative z-10 w-full sm:max-w-[430px] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl"
                   >
-                    <X className="w-5 h-5" />
-                  </button>
-                  <h3 className="text-[17px] font-bold text-[#0a1317] dark:text-white">
-                    Push notifications
-                  </h3>
+                    <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-2" />
+                    <div className="relative flex items-center justify-center h-12 px-4 border-b border-black/[0.08] dark:border-white/[0.1]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic("selection");
+                          setShowNotificationsInfoSheet(false);
+                        }}
+                        className="ds-apple-icon-btn absolute left-2 w-10 h-10 flex items-center justify-center rounded-full active:scale-[0.95] cursor-pointer"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                      <h3 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        Push notifications
+                      </h3>
+                    </div>
+                    <div className="px-6 pt-5 text-[15px] leading-relaxed text-[#6E6E73] dark:text-[#98989D] space-y-3">
+                      <p>
+                        Allowing push notifications lets DEEP SHOP send real-time
+                        updates when your order ships, when a seller messages you,
+                        or when someone interacts with your Loops.
+                      </p>
+                      <p>
+                        You can turn push notifications on or off anytime from your
+                        DEEP SHOP Settings page.
+                      </p>
+                    </div>
+                  </motion.div>
                 </div>
-                <div className="px-6 pt-5 text-[15px] leading-relaxed text-[#1c2b33] dark:text-zinc-200 space-y-3">
-                  <p>
-                    Allowing push notifications lets DEEP SHOP send real-time
-                    updates when your order ships, when a seller messages you,
-                    or when someone interacts with your Loops.
-                  </p>
-                  <p>
-                    You can turn push notifications on or off anytime from your
-                    DEEP SHOP Settings page.
-                  </p>
-                </div>
-              </motion.div>
-            </div>
+              )}
+            </AnimatePresence>,
+            document.body
           )}
-        </AnimatePresence>
       </>
     );
   }
@@ -2495,10 +2641,10 @@ const SignUp: React.FC = () => {
       >
         <form onSubmit={handleNextFromPassword} className="space-y-4 pt-1">
           <div className="space-y-2">
-            <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+            <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Create a password
             </h1>
-            <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
+            <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
               Create a password with at least eight characters including
               uppercase, lowercase, numbers, and symbols. It should be something
               that others can&apos;t guess.
@@ -2526,23 +2672,23 @@ const SignUp: React.FC = () => {
             {(() => {
               const pwdRules = checkPasswordRules(password);
               return (
-                <div className="p-3.5 rounded-2xl bg-[#f0f2f5] dark:bg-zinc-800/80 border border-[#dce1e7] dark:border-zinc-700/80 space-y-2">
-                  <p className="text-[12px] font-bold text-[#5e6c77] dark:text-zinc-400">
+                <div className="p-3.5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.08] dark:border-white/[0.1] space-y-2">
+                  <p className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
                     পাসওয়ার্ডের প্রয়োজনীয় শর্তাবলী (Password Rules):
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-[12px] font-semibold">
                     <div
                       className={`flex items-center gap-1.5 transition ${
                         pwdRules.hasMinLen
-                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
-                          : "text-zinc-500 dark:text-zinc-400"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
                         className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           pwdRules.hasMinLen
-                            ? "bg-emerald-500 text-white"
-                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                            ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
+                            : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
                         }`}
                       >
                         {pwdRules.hasMinLen ? "✓" : "○"}
@@ -2553,15 +2699,15 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 transition ${
                         pwdRules.hasNumber
-                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
-                          : "text-zinc-500 dark:text-zinc-400"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
                         className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           pwdRules.hasNumber
-                            ? "bg-emerald-500 text-white"
-                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                            ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
+                            : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
                         }`}
                       >
                         {pwdRules.hasNumber ? "✓" : "○"}
@@ -2572,15 +2718,15 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 transition ${
                         pwdRules.hasLower
-                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
-                          : "text-zinc-500 dark:text-zinc-400"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
                         className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           pwdRules.hasLower
-                            ? "bg-emerald-500 text-white"
-                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                            ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
+                            : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
                         }`}
                       >
                         {pwdRules.hasLower ? "✓" : "○"}
@@ -2591,15 +2737,15 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 transition ${
                         pwdRules.hasUpper
-                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
-                          : "text-zinc-500 dark:text-zinc-400"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
                         className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           pwdRules.hasUpper
-                            ? "bg-emerald-500 text-white"
-                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                            ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
+                            : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
                         }`}
                       >
                         {pwdRules.hasUpper ? "✓" : "○"}
@@ -2610,15 +2756,15 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 col-span-2 transition ${
                         pwdRules.hasSpecial
-                          ? "text-emerald-600 dark:text-emerald-400 font-bold"
-                          : "text-zinc-500 dark:text-zinc-400"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
                         className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
                           pwdRules.hasSpecial
-                            ? "bg-emerald-500 text-white"
-                            : "bg-zinc-300 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                            ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
+                            : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
                         }`}
                       >
                         {pwdRules.hasSpecial ? "✓" : "○"}
@@ -2636,25 +2782,29 @@ const SignUp: React.FC = () => {
               type="button"
               role="checkbox"
               aria-checked={draft.rememberLogin}
-              onClick={() =>
-                updateDraft({ rememberLogin: !draft.rememberLogin })
-              }
+              onClick={() => {
+                triggerHaptic("toggle");
+                updateDraft({ rememberLogin: !draft.rememberLogin });
+              }}
               className={`w-[22px] h-[22px] rounded-[6px] flex items-center justify-center shrink-0 transition cursor-pointer ${
                 draft.rememberLogin
-                  ? "bg-[#0064e0] text-white"
-                  : "border-2 border-[#65737e] dark:border-zinc-500 bg-transparent"
+                  ? "bg-[#0071E3] dark:bg-[#0A84FF] text-white"
+                  : "border-2 border-[#8E8E93] dark:border-[#636366] bg-transparent"
               }`}
             >
               {draft.rememberLogin && (
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
               )}
             </button>
-            <span className="text-[15px] text-[#0a1317] dark:text-zinc-200">
+            <span className="text-[15px] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Remember login info.{" "}
               <button
                 type="button"
-                onClick={() => setShowRememberInfoSheet(true)}
-                className="text-[#0064e0] dark:text-[#4599ff] font-medium hover:underline cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setShowRememberInfoSheet(true);
+                }}
+                className="text-[#0071E3] dark:text-[#0A84FF] font-medium hover:underline cursor-pointer"
               >
                 Learn more
               </button>
@@ -2664,7 +2814,8 @@ const SignUp: React.FC = () => {
           <div className="pt-1">
             <button
               type="submit"
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              onClick={() => triggerHaptic("medium")}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
             >
               <span>Next</span>
             </button>
@@ -2672,51 +2823,71 @@ const SignUp: React.FC = () => {
         </form>
       </DeepShopAuthShell>
 
-      <AnimatePresence>
-        {showRememberInfoSheet && (
-          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowRememberInfoSheet(false)}
-              className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
-            />
-            <motion.div
-              initial={{ y: "100%", opacity: 0.6 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", stiffness: 320, damping: 30 }}
-              className="relative z-10 w-full sm:max-w-[420px] bg-white dark:bg-[#182028] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl border-t sm:border border-zinc-200 dark:border-zinc-800"
-            >
-              <div className="w-10 h-1 rounded-full bg-[#cbd2d9] dark:bg-zinc-600 mx-auto mb-2" />
-              <div className="relative flex items-center justify-center h-12 px-4 border-b border-[#e5e8ec] dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setShowRememberInfoSheet(false)}
-                  className="absolute left-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {showRememberInfoSheet && (
+              <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: prefersReducedMotion ? 0.14 : 0.22 }}
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    setShowRememberInfoSheet(false);
+                  }}
+                  className="ds-apple-backdrop fixed inset-0"
+                />
+                <motion.div
+                  initial={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
+                  transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                  drag={prefersReducedMotion ? false : "y"}
+                  dragConstraints={{ top: 0 }}
+                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  onDragEnd={(_, info) => {
+                    if (info.offset.y + projectMomentum(info.velocity.y) > 100 || info.velocity.y > 400) {
+                      triggerHaptic("selection");
+                      setShowRememberInfoSheet(false);
+                    }
+                  }}
+                  className="ds-apple-sheet relative z-10 w-full sm:max-w-[420px] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl"
                 >
-                  <X className="w-5 h-5" />
-                </button>
-                <h3 className="text-[17px] font-bold text-[#0a1317] dark:text-white">
-                  Remember login info
-                </h3>
+                  <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-2" />
+                  <div className="relative flex items-center justify-center h-12 px-4 border-b border-black/[0.08] dark:border-white/[0.1]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("selection");
+                        setShowRememberInfoSheet(false);
+                      }}
+                      className="ds-apple-icon-btn absolute left-2 w-10 h-10 flex items-center justify-center rounded-full active:scale-[0.95] cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <h3 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      Remember login info
+                    </h3>
+                  </div>
+                  <div className="px-6 pt-5 text-[15px] leading-relaxed text-[#6E6E73] dark:text-[#98989D] space-y-3">
+                    <p>
+                      We&apos;ll save your DEEP SHOP profile on this browser so next
+                      time you log out, you can tap your profile card to log back in
+                      without re-typing your details.
+                    </p>
+                    <p>
+                      You can remove saved login info anytime from the{" "}
+                      <strong>•••</strong> menu on the Saved Accounts page.
+                    </p>
+                  </div>
+                </motion.div>
               </div>
-              <div className="px-6 pt-5 text-[15px] leading-relaxed text-[#1c2b33] dark:text-zinc-200 space-y-3">
-                <p>
-                  We&apos;ll save your DEEP SHOP profile on this browser so next
-                  time you log out, you can tap your profile card to log back in
-                  without re-typing your details.
-                </p>
-                <p>
-                  You can remove saved login info anytime from the{" "}
-                  <strong>•••</strong> menu on the Saved Accounts page.
-                </p>
-              </div>
-            </motion.div>
-          </div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
 
       <StopCreatingAccountModal
         isOpen={showStopModal}

@@ -5,6 +5,7 @@ import { db, auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import { Ticket } from "lucide-react";
 import { useIllustrations } from "../lib/useIllustrations";
+import { triggerHaptic } from "../lib/haptics";
 
 export default function MyCoupons() {
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -16,110 +17,169 @@ export default function MyCoupons() {
   useEffect(() => {
     const fetchMyCoupons = async () => {
       if (!auth.currentUser) {
-          setLoading(false);
-          return;
+        setLoading(false);
+        return;
       }
-      
-      const userRef = await import("firebase/firestore").then(m => m.getDoc(m.doc(db, "users", auth.currentUser!.uid)));
+
+      const userRef = await import("firebase/firestore").then((m) =>
+        m.getDoc(m.doc(db, "users", auth.currentUser!.uid)),
+      );
       if (userRef.exists()) {
-          const claimedIds = userRef.data().claimedCoupons || [];
-          const usedIds = userRef.data().usedCoupons || [];
-          setUserData(userRef.data());
-          if (claimedIds.length > 0) {
-              // chunk array into 10s if needed, or if few just use in
-              const chunked = claimedIds.slice(0, 10); // Safe limit for 'in' query
-              const q = query(collection(db, "coupons"), where(documentId(), "in", chunked));
-              const snap = await getDocs(q);
-              setCoupons(snap.docs.map(d => ({id: d.id, ...d.data()})));
-          }
+        const claimedIds = userRef.data().claimedCoupons || [];
+        setUserData(userRef.data());
+        if (claimedIds.length > 0) {
+          const chunked = claimedIds.slice(0, 10);
+          const q = query(collection(db, "coupons"), where(documentId(), "in", chunked));
+          const snap = await getDocs(q);
+          setCoupons(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        }
       }
       setLoading(false);
     };
-    
+
     fetchMyCoupons();
   }, []);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 animate-fade-in min-h-screen">
-      <div className="mb-8">
-        <h1 className="text-2xl font-black mb-2 text-zinc-900 dark:text-zinc-100">My Coupons</h1>
-        <p className="text-sm font-medium text-zinc-500">Your claimed vouchers ready to use</p>
-      </div>
+    <div className="ds-apple-shop-canvas min-h-screen pb-28">
+      <div className="max-w-2xl mx-auto px-4 pt-6">
+        <div className="mb-4 px-1">
+          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+            My Coupons
+          </h1>
+          <p className="text-[13.5px] text-[#6E6E73] dark:text-[#98989D] mt-1">
+            Your claimed vouchers ready to apply at checkout.
+          </p>
+        </div>
 
-      {loading ? (
-          <div className="py-20 text-center text-zinc-500">Loading your coupons...</div>
-      ) : coupons.length > 0 ? (
-          <div className="space-y-4">
+        {loading ? (
+          <div className="py-20 text-center text-[14px] text-[#6E6E73] dark:text-[#98989D]">
+            Loading your coupons...
+          </div>
+        ) : coupons.length > 0 ? (
+          <div className="space-y-3.5">
             {coupons.map((c, i) => {
               const isExpired = c.expiresAt && c.expiresAt < Date.now();
               const isUsed = userData?.usedCoupons?.includes(c.id);
 
               return (
-                <div key={i} className={`relative bg-green-500/10 dark:bg-green-900/10 rounded-[20px] overflow-hidden border border-green-200 dark:border-green-900 flex shadow-sm ${(isExpired || isUsed) ? "opacity-60 grayscale" : ""}`}>
-                    {isUsed && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/30 dark:bg-black/30 backdrop-blur-[1px]">
-                        <div className="border-[3px] md:border-4 border-zinc-500 text-zinc-500 font-black text-2xl md:text-3xl tracking-widest uppercase px-4 py-1.5 md:px-6 md:py-2 rounded-[8px] transform -rotate-12 select-none shadow-sm opacity-90 mix-blend-multiply dark:mix-blend-screen bg-transparent">
-                          Used
-                        </div>
+                <div
+                  key={c.id || i}
+                  className={`relative ds-apple-surface rounded-[22px] overflow-hidden flex ${
+                    isExpired || isUsed ? "opacity-60 grayscale" : ""
+                  }`}
+                >
+                  {isUsed && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
+                      <div className="border-2 border-[#6E6E73] text-[#6E6E73] font-bold text-[18px] tracking-widest uppercase px-4 py-1 rounded-[10px] -rotate-12 select-none">
+                        Used
                       </div>
-                    )}
-                    {/* Left section - Discount */}
-                    <div className="w-[100px] md:w-[120px] bg-green-500 text-white flex flex-col justify-center items-center p-4 relative shrink-0">
-                        <span className="text-2xl md:text-3xl font-black">{c.type === 'percent' ? `${c.discount}%` : `${formatPrice(c.discount)}`}</span>
-                        <span className="text-xs font-bold tracking-wider uppercase mt-1">OFF</span>
-                        
-                        {/* Jagged edge */}
-                        <div className="absolute right-0 top-0 bottom-0 w-2 flex flex-col justify-between translate-x-1/2 py-1">
-                            {[...Array(12)].map((_, j) => (
-                                <div key={j} className="w-2.5 h-2.5 bg-zinc-50 dark:bg-[#0a0a0b] rounded-full my-0.5"></div>
-                            ))}
-                        </div>
                     </div>
-                    
-                    {/* Right section - Details */}
-                    <div className="p-4 flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 ml-[5px]">
-                        <div>
-                            <h3 className="font-bold text-lg mb-1 text-zinc-900 dark:text-zinc-100">{c.code}</h3>
-                            <p className="text-xs text-zinc-500">
-                                {c.minOrderAmount > 0 ? `For orders over ${formatPrice(c.minOrderAmount)}` : "No minimum order amount"}
-                                {c.expiresAt && <span className={`block mt-1 ${isExpired ? 'text-red-500 font-bold' : ''}`}>{isExpired ? "EXPIRED" : `Valid until: ${new Date(c.expiresAt).toLocaleDateString()}`}</span>}
-                            </p>
-                        </div>
-                        
-                        <div className="text-center md:text-right">
-                           <span className={`text-xs font-bold block mb-1 ${isUsed ? "text-zinc-500" : isExpired ? "text-red-500" : "text-green-600"}`}>
-                               {isUsed ? "Already used" : isExpired ? "Expired" : "Available for use"}
-                           </span>
-                           <button 
-                               onClick={() => !isUsed && !isExpired && navigate('/cart')} 
-                               disabled={isUsed || isExpired}
-                               className={`underline text-sm font-bold ${isUsed || isExpired ? "text-zinc-400 cursor-not-allowed" : "text-zinc-900 dark:text-zinc-100"}`}
-                           >
-                               Shop now
-                           </button>
-                        </div>
+                  )}
+
+                  {/* Left Discount Strip */}
+                  <div className="w-[104px] md:w-[120px] bg-[#0071E3] dark:bg-[#0A84FF] text-white flex flex-col justify-center items-center p-4 shrink-0">
+                    <span className="text-[22px] md:text-[26px] font-bold tabular-nums leading-tight">
+                      {c.type === "percent" ? `${c.discount}%` : formatPrice(c.discount)}
+                    </span>
+                    <span className="text-[11px] font-semibold tracking-wider uppercase mt-0.5 opacity-90">
+                      OFF
+                    </span>
+                  </div>
+
+                  {/* Right Details */}
+                  <div className="p-4 flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-[16px] text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        {c.code}
+                      </h3>
+                      <p className="text-[12px] text-[#6E6E73] dark:text-[#98989D] mt-0.5 tabular-nums">
+                        {c.minOrderAmount > 0
+                          ? `For orders over ${formatPrice(c.minOrderAmount)}`
+                          : "No minimum order amount"}
+                        {c.expiresAt && (
+                          <span
+                            className={`block mt-0.5 ${
+                              isExpired ? "text-[#FF3B30] dark:text-[#FF453A] font-semibold" : ""
+                            }`}
+                          >
+                            {isExpired
+                              ? "Expired"
+                              : `Valid until ${new Date(c.expiresAt).toLocaleDateString()}`}
+                          </span>
+                        )}
+                      </p>
                     </div>
+
+                    <div className="sm:text-right flex sm:flex-col items-center sm:items-end justify-between gap-2">
+                      <span
+                        className={`text-[12px] font-semibold ${
+                          isUsed
+                            ? "text-[#6E6E73] dark:text-[#98989D]"
+                            : isExpired
+                            ? "text-[#FF3B30] dark:text-[#FF453A]"
+                            : "text-[#34C759] dark:text-[#30D158]"
+                        }`}
+                      >
+                        {isUsed ? "Already used" : isExpired ? "Expired" : "Available"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isUsed || isExpired) return;
+                          triggerHaptic("light");
+                          navigate("/cart");
+                        }}
+                        disabled={isUsed || isExpired}
+                        className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] font-semibold transition-transform active:scale-95 ${
+                          isUsed || isExpired
+                            ? "bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#8E8E93] cursor-not-allowed"
+                            : "ds-apple-btn-primary"
+                        }`}
+                      >
+                        Shop Now
+                      </button>
+                    </div>
+                  </div>
                 </div>
-            )})}
+              );
+            })}
           </div>
-      ) : (
-          <div className="py-20 text-center bg-white dark:bg-zinc-900 rounded-[32px] border border-zinc-200 dark:border-zinc-800 flex flex-col items-center">
-              {illustrations.emptyCoupons ? (
-                  <div className="w-48 h-48 mx-auto mb-4 rounded-[20px] overflow-hidden">
-                    <img src={illustrations.emptyCoupons} alt="No Coupons" className="w-full h-full object-cover" />
-                  </div>
-              ) : (
-                  <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                      <Ticket className="w-8 h-8 text-zinc-400" />
-                  </div>
-              )}
-              <h3 className="text-xl font-bold mb-2">No coupons claimed</h3>
-              <p className="text-sm font-medium text-zinc-500 mb-6">You haven't claimed any vouchers yet.</p>
-              <button onClick={() => navigate('/coupons')} className="px-6 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold rounded-full">
-                  Browse Coupons
-              </button>
+        ) : (
+          <div className="ds-apple-surface py-16 px-6 text-center rounded-[26px] flex flex-col items-center">
+            {illustrations.emptyCoupons ? (
+              <div className="w-40 h-40 mx-auto mb-4 rounded-[20px] overflow-hidden">
+                <img
+                  src={illustrations.emptyCoupons}
+                  alt="No Coupons"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-14 h-14 bg-[#F5F5F7] dark:bg-[#2C2C2E] rounded-full flex items-center justify-center mb-4">
+                <Ticket className="w-7 h-7 text-[#6E6E73] dark:text-[#98989D]" />
+              </div>
+            )}
+            <h3 className="text-[19px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
+              No coupons claimed
+            </h3>
+            <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] mb-6">
+              You haven&apos;t claimed any vouchers yet.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic("light");
+                navigate("/coupons");
+              }}
+              className="ds-apple-btn-primary whitespace-nowrap px-6 py-2.5 text-[14px] font-semibold rounded-full active:scale-95 transition-transform"
+            >
+              Browse Coupons
+            </button>
           </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
+

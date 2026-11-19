@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import SEO from "../components/SEO";
-import Icon from "../components/Icon";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 const faqs = [
   {
@@ -27,9 +29,9 @@ const faqs = [
 ];
 
 const FAQPage: React.FC = () => {
+  const prefersReducedMotion = useReducedMotion();
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
-  // Generate Rich Snippets
   const generateSchema = () => {
     return {
       "@context": "https://schema.org",
@@ -46,7 +48,7 @@ const FAQPage: React.FC = () => {
   };
 
   return (
-    <div className="bg-zinc-50 dark:bg-[#121212] min-h-screen font-sans pb-24">
+    <div className="ds-apple-shop-canvas bg-[#F5F5F7] dark:bg-black min-h-screen pb-24">
       <SEO
         title="Frequently Asked Questions (FAQ) | DEEP SHOP"
         description="Find answers to common questions about buying Border Cross Products, genuine mobiles, warranty, and delivery at DEEP SHOP Bangladesh."
@@ -57,55 +59,61 @@ const FAQPage: React.FC = () => {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSchema()) }}
       />
 
-      <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 pt-10 pb-16 px-6 text-center">
-        <h1 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight mb-4">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-6 text-center">
+        <p className="ds-apple-eyebrow mb-1.5">Support &amp; Answers</p>
+        <h1 className="ds-apple-display text-[24px] sm:text-[30px] leading-tight font-semibold text-[#1D1D1F] dark:text-white mb-2.5">
           Frequently Asked Questions
         </h1>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm md:text-base max-w-md mx-auto leading-relaxed">
+        <p className="ds-apple-muted text-sm md:text-base max-w-md mx-auto leading-relaxed">
           Everything you need to know about our products, billing, and support.
         </p>
       </div>
 
-      <div className="max-w-3xl mx-auto px-6 mt-8">
-        <div className="bg-white dark:bg-zinc-900 rounded-[2rem] shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-          {faqs.map((faq, i) => (
-            <div
-              key={i}
-              className="group cursor-pointer"
-              onClick={() =>
-                setExpandedFaq(expandedFaq === i ? null : i)
-              }
-            >
-              <button className="w-full px-6 py-5 flex justify-between items-center text-left bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                <span className="text-[15px] font-bold text-zinc-900 dark:text-zinc-100 pr-8">
-                  {faq.q}
-                </span>
-                <div
-                  className={`w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0 transition-transform duration-300 ${
-                    expandedFaq === i
-                      ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-none rotate-180"
-                      : "text-zinc-400 group-hover:border-zinc-900 dark:group-hover:border-white"
-                  }`}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 mt-2">
+        <div className="ds-apple-surface rounded-[24px] overflow-hidden divide-y divide-black/[0.06] dark:divide-white/[0.08]">
+          {faqs.map((faq, i) => {
+            const isOpen = expandedFaq === i;
+            return (
+              <div key={i} className="group">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    setExpandedFaq(isOpen ? null : i);
+                  }}
+                  className="w-full px-5 sm:px-6 py-5 flex justify-between items-center text-left bg-transparent hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors cursor-pointer active:opacity-80"
                 >
-                  <Icon name="chevron-down" className="text-xs" />
-                </div>
-              </button>
-              <AnimatePresence>
-                {expandedFaq === i && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
+                  <span className="text-[15px] font-semibold text-[#1D1D1F] dark:text-white pr-6 tracking-[-0.01em]">
+                    {faq.q}
+                  </span>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+                      isOpen
+                        ? "bg-[#0071E3] dark:bg-[#0A84FF] text-white rotate-180"
+                        : "bg-black/[0.05] dark:bg-white/[0.08] text-[#6E6E73] dark:text-[#98989D]"
+                    }`}
                   >
-                    <div className="px-6 pb-6 text-sm text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed border-t border-zinc-100 dark:border-zinc-800/50 pt-4 bg-zinc-50 dark:bg-zinc-800/20">
-                      {faq.a}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </button>
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                      animate={prefersReducedMotion ? { opacity: 1 } : { height: "auto", opacity: 1 }}
+                      exit={prefersReducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                      transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 sm:px-6 pb-6 pt-3 text-sm ds-apple-muted font-medium leading-relaxed border-t border-black/[0.05] dark:border-white/[0.06] ds-apple-surface-subtle">
+                        {faq.a}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

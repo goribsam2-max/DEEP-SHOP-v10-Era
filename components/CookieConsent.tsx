@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { ShieldCheck } from 'lucide-react';
+import { APPLE_SPRING_DEFAULT, isAppleShoppingRoute } from '../lib/shoppingRoute';
+import { triggerHaptic } from '../lib/haptics';
 
 const BOT_USER_AGENT_REGEX =
   /bot|crawl|spider|slurp|facebookexternalhit|facebot|whatsapp|telegram|twitterbot|discordbot|linkedinbot|slackbot|pinterest|skype|vkshare|embedly|quora|outbrain|W3C_Validator|Lighthouse|HeadlessChrome|Preview/i;
@@ -8,6 +12,8 @@ export const CookieConsent: React.FC = () => {
   const [showConsent, setShowConsent] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const prefersReducedMotion = useReducedMotion();
+  const isAppleShop = isAppleShoppingRoute(location.pathname);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -29,7 +35,6 @@ export const CookieConsent: React.FC = () => {
 
     const isAccepted = localStorage.getItem('vibe_cookie_consent_accepted');
     if (!isAccepted) {
-      // Show consent banner after a tiny delay
       const timer = setTimeout(() => {
         setShowConsent(true);
       }, 1500);
@@ -38,187 +43,69 @@ export const CookieConsent: React.FC = () => {
   }, [location.pathname]);
 
   const handleAccept = () => {
+    triggerHaptic('light');
     localStorage.setItem('vibe_cookie_consent_accepted', 'true');
     setShowConsent(false);
   };
 
   const handleMoreDetails = (e: React.MouseEvent) => {
     e.preventDefault();
+    triggerHaptic('light');
     navigate('/cookie-policy');
   };
 
-  if (!showConsent) return null;
-
   return (
-    <>
-      <style>{`
-        .ckW {
-          position: fixed;
-          left: 20px;
-          bottom: 20px;
-          right: 20px;
-          z-index: 999999;
-          background: #fffdfc;
-          color: #08102b;
-          padding: 20px;
-          border-radius: 24px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          max-width: 420px;
-          border: 1px solid #eceff1;
-          font-family: var(--font-sans), system-ui, sans-serif;
-          animation: ckW-slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .dark .ckW, .drK .ckW {
-          background: #18181b;
-          color: #fffdfc;
-          border-color: #27272a;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        @media (min-width: 768px) {
-          .ckW {
-            left: auto;
-            right: 24px;
-            bottom: 24px;
-          }
-        }
-
-        .ckA {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          text-align: left;
-        }
-
-        .ckH {
-          font-size: 14px;
-          font-weight: 800;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          color: #08102b;
-        }
-
-        .dark .ckH, .drK .ckH {
-          color: #ffffff;
-        }
-
-        .ckD {
-          font-size: 12px;
-          line-height: 1.6;
-          color: #52525b;
-          font-weight: 500;
-        }
-
-        .dark .ckD, .drK .ckD {
-          color: #a1a1aa;
-        }
-
-        .ckF {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-          justify-content: flex-start; /* Align to the left/start */
-        }
-
-        .ckB {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 10px 22px;
-          font-size: 12px;
-          font-weight: 700;
-          border-radius: 50px; /* Full border-radius 50px */
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border: none;
-          outline: none;
-          text-decoration: none;
-        }
-
-        #ckAccept {
-          background: #2563eb; /* Royal blue for Accept in light mode */
-          color: #ffffff;
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-        }
-
-        #ckAccept:hover {
-          background: #1d4ed8;
-          transform: translateY(-1px);
-        }
-
-        #ckAccept:active {
-          transform: translateY(0);
-        }
-
-        .dark #ckAccept, .drK #ckAccept {
-          background: #3b82f6; /* Modern light blue in dark mode */
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-
-        .dark #ckAccept:hover, .drK #ckAccept:hover {
-          background: #60a5fa;
-        }
-
-        .ckF a.ckB {
-          background: #f4f4f5;
-          color: #18181b;
-          border: 1px solid #e4e4e7;
-        }
-
-        .ckF a.ckB:hover {
-          background: #e4e4e7;
-          transform: translateY(-1px);
-        }
-
-        .dark .ckF a.ckB, .drK .ckF a.ckB {
-          background: #27272a;
-          color: #f4f4f5;
-          border-color: #3f3f46;
-        }
-
-        .dark .ckF a.ckB:hover, .drK .ckF a.ckB:hover {
-          background: #3f3f46;
-        }
-
-        @keyframes ckW-slideUp {
-          from {
-            transform: translateY(40px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
-
-      {/* Cookies Consent HTML exact structure from XML */}
-      <div className="ckW" id="ckWrap" data-nosnippet="true" role="region" aria-label="Site preferences">
-        <div className="ckA">
-          <div className="ckH">Cookie Consent</div>
-          <div className="ckD">
-            We serve cookies on this site to analyze traffic, remember your preferences, and optimize your experience.
+    <AnimatePresence>
+      {showConsent && (
+        <motion.div
+          role="region"
+          aria-label="Site preferences"
+          data-nosnippet="true"
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.97 }}
+          animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+          exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.97 }}
+          transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+          className={`fixed left-4 right-4 bottom-24 md:left-auto md:right-6 md:bottom-6 z-[999999] max-w-[400px] rounded-[24px] p-5 flex flex-col gap-3.5 ${
+            isAppleShop
+              ? 'ds-apple-portal ds-apple-popover'
+              : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-white'
+          }`}
+        >
+          <div className="flex items-start gap-3 text-left">
+            <div className="w-9 h-9 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div className="space-y-1">
+              <div className="ds-apple-display text-[14px] font-bold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
+                Cookie Preferences
+              </div>
+              <p className="text-[12.5px] leading-[1.48] text-[#6e6e73] dark:text-[#98989d]">
+                We use cookies to remember your preferences, analyze traffic, and deliver a smoother experience.
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="ckF">
-          <button className="ckB" id="ckAccept" onClick={handleAccept}>
-            Accept
-          </button>
-          <a
-            className="ckB"
-            href="/cookie-policy"
-            onClick={handleMoreDetails}
-            title="Read Cookie Policy"
-            aria-label="Read our complete Cookie Policy"
-          >
-            Read Cookie Policy
-          </a>
-        </div>
-      </div>
-    </>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onPointerDown={() => triggerHaptic('light')}
+              onClick={handleAccept}
+              className="ds-apple-btn-primary px-5 min-h-[38px] rounded-full text-[13px] font-semibold active:scale-[0.97] transition-transform cursor-pointer"
+            >
+              Accept
+            </button>
+            <a
+              href="/cookie-policy"
+              onClick={handleMoreDetails}
+              title="Read Cookie Policy"
+              aria-label="Read our complete Cookie Policy"
+              className="ds-apple-btn-secondary px-4 min-h-[38px] rounded-full text-[13px] font-semibold inline-flex items-center justify-center active:scale-[0.97] transition-transform cursor-pointer"
+            >
+              Cookie Policy
+            </a>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

@@ -3,20 +3,24 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, addDoc, collection } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useNotify } from "../components/Notifications";
-import { motion, AnimatePresence } from "framer-motion";
-import { CreditCard, Check, ArrowLeft, Loader2, Copy } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { CreditCard, Check, Loader2, Copy, Store } from "lucide-react";
 import { formatPrice } from "../lib/utils";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 const CustomPay: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const notify = useNotify();
+  const prefersReducedMotion = useReducedMotion();
 
   const amount = searchParams.get("amount") || "";
   const sellerId = searchParams.get("sellerId") || "";
 
   const [sellerInfo, setSellerInfo] = useState<any>(null);
   const [loadingSeller, setLoadingSeller] = useState(true);
+  const [logoError, setLogoError] = useState(false);
 
   // Form states
   const [senderNumber, setSenderNumber] = useState("");
@@ -48,6 +52,7 @@ const CustomPay: React.FC = () => {
   }, [sellerId]);
 
   const copyToClipboard = (text: string, type: string) => {
+    triggerHaptic("light");
     navigator.clipboard.writeText(text);
     notify(`${type} number copied to clipboard!`, "success");
   };
@@ -55,20 +60,24 @@ const CustomPay: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !sellerId) {
+      triggerHaptic("error");
       notify("Invalid payment link parameters.", "error");
       return;
     }
     if (!senderNumber || !trxId) {
+      triggerHaptic("warning");
       notify("Please fill in all required fields.", "error");
       return;
     }
 
     const currentUser = auth.currentUser;
     if (!currentUser && (!guestName || !guestEmail)) {
+      triggerHaptic("warning");
       notify("Please provide your name and email to proceed.", "error");
       return;
     }
 
+    triggerHaptic("medium");
     setSubmitting(true);
     try {
       await addDoc(collection(db, "custom_payments"), {
@@ -82,10 +91,12 @@ const CustomPay: React.FC = () => {
         status: "pending",
         createdAt: Date.now(),
       });
+      triggerHaptic("success");
       setSubmitted(true);
       notify("Payment details submitted successfully!", "success");
     } catch (err) {
       console.error(err);
+      triggerHaptic("error");
       notify("Failed to submit payment details.", "error");
     } finally {
       setSubmitting(false);
@@ -94,20 +105,29 @@ const CustomPay: React.FC = () => {
 
   if (loadingSeller) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin mb-4" />
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm">Loading custom payment...</p>
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-7 h-7 text-[#0071E3] dark:text-[#0A84FF] animate-spin mb-3" />
+        <p className="text-[#6E6E73] dark:text-[#8E8E93] text-sm">Loading custom payment...</p>
       </div>
     );
   }
 
   if (!amount || !sellerId) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-4">
-        <div className="bg-white dark:bg-zinc-900 rounded-[2rem] p-8 max-w-sm w-full text-center border border-zinc-100 dark:border-zinc-800 shadow-xl">
-          <p className="text-rose-500 font-bold text-lg mb-2">Invalid Link</p>
-          <p className="text-zinc-500 dark:text-zinc-400 text-xs mb-6">This custom payment link is broken or missing parameters.</p>
-          <button onClick={() => navigate("/")} className="w-full h-12 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-bold text-sm">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] flex flex-col items-center justify-center p-4">
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-[28px] p-8 max-w-sm w-full text-center border border-black/[0.06] dark:border-white/[0.1] shadow-sm">
+          <p className="text-[#FF3B30] dark:text-[#FF453A] font-bold text-lg mb-2">Invalid Link</p>
+          <p className="text-[#6E6E73] dark:text-[#8E8E93] text-xs mb-6">
+            This custom payment link is broken or missing parameters.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("light");
+              navigate("/");
+            }}
+            className="w-full h-11 bg-[#0071E3] dark:bg-[#0A84FF] text-white rounded-full font-semibold text-sm active:scale-[0.98] transition-transform"
+          >
             Go to Home
           </button>
         </div>
@@ -116,141 +136,193 @@ const CustomPay: React.FC = () => {
   }
 
   const shopName = sellerInfo?.shopName || "Our Shop";
-  const shopLogo = sellerInfo?.photoURL || sellerInfo?.avatarUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80";
+  const shopLogo = sellerInfo?.photoURL || sellerInfo?.avatarUrl || "";
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-zinc-950 py-8 px-4 flex justify-center items-center">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] py-8 px-4 flex justify-center items-center transition-colors">
       <AnimatePresence mode="wait">
         {!submitted ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            key="form"
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-[2.5rem] shadow-2xl border border-zinc-100 dark:border-zinc-800 p-6 md:p-8 flex flex-col gap-6"
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+            transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+            className="bg-white dark:bg-[#1C1C1E] w-full max-w-md rounded-[28px] shadow-sm border border-black/[0.06] dark:border-white/[0.1] p-6 md:p-8 flex flex-col gap-6"
           >
             {/* Header */}
-            <div className="flex items-center gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
-              <img src={shopLogo} alt={shopName} className="w-12 h-12 rounded-full object-cover border" />
+            <div className="flex items-center gap-3.5 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
+              {shopLogo && !logoError ? (
+                <img
+                  src={shopLogo}
+                  alt={shopName}
+                  referrerPolicy="no-referrer"
+                  onError={() => setLogoError(true)}
+                  className="w-12 h-12 rounded-full object-cover border border-black/[0.08] dark:border-white/[0.1]"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center text-[#0071E3] dark:text-[#0A84FF]">
+                  <Store className="w-5 h-5" />
+                </div>
+              )}
               <div>
-                <h2 className="font-bold text-zinc-950 dark:text-white text-base leading-tight">{shopName}</h2>
-                <p className="text-zinc-500 dark:text-zinc-400 text-xs font-medium">Custom Payment Link</p>
+                <h2 className="font-bold text-base leading-tight">{shopName}</h2>
+                <p className="text-[#6E6E73] dark:text-[#8E8E93] text-xs font-medium">
+                  Custom Payment Link
+                </p>
               </div>
             </div>
 
             {/* Amount Banner */}
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-zinc-800/40 dark:to-zinc-800/20 rounded-3xl p-6 text-center border border-orange-100/50 dark:border-zinc-800">
-              <span className="text-[11px] font-bold text-orange-500 uppercase tracking-widest block mb-1">Amount to Pay</span>
-              <span className="text-3xl font-black text-zinc-950 dark:text-white font-mono">{formatPrice(Number(amount))}</span>
+            <div className="bg-[#F5F5F7] dark:bg-[#2C2C2E]/80 rounded-[22px] p-6 text-center border border-black/[0.05] dark:border-white/[0.08]">
+              <span className="text-[11px] font-semibold text-[#6E6E73] dark:text-[#8E8E93] uppercase tracking-[0.06em] block mb-1">
+                Amount to Pay
+              </span>
+              <span className="text-3xl font-bold tracking-tight tabular-nums">
+                {formatPrice(Number(amount))}
+              </span>
             </div>
 
-            {/* Instruction */}
-            <div className="flex flex-col gap-3">
-              <h3 className="font-bold text-xs text-zinc-800 dark:text-zinc-200 uppercase tracking-wide">Merchant Payment Methods</h3>
-              
+            {/* Merchant Methods */}
+            <div className="flex flex-col gap-2.5">
+              <h3 className="font-semibold text-xs text-[#6E6E73] dark:text-[#8E8E93] uppercase tracking-[0.04em]">
+                Merchant Payment Methods
+              </h3>
+
               {sellerInfo?.bkashNumber && (
-                <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/60 p-3.5 rounded-2xl border border-zinc-100 dark:border-zinc-800/80">
+                <div className="flex items-center justify-between bg-[#F5F5F7] dark:bg-[#2C2C2E]/70 p-3.5 rounded-[18px]">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-pink-500/10 flex items-center justify-center font-bold text-pink-500 text-xs">bK</div>
+                    <div className="w-9 h-9 rounded-xl bg-[#E2125B]/12 flex items-center justify-center font-bold text-[#E2125B] text-xs">
+                      bK
+                    </div>
                     <div>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white">bKash (Personal)</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">{sellerInfo.bkashNumber}</p>
+                      <p className="text-xs font-semibold">bKash (Personal)</p>
+                      <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] font-mono tabular-nums mt-0.5">
+                        {sellerInfo.bkashNumber}
+                      </p>
                     </div>
                   </div>
-                  <button onClick={() => copyToClipboard(sellerInfo.bkashNumber, "bKash")} className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 rounded-xl transition text-zinc-500 dark:text-zinc-400">
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(sellerInfo.bkashNumber, "bKash")}
+                    className="ds-apple-icon-btn w-9 h-9 flex items-center justify-center active:scale-95 transition-transform"
+                    aria-label="Copy bKash number"
+                  >
                     <Copy className="w-4 h-4" />
                   </button>
                 </div>
               )}
 
               {sellerInfo?.nagadNumber && (
-                <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/60 p-3.5 rounded-2xl border border-zinc-100 dark:border-zinc-800/80">
+                <div className="flex items-center justify-between bg-[#F5F5F7] dark:bg-[#2C2C2E]/70 p-3.5 rounded-[18px]">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center font-bold text-orange-500 text-xs font-mono">N</div>
+                    <div className="w-9 h-9 rounded-xl bg-[#F57C20]/12 flex items-center justify-center font-bold text-[#F57C20] text-xs font-mono">
+                      N
+                    </div>
                     <div>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white">Nagad (Personal)</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">{sellerInfo.nagadNumber}</p>
+                      <p className="text-xs font-semibold">Nagad (Personal)</p>
+                      <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] font-mono tabular-nums mt-0.5">
+                        {sellerInfo.nagadNumber}
+                      </p>
                     </div>
                   </div>
-                  <button onClick={() => copyToClipboard(sellerInfo.nagadNumber, "Nagad")} className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 rounded-xl transition text-zinc-500 dark:text-zinc-400">
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(sellerInfo.nagadNumber, "Nagad")}
+                    className="ds-apple-icon-btn w-9 h-9 flex items-center justify-center active:scale-95 transition-transform"
+                    aria-label="Copy Nagad number"
+                  >
                     <Copy className="w-4 h-4" />
                   </button>
                 </div>
               )}
 
               {!sellerInfo?.bkashNumber && !sellerInfo?.nagadNumber && (
-                <p className="text-xs font-semibold text-rose-500 text-center py-2 bg-rose-500/5 rounded-2xl border border-rose-500/10">
+                <p className="text-xs font-medium text-[#FF3B30] dark:text-[#FF453A] text-center py-3 bg-[#FF3B30]/8 rounded-[16px]">
                   No payment merchant details configured by the seller.
                 </p>
               )}
             </div>
 
             {/* Submission Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <h3 className="font-bold text-xs text-zinc-800 dark:text-zinc-200 uppercase tracking-wide">Submit Payment Details</h3>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+              <h3 className="font-semibold text-xs text-[#6E6E73] dark:text-[#8E8E93] uppercase tracking-[0.04em]">
+                Submit Payment Details
+              </h3>
 
               {!auth.currentUser && (
-                <div className="flex flex-col gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 rounded-3xl">
-                  <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Guest Contact Info</p>
+                <div className="flex flex-col gap-3 p-4 bg-[#F5F5F7] dark:bg-[#2C2C2E]/60 rounded-[20px]">
+                  <p className="text-[11px] font-semibold text-[#6E6E73] dark:text-[#8E8E93] uppercase tracking-[0.04em]">
+                    Guest Contact Info
+                  </p>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">Your Full Name</label>
+                    <label className="text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93]">
+                      Your Full Name
+                    </label>
                     <input
                       type="text"
                       required
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
                       placeholder="e.g., John Doe"
-                      className="w-full h-11 px-3.5 text-xs font-medium bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="ds-apple-input w-full h-11 px-3.5 text-sm"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">Your Email Address</label>
+                    <label className="text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93]">
+                      Your Email Address
+                    </label>
                     <input
                       type="email"
                       required
                       value={guestEmail}
                       onChange={(e) => setGuestEmail(e.target.value)}
                       placeholder="e.g., john@example.com"
-                      className="w-full h-11 px-3.5 text-xs font-medium bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      className="ds-apple-input w-full h-11 px-3.5 text-sm"
                     />
                   </div>
                 </div>
               )}
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">Sender Mobile Number</label>
+                <label className="text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93]">
+                  Sender Mobile Number
+                </label>
                 <input
-                  type="text"
+                  type="tel"
                   required
                   value={senderNumber}
                   onChange={(e) => setSenderNumber(e.target.value)}
                   placeholder="e.g., 017XXXXXXXX"
-                  className="w-full h-11 px-3.5 text-xs font-semibold bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-zinc-900 dark:text-white"
+                  className="ds-apple-input w-full h-11 px-3.5 text-sm tabular-nums"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">Transaction ID (TrxID)</label>
+                <label className="text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93]">
+                  Transaction ID (TrxID)
+                </label>
                 <input
                   type="text"
                   required
                   value={trxId}
                   onChange={(e) => setTrxId(e.target.value)}
                   placeholder="e.g., A7B89CF2"
-                  className="w-full h-11 px-3.5 text-xs font-semibold bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-zinc-900 dark:text-white"
+                  className="ds-apple-input w-full h-11 px-3.5 text-sm font-mono uppercase"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full h-12 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 text-white dark:text-zinc-900 font-bold text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2 mt-2"
+                className="w-full h-12 bg-[#0071E3] dark:bg-[#0A84FF] hover:opacity-95 active:scale-[0.98] disabled:opacity-45 text-white font-semibold text-sm rounded-full transition-all flex items-center justify-center gap-2 mt-2"
               >
                 {submitting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    Submit Custom Payment
+                    <span>Submit Custom Payment</span>
                   </>
                 )}
               </button>
@@ -258,27 +330,37 @@ const CustomPay: React.FC = () => {
           </motion.div>
         ) : (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            key="submitted"
+            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-[2.5rem] shadow-2xl border border-zinc-100 dark:border-zinc-800 p-8 text-center flex flex-col items-center gap-6"
+            transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+            className="bg-white dark:bg-[#1C1C1E] w-full max-w-md rounded-[28px] shadow-sm border border-black/[0.06] dark:border-white/[0.1] p-8 text-center flex flex-col items-center gap-6"
           >
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500">
+            <div className="w-16 h-16 bg-[#248A3D]/12 dark:bg-[#30D158]/15 rounded-full flex items-center justify-center text-[#248A3D] dark:text-[#30D158]">
               <Check className="w-8 h-8" />
             </div>
 
             <div>
-              <h2 className="font-bold text-zinc-950 dark:text-white text-xl">Payment Details Submitted</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 text-xs font-medium mt-2">
-                Thank you! Your payment verification request of <span className="font-bold text-zinc-800 dark:text-zinc-200">{formatPrice(Number(amount))}</span> has been successfully sent to the seller.
+              <h2 className="font-bold text-xl">Payment Details Submitted</h2>
+              <p className="text-[#6E6E73] dark:text-[#8E8E93] text-sm mt-2 leading-relaxed">
+                Your payment verification request of{" "}
+                <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                  {formatPrice(Number(amount))}
+                </span>{" "}
+                has been sent to the seller.
               </p>
-              <p className="text-zinc-400 dark:text-zinc-500 text-[10px] mt-2">
-                The merchant will verify your payment with TrxID <span className="font-mono font-bold">{trxId}</span> shortly. You can check its approval status in your "My Orders" custom section.
+              <p className="text-[#8E8E93] text-xs mt-2">
+                TrxID: <span className="font-mono font-semibold">{trxId}</span>
               </p>
             </div>
 
             <button
-              onClick={() => navigate("/orders")}
-              className="w-full h-12 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-bold text-sm shadow-md mt-4"
+              type="button"
+              onClick={() => {
+                triggerHaptic("light");
+                navigate("/orders");
+              }}
+              className="w-full h-12 bg-[#0071E3] dark:bg-[#0A84FF] text-white rounded-full font-semibold text-sm active:scale-[0.98] transition-transform"
             >
               Go to My Orders
             </button>

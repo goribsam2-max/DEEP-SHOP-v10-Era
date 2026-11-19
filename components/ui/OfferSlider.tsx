@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Star, Heart, ShoppingCart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Product } from "../../types";
@@ -10,6 +10,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import { PixelImage } from "./PixelImage";
 import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
 import { useIsWishlisted, toggleWishlistItem } from "../../lib/wishlistStore";
+import { triggerHaptic } from "../../lib/haptics";
 
 function OfferProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ function OfferProductCard({ product }: { product: Product }) {
   const isWishlisted = useIsWishlisted(product.id);
 
   const toggleWishlist = async (e: React.MouseEvent) => {
+    triggerHaptic();
     e.preventDefault();
     e.stopPropagation();
 
@@ -40,80 +42,95 @@ function OfferProductCard({ product }: { product: Product }) {
   };
 
   const addToCart = (e: React.MouseEvent) => {
+    triggerHaptic();
     e.preventDefault();
     e.stopPropagation();
-    
+
     const cart = JSON.parse(localStorage.getItem("f_cart") || "[]");
     const existingIdx = cart.findIndex((i: any) => i.id === product.id);
-    
+
     if (existingIdx > -1) {
-       cart[existingIdx].quantity += 1;
+      cart[existingIdx].quantity += 1;
     } else {
-       cart.push({ ...product, quantity: 1, addedAt: Date.now() });
+      cart.push({ ...product, quantity: 1, addedAt: Date.now() });
     }
-    
+
     localStorage.setItem("f_cart", JSON.stringify(cart));
-    notify("Added to cart successfully", "success");
-    
-    window.dispatchEvent(new CustomEvent('cartUpdated'));
+    notify("Added to cart", "success");
+    window.dispatchEvent(new Event("update_cart"));
+    window.dispatchEvent(new CustomEvent("cartUpdated"));
   };
 
   const productSlug = product.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
   return (
     <div
-      className="pl-4 sm:pl-6 max-w-full flex-[0_0_220px] sm:flex-[0_0_250px] md:flex-[0_0_280px] cursor-pointer"
-      onClick={() => navigate(`/product/${productSlug}/${product.id}`)}
+      className="pl-3.5 sm:pl-5 max-w-full flex-[0_0_220px] sm:flex-[0_0_255px] md:flex-[0_0_280px] cursor-pointer"
+      onClick={() => {
+        triggerHaptic();
+        navigate(`/product/${productSlug}/${product.id}`);
+      }}
     >
-      <div className="relative h-[290px] sm:h-[320px] md:h-[350px] w-full overflow-hidden rounded-[15px] md:rounded-[15px] bg-zinc-100 dark:bg-zinc-800 shadow-lg border border-zinc-200/50 dark:border-zinc-800/50 group hover:-translate-y-1 transition-transform duration-300">
-        <PixelImage
-          src={getProductDisplayImage(product)}
-          alt={product.name}
-          className="absolute inset-0 w-full h-full"
-          imgClassName="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-        />
-        
-        {/* Top Right Badge */}
-        <div className="absolute top-3 right-3 z-10 bg-black/30 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 flex items-center gap-1.5 text-white shadow-xl">
-          <span className="text-xs font-semibold capitalize max-w-[80px] truncate">{product.category || "Offer"}</span>
-          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-          <span className="text-xs font-bold">{product.rating ? product.rating.toFixed(1) : "4.9"}</span>
+      <div className="ds-apple-surface group relative h-[290px] sm:h-[320px] md:h-[348px] w-full overflow-hidden rounded-[22px] flex flex-col transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.985]">
+        <div className="relative flex-1 w-full overflow-hidden ds-apple-surface-subtle border-0">
+          <PixelImage
+            src={getProductDisplayImage(product)}
+            alt={product.name}
+            className="w-full h-full"
+            imgClassName="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+
+          <div className="absolute top-2.5 right-2.5 z-10 bg-black/55 backdrop-blur-md rounded-full px-2.5 py-1 flex items-center gap-1 text-white">
+            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+            <span className="text-[11px] font-semibold tabular-nums">
+              {product.rating ? product.rating.toFixed(1) : "4.9"}
+            </span>
+          </div>
         </div>
 
-        {/* Bottom Pill Card */}
-        <div className="absolute bottom-3 left-3 right-3 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-white/50 dark:border-zinc-800/50 rounded-[18px] p-2 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.12)] gap-1">
-          <span className="font-bold text-zinc-900 dark:text-zinc-100 text-[13px] sm:text-sm truncate px-1.5 pt-0.5">
-            {product.name}
-          </span>
-          <div className="flex items-center justify-between px-1.5 pb-0.5">
-            <div className="flex items-center gap-1.5">
-                <span className="font-black text-[#ea580c] dark:text-[#ff8033] text-sm">
-                  {formatPrice(product.offerPrice || product.price)}
+        <div className="p-3.5 flex flex-col gap-2">
+          <div className="min-w-0">
+            <p className="ds-apple-muted text-[11px] font-medium truncate">
+              {product.category || "Special Offer"}
+            </p>
+            <h4 className="font-semibold text-[14px] leading-snug truncate mt-0.5">
+              {product.name}
+            </h4>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-black/[0.06] dark:border-white/[0.08]">
+            <div className="flex items-baseline gap-1.5 tabular-nums min-w-0">
+              <span className="font-semibold text-[15px] truncate">
+                {formatPrice(product.offerPrice || product.price)}
+              </span>
+              {product.isOffer && product.offerPrice && (
+                <span className="ds-apple-muted line-through text-[11px] truncate">
+                  {formatPrice(product.price)}
                 </span>
-                {product.isOffer && product.offerPrice && (
-                    <span className="font-bold text-zinc-400 dark:text-zinc-500 line-through text-[10px]">
-                      {formatPrice(product.price)}
-                    </span>
-                )}
+              )}
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              <button 
-                  className={cn(
-                    "w-7 h-7 rounded-full border bg-white dark:bg-zinc-900 flex items-center justify-center transition-all shadow-sm active:scale-95",
-                    isWishlisted 
-                      ? "text-red-500 border-red-500 bg-red-50 dark:bg-red-950/30" 
-                      : "border-zinc-100 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-red-500 hover:border-red-100 dark:hover:border-red-900/50"
-                  )}
-                  onClick={toggleWishlist}
+              <button
+                type="button"
+                aria-label="Save to wishlist"
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90 cursor-pointer",
+                  isWishlisted
+                    ? "bg-rose-500/12 text-rose-500"
+                    : "ds-apple-surface-subtle hover:opacity-80"
+                )}
+                onClick={toggleWishlist}
               >
-                  <Heart className={cn("w-3.5 h-3.5", isWishlisted && "fill-current")} />
+                <Heart className={cn("w-4 h-4", isWishlisted && "fill-current")} />
               </button>
-              <button 
-                  className="w-7 h-7 rounded-full border border-zinc-100 dark:border-zinc-800 bg-zinc-900 dark:bg-white flex items-center justify-center hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors shadow-sm active:scale-95 text-white dark:text-zinc-900"
-                  onClick={addToCart}
+              <button
+                type="button"
+                aria-label="Add to cart"
+                className="ds-apple-btn-primary w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
+                onClick={addToCart}
               >
-                  <ShoppingCart className="w-3.5 h-3.5" />
+                <ShoppingCart className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -123,7 +140,7 @@ function OfferProductCard({ product }: { product: Product }) {
   );
 }
 
-export function OfferSlider({ products, autoSlide = true }: { products: Product[], autoSlide?: boolean }) {
+export function OfferSlider({ products, autoSlide = true }: { products: Product[]; autoSlide?: boolean }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
     loop: true,
@@ -134,42 +151,48 @@ export function OfferSlider({ products, autoSlide = true }: { products: Product[
     if (!emblaApi || !autoSlide) return;
     const interval = setInterval(() => {
       emblaApi.scrollNext();
-    }, 3000);
+    }, 3500);
     return () => clearInterval(interval);
   }, [emblaApi, autoSlide]);
 
-  const scrollTo = useCallback((direction: 'left' | 'right') => {
-    if (emblaApi) {
-      if (direction === 'left') emblaApi.scrollPrev();
-      else emblaApi.scrollNext();
-    }
-  }, [emblaApi]);
+  const scrollTo = useCallback(
+    (direction: "left" | "right") => {
+      if (emblaApi) {
+        triggerHaptic();
+        if (direction === "left") emblaApi.scrollPrev();
+        else emblaApi.scrollNext();
+      }
+    },
+    [emblaApi]
+  );
 
   if (products.length === 0) return null;
 
   return (
-    <div className="relative group/offer-slider overflow-hidden -mx-5 md:-mx-12 px-5 md:px-12 w-[calc(100%+40px)] md:w-[calc(100%+96px)]">
-      <div className="absolute top-1/2 -translate-y-1/2 left-6 md:left-14 z-20 opacity-0 group-hover/offer-slider:opacity-100 transition-opacity duration-300 md:block hidden">
+    <div className="relative group/offer-slider overflow-hidden -mx-4 sm:-mx-5 md:-mx-12 px-4 sm:px-5 md:px-12 w-[calc(100%+32px)] sm:w-[calc(100%+40px)] md:w-[calc(100%+96px)]">
+      <div className="absolute top-1/2 -translate-y-1/2 left-6 md:left-14 z-20 opacity-0 group-hover/offer-slider:opacity-100 transition-opacity duration-200 md:block hidden">
         <button
+          type="button"
           onClick={() => scrollTo("left")}
-          className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 shadow-lg flex items-center justify-center hover:bg-white transition-all active:scale-95 text-zinc-900 dark:text-zinc-100"
+          className="ds-apple-surface h-10 w-10 rounded-full flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
           aria-label="Scroll left"
         >
-          <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+          <ChevronLeft className="w-5 h-5" />
         </button>
       </div>
-      <div className="absolute top-1/2 -translate-y-1/2 right-6 md:right-14 z-20 opacity-0 group-hover/offer-slider:opacity-100 transition-opacity duration-300 md:block hidden">
+      <div className="absolute top-1/2 -translate-y-1/2 right-6 md:right-14 z-20 opacity-0 group-hover/offer-slider:opacity-100 transition-opacity duration-200 md:block hidden">
         <button
+          type="button"
           onClick={() => scrollTo("right")}
-          className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 shadow-lg flex items-center justify-center hover:bg-white transition-all active:scale-95 text-zinc-900 dark:text-zinc-100"
+          className="ds-apple-surface h-10 w-10 rounded-full flex items-center justify-center active:scale-90 transition-transform cursor-pointer"
           aria-label="Scroll right"
         >
-          <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+          <ChevronRight className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="overflow-hidden pb-8 pt-2" ref={emblaRef}>
-        <div className="flex -ml-4 sm:-ml-6">
+      <div className="overflow-hidden pb-4 pt-1" ref={emblaRef}>
+        <div className="flex -ml-3.5 sm:-ml-5">
           {products.map((product, idx) => (
             <OfferProductCard key={product.id ? `${product.id}-${idx}` : idx} product={product} />
           ))}

@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ChevronLeft,
   Eye,
@@ -14,12 +14,13 @@ import {
   Truck,
   X,
 } from "lucide-react";
-import { db } from "../firebase";
 import AuthVoiceToggle from "./AuthVoiceToggle";
 import {
   useFooterLogo,
   DEEP_SHOP_LOGO_DATA_URI,
 } from "../lib/useFooterLogo";
+import { APPLE_SPRING_DEFAULT, projectMomentum } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 export { useFooterLogo };
 
@@ -87,74 +88,68 @@ export const DeepShopBottomBrand: React.FC<{ className?: string }> = ({
 export const DeepShopEcosystemHero: React.FC = () => {
   const logoUrl = useFooterLogo();
   const [imgSrc, setImgSrc] = useState(logoUrl);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     setImgSrc(logoUrl);
   }, [logoUrl]);
 
   return (
-    <div className="relative w-full h-[230px] sm:h-[250px] flex items-center justify-center select-none overflow-hidden my-2">
-      {/* Ambient soft glow */}
-      <div className="w-44 h-44 rounded-full bg-[#0064e0]/10 dark:bg-[#0064e0]/20 blur-2xl absolute" />
+    <div className="relative w-full h-[220px] sm:h-[240px] flex items-center justify-center select-none overflow-hidden my-2">
+      <div className="w-40 h-40 rounded-full bg-[#0071E3]/8 dark:bg-[#0A84FF]/14 blur-2xl absolute" />
 
-      {/* Center Primary Auto-Synced Footer Logo */}
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 22 }}
-        className="relative z-20 w-24 h-24 rounded-[28px] bg-white dark:bg-zinc-900 border border-[#dfe5ec] dark:border-zinc-700 shadow-[0_16px_40px_rgba(0,100,224,0.18)] p-2 flex items-center justify-center overflow-hidden"
+        transition={prefersReducedMotion ? { duration: 0.2 } : APPLE_SPRING_DEFAULT}
+        className="relative z-20 w-24 h-24 rounded-[26px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] shadow-md p-2 flex items-center justify-center overflow-hidden"
       >
         <img
           src={imgSrc || DEEP_SHOP_LOGO_DATA_URI}
           alt="DEEP SHOP"
           onError={() => setImgSrc(DEEP_SHOP_LOGO_DATA_URI)}
-          className="w-full h-full object-cover rounded-[20px]"
+          className="w-full h-full object-cover rounded-[18px]"
         />
       </motion.div>
 
-      {/* Top-Left Orbit Badge: Shop */}
       <motion.div
-        animate={{ y: [0, -5, 0] }}
-        transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute left-[10%] sm:left-[14%] top-[18%] w-16 h-16 rounded-full bg-[#0064e0] text-white shadow-[0_10px_24px_rgba(0,100,224,0.3)] flex items-center justify-center"
+        animate={prefersReducedMotion ? undefined : { y: [0, -4, 0] }}
+        transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute left-[10%] sm:left-[14%] top-[18%] w-15 h-15 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white shadow-md flex items-center justify-center"
       >
-        <ShoppingBag className="w-7 h-7 stroke-[2]" />
+        <ShoppingBag className="w-6 h-6 stroke-[2]" />
       </motion.div>
 
-      {/* Top-Center Sparkle Orb */}
       <motion.div
-        animate={{ y: [0, 4, 0] }}
-        transition={{ duration: 3.1, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute left-[34%] top-[8%] w-10 h-10 rounded-2xl bg-violet-500/15 dark:bg-violet-500/25 text-violet-600 dark:text-violet-300 border border-violet-400/30 flex items-center justify-center"
+        animate={prefersReducedMotion ? undefined : { y: [0, 3, 0] }}
+        transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute left-[34%] top-[8%] w-10 h-10 rounded-2xl bg-[#0071E3]/12 dark:bg-[#0A84FF]/18 text-[#0071E3] dark:text-[#0A84FF] border border-[#0071E3]/20 dark:border-[#0A84FF]/25 flex items-center justify-center"
       >
         <Sparkles className="w-5 h-5" />
       </motion.div>
 
-      {/* Top-Right Orbit Badge: Verified Community */}
       <motion.div
-        animate={{ y: [0, -6, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute right-[12%] sm:right-[15%] top-[12%] w-14 h-14 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg flex items-center justify-center"
+        animate={prefersReducedMotion ? undefined : { y: [0, -5, 0] }}
+        transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute right-[12%] sm:right-[15%] top-[12%] w-14 h-14 rounded-2xl bg-[#1D1D1F] dark:bg-[#F5F5F7] text-white dark:text-[#1D1D1F] shadow-md flex items-center justify-center"
       >
-        <ShieldCheck className="w-7 h-7 stroke-[2]" />
+        <ShieldCheck className="w-6 h-6 stroke-[2]" />
       </motion.div>
 
-      {/* Bottom-Left Orbit Badge: Fast Delivery */}
       <motion.div
-        animate={{ y: [0, 5, 0] }}
-        transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute left-[18%] sm:left-[22%] bottom-[12%] w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 shadow-md flex items-center justify-center"
+        animate={prefersReducedMotion ? undefined : { y: [0, 4, 0] }}
+        transition={{ duration: 4.4, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute left-[18%] sm:left-[22%] bottom-[12%] w-12 h-12 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.1] shadow-sm flex items-center justify-center"
       >
         <Truck className="w-5 h-5 stroke-[2]" />
       </motion.div>
 
-      {/* Bottom-Right Orbit Badge: Direct Chat */}
       <motion.div
-        animate={{ y: [0, -4, 0] }}
-        transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute right-[10%] sm:right-[14%] bottom-[14%] w-16 h-16 rounded-[20px] bg-gradient-to-tr from-amber-500 via-rose-500 to-fuchsia-600 text-white shadow-[0_12px_26px_rgba(244,63,94,0.28)] flex items-center justify-center rotate-6"
+        animate={prefersReducedMotion ? undefined : { y: [0, -4, 0] }}
+        transition={{ duration: 4.1, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute right-[10%] sm:right-[14%] bottom-[14%] w-15 h-15 rounded-[18px] bg-[#248A3D] dark:bg-[#30D158] text-white shadow-md flex items-center justify-center rotate-6"
       >
-        <MessageCircle className="w-7 h-7 stroke-[2]" />
+        <MessageCircle className="w-6 h-6 stroke-[2]" />
       </motion.div>
     </div>
   );
@@ -326,44 +321,61 @@ export const BirthdaysInfoSheet: React.FC<{
   isOpen: boolean;
   onClose: () => void;
 }> = ({ isOpen, onClose }) => {
-  return (
+  const prefersReducedMotion = useReducedMotion();
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+        <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
+            transition={{ duration: prefersReducedMotion ? 0.12 : 0.2 }}
+            onClick={() => {
+              triggerHaptic("selection");
+              onClose();
+            }}
+            className="ds-apple-backdrop fixed inset-0"
           />
           <motion.div
-            initial={{ y: "100%", opacity: 0.6 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "100%", opacity: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="relative z-10 w-full sm:max-w-[440px] bg-white dark:bg-[#182028] rounded-t-[28px] sm:rounded-[28px] pb-8 pt-2.5 shadow-2xl border-t sm:border border-zinc-200/80 dark:border-zinc-800"
+            initial={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.6 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
+            transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+            drag={prefersReducedMotion ? false : "y"}
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0.08, bottom: 0.45 }}
+            onDragEnd={(_, info) => {
+              const projected = info.offset.y + projectMomentum(info.velocity.y);
+              if (projected > 100 || info.velocity.y > 400) {
+                triggerHaptic("light");
+                onClose();
+              }
+            }}
+            className="ds-apple-sheet relative z-10 w-full sm:max-w-[440px] rounded-t-[28px] sm:rounded-[28px] pb-8 pt-2.5"
           >
-            {/* Top Grab Handle */}
-            <div className="w-10 h-1 rounded-full bg-[#cbd2d9] dark:bg-zinc-600 mx-auto mb-2" />
+            <div className="w-10 h-1 rounded-full bg-black/[0.15] dark:bg-white/[0.2] mx-auto mb-2" />
 
-            {/* Header Row */}
-            <div className="relative flex items-center justify-center h-12 px-4 border-b border-[#e5e8ec] dark:border-zinc-800">
+            <div className="relative flex items-center justify-center h-12 px-4 border-b border-black/[0.06] dark:border-white/[0.08]">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  onClose();
+                }}
                 aria-label="Close"
-                className="absolute left-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1c2b33] dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition cursor-pointer"
+                className="ds-apple-icon-btn absolute left-3 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
-              <h3 className="text-[17px] font-bold text-[#0a1317] dark:text-white">
+              <h3 className="text-[16px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Birthdays
               </h3>
             </div>
 
-            {/* Body Copy */}
-            <div className="px-6 pt-5 space-y-4 text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-200">
+            <div className="px-6 pt-5 space-y-4 text-[14.5px] leading-relaxed text-[#1D1D1F] dark:text-[#F5F5F7]">
               <p>
                 Providing your birthday improves the features and product
                 recommendations you see, and helps us keep the DEEP SHOP
@@ -374,8 +386,11 @@ export const BirthdaysInfoSheet: React.FC<{
                 details account settings.{" "}
                 <Link
                   to="/privacy"
-                  onClick={onClose}
-                  className="text-[#0064e0] dark:text-[#4599ff] font-medium hover:underline"
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    onClose();
+                  }}
+                  className="text-[#0071E3] dark:text-[#0A84FF] font-semibold hover:underline"
                 >
                   Learn more about how we use your info in our Privacy Policy.
                 </Link>
@@ -384,7 +399,8 @@ export const BirthdaysInfoSheet: React.FC<{
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
@@ -393,46 +409,59 @@ export const StopCreatingAccountModal: React.FC<{
   onStop: () => void;
   onContinue: () => void;
 }> = ({ isOpen, onStop, onContinue }) => {
-  return (
+  const prefersReducedMotion = useReducedMotion();
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6">
+        <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-center justify-center p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onContinue}
-            className="fixed inset-0 ds-liquid-backdrop"
+            transition={{ duration: prefersReducedMotion ? 0.12 : 0.2 }}
+            onClick={() => {
+              triggerHaptic("selection");
+              onContinue();
+            }}
+            className="fixed inset-0 ds-apple-backdrop"
           />
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={{ scale: 0.91, opacity: 0, y: 10 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.94, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.94, opacity: 0, y: 8 }}
-            transition={{ type: "spring", stiffness: 380, damping: 28, mass: 0.85 }}
-            className="ds-liquid-glass-popup relative z-10 w-full max-w-[356px] px-6 pt-7 pb-6 text-left"
+            exit={prefersReducedMotion ? { opacity: 0 } : { scale: 0.94, opacity: 0, y: 8 }}
+            transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+            className="ds-apple-modal relative z-10 w-full max-w-[356px] px-6 pt-7 pb-6 text-left rounded-[24px]"
           >
-            <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">
+            <h3 className="text-[19px] font-bold leading-snug tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Do you want to stop creating your account?
             </h3>
-            <p className="ds-liquid-popup-desc mt-2.5 text-[15.5px] leading-[1.44]">
+            <p className="mt-2 text-[14.5px] leading-relaxed text-[#6E6E73] dark:text-[#98989D]">
               If you stop now, you&apos;ll lose any progress that you&apos;ve
               made.
             </p>
 
-            <div className="mt-6 flex flex-col gap-3">
+            <div className="mt-6 flex flex-col gap-2.5">
               <button
                 type="button"
-                onClick={onStop}
-                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full font-semibold text-[16px] tracking-[-0.01em] transition-transform active:scale-[0.985] cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("warning");
+                  onStop();
+                }}
+                className="w-full min-h-[46px] px-5 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white font-semibold text-[15px] transition-transform active:scale-[0.98] cursor-pointer"
               >
                 Stop creating account
               </button>
               <button
                 type="button"
-                onClick={onContinue}
-                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full font-semibold text-[16px] tracking-[-0.01em] transition-transform active:scale-[0.985] cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  onContinue();
+                }}
+                className="w-full min-h-[46px] px-5 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[15px] transition-transform active:scale-[0.98] cursor-pointer"
               >
                 Continue creating account
               </button>
@@ -440,7 +469,8 @@ export const StopCreatingAccountModal: React.FC<{
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
@@ -473,15 +503,16 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
   }, [logoUrl]);
 
   return (
-    <div className="min-h-[100dvh] w-full bg-white dark:bg-[#0f1419] lg:bg-[#f0f2f5] lg:dark:bg-[#090d11] text-[#0a1317] dark:text-zinc-100 flex flex-col justify-center relative">
+    <div className="min-h-[100dvh] w-full bg-white dark:bg-black lg:bg-[#F5F5F7] lg:dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] flex flex-col justify-center relative">
       <div className="w-full max-w-6xl mx-auto flex-1 lg:flex-initial lg:grid lg:grid-cols-12 lg:items-center lg:gap-12 lg:px-8 xl:px-12 lg:py-10">
-        {/* Desktop Brand Showcase Column (Responsive Desktop Layout) */}
+        {/* Desktop Brand Showcase Column */}
         <div className="hidden lg:flex lg:col-span-6 flex-col justify-center pr-4 space-y-7">
           <Link
             to="/"
+            onClick={() => triggerHaptic("selection")}
             className="inline-flex items-center gap-3.5 w-fit group"
           >
-            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 border border-[#dce1e7] dark:border-zinc-700 shadow-md flex items-center justify-center p-1">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex items-center justify-center p-1">
               <img
                 src={imgSrc || DEEP_SHOP_LOGO_DATA_URI}
                 alt="DEEP SHOP"
@@ -490,10 +521,10 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
               />
             </div>
             <div>
-              <span className="block text-3xl font-extrabold tracking-tight text-[#0064e0] dark:text-[#4599ff]">
+              <span className="block text-[28px] font-bold tracking-[-0.025em] text-[#0071E3] dark:text-[#0A84FF]">
                 DEEP SHOP
               </span>
-              <span className="block text-[13px] font-medium text-[#5e6c77] dark:text-zinc-400">
+              <span className="block text-[13px] font-medium text-[#6E6E73] dark:text-[#98989D]">
                 Official Account Center
               </span>
             </div>
@@ -501,41 +532,41 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
 
           <div className="space-y-3">
             {typeof savedCountBadge === "number" && savedCountBadge > 0 && (
-              <p className="text-sm font-semibold text-[#0064e0] dark:text-[#4599ff]">
+              <p className="text-[13.5px] font-semibold tabular-nums text-[#0071E3] dark:text-[#0A84FF]">
                 {savedCountBadge}{" "}
                 {savedCountBadge === 1 ? "account" : "accounts"} saved on this
                 browser
               </p>
             )}
-            <h2 className="text-3xl xl:text-[38px] font-bold tracking-tight leading-[1.18] text-[#0a1317] dark:text-white [text-wrap:balance]">
+            <h2 className="text-3xl xl:text-[38px] font-bold tracking-[-0.025em] leading-[1.15] text-[#1D1D1F] dark:text-[#F5F5F7] [text-wrap:balance]">
               {desktopHeadline}
             </h2>
-            <p className="text-[16px] leading-relaxed text-[#52606d] dark:text-zinc-400 max-w-lg">
+            <p className="text-[15.5px] leading-relaxed text-[#6E6E73] dark:text-[#98989D] max-w-lg">
               {desktopSubtext}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3.5 pt-1 max-w-lg">
-            <div className="rounded-2xl bg-white dark:bg-[#161b22] border border-[#e1e5eb] dark:border-zinc-800 p-4 shadow-2xs">
-              <div className="w-9 h-9 rounded-xl bg-[#0064e0]/10 text-[#0064e0] dark:text-[#4599ff] flex items-center justify-center mb-2.5">
+            <div className="rounded-[20px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-xs">
+              <div className="w-9 h-9 rounded-xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center mb-2.5">
                 <ShoppingBag className="w-5 h-5" />
               </div>
-              <p className="text-sm font-bold text-[#0a1317] dark:text-zinc-100">
+              <p className="text-[14px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Instant Order Sync
               </p>
-              <p className="text-xs text-[#5e6c77] dark:text-zinc-400 mt-0.5 leading-snug">
+              <p className="text-[12px] text-[#6E6E73] dark:text-[#98989D] mt-0.5 leading-snug">
                 Track deliveries, shopping credits, and e-receipts in real time.
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white dark:bg-[#161b22] border border-[#e1e5eb] dark:border-zinc-800 p-4 shadow-2xs">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5">
+            <div className="rounded-[20px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-xs">
+              <div className="w-9 h-9 rounded-xl bg-[#248A3D]/10 dark:bg-[#30D158]/16 text-[#248A3D] dark:text-[#30D158] flex items-center justify-center mb-2.5">
                 <ShieldCheck className="w-5 h-5" />
               </div>
-              <p className="text-sm font-bold text-[#0a1317] dark:text-zinc-100">
+              <p className="text-[14px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 1-Tap Profile Switch
               </p>
-              <p className="text-xs text-[#5e6c77] dark:text-zinc-400 mt-0.5 leading-snug">
+              <p className="text-[12px] text-[#6E6E73] dark:text-[#98989D] mt-0.5 leading-snug">
                 Switch between buyer, creator, and seller accounts effortlessly.
               </p>
             </div>
@@ -543,20 +574,22 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
         </div>
 
         {/* Mobile Full-Height Native Surface / Desktop Elevated Card */}
-        <div className="lg:col-span-6 w-full flex-1 flex flex-col justify-between min-h-[100dvh] lg:min-h-[640px] lg:max-w-[460px] lg:mx-auto bg-white dark:bg-[#0f1419] lg:dark:bg-[#161b22] lg:rounded-[28px] lg:border lg:border-[#dde2e8] lg:dark:border-zinc-800 lg:shadow-[0_14px_44px_rgba(15,23,42,0.08)] px-5 sm:px-7 pt-3 pb-6 lg:p-8">
-          {/* Top App Bar */}
+        <div className="lg:col-span-6 w-full flex-1 flex flex-col justify-between min-h-[100dvh] lg:min-h-[640px] lg:max-w-[460px] lg:mx-auto bg-white dark:bg-[#1C1C1E] lg:rounded-[28px] lg:border lg:border-black/[0.06] lg:dark:border-white/[0.08] lg:shadow-sm px-5 sm:px-7 pt-3 pb-6 lg:p-8">
           <div className="flex items-center justify-between h-12 -mx-2 shrink-0">
             {!hideBack && onBack ? (
               <button
                 type="button"
-                onClick={onBack}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  onBack();
+                }}
                 aria-label="Go back"
-                className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-[#0a1317] dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer"
+                className="ds-apple-icon-btn w-10 h-10 rounded-full flex items-center justify-center active:scale-[0.95] transition-transform cursor-pointer"
               >
-                <ChevronLeft className="w-6 h-6 stroke-[2]" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
             ) : (
-              <div className="w-[44px] h-[44px]" />
+              <div className="w-10 h-10" />
             )}
 
             <div className="flex items-center gap-2">
@@ -564,20 +597,21 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
               {onMoreClick && (
                 <button
                   type="button"
-                  onClick={onMoreClick}
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    onMoreClick();
+                  }}
                   aria-label="More account options"
-                  className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-[#0a1317] dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer"
+                  className="ds-apple-icon-btn w-10 h-10 rounded-full flex items-center justify-center active:scale-[0.95] transition-transform cursor-pointer"
                 >
-                  <MoreHorizontal className="w-6 h-6 stroke-[2]" />
+                  <MoreHorizontal className="w-5 h-5" />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Main Content Body */}
           <div className="flex-1 flex flex-col w-full">{children}</div>
 
-          {/* Pinned Footer Slot */}
           {footer && <div className="pt-6 shrink-0 w-full">{footer}</div>}
         </div>
       </div>

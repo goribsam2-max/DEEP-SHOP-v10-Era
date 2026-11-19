@@ -30,6 +30,7 @@ import {
   validateInappropriateContent,
   validateRealEmail,
 } from "../lib/authVoiceAndValidation";
+import { triggerHaptic } from "../lib/haptics";
 
 const FOUND_ACCOUNTS_KEY = "deepshop_found_accounts_v1";
 const SELECTED_ACCOUNT_KEY = "deepshop_selected_account_v1";
@@ -145,10 +146,10 @@ export const FindAccountPage: React.FC = () => {
       >
         <form onSubmit={handleContinue} className="space-y-4 pt-1">
           <div className="space-y-2">
-            <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+            <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Find your account
             </h1>
-            <p className="text-[15px] leading-[1.45] text-[#1c2b33] dark:text-zinc-300">
+            <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
               {mode === "mobile"
                 ? "Enter your mobile number."
                 : "Enter your email address."}
@@ -182,16 +183,20 @@ export const FindAccountPage: React.FC = () => {
             <button
               type="submit"
               disabled={searching}
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              onClick={() => triggerHaptic("medium")}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              {searching && <Loader2 className="w-5 h-5 animate-spin" />}
+              {searching && <Loader2 className="w-5 h-5 animate-spin shrink-0" />}
               <span>{searching ? "Searching..." : "Continue"}</span>
             </button>
 
             <button
               type="button"
-              onClick={toggleSearchMode}
-              className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+              onClick={() => {
+                triggerHaptic("selection");
+                toggleSearchMode();
+              }}
+              className="w-full h-[48px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
             >
               {mode === "mobile"
                 ? "Search by email address"
@@ -269,18 +274,21 @@ export const ChooseAccountPage: React.FC = () => {
         desktopSubtext="Choose the account you want to sign in to from the matching profiles below."
       >
         <div className="space-y-4 pt-1">
-          <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+          <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
             Choose your account
           </h1>
 
-          {/* Top Highlight DEEP SHOP Account Banner (Matches IMG_5033 top card) */}
+          {/* Top Highlight DEEP SHOP Account Banner */}
           <button
             type="button"
-            onClick={() => handleSelectProfile(primaryAccount)}
-            className="w-full rounded-[20px] bg-[#f0f2f5] hover:bg-[#e6e9ef] dark:bg-zinc-800/80 dark:hover:bg-zinc-800 p-4 flex items-center justify-between gap-3 text-left transition cursor-pointer"
+            onClick={() => {
+              triggerHaptic("selection");
+              handleSelectProfile(primaryAccount);
+            }}
+            className="w-full rounded-[20px] bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] p-4 flex items-center justify-between gap-3 text-left transition cursor-pointer"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-7 h-7 rounded-lg overflow-hidden bg-white dark:bg-zinc-900 border border-[#dce1e7] dark:border-zinc-700 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-lg overflow-hidden bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] flex items-center justify-center shrink-0">
                 {logoSrc ? (
                   <img
                     src={logoSrc}
@@ -289,16 +297,16 @@ export const ChooseAccountPage: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-[10px] font-black text-zinc-900 dark:text-white">
+                  <span className="text-[10px] font-black text-[#1D1D1F] dark:text-[#F5F5F7]">
                     DS
                   </span>
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-[16px] font-semibold text-[#0a1317] dark:text-white leading-snug">
+                <p className="text-[16px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
                   DEEP SHOP Account
                 </p>
-                <p className="text-[15px] text-[#5e6c77] dark:text-zinc-400 truncate">
+                <p className="text-[15px] text-[#6E6E73] dark:text-[#98989D] truncate">
                   {primaryAccount.displayName}
                 </p>
               </div>
@@ -312,7 +320,7 @@ export const ChooseAccountPage: React.FC = () => {
                   sizeClass="w-12 h-12"
                 />
                 {logoSrc && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full overflow-hidden bg-white dark:bg-zinc-900 p-0.5 ring-2 ring-[#f0f2f5] dark:ring-zinc-800">
+                  <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full overflow-hidden bg-white dark:bg-[#1C1C1E] p-0.5 ring-2 ring-[#F5F5F7] dark:ring-[#2C2C2E]">
                     <img
                       src={logoSrc}
                       alt="DEEP SHOP"
@@ -322,11 +330,11 @@ export const ChooseAccountPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              <ChevronRight className="w-5 h-5 text-[#5e6c77] dark:text-zinc-400" />
+              <ChevronRight className="w-5 h-5 text-[#6E6E73] dark:text-[#98989D]" />
             </div>
           </button>
 
-          <p className="text-[14px] leading-[1.45] text-[#5e6c77] dark:text-zinc-400 pt-1">
+          <p className="text-[14px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D] pt-1">
             These DEEP SHOP profiles match the email address or mobile number
             that you entered.
           </p>
@@ -337,8 +345,11 @@ export const ChooseAccountPage: React.FC = () => {
               <button
                 key={acc.uid}
                 type="button"
-                onClick={() => handleSelectProfile(acc)}
-                className="w-full rounded-[20px] border border-[#dce1e7] dark:border-zinc-800 bg-white dark:bg-[#121820] hover:bg-[#f7f8fa] dark:hover:bg-zinc-800/70 active:scale-[0.99] px-4 py-3.5 flex items-center justify-between gap-3 text-left transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  handleSelectProfile(acc);
+                }}
+                className="w-full rounded-[20px] border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#1C1C1E] hover:bg-[#F5F5F7] dark:hover:bg-[#2C2C2E] active:scale-[0.98] px-4 py-3.5 flex items-center justify-between gap-3 text-left transition cursor-pointer"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <DefaultUserAvatar
@@ -347,15 +358,15 @@ export const ChooseAccountPage: React.FC = () => {
                     sizeClass="w-[54px] h-[54px]"
                   />
                   <div className="min-w-0">
-                    <p className="text-[16px] font-semibold text-[#0a1317] dark:text-zinc-100 truncate">
+                    <p className="text-[16px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                       {acc.displayName}
                     </p>
-                    <p className="text-[14px] text-[#5e6c77] dark:text-zinc-400">
+                    <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D]">
                       DEEP SHOP
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-[#5e6c77] dark:text-zinc-400 shrink-0" />
+                <ChevronRight className="w-5 h-5 text-[#6E6E73] dark:text-[#98989D] shrink-0" />
               </button>
             ))}
           </div>
@@ -608,7 +619,7 @@ export const ReviewAccountPage: React.FC = () => {
     return (
       <DeepShopAuthShell onBack={handleNotYou}>
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-7 h-7 animate-spin text-[#0064e0]" />
+          <Loader2 className="w-7 h-7 animate-spin text-[#0071E3] dark:text-[#0A84FF]" />
         </div>
       </DeepShopAuthShell>
     );
@@ -620,13 +631,16 @@ export const ReviewAccountPage: React.FC = () => {
         onBack={() => navigate(`/find-account${cleanRedirectSearch()}`)}
       >
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
-          <p className="text-[16px] font-semibold text-[#0a1317] dark:text-white">
+          <p className="text-[16px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
             Select an account first
           </p>
           <button
             type="button"
-            onClick={() => navigate(`/find-account${cleanRedirectSearch()}`)}
-            className="w-full h-[48px] rounded-full bg-[#0064e0] text-white font-semibold text-[16px] cursor-pointer"
+            onClick={() => {
+              triggerHaptic("selection");
+              navigate(`/find-account${cleanRedirectSearch()}`);
+            }}
+            className="w-full h-[48px] rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] text-white font-semibold text-[16px] active:scale-[0.98] transition cursor-pointer"
           >
             Find my account
           </button>
@@ -655,15 +669,15 @@ export const ReviewAccountPage: React.FC = () => {
       >
         {stepMode === "review" && (
           <div className="pt-2 flex flex-col items-center text-center">
-            <h1 className="text-[26px] font-bold tracking-tight leading-[1.2] text-[#0a1317] dark:text-white">
+            <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Review your selection
             </h1>
-            <p className="mt-2 text-[16px] text-[#1c2b33] dark:text-zinc-300">
+            <p className="mt-2 text-[16px] text-[#6E6E73] dark:text-[#98989D]">
               We&apos;ll help you log in as {account.displayName}
             </p>
 
-            {/* Centered Large Profile Avatar matching IMG_5034 */}
-            <div className="my-8 p-1 rounded-full border border-[#dce1e7] dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xs">
+            {/* Centered Large Profile Avatar */}
+            <div className="my-8 p-1 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#1C1C1E] shadow-xs">
               <DefaultUserAvatar
                 photoURL={account.photoURL}
                 displayName={account.displayName}
@@ -675,19 +689,25 @@ export const ReviewAccountPage: React.FC = () => {
               <button
                 type="button"
                 disabled={submitting}
-                onClick={handlePrimaryLoginClick}
-                className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  handlePrimaryLoginClick();
+                }}
+                className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
               >
-                {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
-                <span className="truncate px-3">
+                {submitting && <Loader2 className="w-5 h-5 animate-spin shrink-0" />}
+                <span className="truncate px-1">
                   Log in as {account.displayName}
                 </span>
               </button>
 
               <button
                 type="button"
-                onClick={handleNotYou}
-                className="w-full h-[48px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 active:scale-[0.99] text-[#0a1317] dark:text-zinc-100 font-semibold text-[16px] transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  handleNotYou();
+                }}
+                className="w-full h-[48px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
               >
                 Not you?
               </button>
@@ -703,10 +723,10 @@ export const ReviewAccountPage: React.FC = () => {
                 displayName={account.displayName}
                 sizeClass="w-20 h-20"
               />
-              <h2 className="mt-3 text-[20px] font-bold text-[#0a1317] dark:text-white">
+              <h2 className="mt-3 text-[20px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {account.displayName}
               </h2>
-              <p className="text-[13px] text-[#5e6c77] dark:text-zinc-400">
+              <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D]">
                 DEEP SHOP Account
               </p>
             </div>
@@ -725,16 +745,19 @@ export const ReviewAccountPage: React.FC = () => {
                 type="button"
                 role="checkbox"
                 aria-checked={rememberLogin}
-                onClick={() => setRememberLogin((r) => !r)}
+                onClick={() => {
+                  triggerHaptic("toggle");
+                  setRememberLogin((r) => !r);
+                }}
                 className={`w-[22px] h-[22px] rounded-[6px] flex items-center justify-center shrink-0 transition cursor-pointer ${
                   rememberLogin
-                    ? "bg-[#0064e0] text-white"
-                    : "border-2 border-[#65737e] dark:border-zinc-500 bg-transparent"
+                    ? "bg-[#0071E3] dark:bg-[#0A84FF] text-white"
+                    : "border-2 border-[#6E6E73] dark:border-[#98989D] bg-transparent"
                 }`}
               >
                 {rememberLogin && <Check className="w-3.5 h-3.5 stroke-[3]" />}
               </button>
-              <span className="text-[15px] text-[#0a1317] dark:text-zinc-200">
+              <span className="text-[15px] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Remember login info on this device
               </span>
             </div>
@@ -742,17 +765,21 @@ export const ReviewAccountPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] active:scale-[0.99] disabled:opacity-60 text-white font-semibold text-[16px] flex items-center justify-center gap-2 transition cursor-pointer"
+              onClick={() => triggerHaptic("medium")}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] disabled:opacity-60 text-white font-semibold text-[15px] whitespace-nowrap flex items-center justify-center gap-2 transition cursor-pointer"
             >
-              {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
+              {submitting && <Loader2 className="w-5 h-5 animate-spin shrink-0" />}
               <span>{submitting ? "Logging in..." : "Log in"}</span>
             </button>
 
             <button
               type="button"
               disabled={submitting}
-              onClick={handlePasswordReset}
-              className="w-full h-[46px] rounded-full bg-[#f0f2f5] hover:bg-[#e4e6eb] dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[#0a1317] dark:text-zinc-100 font-semibold text-[15px] transition cursor-pointer"
+              onClick={() => {
+                triggerHaptic("selection");
+                handlePasswordReset();
+              }}
+              className="w-full h-[46px] px-5 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] active:scale-[0.98] text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[13.5px] sm:text-[14px] whitespace-nowrap transition cursor-pointer"
             >
               {!isPhoneSyntheticEmail && account.email.includes("@")
                 ? "Send password reset link via email"
@@ -763,19 +790,22 @@ export const ReviewAccountPage: React.FC = () => {
 
         {stepMode === "reset-sent" && (
           <div className="pt-4 text-center space-y-5">
-            <div className="mx-auto w-16 h-16 rounded-full bg-[#0064e0]/10 text-[#0064e0] dark:text-[#4599ff] flex items-center justify-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center">
               <Check className="w-8 h-8 stroke-[2.5]" />
             </div>
-            <h2 className="text-[22px] font-bold text-[#0a1317] dark:text-white">
+            <h2 className="text-[22px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
               Password reset requested
             </h2>
-            <p className="text-[15px] leading-relaxed text-[#46545e] dark:text-zinc-300">
+            <p className="text-[15px] leading-relaxed text-[#6E6E73] dark:text-[#98989D]">
               {resetMessage}
             </p>
             <button
               type="button"
-              onClick={() => navigate(`/signin${cleanRedirectSearch()}`)}
-              className="w-full h-[48px] rounded-full bg-[#0064e0] hover:bg-[#0056c1] text-white font-semibold text-[16px] cursor-pointer"
+              onClick={() => {
+                triggerHaptic("selection");
+                navigate(`/signin${cleanRedirectSearch()}`);
+              }}
+              className="w-full h-[48px] px-5 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white font-semibold text-[15px] whitespace-nowrap transition cursor-pointer"
             >
               Back to Log in
             </button>

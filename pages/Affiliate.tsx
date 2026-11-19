@@ -23,7 +23,7 @@ import {
   sendAffiliateRequestToTelegram,
   sendCreatorVideoToTelegram,
 } from "../services/telegram";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useTheme } from "../components/ThemeContext";
 import { Card } from "@/components/ui/card"
@@ -34,6 +34,8 @@ import { DiscreteTabs, TabItem } from "../components/ui/discrete-tab";
 import { TourProvider, TourAlertDialog, useTour } from "@/components/ui/tour";
 import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
 import { LiquidGlassPopup } from "../components/ui/liquid-glass-popup";
+import { APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 // GIF Generator
 import { generateStickerGif } from "../components/GifGenerator";
@@ -47,6 +49,7 @@ const tabsData: TabItem[] = [
 const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => {
   const notify = useNotify();
   const { formatPrice } = useRegion();
+  const prefersReducedMotion = useReducedMotion();
   const [colorScheme, setColorScheme] = useState<"black" | "white">("white");
   const [submitting, setSubmitting] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
@@ -255,73 +258,87 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in relative z-10 w-full">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xl">
-        {/* Background decorations */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/10 blur-3xl rounded-full pointer-events-none translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/10 blur-3xl rounded-full pointer-events-none -translate-x-1/2 translate-y-1/2"></div>
-
+    <div className="space-y-6 relative z-10 w-full">
+      <div className="ds-apple-surface rounded-[28px] p-6 md:p-8 relative overflow-hidden">
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                Earn with DEEP SHOP! 🚀
+              <h2 className="ds-apple-display text-2xl md:text-3xl font-bold mb-3 text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2">
+                Earn with DEEP SHOP
               </h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-xl leading-relaxed">
+              <p className="text-sm ds-apple-muted max-w-xl leading-relaxed">
                 Put these custom animated stickers on your videos (Facebook, TikTok, YouTube). 
                 Add our website link to your video description or comment section. 
-                <strong className="text-zinc-900 dark:text-zinc-100 block mt-2 px-3 py-2 bg-pink-50 dark:bg-pink-900/30 rounded-lg w-max border border-pink-100 dark:border-pink-800/30">
-                  🎁 You will get {formatPrice(10)} for every 1k views!
+                <strong className="text-[#1D1D1F] dark:text-[#F5F5F7] block mt-3 px-3.5 py-2 bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] rounded-xl w-max tabular-nums">
+                  Reward: {formatPrice(10)} per 1k views
                 </strong>
               </p>
             </div>
             
-            <div className="shrink-0 bg-zinc-50 dark:bg-zinc-950 p-4 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col gap-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-                Customize Sticker Color
+            <div className="shrink-0 ds-apple-surface-subtle p-4 rounded-2xl flex flex-col gap-2">
+              <label className="text-[11px] font-semibold ds-apple-muted uppercase tracking-wider">
+                Sticker Background
               </label>
-              <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1">
-                <button 
-                  onClick={() => setColorScheme('white')}
-                  className={`flex-1 py-1 px-4 text-xs font-semibold rounded-md transition-all ${colorScheme === 'white' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
-                >
-                  Light
-                </button>
-                <button 
-                  onClick={() => setColorScheme('black')}
-                  className={`flex-1 py-1 px-4 text-xs font-semibold rounded-md transition-all ${colorScheme === 'black' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
-                >
-                  Dark
-                </button>
+              <div className="ds-apple-segmented relative flex rounded-full p-1">
+                {(["white", "black"] as const).map((scheme) => {
+                  const active = colorScheme === scheme;
+                  return (
+                    <button
+                      key={scheme}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("selection");
+                        setColorScheme(scheme);
+                      }}
+                      className={`relative z-10 flex-1 py-1.5 px-4 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
+                        active
+                          ? "text-[#1D1D1F] dark:text-[#F5F5F7]"
+                          : "ds-apple-muted"
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="stickerColorPill"
+                          transition={
+                            prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY
+                          }
+                          className="absolute inset-0 -z-10 rounded-full bg-white dark:bg-[#3A3A3C] shadow-xs"
+                        />
+                      )}
+                      {scheme === "white" ? "Light" : "Dark"}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10 text-center">
             {stickers.map((st) => (
-               <div key={st.id} className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-5 flex flex-col items-center justify-between group shadow-sm relative overflow-hidden transition-all hover:shadow-md">
-                 <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                 
+               <div key={st.id} className="ds-apple-surface-subtle rounded-[24px] p-5 flex flex-col items-center justify-between group relative overflow-hidden transition-transform hover:-translate-y-0.5">
                  <div 
-                   className="w-32 h-32 md:w-36 md:h-36 mb-4 filter drop-shadow-md relative z-10 flex shrink-0 items-center justify-center"
+                   className="w-32 h-32 md:w-36 md:h-36 mb-4 relative z-10 flex shrink-0 items-center justify-center"
                    dangerouslySetInnerHTML={{ __html: st.svg }}
                  ></div>
                  
                  <div className="flex-1 flex flex-col justify-end w-full">
-                   <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm md:text-base mb-1">{st.title}</h3>
-                   <p className="text-[11px] md:text-xs text-zinc-500 mb-4 px-2 line-clamp-2 leading-tight">
-                     "{st.desc}"
+                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm md:text-base mb-1">{st.title}</h3>
+                   <p className="text-xs ds-apple-muted mb-4 px-2 line-clamp-2 leading-snug">
+                     {st.desc}
                    </p>
                    <button 
-                     onClick={() => handleDownload(st.id, `vibe-${st.id}.gif`)}
+                     onClick={() => {
+                       triggerHaptic("medium");
+                       handleDownload(st.id, `vibe-${st.id}.gif`);
+                     }}
                      disabled={generatingGif === st.id}
                      type="button"
-                     className="inline-flex items-center justify-center bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-bold py-2.5 px-4 rounded-xl w-full hover:scale-105 active:scale-95 transition-transform shadow-md disabled:opacity-50 disabled:scale-100"
+                     className="ds-apple-btn-primary inline-flex items-center justify-center text-xs font-semibold py-2.5 px-4 rounded-full w-full whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer"
                    >
                      {generatingGif === st.id ? (
-                       <><Loader2 className="mr-1.5 w-[14px] h-[14px] animate-spin" /> Generating...</>
+                       <><Loader2 className="mr-1.5 w-[14px] h-[14px] shrink-0 animate-spin" /> Generating...</>
                      ) : (
-                       <><Icon name="download" className="mr-1.5" style={{ width: '14px', height: '14px' }} /> Download GIF</>
+                       <><Icon name="download" className="mr-1.5 shrink-0" style={{ width: '14px', height: '14px' }} /> Download GIF</>
                      )}
                    </button>
                  </div>
@@ -330,29 +347,29 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
-            <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 rounded-3xl p-6 flex flex-col justify-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900 flex items-center justify-center shrink-0 shadow-inner">
-                <Icon name="info-circle" className="text-orange-500 text-xl" />
+            <div className="ds-apple-surface-subtle rounded-[24px] p-6 flex flex-col justify-center gap-4">
+              <div className="w-11 h-11 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center shrink-0">
+                <Icon name="info-circle" className="text-xl" />
               </div>
               <div>
-                <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-base mb-2">How to claim your reward?</h4>
-                <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed mb-4">
-                  Once your video reaches at least <strong>1,000 views</strong>, submit its link in the form. Our team will verify the video view count and check if our website link is in the description/comment, then instantly add the money to your Wallet!
+                <h4 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] text-base mb-2">How to claim your reward</h4>
+                <p className="text-sm ds-apple-muted leading-relaxed mb-4">
+                  Once your video reaches at least <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">1,000 views</strong>, submit its link in the form. Our team verifies the view count and link placement, then credits your Wallet.
                 </p>
-                <p className="note mt-2">
-                  <strong>Payout Rate:</strong> Payout is {formatPrice(10)} per 1k views. Unlimited videos allowed!
+                <p className="text-xs font-semibold text-[#248A3D] dark:text-[#30D158] tabular-nums">
+                  Payout Rate: {formatPrice(10)} per 1k views · Unlimited videos
                 </p>
               </div>
             </div>
 
-            <div className="bg-zinc-50 dark:bg-[#121212] border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
-               <h4 className="font-bold text-zinc-900 dark:text-zinc-100 mb-4 flex items-center gap-2">
-                 <Icon name="video" className="text-zinc-500" />
+            <div className="ds-apple-surface-subtle rounded-[24px] p-6">
+               <h4 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-4 flex items-center gap-2">
+                 <Icon name="video" className="text-[#0071E3] dark:text-[#0A84FF]" />
                  Submit Your Video
                </h4>
                <form onSubmit={handleVideoSubmit} className="space-y-4">
                   <div>
-                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                    <label className="text-xs font-semibold ds-apple-muted block mb-1.5">
                       Video URL (TikTok/YouTube/Facebook)
                     </label>
                     <input
@@ -361,14 +378,17 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
                       placeholder="e.g. https://tiktok.com/@profile/video/123"
                       value={videoUrl}
                       onChange={(e) => setVideoUrl(e.target.value)}
-                      className="w-full bg-white dark:bg-zinc-900 px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 block text-sm font-medium outline-none focus:border-zinc-400 dark:focus:border-zinc-600 transition-colors"
+                      className="ds-apple-input w-full px-4 py-3 rounded-2xl block text-sm font-medium outline-none"
                     />
                   </div>
-                  <Button type="submit" disabled={submitting} className="w-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 h-12 rounded-xl mt-2 relative overflow-hidden group">
-                    <span className="relative z-10 flex items-center justify-center font-bold">
-                      {submitting ? <span className="w-28 h-4 rounded-full ds-skeleton inline-block" /> : "Send Request For Review"}
-                    </span>
-                  </Button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    onClick={() => triggerHaptic("medium")}
+                    className="ds-apple-btn-primary w-full h-12 px-5 rounded-full mt-2 text-sm font-semibold flex items-center justify-center whitespace-nowrap disabled:opacity-50 cursor-pointer"
+                  >
+                    {submitting ? <span className="w-28 h-4 rounded-full ds-skeleton inline-block" /> : "Send Request For Review"}
+                  </button>
                </form>
             </div>
           </div>
@@ -529,44 +549,44 @@ const CreatorHub: React.FC<{ userData: UserProfile }> = ({ userData }) => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 md:p-8">
-        <h2 className="text-xl font-semibold tracking-tight mb-4 flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
-          <Icon name="video" className="text-zinc-500" /> Content Creator Hub
+    <div className="space-y-6">
+      <div className="ds-apple-surface rounded-[28px] p-6 md:p-8">
+        <h2 className="text-xl font-bold tracking-tight mb-4 flex items-center gap-2.5 text-[#1D1D1F] dark:text-[#F5F5F7]">
+          <Icon name="video" className="text-[#0071E3] dark:text-[#0A84FF]" /> Content Creator Hub
         </h2>
-        <div className="bg-zinc-50 dark:bg-[#121212] p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 mb-6">
-          <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 mb-3">
+        <div className="ds-apple-surface-subtle p-5 rounded-2xl mb-6">
+          <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">
             Rules & Guidelines
           </h3>
-          <ul className="list-disc pl-5 space-y-2 text-zinc-600 dark:text-zinc-400 text-sm">
+          <ul className="list-disc pl-5 space-y-2 ds-apple-muted text-sm tabular-nums">
             <li>
-              <strong>Eligibility:</strong> YouTube (1k+ subscribers), Facebook (5k+ followers), TikTok (10k+ followers).
+              <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">Eligibility:</strong> YouTube (1k+ subscribers), Facebook (5k+ followers), TikTok (10k+ followers).
             </li>
             <li>
-              <strong>YouTube:</strong> Minimum 1000 views to get {formatPrice(100)}.
+              <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">YouTube:</strong> Minimum 1000 views to get {formatPrice(100)}.
             </li>
             <li>
-              <strong>Facebook:</strong> Minimum 1000 views to get {formatPrice(150)}.
+              <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">Facebook:</strong> Minimum 1000 views to get {formatPrice(150)}.
             </li>
             <li>
-              <strong>TikTok:</strong> Minimum 5000 views to get {formatPrice(200)}.
+              <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">TikTok:</strong> Minimum 5000 views to get {formatPrice(200)}.
             </li>
             <li>
               Video must explicitly mention that{" "}
-              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+              <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 DEEP SHOP
               </span>{" "}
               is sponsoring the video.
             </li>
             <li>
               Description must include our website link:{" "}
-              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+              <span className="font-semibold text-[#0071E3] dark:text-[#0A84FF]">
                 https://www.deepshop.top
               </span>
             </li>
             <li>
               You must talk about DEEP SHOP products & features for at least{" "}
-              <strong>1 minute</strong>.
+              <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">1 minute</strong>.
             </li>
             <li>
               No limit! You can submit an unlimited number of videos as long as
@@ -578,7 +598,7 @@ const CreatorHub: React.FC<{ userData: UserProfile }> = ({ userData }) => {
         {userData.creatorStatus === 'approved' ? (
           <form onSubmit={handleVideoSubmit} className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+              <label className="text-xs font-semibold ds-apple-muted block mb-1.5">
                 Social Media Platform
               </label>
               <CustomDropdown
@@ -592,7 +612,7 @@ const CreatorHub: React.FC<{ userData: UserProfile }> = ({ userData }) => {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+              <label className="text-xs font-semibold ds-apple-muted block mb-1.5">
                 Video URL
               </label>
               <input
@@ -606,38 +626,50 @@ const CreatorHub: React.FC<{ userData: UserProfile }> = ({ userData }) => {
                 }
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-[#121212] px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 block text-sm font-medium outline-none"
+                className="ds-apple-input w-full px-4 py-3 rounded-2xl block text-sm font-medium outline-none"
               />
             </div>
             <div>
-              <Button type="submit" disabled={submitting} className="w-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200">
+              <button
+                type="submit"
+                disabled={submitting}
+                onClick={() => triggerHaptic("medium")}
+                className="ds-apple-btn-primary w-full h-12 px-5 rounded-full text-sm font-semibold flex items-center justify-center whitespace-nowrap cursor-pointer disabled:opacity-50"
+              >
                 {submitting ? "Submitting..." : "Submit Video For Review"}
-              </Button>
+              </button>
             </div>
           </form>
         ) : userData.creatorStatus === 'pending' ? (
-           <div className="bg-zinc-100 dark:bg-zinc-800 p-6 rounded-2xl text-center">
-             <Icon name="clock" className="text-4xl text-zinc-400 mb-2" />
-             <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Application Under Review</h3>
-             <p className="text-sm text-zinc-500 mt-2">We are reviewing your channel/page to ensure it meets our guidelines. Please check back later.</p>
+           <div className="ds-apple-surface-subtle p-6 rounded-2xl text-center">
+             <Icon name="clock" className="text-4xl ds-apple-muted mb-2" />
+             <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">Application Under Review</h3>
+             <p className="text-sm ds-apple-muted mt-2">We are reviewing your channel/page to ensure it meets our guidelines. Please check back later.</p>
            </div>
         ) : userData.creatorStatus === 'rejected' ? (
-           <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-2xl text-center border border-red-200 dark:border-red-800/30">
-             <Icon name="times-circle" className="text-4xl text-red-500 mb-2" />
-             <h3 className="font-semibold text-red-700 dark:text-red-400">Application Not Approved</h3>
-             <p className="text-sm text-red-600 dark:text-red-400 mt-2">Unfortunately, your application was not approved. <br/><strong>Reason:</strong> {userData.creatorRejectReason || "Did not meet follower/subscriber criteria."}</p>
+           <div className="bg-[#FF3B30]/10 p-6 rounded-2xl text-center border border-[#FF3B30]/25">
+             <Icon name="times-circle" className="text-4xl text-[#FF3B30] dark:text-[#FF453A] mb-2" />
+             <h3 className="font-semibold text-[#FF3B30] dark:text-[#FF453A]">Application Not Approved</h3>
+             <p className="text-sm text-[#FF3B30] dark:text-[#FF453A] mt-2">Unfortunately, your application was not approved. <br/><strong>Reason:</strong> {userData.creatorRejectReason || "Did not meet follower/subscriber criteria."}</p>
              {userData.creatorApplyDate && Date.now() - userData.creatorApplyDate > 24 * 60 * 60 * 1000 ? (
-               <Button onClick={async () => await updateDoc(doc(db, "users", userData.uid), { creatorStatus: "none" })} variant="outline" className="mt-4">
+               <button
+                 type="button"
+                 onClick={async () => {
+                   triggerHaptic("medium");
+                   await updateDoc(doc(db, "users", userData.uid), { creatorStatus: "none" });
+                 }}
+                 className="ds-apple-btn-secondary mt-4 px-5 h-10 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer"
+               >
                  Re-apply Now
-               </Button>
+               </button>
              ) : (
-               <p className="text-xs text-zinc-500 mt-4">You can re-apply after 24 hours.</p>
+               <p className="text-xs ds-apple-muted mt-4">You can re-apply after 24 hours.</p>
              )}
            </div>
         ) : (
           <form onSubmit={handleApply} className="space-y-4">
              <div>
-              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+              <label className="text-xs font-semibold ds-apple-muted block mb-1.5">
                 Channel / Page Platform
               </label>
               <CustomDropdown
@@ -651,7 +683,7 @@ const CreatorHub: React.FC<{ userData: UserProfile }> = ({ userData }) => {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+              <label className="text-xs font-semibold ds-apple-muted block mb-1.5">
                 Channel/Page/Profile URL
               </label>
               <input
@@ -665,13 +697,18 @@ const CreatorHub: React.FC<{ userData: UserProfile }> = ({ userData }) => {
                 }
                 value={channelUrl}
                 onChange={(e) => setChannelUrl(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-[#121212] px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 block text-sm font-medium outline-none"
+                className="ds-apple-input w-full px-4 py-3 rounded-2xl block text-sm font-medium outline-none"
               />
             </div>
             <div>
-              <Button type="submit" disabled={submitting} className="w-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 block h-12 rounded-xl">
+              <button
+                type="submit"
+                disabled={submitting}
+                onClick={() => triggerHaptic("medium")}
+                className="ds-apple-btn-primary w-full h-12 px-5 rounded-full text-sm font-semibold flex items-center justify-center whitespace-nowrap cursor-pointer disabled:opacity-50"
+              >
                 {submitting ? "Applying..." : "Apply for Creator Hub"}
-              </Button>
+              </button>
             </div>
           </form>
         )}
@@ -805,20 +842,25 @@ const AffiliatePage: React.FC = () => {
 
   if (userData.affiliateStatus === "pending") {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-10 min-h-screen bg-background text-foreground text-center relative">
-        <div className="flex items-center space-x-6 mb-10 text-left">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+      <div className="ds-apple-shop-canvas min-h-screen pb-24">
+        <div className="max-w-lg mx-auto px-4 pt-10 sm:pt-14 text-center">
+          <div className="mb-6">
+            <p className="ds-apple-eyebrow mb-1">Application Status</p>
+            <h1 className="ds-apple-display text-[22px] sm:text-[26px] leading-tight font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
               Partner Program
             </h1>
-            <p className="text-[9px] font-bold text-zinc-800 dark:text-zinc-200/70  tracking-normal mt-1 pl-1">
-              Application Status
+          </div>
+          <div className="ds-apple-surface rounded-[28px] p-8 space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center mx-auto">
+              <Clock className="w-7 h-7" />
+            </div>
+            <h2 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              Your request is under review
+            </h2>
+            <p className="text-sm ds-apple-muted leading-relaxed">
+              We will notify you once your Partner application has been processed.
             </p>
           </div>
-        </div>
-        <div className="pt-20">
-          <h2 className="text-xl font-semibold mb-4">Your request is under review</h2>
-          <p className="text-zinc-500">We will notify you once your application has been processed.</p>
         </div>
       </div>
     );
@@ -826,55 +868,42 @@ const AffiliatePage: React.FC = () => {
 
   if (!userData.isAffiliate) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-10 min-h-screen bg-background text-foreground font-sans relative overflow-hidden">
-        <div className="flex items-center space-x-6 mb-10">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Partner Program
+      <div className="ds-apple-shop-canvas min-h-screen pb-24">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
+          <div className="mb-8 text-center md:text-left">
+            <p className="ds-apple-eyebrow mb-1.5">Partner Program</p>
+            <h1 className="ds-apple-display text-[24px] sm:text-[30px] leading-tight font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">
+              Partner &amp; Earn
             </h1>
-            <p className="text-[9px] font-bold text-zinc-800 dark:text-zinc-200/70  tracking-normal mt-1 pl-1">
-              Apply Now
-            </p>
-          </div>
-        </div>
-
-        <div className="mb-10 text-center md:text-left">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
-              Partner & Earn
-            </h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium leading-relaxed max-w-xl">
+            <p className="ds-apple-muted text-sm font-medium leading-relaxed max-w-xl">
               Join our exclusive network. Share your custom promo code to give
               your audience 5% OFF, and earn up to{" "}
-              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+              <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                 {formatPrice(200)} commission
               </span>{" "}
               for every successful sale directly to your wallet based on your
-              tier!
+              tier.
             </p>
           </div>
 
-          <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-zinc-900 p-6 flex flex-col items-start gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <div>
-                <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 mb-2 tracking-tight">
-                  5% Flat Discount
-                </h3>
-                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                  Your audience gets a flat discount on every purchase using
-                  your code.
-                </p>
-              </div>
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="ds-apple-surface p-6 flex flex-col items-start gap-2 rounded-[24px]">
+              <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                5% Flat Discount
+              </h3>
+              <p className="text-xs ds-apple-muted font-medium leading-relaxed">
+                Your audience gets a flat discount on every purchase using your
+                code.
+              </p>
             </div>
-            <div className="bg-white dark:bg-zinc-900 p-6 flex flex-col items-start gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              <div>
-                <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 mb-2 tracking-tight">
-                  Tiered Commission
-                </h3>
-                <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                  The more you sell, the more you earn. Reach higher tiers for
-                  up to {formatPrice(200)} per sale.
-                </p>
-              </div>
+            <div className="ds-apple-surface p-6 flex flex-col items-start gap-2 rounded-[24px]">
+              <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                Tiered Commission
+              </h3>
+              <p className="text-xs ds-apple-muted font-medium leading-relaxed tabular-nums">
+                The more you sell, the more you earn. Reach higher tiers for up
+                to {formatPrice(200)} per sale.
+              </p>
             </div>
           </div>
 
@@ -888,6 +917,7 @@ const AffiliatePage: React.FC = () => {
             isSubmitting={submitting}
           />
         </div>
+      </div>
     );
   }
 
@@ -1073,414 +1103,584 @@ const AffiliatePage: React.FC = () => {
   const chartData = getChartData();
 
   return (
-    <div className={`min-h-screen bg-background text-foreground font-sans relative overflow-hidden ${activeTab !== 'dashboard' ? 'max-w-4xl mx-auto px-6 py-10' : ''}`}>
-        <div aria-hidden className="fixed inset-0 isolate contain-strict -z-10 opacity-30 dark:opacity-60 pointer-events-none">
-            <div className="bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,rgba(0,0,0,0.06)_0,rgba(0,0,0,0.02)_50%,rgba(0,0,0,0.01)_80%)] dark:bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,rgba(255,255,255,0.06)_0,rgba(255,255,255,0.02)_50%,rgba(255,255,255,0.01)_80%)] absolute top-0 right-0 h-[800px] w-[560px] -translate-y-[350px] rounded-full" />
-            <div className="bg-[radial-gradient(50%_50%_at_50%_50%,rgba(0,0,0,0.04)_0,rgba(0,0,0,0.01)_80%,transparent_100%)] dark:bg-[radial-gradient(50%_50%_at_50%_50%,rgba(255,255,255,0.04)_0,rgba(255,255,255,0.01)_80%,transparent_100%)] absolute top-0 right-0 h-[800px] w-[240px] -translate-y-[350px] rounded-full" />
-        </div>
-      {activeTab !== 'dashboard' && activeTab !== 'creator_hub' && (
-      <div className="flex items-center justify-between mb-10 relative z-10">
-        <div className="flex items-center space-x-6">
-          <div className="flex flex-col">
-            <h1 className="text-lg md:text-xl lg:text-base xl:text-sm font-semibold tracking-tight  text-shine">
-              {activeTab === "menu" ? "Partners." : 
-               activeTab === "dashboard" ? "Dashboard" : 
-               activeTab === "creator_hub" ? "Creator Hub" : 
-               "Small Creators"}
-            </h1>
-            <p className="text-[9px] font-bold text-zinc-800 dark:text-zinc-200/70  tracking-normal mt-1 pl-1">
-              {activeTab === "menu" ? "Select an option" : "Affiliate Portal"}
+    <div className="ds-apple-shop-canvas min-h-screen pb-24">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-5 sm:pt-6 space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="ds-apple-eyebrow">
+              {activeTab === "menu" ? "Partner Portal" : "Affiliate Portal"}
             </p>
+            <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.02em] leading-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+              {activeTab === "menu"
+                ? "Partners"
+                : activeTab === "dashboard"
+                ? "Partner Dashboard"
+                : activeTab === "creator_hub"
+                ? "Creator Hub"
+                : "Small Creators"}
+            </h1>
           </div>
+
+          {activeTab !== "menu" && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic("selection");
+                navigate("/affiliate/menu");
+              }}
+              className="ds-apple-btn-secondary h-9 px-4 rounded-full text-xs font-semibold shrink-0 whitespace-nowrap active:scale-[0.97] transition-transform cursor-pointer"
+            >
+              All Hubs
+            </button>
+          )}
         </div>
-      </div>
-      )}
-
-      {activeTab === "menu" ? (
-        <div className="max-w-5xl mx-auto space-y-4">
-          {tabsData.map(tab => {
-            const IconCmp = tab.icon;
-            return (
-              <div 
-                key={tab.id}
-                onClick={() => navigate(`/affiliate/${tab.id}`)}
-                className="bg-white dark:bg-zinc-900 rounded-[28px] p-5 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform shadow-sm border border-zinc-100 dark:border-zinc-800"
-              >
-                <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                        <IconCmp className="w-5 h-5 text-zinc-900 dark:text-zinc-100" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{tab.title}</h3>
-                        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">View {tab.title.toLowerCase()}</p>
-                    </div>
-                </div>
-                <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center">
-                    <Icon name="chevron-right" className="text-zinc-900 dark:text-zinc-100" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : activeTab === "dashboard" ? (
-        <div className="font-sans relative">
-          {/* Green Header Section */}
-          <div className="bg-gradient-to-br from-[#1cdb5e] to-[#0ba340] dark:from-[#1cdb5e]/90 dark:to-[#0ba340]/90 pt-4 pb-32 px-6 rounded-b-[2.5rem] text-white overflow-hidden relative">
-            <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
-               <svg width="400" height="400" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#ffffff" d="M45.7,-76.4C58.9,-69.3,69.1,-55.3,77.7,-40.7C86.3,-26.1,93.4,-10.8,92.6,4.1C91.8,19,83.1,33.5,72.6,45.4C62.1,57.3,49.8,66.6,35.6,73.1C21.4,79.6,5.3,83.3,-9.7,81.1C-24.7,78.9,-38.6,70.8,-48.9,59.9C-59.2,49,-65.9,35.3,-71.4,20.8C-76.9,6.3,-81.1,-9,-77.8,-22.4C-74.5,-35.8,-63.7,-47.3,-50.9,-54.8C-38.1,-62.3,-23.3,-65.8,-8,-66.4C7.3,-67,24,-64.7,32.5,-83.5L45.7,-76.4Z" transform="translate(100 100) scale(1.1)" />
-               </svg>
-            </div>
-            
-            <div className="max-w-3xl mx-auto relative z-10">
-              <div className="flex items-center justify-between mb-8">
-                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                    <Icon name="bars" className="text-xl" />
-                 </div>
-                 <div className="w-16 h-8 opacity-70">
-                    <svg viewBox="0 0 100 50" className="w-full h-full fill-none stroke-white stroke-2">
-                       <path d="M0,40 Q25,10 50,30 T100,10" />
-                    </svg>
-                 </div>
-              </div>
-
-              <div className="flex justify-between items-end mb-6">
-                <div>
-                  <h1 className="text-[3rem] sm:text-[3.5rem] font-black tracking-tighter leading-none mb-1">
-                    {formatPrice(((userData.walletBalance || 0) + logs.reduce((acc: any, log: any) => acc + (log.commission || 0), 0)))}
-                  </h1>
-                  <p className="text-white/80 font-semibold text-sm tracking-wide ml-1">Earned</p>
-                </div>
-                <div className="text-right">
-                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1">
-                    {formatPrice(userData.walletBalance || 0)}
-                  </h2>
-                  <p className="text-white/80 font-semibold text-sm tracking-wide">Available</p>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                 <button onClick={() => navigate("/withdraw")} className="bg-white text-[#1cdb5e] hover:bg-zinc-50 px-6 py-2.5 rounded-full font-bold shadow-sm transition-colors text-sm">
-                    Withdraw
-                 </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 relative -mt-24 z-20 pb-12">
-            <div className="bg-white dark:bg-[#1e1e1e] rounded-[2rem] shadow-xl pt-6 pb-4 px-4 sm:px-6 border border-gray-100 dark:border-zinc-800">
-               <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Partner Tracker</h3>
-                 <button className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
-                   <Icon name="sliders-h" className="w-5 h-5" />
-                 </button>
-               </div>
-               
-               <div className="space-y-6">
-                 <div className="flex items-center justify-between pb-6 border-b border-gray-100 dark:border-zinc-800">
-                    <div>
-                       <h4 className="font-semibold text-zinc-900 dark:text-white text-base mb-1">Total Sales Record</h4>
-                       <div className="flex items-center gap-2">
-                         <span className="font-bold text-lg text-[#1cdb5e]">{salesCount}</span>
-                         <span className="text-xs text-zinc-500 font-medium">/ {currentTarget} Goal</span>
-                       </div>
-                    </div>
-                    <div className="text-right">
-                       <p className="text-xs font-semibold text-zinc-500 mb-1">Level {currentTier}</p>
-                       <p className="text-xs text-zinc-400 font-medium">{formatPrice(currentCommission)} Cap</p>
-                    </div>
-                 </div>
-
-                 <div className="flex items-center justify-between pb-6 border-b border-gray-100 dark:border-zinc-800">
-                    <div>
-                       <h4 className="font-semibold text-zinc-900 dark:text-white text-base mb-1">Sales Progress</h4>
-                       <div className="flex items-center gap-2">
-                         <span className="font-bold text-lg text-zinc-900 dark:text-white">{progressPercent.toFixed(0)}%</span>
-                         <span className="text-xs text-zinc-500 font-medium">to next Level</span>
-                       </div>
-                    </div>
-                    <div className="w-32 bg-gray-100 dark:bg-zinc-800 rounded-full h-2">
-                       <div className="bg-[#1cdb5e] h-2 rounded-full" style={{ width: `${progressPercent}%` }}></div>
-                    </div>
-                 </div>
-                 
-                 <div className="flex items-center justify-between">
-                    <div>
-                       <h4 className="font-semibold text-zinc-900 dark:text-white text-base mb-1">Next Cap Target</h4>
-                       <div className="flex items-center gap-2">
-                         <span className="font-bold text-lg text-zinc-900 dark:text-white">{formatPrice(nextCommission)}</span>
-                       </div>
-                    </div>
-                    <div className="text-right">
-                       <p className="text-xs font-semibold text-zinc-500 mb-1">Shares: {currentTier}</p>
-                       <span className="inline-block bg-[#1cdb5e]/10 text-[#1cdb5e] px-3 py-1 rounded-full text-[10px] font-bold">
-                         {currentTier === 4 && salesCount >= t4Limit ? "MAX Level" : `+${currentTarget - salesCount} to reach`}
-                       </span>
-                    </div>
-                 </div>
-               </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-8 overflow-hidden relative hidden md:block">
-            <div className="flex justify-between items-center mb-6 z-10 relative">
-              <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                Performance Over Time
-              </h2>
-              <div className="flex items-center gap-4 text-[10px] font-bold  tracking-normal text-zinc-400">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"></span>{" "}
-                  Sales
-                </div>
-              </div>
-            </div>
-            <div className="h-56 w-full min-w-0 min-h-[200px] relative z-10 -ml-2">
-              <ResponsiveContainer width="100%" height={224} minWidth={100} minHeight={200}>
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+        {activeTab === "menu" ? (
+          <div className="space-y-3">
+            {tabsData.map((itemTab) => {
+              const IconCmp = itemTab.icon;
+              return (
+                <button
+                  key={itemTab.id}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    navigate(`/affiliate/${itemTab.id}`);
+                  }}
+                  className="ds-apple-surface w-full rounded-[24px] p-5 flex items-center justify-between text-left active:scale-[0.985] transition-transform cursor-pointer"
                 >
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="month"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: "#71717a" }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: "#71717a" }}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    cursor={{
-                      stroke: "#ecfdf5",
-                      strokeWidth: 2,
-                      strokeDasharray: "4 4",
-                    }}
-                    contentStyle={{
-                      backgroundColor: "white",
-                      borderRadius: "1.5rem",
-                      border: "1px solid #f4f4f5",
-                      boxShadow: "0 10px 25px -5px rgb(0 0 0 / 0.1)",
-                      padding: "12px 16px",
-                    }}
-                    itemStyle={{
-                      fontSize: "14px",
-                      fontWeight: "900",
-                      color: "#10b981",
-                    }}
-                    labelStyle={{
-                      fontSize: "10px",
-                      color: "#a1a1aa",
-                      textTransform: "",
-                      letterSpacing: "0.1em",
-                      fontWeight: "700",
-                      marginBottom: "4px",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="sales"
-                    name="Total Sales"
-                    stroke="#10b981"
-                    strokeWidth={4}
-                    fillOpacity={1}
-                    fill="url(#colorSales)"
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center shrink-0">
+                      <IconCmp className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-[17px] text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        {itemTab.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm ds-apple-muted">
+                        Open {itemTab.title.toLowerCase()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-9 h-9 ds-apple-surface-subtle rounded-full flex items-center justify-center shrink-0">
+                    <Icon name="chevron-right" className="text-sm ds-apple-muted" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : activeTab === "dashboard" ? (
+          <div className="space-y-6">
+            {/* Apple Wallet Partner Balance Card */}
+            <div className="rounded-[28px] bg-[#1D1D1F] dark:bg-[#1C1C1E] text-white p-6 sm:p-8 border border-black/10 dark:border-white/10 shadow-xl relative overflow-hidden">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#0071E3] dark:bg-[#0A84FF] flex items-center justify-center">
+                    <Wallet className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white/60">
+                      Partner Wallet
+                    </p>
+                    <p className="text-xs font-semibold text-white/90">
+                      Level {currentTier} Tier
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-white/10 text-[11px] font-semibold text-[#30D158] tabular-nums">
+                  +{formatPrice(currentCommission)} / sale
+                </span>
+              </div>
+
+              <div className="flex flex-wrap justify-between items-end gap-4 mb-6 tabular-nums">
+                <div>
+                  <p className="text-white/65 font-medium text-xs uppercase tracking-wider mb-1">
+                    Total Earned
+                  </p>
+                  <h2 className="text-4xl sm:text-[3.25rem] font-bold tracking-[-0.03em] leading-none">
+                    {formatPrice(
+                      (userData.walletBalance || 0) +
+                        logs.reduce(
+                          (acc: any, log: any) => acc + (log.commission || 0),
+                          0
+                        )
+                    )}
+                  </h2>
+                </div>
+                <div className="text-left sm:text-right">
+                  <p className="text-white/65 font-medium text-xs uppercase tracking-wider mb-1">
+                    Available Balance
+                  </p>
+                  <p className="text-2xl sm:text-3xl font-bold tracking-tight text-[#30D158]">
+                    {formatPrice(userData.walletBalance || 0)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic("medium");
+                    navigate("/withdraw");
+                  }}
+                  className="bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] text-white px-5 min-h-[42px] rounded-full font-semibold text-[13px] sm:text-sm whitespace-nowrap shrink-0 transition-transform active:scale-[0.97] cursor-pointer"
+                >
+                  Withdraw Funds
+                </button>
+                <span className="text-xs text-white/60 tabular-nums">
+                  Min payout: {formatPrice(minWithdrawal)}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10 pb-8 mt-4">
-             <div className="bg-white dark:bg-[#1e1e1e] rounded-[2rem] shadow-sm border border-gray-100 dark:border-zinc-800 p-6 sm:p-8">
-               <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">Your Promotion Hub</h3>
-               <p className="text-sm font-medium text-zinc-500 mb-8 max-w-md">
-                  Share your code everywhere. Customers get <span className="text-zinc-900 dark:text-white font-bold">5% OFF</span> instantly, and you earn <span className="text-[#1cdb5e] font-bold">{formatPrice(currentCommission)}</span> immediately upon delivery.
-               </p>
-               
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Custom Promo Code */}
+            {/* Partner Tracker Card */}
+            <div className="ds-apple-surface rounded-[24px] p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  Partner Tracker
+                </h3>
+                <span className="text-xs font-semibold ds-apple-muted tabular-nums">
+                  Level {currentTier}
+                </span>
+              </div>
+
+              <div className="space-y-5 tabular-nums">
+                <div className="flex items-center justify-between pb-5 border-b border-black/[0.06] dark:border-white/[0.08]">
                   <div>
-                     <label className="text-xs font-semibold text-zinc-500 tracking-wide uppercase mb-3 block">Custom Promo Code</label>
-                     {isEditingCode ? (
-                       <div className="flex bg-zinc-50 dark:bg-[#121212] border-2 border-[#1cdb5e] p-1.5 rounded-xl transition-all h-14">
-                         <input
-                           type="text"
-                           value={tempCode}
-                           onChange={(e) => setTempCode(e.target.value.toUpperCase())}
-                           className="flex-1 bg-transparent px-4 text-sm font-bold text-zinc-900 dark:text-white outline-none min-w-0"
-                           placeholder="e.g. VIBE"
-                         />
-                         <div className="flex gap-1.5 shrink-0">
-                           <button onClick={handleSaveCode} disabled={savingCode} className="w-12 flex items-center justify-center bg-[#1cdb5e] text-white rounded-lg shadow-sm">
-                              {savingCode ? <Icon name="spinner-third" className="animate-spin text-sm" /> : <Icon name="check" className="text-sm" />}
-                           </button>
-                           <button onClick={() => { setIsEditingCode(false); setTempCode(userData.affiliateCode || ""); }} className="w-12 flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg">
-                              <Icon name="times" className="text-sm" />
-                           </button>
-                         </div>
-                       </div>
-                     ) : (
-                       <div className="flex bg-zinc-50 dark:bg-[#121212] border border-zinc-200 dark:border-zinc-800 p-1.5 rounded-xl transition-all h-14">
-                         <input
-                           type="text"
-                           readOnly
-                           value={affiliateCode}
-                           className="flex-1 bg-transparent px-4 text-base font-bold text-zinc-900 dark:text-white outline-none min-w-0"
-                         />
-                         <div className="flex gap-1.5 shrink-0">
-                           <button onClick={() => setIsEditingCode(true)} className="px-4 text-[10px] font-bold uppercase tracking-wider bg-white dark:bg-[#1e1e1e] border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 text-zinc-600 rounded-lg">Edit</button>
-                           <button onClick={() => copyToClipboard(affiliateCode)} className="px-5 text-[10px] font-bold uppercase tracking-wider bg-[#1cdb5e] text-white rounded-lg shadow-sm">
-                              {isCopying ? "Copied!" : "Copy"}
-                           </button>
-                         </div>
-                       </div>
-                     )}
+                    <h4 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm sm:text-base mb-1">
+                      Total Sales Record
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-lg text-[#248A3D] dark:text-[#30D158]">
+                        {salesCount}
+                      </span>
+                      <span className="text-xs ds-apple-muted font-medium">
+                        / {currentTarget} Goal
+                      </span>
+                    </div>
                   </div>
-                  
-                  {/* Direct Link */}
+                  <div className="text-right">
+                    <p className="text-xs font-semibold ds-apple-muted mb-0.5">
+                      Level {currentTier}
+                    </p>
+                    <p className="text-xs ds-apple-muted font-medium">
+                      {formatPrice(currentCommission)} Cap
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pb-5 border-b border-black/[0.06] dark:border-white/[0.08] gap-4">
                   <div>
-                     <label className="text-xs font-semibold text-zinc-500 tracking-wide uppercase mb-3 block">Direct Link</label>
-                     <div className="flex bg-zinc-50 dark:bg-[#121212] border border-zinc-200 dark:border-zinc-800 p-1.5 rounded-xl transition-all h-14">
-                       <div className="w-10 flex items-center justify-center text-zinc-400"><Icon name="link" /></div>
-                       <input
-                         type="text"
-                         readOnly
-                         value={shareLink}
-                         className="flex-1 bg-transparent px-2 text-xs font-semibold text-zinc-500 outline-none min-w-0 truncate"
-                       />
-                       <button onClick={() => copyToClipboard(shareLink)} className="px-5 text-[10px] font-bold uppercase tracking-wider bg-white dark:bg-[#1e1e1e] border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 text-zinc-600 rounded-lg">
+                    <h4 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm sm:text-base mb-1">
+                      Sales Progress
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        {progressPercent.toFixed(0)}%
+                      </span>
+                      <span className="text-xs ds-apple-muted font-medium">
+                        to next Level
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-32 sm:w-40 bg-black/[0.08] dark:bg-white/[0.12] rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-[#0071E3] dark:bg-[#0A84FF] h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm sm:text-base mb-1">
+                      Next Cap Target
+                    </h4>
+                    <span className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {formatPrice(nextCommission)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-semibold ds-apple-muted mb-1">
+                      Shares: {currentTier}
+                    </p>
+                    <span className="inline-block bg-[#248A3D]/12 dark:bg-[#30D158]/16 text-[#248A3D] dark:text-[#30D158] px-3 py-1 rounded-full text-[11px] font-semibold">
+                      {currentTier === 4 && salesCount >= t4Limit
+                        ? "MAX Level"
+                        : `+${currentTarget - salesCount} to reach`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Performance Chart */}
+            <div className="ds-apple-surface p-6 sm:p-8 rounded-[24px] overflow-hidden relative hidden md:block">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  Performance Over Time
+                </h2>
+                <div className="flex items-center gap-1.5 text-xs font-semibold ds-apple-muted">
+                  <span className="w-2 h-2 rounded-full bg-[#0071E3] dark:bg-[#0A84FF]" />
+                  <span>Sales</span>
+                </div>
+              </div>
+              <div className="h-56 w-full min-w-0 min-h-[200px] -ml-2">
+                <ResponsiveContainer
+                  width="100%"
+                  height={224}
+                  minWidth={100}
+                  minHeight={200}
+                >
+                  <AreaChart
+                    data={chartData}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0071E3" stopOpacity={0.28} />
+                        <stop offset="95%" stopColor="#0071E3" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: "#6E6E73" }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: "#6E6E73" }}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      cursor={{
+                        stroke: "#0071E3",
+                        strokeWidth: 1.5,
+                        strokeDasharray: "4 4",
+                      }}
+                      contentStyle={{
+                        backgroundColor: "rgba(255,255,255,0.94)",
+                        borderRadius: "16px",
+                        border: "1px solid rgba(0,0,0,0.08)",
+                        boxShadow: "0 12px 32px -8px rgba(0,0,0,0.16)",
+                        padding: "10px 14px",
+                      }}
+                      itemStyle={{
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        color: "#0071E3",
+                      }}
+                      labelStyle={{
+                        fontSize: "11px",
+                        color: "#6E6E73",
+                        fontWeight: "600",
+                        marginBottom: "2px",
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="sales"
+                      name="Total Sales"
+                      stroke="#0071E3"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorSales)"
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Promotion Hub */}
+            <div className="ds-apple-surface rounded-[24px] p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 tracking-tight">
+                Your Promotion Hub
+              </h3>
+              <p className="text-sm font-medium ds-apple-muted mb-6 max-w-md tabular-nums">
+                Share your code everywhere. Customers get{" "}
+                <span className="text-[#1D1D1F] dark:text-[#F5F5F7] font-bold">
+                  5% OFF
+                </span>{" "}
+                instantly, and you earn{" "}
+                <span className="text-[#248A3D] dark:text-[#30D158] font-bold">
+                  {formatPrice(currentCommission)}
+                </span>{" "}
+                immediately upon delivery.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Custom Promo Code */}
+                <div>
+                  <label className="text-xs font-semibold ds-apple-muted tracking-wide uppercase mb-2 block">
+                    Custom Promo Code
+                  </label>
+                  {isEditingCode ? (
+                    <div className="ds-apple-input flex p-1.5 rounded-2xl h-14 border-[#0071E3]! dark:border-[#0A84FF]!">
+                      <input
+                        type="text"
+                        value={tempCode}
+                        onChange={(e) =>
+                          setTempCode(e.target.value.toUpperCase())
+                        }
+                        className="flex-1 bg-transparent px-3.5 text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] outline-none min-w-0"
+                        placeholder="e.g. VIBE"
+                      />
+                      <div className="flex gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic("success");
+                            handleSaveCode();
+                          }}
+                          disabled={savingCode}
+                          className="ds-apple-btn-primary w-11 flex items-center justify-center rounded-xl cursor-pointer"
+                        >
+                          {savingCode ? (
+                            <Icon name="spinner-third" className="animate-spin text-sm" />
+                          ) : (
+                            <Icon name="check" className="text-sm" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic("selection");
+                            setIsEditingCode(false);
+                            setTempCode(userData.affiliateCode || "");
+                          }}
+                          className="ds-apple-btn-secondary w-11 flex items-center justify-center rounded-xl cursor-pointer"
+                        >
+                          <Icon name="times" className="text-sm" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ds-apple-input flex p-1.5 rounded-2xl h-14">
+                      <input
+                        type="text"
+                        readOnly
+                        value={affiliateCode}
+                        className="flex-1 bg-transparent px-3.5 text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] outline-none min-w-0"
+                      />
+                      <div className="flex gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic("selection");
+                            setIsEditingCode(true);
+                          }}
+                          className="ds-apple-btn-secondary px-4 text-xs font-semibold whitespace-nowrap rounded-xl cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic("success");
+                            copyToClipboard(affiliateCode);
+                          }}
+                          className="ds-apple-btn-primary px-5 text-xs font-semibold whitespace-nowrap rounded-xl cursor-pointer"
+                        >
                           {isCopying ? "Copied!" : "Copy"}
-                       </button>
-                     </div>
-                  </div>
-               </div>
-             </div>
-          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10 mt-6">
-            <div
-              onClick={() => navigate("/subscription")}
-              className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-700 transition-all shadow-2xs"
+                {/* Direct Link */}
+                <div>
+                  <label className="text-xs font-semibold ds-apple-muted tracking-wide uppercase mb-2 block">
+                    Direct Link
+                  </label>
+                  <div className="ds-apple-input flex p-1.5 rounded-2xl h-14">
+                    <div className="w-10 flex items-center justify-center ds-apple-muted shrink-0">
+                      <Icon name="link" />
+                    </div>
+                    <input
+                      type="text"
+                      readOnly
+                      value={shareLink}
+                      className="flex-1 bg-transparent px-2 text-xs font-semibold ds-apple-muted outline-none min-w-0 truncate"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("success");
+                        copyToClipboard(shareLink);
+                      }}
+                      className="ds-apple-btn-secondary px-5 text-xs font-semibold whitespace-nowrap rounded-xl shrink-0 cursor-pointer"
+                    >
+                      {isCopying ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* VIP Reseller Guide Promo Banner */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic("selection");
+                navigate("/subscription");
+              }}
+              className="ds-apple-surface w-full p-5 rounded-[24px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left active:scale-[0.99] transition-transform cursor-pointer"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-[#FF9F0A]/15 text-[#FF9F0A] flex items-center justify-center shrink-0">
                   <Crown className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-0.5">
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#B26A00] dark:text-[#FFD60A] uppercase tracking-wider mb-0.5">
                     <GraduationCap className="w-3.5 h-3.5" />
                     <span>রিসেলিং শিক্ষক ও ভিআইপি মেম্বারশিপ</span>
                   </div>
-                  <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                  <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     ০ টাকা অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারিতে প্রোডাক্ট রিসেলিং করুন
                   </h4>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs ds-apple-muted mt-0.5">
                     কোনো প্রোডাক্ট স্টক না রেখে কাস্টমারের ঠিকানায় পার্সেল পাঠিয়ে ঘরে বসে আয়ের সম্পূর্ণ নির্দেশিকা।
                   </p>
                 </div>
               </div>
-              <span className="px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold shrink-0 self-start sm:self-center">
-                গাইড ও প্ল্যান দেখুন ➔
+              <span className="ds-apple-btn-primary px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 self-start sm:self-center">
+                গাইড ও প্ল্যান দেখুন
               </span>
-            </div>
-          </div>
+            </button>
 
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10 pb-8 mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-4 px-2">
-                <h3 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-white">Recent Transactions</h3>
-                <span className="text-xs font-bold text-[#1cdb5e] uppercase tracking-widest">{logs.length} Sales</span>
-              </div>
+            {/* Recent Transactions & Marketing Tips */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <h3 className="text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    Recent Transactions
+                  </h3>
+                  <span className="text-xs font-semibold text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider tabular-nums">
+                    {logs.length} Sales
+                  </span>
+                </div>
 
-              {logs.length === 0 ? (
-                <div className="bg-white dark:bg-[#1e1e1e] p-8 rounded-[2rem] shadow-sm border border-gray-100 dark:border-zinc-800 text-center">
-                  <div className="w-16 h-16 bg-zinc-50 dark:bg-[#121212] rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-400">
-                    <Icon name="receipt" className="text-2xl" />
+                {logs.length === 0 ? (
+                  <div className="ds-apple-surface p-8 rounded-[24px] text-center">
+                    <div className="w-14 h-14 ds-apple-surface-subtle rounded-full flex items-center justify-center mx-auto mb-3 ds-apple-muted">
+                      <Icon name="receipt" className="text-2xl" />
+                    </div>
+                    <h4 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">
+                      No transactions yet
+                    </h4>
+                    <p className="text-sm ds-apple-muted max-w-[220px] mx-auto">
+                      Earnings appear here when your code is used.
+                    </p>
                   </div>
-                  <h4 className="font-bold text-zinc-900 dark:text-white mb-2">No transactions yet</h4>
-                  <p className="text-sm text-zinc-500 max-w-[200px] mx-auto">Earnings appear here when your code is used.</p>
-                </div>
-              ) : (
-                <div className="bg-white dark:bg-[#1e1e1e] rounded-[2rem] shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden divide-y divide-gray-100 dark:divide-zinc-800">
-                  {logs.map((log) => (
-                    <div key={log.id} className="p-4 sm:p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-[#252525] transition-colors">
-                      <div className="flex flex-row items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-[#1cdb5e]/10 text-[#1cdb5e] flex items-center justify-center shrink-0">
-                          <Icon name="arrow-down-left" className="text-sm font-bold" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-zinc-900 dark:text-white text-sm mb-0.5">Sale Commission</p>
-                          <p className="text-xs font-medium text-zinc-500">
-                            {log.createdAt ? (log.createdAt.toDate ? log.createdAt.toDate().toLocaleDateString() : (new Date(log.createdAt).getTime() ? new Date(log.createdAt).toLocaleDateString() : 'N/A')) : 'N/A'} • {log.customerName || "Customer"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-[#1cdb5e] text-lg">+{formatPrice(log.commission)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="lg:col-span-1">
-              <div className="bg-gradient-to-b from-zinc-900 to-black p-8 rounded-[2rem] text-white shadow-xl h-full border border-zinc-800 relative overflow-hidden">
-                 <div className="absolute top-0 right-0 opacity-10 pointer-events-none translate-x-12 -translate-y-12">
-                   <Icon name="bullhorn" className="text-9xl" />
-                 </div>
-                 
-                 <div className="relative z-10 w-full h-full flex flex-col justify-between">
-                    <div>
-                        <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center mb-6">
-                          <Icon name="bolt" className="text-[#1cdb5e]" />
-                        </div>
-                        <h3 className="text-xl font-bold tracking-tight mb-6">Marketing Tips</h3>
-                        
-                        <div className="space-y-5">
-                          <div className="bg-white/5 p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
-                            <h4 className="font-bold text-white text-sm flex items-center gap-2 mb-2">
-                              <Icon name="instagram" className="text-[#1cdb5e]" /> Social Media Bio
-                            </h4>
-                            <p className="text-xs text-zinc-300">Add your custom link to your Instagram, TikTok, and Twitter bio. Mention "Use code <span className="font-bold text-[#1cdb5e] uppercase">{userData.affiliateCode || "VIBE"}</span> for 5% off" in all your captions.</p>
+                ) : (
+                  <div className="ds-apple-surface rounded-[24px] overflow-hidden divide-y divide-black/[0.06] dark:divide-white/[0.08] tabular-nums">
+                    {logs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="p-4 sm:p-5 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 rounded-full bg-[#248A3D]/12 dark:bg-[#30D158]/16 text-[#248A3D] dark:text-[#30D158] flex items-center justify-center shrink-0">
+                            <Icon name="arrow-down-left" className="text-sm font-bold" />
                           </div>
-                          
-                          <div className="bg-white/5 p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
-                            <h4 className="font-bold text-white text-sm flex items-center gap-2 mb-2">
-                              <Icon name="video" className="text-[#1cdb5e]" /> Review Unboxings
-                            </h4>
-                            <p className="text-xs text-zinc-300">Create short-from reels (15-30s) testing products. Pin a comment with your affiliate link so viewers can instantly grab the item.</p>
-                                                     <div className="bg-white/5 p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer group" onClick={() => copyToClipboard(`Grab 5% OFF on premium products & genuine mobiles at DEEP SHOP using my code: ${userData.affiliateCode || "VIBE"}. Shop here: ${shareLink}`)}>
-                            <h4 className="font-bold text-white text-sm flex items-center justify-between mb-2">
-                              <span className="flex items-center gap-2"><Icon name="copy" className="text-[#1cdb5e]" /> Quick Share Script</span>
-                              <span className="text-[10px] text-zinc-500 group-hover:text-[#1cdb5e] transition-colors">Tap to Copy</span>
-                            </h4>
-                            <p className="text-xs text-zinc-300 italic opacity-80 group-hover:opacity-100 transition-opacity">"Grab 5% OFF on premium products & genuine mobiles at DEEP SHOP using my code: {userData.affiliateCode || "VIBE"}. Shop here: {shareLink}"</p>
-                          </div>  </div>
+                          <div>
+                            <p className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm mb-0.5">
+                              Sale Commission
+                            </p>
+                            <p className="text-xs ds-apple-muted">
+                              {log.createdAt
+                                ? log.createdAt.toDate
+                                  ? log.createdAt.toDate().toLocaleDateString()
+                                  : new Date(log.createdAt).getTime()
+                                  ? new Date(log.createdAt).toLocaleDateString()
+                                  : "N/A"
+                                : "N/A"}{" "}
+                              · {log.customerName || "Customer"}
+                            </p>
+                          </div>
                         </div>
+                        <p className="font-bold text-[#248A3D] dark:text-[#30D158] text-base">
+                          +{formatPrice(log.commission)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="lg:col-span-1">
+                <div className="bg-[#1D1D1F] dark:bg-[#1C1C1E] p-6 sm:p-7 rounded-[24px] text-white h-full border border-black/10 dark:border-white/10">
+                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-5">
+                    <Icon name="bolt" className="text-[#30D158]" />
+                  </div>
+                  <h3 className="text-lg font-bold tracking-tight mb-5">
+                    Marketing Tips
+                  </h3>
+
+                  <div className="space-y-3.5">
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                      <h4 className="font-semibold text-white text-sm flex items-center gap-2 mb-1.5">
+                        <Icon name="instagram" className="text-[#0A84FF]" /> Social Media Bio
+                      </h4>
+                      <p className="text-xs text-white/75 leading-relaxed">
+                        Add your link to Instagram, TikTok, and bio. Mention &ldquo;Use code{" "}
+                        <span className="font-bold text-[#30D158] uppercase">
+                          {userData.affiliateCode || "VIBE"}
+                        </span>{" "}
+                        for 5% off&rdquo;.
+                      </p>
                     </div>
-                 </div>
+
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                      <h4 className="font-semibold text-white text-sm flex items-center gap-2 mb-1.5">
+                        <Icon name="video" className="text-[#0A84FF]" /> Review Unboxings
+                      </h4>
+                      <p className="text-xs text-white/75 leading-relaxed">
+                        Create short 15-30s reels testing products and pin your affiliate link in comments.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("success");
+                        copyToClipboard(
+                          `Grab 5% OFF on premium products & genuine mobiles at DEEP SHOP using my code: ${
+                            userData.affiliateCode || "VIBE"
+                          }. Shop here: ${shareLink}`
+                        );
+                      }}
+                      className="w-full text-left bg-white/5 hover:bg-white/10 p-4 rounded-2xl border border-white/10 transition-colors cursor-pointer group"
+                    >
+                      <h4 className="font-semibold text-white text-sm flex items-center justify-between mb-1.5">
+                        <span className="flex items-center gap-2">
+                          <Icon name="copy" className="text-[#30D158]" /> Quick Share Script
+                        </span>
+                        <span className="text-[11px] text-white/60 group-hover:text-[#30D158]">
+                          Tap to Copy
+                        </span>
+                      </h4>
+                      <p className="text-xs text-white/75 italic leading-relaxed">
+                        &ldquo;Grab 5% OFF on premium products &amp; genuine mobiles at DEEP SHOP using my code:{" "}
+                        {userData.affiliateCode || "VIBE"}. Shop here: {shareLink}&rdquo;
+                      </p>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : activeTab === "creator_hub" ? (
-        <CreatorHub userData={userData} />
-      ) : (
-        <SmallCreatorsHub userData={userData} />
-      )}
-      <div className="h-20" />
+        ) : activeTab === "creator_hub" ? (
+          <CreatorHub userData={userData} />
+        ) : (
+          <SmallCreatorsHub userData={userData} />
+        )}
+      </div>
     </div>
   );
 };

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { collection, addDoc, getDoc, doc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useNotify } from "../components/Notifications";
-import { isForbiddenNumber } from "../lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Copy, QrCode, Smartphone } from "lucide-react";
+import { Check, Copy, Smartphone } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { sendDepositRequestToTelegram } from "../services/telegram";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 const Deposit: React.FC = () => {
   const location = useLocation();
@@ -14,13 +16,14 @@ const Deposit: React.FC = () => {
   const [senderNumber, setSenderNumber] = useState("");
   const [method, setMethod] = useState("bkash");
   const [loading, setLoading] = useState(false);
-  const [adminNumbers, setAdminNumbers] = useState({ bkash: "", nagad: "" });
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [bankSettings, setBankSettings] = useState<any>({});
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
-  
+
   const notify = useNotify();
   const navigate = useNavigate();
-  
+  const shouldReduceMotion = useReducedMotion();
+
   const region = localStorage.getItem("user_region") || "BD";
   const isForeign = region === "IN" || region === "PK";
 
@@ -40,10 +43,6 @@ const Deposit: React.FC = () => {
       const docSnap = await getDoc(doc(db, "settings", "platform"));
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setAdminNumbers({
-          bkash: data.bkashNumber || "Not Set",
-          nagad: data.nagadNumber || "Not Set",
-        });
         setBankSettings({
           bankName: data.bankName,
           bankAccountName: data.bankAccountName,
@@ -61,11 +60,27 @@ const Deposit: React.FC = () => {
     fetchSettings();
   }, []);
 
+  const handleCopy = (key: string, value: string) => {
+    if (!value) return;
+    triggerHaptic("light");
+    navigator.clipboard.writeText(value);
+    setCopiedKey(key);
+    notify("Copied to clipboard", "success");
+    setTimeout(() => setCopiedKey(null), 1600);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || (!trxId && !isForeign)) return notify("Please fill all required fields", "error");
-    if (!isForeign && !senderNumber) return notify("Please enter the sender number", "error");
+    if (!amount || (!trxId && !isForeign)) {
+      triggerHaptic("error");
+      return notify("Please fill all required fields", "error");
+    }
+    if (!isForeign && !senderNumber) {
+      triggerHaptic("error");
+      return notify("Please enter the sender number", "error");
+    }
 
+    triggerHaptic("medium");
     setLoading(true);
     try {
       const depositData = {
@@ -76,156 +91,202 @@ const Deposit: React.FC = () => {
         senderNumber: senderNumber || "",
         method,
         status: "pending",
-        createdAt: Date.now()
+        createdAt: Date.now(),
       };
       await addDoc(collection(db, "deposits"), depositData);
-      
       await sendDepositRequestToTelegram(depositData);
 
+      triggerHaptic("success");
       notify("Deposit request sent. Wait for approval.", "success");
       navigate("/profile");
     } catch (err) {
+      triggerHaptic("error");
       notify("Deposit failed. Try again.", "error");
       console.error(err);
     }
     setLoading(false);
   };
 
+  const bkashVal = paymentSettings?.npsbNumber || paymentSettings?.bkashNumber || "";
+  const nagadVal = paymentSettings?.pathaoPayNumber || paymentSettings?.nagadNumber || "";
+
   return (
-    <div className="max-w-md mx-auto px-4 py-8 animate-fade-in mb-20">
-      <h2 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-zinc-100">Deposit Money</h2>
-      
-      <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-        <label className="block text-sm font-semibold mb-2">Payment Method</label>
-        
-        {isForeign ? (
-          <div className="mb-6">
-            <div className="py-3 px-4 rounded-xl border-2 font-bold border-zinc-900 dark:border-zinc-100 flex items-center justify-center">Bank Transfer</div>
-            <div className="mt-4 flex flex-col gap-3">
-              {[
-                { label: "Bank Name", value: bankSettings?.bankName || "..." },
-                { label: "Account Name", value: bankSettings?.bankAccountName || "..." },
-                { label: "Account Number", value: bankSettings?.bankAccountNumber || "..." },
-                { label: "Routing Number", value: bankSettings?.bankRoutingNumber || "..." },
-                { label: "Account Type", value: bankSettings?.bankAccountType || "..." },
-                { label: "Bank Address", value: bankSettings?.bankAddress || "..." }
-              ].map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm">
-                  <div>
-                    <div className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">{item.label}</div>
-                    <div className="font-semibold text-zinc-900 dark:text-zinc-100 mt-1">{item.value}</div>
-                  </div>
-                  <button 
-                    type="button"
-                    className="flex items-center text-xs h-8 px-2 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700 transition" 
-                    onClick={() => navigator.clipboard.writeText(item.value)}
+    <div className="ds-apple-shop-canvas min-h-screen pb-28">
+      <motion.div
+        initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+        className="max-w-lg mx-auto px-4 pt-5 sm:pt-7 space-y-5"
+      >
+        <div className="px-1">
+          <h1 className="ds-apple-display text-[24px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+            Deposit Funds
+          </h1>
+          <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
+            Add balance securely via your preferred transfer method
+          </p>
+        </div>
+        <div className="ds-apple-surface rounded-[24px] p-5 sm:p-6">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#6E6E73] dark:text-[#98989D] mb-3">
+            Payment Method
+          </p>
+
+          {isForeign ? (
+            <div className="mb-6">
+              <div className="py-3 px-4 rounded-[14px] bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] text-[14px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-center">
+                Bank Transfer
+              </div>
+              <div className="mt-4 flex flex-col gap-2.5">
+                {[
+                  { key: "bank", label: "Bank Name", value: bankSettings?.bankName || "..." },
+                  { key: "accName", label: "Account Name", value: bankSettings?.bankAccountName || "..." },
+                  { key: "accNum", label: "Account Number", value: bankSettings?.bankAccountNumber || "..." },
+                  { key: "routing", label: "Routing Number", value: bankSettings?.bankRoutingNumber || "..." },
+                  { key: "type", label: "Account Type", value: bankSettings?.bankAccountType || "..." },
+                  { key: "addr", label: "Bank Address", value: bankSettings?.bankAddress || "..." },
+                ].map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex justify-between items-center p-3.5 bg-[#F5F5F7] dark:bg-[#2C2C2E] rounded-[14px] border border-black/[0.05] dark:border-white/[0.06] text-sm"
                   >
-                    <Copy className="h-4 w-4 mr-1" /> Copy
-                  </button>
-                </div>
-              ))}
+                    <div className="min-w-0 pr-3">
+                      <div className="text-[11px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
+                        {item.label}
+                      </div>
+                      <div className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mt-0.5 tabular-nums truncate">
+                        {item.value}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 text-[12px] font-semibold h-8 px-3 rounded-full bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] text-[#0071E3] dark:text-[#0A84FF] active:scale-95 transition-transform shrink-0"
+                      onClick={() => handleCopy(item.key, item.value)}
+                    >
+                      {copiedKey === item.key ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" /> Copy
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-6 p-6 mb-6 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl items-center md:items-start">
-            <div className="flex flex-col gap-4 w-full">
+          ) : (
+            <div className="p-4 sm:p-5 mb-6 bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.05] dark:border-white/[0.06] rounded-[18px] space-y-4">
               <div>
-                 <h3 className="font-bold text-zinc-900 dark:text-white text-base md:text-lg flex items-center gap-2">
-                  <Smartphone className="w-5 h-5 text-[#1cdb5e]" /> bKash & Nagad Payment Only
-                </h3>
-                <p className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                  Send Money or Cash Out the required amount to our official bKash or Nagad numbers below.
+                <h2 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-[15px] flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF]" />
+                  bKash &amp; Nagad Transfer
+                </h2>
+                <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D] mt-1 leading-relaxed">
+                  Send Money or Cash Out the required amount to our official bKash or Nagad number below.
                 </p>
               </div>
 
-              <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-zinc-700/50">
-                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Transfer manually to:</p>
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center bg-white dark:bg-zinc-800 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
-                    <div>
-                      <span className="text-[10px] font-bold text-red-500 block">bKash (Send Money)</span>
-                      <span className="font-bold text-zinc-900 dark:text-white">{paymentSettings?.npsbNumber || paymentSettings?.bkashNumber || ""}</span>
-                    </div>
-                    <button 
-                      type="button"
-                      className="flex items-center text-xs h-8 px-2 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700 transition" 
-                      onClick={() => {
-                        navigator.clipboard.writeText(paymentSettings?.npsbNumber || paymentSettings?.bkashNumber || "");
-                      }}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
+              <div className="space-y-2.5 pt-3 border-t border-black/[0.06] dark:border-white/[0.08]">
+                <div className="flex justify-between items-center bg-white dark:bg-[#1C1C1E] p-3.5 rounded-[14px] border border-black/[0.05] dark:border-white/[0.06]">
+                  <div>
+                    <span className="text-[11px] font-semibold text-[#FF2D55] block">
+                      bKash (Send Money)
+                    </span>
+                    <span className="font-semibold text-[15px] text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                      {bkashVal || "Not available"}
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center bg-white dark:bg-zinc-800 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
-                    <div>
-                      <span className="text-[10px] font-bold text-orange-500 block">Nagad (Send Money)</span>
-                      <span className="font-bold text-zinc-900 dark:text-white">{paymentSettings?.pathaoPayNumber || paymentSettings?.nagadNumber || ""}</span>
-                    </div>
-                    <button 
-                      type="button"
-                      className="flex items-center text-xs h-8 px-2 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700 transition" 
-                      onClick={() => {
-                        navigator.clipboard.writeText(paymentSettings?.pathaoPayNumber || paymentSettings?.nagadNumber || "");
-                      }}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 text-[12px] font-semibold h-8 px-3 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#0071E3] dark:text-[#0A84FF] active:scale-95 transition-transform"
+                    onClick={() => handleCopy("bkash", bkashVal)}
+                  >
+                    {copiedKey === "bkash" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copiedKey === "bkash" ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+
+                <div className="flex justify-between items-center bg-white dark:bg-[#1C1C1E] p-3.5 rounded-[14px] border border-black/[0.05] dark:border-white/[0.06]">
+                  <div>
+                    <span className="text-[11px] font-semibold text-[#FF9500] block">
+                      Nagad (Send Money)
+                    </span>
+                    <span className="font-semibold text-[15px] text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                      {nagadVal || "Not available"}
+                    </span>
                   </div>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 text-[12px] font-semibold h-8 px-3 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#0071E3] dark:text-[#0A84FF] active:scale-95 transition-transform"
+                    onClick={() => handleCopy("nagad", nagadVal)}
+                  >
+                    {copiedKey === "nagad" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copiedKey === "nagad" ? "Copied" : "Copy"}</span>
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold mb-2">Amount Sent</label>
-            <input 
-              type="number" 
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 outline-none"
-              placeholder="e.g. 500"
-            />
-          </div>
-          {!isForeign && (
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold mb-2">Sender Number</label>
-              <input 
-                type="text" 
+              <label className="block text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
+                Amount Sent
+              </label>
+              <input
+                type="number"
                 required
-                value={senderNumber}
-                onChange={(e) => setSenderNumber(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 outline-none"
-                placeholder="e.g. 01700000000"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="ds-apple-input w-full px-4 py-3.5 rounded-[14px] text-[15px] tabular-nums"
+                placeholder="e.g. 500"
               />
             </div>
-          )}
-          <div>
-            <label className="block text-sm font-semibold mb-2">Transaction ID (TrxID) / Ref {isForeign && "(Optional)"}</label>
-            <input 
-              type="text" 
-              required={!isForeign}
-              value={trxId}
-              onChange={(e) => setTrxId(e.target.value)}
-              className="w-full bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl text-sm border-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 outline-none"
-              placeholder="e.g. 8H3KJ2L9A"
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full py-4 mt-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold tracking-wide disabled:opacity-50 active:scale-95 transition-transform"
-          >
-            {loading ? "Submitting..." : "Submit Request"}
-          </button>
-        </form>
-      </div>
+
+            {!isForeign && (
+              <div>
+                <label className="block text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
+                  Sender Number
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={senderNumber}
+                  onChange={(e) => setSenderNumber(e.target.value)}
+                  className="ds-apple-input w-full px-4 py-3.5 rounded-[14px] text-[15px] tabular-nums"
+                  placeholder="e.g. 01700000000"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
+                Transaction ID (TrxID) / Ref {isForeign && "(Optional)"}
+              </label>
+              <input
+                type="text"
+                required={!isForeign}
+                value={trxId}
+                onChange={(e) => setTrxId(e.target.value)}
+                className="ds-apple-input w-full px-4 py-3.5 rounded-[14px] text-[15px]"
+                placeholder="e.g. 8H3KJ2L9A"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="ds-apple-btn-primary w-full py-3.5 mt-2 rounded-full text-[15px] font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
+            >
+              {loading ? "Submitting..." : "Submit Request"}
+            </button>
+          </form>
+        </div>
+      </motion.div>
     </div>
   );
 };
 
 export default Deposit;
-

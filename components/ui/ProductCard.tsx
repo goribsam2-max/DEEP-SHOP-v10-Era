@@ -1,12 +1,13 @@
 import { formatPrice, getSafeDisplayName } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { Product } from "../../types";
 import { auth, db } from "../../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { PixelImage } from "./PixelImage";
 import { triggerHaptic } from "../../lib/haptics";
+import { APPLE_SPRING_SNAPPY } from "../../lib/shoppingRoute";
 import { Heart, Star, ShoppingBag, Check, ArrowUpRight } from "lucide-react";
 import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
 import { useNotify } from "../Notifications";
@@ -63,6 +64,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
   const isWishlisted = useIsWishlisted(product.id);
   const [justAdded, setJustAdded] = useState(false);
   const [sellerMeta, setSellerMeta] = useState<ResolvedSellerMeta>(() =>
@@ -269,15 +271,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     return (
       <motion.div
         variants={{
-          hidden: { opacity: 0, y: 12 },
-          visible: { opacity: 1, y: 0 },
+          hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 10 },
+          visible: { opacity: 1, y: 0, transition: shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_SNAPPY },
         }}
         className="w-full group relative"
       >
         <Link
           to={productUrl}
           title={product.name}
-          className="block w-full rounded-[22px] md:rounded-[26px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+          className="block w-full rounded-[22px] md:rounded-[26px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/60 dark:focus-visible:ring-[#0A84FF]/60"
         >
           {/* MOBILE LIST CARD (< md) */}
           <article className="md:hidden ds-liquid-product-card rounded-[22px] p-3 flex items-stretch gap-3.5 overflow-hidden">
@@ -444,7 +446,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
               </div>
 
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-snug line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+              <h3 className="text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight leading-snug line-clamp-1 group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
                 {product.name}
               </h3>
 
@@ -540,15 +542,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <motion.div
       variants={{
-        hidden: { opacity: 0, y: 14 },
-        visible: { opacity: 1, y: 0 },
+        hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 12 },
+        visible: { opacity: 1, y: 0, transition: shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_SNAPPY },
       }}
       className="col-span-1 w-full h-full group relative"
     >
       <Link
         to={productUrl}
         title={product.name}
-        className="block h-full rounded-[20px] md:rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/60"
+        className="block h-full rounded-[20px] md:rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/60 dark:focus-visible:ring-[#0A84FF]/60"
       >
         {/* ====================================================================
             MOBILE POST CARD (< md): Compact 2-Column Tactile Liquid Glass Card
@@ -658,8 +660,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   isOutOfStock
                     ? "ds-liquid-icon-btn opacity-40 cursor-not-allowed"
                     : justAdded
-                    ? "bg-emerald-500 text-white shadow-sm"
-                    : "ds-liquid-icon-btn text-sky-700 dark:text-sky-400"
+                    ? "bg-[#248A3D] dark:bg-[#30D158] text-white shadow-sm"
+                    : "ds-liquid-icon-btn text-[#0071E3] dark:text-[#0A84FF]"
                 }`}
               >
                 {justAdded ? (
@@ -743,8 +745,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     onClick={handleQuickAdd}
                     className={`flex-1 h-8 rounded-full px-3 text-xs font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer ${
                       justAdded
-                        ? "bg-emerald-600 text-white"
-                        : "ds-liquid-dock-pill text-slate-900 dark:text-white hover:text-sky-600 dark:hover:text-sky-300"
+                        ? "bg-[#248A3D] dark:bg-[#30D158] text-white"
+                        : "ds-liquid-dock-pill text-[#1D1D1F] dark:text-[#F5F5F7] hover:text-[#0071E3] dark:hover:text-[#0A84FF]"
                     }`}
                   >
                     {justAdded ? (
@@ -777,7 +779,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </span>
 
                 <div className="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-200 tabular-nums shrink-0 whitespace-nowrap">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                  <Star className="w-3 h-3 fill-[#FF9500] text-[#FF9500] dark:fill-[#FF9F0A] dark:text-[#FF9F0A] shrink-0" />
                   <span>{ratingLabel}</span>
                   <span className="text-slate-400 font-normal">
                     ({reviewCount})
@@ -786,7 +788,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               </div>
 
               {/* Crisp Product Title */}
-              <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+              <h3 className="text-[15px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight leading-snug line-clamp-1 group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
                 {product.name}
               </h3>
 

@@ -3,6 +3,8 @@ import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "../../lib/utils"
 
+import { triggerHaptic } from "../../lib/haptics"
+
 const Tabs = TabsPrimitive.Root
 
 const TabsList = React.forwardRef<
@@ -12,7 +14,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-zinc-100 p-1 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+      "ds-apple-segmented inline-flex h-10 items-center justify-center rounded-full bg-black/[0.06] dark:bg-white/[0.1] p-1 text-[#6E6E73] dark:text-[#98989D]",
       className
     )}
     {...props}
@@ -23,11 +25,15 @@ TabsList.displayName = TabsPrimitive.List.displayName
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
+>(({ className, onPointerDown, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
+    onPointerDown={(e) => {
+      triggerHaptic("selection")
+      onPointerDown?.(e)
+    }}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-zinc-950 data-[state=active]:shadow-sm dark:ring-offset-zinc-950 dark:focus-visible:ring-zinc-300 dark:data-[state=active]:bg-zinc-950 dark:data-[state=active]:text-zinc-50",
+      "inline-flex items-center justify-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-semibold tracking-tight transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/60 dark:focus-visible:ring-[#0A84FF]/60 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-[#1D1D1F] data-[state=active]:shadow-xs dark:data-[state=active]:bg-[#3A3A3C] dark:data-[state=active]:text-[#F5F5F7] cursor-pointer",
       className
     )}
     {...props}

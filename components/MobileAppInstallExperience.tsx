@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, PanInfo, useReducedMotion } from "framer-motion";
 import { doc, onSnapshot } from "firebase/firestore";
 import {
   Download,
@@ -14,6 +14,12 @@ import {
   Smartphone,
 } from "lucide-react";
 import { db } from "../firebase";
+import {
+  APPLE_SPRING_DEFAULT,
+  isAppleShoppingRoute,
+  projectMomentum,
+} from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 interface PlatformMobileConfig {
   androidApkEnabled?: boolean;
@@ -28,10 +34,6 @@ const APK_PERSIST_KEY = "ds_running_in_native_apk_v1";
 const DISMISS_ANDROID_KEY = "ds_android_apk_prompt_dismissed_until";
 const DISMISS_IOS_KEY = "ds_ios_a2hs_guide_dismissed_until";
 
-/**
- * Converts GitHub blob links (e.g. https://github.com/user/repo/blob/main/app.apk)
- * into direct binary download URLs automatically so clicking Download immediately downloads the .apk.
- */
 export function normalizeGithubApkDownloadUrl(rawUrl: string): string {
   const trimmed = (rawUrl || "").trim();
   if (!trimmed) return "";
@@ -47,11 +49,6 @@ export function normalizeGithubApkDownloadUrl(rawUrl: string): string {
   }
 }
 
-/**
- * Detects if the site is ALREADY running inside:
- *  - An Android Website-to-APK wrapper / WebView (`; wv)`, WebIntoApp, GoNative/Median, Capacitor, Cordova, Appilix, TWA `android-app://`, JS bridges, or `?source=apk` / `?app=apk`)
- *  - An installed Standalone PWA (`display-mode: standalone` / `fullscreen` / `navigator.standalone`)
- */
 export function isRunningInsideInstalledAppOrApk(): boolean {
   if (typeof window === "undefined") return false;
 
@@ -83,7 +80,6 @@ export function isRunningInsideInstalledAppOrApk(): boolean {
     }
   } catch {}
 
-  // Standalone / Installed Web App check (Android WebAPK + iOS Home Screen)
   try {
     if (
       window.matchMedia?.("(display-mode: standalone)").matches ||
@@ -95,7 +91,6 @@ export function isRunningInsideInstalledAppOrApk(): boolean {
     }
   } catch {}
 
-  // Trusted Web Activity (TWA) referrer check
   if (
     typeof document !== "undefined" &&
     document.referrer &&
@@ -107,7 +102,6 @@ export function isRunningInsideInstalledAppOrApk(): boolean {
     return true;
   }
 
-  // Native Web-to-APK JS bridge globals
   const win = window as any;
   if (
     win.ReactNativeWebView ||
@@ -123,7 +117,6 @@ export function isRunningInsideInstalledAppOrApk(): boolean {
     return true;
   }
 
-  // User-Agent WebView detection (Android `; wv)` + popular Web-to-APK wrappers + iOS non-Safari WebView)
   const ua = window.navigator?.userAgent || "";
   if (
     /; wv\)/i.test(ua) ||
@@ -135,8 +128,12 @@ export function isRunningInsideInstalledAppOrApk(): boolean {
     return true;
   }
 
-  // Android WebView pattern: `Version/X.X Chrome/XX.0... Mobile Safari` when `; wv` is stripped by custom wrapper
-  if (/Android/i.test(ua) && /Version\/\d+\.\d+/i.test(ua) && /Chrome\/\d+/i.test(ua) && !/SamsungBrowser|OPR|EdgA|UCBrowser/i.test(ua)) {
+  if (
+    /Android/i.test(ua) &&
+    /Version\/\d+\.\d+/i.test(ua) &&
+    /Chrome\/\d+/i.test(ua) &&
+    !/SamsungBrowser|OPR|EdgA|UCBrowser/i.test(ua)
+  ) {
     return true;
   }
 
@@ -180,7 +177,6 @@ function triggerDirectApkDownload(rawUrl: string, customFileName?: string) {
   }, 1500);
 }
 
-/* Crisp iOS Safari Share Icon (Square with Upward Arrow) */
 const SafariShareIcon: React.FC<{ className?: string }> = ({
   className = "w-5 h-5",
 }) => (
@@ -201,6 +197,8 @@ const SafariShareIcon: React.FC<{ className?: string }> = ({
 
 export const MobileAppInstallExperience: React.FC = () => {
   const location = useLocation();
+  const prefersReducedMotion = useReducedMotion();
+  const isAppleShop = isAppleShoppingRoute(location.pathname);
   const [config, setConfig] = useState<PlatformMobileConfig | null>(null);
   const [visibleMode, setVisibleMode] = useState<"android" | "ios" | null>(
     null
@@ -215,7 +213,6 @@ export const MobileAppInstallExperience: React.FC = () => {
     [location.search]
   );
 
-  // Subscribe to Admin Panel platform settings (`settings/platform`)
   useEffect(() => {
     if (insideInstalledApp) return;
     const unsub = onSnapshot(
@@ -234,7 +231,6 @@ export const MobileAppInstallExperience: React.FC = () => {
     return () => unsub();
   }, [insideInstalledApp]);
 
-  // Allow manual trigger from any button/menu via custom event
   useEffect(() => {
     const handleManualOpen = () => {
       if (isRunningInsideInstalledAppOrApk()) return;
@@ -246,7 +242,6 @@ export const MobileAppInstallExperience: React.FC = () => {
       window.removeEventListener("openMobileAppInstall", handleManualOpen);
   }, [platform]);
 
-  // Decide whether to show Android APK prompt or iOS animated guide
   useEffect(() => {
     if (!config || insideInstalledApp) {
       setVisibleMode(null);
@@ -308,7 +303,6 @@ export const MobileAppInstallExperience: React.FC = () => {
     }
   }, [config, insideInstalledApp, platform, location.pathname]);
 
-  // Auto-cycle iOS animated step showcase every 2.8s while open
   useEffect(() => {
     if (visibleMode !== "ios") return;
     const interval = window.setInterval(() => {
@@ -329,7 +323,16 @@ export const MobileAppInstallExperience: React.FC = () => {
     setVisibleMode(null);
   };
 
+  const handleSheetDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const projectedY = info.offset.y + projectMomentum(info.velocity.y, 0.994);
+    if (projectedY > 100 || info.velocity.y > 400) {
+      triggerHaptic("light");
+      dismissPrompt(18);
+    }
+  };
+
   const handleAndroidDownload = async () => {
+    triggerHaptic("medium");
     const apkUrl = normalizeGithubApkDownloadUrl(config?.androidApkUrl || "");
     if (apkUrl) {
       setDownloadingApk(true);
@@ -341,7 +344,6 @@ export const MobileAppInstallExperience: React.FC = () => {
       return;
     }
 
-    // Fallback to native Chromium install prompt if Admin hasn't pasted GitHub APK URL yet
     const promptEvent = (window as any).deferredPrompt;
     if (promptEvent) {
       promptEvent.prompt();
@@ -368,33 +370,49 @@ export const MobileAppInstallExperience: React.FC = () => {
   return createPortal(
     <AnimatePresence>
       {visibleMode === "android" && (
-        <div className="fixed inset-0 z-[995] flex items-end sm:items-center justify-center p-3 sm:p-5">
+        <div
+          className={`fixed inset-0 z-[995] flex items-end sm:items-center justify-center p-3 sm:p-5 ${
+            isAppleShop ? "ds-apple-portal" : ""
+          }`}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: prefersReducedMotion ? 0.14 : 0.18 }}
             onClick={() => dismissPrompt(12)}
-            className="fixed inset-0 bg-black/50 backdrop-blur-[2px]"
+            className={`fixed inset-0 ${
+              isAppleShop ? "ds-apple-backdrop" : "bg-black/50 backdrop-blur-[2px]"
+            }`}
           />
 
           <motion.div
-            initial={{ opacity: 0, y: 44, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 36, scale: 0.96 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+            role="dialog"
+            aria-modal="true"
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 36, scale: 0.97 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 30, scale: 0.97 }}
+            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+            drag={isAppleShop && !prefersReducedMotion ? "y" : false}
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0.06, bottom: 0.5 }}
+            onDragEnd={isAppleShop ? handleSheetDragEnd : undefined}
             onClick={(e) => e.stopPropagation()}
-            className="relative z-10 w-full max-w-[420px] rounded-[28px] bg-white dark:bg-zinc-950 border border-zinc-200/85 dark:border-zinc-800 shadow-[0_24px_70px_rgba(0,0,0,0.28)] p-5 text-zinc-950 dark:text-white overflow-hidden"
+            className={`relative z-10 w-full max-w-[420px] rounded-[28px] p-5 overflow-hidden ${
+              isAppleShop
+                ? "ds-apple-sheet"
+                : "bg-white dark:bg-zinc-950 border border-zinc-200/85 dark:border-zinc-800 shadow-[0_24px_70px_rgba(0,0,0,0.28)] text-zinc-950 dark:text-white"
+            }`}
           >
-            {/* Subtle Ambient Header Wash */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#1877F2]/12 via-[#3DDC84]/6 to-transparent"
-            />
+            {isAppleShop && (
+              <div className="sm:hidden flex justify-center pb-3 -mt-1">
+                <div className="w-9 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+              </div>
+            )}
 
             <div className="relative flex items-start justify-between gap-3">
               <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-md p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
+                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-zinc-900 border border-black/[0.08] dark:border-white/[0.12] shadow-sm p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
                   <img
                     src={appIconSrc}
                     alt="DEEP SHOP"
@@ -403,10 +421,10 @@ export const MobileAppInstallExperience: React.FC = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-[17px] font-extrabold tracking-tight text-zinc-950 dark:text-white">
+                    <h3 className="ds-apple-display text-[17px] font-bold tracking-tight text-zinc-950 dark:text-white">
                       DEEP SHOP App
                     </h3>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/12 text-[#248A3D] dark:text-[#30D158] text-[11px] font-semibold">
                       Android {apkVersion}
                     </span>
                   </div>
@@ -418,37 +436,41 @@ export const MobileAppInstallExperience: React.FC = () => {
 
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic("light")}
                 onClick={() => dismissPrompt(18)}
                 aria-label="Close app download prompt"
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center shrink-0 transition cursor-pointer"
+                className="w-8 h-8 rounded-full bg-black/[0.06] dark:bg-white/[0.1] text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center shrink-0 transition active:scale-95 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Highlights */}
             <div className="relative mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200/60 dark:border-zinc-800 px-3 py-2.5 flex items-center gap-2">
-                <Zap className="w-4 h-4 text-[#1877F2] shrink-0" />
+              <div className="rounded-2xl bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] px-3 py-2.5 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                   Ultra-fast native speed
                 </span>
               </div>
-              <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200/60 dark:border-zinc-800 px-3 py-2.5 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+              <div className="rounded-2xl bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] px-3 py-2.5 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#248A3D] dark:text-[#30D158] shrink-0" />
                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                   Verified Official APK
                 </span>
               </div>
             </div>
 
-            {/* Download CTA */}
             <div className="relative mt-4 space-y-2">
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic("light")}
                 onClick={handleAndroidDownload}
                 disabled={downloadingApk}
-                className="w-full h-12 rounded-2xl bg-[#1877F2] hover:bg-[#1464D0] active:scale-[0.985] text-white font-bold text-[14.5px] shadow-[0_10px_28px_rgba(24,119,242,0.34)] flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-70"
+                className={`w-full h-12 rounded-full font-semibold text-[14.5px] flex items-center justify-center gap-2 transition active:scale-[0.97] cursor-pointer disabled:opacity-70 ${
+                  isAppleShop
+                    ? "ds-apple-btn-primary"
+                    : "bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-sm"
+                }`}
               >
                 {apkStarted ? (
                   <>
@@ -457,20 +479,20 @@ export const MobileAppInstallExperience: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Download className="w-4.5 h-4.5" />
+                    <Download className="w-4 h-4" />
                     <span>
                       {downloadingApk
                         ? "Starting APK download..."
                         : config?.androidApkUrl
-                        ? "Download Android APK"
-                        : "Install Android App"}
+                          ? "Download Android APK"
+                          : "Install Android App"}
                     </span>
                   </>
                 )}
               </button>
 
               {apkStarted && (
-                <p className="text-[11.5px] text-center text-emerald-600 dark:text-emerald-400 font-medium">
+                <p className="text-[11.5px] text-center text-[#248A3D] dark:text-[#30D158] font-medium">
                   Open the downloaded <strong>.apk</strong> from your notifications to install.
                 </p>
               )}
@@ -488,28 +510,49 @@ export const MobileAppInstallExperience: React.FC = () => {
       )}
 
       {visibleMode === "ios" && (
-        <div className="fixed inset-0 z-[995] flex items-end sm:items-center justify-center p-3 sm:p-5">
+        <div
+          className={`fixed inset-0 z-[995] flex items-end sm:items-center justify-center p-3 sm:p-5 ${
+            isAppleShop ? "ds-apple-portal" : ""
+          }`}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: prefersReducedMotion ? 0.14 : 0.18 }}
             onClick={() => dismissPrompt(24)}
-            className="fixed inset-0 bg-black/55 backdrop-blur-[3px]"
+            className={`fixed inset-0 ${
+              isAppleShop ? "ds-apple-backdrop" : "bg-black/55 backdrop-blur-[3px]"
+            }`}
           />
 
           <motion.div
-            initial={{ opacity: 0, y: 48, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 36, scale: 0.96 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+            role="dialog"
+            aria-modal="true"
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 38, scale: 0.97 }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 30, scale: 0.97 }}
+            transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+            drag={isAppleShop && !prefersReducedMotion ? "y" : false}
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0.06, bottom: 0.5 }}
+            onDragEnd={isAppleShop ? handleSheetDragEnd : undefined}
             onClick={(e) => e.stopPropagation()}
-            className="relative z-10 w-full max-w-[430px] rounded-[30px] bg-white dark:bg-zinc-950 border border-zinc-200/85 dark:border-zinc-800 shadow-[0_26px_74px_rgba(0,0,0,0.34)] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] text-zinc-950 dark:text-white overflow-hidden"
+            className={`relative z-10 w-full max-w-[430px] rounded-[28px] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] overflow-hidden ${
+              isAppleShop
+                ? "ds-apple-sheet"
+                : "bg-white dark:bg-zinc-950 border border-zinc-200/85 dark:border-zinc-800 shadow-[0_26px_74px_rgba(0,0,0,0.34)] text-zinc-950 dark:text-white"
+            }`}
           >
-            {/* Header */}
+            {isAppleShop && (
+              <div className="sm:hidden flex justify-center pb-3 -mt-1">
+                <div className="w-9 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+              </div>
+            )}
+
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-13 h-13 rounded-[16px] bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-md p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
+                <div className="w-13 h-13 rounded-[16px] bg-white dark:bg-zinc-900 border border-black/[0.08] dark:border-white/[0.12] shadow-sm p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
                   <img
                     src={appIconSrc}
                     alt="DEEP SHOP"
@@ -517,7 +560,7 @@ export const MobileAppInstallExperience: React.FC = () => {
                   />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-[17px] font-extrabold tracking-tight">
+                  <h3 className="ds-apple-display text-[17px] font-bold tracking-tight">
                     Add DEEP SHOP to Home Screen
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -528,47 +571,34 @@ export const MobileAppInstallExperience: React.FC = () => {
 
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic("light")}
                 onClick={() => dismissPrompt(24)}
                 aria-label="Close iOS install guide"
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center shrink-0 transition cursor-pointer"
+                className="w-8 h-8 rounded-full bg-black/[0.06] dark:bg-white/[0.1] text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center shrink-0 transition active:scale-95 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Live Animated Interactive iOS Visual Stage */}
-            <div className="mt-4 rounded-2xl bg-gradient-to-b from-slate-100 to-slate-50 dark:from-zinc-900 dark:to-zinc-900/70 border border-zinc-200/80 dark:border-zinc-800 p-4 overflow-hidden">
+            <div className="mt-4 rounded-2xl bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] p-4 overflow-hidden">
               <AnimatePresence mode="wait">
                 {activeIosStep === 0 && (
                   <motion.div
                     key="ios-stage-0"
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.22 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
                     className="flex flex-col items-center text-center py-1"
                   >
-                    <div className="w-full max-w-[260px] rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 px-4 py-2.5 shadow-sm flex items-center justify-between text-zinc-400">
+                    <div className="w-full max-w-[260px] rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.1] px-4 py-2.5 shadow-sm flex items-center justify-between text-zinc-400">
                       <span className="text-xs font-medium">deepshop.top</span>
-                      <motion.div
-                        animate={{ scale: [1, 1.18, 1] }}
-                        transition={{
-                          repeat: Infinity,
-                          duration: 1.3,
-                          ease: "easeInOut",
-                        }}
-                        className="relative w-9 h-9 rounded-xl bg-[#007AFF]/12 text-[#007AFF] flex items-center justify-center ring-2 ring-[#007AFF]/40"
-                      >
+                      <div className="w-9 h-9 rounded-xl bg-[#0071E3]/12 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center ring-2 ring-[#0071E3]/35">
                         <SafariShareIcon className="w-5 h-5" />
-                        <motion.span
-                          animate={{ scale: [1, 1.7], opacity: [0.55, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.3 }}
-                          className="absolute inset-0 rounded-xl border-2 border-[#007AFF]"
-                        />
-                      </motion.div>
+                      </div>
                       <Smartphone className="w-4 h-4 opacity-50" />
                     </div>
-                    <p className="mt-2.5 text-xs font-semibold text-[#007AFF]">
+                    <p className="mt-2.5 text-xs font-semibold text-[#0071E3] dark:text-[#0A84FF]">
                       1. Tap the Safari Share icon at the bottom (or top) bar
                     </p>
                   </motion.div>
@@ -577,29 +607,21 @@ export const MobileAppInstallExperience: React.FC = () => {
                 {activeIosStep === 1 && (
                   <motion.div
                     key="ios-stage-1"
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.22 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
                     className="flex flex-col items-center text-center py-1"
                   >
-                    <motion.div
-                      animate={{ y: [3, -2, 3] }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 1.6,
-                        ease: "easeInOut",
-                      }}
-                      className="w-full max-w-[270px] rounded-2xl bg-white dark:bg-zinc-950 border-2 border-[#007AFF]/60 px-3.5 py-2.5 shadow-md flex items-center justify-between"
-                    >
+                    <div className="w-full max-w-[270px] rounded-2xl bg-white dark:bg-[#1c1c1e] border-2 border-[#0071E3]/55 px-3.5 py-2.5 shadow-sm flex items-center justify-between">
                       <span className="text-[13px] font-bold text-zinc-900 dark:text-white">
                         Add to Home Screen
                       </span>
-                      <span className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-zinc-900 dark:text-white">
+                      <span className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-black/[0.08] dark:border-white/[0.1] flex items-center justify-center text-zinc-900 dark:text-white">
                         <Plus className="w-4 h-4 stroke-[2.4]" />
                       </span>
-                    </motion.div>
-                    <p className="mt-2.5 text-xs font-semibold text-[#007AFF]">
+                    </div>
+                    <p className="mt-2.5 text-xs font-semibold text-[#0071E3] dark:text-[#0A84FF]">
                       2. Scroll the share menu & tap “Add to Home Screen”
                     </p>
                   </motion.div>
@@ -608,30 +630,26 @@ export const MobileAppInstallExperience: React.FC = () => {
                 {activeIosStep === 2 && (
                   <motion.div
                     key="ios-stage-2"
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.22 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
                     className="flex flex-col items-center text-center py-1"
                   >
-                    <div className="w-full max-w-[270px] rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 px-3.5 py-2.5 shadow-sm flex items-center justify-between">
+                    <div className="w-full max-w-[270px] rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.08] dark:border-white/[0.1] px-3.5 py-2.5 shadow-sm flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
                         <img
                           src={appIconSrc}
                           alt="DEEP SHOP"
-                          className="w-8 h-8 rounded-lg object-contain border border-zinc-200 dark:border-zinc-800"
+                          className="w-8 h-8 rounded-lg object-contain border border-black/[0.08] dark:border-white/[0.1]"
                         />
                         <span className="text-[13px] font-bold">DEEP SHOP</span>
                       </div>
-                      <motion.span
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ repeat: Infinity, duration: 1.2 }}
-                        className="px-3 py-1 rounded-full bg-[#007AFF] text-white text-xs font-bold shadow-xs"
-                      >
+                      <span className="px-3 py-1 rounded-full bg-[#0071E3] text-white text-xs font-bold">
                         Add
-                      </motion.span>
+                      </span>
                     </div>
-                    <p className="mt-2.5 text-xs font-semibold text-[#007AFF]">
+                    <p className="mt-2.5 text-xs font-semibold text-[#0071E3] dark:text-[#0A84FF]">
                       3. Tap “Add” at the top-right to launch full-screen!
                     </p>
                   </motion.div>
@@ -639,28 +657,25 @@ export const MobileAppInstallExperience: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            {/* Interactive Step-by-Step Rows */}
             <div className="mt-3.5 space-y-2">
               {[
                 {
                   step: 1,
                   title: "Tap Share in Safari",
                   desc: "Look for the square icon with an upward arrow",
-                  icon: <SafariShareIcon className="w-4 h-4 text-[#007AFF]" />,
+                  icon: <SafariShareIcon className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF]" />,
                 },
                 {
                   step: 2,
                   title: "Select “Add to Home Screen”",
                   desc: "Swipe up on the share sheet to find this option",
-                  icon: <Plus className="w-4 h-4 text-[#007AFF] stroke-[2.4]" />,
+                  icon: <Plus className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF] stroke-[2.4]" />,
                 },
                 {
                   step: 3,
                   title: "Tap “Add” in Top Right",
                   desc: "Open DEEP SHOP directly from your Home Screen",
-                  icon: (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  ),
+                  icon: <CheckCircle2 className="w-4 h-4 text-[#248A3D] dark:text-[#30D158]" />,
                 },
               ].map((item, idx) => {
                 const active = activeIosStep === idx;
@@ -668,19 +683,20 @@ export const MobileAppInstallExperience: React.FC = () => {
                   <button
                     key={item.step}
                     type="button"
+                    onPointerDown={() => triggerHaptic("light")}
                     onClick={() => setActiveIosStep(idx)}
-                    className={`w-full px-3.5 py-2.5 rounded-2xl border text-left flex items-center justify-between gap-3 transition cursor-pointer ${
+                    className={`w-full px-3.5 py-2.5 rounded-2xl border text-left flex items-center justify-between gap-3 transition active:scale-[0.985] cursor-pointer ${
                       active
-                        ? "bg-[#007AFF]/[0.07] border-[#007AFF]/45 dark:bg-[#007AFF]/15"
-                        : "bg-zinc-50/70 dark:bg-zinc-900/60 border-zinc-200/70 dark:border-zinc-800/80"
+                        ? "bg-[#0071E3]/[0.08] border-[#0071E3]/45 dark:bg-[#0A84FF]/15"
+                        : "bg-[#f5f5f7] dark:bg-[#2c2c2e] border-black/[0.06] dark:border-white/[0.08]"
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
-                        className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-extrabold shrink-0 ${
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold tabular-nums shrink-0 ${
                           active
-                            ? "bg-[#007AFF] text-white"
-                            : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700"
+                            ? "bg-[#0071E3] text-white"
+                            : "bg-white dark:bg-[#1c1c1e] text-zinc-700 dark:text-zinc-300 border border-black/[0.08] dark:border-white/[0.1]"
                         }`}
                       >
                         {item.step}
@@ -705,23 +721,22 @@ export const MobileAppInstallExperience: React.FC = () => {
 
             <button
               type="button"
+              onPointerDown={() => triggerHaptic("light")}
               onClick={() => dismissPrompt(48)}
-              className="mt-4 w-full h-11 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-[13.5px] active:scale-[0.985] transition cursor-pointer"
+              className={`mt-4 w-full h-11 rounded-full font-semibold text-[14px] active:scale-[0.97] transition cursor-pointer ${
+                isAppleShop
+                  ? "ds-apple-btn-primary"
+                  : "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950"
+              }`}
             >
               Got it
             </button>
 
-            {/* Animated Bouncing Pointer toward Safari Bottom Toolbar on iPhone */}
-            <motion.div
-              aria-hidden="true"
-              animate={{ y: [0, 5, 0] }}
-              transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
-              className="sm:hidden mt-2.5 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-zinc-400"
-            >
+            <div className="sm:hidden mt-2.5 flex items-center justify-center gap-1.5 text-[11px] font-medium text-zinc-400">
               <span>Tap</span>
-              <SafariShareIcon className="w-3.5 h-3.5 text-[#007AFF]" />
+              <SafariShareIcon className="w-3.5 h-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
               <span>in Safari’s toolbar below</span>
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       )}

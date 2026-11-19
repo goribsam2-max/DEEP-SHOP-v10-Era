@@ -4,8 +4,10 @@ import { auth, db } from "../firebase";
 import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { useNotify } from "../components/Notifications";
 import { Shield, Smartphone, Monitor, Globe, LogOut, Trash2, Calendar } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import SEO from "../components/SEO";
 import { LiquidGlassPopup } from "../components/ui/liquid-glass-popup";
+import { triggerHaptic } from "../lib/haptics";
 
 interface UserSession {
   id: string;
@@ -21,6 +23,7 @@ interface UserSession {
 export const LoginDevices: React.FC<{ userData: any }> = ({ userData }) => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -124,57 +127,58 @@ export const LoginDevices: React.FC<{ userData: any }> = ({ userData }) => {
   };
 
   return (
-    <div className="bg-[#F0F2F5] dark:bg-zinc-950 font-sans min-h-screen pb-[120px]">
+    <div className="ds-apple-shop-canvas min-h-screen pb-[120px]">
       <SEO 
         title="Where You're Logged In" 
         description="Manage your active login sessions and devices." 
         noindex={true}
       />
 
-      {/* Header banner */}
-      <div className="bg-[#0a2e15] dark:bg-[#071f0f] pt-12 pb-20 px-6 rounded-b-[40px] relative overflow-hidden">
-        <div className="max-w-lg mx-auto relative z-10">
-          <div>
-            <h2 className="text-white text-xl font-bold tracking-tight">Login Devices</h2>
-            <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Where you are logged in</p>
-          </div>
-        </div>
-      </div>
-
       {/* Main Container */}
-      <div className="-mt-10 px-4 md:px-6 relative z-30 max-w-lg mx-auto space-y-6">
+      <div className="px-4 md:px-6 pt-6 max-w-lg mx-auto space-y-5">
+        <div className="px-1">
+          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+            Login Devices
+          </h1>
+        </div>
         
         {/* Information box */}
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-[28px] p-5 shadow-xl border border-gray-100 dark:border-zinc-800 flex items-start gap-4">
-          <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
-            <Shield className="w-5 h-5 text-blue-500" />
+        <div className="ds-apple-surface rounded-[24px] p-5 flex items-start gap-4">
+          <div className="w-10 h-10 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 flex items-center justify-center shrink-0">
+            <Shield className="w-5 h-5 ds-apple-accent-text" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-zinc-900 dark:text-white mb-1">Session Security</h4>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+            <h4 className="text-[15px] font-semibold mb-1">Session Security</h4>
+            <p className="text-xs ds-apple-muted leading-relaxed">
               These are the devices that have logged into your account. If you recognize any unfamiliar device, log it out immediately and change your password.
             </p>
           </div>
         </div>
 
         {/* Sessions list */}
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-[32px] p-6 shadow-xl border border-gray-100 dark:border-zinc-800">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">Active Sessions ({sessions.length})</h3>
+        <div className="ds-apple-surface rounded-[24px] p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-5 gap-3">
+            <h3 className="text-[15px] font-semibold tracking-tight tabular-nums">
+              Active Sessions ({sessions.length})
+            </h3>
             
             {sessions.length > 1 && (
               <button 
-                onClick={() => setShowConfirmAllModal(true)}
-                className="text-xs text-red-500 font-bold hover:underline flex items-center gap-1.5"
+                type="button"
+                onClick={() => {
+                  triggerHaptic("warning");
+                  setShowConfirmAllModal(true);
+                }}
+                className="text-xs text-[#FF3B30] dark:text-[#FF453A] font-semibold hover:underline flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                Logout Other Devices
+                <LogOut className="w-3.5 h-3.5 shrink-0" />
+                <span>Logout Others</span>
               </button>
             )}
           </div>
 
           {loading ? (
-            <div className="space-y-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+            <div className="space-y-4 divide-y divide-black/[0.06] dark:divide-white/[0.08]">
               {Array.from({ length: 3 }).map((_, idx) => (
                 <div key={idx} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1">
@@ -191,18 +195,18 @@ export const LoginDevices: React.FC<{ userData: any }> = ({ userData }) => {
             </div>
           ) : sessions.length === 0 ? (
             <div className="text-center py-10">
-              <p className="text-sm text-zinc-500 font-bold">No active sessions found.</p>
+              <p className="text-sm ds-apple-muted font-medium">No active sessions found.</p>
             </div>
           ) : (
-            <div className="space-y-4 divide-y divide-zinc-100 dark:divide-zinc-800">
-              {sessions.map((session, index) => {
+            <div className="space-y-3 divide-y divide-black/[0.06] dark:divide-white/[0.08]">
+              {sessions.map((session) => {
                 const isCurrent = session.id === currentSessionId;
                 const isMobileDevice = session.device === "Mobile";
 
                 return (
-                  <div key={session.id} className={`pt-4 first:pt-0 flex items-center justify-between gap-4 group ${isCurrent ? "bg-emerald-50/20 dark:bg-emerald-950/5 p-3 rounded-2xl border border-emerald-100/30 dark:border-emerald-900/10" : ""}`}>
-                    <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isCurrent ? "bg-[#1cdb5e]/10 text-[#1cdb5e]" : "bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400"}`}>
+                  <div key={session.id} className={`pt-3.5 first:pt-0 flex items-center justify-between gap-4 group ${isCurrent ? "bg-[#34C759]/[0.07] dark:bg-[#30D158]/[0.1] p-3.5 rounded-2xl border border-[#34C759]/20" : ""}`}>
+                    <div className="flex items-start gap-3.5 min-w-0">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${isCurrent ? "bg-[#34C759]/15 text-[#248A3D] dark:text-[#30D158]" : "ds-apple-surface-subtle ds-apple-muted"}`}>
                         {isMobileDevice ? (
                           <Smartphone className="w-5 h-5" />
                         ) : (
@@ -210,40 +214,43 @@ export const LoginDevices: React.FC<{ userData: any }> = ({ userData }) => {
                         )}
                       </div>
                       
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-black text-zinc-800 dark:text-zinc-200">
+                          <span className="text-sm font-semibold truncate">
                             {session.os} ({session.browser})
                           </span>
                           {isCurrent && (
-                            <span className="bg-[#1cdb5e]/10 text-[#1cdb5e] text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
+                            <span className="bg-[#34C759]/15 text-[#248A3D] dark:text-[#30D158] text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full">
                               This Device
                             </span>
                           )}
                         </div>
                         
-                        <div className="flex flex-col gap-0.5 text-xs text-zinc-500 dark:text-zinc-400 font-bold">
-                          <span className="flex items-center gap-1">
-                            <Globe className="w-3.5 h-3.5 opacity-60" /> {session.ip} • {session.location}
+                        <div className="flex flex-col gap-0.5 text-xs ds-apple-muted tabular-nums">
+                          <span className="flex items-center gap-1 truncate">
+                            <Globe className="w-3.5 h-3.5 opacity-60 shrink-0" /> {session.ip} · {session.location}
                           </span>
-                          <span className="flex items-center gap-1 opacity-80 text-[11px]">
-                            <Calendar className="w-3.5 h-3.5 opacity-60" /> Active: {formatDate(session.lastActive)}
+                          <span className="flex items-center gap-1 text-[11px]">
+                            <Calendar className="w-3.5 h-3.5 opacity-60 shrink-0" /> Active: {formatDate(session.lastActive)}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     {!isCurrent && (
-                      <button
+                      <motion.button
+                        type="button"
+                        whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
                         onClick={() => {
+                          triggerHaptic("warning");
                           setTargetSessionId(session.id);
                           setShowConfirmModal(true);
                         }}
-                        className="w-10 h-10 rounded-full bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/30 flex items-center justify-center text-red-500 transition-colors"
+                        className="w-9 h-9 rounded-full bg-[#FF3B30]/10 hover:bg-[#FF3B30]/15 flex items-center justify-center text-[#FF3B30] dark:text-[#FF453A] transition-colors shrink-0 cursor-pointer"
                         title="Logout device"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </motion.button>
                     )}
                   </div>
                 );

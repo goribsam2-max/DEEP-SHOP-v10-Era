@@ -1,7 +1,8 @@
 import { formatPrice } from "@/lib/utils";
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { CustomSectionEmbed } from "../components/CustomSectionEmbed";
 import { auth, db } from "../firebase";
 import { query, where, getDocs, collection } from "firebase/firestore";
@@ -9,6 +10,8 @@ import { useNotify } from "../components/Notifications";
 import { useIllustrations } from "../lib/useIllustrations";
 import { PixelImage } from "../components/ui/PixelImage";
 import { getProductDisplayImage } from "../src/lib/phonePartsArt";
+import { APPLE_SPRING_DEFAULT, projectMomentum } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 import {
   ShoppingBag,
   Trash2,
@@ -16,7 +19,6 @@ import {
   Minus,
   Ticket,
   ArrowRight,
-  ArrowLeft,
   ShieldCheck,
   X,
   CheckCircle2,
@@ -35,6 +37,7 @@ const Cart: React.FC = () => {
 
   const navigate = useNavigate();
   const notify = useNotify();
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const syncCartFromStorage = () => {
@@ -111,6 +114,7 @@ const Cart: React.FC = () => {
   const grandTotal = Math.max(0, total + deliveryCharge - promoDiscount);
 
   const updateQuantity = (index: number, delta: number) => {
+    triggerHaptic("light");
     const newItems = [...items];
     const nextQty = Math.max(1, (newItems[index].quantity || 1) + delta);
     newItems[index] = { ...newItems[index], quantity: nextQty };
@@ -118,6 +122,7 @@ const Cart: React.FC = () => {
   };
 
   const removeItem = (index: number) => {
+    triggerHaptic("medium");
     const newItems = items.filter((_, i) => i !== index);
     persistCart(newItems);
     notify("কার্ট থেকে পণ্য সরানো হয়েছে", "info");
@@ -125,9 +130,11 @@ const Cart: React.FC = () => {
 
   const handleClearCart = () => {
     if (!confirmClear) {
+      triggerHaptic("warning");
       setConfirmClear(true);
       return;
     }
+    triggerHaptic("medium");
     persistCart([]);
     setAppliedPromo(null);
     setConfirmClear(false);
@@ -137,6 +144,7 @@ const Cart: React.FC = () => {
   const applyPromo = async () => {
     setPromoError("");
     if (!promoCode.trim()) return;
+    triggerHaptic("light");
     try {
       const q = query(
         collection(db, "promo_codes"),
@@ -144,33 +152,41 @@ const Cart: React.FC = () => {
       );
       const snap = await getDocs(q);
       if (snap.empty) {
+        triggerHaptic("error");
         setPromoError("প্রোমো কোডটি সঠিক নয়");
       } else {
         const c = snap.docs[0].data();
         if (!c.isActive) {
+          triggerHaptic("error");
           setPromoError("এই প্রোমো কোডটি বর্তমানে নিষ্ক্রিয়");
         } else if (c.expiresAt && c.expiresAt < Date.now()) {
+          triggerHaptic("error");
           setPromoError("প্রোমো কোডের মেয়াদ শেষ হয়েছে");
         } else if (c.minOrderValue && total < c.minOrderValue) {
+          triggerHaptic("warning");
           setPromoError(`সর্বনিম্ন অর্ডার মূল্য ${formatPrice(c.minOrderValue)} হতে হবে`);
         } else {
+          triggerHaptic("success");
           setAppliedPromo({ id: snap.docs[0].id, ...c, isVoucher: false });
           notify("প্রোমো কোড সফলভাবে যুক্ত হয়েছে!", "success");
         }
       }
     } catch {
+      triggerHaptic("error");
       setPromoError("প্রোমো কোড যাচাই করতে সমস্যা হয়েছে");
     }
   };
 
   const applyVoucher = (voucher: any) => {
     if (voucher.minOrderValue && total < voucher.minOrderValue) {
+      triggerHaptic("warning");
       notify(
         `সর্বনিম্ন অর্ডার মূল্য ${formatPrice(voucher.minOrderValue)} প্রয়োজন`,
         "error"
       );
       return;
     }
+    triggerHaptic("success");
     setAppliedPromo(voucher);
     setShowCouponsModal(false);
     notify("ভাউচার সফলভাবে যুক্ত হয়েছে!", "success");
@@ -483,9 +499,9 @@ const Cart: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate("/all-products")}
-                    className="ds-liquid-btn-secondary !min-h-[44px] !text-sm px-5 flex items-center gap-2 whitespace-nowrap"
+                    className="ds-liquid-btn-secondary !min-h-[44px] !text-sm px-5 flex items-center gap-2 whitespace-nowrap cursor-pointer"
                   >
-                    <ArrowLeft className="w-4 h-4 shrink-0" />
+                    <ShoppingBag className="w-4 h-4 shrink-0" />
                     <span>কেনাকাটা চালিয়ে যান</span>
                   </button>
                   <button
@@ -807,72 +823,94 @@ const Cart: React.FC = () => {
       )}
 
       {/* ====================================================================
-          LIQUID GLASS VOUCHERS MODAL
+          APPLE GLASS VOUCHERS MODAL (Portaled + Momentum Dismiss)
           ==================================================================== */}
-      <AnimatePresence>
-        {showCouponsModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowCouponsModal(false)}
-            className="fixed inset-0 z-50 ds-liquid-backdrop flex items-end sm:items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 40, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 24, scale: 0.96 }}
-              transition={{ type: "spring", stiffness: 360, damping: 28 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md ds-liquid-panel p-5 sm:p-6 overflow-hidden flex flex-col max-h-[80vh]"
-            >
-              <div className="pb-4 border-b border-slate-900/[0.07] dark:border-white/[0.08] flex justify-between items-center shrink-0">
-                <div>
-                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">
-                    আপনার ভাউচারসমূহ
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    যেকোনো একটি ভাউচার অর্ডারে যুক্ত করুন
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowCouponsModal(false)}
-                  aria-label="Close vouchers"
-                  className="w-8 h-8 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-600 dark:text-slate-300"
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {showCouponsModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                onClick={() => {
+                  triggerHaptic("light");
+                  setShowCouponsModal(false);
+                }}
+                className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+              >
+                <motion.div
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 36, scale: 0.98 }}
+                  transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+                  drag={prefersReducedMotion ? false : "y"}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  onDragEnd={(_, info) => {
+                    const projected = info.offset.y + projectMomentum(info.velocity.y);
+                    if (projected > 110 || info.velocity.y > 420) {
+                      triggerHaptic("light");
+                      setShowCouponsModal(false);
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-md ds-apple-modal rounded-t-[28px] sm:rounded-[28px] p-5 sm:p-6 overflow-hidden flex flex-col max-h-[82vh]"
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="overflow-y-auto pt-4 space-y-3">
-                {myCoupons.map((voucher) => (
-                  <div
-                    key={voucher.id}
-                    className="ds-liquid-subpanel p-4 flex justify-between items-center gap-4"
-                  >
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                        {voucher.title}
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
-                        সর্বনিম্ন অর্ডার: {formatPrice(voucher.minOrderValue || 0)}
+                  <div className="w-9 h-1 rounded-full bg-black/20 dark:bg-white/25 mx-auto mb-3 sm:hidden" />
+                  <div className="pb-4 border-b border-black/[0.06] dark:border-white/[0.08] flex justify-between items-center shrink-0">
+                    <div>
+                      <h3 className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        আপনার ভাউচারসমূহ
+                      </h3>
+                      <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">
+                        যেকোনো একটি ভাউচার অর্ডারে যুক্ত করুন
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => applyVoucher(voucher)}
-                      className="ds-liquid-btn-primary !min-h-[36px] !text-xs px-4 whitespace-nowrap shrink-0"
+                      onClick={() => {
+                        triggerHaptic("light");
+                        setShowCouponsModal(false);
+                      }}
+                      aria-label="Close vouchers"
+                      className="ds-apple-icon-btn w-8 h-8 flex items-center justify-center active:scale-95 transition-transform"
                     >
-                      ব্যবহার করুন
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
+
+                  <div className="overflow-y-auto pt-4 space-y-3">
+                    {myCoupons.map((voucher) => (
+                      <div
+                        key={voucher.id}
+                        className="ds-liquid-subpanel p-4 flex justify-between items-center gap-4"
+                      >
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                            {voucher.title}
+                          </h4>
+                          <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-0.5 tabular-nums">
+                            সর্বনিম্ন অর্ডার: {formatPrice(voucher.minOrderValue || 0)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => applyVoucher(voucher)}
+                          className="ds-liquid-btn-primary !min-h-[36px] !text-xs px-4 whitespace-nowrap shrink-0 active:scale-[0.97]"
+                        >
+                          ব্যবহার করুন
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 };

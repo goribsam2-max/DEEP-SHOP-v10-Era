@@ -27,7 +27,11 @@ import {
   isPhoneAuthEmail,
 } from "../lib/utils";
 import { syncCurrentUserToSavedAccounts } from "../lib/savedAccounts";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  APPLE_SPRING_DEFAULT,
+  projectMomentum,
+} from "../lib/shoppingRoute";
 import {
   ChevronRight,
   User,
@@ -115,6 +119,7 @@ export const Profile: React.FC<ProfileProps> = ({
   const { formatPrice } = useRegion();
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
 
   const [authUser, setAuthUser] = useState<FirebaseUser | null>(
     () => auth.currentUser
@@ -924,7 +929,7 @@ export const Profile: React.FC<ProfileProps> = ({
 
   if (!authReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm font-semibold text-zinc-500">
+      <div className="ds-apple-shop-canvas min-h-screen flex items-center justify-center text-sm font-semibold ds-apple-muted">
         Loading profile...
       </div>
     );
@@ -932,67 +937,70 @@ export const Profile: React.FC<ProfileProps> = ({
 
   if (!effectiveProfile) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-28 px-4 bg-transparent min-h-screen font-sans">
+      <div className="ds-apple-shop-canvas flex flex-col items-center justify-center text-center py-28 px-4 min-h-screen">
         <SEO
           title="My Profile • DEEP SHOP"
           description="Manage your profile and account settings."
         />
-        <div className="w-20 h-20 bg-white dark:bg-zinc-900 rounded-3xl flex items-center justify-center mb-5 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <div className="ds-apple-surface w-20 h-20 rounded-[24px] flex items-center justify-center mb-5">
           <User
-            className="w-10 h-10 text-zinc-400 dark:text-zinc-500"
-            strokeWidth={1.5}
+            className="w-10 h-10 ds-apple-muted"
+            strokeWidth={1.6}
           />
         </div>
-        <h2 className="text-2xl font-black mb-2 tracking-tight text-zinc-900 dark:text-white">
+        <h2 className="ds-apple-display text-2xl font-semibold mb-2">
           Sign In to Continue
         </h2>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6 max-w-xs leading-relaxed">
+        <p className="text-[13px] ds-apple-muted mb-6 max-w-xs leading-relaxed">
           Sign in to access your profile, order history, wallet, inbox messages,
           and all account pages.
         </p>
-        <button
+        <motion.button
           type="button"
-          onClick={() => navigate("/auth-selector")}
-          className="px-8 py-3.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-full font-extrabold text-xs transition shadow-lg active:scale-95 flex items-center space-x-2 cursor-pointer"
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+          onClick={() => {
+            triggerHaptic();
+            navigate("/auth-selector");
+          }}
+          className="ds-apple-btn-primary px-8 h-12 rounded-full font-semibold text-sm transition flex items-center gap-2 cursor-pointer"
         >
           <span>Sign In / Register</span>
           <ChevronRight className="w-4 h-4" />
-        </button>
+        </motion.button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F2F3F5] dark:bg-[#0B0B0E] text-zinc-950 dark:text-zinc-100 font-sans pb-32 pt-4 sm:pt-6">
+    <div className="ds-apple-shop-canvas min-h-screen pb-32 pt-4 sm:pt-6">
       <SEO
         title={`${displayName} • DEEP SHOP`}
         description="Account dashboard, orders, wallet, settings, and all pages."
       />
 
-      {/* Uses <div> instead of <main> so global CSS never forces a solid white rectangle */}
       <div className="max-w-2xl mx-auto px-3.5 sm:px-5 space-y-5 bg-transparent">
         {/* TOP PROFILE HEADER */}
-        <div className="relative bg-white dark:bg-[#16161A] rounded-[24px] p-5 sm:p-6 border border-zinc-200/60 dark:border-zinc-800/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="ds-apple-surface relative rounded-[24px] p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4 min-w-0">
               <AvatarUploader onUpload={handleAvatarUpload}>
                 <div className="relative group cursor-pointer shrink-0">
-                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 rounded-[28px] border-3 border-white dark:border-zinc-800 shadow-lg bg-zinc-200 dark:bg-zinc-800 transition-transform group-hover:scale-105 active:scale-95">
+                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 rounded-[26px] border-2 border-white/80 dark:border-white/15 shadow-sm bg-[#F2F2F7] dark:bg-[#2C2C2E] transition-transform group-hover:scale-[1.03] active:scale-95">
                     <AvatarImage
                       src={
                         effectiveProfile?.photoURL ||
                         `https://ui-avatars.com/api/?name=${encodeURIComponent(
                           displayName
-                        )}&background=1877F2&color=fff`
+                        )}&background=0071E3&color=fff`
                       }
                       alt={displayName}
                       className="object-cover"
                     />
-                    <AvatarFallback className="text-2xl font-black bg-zinc-200 dark:bg-zinc-800">
+                    <AvatarFallback className="text-2xl font-semibold bg-[#F2F2F7] dark:bg-[#2C2C2E]">
                       {displayName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center border-2 border-white dark:border-zinc-950 shadow-md">
+                  <div className="ds-apple-icon-btn absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center">
                     <Pencil className="w-3.5 h-3.5" />
                   </div>
                 </div>
@@ -1000,23 +1008,23 @@ export const Profile: React.FC<ProfileProps> = ({
 
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white truncate">
+                  <h1 className="ds-apple-display text-xl sm:text-2xl font-semibold truncate">
                     {displayName}
                   </h1>
-                  <CheckCircle2 className="w-5 h-5 text-[#1877F2] shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 ds-apple-accent-text shrink-0" />
                   {isAdmin && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-semibold uppercase tracking-wider">
                       Admin
                     </span>
                   )}
                 </div>
                 {handle && (
-                  <p className="text-xs sm:text-sm font-semibold text-zinc-500 dark:text-zinc-400 truncate">
+                  <p className="text-xs sm:text-sm font-medium ds-apple-muted truncate">
                     @{handle}
                   </p>
                 )}
                 {effectiveProfile.email && !isPhoneAuthEmail(effectiveProfile.email) && (
-                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">
+                  <p className="text-[11px] ds-apple-muted truncate mt-0.5">
                     {effectiveProfile.email}
                   </p>
                 )}
@@ -1024,75 +1032,89 @@ export const Profile: React.FC<ProfileProps> = ({
             </div>
 
             <div className="flex sm:flex-col gap-2 w-full sm:w-auto">
-              <button
+              <motion.button
                 type="button"
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
                 onClick={() => {
                   triggerHaptic();
                   navigate("/deposit");
                 }}
-                className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 text-xs font-semibold text-zinc-900 dark:text-zinc-100 transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer border border-zinc-200/60 dark:border-zinc-700/60"
+                className="ds-apple-btn-secondary flex-1 sm:flex-none px-4 h-9 rounded-full text-xs font-semibold whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <QrCode className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <QrCode className="w-3.5 h-3.5 ds-apple-accent-text shrink-0" />
                 <span>Deposit / QR</span>
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
                 type="button"
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
                 onClick={() => {
                   triggerHaptic();
                   navigate("/subscription");
                 }}
-                className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="ds-apple-btn-primary flex-1 sm:flex-none px-4 h-9 rounded-full text-xs font-semibold whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Crown className="w-3.5 h-3.5" />
+                <Crown className="w-3.5 h-3.5 shrink-0" />
                 <span>VIP Plan</span>
-              </button>
+              </motion.button>
             </div>
           </div>
 
-          {/* STATS ROW - MINIMAL RESPONSIVE GRID */}
-          <div className="grid grid-cols-4 gap-2 mt-4 pt-3.5 border-t border-zinc-100 dark:border-zinc-800/70">
-            <button
+          {/* STATS ROW */}
+          <div className="grid grid-cols-4 gap-2 mt-4 pt-3.5 border-t border-black/[0.06] dark:border-white/[0.08]">
+            <motion.button
               type="button"
-              onClick={() => navigate("/deposit")}
-              className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 p-2 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer border border-zinc-100 dark:border-zinc-800/50"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
+              onClick={() => {
+                triggerHaptic();
+                navigate("/deposit");
+              }}
+              className="ds-apple-surface-subtle rounded-2xl p-2.5 text-center transition cursor-pointer"
             >
-              <span className="text-[9.5px] font-semibold uppercase text-zinc-400 block tracking-tight">
+              <span className="text-[10px] font-medium ds-apple-muted block">
                 Wallet
               </span>
-              <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums truncate block mt-0.5">
+              <span className="text-xs sm:text-sm font-semibold text-[#248A3D] dark:text-[#30D158] tabular-nums truncate block mt-0.5">
                 {formatPrice(walletBalance)}
               </span>
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
-              onClick={() => navigate("/my-coins")}
-              className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 p-2 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer border border-zinc-100 dark:border-zinc-800/50"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
+              onClick={() => {
+                triggerHaptic();
+                navigate("/my-coins");
+              }}
+              className="ds-apple-surface-subtle rounded-2xl p-2.5 text-center transition cursor-pointer"
             >
-              <span className="text-[9.5px] font-semibold uppercase text-zinc-400 block tracking-tight">
+              <span className="text-[10px] font-medium ds-apple-muted block">
                 Coins
               </span>
-              <span className="text-xs sm:text-sm font-bold text-amber-500 tabular-nums block mt-0.5">
+              <span className="text-xs sm:text-sm font-semibold text-[#C93400] dark:text-[#FF9F0A] tabular-nums block mt-0.5">
                 {coins.toLocaleString()}
               </span>
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
-              onClick={() => navigate("/buy-stars")}
-              className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 p-2 text-center hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition cursor-pointer border border-zinc-100 dark:border-zinc-800/50"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
+              onClick={() => {
+                triggerHaptic();
+                navigate("/buy-stars");
+              }}
+              className="ds-apple-surface-subtle rounded-2xl p-2.5 text-center transition cursor-pointer"
             >
-              <span className="text-[9.5px] font-semibold uppercase text-zinc-400 block tracking-tight">
+              <span className="text-[10px] font-medium ds-apple-muted block">
                 Stars
               </span>
-              <span className="text-xs sm:text-sm font-bold text-indigo-500 tabular-nums block mt-0.5">
+              <span className="text-xs sm:text-sm font-semibold ds-apple-accent-text tabular-nums block mt-0.5">
                 {stars.toLocaleString()}
               </span>
-            </button>
-            <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 p-2 text-center border border-zinc-100 dark:border-zinc-800/50">
-              <span className="text-[9.5px] font-semibold uppercase text-zinc-400 block tracking-tight">
+            </motion.button>
+            <div className="ds-apple-surface-subtle rounded-2xl p-2.5 text-center">
+              <span className="text-[10px] font-medium ds-apple-muted block">
                 Followers
               </span>
-              <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 tabular-nums block mt-0.5">
+              <span className="text-xs sm:text-sm font-semibold tabular-nums block mt-0.5">
                 {followers > 0 ? followers.toLocaleString() : xp.toLocaleString()}
               </span>
             </div>
@@ -1102,29 +1124,29 @@ export const Profile: React.FC<ProfileProps> = ({
         {/* PROMINENT TOP ADMIN CONTROL PANEL BANNER FOR ADMINS & STAFF */}
         {isAdmin && (
           <motion.div
-            whileTap={{ scale: 0.985 }}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
             onClick={() => {
               triggerHaptic();
               navigate("/admin");
             }}
-            className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-indigo-600 via-blue-600 to-blue-700 text-white p-4 shadow-sm cursor-pointer group"
+            className="relative overflow-hidden rounded-[22px] bg-[#0071E3] dark:bg-[#0A84FF] text-white p-4 shadow-sm cursor-pointer group"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/25">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
                   <Shield className="w-5 h-5 text-white" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm sm:text-base font-bold tracking-tight text-white truncate">
+                    <h2 className="text-sm sm:text-base font-semibold tracking-tight text-white truncate">
                       Admin Control Panel
                     </h2>
-                    <span className="px-1.5 py-0.5 rounded bg-white/20 text-white text-[9px] font-extrabold uppercase tracking-wider shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-semibold uppercase tracking-wider shrink-0">
                       Admin
                     </span>
                   </div>
-                  <p className="text-[11px] text-blue-100 font-medium truncate mt-0.5">
-                    Manage Products, Orders, Users, Deposits, Banners & Settings
+                  <p className="text-[11px] text-white/80 font-medium truncate mt-0.5">
+                    Manage Products, Orders, Users, Deposits, Banners &amp; Settings
                   </p>
                 </div>
               </div>
@@ -1135,49 +1157,55 @@ export const Profile: React.FC<ProfileProps> = ({
           </motion.div>
         )}
 
-        {/* MINIMAL MEMBERSHIP BANNER */}
+        {/* MEMBERSHIP BANNER */}
         <motion.div
-          whileTap={{ scale: 0.985 }}
-          onClick={() => navigate("/subscription")}
-          className="relative overflow-hidden rounded-[20px] bg-white dark:bg-[#16161A] text-zinc-900 dark:text-white p-4 border border-zinc-200/70 dark:border-zinc-800 shadow-2xs cursor-pointer group"
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+          onClick={() => {
+            triggerHaptic();
+            navigate("/subscription");
+          }}
+          className="ds-apple-surface relative overflow-hidden rounded-[22px] p-4 cursor-pointer group"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#FF9500] to-[#FFCC00] flex items-center justify-center text-white shrink-0">
               <Crown className="w-5 h-5" />
             </div>
 
             <div className="min-w-0 flex-1">
-              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white tracking-wide truncate">
+              <h3 className="text-xs sm:text-sm font-semibold tracking-tight truncate">
                 {effectiveProfile.hasActiveSubscription
                   ? "VIP Reseller Member"
                   : "Starter Plan · Upgrade to VIP"}
               </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 truncate">
-                Unlock 0৳ advance Cash on Delivery & wholesale perks
+              <p className="text-[11px] ds-apple-muted font-medium mt-0.5 truncate">
+                Unlock 0৳ advance Cash on Delivery &amp; wholesale perks
               </p>
             </div>
 
-            <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
-              <ChevronRight className="w-4 h-4 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors" />
+            <div className="ds-apple-surface-subtle w-7 h-7 rounded-full flex items-center justify-center shrink-0">
+              <ChevronRight className="w-4 h-4 ds-apple-muted group-hover:translate-x-0.5 transition-transform" />
             </div>
           </div>
         </motion.div>
 
         {/* INSTANT PAGE FINDER SEARCH BAR */}
         <div className="relative">
-          <Search className="w-4 h-4 text-zinc-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 ds-apple-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search all profile pages, orders, wallet, settings..."
-            className="w-full h-12 pl-11 pr-10 rounded-full bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-sm font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 shadow-[0_4px_16px_rgba(15,23,42,0.04)] outline-none focus:border-[#1877F2]"
+            className="ds-apple-input w-full h-11 pl-11 pr-10 rounded-full text-sm font-medium outline-none"
           />
           {searchQuery && (
             <button
               type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
+              onClick={() => {
+                triggerHaptic();
+                setSearchQuery("");
+              }}
+              className="ds-apple-icon-btn absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer"
               aria-label="Clear search"
             >
               <X className="w-3.5 h-3.5" />
@@ -1185,14 +1213,14 @@ export const Profile: React.FC<ProfileProps> = ({
           )}
         </div>
 
-        {/* ALL EXISTING APPLICATION SECTIONS & PAGES (Exact 1:1 IMG_5308 Card & Row Design) */}
+        {/* ALL PROFILE SECTIONS */}
         <div className="space-y-5">
           {filteredSections.map((section) => (
             <div key={section.id} className="space-y-2">
-              <h2 className="px-2 text-[13px] font-semibold text-[#65676B] dark:text-zinc-400 tracking-[-0.005em]">
+              <h2 className="ds-apple-eyebrow ds-apple-muted px-2 text-[11px]">
                 {section.heading}
               </h2>
-              <div className="w-full rounded-[20px] bg-white dark:bg-[#16161A] shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border dark:border-zinc-800/80 overflow-hidden">
+              <div className="ds-apple-surface w-full rounded-[22px] overflow-hidden">
                 {section.items.map((item, idx) => (
                   <ProfileRow
                     key={item.id}
@@ -1208,98 +1236,120 @@ export const Profile: React.FC<ProfileProps> = ({
           ))}
 
           {filteredSections.length === 0 && (
-            <div className="rounded-[20px] bg-white dark:bg-[#16161A] p-8 text-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border dark:border-zinc-800/80">
-              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            <div className="ds-apple-surface rounded-[22px] p-8 text-center">
+              <p className="text-sm font-semibold">
                 No pages matched “{searchQuery}”
               </p>
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
-                className="mt-3 px-4 py-2 rounded-full bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
+                onClick={() => {
+                  triggerHaptic();
+                  setSearchQuery("");
+                }}
+                className="ds-apple-btn-primary mt-3 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer"
               >
                 Show All Pages
               </button>
             </div>
           )}
 
-          {/* LOGOUT CARD (Exact IMG_5308 Row Geometry) */}
-          <div className="w-full rounded-[20px] bg-white dark:bg-[#16161A] shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border dark:border-zinc-800/80 overflow-hidden">
+          {/* LOGOUT CARD */}
+          <div className="ds-apple-surface w-full rounded-[22px] overflow-hidden">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic();
                 setShowLogoutModal(true);
               }}
-              className="w-full pl-5 pr-4 py-[17px] flex items-center justify-between hover:bg-black/[0.025] dark:hover:bg-white/[0.04] active:bg-black/[0.045] transition-colors cursor-pointer"
+              className="w-full pl-5 pr-4 py-[16px] flex items-center justify-between hover:bg-black/[0.025] dark:hover:bg-white/[0.04] active:bg-black/[0.045] transition-colors cursor-pointer"
             >
               <div className="flex items-center min-w-0">
-                <span className="w-6 h-6 flex items-center justify-center text-[#E11D48] dark:text-rose-400 shrink-0">
-                  <LogOut className="w-[22px] h-[22px] stroke-[2]" />
+                <span className="w-6 h-6 flex items-center justify-center text-[#FF3B30] dark:text-[#FF453A] shrink-0">
+                  <LogOut className="w-[21px] h-[21px] stroke-[2]" />
                 </span>
-                <span className="pl-4 text-[16.5px] leading-[1.3] font-normal text-[#E11D48] dark:text-rose-400 tracking-[-0.01em] truncate">
+                <span className="pl-4 text-[16px] leading-[1.3] font-medium text-[#FF3B30] dark:text-[#FF453A] tracking-[-0.01em] truncate">
                   Log Out
                 </span>
               </div>
-              <ChevronRight className="w-[20px] h-[20px] text-[#65676B] dark:text-zinc-400 stroke-[2] shrink-0" />
+              <ChevronRight className="w-[19px] h-[19px] ds-apple-muted stroke-[2] shrink-0" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* LOGOUT CONFIRMATION BOTTOM SHEET (Unified with Post Card Bottom Sheet) */}
+      {/* LOGOUT CONFIRMATION BOTTOM SHEET */}
       {typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence>
             {showLogoutModal && (
               <div
-                className="fixed inset-0 z-[280] flex flex-col justify-end"
+                className="ds-apple-portal fixed inset-0 z-[280] flex flex-col justify-end"
                 onClick={() => setShowLogoutModal(false)}
               >
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className="fixed inset-0 bg-black/45 backdrop-blur-[1.5px]"
+                  transition={{ duration: 0.2 }}
+                  className="ds-apple-backdrop fixed inset-0"
                 />
 
                 <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{ type: "spring", stiffness: 390, damping: 34 }}
+                  initial={shouldReduceMotion ? { opacity: 0 } : { y: "100%" }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { y: "100%" }}
+                  transition={
+                    shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT
+                  }
+                  drag={shouldReduceMotion ? false : "y"}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  onDragEnd={(_, info) => {
+                    const projected = info.offset.y + projectMomentum(info.velocity.y);
+                    if (projected > 120 || info.velocity.y > 420) {
+                      triggerHaptic();
+                      setShowLogoutModal(false);
+                    }
+                  }}
                   onClick={(e) => e.stopPropagation()}
-                  className="loops-about-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[32px] px-5 pt-3 pb-8 space-y-4 shadow-[0_-12px_40px_rgba(0,0,0,0.16)] border-t loops-divider"
+                  className="ds-apple-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[28px] px-5 pt-3 pb-8 space-y-4"
                 >
-                  <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
+                  <div className="w-10 h-1 rounded-full bg-black/20 dark:bg-white/25 mx-auto mb-1 shrink-0" />
 
-                  <div className="space-y-1.5 pt-0.5">
-                    <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                  <div className="space-y-1.5 pt-0.5 px-1">
+                    <h3 className="text-[17px] font-semibold tracking-tight">
                       Log out of your account?
                     </h3>
-                    <p className="text-[14.5px] leading-snug text-zinc-500 dark:text-zinc-400">
-                      You will need to sign in again to access your orders, wallet, and Loops profile.
+                    <p className="text-[14px] leading-snug ds-apple-muted">
+                      You will need to sign in again to access your orders, wallet, and profile.
                     </p>
                   </div>
 
-                  <div className="loops-about-card rounded-[22px] py-1.5 px-1.5 space-y-0.5">
-                    <button
+                  <div className="space-y-2.5 pt-1">
+                    <motion.button
                       type="button"
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-rose-500/10 text-[16px] font-normal text-[#FF3040] cursor-pointer text-left transition"
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                      onClick={() => {
+                        triggerHaptic("warning");
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center justify-center gap-2.5 h-12 px-4 rounded-full bg-[#FF3B30] dark:bg-[#FF453A] text-white text-[15.5px] font-semibold cursor-pointer"
                     >
-                      <LogOut className="w-[22px] h-[22px] stroke-[1.95] text-[#FF3040] shrink-0" />
-                      <span>Log out</span>
-                    </button>
+                      <LogOut className="w-[18px] h-[18px] stroke-[2] shrink-0" />
+                      <span>Log Out</span>
+                    </motion.button>
 
-                    <button
+                    <motion.button
                       type="button"
-                      onClick={() => setShowLogoutModal(false)}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-[#0f0f0f] dark:text-white cursor-pointer text-left transition"
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                      onClick={() => {
+                        triggerHaptic();
+                        setShowLogoutModal(false);
+                      }}
+                      className="ds-apple-btn-secondary w-full flex items-center justify-center h-12 px-4 rounded-full text-[15.5px] font-semibold cursor-pointer"
                     >
-                      <X className="w-[22px] h-[22px] stroke-[1.95] text-[#0f0f0f] dark:text-white shrink-0" />
-                      <span>Cancel</span>
-                    </button>
+                      Cancel
+                    </motion.button>
                   </div>
                 </motion.div>
               </div>
@@ -1369,7 +1419,7 @@ function ProfileRow({
         </div>
       </button>
       {!isLast && (
-        <div className="ml-[60px] border-b border-[#E5E7EB] dark:border-zinc-800/90" />
+        <div className="ml-[60px] border-b border-black/[0.06] dark:border-white/[0.08]" />
       )}
     </div>
   );

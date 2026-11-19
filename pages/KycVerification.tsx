@@ -4,13 +4,14 @@ import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { uploadToImgbb } from "../services/imgbb";
 import { useNotify } from "../components/Notifications";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "../components/ui/button";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Input } from "../components/ui/input";
 import { 
-  Shield, Camera, Check, User, Calendar, CreditCard, Eye, EyeOff, 
-  ArrowLeft, ArrowRight, Sparkles, AlertCircle, RefreshCw, Loader2, Video, ChevronLeft
+  Shield, Camera, Check, User, Calendar, CreditCard, Eye, 
+  ArrowLeft, ArrowRight, Sparkles, AlertCircle, Video
 } from "lucide-react";
+import { triggerHaptic } from "../lib/haptics";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
 
 
 
@@ -19,6 +20,7 @@ type KycStep = "info" | "nid-front" | "nid-back" | "face-liveness" | "processing
 export default function KycVerification(props?: { onSuccess?: () => void }) {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
   const [currentStep, setCurrentStep] = useState<KycStep>("info");
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
@@ -234,34 +236,36 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
   };
 
   
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-inter pb-20">
-      <div className="max-w-2xl mx-auto md:py-10">
-        
-        {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-4 md:px-0 mb-4">
-            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">KYC Verification</h1>
-        </div>
+  const stepTransition = shouldReduceMotion
+    ? { duration: 0.16 }
+    : APPLE_SPRING_DEFAULT;
 
-        <div className="bg-white dark:bg-zinc-900 rounded-none md:rounded-2xl border-y md:border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm flex flex-col">
+  return (
+    <div className="ds-apple-shop-canvas min-h-screen pb-24">
+      <div className="max-w-2xl mx-auto px-4 pt-6 space-y-4">
+        <div className="px-1">
+          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+            KYC Verification
+          </h1>
+        </div>
+        <div className="ds-apple-surface rounded-[26px] overflow-hidden flex flex-col">
 
         {/* Header bar */}
-        <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
+        <div className="p-5 sm:p-6 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#34C759]/12 dark:bg-[#30D158]/15 flex items-center justify-center text-[#248A3D] dark:text-[#30D158]">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-zinc-900 dark:text-white leading-tight">DEEP Verification</h3>
-              <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">KYC Compliance Portal</p>
+              <h3 className="font-semibold tracking-tight leading-tight">DEEP Verification</h3>
+              <p className="ds-apple-eyebrow ds-apple-muted text-[10px]">Identity Compliance Portal</p>
             </div>
           </div>
-          
         </div>
 
         {/* Step Indicator */}
         {currentStep !== "processing" && currentStep !== "success" && (
-          <div className="px-6 pt-4 flex gap-1 items-center">
+          <div className="px-6 pt-4 flex gap-1.5 items-center">
             {(["info", "nid-front", "nid-back", "face-liveness"] as const).map((step, idx) => {
               const stepLabels = ["Info", "NID Front", "NID Back", "Biometric"];
               const stepIndex = ["info", "nid-front", "nid-back", "face-liveness"].indexOf(currentStep);
@@ -269,9 +273,9 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
               const isCompleted = stepIndex > idx;
 
               return (
-                <div key={step} className="flex-1 flex flex-col gap-1">
-                  <div className={`h-1 rounded-full transition-all duration-300 ${isCompleted ? "bg-emerald-500" : isActive ? "bg-[#EF8020] animate-pulse" : "bg-zinc-100 dark:bg-zinc-800"}`} />
-                  <span className={`text-[9px] font-bold text-center ${isActive ? "text-zinc-800 dark:text-zinc-100" : "text-zinc-400"}`}>
+                <div key={step} className="flex-1 flex flex-col gap-1.5">
+                  <div className={`h-1.5 rounded-full transition-colors duration-200 ${isCompleted ? "bg-[#34C759] dark:bg-[#30D158]" : isActive ? "bg-[#0071E3] dark:bg-[#0A84FF]" : "bg-[#E5E5EA] dark:bg-[#2C2C2E]"}`} />
+                  <span className={`text-[10px] font-semibold text-center ${isActive ? "ds-apple-accent-text" : isCompleted ? "text-[#248A3D] dark:text-[#30D158]" : "ds-apple-muted"}`}>
                     {stepLabels[idx]}
                   </span>
                 </div>
@@ -281,61 +285,68 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
         )}
 
         {/* Main Content Area */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1">
           <AnimatePresence mode="wait">
             
             {/* Step 1: Personal Info */}
             {currentStep === "info" && (
               <motion.div 
                 key="info"
-                initial={{ opacity: 0, x: 20 }}
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -16 }}
+                transition={stepTransition}
                 className="space-y-5"
               >
-                <div className="space-y-2">
-                  <h4 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight">Identity Details</h4>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
+                <div className="space-y-1.5">
+                  <h4 className="ds-apple-display text-lg font-semibold tracking-tight">Identity Details</h4>
+                  <p className="text-xs ds-apple-muted leading-relaxed">
                     Please provide your complete name as listed on your National Identity Card (NID) and select your correct date of birth.
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">Full Name (As written on NID)</label>
+                    <label className="text-xs font-medium ds-apple-muted">Full Name (As written on NID)</label>
                     <div className="relative">
                       <Input 
                         placeholder="MD. ABDUR RAHMAN"
-                        className="ps-10 h-12 bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-800 rounded-xl"
+                        className="ds-apple-input ps-10 h-12 rounded-2xl"
                         value={nidName}
                         onChange={(e) => setNidName(e.target.value.toUpperCase())}
                       />
-                      <User className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-400" />
+                      <User className="absolute left-3.5 top-3.5 w-4 h-4 ds-apple-muted" />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide">Date of Birth</label>
+                    <label className="text-xs font-medium ds-apple-muted">Date of Birth</label>
                     <div className="relative">
                       <Input 
                         type="date"
-                        className="ps-10 h-12 bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-800 rounded-xl"
+                        className="ds-apple-input ps-10 h-12 rounded-2xl tabular-nums"
                         value={dob}
                         onChange={(e) => setDob(e.target.value)}
                       />
-                      <Calendar className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-zinc-400" />
+                      <Calendar className="absolute left-3.5 top-3.5 w-4 h-4 ds-apple-muted" />
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4">
-                  <Button 
+                <div className="pt-3">
+                  <motion.button
+                    type="button"
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                     disabled={!nidName || !dob}
-                    onClick={() => setCurrentStep("nid-front")}
-                    className="w-full bg-[#EF8020] hover:bg-[#EF8020]/90 text-white font-bold py-6 rounded-xl flex items-center justify-center gap-2"
+                    onClick={() => {
+                      triggerHaptic();
+                      setCurrentStep("nid-front");
+                    }}
+                    className="ds-apple-btn-primary w-full h-12 rounded-full font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-45 cursor-pointer"
                   >
-                    Proceed to Front NID <ArrowRight className="w-4 h-4" />
-                  </Button>
+                    <span>Proceed to Front NID</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </motion.button>
                 </div>
               </motion.div>
             )}
@@ -344,42 +355,51 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
             {currentStep === "nid-front" && (
               <motion.div 
                 key="nid-front"
-                initial={{ opacity: 0, x: 20 }}
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -16 }}
+                transition={stepTransition}
                 className="space-y-5"
               >
-                <div className="space-y-2">
-                  <h4 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight">Front of NID Card</h4>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
+                <div className="space-y-1.5">
+                  <h4 className="ds-apple-display text-lg font-semibold tracking-tight">Front of NID Card</h4>
+                  <p className="text-xs ds-apple-muted leading-relaxed">
                     Capture or upload a clear, well-lit photograph showing the front of your National Identity Card.
                   </p>
                 </div>
 
                 {cameraActive && cameraMode === "environment" ? (
-                  <div className="relative aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                  <div className="relative aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-black/10 dark:border-white/10">
                     <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-                    {/* Scanner Guide Overlay */}
-                    <div className="absolute inset-0 border-[3px] border-emerald-500/50 m-6 rounded-xl pointer-events-none flex items-center justify-center">
-                      <span className="text-[10px] bg-emerald-500 text-white font-bold px-3 py-1 rounded-full uppercase tracking-wider">Position Front of NID Inside Here</span>
+                    <div className="absolute inset-0 border-[2px] border-[#30D158]/60 m-6 rounded-xl pointer-events-none flex items-center justify-center">
+                      <span className="text-[10px] bg-[#248A3D] text-white font-semibold px-3 py-1 rounded-full uppercase tracking-wider">Position Front of NID Inside</span>
                     </div>
                     <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                      <Button onClick={() => capturePhoto("front")} className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 font-bold shadow-lg flex items-center gap-2">
-                        <Camera className="w-5 h-5" /> Capture Snapshot
-                      </Button>
-                      <Button onClick={stopCamera} variant="outline" className="bg-black/40 hover:bg-black/60 border-zinc-700 text-white rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => { triggerHaptic("success"); capturePhoto("front"); }}
+                        className="bg-[#248A3D] hover:bg-[#1f7a34] text-white rounded-full px-5 h-10 text-xs font-semibold shadow-lg flex items-center gap-2 cursor-pointer"
+                      >
+                        <Camera className="w-4 h-4" /> Capture Snapshot
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { triggerHaptic(); stopCamera(); }}
+                        className="bg-black/55 backdrop-blur-md text-white rounded-full px-4 h-10 text-xs font-semibold cursor-pointer"
+                      >
                         Cancel
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {nidFrontPreview ? (
-                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 ds-apple-surface-subtle">
                         <img src={nidFrontPreview} alt="NID Front Preview" className="w-full h-full object-contain" />
                         <button 
-                          onClick={() => { setNidFrontPreview(""); setNidFrontFile(null); }}
-                          className="absolute top-3 right-3 bg-red-500 text-white text-[10px] uppercase font-bold px-3 py-1 rounded-full shadow"
+                          type="button"
+                          onClick={() => { triggerHaptic(); setNidFrontPreview(""); setNidFrontFile(null); }}
+                          className="absolute top-3 right-3 bg-[#FF3B30] text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm cursor-pointer"
                         >
                           Reset
                         </button>
@@ -387,18 +407,19 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <button 
-                          onClick={() => startCamera("environment")}
-                          className="flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl transition"
+                          type="button"
+                          onClick={() => { triggerHaptic(); startCamera("environment"); }}
+                          className="ds-apple-surface-subtle flex flex-col items-center justify-center p-8 border border-dashed border-black/15 dark:border-white/15 rounded-2xl transition hover:border-[#0071E3] cursor-pointer"
                         >
-                          <Camera className="w-8 h-8 text-zinc-400 mb-2" />
-                          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Open Device Camera</span>
-                          <span className="text-[10px] text-zinc-400 mt-1">Take instant picture</span>
+                          <Camera className="w-7 h-7 ds-apple-accent-text mb-2" />
+                          <span className="text-xs font-semibold">Open Device Camera</span>
+                          <span className="text-[11px] ds-apple-muted mt-1">Take instant picture</span>
                         </button>
 
-                        <label className="flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl transition cursor-pointer">
-                          <CreditCard className="w-8 h-8 text-zinc-400 mb-2" />
-                          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Upload NID Photo</span>
-                          <span className="text-[10px] text-zinc-400 mt-1">Select from browser library</span>
+                        <label className="ds-apple-surface-subtle flex flex-col items-center justify-center p-8 border border-dashed border-black/15 dark:border-white/15 rounded-2xl transition hover:border-[#0071E3] cursor-pointer">
+                          <CreditCard className="w-7 h-7 ds-apple-muted mb-2" />
+                          <span className="text-xs font-semibold">Upload NID Photo</span>
+                          <span className="text-[11px] ds-apple-muted mt-1">Select from library</span>
                           <input 
                             type="file" 
                             accept="image/*" 
@@ -406,6 +427,7 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                triggerHaptic();
                                 setNidFrontFile(file);
                                 setNidFrontPreview(URL.createObjectURL(file));
                               }
@@ -417,17 +439,23 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-4 justify-between">
-                  <Button variant="outline" onClick={() => setCurrentStep("info")} className="rounded-xl border-zinc-200 dark:border-zinc-800">
-                    <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                  </Button>
-                  <Button 
-                    disabled={!nidFrontFile}
-                    onClick={() => setCurrentStep("nid-back")}
-                    className="bg-[#EF8020] hover:bg-[#EF8020]/90 text-white font-bold px-6 rounded-xl flex items-center gap-2"
+                <div className="flex gap-2 pt-3 justify-between">
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(); setCurrentStep("info"); }}
+                    className="ds-apple-btn-secondary h-11 px-5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
                   >
-                    Proceed to Back NID <ArrowRight className="w-4 h-4" />
-                  </Button>
+                    <ArrowLeft className="w-4 h-4 shrink-0" /> Back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!nidFrontFile}
+                    onClick={() => { triggerHaptic(); setCurrentStep("nid-back"); }}
+                    className="ds-apple-btn-primary h-11 px-6 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-2 disabled:opacity-45 cursor-pointer"
+                  >
+                    <span>Proceed to Back NID</span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -436,41 +464,51 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
             {currentStep === "nid-back" && (
               <motion.div 
                 key="nid-back"
-                initial={{ opacity: 0, x: 20 }}
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -16 }}
+                transition={stepTransition}
                 className="space-y-5"
               >
-                <div className="space-y-2">
-                  <h4 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight">Back of NID Card</h4>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
+                <div className="space-y-1.5">
+                  <h4 className="ds-apple-display text-lg font-semibold tracking-tight">Back of NID Card</h4>
+                  <p className="text-xs ds-apple-muted leading-relaxed">
                     Now capture or upload a clear photo showing the back of your National Identity Card containing addresses.
                   </p>
                 </div>
 
                 {cameraActive && cameraMode === "environment" ? (
-                  <div className="relative aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                  <div className="relative aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-black/10 dark:border-white/10">
                     <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-                    <div className="absolute inset-0 border-[3px] border-emerald-500/50 m-6 rounded-xl pointer-events-none flex items-center justify-center">
-                      <span className="text-[10px] bg-emerald-500 text-white font-bold px-3 py-1 rounded-full uppercase tracking-wider">Position Back of NID Inside Here</span>
+                    <div className="absolute inset-0 border-[2px] border-[#30D158]/60 m-6 rounded-xl pointer-events-none flex items-center justify-center">
+                      <span className="text-[10px] bg-[#248A3D] text-white font-semibold px-3 py-1 rounded-full uppercase tracking-wider">Position Back of NID Inside</span>
                     </div>
                     <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                      <Button onClick={() => capturePhoto("back")} className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 font-bold shadow-lg flex items-center gap-2">
-                        <Camera className="w-5 h-5" /> Capture Snapshot
-                      </Button>
-                      <Button onClick={stopCamera} variant="outline" className="bg-black/40 hover:bg-black/60 border-zinc-700 text-white rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => { triggerHaptic("success"); capturePhoto("back"); }}
+                        className="bg-[#248A3D] hover:bg-[#1f7a34] text-white rounded-full px-5 h-10 text-xs font-semibold shadow-lg flex items-center gap-2 cursor-pointer"
+                      >
+                        <Camera className="w-4 h-4" /> Capture Snapshot
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { triggerHaptic(); stopCamera(); }}
+                        className="bg-black/55 backdrop-blur-md text-white rounded-full px-4 h-10 text-xs font-semibold cursor-pointer"
+                      >
                         Cancel
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {nidBackPreview ? (
-                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 ds-apple-surface-subtle">
                         <img src={nidBackPreview} alt="NID Back Preview" className="w-full h-full object-contain" />
                         <button 
-                          onClick={() => { setNidBackPreview(""); setNidBackFile(null); }}
-                          className="absolute top-3 right-3 bg-red-500 text-white text-[10px] uppercase font-bold px-3 py-1 rounded-full shadow"
+                          type="button"
+                          onClick={() => { triggerHaptic(); setNidBackPreview(""); setNidBackFile(null); }}
+                          className="absolute top-3 right-3 bg-[#FF3B30] text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm cursor-pointer"
                         >
                           Reset
                         </button>
@@ -478,18 +516,19 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <button 
-                          onClick={() => startCamera("environment")}
-                          className="flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl transition"
+                          type="button"
+                          onClick={() => { triggerHaptic(); startCamera("environment"); }}
+                          className="ds-apple-surface-subtle flex flex-col items-center justify-center p-8 border border-dashed border-black/15 dark:border-white/15 rounded-2xl transition hover:border-[#0071E3] cursor-pointer"
                         >
-                          <Camera className="w-8 h-8 text-zinc-400 mb-2" />
-                          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Open Device Camera</span>
-                          <span className="text-[10px] text-zinc-400 mt-1">Take instant picture</span>
+                          <Camera className="w-7 h-7 ds-apple-accent-text mb-2" />
+                          <span className="text-xs font-semibold">Open Device Camera</span>
+                          <span className="text-[11px] ds-apple-muted mt-1">Take instant picture</span>
                         </button>
 
-                        <label className="flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl transition cursor-pointer">
-                          <CreditCard className="w-8 h-8 text-zinc-400 mb-2" />
-                          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Upload Back Photo</span>
-                          <span className="text-[10px] text-zinc-400 mt-1">Select from browser library</span>
+                        <label className="ds-apple-surface-subtle flex flex-col items-center justify-center p-8 border border-dashed border-black/15 dark:border-white/15 rounded-2xl transition hover:border-[#0071E3] cursor-pointer">
+                          <CreditCard className="w-7 h-7 ds-apple-muted mb-2" />
+                          <span className="text-xs font-semibold">Upload Back Photo</span>
+                          <span className="text-[11px] ds-apple-muted mt-1">Select from library</span>
                           <input 
                             type="file" 
                             accept="image/*" 
@@ -497,6 +536,7 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                triggerHaptic();
                                 setNidBackFile(file);
                                 setNidBackPreview(URL.createObjectURL(file));
                               }
@@ -508,20 +548,27 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-4 justify-between">
-                  <Button variant="outline" onClick={() => setCurrentStep("nid-front")} className="rounded-xl border-zinc-200 dark:border-zinc-800">
-                    <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                  </Button>
-                  <Button 
+                <div className="flex gap-2 pt-3 justify-between">
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(); setCurrentStep("nid-front"); }}
+                    className="ds-apple-btn-secondary h-11 px-5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4 shrink-0" /> Back
+                  </button>
+                  <button
+                    type="button"
                     disabled={!nidBackFile}
                     onClick={() => {
+                      triggerHaptic();
                       setCurrentStep("face-liveness");
                       setLivenessStage("ready");
                     }}
-                    className="bg-[#EF8020] hover:bg-[#EF8020]/90 text-white font-bold px-6 rounded-xl flex items-center gap-2"
+                    className="ds-apple-btn-primary h-11 px-6 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-2 disabled:opacity-45 cursor-pointer"
                   >
-                    Proceed to Liveness <ArrowRight className="w-4 h-4" />
-                  </Button>
+                    <span>Proceed to Liveness</span>
+                    <ArrowRight className="w-4 h-4 shrink-0" />
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -530,57 +577,58 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
             {currentStep === "face-liveness" && (
               <motion.div 
                 key="face-liveness"
-                initial={{ opacity: 0, x: 20 }}
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -16 }}
+                transition={stepTransition}
                 className="space-y-4 text-center"
               >
                 <div className="space-y-1.5">
-                  <h4 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight">Facial Liveness Check</h4>
-                  <p className="text-xs text-zinc-500 leading-relaxed max-w-sm mx-auto">
+                  <h4 className="ds-apple-display text-lg font-semibold tracking-tight">Facial Liveness Check</h4>
+                  <p className="text-xs ds-apple-muted leading-relaxed max-w-sm mx-auto">
                     Biometric face verification checks presence. Follow instructions: look straight, blink, look right, look left.
                   </p>
                 </div>
 
                 <div className="flex justify-center my-3 relative">
                   {cameraActive && cameraMode === "user" ? (
-                    <div className="relative w-56 h-56 rounded-full overflow-hidden border-4 border-emerald-500 shadow-2xl bg-black">
+                    <div className="relative w-56 h-56 rounded-full overflow-hidden border-4 border-[#34C759] dark:border-[#30D158] shadow-lg bg-black">
                       <video ref={videoRef} className="w-full h-full object-cover scale-x-[-1]" playsInline muted />
                       
-                      {/* Biometric Circle Guides */}
-                      <div className="absolute inset-0 rounded-full border-4 border-dashed border-white/40 animate-[spin_12s_linear_infinite] pointer-events-none" />
+                      {/* Static Face ID Circle Guide */}
+                      <div className="absolute inset-0 rounded-full border-2 border-dashed border-white/45 pointer-events-none" />
                       
                       {/* Interactive Instruction Overlay */}
                       <div className="absolute inset-x-0 bottom-3 flex flex-col items-center">
-                        <div className="bg-black/85 text-white px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide uppercase flex items-center gap-1.5 shadow-md">
+                        <div className="bg-black/80 backdrop-blur-md text-white px-3 py-1 rounded-full text-[11px] font-semibold tracking-tight flex items-center gap-1.5 shadow-md">
                           {livenessStage === "look-straight" && (
                             <>
-                              <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-spin" />
+                              <Sparkles className="w-3.5 h-3.5 text-[#FFCC00]" />
                               Look Straight
                             </>
                           )}
                           {livenessStage === "blink" && (
                             <>
-                              <Eye className="w-3.5 h-3.5 text-sky-400 animate-bounce" />
+                              <Eye className="w-3.5 h-3.5 text-[#0A84FF]" />
                               Blink Your Eyes
                             </>
                           )}
                           {livenessStage === "look-right" && (
                             <>
-                              <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                              <ArrowRight className="w-3.5 h-3.5 text-[#30D158]" />
                               Turn Right
                             </>
                           )}
                           {livenessStage === "look-left" && (
                             <>
-                              <ArrowLeft className="w-3.5 h-3.5 text-emerald-400" />
+                              <ArrowLeft className="w-3.5 h-3.5 text-[#30D158]" />
                               Turn Left
                             </>
                           )}
                           {livenessStage === "completed" && (
                             <>
-                              <Check className="w-3.5 h-3.5 text-emerald-500" />
-                              Liveness Saved!
+                              <Check className="w-3.5 h-3.5 text-[#30D158]" />
+                              Liveness Saved
                             </>
                           )}
                         </div>
@@ -594,13 +642,13 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                               cx="112" 
                               cy="112" 
                               r="104" 
-                              className="stroke-zinc-100/10 fill-none stroke-[4]"
+                              className="stroke-white/15 fill-none stroke-[4]"
                             />
                             <circle 
                               cx="112" 
                               cy="112" 
                               r="104" 
-                              className="stroke-emerald-500 fill-none stroke-[4] transition-all duration-200"
+                              className="stroke-[#30D158] fill-none stroke-[4] transition-all duration-200"
                               strokeDasharray="653"
                               strokeDashoffset={653 - (653 * livenessProgress) / 100}
                             />
@@ -611,11 +659,12 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                   ) : (
                     <div className="space-y-4 w-full">
                       {facePreview ? (
-                        <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-emerald-500 mx-auto bg-zinc-50 dark:bg-zinc-950 shadow-lg">
+                        <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-[#34C759] dark:border-[#30D158] mx-auto ds-apple-surface-subtle shadow-md">
                           <img src={facePreview} alt="Face Preview" className="w-full h-full object-cover" />
                           <button 
-                            onClick={() => { setFacePreview(""); setFaceFile(null); }}
-                            className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] uppercase font-bold px-2.5 py-1 rounded-full shadow"
+                            type="button"
+                            onClick={() => { triggerHaptic(); setFacePreview(""); setFaceFile(null); }}
+                            className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-[#FF3B30] text-white text-[10px] font-semibold px-3 py-1 rounded-full shadow cursor-pointer"
                           >
                             Reset
                           </button>
@@ -623,16 +672,17 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                       ) : (
                         <div className="flex flex-col items-center gap-3">
                           <button 
-                            onClick={() => startCamera("user")}
-                            className="w-full max-w-sm flex items-center justify-center gap-2 p-6 bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl transition"
+                            type="button"
+                            onClick={() => { triggerHaptic(); startCamera("user"); }}
+                            className="ds-apple-surface-subtle w-full max-w-sm flex items-center justify-center gap-2 p-6 border border-dashed border-black/15 dark:border-white/15 rounded-2xl transition hover:border-[#0071E3] cursor-pointer"
                           >
-                            <Video className="w-5 h-5 text-[#EF8020]" />
-                            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Start Liveness Scanner Video</span>
+                            <Video className="w-5 h-5 ds-apple-accent-text" />
+                            <span className="text-xs font-semibold">Start Liveness Scanner Video</span>
                           </button>
                           
-                          <label className="w-full max-w-sm flex items-center justify-center gap-2 p-6 bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl transition cursor-pointer">
-                            <Camera className="w-5 h-5 text-zinc-400" />
-                            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Or Upload Portrait Snapshot</span>
+                          <label className="ds-apple-surface-subtle w-full max-w-sm flex items-center justify-center gap-2 p-6 border border-dashed border-black/15 dark:border-white/15 rounded-2xl transition hover:border-[#0071E3] cursor-pointer">
+                            <Camera className="w-5 h-5 ds-apple-muted" />
+                            <span className="text-xs font-semibold">Or Upload Portrait Snapshot</span>
                             <input 
                               type="file" 
                               accept="image/*" 
@@ -640,6 +690,7 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
+                                  triggerHaptic();
                                   setFaceFile(file);
                                   setFacePreview(URL.createObjectURL(file));
                                 }
@@ -653,25 +704,33 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
                 </div>
 
                 {cameraActive && livenessStage === "ready" && (
-                  <Button 
-                    onClick={() => setLivenessStage("look-straight")}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded-full inline-flex items-center gap-2"
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(); setLivenessStage("look-straight"); }}
+                    className="ds-apple-btn-primary h-10 px-6 rounded-full text-xs font-semibold inline-flex items-center gap-2 cursor-pointer"
                   >
-                    Start Liveness Tasks <Sparkles className="w-4 h-4 text-yellow-300" />
-                  </Button>
+                    <span>Start Liveness Tasks</span>
+                    <Sparkles className="w-4 h-4" />
+                  </button>
                 )}
 
-                <div className="flex gap-2 pt-4 justify-between">
-                  <Button variant="outline" onClick={() => { stopCamera(); setCurrentStep("nid-back"); }} className="rounded-xl border-zinc-200 dark:border-zinc-800">
-                    <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                  </Button>
-                  <Button 
-                    disabled={!faceFile}
-                    onClick={handleSubmitKyc}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-6 rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-500/15"
+                <div className="flex gap-2 pt-3 justify-between">
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(); stopCamera(); setCurrentStep("nid-back"); }}
+                    className="ds-apple-btn-secondary h-11 px-5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
                   >
-                    Submit Verification <Shield className="w-4 h-4 text-white" />
-                  </Button>
+                    <ArrowLeft className="w-4 h-4 shrink-0" /> Back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!faceFile || loading}
+                    onClick={() => { triggerHaptic("success"); handleSubmitKyc(); }}
+                    className="bg-[#248A3D] hover:bg-[#1f7a34] dark:bg-[#30D158] text-white h-11 px-6 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 disabled:opacity-45 cursor-pointer"
+                  >
+                    <span>Submit Verification</span>
+                    <Shield className="w-4 h-4 shrink-0" />
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -680,23 +739,22 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
             {currentStep === "processing" && (
               <motion.div 
                 key="processing"
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
+                transition={stepTransition}
                 className="py-12 text-center space-y-6"
               >
-                <div className="relative w-20 h-20 mx-auto">
-                  <div className="absolute inset-0 rounded-full border-4 border-[#EF8020]/20" />
-                  <div className="absolute inset-0 rounded-full border-4 border-[#EF8020] border-t-transparent animate-spin" />
-                  <Shield className="absolute inset-0 m-auto w-8 h-8 text-[#EF8020] animate-pulse" />
+                <div className="relative w-18 h-18 mx-auto rounded-full bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 flex items-center justify-center">
+                  <Shield className="w-8 h-8 ds-apple-accent-text" />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight">Uploading Secure Documents</h4>
-                  <p className="text-xs text-zinc-500 font-mono tracking-tight bg-zinc-50 dark:bg-zinc-850 py-2.5 px-4 rounded-xl max-w-sm mx-auto">
+                  <h4 className="ds-apple-display text-lg font-semibold tracking-tight">Uploading Secure Documents</h4>
+                  <p className="ds-apple-surface-subtle text-xs ds-apple-muted font-mono tracking-tight py-2.5 px-4 rounded-2xl max-w-sm mx-auto">
                     {uploadProgress}
                   </p>
                 </div>
-                <p className="text-[10px] text-zinc-400 max-w-xs mx-auto">
-                  Files are uploaded through end-to-end encrypted tunnels. ImgBB secure cloud API saves the image endpoints.
+                <p className="text-[11px] ds-apple-muted max-w-xs mx-auto">
+                  Files are uploaded through end-to-end encrypted channels.
                 </p>
               </motion.div>
             )}
@@ -705,32 +763,39 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
             {currentStep === "success" && (
               <motion.div 
                 key="success"
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
+                transition={stepTransition}
                 className="py-12 text-center space-y-6"
               >
-                <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                  <Check className="w-10 h-10 stroke-[3]" />
+                <div className="w-20 h-20 bg-[#34C759]/12 dark:bg-[#30D158]/15 text-[#248A3D] dark:text-[#30D158] rounded-full flex items-center justify-center mx-auto">
+                  <Check className="w-10 h-10 stroke-[2.8]" />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">KYC Verification Submitted!</h4>
-                  <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
-                    Thank you! Your documents and biometric liveness scan have been safely dispatched to our compliance officers. Verification requests are processed within <span className="font-bold text-zinc-900 dark:text-white">24 hours</span>.
+                  <h4 className="ds-apple-display text-2xl font-semibold tracking-tight">Verification Submitted</h4>
+                  <p className="text-xs ds-apple-muted max-w-sm mx-auto leading-relaxed">
+                    Your documents and biometric scan have been submitted to our compliance team. Verification requests are processed within <span className="font-semibold">24 hours</span>.
                   </p>
                 </div>
                 
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 rounded-2xl border border-zinc-100 dark:border-zinc-800 flex items-start gap-3 text-left max-w-sm mx-auto">
-                  <AlertCircle className="w-5 h-5 text-[#EF8020] shrink-0 mt-0.5" />
+                <div className="ds-apple-surface-subtle p-4 rounded-2xl flex items-start gap-3 text-left max-w-sm mx-auto">
+                  <AlertCircle className="w-5 h-5 ds-apple-accent-text shrink-0 mt-0.5" />
                   <div>
-                    <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200 block">Review Period Security</span>
-                    <span className="text-[10px] text-zinc-500 leading-relaxed block mt-0.5">
-                      Your products and stories can still be listed in our catalog, but will display unverified tags until the check completes successfully.
+                    <span className="text-xs font-semibold block">Review Period Security</span>
+                    <span className="text-[11px] ds-apple-muted leading-relaxed block mt-0.5">
+                      Your products can still be listed in our catalog, and verified status will update automatically once reviewed.
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-2">
-                  <Button onClick={() => navigate(-1)} className="bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold px-8 py-5 rounded-xl">Return to Profile</Button>
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(); navigate(-1); }}
+                    className="ds-apple-btn-primary px-8 h-12 rounded-full text-sm font-semibold cursor-pointer"
+                  >
+                    Return to Profile
+                  </button>
                 </div>
               </motion.div>
             )}

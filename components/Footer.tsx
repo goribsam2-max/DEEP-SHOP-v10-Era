@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { doc, onSnapshot } from "firebase/firestore";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { db } from "../firebase";
 import Icon from "./Icon";
 import { Link } from "react-router-dom";
+import { triggerHaptic } from "../lib/haptics";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
 
 interface FooterSettings {
   instagramUrl: string;
@@ -15,6 +18,7 @@ interface FooterSettings {
 }
 
 export const Footer: React.FC = () => {
+  const prefersReducedMotion = useReducedMotion();
   const [settings, setSettings] = useState<FooterSettings>({
     instagramUrl: "https://www.instagram.com/deep.shop.official",
     telegramUrl: "https://t.me/+jBB7zRRjuF5hYWY1",
@@ -252,34 +256,32 @@ export const Footer: React.FC = () => {
 
   return (
     <>
-      <footer className="relative z-10 mt-10 mx-2.5 sm:mx-5 md:mx-6 mb-24 md:mb-6 rounded-[26px] bg-white dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800/90 shadow-2xs text-zinc-900 dark:text-zinc-100 overflow-hidden">
+      <footer className="ds-apple-surface relative z-10 mt-10 mx-2.5 sm:mx-5 md:mx-6 mb-24 md:mb-6 rounded-[24px] overflow-hidden">
         {/* ==============================================================
-            DESKTOP LAYOUT (md & up): Architectural Storefront Directory
+            DESKTOP LAYOUT (md & up): Apple Storefront Directory
            ============================================================== */}
         <div className="hidden md:block max-w-7xl mx-auto px-7 lg:px-10 py-9">
-          {/* Desktop Top Band: Brand Story Left + Horizontal Social Showcase Right */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-8 border-b border-zinc-200/80 dark:border-zinc-800/80">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-8 border-b border-black/[0.06] dark:border-white/[0.08]">
             <div className="flex items-start gap-4 max-w-md">
               {renderBrandLogo("w-12 h-12")}
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5">
-                  <h2 className="text-lg font-black tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">
+                  <h2 className="ds-apple-display text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
                     DEEP SHOP
                   </h2>
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                  <span className="text-xs text-[#86868B]">
                     ·
                   </span>
-                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                  <span className="text-xs font-medium text-[#6E6E73] dark:text-[#98989D] whitespace-nowrap">
                     Border Cross Tech Marketplace
                   </span>
                 </div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                <p className="text-xs text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
                   Curated global electronics, smart gadgets, and verified cross-border imports delivered across Bangladesh.
                 </p>
               </div>
             </div>
 
-            {/* Desktop Social Media Cards + Direct Helpline */}
             <div className="flex flex-wrap items-center gap-2.5">
               {socialChannels.map((item) => (
                 <a
@@ -288,41 +290,42 @@ export const Footer: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={item.label}
-                  className={`group flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 transition-all duration-200 hover:-translate-y-0.5 ${item.hoverClass}`}
+                  onPointerDown={() => triggerHaptic()}
+                  className={`group flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-black/[0.06] dark:border-white/[0.1] bg-[#F2F2F7]/80 dark:bg-[#2C2C2E]/80 transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.97] ${item.hoverClass}`}
                 >
                   <span
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${item.iconWrapClass}`}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-150 group-hover:scale-105 ${item.iconWrapClass}`}
                   >
                     {item.icon}
                   </span>
                   <div className="text-left pr-1">
-                    <span className="block text-xs font-bold text-zinc-900 dark:text-zinc-100 leading-tight whitespace-nowrap">
+                    <span className="block text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight whitespace-nowrap">
                       {item.label}
                     </span>
-                    <span className="block text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight whitespace-nowrap">
+                    <span className="block text-[10px] text-[#6E6E73] dark:text-[#98989D] leading-tight whitespace-nowrap">
                       {item.sublabel}
                     </span>
                   </div>
-                  <Icon name="arrow-up-right" className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors shrink-0" />
+                  <Icon name="arrow-up-right" className="w-3.5 h-3.5 text-[#86868B] group-hover:text-[#1D1D1F] dark:group-hover:text-white transition-colors shrink-0" />
                 </a>
               ))}
 
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic()}
                 onClick={() => setIsContactOpen(true)}
-                className="min-h-[48px] px-4 py-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                className="ds-apple-btn-primary min-h-[46px] px-4.5 py-2 rounded-2xl text-xs font-semibold flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Icon name="headphones" className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
+                <Icon name="headphones" className="w-4 h-4 shrink-0" />
                 <span>24/7 Helpline</span>
               </button>
             </div>
           </div>
 
-          {/* Desktop Middle Band: 4-Column Structured Link Directory */}
-          <div className="grid grid-cols-4 gap-8 py-8 border-b border-zinc-200/80 dark:border-zinc-800/80">
+          <div className="grid grid-cols-4 gap-8 py-8 border-b border-black/[0.06] dark:border-white/[0.08]">
             {desktopColumns.map((col) => (
               <div key={col.heading} className="space-y-3.5">
-                <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                <h3 className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                   {col.heading}
                 </h3>
                 <ul className="space-y-2.5">
@@ -330,7 +333,7 @@ export const Footer: React.FC = () => {
                     <li key={lnk.to}>
                       <Link
                         to={lnk.to}
-                        className="group inline-flex items-center gap-1.5 text-[13px] text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors"
+                        className="group inline-flex items-center gap-1.5 text-[13px] text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
                       >
                         <span className="group-hover:underline underline-offset-4">
                           {lnk.label}
@@ -343,31 +346,31 @@ export const Footer: React.FC = () => {
             ))}
           </div>
 
-          {/* Desktop Bottom Band: Copyright, Payment Channels & Scroll-to-Top */}
-          <div className="pt-6 flex items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="pt-6 flex items-center justify-between gap-4 text-xs text-[#6E6E73] dark:text-[#98989D]">
             <div className="flex items-center gap-3 flex-wrap">
               <span>
                 © {new Date().getFullYear()} DEEP SHOP. All rights reserved.
               </span>
               <span aria-hidden="true">·</span>
-              <span className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 font-medium">
-                <Icon name="shield-check" className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="inline-flex items-center gap-1.5 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium">
+                <Icon name="shield-check" className="w-4 h-4 text-[#248A3D] dark:text-[#30D158] shrink-0" />
                 <span>Verified Marketplace</span>
               </span>
             </div>
 
             <div className="flex items-center gap-5">
-              <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="flex items-center gap-2 text-xs">
                 <span>Payments:</span>
-                <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   bKash · Nagad · Cash on Delivery
                 </span>
               </div>
 
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic()}
                 onClick={scrollToTop}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-700 dark:text-zinc-300 font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                className="ds-apple-btn-secondary inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer whitespace-nowrap"
               >
                 <span>Back to top</span>
                 <Icon name="arrow-up" className="w-3.5 h-3.5" />
@@ -377,18 +380,17 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* ==============================================================
-            MOBILE LAYOUT (below md): Thumb-First Compact Storefront Dock
+            MOBILE LAYOUT (below md): Thumb-First Storefront Dock
            ============================================================== */}
         <div className="block md:hidden px-4 py-5 space-y-5">
-          {/* Mobile Row 1: Brand Header + Instant Helpline & Top Button */}
-          <div className="flex items-center justify-between gap-2 pb-4 border-b border-zinc-200/70 dark:border-zinc-800/80">
+          <div className="flex items-center justify-between gap-2 pb-4 border-b border-black/[0.06] dark:border-white/[0.08]">
             <div className="flex items-center gap-2.5 min-w-0">
               {renderBrandLogo("w-10 h-10")}
               <div className="min-w-0">
-                <h2 className="text-sm font-black tracking-tight text-zinc-900 dark:text-white truncate">
+                <h2 className="ds-apple-display text-sm font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                   DEEP SHOP
                 </h2>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] truncate">
                   Border Cross Tech Hub
                 </p>
               </div>
@@ -397,17 +399,19 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic()}
                 onClick={() => setIsContactOpen(true)}
-                className="min-h-[38px] px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
+                className="ds-apple-btn-primary min-h-[38px] px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 active:scale-[0.96] transition-transform cursor-pointer whitespace-nowrap"
               >
                 <Icon name="phone-call" className="w-3.5 h-3.5 shrink-0" />
                 <span>Helpline</span>
               </button>
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic()}
                 onClick={scrollToTop}
                 aria-label="Scroll to top"
-                className="w-9 h-9 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center text-zinc-600 dark:text-zinc-300 active:scale-95 transition-transform cursor-pointer"
+                className="ds-apple-btn-secondary w-9 h-9 rounded-full flex items-center justify-center active:scale-[0.95] transition-transform cursor-pointer"
               >
                 <Icon name="arrow-up" className="w-4 h-4" />
               </button>
@@ -492,158 +496,212 @@ export const Footer: React.FC = () => {
         </div>
       </footer>
 
-      {/* Contact Options Popup (Portaled above BottomNav on PWA/Mobile) */}
-      {isContactOpen && typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed inset-0 z-[10060] flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-black/60 backdrop-blur-xs"
-          onClick={() => setIsContactOpen(false)}
-        >
-          <div
-            className="bg-white dark:bg-zinc-900 w-full sm:max-w-sm rounded-[24px] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">
-                24/7 Customer Support
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsContactOpen(false)}
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
+      {/* Contact Options Popup (Apple Frosted Drag Sheet) */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isContactOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[10060] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-[env(safe-area-inset-bottom)]"
+              onClick={() => setIsContactOpen(false)}
+            >
+              <motion.div
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
+                transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                drag={prefersReducedMotion ? false : "y"}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0.12, bottom: 0.45 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 400) {
+                    setIsContactOpen(false);
+                  }
+                }}
+                className="ds-apple-sheet w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] p-6 pt-3 sm:pt-6 max-h-[85vh] overflow-y-auto touch-pan-y"
+                onClick={(e) => e.stopPropagation()}
               >
-                <Icon name="x" className="w-4 h-4" />
-              </button>
-            </div>
+                <div className="sm:hidden flex justify-center pb-3">
+                  <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/25" />
+                </div>
+                <div className="flex justify-between items-center mb-5">
+                  <h3 className="ds-apple-display text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    24/7 Customer Support
+                  </h3>
+                  <button
+                    type="button"
+                    onPointerDown={() => triggerHaptic()}
+                    onClick={() => setIsContactOpen(false)}
+                    className="w-8 h-8 rounded-full bg-black/[0.05] dark:bg-white/[0.1] flex items-center justify-center text-[#6E6E73] dark:text-[#98989D] cursor-pointer"
+                    aria-label="Close"
+                  >
+                    <Icon name="x" className="w-4 h-4" />
+                  </button>
+                </div>
 
-            <div className="space-y-3">
-              <a
-                href="tel:+17247648185"
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors text-blue-700 dark:text-blue-400"
-              >
-                <div className="w-11 h-11 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center shadow-2xs shrink-0">
-                  <Icon name="phone-call" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-sm">Direct Call</p>
-                  <p className="text-xs opacity-80 tabular-nums">
-                    +1 (724) 764-8185
-                  </p>
-                </div>
-              </a>
+                <div className="space-y-3">
+                  <a
+                    href="tel:+17247648185"
+                    onPointerDown={() => triggerHaptic()}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[#0071E3]/[0.08] dark:bg-[#0A84FF]/[0.14] hover:bg-[#0071E3]/[0.13] dark:hover:bg-[#0A84FF]/[0.2] active:scale-[0.98] transition-all text-[#0071E3] dark:text-[#0A84FF]"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-white dark:bg-[#2C2C2E] flex items-center justify-center shadow-2xs shrink-0">
+                      <Icon name="phone-call" className="w-5 h-5 text-[#0071E3] dark:text-[#0A84FF]" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">Direct Call</p>
+                      <p className="text-xs text-[#0071E3] dark:text-[#0A84FF] tabular-nums">
+                        +1 (724) 764-8185
+                      </p>
+                    </div>
+                  </a>
 
-              <button
-                type="button"
-                onClick={() => setIsWhatsAppOpen(true)}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors text-emerald-700 dark:text-emerald-400 cursor-pointer"
-              >
-                <div className="w-11 h-11 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center shadow-2xs shrink-0">
-                  <Icon name="message-circle" className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <button
+                    type="button"
+                    onPointerDown={() => triggerHaptic()}
+                    onClick={() => setIsWhatsAppOpen(true)}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-[#248A3D]/[0.08] dark:bg-[#30D158]/[0.14] hover:bg-[#248A3D]/[0.13] dark:hover:bg-[#30D158]/[0.2] active:scale-[0.98] transition-all text-[#248A3D] dark:text-[#30D158] cursor-pointer"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-white dark:bg-[#2C2C2E] flex items-center justify-center shadow-2xs shrink-0">
+                      <Icon name="message-circle" className="w-5 h-5 text-[#248A3D] dark:text-[#30D158]" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">WhatsApp Support</p>
+                      <p className="text-xs text-[#248A3D] dark:text-[#30D158]">Message us instantly</p>
+                    </div>
+                  </button>
                 </div>
-                <div className="text-left">
-                  <p className="font-bold text-sm">WhatsApp Support</p>
-                  <p className="text-xs opacity-80">Message us instantly</p>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>,
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
         document.body
       )}
 
-      {/* WhatsApp Reason Popup (Portaled above BottomNav on PWA/Mobile) */}
-      {isWhatsAppOpen && typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed inset-0 z-[10070] flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-black/60 backdrop-blur-xs"
-          onClick={() => setIsWhatsAppOpen(false)}
-        >
-          <div
-            className="bg-white dark:bg-zinc-900 w-full sm:max-w-sm rounded-[24px] p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">
-                What do you need help with?
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsWhatsAppOpen(false)}
-                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 cursor-pointer"
-              >
-                <Icon name="x" className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2.5">
-              {[
-                "Order Issue",
-                "Product Inquiry",
-                "Delivery Status",
-                "Return/Refund",
-                "Other",
-              ].map((reason) => (
-                <label
-                  key={reason}
-                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                    waReason === reason
-                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
-                      : "border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="wareason"
-                    value={reason}
-                    checked={waReason === reason}
-                    onChange={(e) => setWaReason(e.target.value)}
-                    className="accent-emerald-600"
-                  />
-                  <span
-                    className={`text-sm font-medium ${
-                      waReason === reason
-                        ? "text-emerald-700 dark:text-emerald-400"
-                        : "text-zinc-700 dark:text-zinc-300"
-                    }`}
-                  >
-                    {reason}
-                  </span>
-                </label>
-              ))}
-
-              {waReason === "Other" && (
-                <textarea
-                  placeholder="Please specify your reason..."
-                  value={customReason}
-                  onChange={(e) => setCustomReason(e.target.value)}
-                  className="w-full mt-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 dark:text-white"
-                  rows={3}
-                />
-              )}
-
-              {waReason === "Other" && !customReason.trim() ? (
-                <button
-                  type="button"
-                  disabled
-                  className="w-full mt-4 bg-emerald-600 text-white py-3.5 rounded-xl font-bold opacity-50 cursor-not-allowed"
-                >
-                  Continue to WhatsApp
-                </button>
-              ) : (
-                <a
-                  href={whatsAppHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => {
+      {/* WhatsApp Reason Popup (Apple Frosted Drag Sheet) */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isWhatsAppOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[10070] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-[env(safe-area-inset-bottom)]"
+              onClick={() => setIsWhatsAppOpen(false)}
+            >
+              <motion.div
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
+                transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                drag={prefersReducedMotion ? false : "y"}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0.12, bottom: 0.45 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 400) {
                     setIsWhatsAppOpen(false);
-                    setIsContactOpen(false);
-                  }}
-                  className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold flex items-center justify-center transition-colors"
-                >
-                  Continue to WhatsApp
-                </a>
-              )}
-            </div>
-          </div>
-        </div>,
+                  }
+                }}
+                className="ds-apple-sheet w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] p-6 pt-3 sm:pt-6 max-h-[85vh] overflow-y-auto touch-pan-y"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="sm:hidden flex justify-center pb-3">
+                  <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/25" />
+                </div>
+                <div className="flex justify-between items-center mb-5">
+                  <h3 className="ds-apple-display text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    What do you need help with?
+                  </h3>
+                  <button
+                    type="button"
+                    onPointerDown={() => triggerHaptic()}
+                    onClick={() => setIsWhatsAppOpen(false)}
+                    className="w-8 h-8 rounded-full bg-black/[0.05] dark:bg-white/[0.1] flex items-center justify-center text-[#6E6E73] dark:text-[#98989D] cursor-pointer"
+                    aria-label="Close"
+                  >
+                    <Icon name="x" className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-2.5">
+                  {[
+                    "Order Issue",
+                    "Product Inquiry",
+                    "Delivery Status",
+                    "Return/Refund",
+                    "Other",
+                  ].map((reason) => (
+                    <label
+                      key={reason}
+                      onPointerDown={() => triggerHaptic()}
+                      className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition-colors ${
+                        waReason === reason
+                          ? "border-[#0071E3] dark:border-[#0A84FF] bg-[#0071E3]/[0.07] dark:bg-[#0A84FF]/[0.14]"
+                          : "border-black/[0.08] dark:border-white/[0.1] hover:bg-black/[0.03] dark:hover:bg-white/[0.05]"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="wareason"
+                        value={reason}
+                        checked={waReason === reason}
+                        onChange={(e) => setWaReason(e.target.value)}
+                        className="accent-[#0071E3] dark:accent-[#0A84FF]"
+                      />
+                      <span
+                        className={`text-sm font-medium ${
+                          waReason === reason
+                            ? "text-[#0071E3] dark:text-[#0A84FF] font-semibold"
+                            : "text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        }`}
+                      >
+                        {reason}
+                      </span>
+                    </label>
+                  ))}
+
+                  {waReason === "Other" && (
+                    <textarea
+                      placeholder="Please specify your reason..."
+                      value={customReason}
+                      onChange={(e) => setCustomReason(e.target.value)}
+                      className="ds-apple-input w-full mt-2 rounded-2xl p-3.5 text-sm outline-none"
+                      rows={3}
+                    />
+                  )}
+
+                  {waReason === "Other" && !customReason.trim() ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="ds-apple-btn-primary w-full mt-4 py-3.5 rounded-full font-semibold opacity-50 cursor-not-allowed"
+                    >
+                      Continue to WhatsApp
+                    </button>
+                  ) : (
+                    <a
+                      href={whatsAppHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onPointerDown={() => triggerHaptic()}
+                      onClick={() => {
+                        setIsWhatsAppOpen(false);
+                        setIsContactOpen(false);
+                      }}
+                      className="ds-apple-btn-primary w-full mt-4 py-3.5 rounded-full font-semibold flex items-center justify-center"
+                    >
+                      Continue to WhatsApp
+                    </a>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
         document.body
       )}
     </>

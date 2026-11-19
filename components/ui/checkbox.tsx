@@ -6,14 +6,20 @@ import { Check } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 
+import { triggerHaptic } from "../../lib/haptics"
+
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
->(({ className, ...props }, ref) => (
+>(({ className, onPointerDown, ...props }, ref) => (
   <CheckboxPrimitive.Root
     ref={ref}
+    onPointerDown={(e) => {
+      triggerHaptic("selection")
+      onPointerDown?.(e)
+    }}
     className={cn(
-      "peer h-4.5 w-4.5 shrink-0 rounded border border-zinc-300 dark:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 data-[state=checked]:text-white dark:data-[state=checked]:bg-emerald-500 dark:data-[state=checked]:border-emerald-500 transition-all",
+      "peer h-5 w-5 shrink-0 rounded-md border border-black/[0.22] dark:border-white/[0.24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3] dark:focus-visible:ring-[#0A84FF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-[#0071E3] data-[state=checked]:border-[#0071E3] data-[state=checked]:text-white dark:data-[state=checked]:bg-[#0A84FF] dark:data-[state=checked]:border-[#0A84FF] active:scale-90 transition-all cursor-pointer",
       className,
     )}
     {...props}
@@ -21,7 +27,7 @@ const Checkbox = React.forwardRef<
     <CheckboxPrimitive.Indicator
       className={cn("flex items-center justify-center")}
     >
-      <Check className="h-3 w-3 text-white stroke-[3.5]" />
+      <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ))

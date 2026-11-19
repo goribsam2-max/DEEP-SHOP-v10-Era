@@ -8,7 +8,7 @@ import { AnimatedThemeToggler } from "./animated-theme-toggler";
 import Icon from "../Icon";
 import AccountMenu from "./account-menu";
 import { useIsland } from "./dynamic-island";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 
 import { triggerHaptic } from "../../lib/haptics";
@@ -424,37 +424,31 @@ export function Header() {
     window.dispatchEvent(new CustomEvent("toggleSidebar", { detail: open }));
   }, [open]);
 
-  const newsHubCircleBtnClass =
-    "ds-theme-icon-btn relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/95 dark:bg-zinc-900/90 text-zinc-900 dark:text-white flex items-center justify-center shadow-[0_4px_16px_rgba(120,90,160,0.06)] hover:bg-white dark:hover:bg-zinc-800 active:scale-95 transition cursor-pointer shrink-0 border-0";
-
   const standardDesktopBtnClass =
-    "ds-theme-icon-btn transition-all duration-200 flex items-center justify-center hover:scale-105 active:scale-95 bg-white/95 dark:bg-zinc-900/90 border-0 text-zinc-900 dark:text-white hover:bg-white dark:hover:bg-zinc-800 shadow-[0_4px_16px_rgba(120,90,160,0.06)] rounded-full w-10 h-10 cursor-pointer shrink-0";
+    "ds-apple-icon-btn ds-theme-icon-btn transition-transform duration-150 flex items-center justify-center hover:scale-[1.04] active:scale-[0.94] rounded-full w-10 h-10 cursor-pointer shrink-0";
 
   const mobileCircleBtnClass =
-    "ds-theme-icon-btn relative rounded-full bg-white/95 dark:bg-zinc-900/90 border-0 hover:bg-white dark:hover:bg-zinc-800 shadow-[0_4px_16px_rgba(120,90,160,0.06)] active:scale-95 transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 text-zinc-900 dark:text-white flex items-center justify-center cursor-pointer shrink-0";
+    "ds-apple-icon-btn ds-theme-icon-btn relative rounded-full active:scale-[0.94] transition-transform duration-150 w-9 h-9 sm:w-9.5 sm:h-9.5 flex items-center justify-center cursor-pointer shrink-0";
 
   return (
     <header
       className={cn(
-        "fixed top-0 inset-x-0 z-[120] w-full max-w-[100vw] box-border transition-all duration-300 ease-in-out pointer-events-none border-none",
-        scrolled || open
-          ? "bg-white/75 dark:bg-[#0e0c13]/80 backdrop-blur-xl shadow-[0_6px_24px_rgba(120,90,160,0.06)]"
-          : "bg-transparent"
+        "fixed top-0 inset-x-0 z-[120] w-full max-w-[100vw] box-border transition-all duration-200 pointer-events-none",
+        scrolled || open ? "ds-apple-topbar" : "bg-transparent border-b border-transparent"
       )}
     >
       <nav
         className={cn(
-          "mx-auto flex w-full max-w-[1920px] items-center justify-between gap-1.5 px-3 sm:px-5 lg:px-6 box-border transition-all duration-300",
+          "mx-auto flex w-full max-w-[1920px] items-center justify-between gap-2 px-3 sm:px-5 lg:px-6 box-border",
           isHomePage ? "h-15 md:h-16" : "h-14 md:h-16"
         )}
       >
         <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0 shrink pointer-events-auto">
-          {/* Top-left Menu / Back Button: Hidden on mobile ONLY on Home ("/"), visible on desktop & all other pages */}
           <Button
             size="icon"
             variant="ghost"
+            onPointerDown={() => triggerHaptic()}
             onClick={() => {
-              triggerHaptic();
               if (location.pathname === "/withdraw") {
                 navigate("/affiliate");
               } else if (location.pathname.startsWith("/messages")) {
@@ -475,25 +469,24 @@ export function Header() {
               }
             }}
             className={cn(
-              "ds-theme-icon-btn items-center justify-center transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 md:w-10 md:h-10 rounded-full shrink-0 bg-white/95 dark:bg-zinc-900/90 border-0 hover:bg-white dark:hover:bg-zinc-800 shadow-[0_4px_16px_rgba(120,90,160,0.06)] active:scale-95 cursor-pointer",
+              "ds-apple-icon-btn ds-theme-icon-btn items-center justify-center transition-transform duration-150 w-9 h-9 sm:w-9.5 sm:h-9.5 md:w-10 md:h-10 rounded-full shrink-0 active:scale-[0.94] cursor-pointer",
               isHomePage ? "hidden md:flex" : "flex"
             )}
             aria-expanded={open}
             aria-controls="mobile-menu"
-            aria-label="Toggle menu"
+            aria-label={isInnerPage ? "Go back" : "Toggle menu"}
           >
             {isInnerPage ? (
-              <Icon name="chevron-left" className="size-5 sm:size-5.5 text-zinc-900 dark:text-white" />
+              <Icon name="chevron-left" className="size-5 text-[#1D1D1F] dark:text-[#F5F5F7]" />
             ) : (
               <MenuToggleIcon
                 open={open}
-                className="size-5 text-zinc-900 dark:text-white"
-                duration={300}
+                className="size-5 text-[#1D1D1F] dark:text-[#F5F5F7]"
+                duration={280}
               />
             )}
           </Button>
 
-          {/* Left Brand Title — Compact Switcher Popover (Shop <-> Loops) */}
           {isAdminRoute ? (
             <NavLink
               to="/admin"
@@ -505,28 +498,28 @@ export function Header() {
           ) : (
             <div
               ref={brandMenuRef}
-              className="relative min-w-0 shrink transition-all duration-200"
+              className="relative min-w-0 shrink"
             >
               <button
                 type="button"
+                onPointerDown={() => triggerHaptic()}
                 onClick={(e) => {
                   e.stopPropagation();
-                  triggerHaptic();
                   setBrandMenuOpen((prev) => !prev);
                 }}
-                className="inline-flex items-center gap-1 px-1 py-1 rounded-2xl hover:bg-black/[0.03] dark:hover:bg-white/[0.05] active:scale-95 transition cursor-pointer select-none min-w-0"
+                className="inline-flex items-center gap-1.5 px-1.5 py-1 rounded-2xl hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-[0.97] transition-transform duration-150 cursor-pointer select-none min-w-0"
                 aria-label="Switch between Deep Shop and Loops"
                 aria-expanded={brandMenuOpen}
               >
                 {isHomePage ? (
                   <div className="flex items-center gap-2.5">
                     {(dynamicHeaderLogo || "/favicon.png") && (
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-black/10 dark:border-white/10 shadow-sm bg-white dark:bg-zinc-800 shrink-0 flex items-center justify-center aspect-square">
+                      <div className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-black/10 dark:border-white/15 bg-white dark:bg-[#1C1C1E] shrink-0 flex items-center justify-center aspect-square">
                         <img
                           src={optimizeImageUrl(dynamicHeaderLogo || "/favicon.png", 96, 96)}
                           alt="Deep Shop Logo"
-                          width={40}
-                          height={40}
+                          width={36}
+                          height={36}
                           decoding="async"
                           className="w-full h-full object-cover"
                           onError={() => {
@@ -535,7 +528,7 @@ export function Header() {
                         />
                       </div>
                     )}
-                    <span className="font-brand lowercase text-[22px] sm:text-[26px] font-black tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap">
+                    <span className="ds-apple-display text-[19px] sm:text-[22px] font-bold tracking-[-0.03em] leading-none text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
                       deep shop
                     </span>
                   </div>
@@ -545,7 +538,7 @@ export function Header() {
                 <Icon
                   name="chevron-down"
                   className={cn(
-                    "w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-900 dark:text-zinc-200 mt-0.5 transition-transform duration-200 shrink-0",
+                    "w-3.5 h-3.5 text-[#6E6E73] dark:text-[#98989D] transition-transform duration-200 shrink-0",
                     brandMenuOpen && "rotate-180"
                   )}
                 />
@@ -557,9 +550,10 @@ export function Header() {
                     initial={{ opacity: 0, scale: 0.94, y: -6 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.94, y: -6 }}
-                    transition={{ type: "spring", stiffness: 430, damping: 30 }}
+                    transition={{ type: "spring", bounce: 0, duration: 0.24 }}
+                    style={{ transformOrigin: "top left" }}
                     onClick={(e) => e.stopPropagation()}
-                    className="loops-liquid-popover absolute left-0 top-full mt-2 z-[160] w-[216px] rounded-[26px] py-2 px-1.5 space-y-0.5"
+                    className="ds-apple-popover ds-apple-portal absolute left-0 top-full mt-2 z-[160] w-[216px] rounded-[22px] py-1.5 px-1.5 space-y-0.5"
                   >
                     <button
                       type="button"
@@ -625,16 +619,14 @@ export function Header() {
 
           <button
             type="button"
-            onClick={() => {
-              triggerHaptic();
-              navigate("/cart");
-            }}
+            onPointerDown={() => triggerHaptic()}
+            onClick={() => navigate("/cart")}
             className={cn("relative", standardDesktopBtnClass)}
             aria-label="Shopping Cart"
           >
-            <Icon name="shopping-cart" className="w-5 h-5 text-zinc-900 dark:text-white" />
+            <Icon name="shopping-cart" className="w-5 h-5 text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#5F2CFF] text-white text-[10px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+              <span className="absolute -top-1 -right-1 bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border border-white dark:border-[#1C1C1E] tabular-nums">
                 {cartCount}
               </span>
             )}
@@ -642,16 +634,14 @@ export function Header() {
 
           <button
             type="button"
-            onClick={() => {
-              triggerHaptic();
-              navigate("/messages");
-            }}
+            onPointerDown={() => triggerHaptic()}
+            onClick={() => navigate("/messages")}
             className={cn("relative", standardDesktopBtnClass)}
             aria-label="Messages"
           >
-            <Icon name="message-square" className="w-5 h-5 text-zinc-900 dark:text-white" />
+            <Icon name="message-square" className="w-5 h-5 text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {unreadMessagesCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+              <span className="absolute -top-1 -right-1 bg-[#FF3B30] text-white text-[9px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border border-white dark:border-[#1C1C1E] tabular-nums">
                 {unreadMessagesCount}
               </span>
             )}
@@ -663,10 +653,8 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/settings");
-              }}
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/settings")}
               className={cn("relative", standardDesktopBtnClass)}
               aria-label="Settings"
             >
@@ -677,21 +665,19 @@ export function Header() {
           )}
         </div>
 
-        {/* MOBILE RIGHT ACTION BUTTONS — Crisp white circular icons in Light mode & zinc-900 in Dark mode */}
+        {/* MOBILE RIGHT ACTION BUTTONS */}
         <div className="flex items-center gap-1.5 sm:gap-2 md:hidden shrink-0 pointer-events-auto transition-all duration-200">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => {
-              triggerHaptic();
-              navigate("/cart");
-            }}
+            onPointerDown={() => triggerHaptic()}
+            onClick={() => navigate("/cart")}
             className={mobileCircleBtnClass}
             aria-label="Shopping Cart"
           >
-            <Icon name="shopping-cart" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-zinc-900 dark:text-white" />
+            <Icon name="shopping-cart" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-[#5F2CFF] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm">
+              <span className="absolute -top-0.5 -right-0.5 bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[9px] font-bold min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full border border-white dark:border-[#1C1C1E] tabular-nums">
                 {cartCount}
               </span>
             )}
@@ -699,16 +685,14 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => {
-              triggerHaptic();
-              navigate("/messages");
-            }}
+            onPointerDown={() => triggerHaptic()}
+            onClick={() => navigate("/messages")}
             className={mobileCircleBtnClass}
             aria-label="Messages"
           >
-            <Icon name="message-square" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-zinc-900 dark:text-white" />
+            <Icon name="message-square" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {unreadMessagesCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white dark:border-zinc-900 shadow-sm animate-bounce">
+              <span className="absolute -top-0.5 -right-0.5 bg-[#FF3B30] text-white text-[9px] font-bold min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full border border-white dark:border-[#1C1C1E] tabular-nums">
                 {unreadMessagesCount}
               </span>
             )}
@@ -719,10 +703,8 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                triggerHaptic();
-                navigate("/settings");
-              }}
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/settings")}
               className={mobileCircleBtnClass}
               aria-label="Settings"
             >
@@ -737,7 +719,6 @@ export function Header() {
       <MobileMenu
         open={open}
         onClose={() => setOpen(false)}
-        className="bg-white dark:bg-zinc-900 border-l md:border-l-0 md:border-r border-zinc-200 dark:border-zinc-800"
       >
         <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar w-full">
           <div className="flex w-full flex-col gap-y-1.5 pb-4 px-2">
@@ -784,7 +765,8 @@ export function Header() {
         <div className="flex flex-col gap-2 p-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 w-full shrink-0 pb-6 md:pb-4">
           {userHasAdminAccess && !showAdminMenu && (
             <Button
-              className="w-full bg-[#1877F2] hover:bg-[#1465D8] text-white font-bold"
+              className="w-full ds-apple-btn-primary rounded-2xl font-semibold"
+              onPointerDown={() => triggerHaptic()}
               onClick={() => {
                 setOpen(false);
                 navigate("/admin");
@@ -797,7 +779,8 @@ export function Header() {
           {showAdminMenu && (
             <Button
               variant="outline"
-              className="w-full bg-transparent border-zinc-200 dark:border-zinc-700 mb-2 text-zinc-700 dark:text-zinc-200"
+              className="w-full ds-apple-btn-secondary rounded-2xl mb-1 font-semibold"
+              onPointerDown={() => triggerHaptic()}
               onClick={() => {
                 setOpen(false);
                 navigate("/");
@@ -811,7 +794,8 @@ export function Header() {
             <>
               <Button
                 variant="outline"
-                className="w-full bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200"
+                className="w-full ds-apple-btn-secondary rounded-2xl font-semibold"
+                onPointerDown={() => triggerHaptic()}
                 onClick={() => {
                   setOpen(false);
                   navigate("/auth-selector");
@@ -820,7 +804,8 @@ export function Header() {
                 Sign In
               </Button>
               <Button
-                className="w-full bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900"
+                className="w-full ds-apple-btn-primary rounded-2xl font-semibold"
+                onPointerDown={() => triggerHaptic()}
                 onClick={() => {
                   setOpen(false);
                   navigate("/auth-selector");
@@ -833,7 +818,8 @@ export function Header() {
             <>
               <Button
                 variant="outline"
-                className="w-full bg-transparent border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200"
+                className="w-full ds-apple-btn-secondary rounded-2xl font-semibold"
+                onPointerDown={() => triggerHaptic()}
                 onClick={() => {
                   setOpen(false);
                   navigate("/profile");
@@ -842,7 +828,8 @@ export function Header() {
                 Account & All Pages
               </Button>
               <Button
-                className="w-full bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900"
+                className="w-full ds-apple-btn-primary rounded-2xl font-semibold"
+                onPointerDown={() => triggerHaptic()}
                 onClick={() => {
                   setOpen(false);
                   navigate("/orders");
@@ -858,9 +845,11 @@ export function Header() {
   );
 }
 
-type MobileMenuProps = React.ComponentProps<"div"> & {
+type MobileMenuProps = {
   open: boolean;
+  children?: React.ReactNode;
   onClose?: () => void;
+  className?: string;
 };
 
 function MobileMenu({
@@ -868,38 +857,54 @@ function MobileMenu({
   children,
   onClose,
   className,
-  ...props
 }: MobileMenuProps) {
-  if (!open || typeof window === "undefined") return null;
+  const shouldReduceMotion = useReducedMotion();
+  if (typeof window === "undefined") return null;
 
   return createPortal(
-    <>
-      <div
-        className={cn(
-          "fixed inset-0 z-[150000] bg-black/20 dark:bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden",
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-        onClick={onClose}
-      />
-      <div
-        id="mobile-menu"
-        data-slot={open ? "open" : "closed"}
-        className={cn(
-          "bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800",
-          "fixed z-[150100] md:z-[110] flex flex-col overflow-hidden shadow-2xl md:shadow-none",
-          "top-4 bottom-4 left-4 w-72 rounded-[20px] pt-4 pb-4",
-          "md:top-0 md:bottom-0 md:left-0 md:w-72 md:rounded-none md:border-r md:border-l-0 md:border-t-0 md:border-b-0 md:pt-16 md:pb-4 md:border-zinc-200 md:dark:border-zinc-800",
-          "data-[slot=open]:animate-in data-[slot=closed]:animate-out ease-out duration-300",
-          "data-[slot=open]:slide-in-from-left-full data-[slot=closed]:slide-out-to-left-full",
-          className
-        )}
-        {...props}
-      >
-        <div className="w-full h-full flex flex-col overflow-hidden">
-          {children}
+    <AnimatePresence>
+      {open && (
+        <div className="ds-apple-portal">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="ds-apple-backdrop fixed inset-0 z-[150000] md:hidden"
+            onClick={onClose}
+          />
+          <motion.div
+            id="mobile-menu"
+            initial={shouldReduceMotion ? { opacity: 0 } : { x: -304, opacity: 0.6 }}
+            animate={shouldReduceMotion ? { opacity: 1 } : { x: 0, opacity: 1 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { x: -304, opacity: 0 }}
+            transition={
+              shouldReduceMotion
+                ? { duration: 0.18 }
+                : { type: "spring", bounce: 0, duration: 0.34 }
+            }
+            drag={shouldReduceMotion ? false : "x"}
+            dragConstraints={{ left: -280, right: 0 }}
+            dragElastic={{ left: 0.2, right: 0.08 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -72 || info.velocity.x < -380) {
+                onClose?.();
+              }
+            }}
+            className={cn(
+              "ds-apple-modal fixed z-[150100] md:z-[110] flex flex-col overflow-hidden",
+              "top-3.5 bottom-3.5 left-3.5 w-72 rounded-[26px] pt-4 pb-4",
+              "md:top-0 md:bottom-0 md:left-0 md:w-72 md:rounded-none md:border-r md:border-l-0 md:border-t-0 md:border-b-0 md:pt-16 md:pb-4",
+              className
+            )}
+          >
+            <div className="w-full h-full flex flex-col overflow-hidden">
+              {children}
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </>,
+      )}
+    </AnimatePresence>,
     document.body
   );
 }
@@ -915,30 +920,31 @@ function ListItem({
   return (
     <NavLink
       to={href}
+      onPointerDown={() => triggerHaptic()}
       onClick={onClick}
       className={({ isActive }) =>
         cn(
-          "w-full flex items-center flex-row gap-x-3 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 rounded-xl px-2.5 py-1.5 transition-colors overflow-hidden max-w-full box-border",
-          isActive && "bg-zinc-100 dark:bg-zinc-800 font-medium",
+          "w-full flex items-center flex-row gap-x-3 hover:bg-black/[0.045] dark:hover:bg-white/[0.08] active:scale-[0.98] rounded-2xl px-2.5 py-2 transition-all overflow-hidden max-w-full box-border",
+          isActive && "bg-[#0071E3]/[0.08] dark:bg-[#0A84FF]/[0.15] font-medium",
           className
         )
       }
     >
-      <div className="bg-zinc-100 dark:bg-zinc-800 flex aspect-square size-10 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm shrink-0">
+      <div className="bg-[#F2F2F7] dark:bg-[#2C2C2E] flex aspect-square size-10 items-center justify-center rounded-xl border border-black/[0.06] dark:border-white/[0.1] shrink-0">
         {typeof IconComp === "string" ? (
           <Icon
             name={IconComp}
-            className="text-zinc-700 dark:text-zinc-300 size-4.5"
+            className="text-[#1D1D1F] dark:text-[#F5F5F7] size-4.5"
           />
         ) : (
-          <IconComp className="text-zinc-700 dark:text-zinc-300 size-4.5" />
+          <IconComp className="text-[#1D1D1F] dark:text-[#F5F5F7] size-4.5" />
         )}
       </div>
       <div className="flex flex-col items-start justify-center min-w-0 flex-1 truncate">
-        <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm truncate w-full text-left">
+        <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-xs sm:text-sm truncate w-full text-left">
           {title}
         </span>
-        <span className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-tight truncate w-full text-left">
+        <span className="text-[#6E6E73] dark:text-[#98989D] text-[11px] leading-tight truncate w-full text-left">
           {description}
         </span>
       </div>
@@ -976,7 +982,7 @@ const WordmarkIcon = ({
 }: React.ComponentProps<"span">) => (
   <span
     className={cn(
-      "font-brand lowercase text-[20px] sm:text-[23px] font-black tracking-[-0.02em] leading-none mt-0.5 text-zinc-900 dark:text-white whitespace-nowrap",
+      "ds-apple-display lowercase text-[19px] sm:text-[21px] font-bold tracking-[-0.03em] leading-none text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap",
       className
     )}
     {...props}

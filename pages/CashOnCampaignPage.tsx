@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { doc, onSnapshot, addDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -8,15 +9,14 @@ import SEO from "../components/SEO";
 import { AuthVoiceToggle } from "../components/AuthVoiceToggle";
 import { playAuthVoice } from "../lib/authVoiceAndValidation";
 import { uploadToImgBB } from "../lib/imgbbUpload";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
 import {
-  ChevronLeft,
   Upload,
   CheckCircle2,
   X,
   Loader2,
-  Sparkles,
   Lock,
-  FileText,
   User,
   Phone,
   Mail,
@@ -36,12 +36,11 @@ interface UploadState {
 export default function CashOnCampaignPage() {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
 
-  // Campaign On/Off Status from Firestore settings
   const [campaignEnabled, setCampaignEnabled] = useState<boolean | null>(null);
   const [loadingSettings, setLoadingSettings] = useState(true);
 
-  // Form Fields
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState(auth.currentUser?.email || "");
@@ -50,7 +49,6 @@ export default function CashOnCampaignPage() {
   const [foundSource, setFoundSource] = useState("Social Media");
   const [reason, setReason] = useState("");
 
-  // 4 Screenshot Upload States
   const [followScreenshot, setFollowScreenshot] = useState<UploadState>({ file: null, url: "", uploading: false });
   const [video1Screenshot, setVideo1Screenshot] = useState<UploadState>({ file: null, url: "", uploading: false });
   const [video2Screenshot, setVideo2Screenshot] = useState<UploadState>({ file: null, url: "", uploading: false });
@@ -62,7 +60,6 @@ export default function CashOnCampaignPage() {
   const [userIp, setUserIp] = useState("");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  // File Input Hidden Refs
   const followInputRef = useRef<HTMLInputElement>(null);
   const v1InputRef = useRef<HTMLInputElement>(null);
   const v2InputRef = useRef<HTMLInputElement>(null);
@@ -75,24 +72,22 @@ export default function CashOnCampaignPage() {
         if (snap.exists()) {
           setCampaignEnabled(Boolean(snap.data().isEnabled));
         } else {
-          setCampaignEnabled(true); // Default to enabled if doc not created yet
+          setCampaignEnabled(true);
         }
         setLoadingSettings(false);
       },
       () => {
         setCampaignEnabled(true);
         setLoadingSettings(false);
-      }
+      },
     );
 
-    // 1. Fetch User IP
     const fetchIp = async () => {
       try {
         const res = await fetch("https://api.ipify.org?format=json");
         const data = await res.json();
         if (data.ip) {
           setUserIp(data.ip);
-          // Check if this IP has already applied
           const q = query(collection(db, "cash_on_applications"), where("userIp", "==", data.ip));
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
@@ -105,7 +100,6 @@ export default function CashOnCampaignPage() {
     };
     fetchIp();
 
-    // 2. Fetch User Location
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -116,11 +110,10 @@ export default function CashOnCampaignPage() {
         },
         (err) => {
           console.warn("Geolocation failed or denied:", err);
-        }
+        },
       );
     }
 
-    // Play Bengali male voice guide from Auth system
     playAuthVoice("ক্যাশ অন ডেলিভারি ক্যাম্পেইনে স্বাগতম। আপনার তথ্য ও ৪ টি স্ক্রিনশট প্রদান করে জমা দিন।");
 
     return () => unsub();
@@ -128,15 +121,17 @@ export default function CashOnCampaignPage() {
 
   const handleFileUpload = async (
     file: File,
-    setUploadState: React.Dispatch<React.SetStateAction<UploadState>>
+    setUploadState: React.Dispatch<React.SetStateAction<UploadState>>,
   ) => {
     setUploadState({ file, url: "", uploading: true });
     try {
       const url = await uploadToImgBB(file);
       setUploadState({ file, url, uploading: false });
+      triggerHaptic("success");
       notify("স্ক্রিনশট সফলভাবে আপলোড হয়েছে", "success");
     } catch (err) {
       console.error("Screenshot upload failed:", err);
+      triggerHaptic("error");
       setUploadState({ file: null, url: "", uploading: false, error: "Upload failed" });
       notify("স্ক্রিনশট আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন", "error");
     }
@@ -147,7 +142,7 @@ export default function CashOnCampaignPage() {
 
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
-    triggerHaptic();
+    triggerHaptic("medium");
     const newErrors: Record<string, string> = {};
 
     if (!fullName.trim()) newErrors.fullName = "আপনার পুরো নাম লিখুন (Name is required)";
@@ -161,11 +156,13 @@ export default function CashOnCampaignPage() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      triggerHaptic("error");
       notify("অনুগ্রহ করে সকল লাল চিহ্নিত ভুল ও স্ক্রিনশটসমূহ ঠিক করুন", "error");
       return;
     }
 
     if (alreadyApplied) {
+      triggerHaptic("error");
       notify("আপনার এই আইপি থেকে ইতিমধ্যেই আবেদন করা হয়েছে। (Already applied from this IP)", "error");
       return;
     }
@@ -187,7 +184,7 @@ export default function CashOnCampaignPage() {
         video2Screenshot: video2Screenshot.url,
         video3Screenshot: video3Screenshot.url,
       },
-      userIp: userIp,
+      userIp,
       location: userLocation || null,
       createdAt: Date.now(),
       userId: auth.currentUser?.uid || "guest",
@@ -195,18 +192,17 @@ export default function CashOnCampaignPage() {
     };
 
     try {
-      // Race addDoc against a 4.5 second timeout so user is never stuck loading
       const addDocPromise = addDoc(collection(db, "cash_on_applications"), appData);
       const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 4500));
 
       await Promise.race([addDocPromise, timeoutPromise]);
 
-      // Save locally to ensure local seller dashboard sync
       try {
         const existing = JSON.parse(localStorage.getItem("deepshop_local_campaign_apps") || "[]");
         localStorage.setItem("deepshop_local_campaign_apps", JSON.stringify([appData, ...existing]));
-      } catch (e) {}
+      } catch (err) {}
 
+      triggerHaptic("success");
       setSubmitting(false);
       setSubmitted(true);
       setShowCongratulationsModal(true);
@@ -214,6 +210,7 @@ export default function CashOnCampaignPage() {
       notify("আপনার ক্যাশ অন ক্যাম্পেইন আবেদন সফলভাবে জমা হয়েছে!", "success");
     } catch (err) {
       console.warn("Application submit notice:", err);
+      triggerHaptic("success");
       setSubmitting(false);
       setSubmitted(true);
       setShowCongratulationsModal(true);
@@ -222,99 +219,92 @@ export default function CashOnCampaignPage() {
   };
 
   const saveDraft = () => {
-    triggerHaptic();
+    triggerHaptic("light");
     localStorage.setItem(
       "deepshop_cash_on_draft",
-      JSON.stringify({ fullName, phone, email, address, tiktokUsername, foundSource, reason })
+      JSON.stringify({ fullName, phone, email, address, tiktokUsername, foundSource, reason }),
     );
     notify("খসড়া সংরক্ষিত হয়েছে (Draft Saved)", "info");
   };
 
   if (loadingSettings) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0E1017] flex items-center justify-center p-4">
-        <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+      <div className="ds-apple-shop-canvas min-h-screen flex items-center justify-center p-4">
+        <Loader2 className="w-7 h-7 animate-spin text-[#0071E3] dark:text-[#0A84FF]" />
       </div>
     );
   }
 
-  // Campaign Disabled State: "Soon Available"
   if (campaignEnabled === false) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0A0C10] text-zinc-900 dark:text-zinc-100 flex flex-col justify-between p-4 sm:p-6 font-sans">
+      <div className="ds-apple-shop-canvas min-h-screen flex flex-col justify-between pb-24">
         <SEO title="Cash on Campaign — Deep Shop" description="Cash on delivery access campaign" />
-        
-        {/* Top Header */}
-        <header className="max-w-xl mx-auto w-full flex items-center justify-center py-2 text-center">
-          <span className="text-base font-bold">Cash on Campaign</span>
-        </header>
 
-        {/* Announcement Card */}
-        <main className="max-w-lg mx-auto w-full bg-white dark:bg-[#141720] rounded-[32px] p-6 sm:p-8 border border-zinc-200/80 dark:border-white/10 text-center space-y-5 my-auto">
-          <div className="w-16 h-16 rounded-full bg-pink-500/10 text-pink-500 flex items-center justify-center mx-auto">
-            <Lock className="w-8 h-8" />
+        <main className="max-w-lg mx-auto w-full px-4 my-auto pt-8">
+          <div className="ds-apple-surface rounded-[28px] p-6 sm:p-8 text-center space-y-5">
+            <div className="w-14 h-14 rounded-full bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center mx-auto">
+              <Lock className="w-7 h-7" />
+            </div>
+            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+              Soon Available
+            </h1>
+            <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed max-w-sm mx-auto">
+              ক্যাশ অন ক্যাম্পেইনটি সাময়িকভাবে স্থগিত আছে। সেলার প্যানেল থেকে খুব শীঘ্রই ক্যাম্পেইনটি পুনরায় চালু করা হবে। নিয়মিত নোটিফিকেশন চেক করুন!
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic("light");
+                navigate("/");
+              }}
+              className="ds-apple-btn-primary w-full py-3.5 px-5 rounded-full font-semibold text-[14px] whitespace-nowrap active:scale-[0.98] transition-transform"
+            >
+              হোম পেজে ফিরে যান
+            </button>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            Soon Available 🎉
-          </h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-sm mx-auto">
-            ক্যাশ অন ক্যাম্পেইনটি সাময়িকভাবে স্থগিত আছে। সেলার প্যানেল থেকে খুব শীঘ্রই ক্যাম্পেইনটি পুনরায় চালু করা হবে। নিয়মিত নোটিফিকেশন চেক করুন!
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="w-full py-3.5 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
-          >
-            হোম পেজে ফিরে যান (Back to Home)
-          </button>
         </main>
-        
-        <footer className="text-center text-xs text-zinc-400 py-4">
-          Deep Shop © Cash on Campaign
+
+        <footer className="text-center text-[12px] text-[#6E6E73] dark:text-[#98989D] py-4">
+          Deep Shop &copy; Cash on Campaign
         </footer>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] dark:bg-[#0A0C10] text-zinc-900 dark:text-zinc-100 py-6 px-3 sm:px-6 font-sans">
-      <SEO title="Apply in Cash on Campaign — Deep Shop" description="Submit your screenshots to gain Cash on Delivery access." />
+    <div className="ds-apple-shop-canvas min-h-screen pb-28">
+      <SEO
+        title="Apply in Cash on Campaign — Deep Shop"
+        description="Submit your screenshots to gain Cash on Delivery access."
+      />
 
-      {/* Outer Centered Container */}
-      <div className="max-w-2xl mx-auto space-y-4">
-        {/* Top Header Bar */}
-        <header className="flex items-center justify-between py-1 px-1">
-          <h1 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-white">
-            Cash on Campaign
-          </h1>
-          <div className="shrink-0">
-            <AuthVoiceToggle isInline={true} />
-          </div>
-        </header>
-
-        {/* Success Dialog View */}
+      <div className="max-w-2xl mx-auto px-4 pt-6 space-y-5">
         {submitted ? (
-          <div className="bg-white dark:bg-[#141720] rounded-[32px] p-6 sm:p-8 border border-zinc-200/80 dark:border-white/10 text-center space-y-5">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-9 h-9" />
+          <div className="ds-apple-surface rounded-[28px] p-6 sm:p-8 text-center space-y-5">
+            <div className="w-16 h-16 rounded-full bg-[#34C759]/12 text-[#34C759] dark:text-[#30D158] flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
+            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
               আবেদন সফলভাবে জমা হয়েছে!
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-md mx-auto">
-              ধন্যবাদ <b>{fullName}</b>! আপনার আবেদনটি সফলভাবে জমা হয়েছে। বিজয়ী হলে আপনার প্রোফাইল স্ট্যাটাসে নোটিফিকেশন পাবেন।
+            </h1>
+            <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed max-w-md mx-auto">
+              ধন্যবাদ <b className="text-[#1D1D1F] dark:text-[#F5F5F7]">{fullName}</b>! আপনার আবেদনটি সফলভাবে জমা হয়েছে। বিজয়ী হলে আপনার প্রোফাইল স্ট্যাটাসে নোটিফিকেশন পাবেন।
             </p>
             <div className="pt-2 flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
-                onClick={() => navigate("/")}
-                className="flex-1 py-3.5 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm active:scale-95 transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("light");
+                  navigate("/");
+                }}
+                className="ds-apple-btn-primary flex-1 py-3.5 px-5 rounded-full font-semibold text-[14px] whitespace-nowrap active:scale-[0.98] transition-transform"
               >
                 হোমে ফিরে যান
               </button>
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic("light");
                   setSubmitted(false);
                   setFullName("");
                   setPhone("");
@@ -324,142 +314,152 @@ export default function CashOnCampaignPage() {
                   setVideo2Screenshot({ file: null, url: "", uploading: false });
                   setVideo3Screenshot({ file: null, url: "", uploading: false });
                 }}
-                className="py-3.5 px-5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold text-sm active:scale-95 transition cursor-pointer"
+                className="ds-apple-btn-secondary py-3.5 px-6 rounded-full font-semibold text-[14px] whitespace-nowrap active:scale-[0.98] transition-transform"
               >
                 নতুন আবেদন করুন
               </button>
             </div>
           </div>
         ) : (
-          /* Main Card Container Matching IMG_5509_ea736e50.jpeg */
           <form
             onSubmit={handlePublish}
-            className="bg-white dark:bg-[#141720] rounded-[32px] p-5 sm:p-8 border border-zinc-200/80 dark:border-white/10 shadow-sm space-y-6"
+            className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-6"
           >
-            {/* Card Title & Subtitle (Clean Title, No Inner Duplicate Back Button) */}
-            <div className="border-b border-zinc-100 dark:border-white/5 pb-4">
-              <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-                Cash on Campaign
-              </h2>
-              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Let&apos;s get started with your cash on delivery application
-              </p>
+            <div className="border-b border-black/[0.06] dark:border-white/[0.08] pb-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-[22px] sm:text-[24px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+                  Cash on Campaign
+                </h1>
+                <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D] mt-0.5">
+                  Let&apos;s get started with your cash on delivery application
+                </p>
+              </div>
+              <div className="shrink-0">
+                <AuthVoiceToggle isInline={true} />
+              </div>
             </div>
 
-            {/* Form Input Fields */}
             <div className="space-y-4">
-              {/* Full Name */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+                <label className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D] flex items-center gap-1">
                   <span>Applicant Name</span>
-                  <span className="text-pink-500">*</span>
+                  <span className="text-[#FF3B30] dark:text-[#FF453A]">*</span>
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]" />
                   <input
                     type="text"
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Type your full name..."
-                    className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition ${
-                      errors.fullName ? "border-rose-500 bg-rose-50/50" : "border-zinc-200/80 dark:border-zinc-800"
+                    className={`ds-apple-input w-full pl-10 pr-4 py-3 rounded-[14px] text-[14px] ${
+                      errors.fullName ? "border-[#FF3B30]" : ""
                     }`}
                   />
                 </div>
-                {errors.fullName && <p className="text-[11px] text-rose-500 font-bold">{errors.fullName}</p>}
+                {errors.fullName && (
+                  <p className="text-[11px] text-[#FF3B30] dark:text-[#FF453A] font-medium">
+                    {errors.fullName}
+                  </p>
+                )}
               </div>
 
-              {/* Phone & Email Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+                  <label className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D] flex items-center gap-1">
                     <span>Phone Number</span>
-                    <span className="text-pink-500">*</span>
+                    <span className="text-[#FF3B30] dark:text-[#FF453A]">*</span>
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]" />
                     <input
                       type="tel"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="017XXXXXXXX"
-                      className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition ${
-                        errors.phone ? "border-rose-500 bg-rose-50/50" : "border-zinc-200/80 dark:border-zinc-800"
+                      className={`ds-apple-input w-full pl-10 pr-4 py-3 rounded-[14px] text-[14px] tabular-nums ${
+                        errors.phone ? "border-[#FF3B30]" : ""
                       }`}
                     />
                   </div>
-                  {errors.phone && <p className="text-[11px] text-rose-500 font-bold">{errors.phone}</p>}
+                  {errors.phone && (
+                    <p className="text-[11px] text-[#FF3B30] dark:text-[#FF453A] font-medium">
+                      {errors.phone}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                  <label className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
                     Email Address
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="example@gmail.com"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition"
+                      className="ds-apple-input w-full pl-10 pr-4 py-3 rounded-[14px] text-[14px]"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Address & TikTok Username */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                  <label className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
                     Delivery Address
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]" />
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="Type your address..."
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition"
+                      className="ds-apple-input w-full pl-10 pr-4 py-3 rounded-[14px] text-[14px]"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+                  <label className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D] flex items-center gap-1">
                     <span>TikTok ID / Username</span>
-                    <span className="text-pink-500">*</span>
+                    <span className="text-[#FF3B30] dark:text-[#FF453A]">*</span>
                   </label>
                   <div className="relative">
-                    <Video className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <Video className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8E8E93]" />
                     <input
                       type="text"
                       required
                       value={tiktokUsername}
                       onChange={(e) => setTiktokUsername(e.target.value)}
                       placeholder="@your_tiktok_id"
-                      className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition ${
-                        errors.tiktokUsername ? "border-rose-500 bg-rose-50/50" : "border-zinc-200/80 dark:border-zinc-800"
+                      className={`ds-apple-input w-full pl-10 pr-4 py-3 rounded-[14px] text-[14px] ${
+                        errors.tiktokUsername ? "border-[#FF3B30]" : ""
                       }`}
                     />
                   </div>
-                  {errors.tiktokUsername && <p className="text-[11px] text-rose-500 font-bold">{errors.tiktokUsername}</p>}
+                  {errors.tiktokUsername && (
+                    <p className="text-[11px] text-[#FF3B30] dark:text-[#FF453A] font-medium">
+                      {errors.tiktokUsername}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* How did you find Deep Shop? */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
-                  <HelpCircle className="w-3.5 h-3.5 text-zinc-400" />
+                <label className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D] flex items-center gap-1">
+                  <HelpCircle className="w-3.5 h-3.5" />
                   <span>How did you find Deep Shop?</span>
                 </label>
                 <select
                   value={foundSource}
                   onChange={(e) => setFoundSource(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition cursor-pointer"
+                  className="ds-apple-input w-full px-4 py-3 rounded-[14px] text-[14px] cursor-pointer"
                 >
                   <option value="Social Media">Social Media (Facebook / Instagram)</option>
                   <option value="TikTok">TikTok Feed / Reels</option>
@@ -470,9 +470,8 @@ export default function CashOnCampaignPage() {
                 </select>
               </div>
 
-              {/* Project Description / Reason */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                <label className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
                   Application Note
                 </label>
                 <textarea
@@ -480,21 +479,19 @@ export default function CashOnCampaignPage() {
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Explain why you want Cash on Delivery access..."
-                  className="w-full p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-sm outline-none focus:ring-2 focus:ring-pink-500/25 transition resize-none"
+                  className="ds-apple-input w-full p-3.5 rounded-[14px] text-[14px] resize-none"
                 />
               </div>
             </div>
 
-            {/* 4 Screenshot Upload Dropzones Matching IMG_5509_ea736e50.jpeg */}
-            <div className="space-y-3 pt-2">
-              <label className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1">
-                <Upload className="w-4 h-4 text-pink-500" />
+            <div className="space-y-3 pt-1">
+              <label className="text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-1.5">
+                <Upload className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF]" />
                 <span>Upload 4 Mandatory Screenshots</span>
-                <span className="text-pink-500">*</span>
+                <span className="text-[#FF3B30] dark:text-[#FF453A]">*</span>
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {/* Hidden File Inputs */}
                 <input
                   type="file"
                   ref={followInputRef}
@@ -536,7 +533,6 @@ export default function CashOnCampaignPage() {
                   }}
                 />
 
-                {/* Dropzone 1: TikTok Follow */}
                 <RenderDropzoneBox
                   label="1. TikTok Follow Screenshot"
                   state={followScreenshot}
@@ -544,7 +540,6 @@ export default function CashOnCampaignPage() {
                   onRemove={() => setFollowScreenshot({ file: null, url: "", uploading: false })}
                 />
 
-                {/* Dropzone 2: Video 1 Like & Comment */}
                 <RenderDropzoneBox
                   label="2. Video 1 Like & Comment"
                   state={video1Screenshot}
@@ -552,7 +547,6 @@ export default function CashOnCampaignPage() {
                   onRemove={() => setVideo1Screenshot({ file: null, url: "", uploading: false })}
                 />
 
-                {/* Dropzone 3: Video 2 Like & Comment */}
                 <RenderDropzoneBox
                   label="3. Video 2 Like & Comment"
                   state={video2Screenshot}
@@ -560,7 +554,6 @@ export default function CashOnCampaignPage() {
                   onRemove={() => setVideo2Screenshot({ file: null, url: "", uploading: false })}
                 />
 
-                {/* Dropzone 4: Video 3 Like & Comment */}
                 <RenderDropzoneBox
                   label="4. Video 3 Like & Comment"
                   state={video3Screenshot}
@@ -570,23 +563,21 @@ export default function CashOnCampaignPage() {
               </div>
             </div>
 
-            {/* Bottom Actions Row Matching IMG_5509_ea736e50.jpeg */}
-            <div className="pt-4 flex flex-col gap-3">
+            <div className="pt-2 flex flex-col gap-3">
               {alreadyApplied && (
-                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-2.5 text-rose-600">
+                <div className="p-3.5 rounded-[14px] bg-[#FF3B30]/10 border border-[#FF3B30]/20 flex items-center gap-2.5 text-[#FF3B30] dark:text-[#FF453A]">
                   <Globe className="w-5 h-5 shrink-0" />
-                  <p className="text-xs font-bold">
+                  <p className="text-[12px] font-semibold">
                     আপনার এই আইপি ({userIp}) থেকে ইতিমধ্যেই একটি আবেদন জমা হয়েছে। আপনি একটি আইপি থেকে একবারই আবেদন করতে পারবেন।
                   </p>
                 </div>
               )}
-              
+
               <div className="flex flex-col sm:flex-row gap-3">
-                {/* Primary Black Button "Get Started / Submit" */}
                 <button
                   type="submit"
                   disabled={submitting || alreadyApplied}
-                  className="flex-1 py-4 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition cursor-pointer disabled:opacity-50"
+                  className="ds-apple-btn-primary flex-1 py-3.5 rounded-full font-semibold text-[14px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
@@ -594,22 +585,17 @@ export default function CashOnCampaignPage() {
                       <span>Submitting Application...</span>
                     </>
                   ) : alreadyApplied ? (
-                    <>
-                      <span>Already Applied ✓</span>
-                    </>
+                    <span>Already Applied</span>
                   ) : (
-                    <>
-                      <span>Submit Application (Get Started)</span>
-                    </>
+                    <span>Submit Application</span>
                   )}
                 </button>
 
-                {/* Secondary Light Button "Save Draft" */}
                 <button
                   type="button"
                   onClick={saveDraft}
                   disabled={alreadyApplied}
-                  className="py-4 px-6 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition cursor-pointer disabled:opacity-50"
+                  className="ds-apple-btn-secondary py-3.5 px-6 rounded-full font-semibold text-[14px] active:scale-[0.98] transition-transform disabled:opacity-50"
                 >
                   Save Draft
                 </button>
@@ -619,70 +605,83 @@ export default function CashOnCampaignPage() {
         )}
       </div>
 
-      {/* Congratulations Popup Modal (Site Styled Modal) */}
-      {showCongratulationsModal && (
-        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#141720] border border-zinc-200/90 dark:border-white/10 rounded-[32px] p-6 sm:p-8 max-w-md w-full text-center space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200">
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setShowCongratulationsModal(false)}
-              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {showCongratulationsModal && (
+              <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowCongratulationsModal(false)}
+                  className="ds-apple-backdrop fixed inset-0"
+                />
+                <motion.div
+                  initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 12 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 12 }}
+                  transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+                  className="ds-apple-modal relative z-10 rounded-[28px] p-6 sm:p-8 max-w-md w-full text-center space-y-5"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setShowCongratulationsModal(false)}
+                    aria-label="Close dialog"
+                    className="ds-apple-icon-btn absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
 
-            {/* Animated Celebration Icon */}
-            <div className="w-20 h-20 rounded-full bg-emerald-500/15 text-emerald-500 border-2 border-emerald-500/30 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
-              <CheckCircle2 className="w-10 h-10 animate-bounce" />
-            </div>
+                  <div className="w-16 h-16 rounded-full bg-[#34C759]/12 text-[#34C759] dark:text-[#30D158] flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
 
-            {/* Header Text */}
-            <div className="space-y-1">
-              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 text-xs font-bold inline-block">
-                🎉 Congratulations! (অভিনন্দন)
-              </span>
-              <h3 className="text-2xl font-bold text-zinc-900 dark:text-white pt-1">
-                আবেদন সফলভাবে গৃহীত হয়েছে!
-              </h3>
-            </div>
+                  <div className="space-y-1">
+                    <span className="px-3 py-1 rounded-full bg-[#34C759]/12 text-[#34C759] dark:text-[#30D158] text-[12px] font-semibold inline-block">
+                      Congratulations
+                    </span>
+                    <h3 className="text-[20px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] pt-1">
+                      আবেদন সফলভাবে গৃহীত হয়েছে!
+                    </h3>
+                  </div>
 
-            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              ধন্যবাদ <b>{fullName}</b>! আপনার ক্যাশ অন ডেলিভারি ক্যাম্পেইনের আবেদনটি সফলভাবে নিবন্ধিত হয়েছে। সেলার প্যানেল থেকে দ্রুতই এটি যাচাই করা হবে।
-            </p>
+                  <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
+                    ধন্যবাদ <b className="text-[#1D1D1F] dark:text-[#F5F5F7]">{fullName}</b>! আপনার ক্যাশ অন ডেলিভারি ক্যাম্পেইনের আবেদনটি সফলভাবে নিবন্ধিত হয়েছে। সেলার প্যানেল থেকে দ্রুতই এটি যাচাই করা হবে।
+                  </p>
 
-            {/* Quick Summary Badges */}
-            <div className="bg-zinc-50 dark:bg-zinc-900 p-3.5 rounded-2xl text-xs space-y-1.5 text-left border border-zinc-100 dark:border-zinc-800">
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Applicant:</span>
-                <span className="font-bold text-zinc-900 dark:text-white">{fullName}</span>
+                  <div className="bg-[#F5F5F7] dark:bg-[#2C2C2E] p-3.5 rounded-[16px] text-[12px] space-y-1.5 text-left">
+                    <div className="flex justify-between">
+                      <span className="text-[#6E6E73] dark:text-[#98989D]">Applicant:</span>
+                      <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{fullName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#6E6E73] dark:text-[#98989D]">TikTok ID:</span>
+                      <span className="font-semibold text-[#0071E3] dark:text-[#0A84FF]">{tiktokUsername}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#6E6E73] dark:text-[#98989D]">Screenshots:</span>
+                      <span className="font-semibold text-[#34C759] dark:text-[#30D158]">4 / 4 Complete</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic("light");
+                      setShowCongratulationsModal(false);
+                      navigate("/");
+                    }}
+                    className="ds-apple-btn-primary w-full py-3.5 rounded-full font-semibold text-[14px] active:scale-[0.98] transition-transform"
+                  >
+                    হোম পেজে ফিরে যান (Go to Home)
+                  </button>
+                </motion.div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">TikTok ID:</span>
-                <span className="font-mono font-bold text-pink-500">{tiktokUsername}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-400">Screenshots:</span>
-                <span className="font-bold text-emerald-500">4 / 4 Complete ✓</span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="pt-2 flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCongratulationsModal(false);
-                  navigate("/");
-                }}
-                className="w-full py-3.5 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm hover:opacity-90 active:scale-95 transition cursor-pointer shadow-md"
-              >
-                হোম পেজে ফিরে যান (Go to Home)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -699,26 +698,26 @@ function RenderDropzoneBox({
   onRemove: () => void;
 }) {
   return (
-    <div className="relative bg-zinc-50 dark:bg-zinc-900/50 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 flex flex-col items-center justify-center min-h-[120px] transition hover:border-pink-500/50 group">
+    <div className="relative bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-dashed border-black/15 dark:border-white/15 rounded-[18px] p-3 flex flex-col items-center justify-center min-h-[120px] transition hover:border-[#0071E3]/50 group">
       {state.uploading ? (
-        <div className="flex flex-col items-center gap-2 text-xs text-pink-500 font-medium">
-          <Loader2 className="w-6 h-6 animate-spin" />
+        <div className="flex flex-col items-center gap-2 text-[12px] text-[#0071E3] dark:text-[#0A84FF] font-medium">
+          <Loader2 className="w-5 h-5 animate-spin" />
           <span>Uploading Image...</span>
         </div>
       ) : state.url ? (
-        <div className="relative w-full h-24 rounded-xl overflow-hidden group">
+        <div className="relative w-full h-24 rounded-[12px] overflow-hidden group">
           <img src={state.url} alt={label} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
             <button
               type="button"
               onClick={onRemove}
-              className="p-1.5 rounded-full bg-rose-500 text-white shadow-sm"
+              className="p-1.5 rounded-full bg-[#FF3B30] text-white"
               title="Remove image"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="absolute bottom-1 right-1 px-2 py-0.5 rounded-md bg-emerald-500 text-white text-[10px] font-bold flex items-center gap-1">
+          <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-[#34C759] text-white text-[10px] font-semibold flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" />
             <span>Uploaded</span>
           </div>
@@ -726,18 +725,24 @@ function RenderDropzoneBox({
       ) : (
         <button
           type="button"
-          onClick={onClick}
+          onClick={() => {
+            triggerHaptic("light");
+            onClick();
+          }}
           className="flex flex-col items-center justify-center text-center gap-1.5 w-full h-full py-2 cursor-pointer"
         >
-          <div className="w-8 h-8 rounded-full bg-zinc-200/70 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300">
+          <div className="w-8 h-8 rounded-full bg-white dark:bg-[#1C1C1E] flex items-center justify-center text-[#0071E3] dark:text-[#0A84FF]">
             <Upload className="w-4 h-4" />
           </div>
-          <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 leading-tight">
+          <span className="text-[12px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             {label}
           </span>
-          <span className="text-[11px] text-zinc-400">click to browse or drag & drop</span>
+          <span className="text-[11px] text-[#6E6E73] dark:text-[#98989D]">
+            Tap to choose image
+          </span>
         </button>
       )}
     </div>
   );
 }
+

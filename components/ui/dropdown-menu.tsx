@@ -4,7 +4,12 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { isAppleShoppingRoute } from "@/lib/shoppingRoute";
 import { CheckIcon, ChevronRightIcon, DotFilledIcon } from "@radix-ui/react-icons";
+
+function isShoppingPortalActive() {
+  return typeof window !== "undefined" && isAppleShoppingRoute(window.location.pathname);
+}
 
 type PointerDownEvent = Parameters<
   NonNullable<DropdownMenuPrimitive.DropdownMenuContentProps["onPointerDown"]>
@@ -34,7 +39,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      "flex cursor-default select-none items-center gap-2 rounded-xl px-2.5 py-2 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
       inset && "pl-8",
       className,
     )}
@@ -49,16 +54,22 @@ DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayNam
 const DropdownMenuSubContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
->(({ className, ...props }, ref) => (
-  <DropdownMenuPrimitive.SubContent
-    ref={ref}
-    className={cn(
-      "z-50 min-w-40 overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg shadow-black/5 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const isAppleShop = isShoppingPortalActive();
+  return (
+    <DropdownMenuPrimitive.SubContent
+      ref={ref}
+      className={cn(
+        isAppleShop
+          ? "ds-apple-portal ds-apple-popover rounded-2xl p-1.5"
+          : "rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg shadow-black/5",
+        "z-50 min-w-40 overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
 
 const DropdownMenuContent = React.forwardRef<
@@ -70,6 +81,7 @@ const DropdownMenuContent = React.forwardRef<
     ref,
   ) => {
     const isCloseFromMouse = React.useRef<boolean>(false);
+    const isAppleShop = isShoppingPortalActive();
 
     const handlePointerDown = React.useCallback(
       (e: PointerDownEvent) => {
@@ -109,7 +121,10 @@ const DropdownMenuContent = React.forwardRef<
           ref={ref}
           sideOffset={sideOffset}
           className={cn(
-            "z-50 min-w-40 overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg shadow-black/5 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+            isAppleShop
+              ? "ds-apple-portal ds-apple-popover rounded-2xl p-1.5"
+              : "rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg shadow-black/5",
+            "z-50 min-w-44 overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
             className,
           )}
           onPointerDown={handlePointerDown}

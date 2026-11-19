@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { auth, db } from "../firebase";
 import {
   collection,
@@ -11,10 +12,12 @@ import {
 } from "firebase/firestore";
 import { Order, OrderStatus } from "../types";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { formatPrice } from "../lib/utils";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { useIllustrations } from "../lib/useIllustrations";
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY, projectMomentum } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 import Icon from "../components/Icon";
 import {
   Zap,
@@ -178,6 +181,7 @@ const MyOrders: React.FC = () => {
   const illustrations = useIllustrations();
   const notify = useNotify();
   const confirm = useConfirm();
+  const prefersReducedMotion = useReducedMotion();
 
   const hasAutoSelectedTabRef = useRef(false);
 
@@ -433,6 +437,7 @@ const MyOrders: React.FC = () => {
 
   const handleCancelOrder = async (orderId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    triggerHaptic("warning");
     const ok = await confirm({
       title: "Cancel Order?",
       message: "Are you sure you want to cancel this pending order?",
@@ -445,9 +450,11 @@ const MyOrders: React.FC = () => {
       await updateDoc(doc(db, "orders", orderId), {
         status: OrderStatus.CANCELLED,
       });
+      triggerHaptic("success");
       notify("Order has been cancelled.", "info");
       setMobileDetailOrder(null);
     } catch {
+      triggerHaptic("error");
       notify("Failed to cancel order.", "error");
     }
   };
@@ -573,6 +580,7 @@ const MyOrders: React.FC = () => {
   ];
 
   const handleOpenOrderDetail = (order: Order) => {
+    triggerHaptic("selection");
     setSelectedOrder(order);
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       setMobileDetailOrder(order);
@@ -613,9 +621,10 @@ const MyOrders: React.FC = () => {
               type="button"
               onClick={() => {
                 navigator.clipboard?.writeText(order.id);
+                triggerHaptic("success");
                 notify("Order ID copied!", "success");
               }}
-              className="px-2.5 py-1.5 rounded-full orders-v2-status-pill text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-full orders-v2-status-pill text-[11px] font-semibold flex items-center gap-1 cursor-pointer active:scale-[0.96] transition-transform"
             >
               <Copy className="w-3 h-3" />
               <span>Copy ID</span>
@@ -623,8 +632,11 @@ const MyOrders: React.FC = () => {
             {isMobileSheet && (
               <button
                 type="button"
-                onClick={() => setMobileDetailOrder(null)}
-                className="w-8 h-8 rounded-full orders-v2-status-pill flex items-center justify-center cursor-pointer"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setMobileDetailOrder(null);
+                }}
+                className="w-8 h-8 rounded-full orders-v2-status-pill flex items-center justify-center cursor-pointer active:scale-[0.94] transition-transform"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -750,16 +762,22 @@ const MyOrders: React.FC = () => {
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
-              onClick={() => navigate(`/e-receipt/${order.id}`)}
-              className="py-2.5 px-4 rounded-full orders-v2-status-pill font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer hover:opacity-90 transition"
+              onClick={() => {
+                triggerHaptic("selection");
+                navigate(`/e-receipt/${order.id}`);
+              }}
+              className="py-2.5 px-4 rounded-full orders-v2-status-pill font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer hover:opacity-90 active:scale-[0.97] transition-all"
             >
               <FileText className="w-3.5 h-3.5" />
               <span>Invoice</span>
             </button>
             <button
               type="button"
-              onClick={() => navigate(`/track-order/${order.id}`)}
-              className="py-2.5 px-4 rounded-full orders-v2-btn-explore font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer hover:opacity-95 transition"
+              onClick={() => {
+                triggerHaptic("selection");
+                navigate(`/track-order/${order.id}`);
+              }}
+              className="py-2.5 px-4 rounded-full orders-v2-btn-explore font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer hover:opacity-95 active:scale-[0.97] transition-all"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Track Order</span>
@@ -928,13 +946,13 @@ const MyOrders: React.FC = () => {
                   </div>
                 ) : sub.status === "pending" ? (
                   <div className="p-3.5 rounded-2xl orders-v2-seller-box text-xs space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold">
-                      <Clock className="w-4 h-4 animate-spin" />
+                    <div className="flex items-center gap-1.5 text-[#FF9500] dark:text-[#FF9F0A] font-bold">
+                      <Clock className="w-4 h-4" />
                       <span>আবেদন ভেরিফিকেশন চলছে</span>
                     </div>
                     <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
                       আপনার ট্রানজেকশন আইডি (
-                      <span className="font-mono font-bold">{sub.trxId}</span>) যাচাই করা হচ্ছে। সাধারণত ১-৭ ঘণ্টার মধ্যে সাবস্ক্রিপশনটি সক্রিয় করে দেওয়া হয়।
+                      <span className="font-mono font-bold tabular-nums">{sub.trxId}</span>) যাচাই করা হচ্ছে। সাধারণত ১-৭ ঘণ্টার মধ্যে সাবস্ক্রিপশনটি সক্রিয় করে দেওয়া হয়।
                     </p>
                   </div>
                 ) : sub.status === "rejected" ? (
@@ -1025,23 +1043,24 @@ const MyOrders: React.FC = () => {
 
     return (
       <motion.div
-        whileTap={{ scale: 0.992 }}
+        whileTap={prefersReducedMotion ? undefined : { scale: 0.988 }}
+        transition={APPLE_SPRING_SNAPPY}
         key={order.id}
         onClick={() => handleOpenOrderDetail(order)}
-        className={`orders-v2-card rounded-[22px] p-4 sm:p-5 transition-all cursor-pointer ${
+        className={`orders-v2-card rounded-[22px] p-4 sm:p-5 transition-colors cursor-pointer ${
           isSelectedDesktop
-            ? "lg:ring-2 lg:ring-[#0D6EFD]/50"
+            ? "lg:ring-2 lg:ring-[#0071E3]/50 dark:lg:ring-[#0A84FF]/50"
             : ""
         }`}
       >
-        {/* Top Row: Date + Total Price on Left, Item Cover Thumbnails on Right (IMG_5387) */}
+        {/* Top Row: Date + Total Price on Left, Item Cover Thumbnails on Right */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 pt-0.5">
-            <p className="text-[12px] font-medium text-zinc-500 dark:text-zinc-400">
+            <p className="text-[12px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
               {formatOrderCardDate(order.createdAt)}
             </p>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[17px] sm:text-[18px] font-extrabold text-zinc-900 dark:text-white tracking-tight">
+              <span className="text-[17px] sm:text-[18px] font-bold tabular-nums text-zinc-900 dark:text-white tracking-tight">
                 {formatPrice(order.total)}
               </span>
               <span className="text-[11px] font-semibold uppercase text-zinc-400">
@@ -1253,10 +1272,10 @@ const MyOrders: React.FC = () => {
         {/* Top Editorial Header + Desktop Summary Strip */}
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-5 lg:mb-7">
           <div>
-            <h1 className="font-serif text-[30px] sm:text-[34px] lg:text-[38px] font-bold tracking-tight text-zinc-900 dark:text-white leading-none">
+            <h1 className="text-[30px] sm:text-[34px] lg:text-[38px] font-bold tracking-[-0.028em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-none">
               Orders
             </h1>
-            <p className="hidden lg:block text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+            <p className="hidden lg:block text-sm text-[#6E6E73] dark:text-[#98989D] mt-2">
               Track active deliveries, inspect e-receipts, and manage your VIP pass in one place.
             </p>
           </div>
@@ -1267,7 +1286,7 @@ const MyOrders: React.FC = () => {
               <span className="text-[11px] font-medium text-zinc-400 block">
                 Total Orders
               </span>
-              <span className="text-lg font-extrabold text-zinc-900 dark:text-white mt-0.5 block">
+              <span className="text-lg font-bold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
                 {orders.length}
               </span>
             </div>
@@ -1275,7 +1294,7 @@ const MyOrders: React.FC = () => {
               <span className="text-[11px] font-medium text-zinc-400 block">
                 In Progress
               </span>
-              <span className="text-lg font-extrabold text-zinc-900 dark:text-white mt-0.5 block">
+              <span className="text-lg font-bold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
                 {tabCounts.Pending + tabCounts.Active}
               </span>
             </div>
@@ -1283,14 +1302,14 @@ const MyOrders: React.FC = () => {
               <span className="text-[11px] font-medium text-zinc-400 block">
                 Total Value
               </span>
-              <span className="text-lg font-extrabold text-zinc-900 dark:text-white mt-0.5 block">
+              <span className="text-lg font-bold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
                 {formatPrice(totalSpent)}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Mobile Segmented Pill Tabs (IMG_5387 style, preserving the 4 existing tabs) */}
+        {/* Mobile Segmented Pill Tabs */}
         <div className="lg:hidden orders-v2-track rounded-full p-1 mb-4 flex items-center gap-1 overflow-x-auto no-scrollbar">
           {tabs.map((tab) => {
             const active = activeTab === tab.id;
@@ -1298,8 +1317,11 @@ const MyOrders: React.FC = () => {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 shrink-0 whitespace-nowrap py-2 px-3.5 rounded-full text-[12.5px] font-semibold transition-all cursor-pointer ${
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setActiveTab(tab.id);
+                }}
+                className={`flex-1 shrink-0 whitespace-nowrap py-2 px-3.5 rounded-full text-[12.5px] font-semibold transition-all cursor-pointer active:scale-[0.97] ${
                   active
                     ? "orders-v2-tab-active"
                     : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -1568,29 +1590,47 @@ const MyOrders: React.FC = () => {
       </div>
 
       {/* Mobile Order Detail Sheet when tapping "View detail" */}
-      <AnimatePresence>
-        {mobileDetailOrder && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setMobileDetailOrder(null)}
-            className="lg:hidden fixed inset-0 z-[1000] bg-black/50 backdrop-blur-xs flex items-end justify-center"
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 360, damping: 32 }}
-              onClick={(e) => e.stopPropagation()}
-              className="orders-v2-shell w-full max-w-lg rounded-t-[28px] p-5 pb-8 max-h-[88vh] overflow-y-auto shadow-2xl border-t border-zinc-200/70 dark:border-zinc-800"
-            >
-              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto mb-4" />
-              {renderOrderInspectorContent(mobileDetailOrder, true)}
-            </motion.div>
-          </motion.div>
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {mobileDetailOrder && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: prefersReducedMotion ? 0.12 : 0.2 }}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setMobileDetailOrder(null);
+                }}
+                className="ds-apple-portal ds-apple-backdrop lg:hidden fixed inset-0 z-[1000] flex items-end justify-center"
+              >
+                <motion.div
+                  initial={prefersReducedMotion ? { opacity: 0 } : { y: "100%" }}
+                  animate={prefersReducedMotion ? { opacity: 1 } : { y: 0 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%" }}
+                  transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+                  drag={prefersReducedMotion ? false : "y"}
+                  dragConstraints={{ top: 0 }}
+                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  onDragEnd={(_, info) => {
+                    const projected = info.offset.y + projectMomentum(info.velocity.y);
+                    if (projected > 110 || info.velocity.y > 420) {
+                      triggerHaptic("light");
+                      setMobileDetailOrder(null);
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="ds-apple-sheet w-full max-w-lg rounded-t-[28px] p-5 pb-8 max-h-[88vh] overflow-y-auto"
+                >
+                  <div className="w-10 h-1 rounded-full bg-black/[0.15] dark:bg-white/[0.2] mx-auto mb-4" />
+                  {renderOrderInspectorContent(mobileDetailOrder, true)}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 };

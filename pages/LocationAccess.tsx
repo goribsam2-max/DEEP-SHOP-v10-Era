@@ -1,36 +1,57 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { MapPin } from "lucide-react";
+import { triggerHaptic } from "../lib/haptics";
 
 const LocationAccess: React.FC = () => {
   const navigate = useNavigate();
 
   const handleAllow = () => {
-    // Request real permission if needed, then navigate
-    navigate("/");
+    triggerHaptic("medium");
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        () => navigate("/"),
+        () => navigate("/"),
+      );
+    } else {
+      navigate("/");
+    }
   };
 
   return (
-    <div className="h-screen flex flex-col p-8 items-center justify-center text-center animate-fade-in">
-      <div className="w-24 h-24 bg-[#f4f4f5] dark:bg-zinc-800/80 rounded-full flex items-center justify-center text-xl mb-10">
-        📍
-      </div>
-      <h1 className="text-lg font-bold mb-4">What Is Your Location?</h1>
-      <p className="text-zinc-500 text-sm mb-12 px-6">
-        We need to know your location in order to suggest nearby services.
-      </p>
+    <div className="ds-apple-shop-canvas min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <div className="ds-apple-surface max-w-sm w-full rounded-[28px] p-8 flex flex-col items-center">
+        <div className="w-16 h-16 bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] rounded-[20px] flex items-center justify-center mb-6">
+          <MapPin className="w-8 h-8" />
+        </div>
+        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+          What Is Your Location?
+        </h1>
+        <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed mb-8">
+          Share your location so we can show accurate delivery times and nearby service options.
+        </p>
 
-      <Button onClick={handleAllow} variant="primary" className="w-full mb-4">
-        Allow Location Access
-      </Button>
-      <button
-        onClick={() => navigate("/")}
-        className="text-sm font-bold text-black dark:text-white underline"
-      >
-        Enter Location Manually
-      </button>
+        <button
+          type="button"
+          onClick={handleAllow}
+          className="ds-apple-btn-primary w-full py-3.5 px-5 rounded-full text-[15px] font-semibold whitespace-nowrap mb-3 active:scale-[0.98] transition-transform cursor-pointer"
+        >
+          Allow Location Access
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic("light");
+            navigate("/");
+          }}
+          className="ds-apple-btn-secondary w-full py-3 px-5 rounded-full text-[14px] font-semibold whitespace-nowrap active:scale-[0.98] transition-transform cursor-pointer"
+        >
+          Enter Location Manually
+        </button>
+      </div>
     </div>
   );
 };
 
 export default LocationAccess;
+

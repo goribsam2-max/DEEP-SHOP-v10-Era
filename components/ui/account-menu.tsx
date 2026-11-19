@@ -130,14 +130,14 @@ export default function AccountMenu({
 
   const triggerClass = isNewsHubStyle
     ? cn(
-        "flex items-center justify-center p-0 md:pl-1.5 md:pr-3 gap-2 rounded-full font-semibold transition-all duration-200 w-9 h-9 md:w-auto md:h-10 shrink-0 bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] text-zinc-900 dark:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 cursor-pointer"
+        "ds-apple-icon-btn flex items-center justify-center p-0 md:pl-1.5 md:pr-3 gap-2 rounded-full font-semibold transition-transform duration-150 w-9 h-9 md:w-auto md:h-10 shrink-0 active:scale-[0.96] cursor-pointer"
       )
     : isPill
     ? cn(
-        "flex items-center justify-center p-0 md:pl-1.5 md:pr-3 gap-1.5 rounded-full font-medium transition-all duration-200 w-9 h-9 sm:w-9.5 sm:h-9.5 md:w-auto md:h-10 shrink-0 bg-white dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08] text-zinc-900 dark:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] active:scale-95 cursor-pointer"
+        "ds-apple-icon-btn flex items-center justify-center p-0 md:pl-1.5 md:pr-3 gap-1.5 rounded-full font-medium transition-transform duration-150 w-9 h-9 sm:w-9.5 sm:h-9.5 md:w-auto md:h-10 shrink-0 active:scale-[0.96] cursor-pointer"
       )
     : cn(
-        "flex items-center justify-center p-0 md:pl-2 md:pr-3.5 md:py-2 gap-2 rounded-full font-medium transition-all duration-200 w-9 h-9 md:w-auto md:h-auto shrink-0 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-800 shadow-[0_4px_14px_rgba(15,23,42,0.08)] cursor-pointer"
+        "ds-apple-icon-btn flex items-center justify-center p-0 md:pl-2 md:pr-3.5 md:py-2 gap-2 rounded-full font-medium transition-transform duration-150 w-9 h-9 md:w-auto md:h-auto shrink-0 active:scale-[0.96] cursor-pointer"
       );
 
   return (
@@ -146,28 +146,28 @@ export default function AccountMenu({
         <Button
           variant="outline"
           className={triggerClass}
-          onClick={() => triggerHaptic()}
+          onPointerDown={() => triggerHaptic()}
           aria-label={user ? `Account menu for ${displayName}` : "Sign in or Account menu"}
           title={user ? displayName : "Sign in or Account menu"}
         >
           {user ? (
             <div className="relative w-fit shrink-0 p-[1px]">
-              <Avatar className="w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 rounded-full border-2 border-[#1877F2] shrink-0">
+              <Avatar className="w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 rounded-full border-2 border-[#0071E3] dark:border-[#0A84FF] shrink-0">
                 <AvatarImage
                   src={userProfile?.photoURL || user.photoURL || undefined}
                   alt={displayName}
                   className="object-cover rounded-full"
                 />
-                <AvatarFallback className="text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-full">
+                <AvatarFallback className="text-[10px] font-bold bg-[#F2F2F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] rounded-full">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               {unreadCount > 0 ? (
-                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[15px] h-3.5 text-[9px] font-bold text-white bg-rose-500 rounded-full ring-2 ring-white dark:ring-zinc-900 px-1 z-10">
+                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[15px] h-3.5 text-[9px] font-bold text-white bg-[#FF3B30] rounded-full ring-2 ring-white dark:ring-[#1C1C1E] px-1 z-10 tabular-nums">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : (
-                <span className="absolute bottom-0 right-0 inline-flex size-2 rounded-full ring-2 ring-white dark:ring-zinc-900 bg-emerald-500 z-10"></span>
+                <span className="absolute bottom-0 right-0 inline-flex size-2 rounded-full ring-2 ring-white dark:ring-[#1C1C1E] bg-[#30D158] z-10"></span>
               )}
             </div>
           ) : (
@@ -177,177 +177,152 @@ export default function AccountMenu({
                 isNewsHubStyle
                   ? "w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 bg-transparent"
                   : isPill
-                  ? "w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 bg-white dark:bg-zinc-800 shadow-sm"
-                  : "w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 bg-zinc-100 dark:bg-zinc-800 shadow-sm"
+                  ? "w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 bg-[#F2F2F7] dark:bg-[#2C2C2E]"
+                  : "w-7.5 h-7.5 sm:w-8 sm:h-8 md:w-7 md:h-7 bg-[#F2F2F7] dark:bg-[#2C2C2E]"
               )}
             >
               <Icon
                 name="user"
-                className={cn(
-                  "w-4 h-4 md:w-3.5 md:h-3.5",
-                  isNewsHubStyle
-                    ? "text-zinc-900 dark:text-zinc-100"
-                    : isPill
-                    ? "text-zinc-900 dark:text-zinc-100"
-                    : "text-zinc-900 dark:text-zinc-100"
-                )}
+                className="w-4 h-4 md:w-3.5 md:h-3.5 text-[#1D1D1F] dark:text-[#F5F5F7]"
               />
             </div>
           )}
 
-          <span className="hidden md:inline-block max-w-[76px] lg:max-w-[120px] truncate text-sm">
+          <span className="hidden md:inline-block max-w-[76px] lg:max-w-[120px] truncate text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
             {user ? displayName : "Sign in"}
           </span>
           <span className="hidden md:inline-flex items-center">
-            <Icon name="chevron-down" className="w-4 h-4 opacity-50 shrink-0" />
+            <Icon name="chevron-down" className="w-3.5 h-3.5 opacity-55 shrink-0" />
           </span>
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
         align="end"
-        sideOffset={12}
-        className="w-64 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg p-2 z-[9999] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-4"
+        sideOffset={10}
+        className="ds-apple-popover ds-apple-portal w-64 rounded-[22px] p-2 z-[9999] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2"
       >
         {!user ? (
           <>
-            <DropdownMenuLabel className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-              Welcome
+            <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6E6E73] dark:text-[#98989D] px-2.5 py-1.5">
+              Account
             </DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => {
-                triggerHaptic();
-                navigate("/auth-selector");
-              }}
-              className="flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/auth-selector")}
+              className="flex items-center gap-2 py-2.5 px-2.5 rounded-xl cursor-pointer hover:bg-black/[0.045] dark:hover:bg-white/[0.08] transition-colors"
             >
-              <span className="flex-1 font-medium">Sign In / Sign Up</span>
+              <span className="flex-1 text-sm font-semibold">Sign In / Sign Up</span>
             </DropdownMenuItem>
           </>
         ) : (
           <>
-            <DropdownMenuLabel className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+            <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6E6E73] dark:text-[#98989D] px-2.5 py-1.5">
               My Account
             </DropdownMenuLabel>
 
             {isAdmin && (
               <DropdownMenuItem
-                onClick={() => {
-                  triggerHaptic();
-                  navigate("/admin");
-                }}
-                className="flex items-center justify-between gap-2 rounded-xl py-2.5 px-2.5 mb-1 bg-indigo-50/90 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 cursor-pointer font-bold"
+                onPointerDown={() => triggerHaptic()}
+                onClick={() => navigate("/admin")}
+                className="flex items-center justify-between gap-2 rounded-xl py-2.5 px-2.5 mb-1 bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 hover:bg-[#0071E3]/15 dark:hover:bg-[#0A84FF]/25 text-[#0071E3] dark:text-[#0A84FF] cursor-pointer font-semibold"
               >
                 <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  <span className="text-xs font-extrabold">Admin Panel</span>
+                  <Shield className="w-4 h-4 shrink-0" />
+                  <span className="text-xs font-bold">Admin Console</span>
                 </div>
-                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-600 text-white">
-                  ADMIN
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white">
+                  Admin
                 </span>
               </DropdownMenuItem>
             )}
 
             <DropdownMenuItem
-              onClick={() => {
-                triggerHaptic();
-                navigate("/profile");
-              }}
-              className="flex items-center gap-2 rounded-lg py-2 px-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2.5 rounded-xl py-2 px-2.5 hover:bg-black/[0.045] dark:hover:bg-white/[0.08] cursor-pointer transition-colors"
             >
               <Icon
                 name="user"
-                className="w-4 h-4 text-zinc-500 dark:text-zinc-400"
+                className="w-4 h-4 text-[#6E6E73] dark:text-[#98989D]"
               />
-              <span className="flex-1">Profile & All Pages</span>
+              <span className="flex-1 text-[13.5px] font-medium">Profile & Pages</span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              onClick={() => {
-                triggerHaptic();
-                navigate("/orders");
-              }}
-              className="flex items-center gap-2 rounded-lg py-2 px-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/orders")}
+              className="flex items-center gap-2.5 rounded-xl py-2 px-2.5 hover:bg-black/[0.045] dark:hover:bg-white/[0.08] cursor-pointer transition-colors"
             >
               <Icon
                 name="shopping-bag"
-                className="w-4 h-4 text-zinc-500 dark:text-zinc-400"
+                className="w-4 h-4 text-[#6E6E73] dark:text-[#98989D]"
               />
-              <span className="flex-1">My Orders</span>
+              <span className="flex-1 text-[13.5px] font-medium">My Orders</span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              onClick={() => {
-                triggerHaptic();
-                navigate("/subscription");
-              }}
-              className="flex items-center justify-between gap-2 rounded-lg py-2 px-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer overflow-hidden"
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/subscription")}
+              className="flex items-center justify-between gap-2 rounded-xl py-2 px-2.5 hover:bg-black/[0.045] dark:hover:bg-white/[0.08] cursor-pointer overflow-hidden transition-colors"
             >
-              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                <Crown className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="font-bold text-zinc-900 dark:text-zinc-100 text-[11px] whitespace-nowrap truncate">
-                  VIP Subscription
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <Crown className="w-4 h-4 text-[#B25000] dark:text-[#FF9F0A] shrink-0" />
+                <span className="font-medium text-[13px] whitespace-nowrap truncate">
+                  VIP Membership
                 </span>
               </div>
               <span
-                className={`text-[9px] leading-none font-extrabold px-2 py-1 rounded-full border shadow-2xs whitespace-nowrap shrink-0 ${
+                className={`text-[10px] leading-none font-semibold px-2 py-1 rounded-full whitespace-nowrap shrink-0 tabular-nums ${
                   subInfo.isSubscribed
-                    ? "bg-amber-400/15 text-amber-600 dark:text-amber-400 border-amber-400/30"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                    ? "bg-[#FF9F0A]/15 text-[#B25000] dark:text-[#FF9F0A]"
+                    : "bg-black/[0.05] dark:bg-white/[0.08] text-[#6E6E73] dark:text-[#98989D]"
                 }`}
               >
                 {subInfo.isSubscribed
-                  ? `VIP (${subInfo.daysRemaining} দিন)`
+                  ? `${subInfo.daysRemaining}d`
                   : "Free"}
               </span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              onClick={() => {
-                triggerHaptic();
-                navigate("/notifications");
-              }}
-              className="flex items-center gap-2 rounded-lg py-2 px-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/notifications")}
+              className="flex items-center gap-2.5 rounded-xl py-2 px-2.5 hover:bg-black/[0.045] dark:hover:bg-white/[0.08] cursor-pointer transition-colors"
             >
-              <div className="relative">
-                <Icon
-                  name="bell"
-                  className="w-4 h-4 text-zinc-500 dark:text-zinc-400"
-                />
-              </div>
-              <span className="flex-1">Notifications</span>
+              <Icon
+                name="bell"
+                className="w-4 h-4 text-[#6E6E73] dark:text-[#98989D]"
+              />
+              <span className="flex-1 text-[13.5px] font-medium">Notifications</span>
               {unreadCount > 0 && (
-                <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums">
                   {unreadCount}
                 </span>
               )}
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator className="my-1 border-zinc-100 dark:border-zinc-800" />
+            <DropdownMenuSeparator className="my-1.5 border-black/[0.06] dark:border-white/[0.08]" />
 
             <DropdownMenuItem
-              onClick={() => {
-                triggerHaptic();
-                navigate("/accounts");
-              }}
-              className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/accounts")}
+              className="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-black/[0.045] dark:hover:bg-white/[0.08] cursor-pointer transition-colors"
             >
               <Icon
                 name="user"
-                className="w-4 h-4 text-zinc-500 dark:text-zinc-400"
+                className="w-4 h-4 text-[#6E6E73] dark:text-[#98989D]"
               />
-              <span className="flex-1 font-medium">Switch Account</span>
+              <span className="flex-1 text-[13.5px] font-medium">Switch Account</span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              onClick={() => {
-                triggerHaptic();
-                handleLogout();
-              }}
-              className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 cursor-pointer"
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => handleLogout()}
+              className="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-[#FF3B30]/10 text-[#D70015] dark:text-[#FF453A] cursor-pointer transition-colors"
             >
               <Icon name="logout" className="w-4 h-4" />
-              <span className="flex-1 font-medium">Log out</span>
+              <span className="flex-1 text-[13.5px] font-medium">Log out</span>
             </DropdownMenuItem>
           </>
         )}

@@ -1,8 +1,12 @@
 import { formatPrice } from "../lib/utils";
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { auth, db } from "../firebase";
 import { handleCoinDeductionWithExpiry } from "../lib/coinExpiry";
+import { APPLE_SPRING_DEFAULT, projectMomentum } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 import {
   collection,
   addDoc,
@@ -110,6 +114,7 @@ export default function CheckoutPage() {
   const notify = useNotify();
   const { isDark } = useTheme();
   const { t } = useLanguage();
+  const prefersReducedMotion = useReducedMotion();
 
   const region = localStorage.getItem("user_region") || "BD";
   const isForeign = region === "IN" || region === "PK";
@@ -516,6 +521,7 @@ export default function CheckoutPage() {
 
   const copyToClipboard = (text: string, label: string) => {
     if (!text) return;
+    triggerHaptic("light");
     navigator.clipboard.writeText(text);
     setCopiedNumber(text);
     notify(`${label} নম্বর কপি করা হয়েছে: ${text}`, "success");
@@ -1062,6 +1068,7 @@ export default function CheckoutPage() {
   const nextStep = () => {
     if (currentStep === 1) {
       if (!selectedAddressId) {
+        triggerHaptic("error");
         return notify("অনুগ্রহ করে একটি ডেলিভারি ঠিকানা নির্বাচন করুন।", "error");
       }
       if (
@@ -1069,6 +1076,7 @@ export default function CheckoutPage() {
         !isVipSubscriber &&
         (!guardianNumber.trim() || guardianNumber.trim().replace(/\D/g, "").length < 11)
       ) {
+        triggerHaptic("error");
         return notify(
           "বাইপাস অর্ডারের জন্য গার্ডিয়ান / অভিভাবকের ১১ ডিজিটের মোবাইল নম্বর প্রদান করুন।",
           "error"
@@ -1079,6 +1087,7 @@ export default function CheckoutPage() {
       if (paymentType === "vgcoin") {
         const coinCost = advanceType === "full" ? total : requiredAdvance;
         if (userCoins < coinCost) {
+          triggerHaptic("error");
           return notify(
             `পর্যাপ্ত ডিপি কয়েন নেই। আপনার প্রয়োজন আরও ${coinCost - userCoins} কয়েন।`,
             "error"
@@ -1087,16 +1096,19 @@ export default function CheckoutPage() {
       }
     }
     if (validateStep(currentStep)) {
+      triggerHaptic("selection");
       const target = Math.min(currentStep + 1, 3);
       setCurrentStep(target);
       speakStepGuide(target);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
+      triggerHaptic("warning");
       notify("অনুগ্রহ করে প্রয়োজনীয় তথ্যগুলো সঠিকভাবে পূরণ করুন।", "error");
     }
   };
 
   const prevStep = () => {
+    triggerHaptic("light");
     const target = Math.max(currentStep - 1, 1);
     setCurrentStep(target);
     speakStepGuide(target);
@@ -1105,6 +1117,7 @@ export default function CheckoutPage() {
 
   const jumpToStep = (step: number) => {
     if (step < currentStep) {
+      triggerHaptic("selection");
       setCurrentStep(step);
       speakStepGuide(step);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2291,105 +2304,139 @@ export default function CheckoutPage() {
       </div>
 
       {/* =====================================================================
-          LIQUID GLASS VOUCHERS MODAL (Mobile Bottom Sheet / Desktop Lens Dialog)
+          APPLE GLASS VOUCHERS MODAL (Portaled Mobile Bottom Sheet / Desktop Modal)
          ===================================================================== */}
-      {showCouponsModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 ds-liquid-backdrop"
-          onClick={() => setShowCouponsModal(false)}
-        >
-          <div
-            className="w-full max-w-md ds-liquid-glass-popup !rounded-b-none md:!rounded-[32px] p-6 pb-10 md:pb-6 animate-in slide-in-from-bottom md:zoom-in-95"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="ds-liquid-popup-title">আমার ভাউচারসমূহ</h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  অর্ডারে ছাড় পেতে যেকোনো সক্রিয় ভাউচার নির্বাচন করুন
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCouponsModal(false)}
-                aria-label="বন্ধ করুন"
-                className="w-8 h-8 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center cursor-pointer"
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {showCouponsModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4"
+                onClick={() => {
+                  triggerHaptic("light");
+                  setShowCouponsModal(false);
+                }}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-3 max-h-[58vh] overflow-y-auto pr-1">
-              {claimedCouponsList
-                .filter((c) => !(c.expiresAt && c.expiresAt < Date.now()))
-                .map((c, i) => {
-                  const minMet = !c.minOrderAmount || subtotal >= c.minOrderAmount;
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        "p-3.5 ds-liquid-section flex items-center justify-between gap-3",
-                        !minMet && "opacity-60"
-                      )}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base font-extrabold text-sky-600 dark:text-sky-400 tabular-nums">
-                            {c.type === "percent"
-                              ? `${c.discount}%`
-                              : formatPrice(c.discount)}{" "}
-                            ছাড়
-                          </span>
-                          <span className="text-xs text-zinc-400">·</span>
-                          <span className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white truncate">
-                            {c.code}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
-                          {c.minOrderAmount > 0
-                            ? `সর্বনিম্ন অর্ডার ${formatPrice(c.minOrderAmount)}`
-                            : "যেকোনো অর্ডারে প্রযোজ্য"}
-                        </div>
-                        {!minMet && (
-                          <div className="text-[11px] text-rose-500 font-semibold mt-0.5 tabular-nums">
-                            আরও {formatPrice(c.minOrderAmount - subtotal)} প্রয়োজন
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={!minMet}
-                        onClick={() => {
-                          setAppliedPromo({
-                            id: c.id,
-                            ...c,
-                            isVoucher: true,
-                          });
-                          setCouponCode(c.code);
-                          setShowCouponsModal(false);
-                          notify("ভাউচার সফলভাবে যুক্ত হয়েছে!", "success");
-                        }}
-                        className="px-4 py-2 ds-liquid-btn-primary !min-h-0 !text-xs shrink-0 disabled:opacity-40 whitespace-nowrap cursor-pointer"
-                      >
-                        ব্যবহার করুন
-                      </button>
+                <motion.div
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 36, scale: 0.98 }}
+                  transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+                  drag={prefersReducedMotion ? false : "y"}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  onDragEnd={(_, info) => {
+                    const projected = info.offset.y + projectMomentum(info.velocity.y);
+                    if (projected > 110 || info.velocity.y > 420) {
+                      triggerHaptic("light");
+                      setShowCouponsModal(false);
+                    }
+                  }}
+                  className="w-full max-w-md ds-apple-modal rounded-t-[28px] md:rounded-[28px] p-6 pb-10 md:pb-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="w-9 h-1 rounded-full bg-black/20 dark:bg-white/25 mx-auto mb-3 md:hidden" />
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        আমার ভাউচারসমূহ
+                      </h3>
+                      <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-0.5">
+                        অর্ডারে ছাড় পেতে যেকোনো সক্রিয় ভাউচার নির্বাচন করুন
+                      </p>
                     </div>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("light");
+                        setShowCouponsModal(false);
+                      }}
+                      aria-label="বন্ধ করুন"
+                      className="ds-apple-icon-btn w-8 h-8 flex items-center justify-center active:scale-95 transition-transform"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
 
-              {claimedCouponsList.length === 0 && (
-                <div className="text-center py-10 ds-liquid-section">
-                  <Ticket className="w-9 h-9 text-zinc-400 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
-                    আপনার কোনো সংরক্ষিত ভাউচার নেই
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                  <div className="flex flex-col gap-3 max-h-[58vh] overflow-y-auto pr-1">
+                    {claimedCouponsList
+                      .filter((c) => !(c.expiresAt && c.expiresAt < Date.now()))
+                      .map((c, i) => {
+                        const minMet = !c.minOrderAmount || subtotal >= c.minOrderAmount;
+                        return (
+                          <div
+                            key={i}
+                            className={cn(
+                              "p-3.5 ds-liquid-section flex items-center justify-between gap-3",
+                              !minMet && "opacity-60"
+                            )}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base font-extrabold text-[#0071E3] dark:text-[#0A84FF] tabular-nums">
+                                  {c.type === "percent"
+                                    ? `${c.discount}%`
+                                    : formatPrice(c.discount)}{" "}
+                                  ছাড়
+                                </span>
+                                <span className="text-xs text-zinc-400">·</span>
+                                <span className="font-bold text-xs sm:text-sm text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                                  {c.code}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-[#6E6E73] dark:text-[#8E8E93] mt-0.5 tabular-nums">
+                                {c.minOrderAmount > 0
+                                  ? `সর্বনিম্ন অর্ডার ${formatPrice(c.minOrderAmount)}`
+                                  : "যেকোনো অর্ডারে প্রযোজ্য"}
+                              </div>
+                              {!minMet && (
+                                <div className="text-[11px] text-[#FF3B30] dark:text-[#FF453A] font-semibold mt-0.5 tabular-nums">
+                                  আরও {formatPrice(c.minOrderAmount - subtotal)} প্রয়োজন
+                                </div>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={!minMet}
+                              onClick={() => {
+                                triggerHaptic("success");
+                                setAppliedPromo({
+                                  id: c.id,
+                                  ...c,
+                                  isVoucher: true,
+                                });
+                                setCouponCode(c.code);
+                                setShowCouponsModal(false);
+                                notify("ভাউচার সফলভাবে যুক্ত হয়েছে!", "success");
+                              }}
+                              className="px-4 py-2 ds-liquid-btn-primary !min-h-0 !text-xs shrink-0 disabled:opacity-40 whitespace-nowrap cursor-pointer"
+                            >
+                              ব্যবহার করুন
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                    {claimedCouponsList.length === 0 && (
+                      <div className="text-center py-10 ds-liquid-section">
+                        <Ticket className="w-9 h-9 text-[#8E8E93] mx-auto mb-2" />
+                        <p className="text-sm font-semibold text-[#6E6E73] dark:text-[#8E8E93]">
+                          আপনার কোনো সংরক্ষিত ভাউচার নেই
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
       <CustomSectionEmbed location="checkout_bottom" />
     </div>

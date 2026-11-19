@@ -1,5 +1,6 @@
 import { sendPushNotification } from "../../lib/push";
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   collection,
@@ -26,7 +27,9 @@ import {
   normalizeAccountType,
   toAdminPaymentType,
 } from "../../lib/dhakaTime";
-import { motion, AnimatePresence } from "framer-motion";
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from "../../lib/shoppingRoute";
+import { triggerHaptic } from "../../lib/haptics";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Icon from "../../components/Icon";
 import {
   Plus, Edit, Trash2, Package, Eye, ShoppingBag, TrendingUp, Music,
@@ -91,6 +94,7 @@ const SellerDashboard: React.FC = () => {
   const [searchParams] = useSearchParams();
   const notify = useNotify();
   const confirm = useConfirm();
+  const prefersReducedMotion = useReducedMotion();
   const [user, setUser] = useState<User | null>(null);
   const [sellerProfile, setSellerProfile] = useState<any>(null);
   const [checkingAccess, setCheckingAccess] = useState(true);
@@ -1183,12 +1187,16 @@ const SellerDashboard: React.FC = () => {
     return (
       <button
         type="button"
-        onClick={() => { setActiveTab(tab); setSelectedOrderId(null); }}
+        onClick={() => {
+          triggerHaptic("selection");
+          setActiveTab(tab);
+          setSelectedOrderId(null);
+        }}
         className={cn(
-          "h-10 flex items-center justify-center transition-all duration-300 rounded-full cursor-pointer relative",
+          "h-10 flex items-center justify-center transition-all duration-300 rounded-full cursor-pointer relative active:scale-95",
           isActive 
-            ? "bg-[#E8EAEE]/90 dark:bg-[#2D2E33]/90 text-zinc-950 dark:text-white px-5 shadow-xs" 
-            : "px-3.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+            ? "bg-[#0071E3]/12 dark:bg-[#0A84FF]/20 text-[#0071E3] dark:text-[#0A84FF] px-4 shadow-xs" 
+            : "px-3.5 text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-white"
         )}
         title={label}
       >
@@ -1199,12 +1207,12 @@ const SellerDashboard: React.FC = () => {
             solid={false} 
           />
           {isActive && (
-            <span className="text-xs font-bold whitespace-nowrap">
+            <span className="text-xs font-semibold whitespace-nowrap">
               {label}
             </span>
           )}
           {badge !== undefined && badge > 0 && (
-            <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center leading-none shadow-xs">
+            <span className="absolute -top-2 -right-2 bg-[#FF3B30] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center leading-none tabular-nums shadow-xs">
               {badge}
             </span>
           )}
@@ -1220,8 +1228,10 @@ const SellerDashboard: React.FC = () => {
         notify("Uploading logo...", "info");
         const url = await uploadToImgbb(file);
         setShopLogo(url);
+        triggerHaptic("success");
         notify("Logo uploaded successfully!", "success");
       } catch (err) {
+        triggerHaptic("error");
         notify("Failed to upload logo", "error");
       }
     }
@@ -1229,56 +1239,72 @@ const SellerDashboard: React.FC = () => {
 
   if (checkingAccess || !sellerProfile) {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] dark:bg-zinc-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+      <div className="ds-apple-shop-canvas min-h-screen bg-[#F5F5F7] dark:bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0071E3] dark:text-[#0A84FF]" />
       </div>
     );
   }
 
   return (
-    <div id="seller-dashboard-page" className="min-h-screen bg-[#F5F5F7] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100 font-sans flex flex-col md:flex-row pb-24 md:pb-0 relative">
+    <div id="seller-dashboard-page" className="ds-apple-shop-canvas min-h-screen bg-[#F5F5F7] dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] flex flex-col md:flex-row pb-24 md:pb-0 relative">
       
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 shrink-0 border-r border-zinc-200 dark:border-zinc-750/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 sticky top-0 h-screen z-40 overflow-y-auto no-scrollbar">
+      <aside className="hidden md:flex flex-col w-64 shrink-0 border-r border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] p-6 sticky top-0 h-screen z-40 overflow-y-auto no-scrollbar">
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-lg overflow-hidden">
+          <div className="w-10 h-10 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white flex items-center justify-center font-semibold text-lg overflow-hidden shrink-0">
             {shopLogo ? <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" /> : storeInitials}
           </div>
-          <div>
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{shopName || "Seller Studio"}</h3>
-            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500">Dashboard</span>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-sm text-[#1D1D1F] dark:text-white truncate">{shopName || "Seller Studio"}</h3>
+            <span className="text-[11px] ds-apple-muted">Seller Studio</span>
           </div>
         </div>
-        <nav className="flex flex-col gap-2 flex-1">
-          <button onClick={() => { setActiveTab("home"); setSelectedOrderId(null); }} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab === "home" ? "bg-[#EF8020]/10 text-[#EF8020]" : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}>
-            <Icon name="home" className={`w-5 h-5 ${activeTab === "home" ? "text-[#EF8020]" : "text-zinc-400 dark:text-zinc-500"}`} /> Home
+        <nav className="flex flex-col gap-1.5 flex-1">
+          <button
+            type="button"
+            onClick={() => { triggerHaptic("selection"); setActiveTab("home"); setSelectedOrderId(null); }}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] ${activeTab === "home" ? "bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF]" : "ds-apple-muted hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"}`}
+          >
+            <Icon name="home" className={`w-5 h-5 ${activeTab === "home" ? "text-[#0071E3] dark:text-[#0A84FF]" : "text-[#8E8E93]"}`} /> Home
           </button>
-          <button onClick={() => { setActiveTab("orders"); setSelectedOrderId(null); }} className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab === "orders" ? "bg-[#EF8020]/10 text-[#EF8020]" : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"} w-full`}>
+          <button
+            type="button"
+            onClick={() => { triggerHaptic("selection"); setActiveTab("orders"); setSelectedOrderId(null); }}
+            className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] w-full ${activeTab === "orders" ? "bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF]" : "ds-apple-muted hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"}`}
+          >
             <div className="flex items-center gap-3">
-              <Icon name="receipt" className={`w-5 h-5 ${activeTab === "orders" ? "text-[#EF8020]" : "text-zinc-400 dark:text-zinc-500"}`} />
+              <Icon name="receipt" className={`w-5 h-5 ${activeTab === "orders" ? "text-[#0071E3] dark:text-[#0A84FF]" : "text-[#8E8E93]"}`} />
               <span>Orders</span>
             </div>
             {orders.filter((o: any) => (o.status || "").toLowerCase() === "pending").length > 0 && (
-              <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums">
                 {orders.filter((o: any) => (o.status || "").toLowerCase() === "pending").length}
               </span>
             )}
           </button>
 
-          <button onClick={() => { setActiveTab("products"); setSelectedOrderId(null); }} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab === "products" || activeTab === "add_product" || activeTab === "edit_product" ? "bg-[#EF8020]/10 text-[#EF8020]" : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}>
-            <Icon name="boxes" className={`w-5 h-5 ${activeTab === "products" || activeTab === "add_product" || activeTab === "edit_product" ? "text-[#EF8020]" : "text-zinc-400 dark:text-zinc-500"}`} /> Products
+          <button
+            type="button"
+            onClick={() => { triggerHaptic("selection"); setActiveTab("products"); setSelectedOrderId(null); }}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] ${activeTab === "products" || activeTab === "add_product" || activeTab === "edit_product" ? "bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF]" : "ds-apple-muted hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"}`}
+          >
+            <Icon name="boxes" className={`w-5 h-5 ${activeTab === "products" || activeTab === "add_product" || activeTab === "edit_product" ? "text-[#0071E3] dark:text-[#0A84FF]" : "text-[#8E8E93]"}`} /> Products
           </button>
 
-          <button onClick={() => { setActiveTab("settings_store"); setSelectedOrderId(null); }} className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab.startsWith("settings") ? "bg-[#EF8020]/10 text-[#EF8020]" : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}>
-            <Icon name="cog" className={`w-5 h-5 ${activeTab.startsWith("settings") ? "text-[#EF8020]" : "text-zinc-400 dark:text-zinc-500"}`} /> Settings
+          <button
+            type="button"
+            onClick={() => { triggerHaptic("selection"); setActiveTab("settings_store"); setSelectedOrderId(null); }}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all cursor-pointer active:scale-[0.98] ${activeTab.startsWith("settings") ? "bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF]" : "ds-apple-muted hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"}`}
+          >
+            <Icon name="cog" className={`w-5 h-5 ${activeTab.startsWith("settings") ? "text-[#0071E3] dark:text-[#0A84FF]" : "text-[#8E8E93]"}`} /> Settings
           </button>
 
           {isSuperAdminOrAdmin(sellerProfile, user) && (
-            <div className="pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
+            <div className="pt-4 mt-4 border-t border-black/[0.06] dark:border-white/[0.08] space-y-2">
               <button
                 type="button"
-                onClick={() => navigate("/admin")}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all"
+                onClick={() => { triggerHaptic("light"); navigate("/admin"); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-[#0071E3] dark:text-[#0A84FF] hover:bg-[#0071E3]/10 dark:hover:bg-[#0A84FF]/15 transition-all cursor-pointer"
               >
                 <ShieldCheck className="w-5 h-5" />
                 <span>Admin Panel</span>
@@ -1300,76 +1326,75 @@ const SellerDashboard: React.FC = () => {
           <div className="pb-10">
             {/* --- HOME TAB --- */}
             {activeTab === "home" && !selectedOrderId && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-6">
                 {/* Header Profile */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-12 h-12 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-xl overflow-hidden border border-zinc-200 dark:border-zinc-750 shadow-sm shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white flex items-center justify-center font-semibold text-xl overflow-hidden shadow-sm shrink-0">
                       {shopLogo ? <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" /> : storeInitials}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium mb-0.5">Good Morning!</p>
-                      <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 leading-tight truncate">{shopName || "Seller Studio"}</h2>
+                      <p className="ds-apple-eyebrow mb-0.5">Seller Studio</p>
+                      <h2 className="text-base sm:text-lg font-semibold text-[#1D1D1F] dark:text-white tracking-[-0.015em] leading-tight truncate">{shopName || "Seller Studio"}</h2>
                     </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => navigate("/seller/custom-order")}
-                    className="h-9 px-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer"
+                    onClick={() => { triggerHaptic("light"); navigate("/seller/custom-order"); }}
+                    className="ds-apple-btn-primary h-9 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 shrink-0 whitespace-nowrap active:scale-[0.97] transition-transform cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
                     <span>Custom Order</span>
                   </button>
                 </div>
 
                 {/* Sales Overview Card */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 dark:border-zinc-800">
+                <div className="ds-apple-surface rounded-[24px] p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px]">Sales Overview</h3>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium">All Time</span>
-                      <ArrowRight className="w-4 h-4 text-zinc-400 dark:text-zinc-500 rotate-[-45deg]" strokeWidth={3} />
+                    <h3 className="font-semibold text-[#1D1D1F] dark:text-white text-[15px] tracking-[-0.01em]">Sales Overview</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs ds-apple-muted font-medium">All Time</span>
+                      <ArrowRight className="w-4 h-4 text-[#8E8E93] rotate-[-45deg]" strokeWidth={2.5} />
                     </div>
                   </div>
                   
                   <div className="flex items-end justify-between mb-6">
                     <div>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium mb-1">Total Earning</p>
+                      <p className="text-[11px] ds-apple-muted font-medium mb-1">Total Earning</p>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">{formatPrice(totalEarnings)}</span>
+                        <span className="text-3xl font-semibold text-[#1D1D1F] dark:text-white tracking-[-0.03em] tabular-nums">{formatPrice(totalEarnings)}</span>
                       </div>
                     </div>
-                    {/* Mock Chart Icon */}
                     <div className="flex items-end gap-1 h-10">
-                      <div className="w-2.5 h-4 bg-zinc-200 dark:bg-zinc-700 rounded-sm"></div>
-                      <div className="w-2.5 h-6 bg-zinc-300 rounded-sm"></div>
-                      <div className="w-2.5 h-8 bg-zinc-800 rounded-sm"></div>
-                      <div className="w-2.5 h-5 bg-zinc-300 rounded-sm"></div>
-                      <div className="w-2.5 h-7 bg-zinc-400 rounded-sm"></div>
-                      <div className="w-2.5 h-3 bg-zinc-200 dark:bg-zinc-700 rounded-sm"></div>
+                      <div className="w-2.5 h-4 bg-[#0071E3]/25 dark:bg-[#0A84FF]/30 rounded-sm"></div>
+                      <div className="w-2.5 h-6 bg-[#0071E3]/45 dark:bg-[#0A84FF]/50 rounded-sm"></div>
+                      <div className="w-2.5 h-8 bg-[#0071E3] dark:bg-[#0A84FF] rounded-sm"></div>
+                      <div className="w-2.5 h-5 bg-[#0071E3]/40 dark:bg-[#0A84FF]/45 rounded-sm"></div>
+                      <div className="w-2.5 h-7 bg-[#0071E3]/70 dark:bg-[#0A84FF]/75 rounded-sm"></div>
+                      <div className="w-2.5 h-3 bg-[#0071E3]/20 dark:bg-[#0A84FF]/25 rounded-sm"></div>
                     </div>
                   </div>
 
                   {/* Stats Row */}
-                  <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center justify-between pt-4 border-t border-black/[0.06] dark:border-white/[0.08]">
                     <div>
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium mb-1">Revenue</p>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(totalEarnings)}</p>
+                      <p className="text-[10px] ds-apple-muted font-medium mb-1">Revenue</p>
+                      <p className="text-xs font-semibold text-[#1D1D1F] dark:text-white tabular-nums">{formatPrice(totalEarnings)}</p>
                     </div>
-                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700"></div>
+                    <div className="w-px h-6 bg-black/[0.08] dark:bg-white/[0.1]"></div>
                     <div>
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium mb-1">Product</p>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{products.length}</p>
+                      <p className="text-[10px] ds-apple-muted font-medium mb-1">Products</p>
+                      <p className="text-xs font-semibold text-[#1D1D1F] dark:text-white tabular-nums">{products.length}</p>
                     </div>
-                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700"></div>
+                    <div className="w-px h-6 bg-black/[0.08] dark:bg-white/[0.1]"></div>
                     <div>
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium mb-1">Customer</p>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{uniqueCustomersCount}</p>
+                      <p className="text-[10px] ds-apple-muted font-medium mb-1">Customers</p>
+                      <p className="text-xs font-semibold text-[#1D1D1F] dark:text-white tabular-nums">{uniqueCustomersCount}</p>
                     </div>
-                    <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700"></div>
+                    <div className="w-px h-6 bg-black/[0.08] dark:bg-white/[0.1]"></div>
                     <div>
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium mb-1">Avg. Order</p>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(averageOrderValue)}</p>
+                      <p className="text-[10px] ds-apple-muted font-medium mb-1">Avg. Order</p>
+                      <p className="text-xs font-semibold text-[#1D1D1F] dark:text-white tabular-nums">{formatPrice(averageOrderValue)}</p>
                     </div>
                   </div>
                 </div>
@@ -1377,33 +1402,33 @@ const SellerDashboard: React.FC = () => {
                 {/* Top Selling Products */}
                 <div>
                   <div className="flex items-center justify-between mb-4 px-1">
-                    <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px]">Top Selling Products</h3>
-                    <button onClick={() => setActiveTab("products")} className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 font-medium">See all</button>
+                    <h3 className="font-semibold text-[#1D1D1F] dark:text-white text-[15px] tracking-[-0.01em]">Top Selling Products</h3>
+                    <button type="button" onClick={() => { triggerHaptic("selection"); setActiveTab("products"); }} className="ds-apple-accent-text text-xs font-medium cursor-pointer">See all</button>
                   </div>
                   
-                  <div className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 shadow-sm border border-zinc-100 dark:border-zinc-800 dark:border-zinc-800 flex flex-col gap-5">
+                  <div className="ds-apple-surface rounded-[24px] p-6 flex flex-col gap-5">
                     {topProducts.length === 0 && (
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 text-center py-4">No top selling products yet.</p>
+                      <p className="text-xs ds-apple-muted text-center py-4">No top selling products yet.</p>
                     )}
                     {topProducts.length > 0 && topProducts.map((p: any, idx: number) => (
-                      <div key={p.id || idx} className={`flex items-center justify-between ${idx !== topProducts.length - 1 ? "pb-5 border-b border-zinc-100 dark:border-zinc-800" : ""}`}>
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 dark:border-zinc-800 overflow-hidden shrink-0 p-1 flex items-center justify-center">
+                      <div key={p.id || idx} className={`flex items-center justify-between ${idx !== topProducts.length - 1 ? "pb-5 border-b border-black/[0.06] dark:border-white/[0.08]" : ""}`}>
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] overflow-hidden shrink-0 p-1 flex items-center justify-center">
                             {p.image || (p.imageFiles && p.imageFiles[0]) || p.modelUrl ? (
-                              <img src={p.image || p.modelUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80"} alt={p.name} className="w-full h-full object-contain mix-blend-multiply" />
+                              <img src={p.image || p.modelUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80"} alt={p.name} className="w-full h-full object-contain" />
                             ) : (
-                              <Package className="w-5 h-5 text-zinc-300" />
+                              <Package className="w-5 h-5 text-[#8E8E93]" />
                             )}
                           </div>
-                          <div>
-                            <h4 className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100 leading-tight mb-0.5 line-clamp-1">{p.name}</h4>
-                            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">{p.category || "General"}</p>
+                          <div className="min-w-0">
+                            <h4 className="text-[13px] font-semibold text-[#1D1D1F] dark:text-white leading-tight mb-0.5 line-clamp-1">{p.name}</h4>
+                            <p className="text-[11px] ds-apple-muted font-medium">{p.category || "General"}</p>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100 mb-0.5">{p.unitsSold} Units</p>
-                          <p className="text-[9px] font-bold text-emerald-500 flex items-center justify-end gap-0.5">
-                            <ArrowRight className="w-2.5 h-2.5 rotate-[-45deg]" strokeWidth={3} />
+                          <p className="text-[13px] font-semibold text-[#1D1D1F] dark:text-white mb-0.5 tabular-nums">{p.unitsSold} Units</p>
+                          <p className="text-[10px] font-semibold text-[#34C759] flex items-center justify-end gap-0.5">
+                            <ArrowRight className="w-2.5 h-2.5 rotate-[-45deg]" strokeWidth={2.5} />
                             Active
                           </p>
                         </div>
@@ -1432,28 +1457,28 @@ const SellerDashboard: React.FC = () => {
                     {isSuperAdminOrAdmin(sellerProfile, user) && (
                       <button
                         type="button"
-                        onClick={() => navigate("/admin/orders")}
-                        className="hidden sm:inline-flex h-9 px-3 rounded-[8px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 items-center gap-1.5 text-[12px] font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                        onClick={() => { triggerHaptic("selection"); navigate("/admin/orders"); }}
+                        className="hidden sm:inline-flex h-9 px-3 rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#1C1C1E] items-center gap-1.5 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] whitespace-nowrap shrink-0 active:scale-[0.97] transition-transform cursor-pointer"
                       >
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                         <span>Admin</span>
                       </button>
                     )}
                     <button
                       type="button"
-                      onClick={() => navigate("/seller/custom-order")}
-                      className="h-9 px-3 rounded-[8px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      onClick={() => { triggerHaptic("light"); navigate("/seller/custom-order"); }}
+                      className="h-9 px-3.5 rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#1C1C1E] flex items-center gap-1.5 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] whitespace-nowrap shrink-0 active:scale-[0.97] transition-transform cursor-pointer"
                       title="Create Custom Order"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
                       <span>Custom Order</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowOrderFilterMenu((prev) => !prev)}
-                      className="seller-v2-outline-blue h-9 px-3.5 rounded-[8px] flex items-center gap-1.5 text-[13px] font-semibold transition-transform active:scale-95"
+                      onClick={() => { triggerHaptic("selection"); setShowOrderFilterMenu((prev) => !prev); }}
+                      className="seller-v2-outline-blue h-9 px-3.5 rounded-full flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap shrink-0 active:scale-[0.96] transition-transform cursor-pointer"
                     >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none">
+                      <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none">
                         <path
                           d="M2 4H14M4.5 8H11.5M6.5 12H9.5"
                           stroke="currentColor"
@@ -1617,14 +1642,15 @@ const SellerDashboard: React.FC = () => {
 
                           {/* Bottom Cancel / Track Action Row (matching IMG_5388 active cards) */}
                           {statusMeta.canCancelOrTrack && (
-                            <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800/80 grid grid-cols-2 gap-3">
+                            <div className="px-4 py-3 border-t border-black/[0.06] dark:border-white/[0.08] grid grid-cols-2 gap-3">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  triggerHaptic("warning");
                                   updateOrderStatus(ord.id, OrderStatus.CANCELLED);
                                 }}
-                                className="h-9 rounded-[6px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[13px] font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                className="h-9 px-3 rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#1C1C1E] text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] whitespace-nowrap active:scale-[0.97] transition-transform cursor-pointer"
                               >
                                 Cancel
                               </button>
@@ -1632,9 +1658,10 @@ const SellerDashboard: React.FC = () => {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  triggerHaptic("selection");
                                   setSelectedOrderId(ord.id);
                                 }}
-                                className="h-9 rounded-[6px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[13px] font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                className="h-9 px-3 rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-white dark:bg-[#1C1C1E] text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] whitespace-nowrap active:scale-[0.97] transition-transform cursor-pointer"
                               >
                                 Track
                               </button>
@@ -2029,18 +2056,24 @@ const SellerDashboard: React.FC = () => {
                           <div className="grid grid-cols-2 gap-2.5">
                             <button
                               type="button"
-                              onClick={() => updateOrderStatus(order.id, OrderStatus.CANCELLED)}
-                              className="h-10 bg-rose-500 hover:bg-rose-600 rounded-[10px] flex items-center justify-center gap-1.5 text-white text-[13px] font-semibold transition-colors"
+                              onClick={() => {
+                                triggerHaptic("warning");
+                                updateOrderStatus(order.id, OrderStatus.CANCELLED);
+                              }}
+                              className="h-10 px-4 bg-[#FF3B30] hover:opacity-95 rounded-full flex items-center justify-center gap-1.5 text-white text-xs font-semibold whitespace-nowrap active:scale-[0.97] transition-transform cursor-pointer"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-4 h-4 shrink-0" />
                               <span>Reject</span>
                             </button>
                             <button
                               type="button"
-                              onClick={() => updateOrderStatus(order.id, OrderStatus.APPROVED)}
-                              className="h-10 bg-emerald-600 hover:bg-emerald-700 rounded-[10px] flex items-center justify-center gap-1.5 text-white text-[13px] font-semibold transition-colors"
+                              onClick={() => {
+                                triggerHaptic("success");
+                                updateOrderStatus(order.id, OrderStatus.APPROVED);
+                              }}
+                              className="h-10 px-4 bg-[#248A3D] dark:bg-[#30D158] hover:opacity-95 rounded-full flex items-center justify-center gap-1.5 text-white dark:text-black text-xs font-semibold whitespace-nowrap active:scale-[0.97] transition-transform cursor-pointer"
                             >
-                              <Check className="w-4 h-4" strokeWidth={2.5} />
+                              <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
                               <span>Approve</span>
                             </button>
                           </div>
@@ -2051,70 +2084,87 @@ const SellerDashboard: React.FC = () => {
                           <Label className="text-[10.5px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                             Order Stage
                           </Label>
-                          <div>
+                          <div className="relative">
                             <button
                               type="button"
-                              onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-                              className="w-full h-11 px-3.5 rounded-[10px] bg-[#F5F5F7] dark:bg-zinc-800 hover:bg-[#EAEAEF] dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 text-[13px] font-semibold flex items-center justify-between transition-colors text-left"
+                              onClick={() => {
+                                triggerHaptic("selection");
+                                setStatusDropdownOpen(!statusDropdownOpen);
+                              }}
+                              className="w-full h-11 px-3.5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] hover:bg-[#EAEAEF] dark:hover:bg-[#3A3A3C] text-[#1D1D1F] dark:text-[#F5F5F7] text-[13px] font-semibold flex items-center justify-between gap-2 transition-colors text-left cursor-pointer"
                             >
-                              <span>{order.status || "Select Status"}</span>
-                              <ChevronDown className="w-4 h-4 text-zinc-500" />
+                              <span className="truncate">{order.status || "Select Status"}</span>
+                              <ChevronDown
+                                className={cn(
+                                  "w-4 h-4 text-[#8E8E93] shrink-0 transition-transform duration-200",
+                                  statusDropdownOpen && "rotate-180"
+                                )}
+                              />
                             </button>
 
-                            {statusDropdownOpen && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-40"
-                                  onClick={() => setStatusDropdownOpen(false)}
-                                />
-                                <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl z-50 py-1.5 overflow-hidden max-h-60 overflow-y-auto">
-                                  {[
-                                    { value: OrderStatus.PENDING, label: "Pending" },
-                                    { value: OrderStatus.APPROVED, label: "Approved" },
-                                    { value: OrderStatus.PROCESSING, label: "Processing" },
-                                    { value: "Checking Payment", label: "Checking Payment" },
-                                    { value: "Complete Packaging", label: "Complete Packaging" },
-                                    { value: "Deliver on Courier", label: "Deliver on Courier" },
-                                    {
-                                      value: OrderStatus.ON_THE_WAY || "On Courier / Shipped",
-                                      label: "On Courier / Shipped",
-                                    },
-                                    { value: OrderStatus.DELIVERED, label: "Delivered" },
-                                    { value: OrderStatus.CANCELLED, label: "Cancelled" },
-                                    ...(sellerProfile?.canUseCourierShipping ||
-                                    isSuperAdminOrAdmin(sellerProfile, user)
-                                      ? [
-                                          {
-                                            value: OrderStatus.SHIPPED_IN_COURIER,
-                                            label: "Shipped in Courier",
-                                          },
-                                          { value: OrderStatus.RETURNED, label: "Returned" },
-                                        ]
-                                      : []),
-                                  ].map((opt) => (
-                                    <button
-                                      key={opt.value}
-                                      type="button"
-                                      onClick={() => {
-                                        updateOrderStatus(order.id, opt.value as OrderStatus);
-                                        setStatusDropdownOpen(false);
-                                      }}
-                                      className={cn(
-                                        "w-full text-left px-4 py-2.5 text-xs font-semibold flex items-center justify-between transition-colors",
-                                        order.status === opt.value
-                                          ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                                          : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                                      )}
-                                    >
-                                      <span>{opt.label}</span>
-                                      {order.status === opt.value && (
-                                        <Check className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
-                                      )}
-                                    </button>
-                                  ))}
-                                </div>
-                              </>
-                            )}
+                            <AnimatePresence>
+                              {statusDropdownOpen && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setStatusDropdownOpen(false)}
+                                  />
+                                  <motion.div
+                                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -6 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -6 }}
+                                    transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
+                                    className="ds-apple-popover absolute left-0 right-0 mt-1.5 rounded-2xl shadow-xl z-50 py-1.5 overflow-hidden max-h-60 overflow-y-auto origin-top"
+                                  >
+                                    {[
+                                      { value: OrderStatus.PENDING, label: "Pending" },
+                                      { value: OrderStatus.APPROVED, label: "Approved" },
+                                      { value: OrderStatus.PROCESSING, label: "Processing" },
+                                      { value: "Checking Payment", label: "Checking Payment" },
+                                      { value: "Complete Packaging", label: "Complete Packaging" },
+                                      { value: "Deliver on Courier", label: "Deliver on Courier" },
+                                      {
+                                        value: OrderStatus.ON_THE_WAY || "On Courier / Shipped",
+                                        label: "On Courier / Shipped",
+                                      },
+                                      { value: OrderStatus.DELIVERED, label: "Delivered" },
+                                      { value: OrderStatus.CANCELLED, label: "Cancelled" },
+                                      ...(sellerProfile?.canUseCourierShipping ||
+                                      isSuperAdminOrAdmin(sellerProfile, user)
+                                        ? [
+                                            {
+                                              value: OrderStatus.SHIPPED_IN_COURIER,
+                                              label: "Shipped in Courier",
+                                            },
+                                            { value: OrderStatus.RETURNED, label: "Returned" },
+                                          ]
+                                        : []),
+                                    ].map((opt) => (
+                                      <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => {
+                                          triggerHaptic("selection");
+                                          updateOrderStatus(order.id, opt.value as OrderStatus);
+                                          setStatusDropdownOpen(false);
+                                        }}
+                                        className={cn(
+                                          "w-full text-left px-4 py-2.5 text-xs font-semibold flex items-center justify-between gap-2 transition-colors cursor-pointer",
+                                          order.status === opt.value
+                                            ? "bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF]"
+                                            : "text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                                        )}
+                                      >
+                                        <span className="truncate">{opt.label}</span>
+                                        {order.status === opt.value && (
+                                          <Check className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" strokeWidth={2.5} />
+                                        )}
+                                      </button>
+                                    ))}
+                                  </motion.div>
+                                </>
+                              )}
+                            </AnimatePresence>
                           </div>
                         </div>
 
@@ -2266,18 +2316,21 @@ const SellerDashboard: React.FC = () => {
 
             {/* --- PRODUCTS TAB --- */}
             {activeTab === "products" && !selectedOrderId && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
+              <div className="space-y-6 h-full flex flex-col">
                 <div className="flex items-center justify-between">
-                   <h2 className="text-[17px] font-bold text-zinc-900 dark:text-zinc-100">Your Products</h2>
+                   <h2 className="text-[18px] font-semibold tracking-[-0.015em] text-[#1D1D1F] dark:text-white">Your Products</h2>
                    <button 
+                     type="button"
                      onClick={() => {
+                       triggerHaptic("light");
                        resetProductForm();
                        setProductEditingId(null);
                        setActiveTab("add_product");
                      }}
-                     className="h-10 px-4 bg-zinc-900 text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 hover:bg-zinc-800"
+                     className="ds-apple-btn-primary h-10 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-[0.97] transition-transform cursor-pointer"
                    >
-                     <Plus className="w-4 h-4" /> Add New
+                     <Plus className="w-4 h-4 shrink-0" />
+                     <span>Add New</span>
                    </button>
                 </div>
                 
@@ -2395,22 +2448,22 @@ const SellerDashboard: React.FC = () => {
                        <div className="grid grid-cols-2 gap-3 mb-3">
                          <button
                            type="button"
-                           onClick={() => setProductForm({ ...productForm, advanceType: "custom" })}
-                           className={`p-3 rounded-xl border text-xs font-bold transition-all text-center ${
+                           onClick={() => { triggerHaptic("selection"); setProductForm({ ...productForm, advanceType: "custom" }); }}
+                           className={`p-3 rounded-xl border text-xs font-semibold transition-all text-center cursor-pointer ${
                              productForm.advanceType === "custom"
-                               ? "border-[#EF8020] bg-[#EF8020]/10 text-[#EF8020]"
-                               : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                               ? "border-[#0071E3] dark:border-[#0A84FF] bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF]"
+                               : "border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#2C2C2E] ds-apple-muted"
                            }`}
                          >
                            Custom Advance (কাস্টম)
                          </button>
                          <button
                            type="button"
-                           onClick={() => setProductForm({ ...productForm, advanceType: "full" })}
-                           className={`p-3 rounded-xl border text-xs font-bold transition-all text-center ${
+                           onClick={() => { triggerHaptic("selection"); setProductForm({ ...productForm, advanceType: "full" }); }}
+                           className={`p-3 rounded-xl border text-xs font-semibold transition-all text-center cursor-pointer ${
                              productForm.advanceType === "full"
-                               ? "border-[#EF8020] bg-[#EF8020]/10 text-[#EF8020]"
-                               : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                               ? "border-[#0071E3] dark:border-[#0A84FF] bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF]"
+                               : "border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#2C2C2E] ds-apple-muted"
                            }`}
                          >
                            Full Amount Advance (100% ফুল)
@@ -2694,7 +2747,7 @@ const SellerDashboard: React.FC = () => {
                     </div>
                   </div>
                   
-                  <Button type="submit" disabled={submitting} className="w-full h-14 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl font-bold text-[15px] shadow-sm">
+                  <Button type="submit" disabled={submitting} className="ds-apple-btn-primary w-full h-13 rounded-full font-semibold text-[15px] cursor-pointer">
                     {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (activeTab === "add_product" ? "Publish Product" : "Save Changes")}
                   </Button>
                 </form>
@@ -3051,8 +3104,11 @@ const SellerDashboard: React.FC = () => {
                         </div>
 
                         <Button 
-                           onClick={() => saveStoreSettings({ shopName, defaultAdvanceAmount: Number(defaultAdvanceAmount), tiktokId })}
-                           className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold rounded-xl text-xs mt-4"
+                           onClick={() => {
+                             triggerHaptic("medium");
+                             saveStoreSettings({ shopName, defaultAdvanceAmount: Number(defaultAdvanceAmount), tiktokId });
+                           }}
+                           className="ds-apple-btn-primary w-full h-12 font-semibold rounded-full text-xs mt-4 cursor-pointer"
                         >
                            Save Store Settings
                         </Button>
@@ -3064,73 +3120,113 @@ const SellerDashboard: React.FC = () => {
         )}
       </main>
 
-      {/* Bottom Navigation for Mobile (Floating capsule matching Messages.tsx) */}
-      <div className="md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 pointer-events-auto h-[54px] flex items-center justify-between gap-1.5 px-2.5 rounded-full bg-white/85 dark:bg-[#141518]/85 backdrop-blur-md shadow-[0_4px_18px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_22px_rgba(0,0,0,0.4)] transition-all mb-[env(safe-area-inset-bottom)]">
+      {/* Bottom Navigation for Mobile (Apple Translucent Pill Capsule) */}
+      <div className="ds-apple-topbar md:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 pointer-events-auto h-[54px] flex items-center justify-between gap-1.5 px-2.5 rounded-full border border-black/[0.08] dark:border-white/[0.12] shadow-[0_8px_28px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_28px_rgba(0,0,0,0.5)] transition-all mb-[env(safe-area-inset-bottom)]">
         <NavItem icon="home" label="Home" tab="home" />
         <NavItem icon="receipt" label="Orders" tab="orders" badge={orders.filter((o: any) => (o.status || "").toLowerCase() === "pending").length} />
         <NavItem icon="boxes" label="Products" tab="products" />
         <NavItem icon="cog" label="Settings" tab="settings_store" />
       </div>
 
-       {cancelModalOrderId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            onClick={() => setCancelModalOrderId(null)} 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
-          />
-          
-          {/* Modal Card */}
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[2rem] p-6 shadow-2xl border border-zinc-100 dark:border-zinc-800 relative z-10 animate-in fade-in zoom-in-95 duration-300 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px]">{cancelModalStatus === OrderStatus.RETURNED ? "Return Order" : "Cancel / Reject Order"}</h3>
-              <button 
-                type="button"
-                onClick={() => { setCancelModalOrderId(null); setCancelModalStatus(null); setCancelReasonText(""); }} 
-                className="w-8 h-8 rounded-full bg-[#F5F5F7] dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium">
-              Please provide a brief reason for {cancelModalStatus === OrderStatus.RETURNED ? "returning" : "rejecting/cancelling"} order <span className="font-bold text-zinc-700 dark:text-zinc-300">#{cancelModalOrderId.slice(0, 8)}</span>. The customer will see this reason in their order history.
-            </p>
-            
-            <textarea 
-              value={cancelReasonText} 
-              onChange={(e) => setCancelReasonText(e.target.value)} 
-              placeholder={cancelModalStatus === OrderStatus.RETURNED ? "e.g., Customer refused delivery, etc..." : "e.g., Product out of stock, delivery area not covered, etc..."} 
-              className="w-full h-24 p-3 rounded-2xl bg-[#F5F5F7] dark:bg-zinc-800 text-xs font-medium placeholder:text-zinc-400 outline-none border-none resize-none focus:ring-1 focus:ring-[#EF8020] text-zinc-900 dark:text-zinc-100"
-            />
-            
-            <div className="flex gap-3">
-              <button 
-                type="button"
-                onClick={() => { setCancelModalOrderId(null); setCancelModalStatus(null); setCancelReasonText(""); }} 
-                className="flex-1 h-12 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold rounded-xl"
-              >
-                Go Back
-              </button>
-              <button 
-                type="button"
-                disabled={!cancelReasonText.trim()} 
-                onClick={async () => {
-                  if (cancelReasonText.trim()) {
-                    await updateOrderStatus(cancelModalOrderId, cancelModalStatus || OrderStatus.CANCELLED, cancelReasonText.trim());
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {cancelModalOrderId && (
+              <div className="ds-apple-portal fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => {
+                    triggerHaptic("light");
                     setCancelModalOrderId(null);
                     setCancelModalStatus(null);
                     setCancelReasonText("");
-                  }
-                }} 
-                className="flex-1 h-12 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl shadow-sm"
-              >
-                {cancelModalStatus === OrderStatus.RETURNED ? "Submit Return" : "Cancel Order"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                  }}
+                  className="ds-apple-backdrop fixed inset-0"
+                />
+
+                {/* Modal Card */}
+                <motion.div
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 12 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 12 }}
+                  transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
+                  className="ds-apple-modal w-full max-w-sm rounded-[26px] p-6 relative z-10 flex flex-col gap-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-[#1D1D1F] dark:text-white text-[16px] tracking-[-0.015em]">
+                      {cancelModalStatus === OrderStatus.RETURNED ? "Return Order" : "Cancel / Reject Order"}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("light");
+                        setCancelModalOrderId(null);
+                        setCancelModalStatus(null);
+                        setCancelReasonText("");
+                      }}
+                      className="ds-apple-icon-btn w-8 h-8 flex items-center justify-center cursor-pointer"
+                      aria-label="Close modal"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p className="text-[12px] ds-apple-muted leading-relaxed">
+                    Please provide a brief reason for {cancelModalStatus === OrderStatus.RETURNED ? "returning" : "rejecting/cancelling"} order{" "}
+                    <span className="font-semibold text-[#1D1D1F] dark:text-white tabular-nums">#{cancelModalOrderId.slice(0, 8)}</span>. The customer will see this reason in their order history.
+                  </p>
+
+                  <textarea
+                    value={cancelReasonText}
+                    onChange={(e) => setCancelReasonText(e.target.value)}
+                    placeholder={
+                      cancelModalStatus === OrderStatus.RETURNED
+                        ? "e.g., Customer refused delivery, etc..."
+                        : "e.g., Product out of stock, delivery area not covered, etc..."
+                    }
+                    className="ds-apple-input w-full h-24 p-3.5 rounded-2xl text-xs font-medium resize-none"
+                  />
+
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("light");
+                        setCancelModalOrderId(null);
+                        setCancelModalStatus(null);
+                        setCancelReasonText("");
+                      }}
+                      className="ds-apple-btn-secondary flex-1 h-11 px-4 text-xs font-semibold rounded-full whitespace-nowrap active:scale-[0.97] transition-transform cursor-pointer"
+                    >
+                      Go Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!cancelReasonText.trim()}
+                      onClick={async () => {
+                        if (cancelReasonText.trim()) {
+                          triggerHaptic("warning");
+                          await updateOrderStatus(cancelModalOrderId, cancelModalStatus || OrderStatus.CANCELLED, cancelReasonText.trim());
+                          setCancelModalOrderId(null);
+                          setCancelModalStatus(null);
+                          setCancelReasonText("");
+                        }
+                      }}
+                      className="flex-1 h-11 px-4 bg-[#FF3B30] hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-full shadow-sm whitespace-nowrap cursor-pointer"
+                    >
+                      {cancelModalStatus === OrderStatus.RETURNED ? "Submit Return" : "Cancel Order"}
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
     </div>
   );

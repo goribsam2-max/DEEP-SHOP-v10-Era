@@ -16,7 +16,6 @@ import {
   Check,
   ImagePlus,
   X,
-  ChevronLeft,
   Camera,
   Globe,
   MapPin,
@@ -24,6 +23,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { ProfileSettingsPageSkeleton } from "../components/PageSkeletons";
+import { triggerHaptic } from "../lib/haptics";
 
 const InstagramSvg = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg
@@ -152,6 +152,7 @@ export default function EditProfile() {
     const candidateName = `${firstName.trim()} ${lastName.trim()}`.trim();
     const nameCheck = validateRealPersonName(candidateName, "নাম");
     if (!nameCheck.isValid) {
+      triggerHaptic("error");
       notify(nameCheck.errorMsg, "error");
       return;
     }
@@ -160,6 +161,7 @@ export default function EditProfile() {
     if (cleanedHandle) {
       const handleCheck = validatePublicUsername(cleanedHandle);
       if (!handleCheck.isValid) {
+        triggerHaptic("error");
         notify(handleCheck.errorMsg, "error");
         return;
       }
@@ -229,9 +231,11 @@ export default function EditProfile() {
         })
       );
 
+      triggerHaptic("success");
       notify("Profile updated successfully!", "success");
       navigate("/loops/profile");
     } catch {
+      triggerHaptic("error");
       notify("Failed to update profile", "error");
     } finally {
       setUpdating(false);
@@ -241,6 +245,7 @@ export default function EditProfile() {
   const currentBgImage = bgPreview || (!hideDefaultBg ? defaultBg : null);
 
   const onBgRemove = () => {
+    triggerHaptic();
     handleBgRemove();
     setHideDefaultBg(true);
     setDefaultBg("");
@@ -256,55 +261,46 @@ export default function EditProfile() {
   }
 
   return (
-    <div className="min-h-screen loops-surface text-[#0f0f0f] dark:text-zinc-100 font-sans pb-28">
-      {/* Sticky Minimal Top Bar */}
-      <header className="sticky top-0 z-30 loops-surface/90 backdrop-blur-xl border-b loops-divider">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-[#0f0f0f] dark:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.07] transition cursor-pointer shrink-0"
-              aria-label="Go back"
-            >
-              <ChevronLeft className="w-6 h-6 stroke-[2.1]" />
-            </button>
-            <h1 className="text-[17px] sm:text-[18px] font-bold tracking-tight truncate">
-              Edit profile
-            </h1>
-          </div>
-
+    <div className="ds-apple-shop-canvas min-h-screen pb-28">
+      <form
+        onSubmit={handleUpdate}
+        className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 space-y-6"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
+            Edit Profile
+          </h1>
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                triggerHaptic();
+                navigate(-1);
+              }}
               disabled={updating}
-              className="hidden sm:inline-flex items-center justify-center h-10 px-4 rounded-full text-[13.5px] font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-black/[0.05] dark:hover:bg-white/[0.06] transition cursor-pointer disabled:opacity-50"
+              className="ds-apple-btn-secondary hidden sm:inline-flex items-center justify-center h-9 px-4 rounded-full text-[13px] font-semibold whitespace-nowrap transition cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="button"
-              onClick={() => handleUpdate()}
+              onClick={() => {
+                triggerHaptic();
+                handleUpdate();
+              }}
               disabled={updating}
-              className="inline-flex items-center justify-center h-10 px-5 rounded-full bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] text-[13.5px] font-semibold hover:opacity-90 active:scale-[0.98] transition cursor-pointer disabled:opacity-50"
+              className="ds-apple-btn-primary inline-flex items-center justify-center h-9 px-5 rounded-full text-[13px] font-semibold whitespace-nowrap active:scale-[0.97] transition cursor-pointer disabled:opacity-50"
             >
-              {updating ? "Saving..." : "Save changes"}
+              {updating ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
-      </header>
-
-      <form
-        onSubmit={handleUpdate}
-        className="max-w-4xl mx-auto px-4 sm:px-6 pt-6"
-      >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Studio Preview & Media Card */}
-          <div className="lg:col-span-5 lg:sticky lg:top-22 space-y-4">
-            <div className="loops-about-card rounded-[28px] overflow-hidden border loops-divider">
+          <div className="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
+            <div className="ds-apple-surface rounded-[24px] overflow-hidden">
               {/* Cover Banner Area */}
-              <div className="relative h-40 sm:h-44 w-full bg-zinc-200/80 dark:bg-zinc-800/80 overflow-hidden">
+              <div className="relative h-40 sm:h-44 w-full bg-[#E5E5EA] dark:bg-[#2C2C2E] overflow-hidden">
                 {currentBgImage ? (
                   <img
                     src={currentBgImage}
@@ -312,17 +308,20 @@ export default function EditProfile() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-zinc-200 via-zinc-100 to-zinc-300 dark:from-zinc-800 dark:via-zinc-900 dark:to-zinc-800" />
+                  <div className="w-full h-full bg-gradient-to-br from-[#E5E5EA] via-[#F2F2F7] to-[#D1D1D6] dark:from-[#2C2C2E] dark:via-[#1C1C1E] dark:to-[#2C2C2E]" />
                 )}
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/15 pointer-events-none" />
 
-                {/* Always-accessible tactile Cover Controls */}
+                {/* Cover Controls */}
                 <div className="absolute top-3 right-3 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleBgClick}
-                    className="h-9 px-3.5 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-md text-white text-[12px] font-semibold inline-flex items-center gap-1.5 transition cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic();
+                      handleBgClick();
+                    }}
+                    className="h-9 px-3.5 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-md text-white text-[12px] font-semibold inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95"
                   >
                     <ImagePlus className="w-3.5 h-3.5" />
                     <span>Cover</span>
@@ -331,7 +330,7 @@ export default function EditProfile() {
                     <button
                       type="button"
                       onClick={onBgRemove}
-                      className="w-9 h-9 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition cursor-pointer"
+                      className="w-9 h-9 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition cursor-pointer active:scale-95"
                       aria-label="Remove cover image"
                       title="Remove cover"
                     >
@@ -355,8 +354,11 @@ export default function EditProfile() {
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={handleAvatarClick}
-                      className="relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-white dark:ring-[#181818] bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center cursor-pointer group"
+                      onClick={() => {
+                        triggerHaptic();
+                        handleAvatarClick();
+                      }}
+                      className="relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-white dark:ring-[#1C1C1E] bg-[#F2F2F7] dark:bg-[#2C2C2E] flex items-center justify-center cursor-pointer group"
                       aria-label="Change profile photo"
                     >
                       {currentAvatarImage ? (
@@ -366,7 +368,7 @@ export default function EditProfile() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <UserIcon className="w-10 h-10 text-zinc-400" />
+                        <UserIcon className="w-10 h-10 ds-apple-muted" />
                       )}
                       <span className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                         <Camera className="w-5 h-5" />
@@ -374,8 +376,11 @@ export default function EditProfile() {
                     </button>
                     <button
                       type="button"
-                      onClick={handleAvatarClick}
-                      className="absolute -bottom-0.5 -right-0.5 w-8 h-8 rounded-full bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] ring-2 ring-white dark:ring-[#181818] flex items-center justify-center cursor-pointer active:scale-95 transition"
+                      onClick={() => {
+                        triggerHaptic();
+                        handleAvatarClick();
+                      }}
+                      className="ds-apple-btn-primary absolute -bottom-0.5 -right-0.5 w-8 h-8 rounded-full ring-2 ring-white dark:ring-[#1C1C1E] flex items-center justify-center cursor-pointer active:scale-95 transition"
                       aria-label="Upload new avatar"
                     >
                       <Camera className="w-4 h-4" />
@@ -391,34 +396,37 @@ export default function EditProfile() {
 
                   <button
                     type="button"
-                    onClick={handleAvatarClick}
-                    className="h-9 px-3.5 rounded-full loops-gray-pill text-[12.5px] font-semibold text-[#0f0f0f] dark:text-white hover:opacity-85 transition cursor-pointer"
+                    onClick={() => {
+                      triggerHaptic();
+                      handleAvatarClick();
+                    }}
+                    className="ds-apple-btn-secondary h-9 px-3.5 rounded-full text-[12.5px] font-semibold transition cursor-pointer"
                   >
                     Change photo
                   </button>
                 </div>
 
                 <div className="space-y-1.5">
-                  <h2 className="text-[19px] font-bold tracking-tight text-[#0f0f0f] dark:text-white truncate">
+                  <h2 className="text-[19px] font-semibold tracking-tight truncate">
                     {fullNamePreview}
                   </h2>
-                  <p className="text-[14px] text-zinc-500 dark:text-zinc-400 truncate">
+                  <p className="text-[14px] ds-apple-muted truncate">
                     {cleanUsernamePreview
                       ? `@${cleanUsernamePreview}`
                       : "Set a public @username"}
                   </p>
                   {bio.trim() ? (
-                    <p className="text-[14px] leading-snug text-zinc-700 dark:text-zinc-300 pt-1 line-clamp-3 break-words">
+                    <p className="text-[14px] leading-snug pt-1 line-clamp-3 break-words">
                       {bio}
                     </p>
                   ) : (
-                    <p className="text-[13.5px] text-zinc-400 dark:text-zinc-500 pt-1">
-                      Your short bio will appear here across Deep Shop and Loops.
+                    <p className="text-[13.5px] ds-apple-muted pt-1">
+                      Your short bio will appear here across DEEP SHOP.
                     </p>
                   )}
 
                   {(address.trim() || website.trim()) && (
-                    <div className="pt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                    <div className="pt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] ds-apple-muted">
                       {address.trim() && (
                         <span className="inline-flex items-center gap-1 truncate max-w-full">
                           <MapPin className="w-3.5 h-3.5 shrink-0" />
@@ -426,7 +434,7 @@ export default function EditProfile() {
                         </span>
                       )}
                       {website.trim() && (
-                        <span className="inline-flex items-center gap-1 text-[#0095F6] truncate max-w-full">
+                        <span className="inline-flex items-center gap-1 ds-apple-accent-text truncate max-w-full">
                           <Globe className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">
                             {website
@@ -445,12 +453,12 @@ export default function EditProfile() {
           {/* Right Structured Form Fields */}
           <div className="lg:col-span-7 space-y-5">
             {/* Section 1: Personal Identity */}
-            <section className="loops-about-card rounded-[28px] p-5 sm:p-6 border loops-divider space-y-4">
+            <section className="ds-apple-surface rounded-[24px] p-5 sm:p-6 space-y-4">
               <div className="space-y-0.5">
-                <h3 className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
-                  Personal details
+                <h3 className="text-[16px] font-semibold tracking-tight">
+                  Personal Details
                 </h3>
-                <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                <p className="text-[13px] ds-apple-muted">
                   Your public name, handle, and biography.
                 </p>
               </div>
@@ -459,9 +467,9 @@ export default function EditProfile() {
                 <div className="space-y-1.5">
                   <label
                     htmlFor={`${id}-first-name`}
-                    className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="block text-[13px] font-medium ds-apple-muted"
                   >
-                    First name
+                    First Name
                   </label>
                   <input
                     id={`${id}-first-name`}
@@ -470,16 +478,16 @@ export default function EditProfile() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="First name"
-                    className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                    className="ds-apple-input w-full h-11 px-3.5 rounded-2xl text-[14.5px] font-medium outline-none"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label
                     htmlFor={`${id}-last-name`}
-                    className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="block text-[13px] font-medium ds-apple-muted"
                   >
-                    Last name
+                    Last Name
                   </label>
                   <input
                     id={`${id}-last-name`}
@@ -487,7 +495,7 @@ export default function EditProfile() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Last name"
-                    className="w-full h-11 px-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                    className="ds-apple-input w-full h-11 px-3.5 rounded-2xl text-[14.5px] font-medium outline-none"
                   />
                 </div>
               </div>
@@ -495,22 +503,22 @@ export default function EditProfile() {
               <div className="space-y-1.5">
                 <label
                   htmlFor={`${id}-username`}
-                  className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                  className="block text-[13px] font-medium ds-apple-muted"
                 >
                   Username
                 </label>
                 <div className="relative flex items-center">
-                  <AtSign className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                  <AtSign className="w-4 h-4 ds-apple-muted absolute left-3.5 pointer-events-none" />
                   <input
                     id={`${id}-username`}
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="username"
-                    className="w-full h-11 pl-9 pr-10 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                    className="ds-apple-input w-full h-11 pl-9 pr-10 rounded-2xl text-[14.5px] font-medium outline-none"
                   />
                   {cleanUsernamePreview.length > 2 && (
-                    <span className="absolute right-3.5 w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center pointer-events-none">
+                    <span className="absolute right-3.5 w-5 h-5 rounded-full bg-[#34C759]/15 text-[#248A3D] dark:text-[#30D158] flex items-center justify-center pointer-events-none">
                       <Check className="w-3.5 h-3.5 stroke-[2.6]" />
                     </span>
                   )}
@@ -521,11 +529,11 @@ export default function EditProfile() {
                 <div className="flex items-center justify-between">
                   <label
                     htmlFor={`${id}-bio`}
-                    className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="block text-[13px] font-medium ds-apple-muted"
                   >
                     Biography
                   </label>
-                  <span className="text-[12px] text-zinc-400 tabular-nums">
+                  <span className="text-[12px] ds-apple-muted tabular-nums">
                     {characterCount}/{limit}
                   </span>
                 </div>
@@ -536,18 +544,18 @@ export default function EditProfile() {
                   value={bio}
                   onChange={handleBioChange}
                   placeholder="Write a short introduction about yourself..."
-                  className="w-full p-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] leading-relaxed font-normal text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none resize-none transition"
+                  className="ds-apple-input w-full p-3.5 rounded-2xl text-[14.5px] leading-relaxed font-normal outline-none resize-none"
                 />
               </div>
             </section>
 
             {/* Section 2: Location & Website */}
-            <section className="loops-about-card rounded-[28px] p-5 sm:p-6 border loops-divider space-y-4">
+            <section className="ds-apple-surface rounded-[24px] p-5 sm:p-6 space-y-4">
               <div className="space-y-0.5">
-                <h3 className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
-                  Location & website
+                <h3 className="text-[16px] font-semibold tracking-tight">
+                  Location &amp; Website
                 </h3>
-                <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                <p className="text-[13px] ds-apple-muted">
                   Help shoppers and community members find where you are based.
                 </p>
               </div>
@@ -555,19 +563,19 @@ export default function EditProfile() {
               <div className="space-y-1.5 pt-1">
                 <label
                   htmlFor={`${id}-address`}
-                  className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                  className="block text-[13px] font-medium ds-apple-muted"
                 >
                   Location / Address
                 </label>
                 <div className="relative flex items-center">
-                  <MapPin className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                  <MapPin className="w-4 h-4 ds-apple-muted absolute left-3.5 pointer-events-none" />
                   <input
                     id={`${id}-address`}
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="e.g. Dhaka, Bangladesh"
-                    className="w-full h-11 pl-10 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                    className="ds-apple-input w-full h-11 pl-10 pr-3.5 rounded-2xl text-[14.5px] font-medium outline-none"
                   />
                 </div>
               </div>
@@ -575,31 +583,31 @@ export default function EditProfile() {
               <div className="space-y-1.5">
                 <label
                   htmlFor={`${id}-website`}
-                  className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                  className="block text-[13px] font-medium ds-apple-muted"
                 >
                   Website
                 </label>
                 <div className="relative flex items-center">
-                  <Globe className="w-4 h-4 text-zinc-400 absolute left-3.5 pointer-events-none" />
+                  <Globe className="w-4 h-4 ds-apple-muted absolute left-3.5 pointer-events-none" />
                   <input
                     id={`${id}-website`}
                     type="text"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
                     placeholder="yourwebsite.com"
-                    className="w-full h-11 pl-10 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                    className="ds-apple-input w-full h-11 pl-10 pr-3.5 rounded-2xl text-[14.5px] font-medium outline-none"
                   />
                 </div>
               </div>
             </section>
 
             {/* Section 3: Connected Social Profiles */}
-            <section className="loops-about-card rounded-[28px] p-5 sm:p-6 border loops-divider space-y-4">
+            <section className="ds-apple-surface rounded-[24px] p-5 sm:p-6 space-y-4">
               <div className="space-y-0.5">
-                <h3 className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
-                  Social accounts
+                <h3 className="text-[16px] font-semibold tracking-tight">
+                  Social Accounts
                 </h3>
-                <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                <p className="text-[13px] ds-apple-muted">
                   Link your active social handles to display on your profile.
                 </p>
               </div>
@@ -608,19 +616,19 @@ export default function EditProfile() {
                 <div className="space-y-1.5">
                   <label
                     htmlFor={`${id}-instagram`}
-                    className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="block text-[13px] font-medium ds-apple-muted"
                   >
                     Instagram username
                   </label>
                   <div className="relative flex items-center">
-                    <InstagramSvg className="w-4 h-4 text-zinc-500 dark:text-zinc-400 absolute left-3.5 pointer-events-none" />
+                    <InstagramSvg className="w-4 h-4 ds-apple-muted absolute left-3.5 pointer-events-none" />
                     <input
                       id={`${id}-instagram`}
                       type="text"
                       value={instagramUrl}
                       onChange={(e) => setInstagramUrl(e.target.value)}
                       placeholder="instagram_username"
-                      className="w-full h-11 pl-10 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                      className="ds-apple-input w-full h-11 pl-10 pr-3.5 rounded-2xl text-[14.5px] font-medium outline-none"
                     />
                   </div>
                 </div>
@@ -628,19 +636,19 @@ export default function EditProfile() {
                 <div className="space-y-1.5">
                   <label
                     htmlFor={`${id}-facebook`}
-                    className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="block text-[13px] font-medium ds-apple-muted"
                   >
                     Facebook username or link
                   </label>
                   <div className="relative flex items-center">
-                    <FacebookSvg className="w-4 h-4 text-zinc-500 dark:text-zinc-400 absolute left-3.5 pointer-events-none" />
+                    <FacebookSvg className="w-4 h-4 ds-apple-muted absolute left-3.5 pointer-events-none" />
                     <input
                       id={`${id}-facebook`}
                       type="text"
                       value={facebookUrl}
                       onChange={(e) => setFacebookUrl(e.target.value)}
                       placeholder="facebook.com/yourprofile"
-                      className="w-full h-11 pl-10 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                      className="ds-apple-input w-full h-11 pl-10 pr-3.5 rounded-2xl text-[14.5px] font-medium outline-none"
                     />
                   </div>
                 </div>
@@ -648,19 +656,19 @@ export default function EditProfile() {
                 <div className="space-y-1.5">
                   <label
                     htmlFor={`${id}-tiktok`}
-                    className="block text-[13px] font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="block text-[13px] font-medium ds-apple-muted"
                   >
                     TikTok username
                   </label>
                   <div className="relative flex items-center">
-                    <TikTokSvg className="w-4 h-4 text-zinc-500 dark:text-zinc-400 absolute left-3.5 pointer-events-none" />
+                    <TikTokSvg className="w-4 h-4 ds-apple-muted absolute left-3.5 pointer-events-none" />
                     <input
                       id={`${id}-tiktok`}
                       type="text"
                       value={tiktokUrl}
                       onChange={(e) => setTiktokUrl(e.target.value)}
                       placeholder="tiktok_username"
-                      className="w-full h-11 pl-10 pr-3.5 rounded-2xl bg-black/[0.035] dark:bg-white/[0.055] border border-transparent focus:border-zinc-900 dark:focus:border-white text-[14.5px] font-medium text-[#0f0f0f] dark:text-white placeholder:text-zinc-400 outline-none transition"
+                      className="ds-apple-input w-full h-11 pl-10 pr-3.5 rounded-2xl text-[14.5px] font-medium outline-none"
                     />
                   </div>
                 </div>
@@ -671,18 +679,22 @@ export default function EditProfile() {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  triggerHaptic();
+                  navigate(-1);
+                }}
                 disabled={updating}
-                className="flex-1 sm:flex-none h-12 px-6 rounded-full loops-gray-pill text-[14.5px] font-semibold text-[#0f0f0f] dark:text-white hover:opacity-85 transition cursor-pointer disabled:opacity-50"
+                className="ds-apple-btn-secondary flex-1 sm:flex-none h-11 px-6 rounded-full text-[14px] font-semibold whitespace-nowrap transition cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={updating}
-                className="flex-1 sm:flex-none h-12 px-8 rounded-full bg-[#0f0f0f] dark:bg-white text-white dark:text-[#0f0f0f] text-[14.5px] font-semibold hover:opacity-90 active:scale-[0.98] transition cursor-pointer disabled:opacity-50"
+                onClick={() => triggerHaptic()}
+                className="ds-apple-btn-primary flex-1 sm:flex-none h-11 px-8 rounded-full text-[14px] font-semibold whitespace-nowrap active:scale-[0.98] transition cursor-pointer disabled:opacity-50"
               >
-                {updating ? "Saving changes..." : "Save changes"}
+                {updating ? "Saving changes..." : "Save Changes"}
               </button>
             </div>
           </div>

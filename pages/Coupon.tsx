@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Icon from "../components/Icon";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useNotify } from "../components/Notifications";
 import { formatPrice } from "../lib/utils";
+import { Ticket } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
 
 const Coupon: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
+  const shouldReduceMotion = useReducedMotion();
   const [coupons, setCoupons] = useState<any[]>([]);
   const [userData, setUserData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"Available" | "Used" | "Expired">("Available");
@@ -16,134 +20,190 @@ const Coupon: React.FC = () => {
   useEffect(() => {
     const q = query(collection(db, "coupons"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        setCoupons(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setCoupons(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     if (auth.currentUser) {
-        const unsub = onSnapshot(doc(db, "users", auth.currentUser.uid), (docSnap) => {
-            if (docSnap.exists()) setUserData(docSnap.data());
-        });
-        return () => unsub();
+      const unsub = onSnapshot(doc(db, "users", auth.currentUser.uid), (docSnap) => {
+        if (docSnap.exists()) setUserData(docSnap.data());
+      });
+      return () => unsub();
     }
   }, []);
 
   const handleClaim = async (couponId: string) => {
     if (!auth.currentUser) {
-        notify("Please login to claim vouchers", "error");
-        return;
+      triggerHaptic("error");
+      notify("Please login to claim vouchers", "error");
+      return;
     }
+    triggerHaptic("medium");
     try {
-        await updateDoc(doc(db, "users", auth.currentUser.uid), {
-            claimedCoupons: arrayUnion(couponId)
-        });
-        notify("Voucher claimed successfully! You can use it at checkout", "success");
+      await updateDoc(doc(db, "users", auth.currentUser.uid), {
+        claimedCoupons: arrayUnion(couponId),
+      });
+      triggerHaptic("success");
+      notify("Voucher claimed successfully! You can use it at checkout", "success");
     } catch (err) {
-        notify("Failed to claim voucher", "error");
+      triggerHaptic("error");
+      notify("Failed to claim voucher", "error");
     }
   };
 
-  const filteredCoupons = coupons.filter(c => {
+  const filteredCoupons = coupons.filter((c) => {
     const isExpired = c.expiresAt && c.expiresAt < Date.now();
     const isClaimed = userData?.claimedCoupons?.includes(c.id);
     const isUsed = userData?.usedCoupons?.includes(c.id);
-    
+
     if (activeTab === "Available") return !isExpired && !isUsed;
     if (activeTab === "Used") return isClaimed || isUsed;
     if (activeTab === "Expired") return isExpired;
     return false;
   });
 
+  const tabs: Array<{ key: "Available" | "Used" | "Expired"; label: string }> = [
+    { key: "Available", label: "Available" },
+    { key: "Used", label: "Claimed" },
+    { key: "Expired", label: "Expired" },
+  ];
+
   return (
-    <div className="max-w-2xl mx-auto p-6 md:py-6 animate-fade-in min-h-screen bg-zinc-50 dark:bg-zinc-800">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="w-10"></div>
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Coupons</h1>
-        <button className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-100 dark:border-zinc-800 shadow-sm">
-          <Icon name="ellipsis-h" className="text-zinc-900 dark:text-zinc-100" />
-        </button>
-      </div>
-
-      <div className="flex bg-white dark:bg-zinc-900 rounded-[24px] p-1.5 mb-8 border border-zinc-100 dark:border-zinc-800 shadow-sm gap-1">
-        {["Available", "Used", "Expired"].map((tab) => (
+    <div className="ds-apple-shop-canvas min-h-screen pb-28">
+      <div className="max-w-2xl mx-auto px-4 pt-6 space-y-5">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+            Coupons
+          </h1>
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`flex-1 text-center py-3 rounded-full text-sm font-bold transition-all ${
-              activeTab === tab
-                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md"
-                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 bg-transparent"
-            }`}
+            type="button"
+            onClick={() => {
+              triggerHaptic("light");
+              navigate("/my-coupons");
+            }}
+            aria-label="My coupons"
+            className="ds-apple-btn-secondary px-3.5 py-2 rounded-full text-[12.5px] font-semibold inline-flex items-center gap-1.5 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
           >
-            {tab === "Used" ? "Claimed" : tab}
+            <Ticket className="w-3.5 h-3.5 shrink-0" />
+            <span>My Coupons</span>
           </button>
-        ))}
-      </div>
-
-      <div className="space-y-4">
-        {filteredCoupons.map((c, i) => {
-          const isExpired = c.expiresAt && c.expiresAt < Date.now();
-          const isClaimed = userData?.claimedCoupons?.includes(c.id);
-          const isUsed = userData?.usedCoupons?.includes(c.id);
-          
-          return (
-            <div key={i} className={`relative bg-amber-500/10 dark:bg-amber-900/10 rounded-[20px] overflow-hidden border border-amber-200 dark:border-amber-900 flex shadow-sm ${(isExpired || isUsed) ? "opacity-60 grayscale" : ""}`}>
-                {(isClaimed || isUsed) && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/30 dark:bg-black/30 backdrop-blur-[1px]">
-                    <div className={`border-[3px] md:border-4 font-black text-2xl md:text-3xl tracking-widest uppercase px-4 py-1.5 md:px-6 md:py-2 rounded-[8px] transform -rotate-12 select-none shadow-sm opacity-90 mix-blend-multiply dark:mix-blend-screen bg-transparent ${isUsed ? "border-zinc-500 text-zinc-500" : "border-red-500 text-red-500"}`}>
-                      {isUsed ? "Used" : "Claimed"}
-                    </div>
-                  </div>
+        </div>
+        {/* Segmented Control */}
+        <div className="ds-apple-segmented p-1 rounded-[14px] flex relative">
+          {tabs.map((tab) => {
+            const selected = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setActiveTab(tab.key);
+                }}
+                className={`relative z-10 flex-1 text-center py-2.5 rounded-[10px] text-[13px] font-semibold transition-colors ${
+                  selected
+                    ? "text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    : "text-[#6E6E73] dark:text-[#98989D]"
+                }`}
+              >
+                {selected && (
+                  <motion.span
+                    layoutId="couponTabPill"
+                    transition={shouldReduceMotion ? { duration: 0.15 } : APPLE_SPRING_SNAPPY}
+                    className="absolute inset-0 bg-white dark:bg-[#1C1C1E] rounded-[10px] shadow-sm -z-10"
+                  />
                 )}
-                
-                {/* Left section - Discount */}
-                <div className="w-[100px] md:w-[120px] bg-amber-500 text-white flex flex-col justify-center items-center p-4 relative shrink-0">
-                    <span className="text-2xl md:text-3xl font-black">{c.type === 'percent' ? `${c.discount}%` : `${formatPrice(c.discount)}`}</span>
-                    <span className="text-xs font-bold tracking-wider uppercase mt-1">OFF</span>
-                    
-                    {/* Jagged edge */}
-                    <div className="absolute right-0 top-0 bottom-0 w-2 flex flex-col justify-between translate-x-1/2 py-1">
-                        {[...Array(12)].map((_, j) => (
-                            <div key={j} className="w-2.5 h-2.5 bg-zinc-50 dark:bg-[#0a0a0b] rounded-full my-0.5"></div>
-                        ))}
-                    </div>
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="space-y-3.5">
+          {filteredCoupons.map((c, i) => {
+            const isExpired = c.expiresAt && c.expiresAt < Date.now();
+            const isClaimed = userData?.claimedCoupons?.includes(c.id);
+            const isUsed = userData?.usedCoupons?.includes(c.id);
+
+            return (
+              <div
+                key={c.id || i}
+                className={`relative ds-apple-surface rounded-[22px] overflow-hidden flex ${
+                  isExpired || isUsed ? "opacity-60 grayscale" : ""
+                }`}
+              >
+                {/* Left Discount */}
+                <div className="w-[104px] md:w-[120px] bg-[#0071E3] dark:bg-[#0A84FF] text-white flex flex-col justify-center items-center p-4 shrink-0">
+                  <span className="text-[22px] md:text-[26px] font-bold tabular-nums leading-tight">
+                    {c.type === "percent" ? `${c.discount}%` : formatPrice(c.discount)}
+                  </span>
+                  <span className="text-[11px] font-semibold tracking-wider uppercase mt-0.5 opacity-90">
+                    OFF
+                  </span>
                 </div>
-                
-                {/* Right section - Details */}
-                <div className="p-4 flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 ml-[5px]">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{c.code}</h3>
-                          {c.sellerId && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-full">{c.sellerName || "Store"}</span>}
-                        </div>
-                        <p className="text-xs text-zinc-500">
-                            {c.minOrderAmount > 0 ? `For orders over ${formatPrice(c.minOrderAmount)}` : "No minimum order amount"}
-                            {c.expiresAt && <span className={`block mt-1 ${isExpired ? 'text-red-500 font-bold' : ''}`}>{isExpired ? "EXPIRED" : `Valid until: ${new Date(c.expiresAt).toLocaleDateString()}`}</span>}
-                        </p>
+
+                {/* Right Details */}
+                <div className="p-4 flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-[16px] text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        {c.code}
+                      </h3>
+                      {c.sellerId && (
+                        <span className="px-2 py-0.5 bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] text-[11px] font-semibold rounded-full">
+                          {c.sellerName || "Store"}
+                        </span>
+                      )}
                     </div>
-                    
-                    <button 
-                        onClick={() => !isClaimed && !isExpired && !isUsed && handleClaim(c.id)}
-                        disabled={isExpired || isClaimed || isUsed}
-                        className={`whitespace-nowrap px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider disabled:opacity-50 active:scale-95 transition-all relative z-0 ${isClaimed || isUsed ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500' : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'}`}
-                    >
-                      {isUsed ? "Used" : isClaimed ? "Claimed" : isExpired ? "Expired" : "Claim"}
-                    </button>
+                    <p className="text-[12px] text-[#6E6E73] dark:text-[#98989D] tabular-nums">
+                      {c.minOrderAmount > 0
+                        ? `For orders over ${formatPrice(c.minOrderAmount)}`
+                        : "No minimum order amount"}
+                      {c.expiresAt && (
+                        <span
+                          className={`block mt-0.5 ${
+                            isExpired ? "text-[#FF3B30] dark:text-[#FF453A] font-semibold" : ""
+                          }`}
+                        >
+                          {isExpired
+                            ? "Expired"
+                            : `Valid until ${new Date(c.expiresAt).toLocaleDateString()}`}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => !isClaimed && !isExpired && !isUsed && handleClaim(c.id)}
+                    disabled={isExpired || isClaimed || isUsed}
+                    className={`whitespace-nowrap px-5 py-2 rounded-full text-[13px] font-semibold active:scale-95 transition-transform ${
+                      isClaimed || isUsed || isExpired
+                        ? "bg-[#E8E8ED] dark:bg-[#2C2C2E] text-[#8E8E93] cursor-not-allowed"
+                        : "ds-apple-btn-primary"
+                    }`}
+                  >
+                    {isUsed ? "Used" : isClaimed ? "Claimed" : isExpired ? "Expired" : "Claim"}
+                  </button>
                 </div>
+              </div>
+            );
+          })}
+
+          {filteredCoupons.length === 0 && (
+            <div className="ds-apple-surface rounded-[24px] py-16 text-center">
+              <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D]">
+                No coupons in this category right now.
+              </p>
             </div>
-        )})}
-        {filteredCoupons.length === 0 && (
-            <div className="py-20 text-center">
-                <p className="text-zinc-500">No active coupons available at the moment.</p>
-            </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 export default Coupon;
+

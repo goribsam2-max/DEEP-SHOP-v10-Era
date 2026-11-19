@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn, validateInput } from '@/lib/utils';
 import { auth, db } from '@/firebase';
 import { signOut, deleteUser, updateProfile } from 'firebase/auth';
@@ -9,12 +11,15 @@ import Icon from '../Icon';
 import { useTheme } from '@/components/ThemeContext';
 import { canAccessSellerDashboard } from '@/lib/admin';
 import { syncCurrentUserToSavedAccounts } from '@/lib/savedAccounts';
+import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from '@/lib/shoppingRoute';
+import { triggerHaptic } from '@/lib/haptics';
 
 export function AccountSettings() {
   const navigate = useNavigate();
   const notify = useNotify();
   const confirm = useConfirm();
   const { isDark, toggleTheme } = useTheme();
+  const shouldReduceMotion = useReducedMotion();
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -298,130 +303,183 @@ export function AccountSettings() {
   };
 
 	return (
-		<div className="min-h-screen bg-[#F0F2F5] dark:bg-zinc-950 font-sans pb-10 text-zinc-900 dark:text-zinc-100 relative">
-      {/* Edit Name Modal */}
-      {showEditName && (
-        <div className="fixed inset-0 ds-liquid-backdrop z-[100] flex items-center justify-center p-5" onClick={() => setShowEditName(false)}>
-          <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 relative text-left">
-            <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Edit username</h3>
-            <p className="ds-liquid-popup-desc text-[15px] mt-1.5 mb-4">Choose how your display name appears across DEEP SHOP.</p>
-            <input 
-              autoFocus
-              type="text"
-              className="ds-liquid-input w-full rounded-2xl px-4 py-3.5 text-[15.5px] font-medium focus:ring-2 focus:ring-[#0074f8]/50 outline-none transition-all placeholder:text-zinc-400"
-              value={editNameValue}
-              placeholder="Enter new username"
-              onChange={e => setEditNameValue(e.target.value)}
-            />
-            <div className="mt-6 flex flex-col gap-3">
-              <button 
-                type="button"
-                onClick={handleUpdateName}
-                disabled={!editNameValue.trim() || editNameValue.trim() === name}
-                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
+		<div className="ds-apple-shop-canvas min-h-screen pb-16 relative">
+      {/* Portaled Modals with .ds-apple-portal */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showEditName && (
+            <div className="ds-apple-portal fixed inset-0 z-[100] flex items-center justify-center p-5" onClick={() => setShowEditName(false)}>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="ds-apple-backdrop fixed inset-0"
+              />
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+                transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                onClick={(e) => e.stopPropagation()}
+                className="ds-apple-modal relative z-10 w-full max-w-[368px] rounded-[26px] px-6 pt-7 pb-6 text-left"
               >
-                Save changes
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowEditName(false)}
-                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
-              >
-                Cancel
-              </button>
+                <h3 className="text-[19px] font-semibold leading-[1.28] tracking-[-0.02em]">Edit Display Name</h3>
+                <p className="ds-apple-muted text-[14.5px] mt-1.5 mb-4">Choose how your display name appears across DEEP SHOP.</p>
+                <input 
+                  autoFocus
+                  type="text"
+                  className="ds-apple-input w-full rounded-2xl px-4 py-3.5 text-[15px] font-medium outline-none"
+                  value={editNameValue}
+                  placeholder="Enter new name"
+                  onChange={e => setEditNameValue(e.target.value)}
+                />
+                <div className="mt-6 flex flex-col gap-2.5">
+                  <button 
+                    type="button"
+                    onClick={() => { triggerHaptic(); handleUpdateName(); }}
+                    disabled={!editNameValue.trim() || editNameValue.trim() === name}
+                    className="ds-apple-btn-primary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(); setShowEditName(false); }}
+                    className="ds-apple-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold active:scale-[0.98] transition-transform cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
             </div>
-          </div>
-        </div>
+          )}
+
+          {showAddContact && (
+            <div className="ds-apple-portal fixed inset-0 z-[100] flex items-center justify-center p-5" onClick={() => setShowAddContact(false)}>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="ds-apple-backdrop fixed inset-0"
+              />
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+                transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                onClick={(e) => e.stopPropagation()}
+                className="ds-apple-modal relative z-10 w-full max-w-[368px] rounded-[26px] px-6 pt-7 pb-6 text-left"
+              >
+                <h3 className="text-[19px] font-semibold leading-[1.28] tracking-[-0.02em]">Add {contactTypeToAdd === 'email' ? 'Email Address' : 'Phone Number'}</h3>
+                <p className="ds-apple-muted text-[14.5px] mt-1.5 mb-4">Link your {contactTypeToAdd === 'email' ? 'email' : 'phone'} to keep your account up to date.</p>
+                <input 
+                  autoFocus
+                  type={contactTypeToAdd === 'email' ? "email" : "tel"}
+                  className="ds-apple-input w-full rounded-2xl px-4 py-3.5 text-[15px] font-medium outline-none tabular-nums"
+                  value={contactInputValue}
+                  placeholder={contactTypeToAdd === 'email' ? "Enter your email" : "+8801..."}
+                  onChange={e => setContactInputValue(e.target.value)}
+                />
+                <div className="mt-6 flex flex-col gap-2.5">
+                  <button 
+                    type="button"
+                    onClick={() => { triggerHaptic(); handleUpdateContact(); }}
+                    disabled={!contactInputValue.trim()}
+                    className="ds-apple-btn-primary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
+                  >
+                    Save {contactTypeToAdd === 'email' ? 'Email' : 'Phone'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(); setShowAddContact(false); }}
+                    className="ds-apple-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold active:scale-[0.98] transition-transform cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {showPauseModal && (
+            <div className="ds-apple-portal fixed inset-0 z-[100] flex items-center justify-center p-5" onClick={() => setShowPauseModal(false)}>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="ds-apple-backdrop fixed inset-0"
+              />
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+                transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
+                onClick={(e) => e.stopPropagation()}
+                className="ds-apple-modal relative z-10 w-full max-w-[390px] rounded-[26px] px-6 pt-7 pb-6 text-left"
+              >
+                <h3 className="text-[19px] font-semibold leading-[1.28] tracking-[-0.02em]">অর্ডার গ্রহণ বন্ধ রাখুন (Pause Orders)</h3>
+                <p className="ds-apple-muted text-[14px] mt-2 mb-4 leading-[1.44]">
+                  এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে &quot;Buy Now&quot; ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।
+                </p>
+                
+                <label className="text-xs font-semibold ds-apple-muted block mb-1.5">
+                  অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
+                </label>
+                <textarea
+                  rows={3}
+                  autoFocus
+                  className="ds-apple-input w-full rounded-2xl p-3.5 font-medium outline-none resize-none text-sm"
+                  value={tempPauseReason}
+                  placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
+                  onChange={(e) => setTempPauseReason(e.target.value)}
+                />
+
+                <div className="mt-6 flex flex-col gap-2.5">
+                  <button 
+                    type="button"
+                    onClick={() => { triggerHaptic("warning"); handleSavePauseReason(); }}
+                    disabled={!tempPauseReason.trim()}
+                    className="ds-apple-btn-primary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
+                  >
+                    বন্ধ রাখুন (Pause)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(); setShowPauseModal(false); }}
+                    className="ds-apple-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold active:scale-[0.98] transition-transform cursor-pointer"
+                  >
+                    বাতিল (Cancel)
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
 
-      {showAddContact && (
-        <div className="fixed inset-0 ds-liquid-backdrop z-[100] flex items-center justify-center p-5" onClick={() => setShowAddContact(false)}>
-          <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} className="ds-liquid-glass-popup w-full max-w-[356px] px-6 pt-7 pb-6 relative text-left">
-            <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">Add {contactTypeToAdd === 'email' ? 'email address' : 'phone number'}</h3>
-            <p className="ds-liquid-popup-desc text-[15px] mt-1.5 mb-4">Link your {contactTypeToAdd === 'email' ? 'email' : 'phone'} to keep your account up to date.</p>
-            <input 
-              autoFocus
-              type={contactTypeToAdd === 'email' ? "email" : "tel"}
-              className="ds-liquid-input w-full rounded-2xl px-4 py-3.5 text-[15.5px] font-medium focus:ring-2 focus:ring-[#0074f8]/50 outline-none transition-all placeholder:text-zinc-400"
-              value={contactInputValue}
-              placeholder={contactTypeToAdd === 'email' ? "Enter your email" : "+8801..."}
-              onChange={e => setContactInputValue(e.target.value)}
-            />
-            <div className="mt-6 flex flex-col gap-3">
-              <button 
-                type="button"
-                onClick={handleUpdateContact}
-                disabled={!contactInputValue.trim()}
-                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
-              >
-                Save {contactTypeToAdd === 'email' ? 'email' : 'phone'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddContact(false)}
-                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Pause Orders Modal */}
-      {showPauseModal && (
-        <div className="fixed inset-0 ds-liquid-backdrop z-[100] flex items-center justify-center p-5" onClick={() => setShowPauseModal(false)}>
-          <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} className="ds-liquid-glass-popup w-full max-w-[390px] px-6 pt-7 pb-6 relative text-left">
-            <h3 className="ds-liquid-popup-title text-[20px] font-bold leading-[1.28] tracking-[-0.02em]">অর্ডার গ্রহণ বন্ধ রাখুন (Pause Orders)</h3>
-            <p className="ds-liquid-popup-desc text-[14.5px] mt-2 mb-4 leading-[1.44]">
-              এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে &quot;Buy Now&quot; ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।
-            </p>
-            
-            <label className="ds-liquid-popup-title text-xs font-bold uppercase tracking-wider block mb-1.5">
-              অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
-            </label>
-            <textarea
-              rows={3}
-              autoFocus
-              className="ds-liquid-input w-full rounded-2xl p-3.5 font-medium focus:ring-2 focus:ring-[#0074f8]/50 outline-none transition-all placeholder:text-zinc-400 resize-none text-sm"
-              value={tempPauseReason}
-              placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
-              onChange={(e) => setTempPauseReason(e.target.value)}
-            />
-
-            <div className="mt-6 flex flex-col gap-3">
-              <button 
-                type="button"
-                onClick={handleSavePauseReason}
-                disabled={!tempPauseReason.trim()}
-                className="ds-liquid-btn-primary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold disabled:opacity-50 active:scale-[0.985] transition-transform cursor-pointer"
-              >
-                বন্ধ রাখুন (Pause)
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPauseModal(false)}
-                className="ds-liquid-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[16px] font-semibold active:scale-[0.985] transition-transform cursor-pointer"
-              >
-                বাতিল (Cancel)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Page Title */}
-      <div className="max-w-md md:max-w-4xl lg:max-w-5xl mx-auto px-5 pt-6">
-        <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white">Settings</h1>
+      <div className="max-w-md md:max-w-4xl lg:max-w-5xl mx-auto px-4 sm:px-5 pt-6">
+        <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          Settings
+        </h1>
       </div>
 
-      <div className="px-5 mt-6 space-y-5 max-w-md md:max-w-4xl lg:max-w-5xl mx-auto md:grid md:grid-cols-2 md:gap-6 md:space-y-0 md:items-start">
+      <div className="px-4 sm:px-5 mt-5 space-y-5 max-w-md md:max-w-4xl lg:max-w-5xl mx-auto md:grid md:grid-cols-2 md:gap-6 md:space-y-0 md:items-start">
         
         {/* Main Settings Card */}
         {(() => {
            const isPhoneAccount = email.endsWith('@phone.deepshop.top') || email.endsWith('@phone.vibegadget.com');
            return (
-        <div className="bg-white dark:bg-zinc-900 rounded-[28px] overflow-hidden shadow-sm p-2">
+        <div className="ds-apple-surface rounded-[22px] overflow-hidden p-1.5">
             {isPhoneAccount ? (
                <>
                  <SettingItem icon="phone" label="Phone Number" subLabel={"+" + email.split("@")[0]} onClick={() => {}} />
@@ -429,7 +487,7 @@ export function AccountSettings() {
                     icon="mail" 
                     label="Email" 
                     subLabel={secondaryEmail || "Not set. Add an email to login."} 
-                    onClick={() => { if (!secondaryEmail) { setContactTypeToAdd('email'); setContactInputValue(''); setShowAddContact(true); } }} 
+                    onClick={() => { if (!secondaryEmail) { triggerHaptic(); setContactTypeToAdd('email'); setContactInputValue(''); setShowAddContact(true); } }} 
                  />
                </>
             ) : (
@@ -439,38 +497,40 @@ export function AccountSettings() {
                     icon="phone" 
                     label="Phone Number" 
                     subLabel={phoneNumber || "Not set. Add a phone number."} 
-                    onClick={() => { if (!phoneNumber) { setContactTypeToAdd('phone'); setContactInputValue(''); setShowAddContact(true); } }} 
+                    onClick={() => { if (!phoneNumber) { triggerHaptic(); setContactTypeToAdd('phone'); setContactInputValue(''); setShowAddContact(true); } }} 
                  />
                </>
             )}
-            <SettingItem icon="user" label="Name" subLabel={name} onClick={() => { setEditNameValue(name); setShowEditName(true); }} />
-            <SettingItem icon="user" label="Username" subLabel={username ? `@${username}` : "Not set"} onClick={() => navigate('/profile/edit')} />
-            <SettingItem icon="lock" label="Password" onClick={() => navigate('/settings/password')} />
-            <SettingItem icon="bell" label="Notifications" onClick={togglePush} rightElement={<Switch isChecked={pushEnabled} />} />
-            <SettingItem icon="shield" label="Privacy Policy" onClick={() => navigate('/privacy')} isLast />
+            <SettingItem icon="user" label="Name" subLabel={name} onClick={() => { triggerHaptic(); setEditNameValue(name); setShowEditName(true); }} />
+            <SettingItem icon="user" label="Username" subLabel={username ? `@${username}` : "Not set"} onClick={() => { triggerHaptic(); navigate('/profile/edit'); }} />
+            <SettingItem icon="lock" label="Password" onClick={() => { triggerHaptic(); navigate('/settings/password'); }} />
+            <SettingItem icon="bell" label="Notifications" onClick={() => { triggerHaptic(); togglePush(); }} rightElement={<Switch isChecked={pushEnabled} />} />
+            <SettingItem icon="shield" label="Privacy Policy" onClick={() => { triggerHaptic(); navigate('/privacy'); }} isLast />
         </div>
            );
         })()}
 
         {/* Seller / Store Settings (for verified sellers/admins) */}
         {canManageStore && (
-          <div className="bg-white dark:bg-zinc-900 rounded-[28px] overflow-hidden shadow-sm p-2 border border-amber-500/20">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 px-4 py-2 mt-2 mb-1 flex items-center gap-1.5">
-              <span>🏪 Seller Store Management</span>
+          <div className="ds-apple-surface rounded-[22px] overflow-hidden p-1.5 border border-[#FF9500]/25">
+            <h3 className="ds-apple-eyebrow text-[#C93400] dark:text-[#FF9F0A] px-4 py-2 mt-1 mb-0.5 flex items-center gap-1.5">
+              <span>Seller Store Management</span>
             </h3>
             <SettingItem 
               icon="store" 
               label="Pause All Orders" 
               subLabel={ordersPaused ? `অর্ডার বন্ধ: "${pauseReason || 'কারণ দেওয়া হয়নি'}"` : "Active — accepting orders normally"} 
-              onClick={handleToggleOrdersPaused} 
+              onClick={() => { triggerHaptic(); handleToggleOrdersPaused(); }} 
               rightElement={<Switch isChecked={ordersPaused} />} 
+              isLast={!ordersPaused}
             />
             {ordersPaused && (
-              <div className="px-4 py-2.5 bg-amber-500/10 rounded-2xl mx-2 mb-2 flex items-center justify-between">
-                <span className="text-xs text-amber-800 dark:text-amber-300 font-medium">Edit Reason: {pauseReason}</span>
+              <div className="px-4 py-2.5 bg-[#FF9500]/10 rounded-2xl mx-2 mb-2 flex items-center justify-between">
+                <span className="text-xs text-[#C93400] dark:text-[#FF9F0A] font-medium">Edit Reason: {pauseReason}</span>
                 <button 
-                  onClick={() => { setTempPauseReason(pauseReason); setShowPauseModal(true); }}
-                  className="text-xs font-bold text-amber-600 hover:underline"
+                  type="button"
+                  onClick={() => { triggerHaptic(); setTempPauseReason(pauseReason); setShowPauseModal(true); }}
+                  className="text-xs font-semibold ds-apple-accent-text hover:underline cursor-pointer"
                 >
                   Edit
                 </button>
@@ -480,37 +540,37 @@ export function AccountSettings() {
         )}
 
         {/* Privacy & Safety */}
-        <div className="bg-white dark:bg-zinc-900 rounded-[28px] overflow-hidden shadow-sm p-2">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 px-4 py-2 mt-2 mb-1">Privacy & Safety</h3>
+        <div className="ds-apple-surface rounded-[22px] overflow-hidden p-1.5">
+            <h3 className="ds-apple-eyebrow ds-apple-muted px-4 py-2 mt-1 mb-0.5">Privacy &amp; Safety</h3>
             <SettingItem 
                icon="shield" 
                label="Hide Email" 
                subLabel="Hide email address from other users" 
-               onClick={handleToggleHideEmail} 
+               onClick={() => { triggerHaptic(); handleToggleHideEmail(); }} 
                rightElement={<Switch isChecked={hideEmail} />} 
             />
             <SettingItem 
                icon="phone" 
                label="Hide Phone Number" 
                subLabel="Hide phone number from other users" 
-               onClick={handleToggleHidePhone} 
+               onClick={() => { triggerHaptic(); handleToggleHidePhone(); }} 
                rightElement={<Switch isChecked={hidePhone} />} 
             />
             <SettingItem 
                icon="lock" 
                label="Disable Calls" 
                subLabel="Block incoming voice & video calls" 
-               onClick={handleToggleDisableCalls} 
+               onClick={() => { triggerHaptic(); handleToggleDisableCalls(); }} 
                rightElement={<Switch isChecked={disableCalls} />} 
                isLast
             />
         </div>
 
         {/* Preferences */}
-        <div className="bg-white dark:bg-zinc-900 rounded-[28px] overflow-hidden shadow-sm p-2">
-            <SettingItem icon="moon" label="Dark Mode" onClick={toggleTheme} rightElement={<Switch isChecked={isDark} />} />
-            <SettingItem icon="logout" label="Log Out" onClick={handleLogout} />
-            <SettingItem icon="trash" label="Delete Account" onClick={handleDeleteAccount} isLast textColor="text-red-500" />
+        <div className="ds-apple-surface rounded-[22px] overflow-hidden p-1.5">
+            <SettingItem icon="moon" label="Dark Mode" onClick={() => { triggerHaptic(); toggleTheme(); }} rightElement={<Switch isChecked={isDark} />} />
+            <SettingItem icon="logout" label="Log Out" onClick={() => { triggerHaptic(); handleLogout(); }} />
+            <SettingItem icon="trash" label={isDeleting ? "Deleting..." : "Delete Account"} onClick={() => { triggerHaptic("warning"); handleDeleteAccount(); }} isLast textColor="text-[#FF3B30] dark:text-[#FF453A]" />
         </div>
 
       </div>
@@ -523,22 +583,22 @@ function SettingItem({ icon, label, subLabel, onClick, isLast = false, rightElem
         <div 
             onClick={onClick}
             className={cn(
-                "flex items-center justify-between p-4 cursor-pointer",
-                !isLast && "border-b border-zinc-100 dark:border-zinc-800/50"
+                "flex items-center justify-between px-4 py-3.5 cursor-pointer rounded-2xl hover:bg-black/[0.025] dark:hover:bg-white/[0.04] active:bg-black/[0.045] transition-colors",
+                !isLast && "border-b border-black/[0.06] dark:border-white/[0.08]"
             )}
         >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3.5 min-w-0">
                 {typeof icon === 'string' ? (
-                  <Icon name={icon} className="w-5 h-5 text-zinc-500" />
+                  <Icon name={icon} className="w-5 h-5 ds-apple-muted shrink-0" />
                 ) : (
                   icon
                 )}
-                <div className="flex flex-col">
-                  <span className={cn("font-medium text-[15px]", textColor || "text-zinc-800 dark:text-zinc-200")}>{label}</span>
-                  {subLabel && <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">{subLabel}</span>}
+                <div className="flex flex-col min-w-0">
+                  <span className={cn("font-medium text-[15px] tracking-[-0.01em]", textColor)}>{label}</span>
+                  {subLabel && <span className="text-xs ds-apple-muted font-medium truncate">{subLabel}</span>}
                 </div>
             </div>
-            {rightElement || <Icon name="chevron-right" className="w-5 h-5 text-zinc-400" />}
+            {rightElement || <Icon name="chevron-right" className="w-5 h-5 ds-apple-muted shrink-0" />}
         </div>
     )
 }
@@ -546,13 +606,17 @@ function SettingItem({ icon, label, subLabel, onClick, isLast = false, rightElem
 function Switch({ isChecked }: { isChecked: boolean }) {
     return (
         <div className={cn(
-            "w-10 h-6 flex items-center rounded-full p-1 transition-colors duration-300",
-            isChecked ? "bg-[#109E92]" : "bg-zinc-300 dark:bg-zinc-700"
+            "w-12 h-7 flex items-center rounded-full p-0.5 transition-colors duration-200 shrink-0",
+            isChecked ? "bg-[#34C759] dark:bg-[#30D158]" : "bg-[#E5E5EA] dark:bg-[#3A3A3C]"
         )}>
-            <div className={cn(
-                "w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300",
-                isChecked ? "translate-x-4" : "translate-x-0"
-            )} />
+            <motion.div
+              layout
+              transition={APPLE_SPRING_SNAPPY}
+              className={cn(
+                "w-6 h-6 rounded-full bg-white shadow-sm",
+                isChecked ? "ml-auto" : "mr-auto"
+              )}
+            />
         </div>
     )
 }

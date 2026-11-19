@@ -19,7 +19,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "ds-apple-input flex h-11 w-full items-center justify-between rounded-2xl border border-black/[0.08] dark:border-white/[0.12] bg-[#F2F2F7] dark:bg-[#2C2C2E] px-4 py-2 text-[15px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] focus:outline-none focus:border-[#0071E3] dark:focus:border-[#0A84FF] focus:ring-3 focus:ring-[#0071E3]/16 dark:focus:ring-[#0A84FF]/24 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 transition-all cursor-pointer",
       className,
     )}
     {...props}
@@ -75,9 +75,9 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-[300] max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 shadow-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100",
+        "ds-apple-portal ds-apple-popover relative z-[300] max-h-96 min-w-[8rem] overflow-hidden rounded-2xl",
         position === "popper" &&
-          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          "data-[side=bottom]:translate-y-1.5 data-[side=left]:-translate-x-1.5 data-[side=right]:translate-x-1.5 data-[side=top]:-translate-y-1.5",
         className,
       )}
       position={position}
@@ -118,14 +118,14 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-zinc-100 focus:text-zinc-900 dark:focus:bg-zinc-800 dark:focus:text-zinc-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex w-full cursor-pointer select-none items-center rounded-xl py-2 pl-8 pr-3 text-[14px] font-medium outline-none focus:bg-black/[0.06] dark:focus:bg-white/[0.1] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors",
       className,
     )}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute left-2.5 flex h-3.5 w-3.5 items-center justify-center text-[#0071E3] dark:text-[#0A84FF]">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <Check className="h-4 w-4 stroke-[2.5]" />
       </SelectPrimitive.ItemIndicator>
     </span>
 

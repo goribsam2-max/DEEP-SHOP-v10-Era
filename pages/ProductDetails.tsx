@@ -20,11 +20,15 @@ import { useNotify, useConfirm } from "../components/Notifications";
 import {
   motion,
   AnimatePresence,
-  useScroll,
-  useMotionValueEvent,
+  useReducedMotion,
 } from "framer-motion";
 import Icon from "../components/Icon";
 import { triggerHaptic } from "../lib/haptics";
+import {
+  APPLE_SPRING_DEFAULT,
+  APPLE_SPRING_SNAPPY,
+  projectMomentum,
+} from "../lib/shoppingRoute";
 import { getSafeDisplayName, getPublicShareOrigin } from "../lib/utils";
 import SEO from "../components/SEO";
 import { PixelImage } from "../components/ui/PixelImage";
@@ -73,6 +77,7 @@ const ProductDetails: React.FC = () => {
   const { formatPrice } = useRegion();
   const { id, slug } = useParams();
   const { isDark, toggleTheme } = useTheme();
+  const shouldReduceMotion = useReducedMotion();
   const initialCachedProduct = React.useMemo<Product | null>(() => {
     try {
       const cached: Product[] = JSON.parse(
@@ -657,6 +662,7 @@ const ProductDetails: React.FC = () => {
   };
 
   const changeImage = (index: number) => {
+    triggerHaptic("selection");
     setDirection(index > activeImg ? 1 : -1);
     setActiveImg(index);
   };
@@ -1062,6 +1068,7 @@ const ProductDetails: React.FC = () => {
   );
 
   const handleShareProduct = () => {
+    triggerHaptic("light");
     const shareUrl = `${getPublicShareOrigin()}${window.location.pathname}${window.location.search}`;
     if (navigator.share) {
       navigator
@@ -1457,10 +1464,10 @@ const ProductDetails: React.FC = () => {
               <AnimatePresence mode="popLayout" custom={direction}>
                 <motion.div
                   key={activeImg}
-                  initial={{ opacity: 0, x: direction > 0 ? 40 : -40 }}
+                  initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction > 0 ? 40 : -40 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: direction < 0 ? 40 : -40 }}
-                  transition={{ duration: 0.2 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction < 0 ? 40 : -40 }}
+                  transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
                   drag="x"
                   dragConstraints={{ left: 0, right: 0 }}
                   dragElastic={0.9}
@@ -1656,10 +1663,13 @@ const ProductDetails: React.FC = () => {
                 <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setQuantity((q) => Math.max(1, q - 1));
+                    }}
                     disabled={quantity <= 1}
                     aria-label="Decrease quantity"
-                    className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer"
+                    className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer active:scale-95 transition-transform"
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
@@ -1668,12 +1678,13 @@ const ProductDetails: React.FC = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() =>
-                      setQuantity((q) => Math.min(maxStockQty, q + 1))
-                    }
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setQuantity((q) => Math.min(maxStockQty, q + 1));
+                    }}
                     disabled={quantity >= maxStockQty}
                     aria-label="Increase quantity"
-                    className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer"
+                    className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer active:scale-95 transition-transform"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -1695,8 +1706,11 @@ const ProductDetails: React.FC = () => {
                   <button
                     key={tab.key}
                     type="button"
-                    onClick={() => setActiveInfoTab(tab.key)}
-                    className={`py-2 px-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setActiveInfoTab(tab.key);
+                    }}
+                    className={`py-2 px-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer active:scale-[0.97] ${
                       isActive
                         ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
                         : "text-zinc-500 dark:text-zinc-400"
@@ -1755,10 +1769,10 @@ const ProductDetails: React.FC = () => {
                 <AnimatePresence mode="popLayout" custom={direction}>
                   <motion.div
                     key={activeImg}
-                    initial={{ opacity: 0, x: direction > 0 ? 40 : -40 }}
+                    initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction > 0 ? 40 : -40 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: direction < 0 ? 40 : -40 }}
-                    transition={{ duration: 0.2 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction < 0 ? 40 : -40 }}
+                    transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
                     onClick={() => setIsLightboxOpen(true)}
                     className="absolute inset-0 w-full h-full p-8 flex items-center justify-center cursor-zoom-in group"
                   >
@@ -1839,8 +1853,11 @@ const ProductDetails: React.FC = () => {
                     <button
                       key={tab.key}
                       type="button"
-                      onClick={() => setActiveInfoTab(tab.key)}
-                      className={`px-5 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      onClick={() => {
+                        triggerHaptic("selection");
+                        setActiveInfoTab(tab.key);
+                      }}
+                      className={`px-5 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer active:scale-[0.97] ${
                         isActive
                           ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
                           : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -2006,10 +2023,13 @@ const ProductDetails: React.FC = () => {
                     <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        onClick={() => {
+                          triggerHaptic("selection");
+                          setQuantity((q) => Math.max(1, q - 1));
+                        }}
                         disabled={quantity <= 1}
                         aria-label="Decrease quantity"
-                        className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer"
+                        className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer active:scale-95 transition-transform"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
@@ -2018,12 +2038,13 @@ const ProductDetails: React.FC = () => {
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setQuantity((q) => Math.min(maxStockQty, q + 1))
-                        }
+                        onClick={() => {
+                          triggerHaptic("selection");
+                          setQuantity((q) => Math.min(maxStockQty, q + 1));
+                        }}
                         disabled={quantity >= maxStockQty}
                         aria-label="Increase quantity"
-                        className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer"
+                        className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-zinc-800 dark:text-white disabled:opacity-40 cursor-pointer active:scale-95 transition-transform"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
@@ -2523,89 +2544,120 @@ const ProductDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Seller Orders Paused Liquid Glass Sheet / Modal */}
-      <AnimatePresence>
-        {showOrdersPausedModal && (
-          <div
-            className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center ds-liquid-backdrop p-0 sm:p-4"
-            onClick={() => setShowOrdersPausedModal(false)}
-          >
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 40, opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg ds-liquid-panel rounded-t-3xl sm:rounded-3xl p-6 pb-8 space-y-4 max-h-[85vh] overflow-y-auto"
-            >
-              <div className="flex items-start gap-3.5">
-                <div className="w-11 h-11 rounded-2xl ds-liquid-callout-amber flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                  <AlertCircle className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white leading-snug">
-                      অর্ডার নেওয়া সাময়িকভাবে বন্ধ আছে
-                    </h3>
+      {/* Seller Orders Paused Apple Sheet / Modal */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {showOrdersPausedModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4"
+                onClick={() => {
+                  triggerHaptic("light");
+                  setShowOrdersPausedModal(false);
+                }}
+              >
+                <motion.div
+                  initial={shouldReduceMotion ? { opacity: 0 } : { y: 40, opacity: 0, scale: 0.98 }}
+                  animate={shouldReduceMotion ? { opacity: 1 } : { y: 0, opacity: 1, scale: 1 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { y: 40, opacity: 0, scale: 0.98 }}
+                  transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
+                  drag={shouldReduceMotion ? false : "y"}
+                  dragConstraints={{ top: 0 }}
+                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  onDragEnd={(_, info) => {
+                    const projected = info.offset.y + projectMomentum(info.velocity.y, 0.99);
+                    if (projected > 110) {
+                      triggerHaptic("light");
+                      setShowOrdersPausedModal(false);
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="ds-apple-modal w-full max-w-lg rounded-t-[26px] sm:rounded-[26px] p-6 pb-[calc(24px+env(safe-area-inset-bottom))] sm:pb-6 space-y-4 max-h-[85vh] overflow-y-auto"
+                >
+                  <div className="flex justify-center sm:hidden -mt-2 pb-1" aria-hidden="true">
+                    <div className="w-9 h-1 rounded-full bg-black/[0.16] dark:bg-white/[0.22]" />
+                  </div>
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-[#FF9500]/12 border border-[#FF9500]/25 flex items-center justify-center text-[#FF9500] dark:text-[#FF9F0A] shrink-0">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-base sm:text-lg font-extrabold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug tracking-tight">
+                          অর্ডার নেওয়া সাময়িকভাবে বন্ধ আছে
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic("light");
+                            setShowOrdersPausedModal(false);
+                          }}
+                          className="ds-apple-icon-btn w-8 h-8 rounded-full flex items-center justify-center cursor-pointer shrink-0 active:scale-95"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5 font-medium">
+                        বিক্রেতা:{" "}
+                        {sellerInfo?.shopName ||
+                          sellerInfo?.displayName ||
+                          "Official Seller"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-[#FF9500]/[0.08] border border-[#FF9500]/25 p-4 space-y-1.5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#B25000] dark:text-[#FF9F0A]">
+                      সেলারের দেওয়া কারণ
+                    </p>
+                    <p className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] leading-relaxed">
+                      "
+                      {sellerInfo?.pauseReason ||
+                        "বিক্রেতা সাময়িক বিরতিতে বা স্টক আপডেটে থাকায় বর্তমানে কোনো নতুন অর্ডার গ্রহণ করা হচ্ছে না।"}
+                      "
+                    </p>
+                  </div>
+
+                  <p className="text-xs text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
+                    এই সেলার আবার অর্ডার গ্রহণ চালু না করা পর্যন্ত নতুন অর্ডার প্লেস করা যাবে না। প্রয়োজনে সরাসরি সেলারকে মেসেজ পাঠাতে পারেন।
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                     <button
                       type="button"
-                      onClick={() => setShowOrdersPausedModal(false)}
-                      className="w-8 h-8 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center cursor-pointer shrink-0"
+                      onClick={() => {
+                        triggerHaptic("light");
+                        setShowOrdersPausedModal(false);
+                        navigate(
+                          `/messages?chatId=${sellerInfo?.id || product.sellerId}`
+                        );
+                      }}
+                      className="py-3 px-4 ds-apple-btn-secondary rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                     >
-                      <X className="w-4 h-4" />
+                      <MessageCircle className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF]" />
+                      <span>সেলারকে মেসেজ দিন</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("light");
+                        setShowOrdersPausedModal(false);
+                      }}
+                      className="py-3 px-4 ds-apple-btn-primary rounded-full text-xs sm:text-sm font-semibold cursor-pointer whitespace-nowrap"
+                    >
+                      বুঝেছি
                     </button>
                   </div>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium">
-                    বিক্রেতা:{" "}
-                    {sellerInfo?.shopName ||
-                      sellerInfo?.displayName ||
-                      "Official Seller"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="ds-liquid-callout-amber p-4 space-y-1.5">
-                <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                  সেলারের দেওয়া কারণ
-                </p>
-                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100 leading-relaxed">
-                  "
-                  {sellerInfo?.pauseReason ||
-                    "বিক্রেতা সাময়িক বিরতিতে বা স্টক আপডেটে থাকায় বর্তমানে কোনো নতুন অর্ডার গ্রহণ করা হচ্ছে না।"}
-                  "
-                </p>
-              </div>
-
-              <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                এই সেলার আবার অর্ডার গ্রহণ চালু না করা পর্যন্ত নতুন অর্ডার প্লেস করা যাবে না। প্রয়োজনে সরাসরি সেলারকে মেসেজ পাঠাতে পারেন।
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowOrdersPausedModal(false);
-                    navigate(
-                      `/messages?chatId=${sellerInfo?.id || product.sellerId}`
-                    );
-                  }}
-                  className="py-3 px-4 ds-liquid-btn-secondary text-xs sm:text-sm font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
-                >
-                  <MessageCircle className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                  <span>সেলারকে মেসেজ দিন</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowOrdersPausedModal(false)}
-                  className="py-3 px-4 ds-liquid-btn-primary text-xs sm:text-sm font-bold cursor-pointer whitespace-nowrap"
-                >
-                  বুঝেছি
-                </button>
-              </div>
-            </motion.div>
-          </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
+import { motion, useReducedMotion } from "framer-motion";
 import { db } from "../firebase";
 import {
   Home,
@@ -8,8 +9,6 @@ import {
   Plus,
   Compass,
   User,
-  ShoppingBag,
-  Sparkles
 } from "lucide-react";
 import { triggerHaptic } from "../lib/haptics";
 import { normalizeCustomSvg } from "../lib/svgNormalize";
@@ -17,6 +16,7 @@ import { normalizeCustomSvg } from "../lib/svgNormalize";
 const BottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const shouldReduceMotion = useReducedMotion();
   const [cartCount, setCartCount] = React.useState(0);
   const [customSvgs, setCustomSvgs] = React.useState<{
     home?: string;
@@ -110,7 +110,6 @@ const BottomNav: React.FC = () => {
     return () => window.removeEventListener("deepshop:bottom-nav-visibility", syncVisibility);
   }, []);
 
-  // Hide BottomNav on full-screen detail views or active full-screen Note overlays
   if (
     hideForModal ||
     location.pathname.startsWith("/product/") ||
@@ -131,10 +130,16 @@ const BottomNav: React.FC = () => {
     { to: "/profile", label: "Profile", icon: User, customSvg: customSvgs.profile },
   ];
 
+  const springTransition = shouldReduceMotion
+    ? { duration: 0.14, ease: "easeOut" as const }
+    : { type: "spring" as const, stiffness: 520, damping: 36, mass: 0.8 };
+
   return (
-    <div className="fixed bottom-3 left-3 right-3 z-[100] md:hidden max-w-md mx-auto pointer-events-none">
-      {/* FLOATING LIQUID GLASS PILL CONTAINER (Matching IMG_4760_f05ecd46.jpeg) */}
-      <nav className="ds-shop-bottom-dock pointer-events-auto backdrop-blur-xl rounded-full px-2.5 py-1.5 flex items-center justify-between transition-all">
+    <div className="fixed bottom-[max(14px,env(safe-area-inset-bottom))] inset-x-0 z-[100] md:hidden px-4 pointer-events-none flex justify-center">
+      <nav
+        aria-label="Shopping Navigation"
+        className="ds-shop-bottom-dock pointer-events-auto rounded-full p-1.5 flex items-center justify-between gap-1 w-full max-w-[380px]"
+      >
         {navItems.map((item) => {
           const isActive =
             location.pathname === item.to ||
@@ -142,18 +147,19 @@ const BottomNav: React.FC = () => {
 
           if (item.isCreate) {
             return (
-              <button
+              <motion.button
                 key={item.to}
                 type="button"
-                onClick={() => {
-                  triggerHaptic();
-                  navigate(item.to);
-                }}
-                className="w-10 h-10 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center shadow-lg active:scale-90 transition hover:opacity-90 cursor-pointer -mt-1 mx-1 shrink-0"
-                title="Create Scam Report or Post"
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 560, damping: 34 }}
+                onPointerDown={() => triggerHaptic("selection")}
+                onClick={() => navigate(item.to)}
+                className="w-11 h-11 rounded-full ds-apple-btn-primary flex items-center justify-center cursor-pointer mx-0.5 shrink-0"
+                title="Create Post"
+                aria-label="Create Post"
               >
-                <Plus className="w-5 h-5 stroke-[2.5]" />
-              </button>
+                <Plus className="w-5 h-5 stroke-[2.4]" />
+              </motion.button>
             );
           }
 
@@ -163,53 +169,66 @@ const BottomNav: React.FC = () => {
             <NavLink
               key={item.to}
               to={item.to}
-              onClick={() => triggerHaptic()}
-              className="flex-1 flex flex-col items-center justify-center py-0.5 relative group cursor-pointer"
+              onPointerDown={() => triggerHaptic("selection")}
+              className={`relative z-10 flex-1 h-[50px] min-h-[44px] rounded-full flex flex-col items-center justify-center gap-[3px] cursor-pointer transition-colors duration-150 ${
+                isActive ? "ds-shop-bottom-btn-active" : "ds-shop-bottom-btn"
+              }`}
             >
-              <div className="relative flex items-center justify-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
-                    isActive
-                      ? "ds-shop-bottom-btn-active"
-                      : "ds-shop-bottom-btn"
-                  }`}
-                >
-                  {(() => {
-                    if (item.customSvg && item.customSvg.trim()) {
-                      const cleanSvg = item.customSvg.trim();
-                      if (cleanSvg.startsWith("http://") || cleanSvg.startsWith("https://") || cleanSvg.startsWith("data:") || cleanSvg.startsWith("/")) {
-                        return (
-                          <img
-                            src={cleanSvg}
-                            alt={item.label}
-                            className={`w-4.5 h-4.5 object-contain transition-transform duration-200 ${
-                              isActive
-                                ? "scale-105 brightness-0 invert"
-                                : "brightness-0 dark:invert"
-                            }`}
-                          />
-                        );
-                      }
-                      const normalizedSvg = normalizeCustomSvg(cleanSvg);
+              {isActive && (
+                <motion.div
+                  layoutId="dsShopBottomNavActivePill"
+                  transition={springTransition}
+                  className="ds-shop-bottom-lens absolute inset-0 rounded-full -z-10"
+                />
+              )}
+
+              <div className="relative flex items-center justify-center w-5 h-5">
+                {(() => {
+                  if (item.customSvg && item.customSvg.trim()) {
+                    const cleanSvg = item.customSvg.trim();
+                    if (
+                      cleanSvg.startsWith("http://") ||
+                      cleanSvg.startsWith("https://") ||
+                      cleanSvg.startsWith("data:") ||
+                      cleanSvg.startsWith("/")
+                    ) {
                       return (
-                        <div
-                          className={`w-4.5 h-4.5 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-full [&>svg]:max-h-full transition-transform duration-200 ${
-                            isActive ? "scale-105" : ""
-                          }`}
-                          dangerouslySetInnerHTML={{ __html: normalizedSvg }}
+                        <img
+                          src={cleanSvg}
+                          alt=""
+                          aria-hidden="true"
+                          className="w-[19px] h-[19px] object-contain"
                         />
                       );
                     }
-                    return <IconComp className={`w-4.5 h-4.5 transition-transform duration-200 ${isActive ? "scale-105 stroke-[2.2]" : "stroke-[1.9]"}`} />;
-                  })()}
-                </div>
+                    const normalizedSvg = normalizeCustomSvg(cleanSvg);
+                    return (
+                      <div
+                        aria-hidden="true"
+                        className="w-[19px] h-[19px] flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-full [&>svg]:max-h-full"
+                        dangerouslySetInnerHTML={{ __html: normalizedSvg }}
+                      />
+                    );
+                  }
+                  return (
+                    <IconComp
+                      aria-hidden="true"
+                      fill={isActive ? "currentColor" : "none"}
+                      fillOpacity={isActive ? 0.18 : 0}
+                      className={`w-[19px] h-[19px] ${
+                        isActive ? "stroke-[2.25]" : "stroke-[1.75]"
+                      }`}
+                    />
+                  );
+                })()}
+                {item.to === "/orders" && cartCount > 0 && (
+                  <span className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-1 rounded-full bg-[#0071E3] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
               </div>
 
-              <span
-                className={`text-[10px] font-bold tracking-tight mt-0.5 transition-colors duration-200 ${
-                  isActive ? "text-[#1877F2]" : "text-zinc-900 dark:text-zinc-200"
-                }`}
-              >
+              <span className="text-[10.5px] leading-none font-semibold tracking-[-0.01em] whitespace-nowrap shrink-0">
                 {item.label}
               </span>
             </NavLink>

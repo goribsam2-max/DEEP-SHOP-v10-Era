@@ -20,15 +20,21 @@ const RadioGroup = React.forwardRef<
 })
 RadioGroup.displayName = RadioGroupPrimitive.Root.displayName
 
+import { triggerHaptic } from "../../lib/haptics"
+
 const RadioGroupItem = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
->(({ className, ...props }, ref) => {
+>(({ className, onPointerDown, ...props }, ref) => {
   return (
     <RadioGroupPrimitive.Item
       ref={ref}
+      onPointerDown={(e) => {
+        triggerHaptic("selection")
+        onPointerDown?.(e)
+      }}
       className={cn(
-        "aspect-square h-4 w-4 rounded-full border border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "aspect-square h-5 w-5 rounded-full border border-black/[0.24] dark:border-white/[0.26] text-[#0071E3] dark:text-[#0A84FF] data-[state=checked]:border-[#0071E3] dark:data-[state=checked]:border-[#0A84FF] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3] dark:focus-visible:ring-[#0A84FF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 active:scale-90 transition-all cursor-pointer",
         className,
       )}
       {...props}

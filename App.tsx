@@ -42,7 +42,8 @@ import { LumaSpin } from './components/ui/luma-spin';
 import { RoutePageSkeleton } from './components/PageSkeletons';
 import BanOverlay from './components/BanOverlay';
 import { AdPlacementSlot } from './components/AdPlacementSlot';
-import { initGlobalHaptics } from './lib/haptics';
+import { initGlobalHaptics, triggerHaptic } from './lib/haptics';
+import { isAppleShoppingRoute, isExcludedFromAppleShopping } from './lib/shoppingRoute';
 import { hasImmediateAdminOrStaffRole } from './lib/admin';
 import { ReelUploadProgressOverlay } from './components/ReelUploadProgressOverlay';
 import { MobileAppInstallExperience } from './components/MobileAppInstallExperience';
@@ -445,7 +446,7 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <ErrorBoundary>
-      <div className="w-full">
+      <div className={`w-full ${isAppleShoppingRoute(location.pathname) ? 'ds-apple-shop-canvas' : ''}`}>
         {children}
       </div>
     </ErrorBoundary>
@@ -996,7 +997,9 @@ const AppContent: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="fixed inset-0 z-[9999] ambient-dynamic-bg overflow-hidden pointer-events-none"
+            className={`fixed inset-0 z-[9999] overflow-hidden pointer-events-none ${
+              isAppleShoppingRoute(location.pathname) ? 'ds-apple-shop-canvas' : 'ambient-dynamic-bg'
+            }`}
           >
             <RoutePageSkeleton pathname={location.pathname} />
           </motion.div>
@@ -1217,7 +1220,7 @@ const AppContent: React.FC = () => {
         </ErrorBoundary>
       </main>
       {showNav && <BottomMenu />}
-      {!location.pathname.startsWith('/messages') && (
+      {isExcludedFromAppleShopping(location.pathname) && !location.pathname.startsWith('/messages') && (
         <>
           <div className="stwRainbow" />
           <div className="stwBlurRainbow" />
@@ -1225,84 +1228,84 @@ const AppContent: React.FC = () => {
       )}
       <AnimatePresence>
         {isAppLocked && (
-          <motion.div 
-            initial={{ opacity: 1 }}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999999] bg-[#0a2e15] dark:bg-zinc-950 flex flex-col items-center justify-center p-6 text-white"
+            transition={{ duration: 0.22 }}
+            className="ds-apple-portal fixed inset-0 z-[9999999] bg-black/92 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-[#F5F5F7]"
           >
             {isScanning ? (
               <div className="flex flex-col items-center justify-center space-y-6">
-                <div className="relative w-32 h-32 flex items-center justify-center">
-                  {/* Pulsing biometric ring */}
-                  <div className="absolute inset-0 rounded-full border-4 border-[#1cdb5e]/35 animate-pulse" />
-                  {/* Glowing fingerprint scan icon */}
-                  <div className="text-[#1cdb5e] animate-pulse">
-                    <FingerprintIcon className="w-16 h-16" />
+                <div className="relative w-28 h-28 flex items-center justify-center rounded-full bg-white/[0.06] border border-white/15">
+                  <div className="text-[#0A84FF]">
+                    <FingerprintIcon className="w-12 h-12" />
                   </div>
-                  {/* Moving scanning laser beam */}
-                  <div className="absolute left-4 right-4 h-1 bg-[#1cdb5e] opacity-90 blur-[2px] rounded-full animate-bounce top-1/3" />
                 </div>
                 <div className="text-center space-y-1">
-                  <h3 className="text-lg font-bold tracking-tight">Verifying Biometrics...</h3>
-                  <p className="text-zinc-400 text-xs font-semibold">Touch your sensor or align your face</p>
+                  <h3 className="ds-apple-display text-lg font-bold tracking-tight">Verifying Biometrics</h3>
+                  <p className="text-[#98989D] text-xs font-medium">Touch your sensor or align your face</p>
                 </div>
               </div>
             ) : (
-              <div className="max-w-md w-full flex flex-col items-center text-center space-y-8 animate-scale-up">
-                
-                {/* App logo or branding */}
-                <div className="space-y-2">
-                  <div className="w-20 h-20 bg-[#1cdb5e]/15 text-[#1cdb5e] rounded-[32px] flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10 animate-pulse">
-                    <FingerprintIcon className="w-10 h-10" />
+              <div className="max-w-sm w-full flex flex-col items-center text-center space-y-8">
+                <div className="space-y-2.5">
+                  <div className="w-16 h-16 bg-[#0A84FF]/15 text-[#0A84FF] border border-[#0A84FF]/25 rounded-[22px] flex items-center justify-center mx-auto">
+                    <FingerprintIcon className="w-8 h-8" />
                   </div>
-                  <h2 className="text-2xl font-black tracking-tight">DEEP SHOP</h2>
-                  <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Locked with local protection</p>
+                  <h2 className="ds-apple-display text-2xl font-bold tracking-tight">DEEP SHOP</h2>
+                  <p className="text-[#98989D] text-xs font-medium">Protected with device passcode</p>
                 </div>
 
-                {/* PIN code or biometric trigger */}
-                <div className="w-full max-w-xs space-y-6">
-                  <div className="space-y-2">
-                    <p className="text-sm text-zinc-300 font-bold">Enter 4-Digit Passcode PIN</p>
-                    
+                <div className="w-full max-w-[260px] space-y-6">
+                  <div className="space-y-3">
+                    <p className="text-sm text-[#F5F5F7]/85 font-medium">Enter 4-Digit Passcode</p>
+
                     <div className="flex justify-center gap-4">
                       {[0, 1, 2, 3].map((idx) => (
-                        <div 
-                          key={idx} 
-                          className={`w-4 h-4 rounded-full border-2 ${
-                            lockPinInput.length > idx 
-                              ? "bg-[#1cdb5e] border-[#1cdb5e]" 
-                              : "border-zinc-600 bg-transparent"
-                          } transition-colors`}
+                        <div
+                          key={idx}
+                          className={`w-3.5 h-3.5 rounded-full border transition-all duration-150 ${
+                            lockPinInput.length > idx
+                              ? "bg-[#F5F5F7] border-[#F5F5F7] scale-110"
+                              : "border-white/35 bg-transparent"
+                          }`}
                         />
                       ))}
                     </div>
 
                     {lockError && (
-                      <p className="text-xs text-red-400 font-bold mt-2">{lockError}</p>
+                      <p className="text-xs text-[#FF453A] font-medium mt-2">{lockError}</p>
                     )}
                   </div>
 
-                  {/* Virtual numeric pad */}
-                  <div className="grid grid-cols-3 gap-4 w-full">
+                  <div className="grid grid-cols-3 gap-3.5 w-full">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                      <button
+                      <motion.button
                         key={num}
+                        type="button"
+                        whileTap={{ scale: 0.92 }}
+                        transition={{ type: "spring", bounce: 0, duration: 0.16 }}
+                        onPointerDown={() => triggerHaptic()}
                         onClick={() => {
                           if (lockPinInput.length < 4) {
                             const nextVal = lockPinInput + num;
                             setLockPinInput(nextVal);
                             if (nextVal.length === 4) {
-                              setTimeout(() => handlePinUnlockSubmit(nextVal), 300);
+                              setTimeout(() => handlePinUnlockSubmit(nextVal), 220);
                             }
                           }
                         }}
-                        className="w-16 h-16 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/20 text-xl font-bold flex items-center justify-center mx-auto transition-colors"
+                        className="w-16 h-16 rounded-full bg-white/[0.1] hover:bg-white/[0.16] active:bg-white/[0.25] text-2xl font-normal tabular-nums flex items-center justify-center mx-auto transition-colors cursor-pointer"
                       >
                         {num}
-                      </button>
+                      </motion.button>
                     ))}
-                    
-                    <button
+
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.92 }}
+                      onPointerDown={() => triggerHaptic()}
                       onClick={() => {
                         const bioEnabled = localStorage.getItem("vibe_biometric_enabled") === "true";
                         if (bioEnabled) {
@@ -1311,38 +1314,45 @@ const AppContent: React.FC = () => {
                           notify("Biometric lock is not enabled. Setup inside your profile settings.", "info");
                         }
                       }}
-                      className="w-16 h-16 rounded-full text-[#1cdb5e] flex items-center justify-center mx-auto hover:bg-white/5 transition-colors animate-pulse"
+                      className="w-16 h-16 rounded-full text-[#0A84FF] flex items-center justify-center mx-auto hover:bg-white/[0.08] transition-colors cursor-pointer"
+                      aria-label="Unlock with biometrics"
                     >
                       <FingerprintIcon className="w-7 h-7" />
-                    </button>
+                    </motion.button>
 
-                    <button
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.92 }}
+                      transition={{ type: "spring", bounce: 0, duration: 0.16 }}
+                      onPointerDown={() => triggerHaptic()}
                       onClick={() => {
                         if (lockPinInput.length < 4) {
                           const nextVal = lockPinInput + "0";
                           setLockPinInput(nextVal);
                           if (nextVal.length === 4) {
-                            setTimeout(() => handlePinUnlockSubmit(nextVal), 300);
+                            setTimeout(() => handlePinUnlockSubmit(nextVal), 220);
                           }
                         }
                       }}
-                      className="w-16 h-16 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/20 text-xl font-bold flex items-center justify-center mx-auto transition-colors"
+                      className="w-16 h-16 rounded-full bg-white/[0.1] hover:bg-white/[0.16] active:bg-white/[0.25] text-2xl font-normal tabular-nums flex items-center justify-center mx-auto transition-colors cursor-pointer"
                     >
                       0
-                    </button>
+                    </motion.button>
 
-                    <button
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.92 }}
+                      onPointerDown={() => triggerHaptic()}
                       onClick={() => setLockPinInput(lockPinInput.slice(0, -1))}
-                      className="w-16 h-16 rounded-full text-zinc-400 flex items-center justify-center mx-auto hover:bg-white/5 active:bg-white/10 transition-colors"
+                      className="w-16 h-16 rounded-full text-[#98989D] hover:text-white text-sm font-medium flex items-center justify-center mx-auto hover:bg-white/[0.08] transition-colors cursor-pointer"
                     >
                       Delete
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
-                {/* Status footer */}
-                <div className="text-zinc-500 text-[11px] font-bold">
-                  Secured locally via your phone security services
+                <div className="text-[#636366] text-[11px] font-medium">
+                  Secured locally via your device security service
                 </div>
               </div>
             )}

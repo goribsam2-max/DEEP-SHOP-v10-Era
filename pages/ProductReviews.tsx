@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { Product, Review } from "../types";
-import { ChevronLeft, Star, MessageSquare } from "lucide-react";
+import { Star, MessageSquare } from "lucide-react";
 import { ReviewCard } from "../components/ui/review-card";
 import { ReviewComposer } from "../components/ui/review-composer";
 import {
@@ -22,6 +22,7 @@ import { filterSafeReviews } from "../lib/reviewModeration";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { hasImmediateAdminOrStaffRole } from "../lib/admin";
 import { getProductDisplayImage } from "../src/lib/phonePartsArt";
+import { triggerHaptic } from "../lib/haptics";
 
 type FilterKey = "all" | "photos" | "5" | "4" | "3" | "2" | "1";
 
@@ -79,8 +80,10 @@ const ProductReviews: React.FC = () => {
       onConfirm: async () => {
         try {
           await deleteDoc(doc(db, "reviews", reviewId));
+          triggerHaptic("success");
           notify("Review deleted.", "info");
         } catch {
+          triggerHaptic("error");
           notify("Could not delete review.", "error");
         }
       },
@@ -88,7 +91,7 @@ const ProductReviews: React.FC = () => {
   };
 
   if (!product) {
-    return <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950" />;
+    return <div className="min-h-screen bg-[#F5F5F7] dark:bg-black" />;
   }
 
   const averageRating =
@@ -106,25 +109,23 @@ const ProductReviews: React.FC = () => {
   ).length;
 
   return (
-    <div className="max-w-4xl mx-auto min-h-screen bg-zinc-50/50 dark:bg-zinc-950 pb-16 px-4 sm:px-6 pt-4">
-      {/* Top Product Context Bar */}
-      <div className="sticky top-[56px] md:top-[64px] z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-4 mb-6 shadow-2xs flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5 min-w-0">
-          <button
-            type="button"
-            onClick={() => navigate(`/product/${id}`)}
-            className="w-10 h-10 flex items-center shrink-0 justify-center rounded-full bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-            aria-label="Back to product"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-black pb-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-4">
+        {/* Top Product Context Bar */}
+        <div
+          onClick={() => {
+            triggerHaptic("light");
+            navigate(`/product/${id}`);
+          }}
+          className="ds-apple-surface rounded-[22px] p-4 mb-6 shadow-xs flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-transform"
+        >
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100 truncate">
+            <h1 className="ds-apple-display text-[clamp(1rem,2.4vw,1.15rem)] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
               {product.name}
             </h1>
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5 font-medium tabular-nums">
-              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
-              <span className="font-bold text-zinc-900 dark:text-zinc-100">
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-[#6E6E73] dark:text-[#98989D] mt-0.5 font-medium tabular-nums">
+              <Star className="w-3.5 h-3.5 text-[#FF9500] dark:text-[#FF9F0A] fill-[#FF9500] dark:fill-[#FF9F0A] shrink-0" />
+              <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {averageRating.toFixed(1)}
               </span>
               <span>·</span>
@@ -134,160 +135,168 @@ const ProductReviews: React.FC = () => {
               </span>
             </div>
           </div>
+
+          <img
+            src={getProductDisplayImage(product)}
+            alt={product.name}
+            className="w-12 h-12 rounded-2xl object-cover shrink-0 border border-black/[0.08] dark:border-white/[0.12] bg-[#F5F5F7] dark:bg-[#2C2C2E]"
+          />
         </div>
 
-        <img
-          src={getProductDisplayImage(product)}
-          alt={product.name}
-          className="w-12 h-12 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-zinc-800 hidden sm:block"
-        />
-      </div>
-
-      {/* Summary & Breakdown Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
-        <div className="md:col-span-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 p-6 flex flex-col justify-between gap-4">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Overall Rating
-            </span>
-            <div className="flex items-baseline gap-2.5 mt-2">
-              <span className="text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 tabular-nums">
-                {averageRating.toFixed(1)}
+        {/* Summary & Breakdown Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+          <div className="md:col-span-5 rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] p-6 flex flex-col justify-between gap-4 shadow-xs">
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">
+                Overall Rating
               </span>
-              <span className="text-sm font-medium text-zinc-400">/ 5.0</span>
+              <div className="flex items-baseline gap-2.5 mt-2">
+                <span className="text-5xl font-extrabold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                  {averageRating.toFixed(1)}
+                </span>
+                <span className="text-sm font-medium text-[#6E6E73] dark:text-[#98989D]">
+                  / 5.0
+                </span>
+              </div>
+              <div className="flex items-center gap-1 mt-2">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`w-4 h-4 ${
+                      s <= Math.round(averageRating)
+                        ? "text-[#FF9500] dark:text-[#FF9F0A] fill-[#FF9500] dark:fill-[#FF9F0A]"
+                        : "text-black/[0.12] dark:text-white/[0.16]"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-2 tabular-nums">
+                Based on {reviews.length} verified customer{" "}
+                {reviews.length === 1 ? "review" : "reviews"}
+              </p>
             </div>
-            <div className="flex items-center gap-1 mt-2">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <Star
-                  key={s}
-                  className={`w-4 h-4 ${
-                    s <= Math.round(averageRating)
-                      ? "text-amber-400 fill-amber-400"
-                      : "text-zinc-200 dark:text-zinc-700"
-                  }`}
+
+            <ReviewComposer
+              productId={product.id}
+              product={product}
+              isOpen={composerOpen ? false : false}
+              onOpenChange={() => setComposerOpen((prev) => !prev)}
+            />
+          </div>
+
+          <div className="md:col-span-7 rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] p-5 flex flex-col justify-center shadow-xs">
+            <ReviewFilterGroup
+              value={["5", "4", "3", "2", "1"].includes(filter) ? filter : ""}
+              onValueChange={(val) =>
+                setFilter((prev) => (prev === val ? "all" : (val as FilterKey)))
+              }
+            >
+              {[5, 4, 3, 2, 1].map((stars) => (
+                <ReviewFilterItem
+                  key={stars}
+                  value={String(stars)}
+                  stars={stars}
+                  count={
+                    reviews.filter((r) => Math.round(r.rating) === stars).length
+                  }
+                  total={reviews.length}
                 />
               ))}
-            </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 tabular-nums">
-              Based on {reviews.length} verified customer{" "}
-              {reviews.length === 1 ? "review" : "reviews"}
-            </p>
+            </ReviewFilterGroup>
           </div>
-
-          <ReviewComposer
-            productId={product.id}
-            product={product}
-            isOpen={composerOpen ? false : false}
-            onOpenChange={() => setComposerOpen((prev) => !prev)}
-          />
         </div>
 
-        <div className="md:col-span-7 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 p-5 flex flex-col justify-center">
-          <ReviewFilterGroup
-            value={["5", "4", "3", "2", "1"].includes(filter) ? filter : ""}
-            onValueChange={(val) =>
-              setFilter((prev) => (prev === val ? "all" : (val as FilterKey)))
-            }
-          >
-            {[5, 4, 3, 2, 1].map((stars) => (
-              <ReviewFilterItem
-                key={stars}
-                value={String(stars)}
-                stars={stars}
-                count={
-                  reviews.filter((r) => Math.round(r.rating) === stars).length
-                }
-                total={reviews.length}
-              />
-            ))}
-          </ReviewFilterGroup>
-        </div>
-      </div>
-
-      {/* Expandable Full-Width Review Composer */}
-      {composerOpen && (
-        <div className="mb-6">
-          <ReviewComposer
-            productId={product.id}
-            product={product}
-            isOpen={true}
-            onOpenChange={setComposerOpen}
-          />
-        </div>
-      )}
-
-      {/* Interactive Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-4">
-        {(
-          [
-            { key: "all", label: `All (${reviews.length})` },
-            { key: "photos", label: `With Photos (${photoReviewsCount})` },
-            { key: "5", label: "5 ★" },
-            { key: "4", label: "4 ★" },
-            { key: "3", label: "3 ★" },
-            { key: "2", label: "2 ★" },
-            { key: "1", label: "1 ★" },
-          ] as { key: FilterKey; label: string }[]
-        ).map((tab) => {
-          const active = filter === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setFilter(tab.key)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer tabular-nums border ${
-                active
-                  ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-100 dark:border-zinc-100 dark:text-zinc-900"
-                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-300"
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Reviews List */}
-      <div className="flex flex-col gap-3.5">
-        {filteredReviews.length === 0 ? (
-          <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-dashed border-zinc-200 dark:border-zinc-800 py-14 px-6 text-center">
-            <MessageSquare className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-2.5" />
-            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-              {reviews.length === 0
-                ? "No reviews yet for this product"
-                : "No reviews match the selected filter"}
-            </p>
-            {filter !== "all" && (
-              <button
-                type="button"
-                onClick={() => setFilter("all")}
-                className="mt-3 text-xs font-bold text-[#1877F2] hover:underline cursor-pointer"
-              >
-                Show all reviews
-              </button>
-            )}
+        {/* Expandable Full-Width Review Composer */}
+        {composerOpen && (
+          <div className="mb-6">
+            <ReviewComposer
+              productId={product.id}
+              product={product}
+              isOpen={true}
+              onOpenChange={setComposerOpen}
+            />
           </div>
-        ) : (
-          filteredReviews.map((review) => {
-            const isOwn =
-              Boolean(auth.currentUser?.uid) &&
-              review.userId === auth.currentUser?.uid;
-            return (
-              <ReviewCard
-                key={review.id}
-                name={review.userName}
-                handle={isOwn ? "Your Review" : "Verified Buyer"}
-                review={review.comment}
-                rating={review.rating}
-                imageUrl={review.userPhoto}
-                images={(review as any).images}
-                createdAt={review.createdAt}
-                canDelete={isOwn || isAdmin}
-                onDelete={() => handleDeleteReview(review.id)}
-              />
-            );
-          })
         )}
+
+        {/* Interactive Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-4">
+          {(
+            [
+              { key: "all", label: `All (${reviews.length})` },
+              { key: "photos", label: `With Photos (${photoReviewsCount})` },
+              { key: "5", label: "5 ★" },
+              { key: "4", label: "4 ★" },
+              { key: "3", label: "3 ★" },
+              { key: "2", label: "2 ★" },
+              { key: "1", label: "1 ★" },
+            ] as { key: FilterKey; label: string }[]
+          ).map((tab) => {
+            const active = filter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  setFilter(tab.key);
+                }}
+                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer tabular-nums border active:scale-[0.97] ${
+                  active
+                    ? "bg-[#0071E3] dark:bg-[#0A84FF] border-[#0071E3] dark:border-[#0A84FF] text-white shadow-xs"
+                    : "bg-white dark:bg-[#1C1C1E] border-black/[0.08] dark:border-white/[0.1] text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-black/[0.18] dark:hover:border-white/[0.2]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Reviews List */}
+        <div className="flex flex-col gap-3.5">
+          {filteredReviews.length === 0 ? (
+            <div className="rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-dashed border-black/[0.12] dark:border-white/[0.14] py-14 px-6 text-center">
+              <MessageSquare className="w-8 h-8 text-[#86868B] mx-auto mb-2.5" />
+              <p className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                {reviews.length === 0
+                  ? "No reviews yet for this product"
+                  : "No reviews match the selected filter"}
+              </p>
+              {filter !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setFilter("all");
+                  }}
+                  className="mt-3 text-xs font-semibold text-[#0071E3] dark:text-[#0A84FF] hover:underline cursor-pointer"
+                >
+                  Show all reviews
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredReviews.map((review) => {
+              const isOwn =
+                Boolean(auth.currentUser?.uid) &&
+                review.userId === auth.currentUser?.uid;
+              return (
+                <ReviewCard
+                  key={review.id}
+                  name={review.userName}
+                  handle={isOwn ? "Your Review" : "Verified Buyer"}
+                  review={review.comment}
+                  rating={review.rating}
+                  imageUrl={review.userPhoto}
+                  images={(review as any).images}
+                  createdAt={review.createdAt}
+                  canDelete={isOwn || isAdmin}
+                  onDelete={() => handleDeleteReview(review.id)}
+                />
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

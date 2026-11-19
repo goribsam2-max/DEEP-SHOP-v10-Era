@@ -1,7 +1,6 @@
 import { useRegion } from "@/components/RegionContext";
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { StatusBadge } from "../components/ui/status-badge";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   collection,
   onSnapshot,
@@ -14,49 +13,30 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { Product } from "../types";
-import { getReadableAddress } from "../services/location";
-import { useNotify } from "../components/Notifications";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion, PanInfo } from "framer-motion";
 import { optimizeImageUrl } from "../lib/imageOptimize";
-import Logo from "../components/Logo";
-import Icon from "../components/Icon";
 import SEO from "../components/SEO";
 import { useTheme } from "../components/ThemeContext";
 import { ProductSkeleton } from "../components/Skeletons";
 import { SectionShowcaseSkeleton, StoryRowSkeleton } from "../components/PageSkeletons";
 import { CustomSectionEmbed } from "../components/CustomSectionEmbed";
-import { FlashSaleCarousel } from "../components/ui/flash-sale-carousel";
-import { VibeMascot, MascotState } from "../components/ui/VibeMascot";
-
-import StoryViewer from "../components/ui/StoryViewer";
 import { ProductCard } from "../components/ui/ProductCard";
 import { OfferSlider } from "../components/ui/OfferSlider";
 import { BorderOfferSection } from "../components/ui/BorderOfferSection";
-import { Tag, Zap, Crown, Users, Sparkles, Star, Play, MoreHorizontal, ChevronRight, ShoppingBag, GraduationCap, Wrench, Cpu, Battery, Camera, Smartphone } from "lucide-react";
+import { ChevronRight, ArrowUpRight } from "lucide-react";
 import { PixelImage } from "../components/ui/PixelImage";
 import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 import { HeroSlider } from "../components/ui/hero-slider";
 import { LogoTimeline, type LogoItem } from "../components/ui/logo-timeline";
 import { Footer } from "../components/Footer";
-import { auth } from "../firebase";
-import { hasImmediateAdminOrStaffRole } from "../lib/admin";
+import { triggerHaptic } from "../lib/haptics";
 import {
   DeepShopSponsoredAd,
   isLikelyVideoUrl,
   readHiddenAdIds,
 } from "../components/DeepShopSponsoredAd";
 
-const BrandIcon = ({ brandName }: { brandName: string }) => {
-  return (
-    <img
-      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(brandName)}&background=random&color=fff&rounded=true&font-size=0.4`}
-      className="size-5"
-      alt={brandName}
-    />
-  );
-};
-
-const ThinBanner = ({ banner }: { banner: any; navigate?: any }) => {
+const ThinBanner = ({ banner }: { banner: any }) => {
   const [hiddenTick, setHiddenTick] = useState(0);
 
   useEffect(() => {
@@ -99,33 +79,42 @@ const ThinBanner = ({ banner }: { banner: any; navigate?: any }) => {
   );
 };
 
-// Helper for Section Headers (Defined outside component to prevent re-creation and TDZ issues)
-const SectionHeader: React.FC<{ title: string }> = ({ title }) => (
-  <div className="flex justify-between items-center mb-4 pt-4">
-    <h2
-      className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"
-      style={{ fontFamily: "'Comfortaa', cursive", letterSpacing: "-0.02em" }}
-    >
-      {title}
-    </h2>
+const SectionHeader: React.FC<{
+  eyebrow?: string;
+  title: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}> = ({ eyebrow, title, actionLabel, onAction }) => (
+  <div className="flex items-end justify-between gap-4 mb-4">
+    <div className="min-w-0">
+      {eyebrow && (
+        <p className="ds-apple-eyebrow ds-apple-muted text-[11px] mb-1 truncate">
+          {eyebrow}
+        </p>
+      )}
+      <h2 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold">
+        {title}
+      </h2>
+    </div>
+    {actionLabel && onAction && (
+      <button
+        type="button"
+        onPointerDown={() => triggerHaptic()}
+        onClick={onAction}
+        className="ds-apple-accent-text inline-flex items-center gap-0.5 text-[13px] font-semibold hover:underline whitespace-nowrap shrink-0 cursor-pointer active:scale-95 transition-transform"
+      >
+        <span>{actionLabel}</span>
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    )}
   </div>
 );
 
 const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const navigate = useNavigate();
   const { formatPrice } = useRegion();
-  const { isDark } = useTheme();
-
-  const isAdmin = hasImmediateAdminOrStaffRole(userData, auth.currentUser);
-
-  // Strictly verify seller status so regular buyers never get seller privileges
-  const isSeller = Boolean(
-    (userData?.role === "seller" || userData?.isSeller === true || userData?.type === "seller") &&
-    userData?.role !== "customer" &&
-    userData?.role !== "buyer" &&
-    userData?.sellerStatus !== "rejected" &&
-    userData?.sellerStatus !== "pending"
-  );
+  const shouldReduceMotion = useReducedMotion();
+  useTheme();
 
   const [products, setProducts] = useState<Product[]>(() => {
     try {
@@ -167,9 +156,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     } catch {}
     return true;
   });
-  const [settings, setSettings] = useState<any>({});
   const [seoConfig, setSeoConfig] = useState<any>({});
   const [activeBanner, setActiveBanner] = useState(0);
+  const [heroDirection, setHeroDirection] = useState(1);
 
   useEffect(() => {
     const unsubSeo = onSnapshot(
@@ -181,6 +170,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     );
     return () => unsubSeo();
   }, []);
+
   const [activeCategoryBanner, setActiveCategoryBanner] = useState(0);
   const [activeBottomBanner, setActiveBottomBanner] = useState(0);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -206,11 +196,12 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   }, [activeCategory]);
 
   const handleLoadMore = () => {
+    triggerHaptic();
     setLoadingMore(true);
     setTimeout(() => {
-      setDisplayedCount(prev => prev + 8);
+      setDisplayedCount((prev) => prev + 8);
       setLoadingMore(false);
-    }, 800);
+    }, 450);
   };
 
   const validBanners = useMemo(
@@ -222,13 +213,14 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   );
 
   const heroBanners = validBanners.filter(
-    (b) => !b.bannerType || b.bannerType === "hero",
+    (b) => !b.bannerType || b.bannerType === "hero"
   );
   const gifBanners = validBanners.filter((b) => b.bannerType === "gif");
   const categoryBanners = validBanners.filter(
-    (b) => b.bannerType === "category" || b.bannerType === "profile",
+    (b) => b.bannerType === "category" || b.bannerType === "profile"
   );
   const bottomBanners = validBanners.filter((b) => b.bannerType === "bottom");
+
   const safeHeroIdx =
     heroBanners.length > 0 ? activeBanner % heroBanners.length : 0;
   const safeCategoryBannerIdx =
@@ -241,8 +233,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   useEffect(() => {
     if (heroBanners.length <= 1) return;
     const timer = setInterval(() => {
+      setHeroDirection(1);
       setActiveBanner((prev) => (prev + 1) % heroBanners.length);
-    }, 5000);
+    }, 5500);
     return () => clearInterval(timer);
   }, [heroBanners.length]);
 
@@ -250,7 +243,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     if (categoryBanners.length <= 1) return;
     const timer = setInterval(() => {
       setActiveCategoryBanner((prev) => (prev + 1) % categoryBanners.length);
-    }, 4000);
+    }, 4500);
     return () => clearInterval(timer);
   }, [categoryBanners.length]);
 
@@ -258,11 +251,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     if (bottomBanners.length <= 1) return;
     const timer = setInterval(() => {
       setActiveBottomBanner((prev) => (prev + 1) % bottomBanners.length);
-    }, 4500);
+    }, 5000);
     return () => clearInterval(timer);
   }, [bottomBanners.length]);
-
-  const [referState, setReferState] = useState<string>("refer-idle");
 
   useEffect(() => {
     const qProds = query(collection(db, "products"), limit(80));
@@ -270,7 +261,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       qProds,
       (snapshot) => {
         const nextProducts = snapshot.docs.map(
-          (d) => ({ id: d.id, ...d.data() }) as Product,
+          (d) => ({ id: d.id, ...d.data() }) as Product
         );
         setProducts(nextProducts);
         setIsLoadingProducts(false);
@@ -283,13 +274,13 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       },
       () => {
         setIsLoadingProducts(false);
-      },
+      }
     );
 
     const qBanners = query(
       collection(db, "banners"),
       orderBy("createdAt", "desc"),
-      limit(20),
+      limit(20)
     );
     const unsubscribeBanners = onSnapshot(
       qBanners,
@@ -309,18 +300,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       },
       () => {
         setIsLoadingBanners(false);
-      },
+      }
     );
 
-    const unsubscribeSettings = onSnapshot(
-      doc(db, "settings", "platform"),
-      (snap) => {
-        if (snap.exists()) setSettings(snap.data());
-      },
-      () => {}
-    );
-
-    // Lightweight deferred seller fetch (avoids streaming full users collection on Home)
     const sellerTimer = setTimeout(async () => {
       try {
         if (sessionStorage.getItem("ds_home_sellers_v1")) return;
@@ -336,661 +318,676 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     return () => {
       unsubscribeProds();
       unsubscribeBanners();
-      unsubscribeSettings();
       clearTimeout(sellerTimer);
     };
   }, []);
 
-  const brandLogos = useMemo(() => {
-    const uniqueBrands = Array.from(
-      new Set(products.map((p) => p.brand).filter(Boolean)),
-    ) as string[];
-    // Fill with default ones if there are no products holding brands
-    const defaultBrands = [
-      "Apple", "Samsung", "Sony", "Dji", "Bose", "Anker", "Logitech", "Xiaomi", "Oppo", "Vivo", "Realme", "OnePlus",
-    ];
-    const displayBrands =
-      uniqueBrands.length >= 6
-        ? uniqueBrands
-        : Array.from(new Set([...uniqueBrands, ...defaultBrands]));
-
-    const numRows = 3;
-    const itemsPerRow = Math.ceil(displayBrands.length / numRows);
-
-    return displayBrands.map((brand, idx) => {
-      const rowNum = (idx % numRows) + 1;
-      const rowIndex = Math.floor(idx / numRows);
-
-      return {
-        label: brand,
-        icon: <BrandIcon brandName={brand} />,
-        row: rowNum,
-        animationDelay: -(rowIndex * (50 / itemsPerRow)),
-        animationDuration: 50,
-      } as LogoItem;
-    });
-  }, [products]);
-
   const sellerLogos = useMemo(() => {
-    // Premium Bangladeshi tech stores as beautiful fallbacks/complements
-    const defaultSellers = [
-      { shopName: "Dhaka Smart Hub", displayName: "Dhaka Central", photoURL: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150" },
-      { shopName: "Chittagong Gear", displayName: "Port City Smart", photoURL: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" },
-      { shopName: "Sylhet Gadget Zone", displayName: "Sylhet Plaza", photoURL: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150" },
-      { shopName: "Comilla Tech Store", displayName: "Comilla City", photoURL: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150" },
-      { shopName: "Rajshahi Smart Gallery", displayName: "Rajshahi Market", photoURL: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150" },
-      { shopName: "Barisal Gadget World", displayName: "Barisal Plaza", photoURL: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150" },
-    ];
-
-     const combinedSellers = [...sellers].filter(s => {
-       const name = (s.shopName || s.displayName || "").toLowerCase().trim();
-       return !name.includes("deep shop feni") && !name.includes("shoo") && !name.includes("deep shop");
-     });
-    
-    // Add defaults to enrich the marquee
-    defaultSellers.forEach(ds => {
-      if (!combinedSellers.some(s => (s.shopName && s.shopName.toLowerCase() === ds.shopName.toLowerCase()) || (s.displayName && s.displayName.toLowerCase() === ds.displayName.toLowerCase()))) {
-        combinedSellers.push(ds);
-      }
+    const combinedSellers = [...sellers].filter((s) => {
+      const name = (s.shopName || s.displayName || "").toLowerCase().trim();
+      return (
+        Boolean(name) &&
+        !name.includes("deep shop feni") &&
+        !name.includes("shoo") &&
+        !name.includes("deep shop")
+      );
     });
 
-    const numRows = 2; // Two sleek scrolling rows of top sellers
+    if (combinedSellers.length === 0) return [];
+
+    const numRows = 2;
     const itemsPerRow = Math.ceil(combinedSellers.length / numRows);
 
     return combinedSellers.map((seller, idx) => {
       const rowNum = (idx % numRows) + 1;
       const rowIndex = Math.floor(idx / numRows);
-      const name = seller.shopName || seller.displayName || "Premium Seller";
+      const name = seller.shopName || seller.displayName || "Verified Seller";
       const optimizedSellerAvatar =
         typeof seller.photoURL === "string" && seller.photoURL.trim() !== ""
           ? optimizeImageUrl(seller.photoURL.trim(), 80, 72)
           : "";
       const avatarUrl =
         optimizedSellerAvatar ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10b981&color=fff&rounded=true&font-size=0.4`;
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0071e3&color=fff&rounded=true&font-size=0.4`;
 
       return {
         label: name,
         icon: (
           <img
             src={avatarUrl}
-            width={28}
-            height={28}
+            width={26}
+            height={26}
             loading="lazy"
             decoding="async"
-            className="w-7 h-7 rounded-full object-cover border border-emerald-500/20 shadow-sm shrink-0 bg-zinc-100"
+            className="w-6 h-6 rounded-full object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
             alt={name}
             referrerPolicy="no-referrer"
           />
         ),
         row: rowNum,
-        animationDelay: -(rowIndex * (40 / itemsPerRow)),
-        animationDuration: 30, // medium elegant looping speed
+        animationDelay: -(rowIndex * (40 / Math.max(1, itemsPerRow))),
+        animationDuration: 28,
       } as LogoItem;
     });
   }, [sellers]);
 
-  return (
-    <div className="relative pt-2 sm:pt-3 bg-transparent dark:bg-transparent w-full min-h-screen font-sans pb-0">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-5 md:px-12">
-      <SEO
-        title={
-          seoConfig.metaTitle ||
-          "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site"
-        }
-        description={
-          seoConfig.metaDescription ||
-          "DEEP SHOP is Bangladesh's trusted platform for Border Cross Products & genuine mobiles. Find 100% authentic and trusted global tech products."
-        }
-        image={seoConfig.metaImage || seoConfig.appIconUrl || undefined}
-        canonical="/"
-        exactTitle
-      />
-      
-      <CustomSectionEmbed location="home_top" />
-
-
-      {/* Hero Slider */}
-      {isLoadingBanners ? (
-        <div className="mb-8 w-full space-y-3">
-          <div className="ds-skeleton h-6 w-36 rounded-lg mt-4" />
-          <div className="ds-skeleton w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px]" />
-        </div>
-      ) : heroBanners.length > 0 && (
-        <div className="mb-8 w-full group">
-          <SectionHeader title="Hot Deals" />
-          <div
-            id="home-hero"
-            className="relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px] overflow-hidden shadow-sm cursor-pointer"
-            onClick={() => heroBanners[safeHeroIdx]?.link && navigate(heroBanners[safeHeroIdx].link)}
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={safeHeroIdx}
-                initial={{ opacity: 0.92 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-                className="absolute inset-0 bg-zinc-100 dark:bg-[#1e1e1e]"
-              >
-                {(() => {
-                  const rawHeroUrl = heroBanners[safeHeroIdx]?.imageUrl?.trim() || "";
-                  const heroSrc = optimizeImageUrl(rawHeroUrl, 960, 78) || rawHeroUrl;
-                  return heroSrc ? (
-                    <img
-                      src={heroSrc}
-                      loading="eager"
-                      fetchPriority="high"
-                      decoding="async"
-                      onError={(e) => {
-                        if (rawHeroUrl && e.currentTarget.src !== rawHeroUrl) {
-                          e.currentTarget.src = rawHeroUrl;
-                        }
-                      }}
-                      className="w-full h-full object-cover"
-                      alt={heroBanners[safeHeroIdx]?.title || "Featured Deal Banner"}
-                    />
-                  ) : null;
-                })()}
-              </motion.div>
-            </AnimatePresence>
-
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent z-10 pointer-events-none" />
-
-            <div className="absolute inset-x-0 bottom-0 p-5 z-20 flex justify-between items-end">
-              <div className="flex flex-col text-white max-w-[70%]">
-                <h3 className="font-semibold text-lg leading-tight mb-1 truncate">
-                  {heroBanners[safeHeroIdx]?.title || "Discover the best products"}
-                </h3>
-                <p className="text-xs font-medium text-white/80 shrink-0">
-                  Exclusive collection
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-white text-zinc-900 flex items-center justify-center shadow-lg active:scale-95 transition-transform backdrop-blur-sm shrink-0">
-                 <Icon name="arrow-right" className="text-sm" />
-              </div>
-            </div>
-
-            {heroBanners.length > 1 && (
-              <div className="absolute top-4 right-4 flex gap-1.5 z-20">
-                {heroBanners.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => { e.stopPropagation(); setActiveBanner(i); }}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${activeBanner === i ? "bg-white w-4" : "bg-white/40 w-1.5"}`}
-                    aria-label={`Go to slide ${i + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Reseller VIP & Masterclass Teacher Banner (Immediate paint for zero LCP render delay) */}
-      <div className="mb-8 w-full px-0 md:px-0">
-        <div
-          onClick={() => navigate("/subscription")}
-          className="group relative overflow-hidden rounded-3xl bg-white dark:bg-[#141a22] border border-zinc-200/90 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer active:scale-[0.995]"
-        >
-          {/* Card Container Layout: Mobile (Vertical) / Desktop (Horizontal Grid) */}
-          <div className="grid grid-cols-1 md:grid-cols-12 items-center p-5 sm:p-6 lg:p-7 gap-5 sm:gap-6">
-            {/* Main Text Content Column */}
-            <div className="md:col-span-8 flex flex-col justify-between space-y-3 z-10">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[11px] font-extrabold tracking-wide uppercase flex items-center gap-1.5">
-                  <Icon name="crown" className="w-3.5 h-3.5 text-amber-500" />
-                  <span>VIP Masterclass</span>
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
-                  Reseller Guide
-                </span>
-              </div>
-
-              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 dark:text-white tracking-tight leading-snug group-hover:text-[#0064e0] dark:group-hover:text-[#4599ff] transition-colors">
-                রিসেলারদের জন্য ০৳ অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারি
-              </h3>
-
-              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-normal leading-relaxed line-clamp-2">
-                কোনো অগ্রিম চার্জ ছাড়া সরাসরি কাস্টমারকে পার্সেল পাঠান। রিসেলার মাস্টারক্লাসের স্টেপ-বাই-স্টেপ গাইড ও ভিআইপি প্ল্যান দেখুন।
-              </p>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-[#0064e0] hover:bg-[#0056c1] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
-                >
-                  <span>গাইড ও প্ল্যান দেখুন</span>
-                  <Icon name="chevron-right" className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Desktop Visual Card Column */}
-            <div className="md:col-span-4 relative h-36 sm:h-40 md:h-full min-h-[120px] rounded-2xl overflow-hidden bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-blue-600/15 border border-amber-500/20 flex flex-col items-center justify-center p-4 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 shadow-xs">
-                <Icon name="graduation-cap" className="w-6 h-6" />
-              </div>
-              <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                DEEP SHOP Reseller Hub
-              </p>
-              <p className="text-[11px] text-zinc-700 dark:text-zinc-300 mt-0.5 font-medium">
-                Official Certification &amp; VIP Support
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Refer & Earn (Only if not logged in) */}
-      {!userData && (
-        <div
-          className="mb-8 w-full flex justify-center px-0 md:px-4"
-          onMouseEnter={() => setReferState("refer-hover")}
-          onMouseLeave={() => setReferState("refer-idle")}
-        >
-          <div
-            onClick={() => {
-              navigate("/auth-selector");
-            }}
-            className="bg-[#FF6611] rounded-[24px] shadow-sm px-6 py-5 relative overflow-hidden flex flex-row items-center justify-between cursor-pointer active:scale-[0.98] transition-transform text-white w-full max-w-none md:max-w-4xl mx-auto min-h-[100px]"
-          >
-            <div className="flex flex-col space-y-3 z-20 w-2/3">
-              <h3 className="font-extrabold text-lg md:text-xl m-0 leading-tight drop-shadow-sm">
-                Log in to refer & earn
-              </h3>
-
-              <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 w-fit px-3 py-1.5 rounded-full shadow-inner shrink-0">
-                <span className="text-[12px] md:text-[14px] font-bold text-white tracking-tight">
-                  Login to Earn up to {formatPrice(200)}
-                </span>
-              </div>
-            </div>
-
-            <div className="absolute right-0 bottom-[-20px] h-[140%] w-[120px] pointer-events-none drop-shadow-xl z-20 flex flex-col justify-end items-center">
-              <div className="transform scale-[0.6] origin-bottom mb-[-10px] w-full flex justify-center">
-                <VibeMascot state={referState as MascotState} />
-              </div>
-            </div>
-
-            <div className="absolute right-[50px] top-1/2 -translate-y-1/2 rounded-full border border-white/10 w-24 h-24 pointer-events-none" />
-            <div className="absolute right-[80px] top-1/2 -translate-y-1/2 rounded-full border border-white/10 w-16 h-16 pointer-events-none z-0" />
-          </div>
-        </div>
-      )}
-
-      {/* Auto Product Slider (Capped to top 6 featured products to eliminate multi-MB carousel payload) */}
-      {isLoadingProducts ? (
-        <div className="mb-10 w-full">
-          <SectionShowcaseSkeleton cards={4} />
-        </div>
-      ) : products.length > 0 && (
-        <div id="home-products" className="mb-10 w-full">
-          <SectionHeader title="Trending Products" />
-          <HeroSlider
-            autoSlideDelay={3500}
-            pauseDurationAfterInteract={10000}
-            cards={products.slice(0, 6).map((p) => ({
-              id: p.id,
-              title: p.name,
-              description:
-                p.description || "Discover authentic products at DEEP SHOP.",
-              category: p.category,
-              image: getProductDisplayImage(p),
-              date:
-                p.isOffer && p.offerPrice
-                  ? formatPrice(p.offerPrice)
-                  : formatPrice(p.price),
-              actionText: "Buy Now",
-            }))}
-          />
-        </div>
-      )}
-      
-      {/* Offer Products Slider (Capped to top 8 offers) */}
-      {products.some((p) => p.isOffer) && (
-        <div className="mb-10 w-full group px-0 md:px-0">
-          <SectionHeader title="Special Offers" />
-          <OfferSlider
-            products={products.filter((p) => p.isOffer).slice(0, 8)}
-            autoSlide={true}
-          />
-        </div>
-      )}
-
-      {/* Dedicated Border Stock Mobile Offer Section */}
-      <BorderOfferSection products={products} />
-
-      {/* Categories (Single Line Scrollable) */}
-      <div className="mb-8 w-full relative z-10 pt-2">
-        <SectionHeader title="Categories" />
-        {isLoadingProducts ? (
-          <StoryRowSkeleton count={7} />
-        ) : (
-        <div className="flex items-center gap-4 overflow-x-auto pt-2 pb-6 px-1 scrollbar-hide snap-x">
-          {[
-            "All",
-            ...Array.from(
-              new Set(products.map((p) => p.category).filter(Boolean)),
-            ),
-          ].map((cat, i) => {
-            const fallbackCategoryImg = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(cat)}&backgroundColor=f88c49`;
-            let rawCategoryImg = fallbackCategoryImg;
-            if (cat === "All") {
-              rawCategoryImg =
-                "https://ui-avatars.com/api/?name=User&background=000&color=fff";
-            } else {
-              const firstProduct = products.find((p) => p.category === cat);
-              const validProductImg =
-                firstProduct?.images
-                  ?.find((u) => typeof u === "string" && u.trim() !== "")
-                  ?.trim() ||
-                (typeof firstProduct?.image === "string" &&
-                firstProduct.image.trim() !== ""
-                  ? firstProduct.image.trim()
-                  : "");
-              if (validProductImg) {
-                rawCategoryImg = validProductImg;
-              }
-            }
-            const imageUrl =
-              optimizeImageUrl(rawCategoryImg, 128, 72) ||
-              rawCategoryImg ||
-              fallbackCategoryImg;
-
-            return (
-              <div
-                key={i}
-                className="flex flex-col items-center gap-2 snap-center shrink-0"
-                onClick={() => {
-                  setActiveCategory(cat);
-                  document
-                    .getElementById("popular-products")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }}
-              >
-                <div
-                  className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center p-0.5 cursor-pointer transition-transform ${activeCategory === cat ? "bg-gradient-to-tr from-[#FFC27A] to-[#FF8C00] scale-110 shadow-md shadow-orange-500/20" : "bg-transparent border border-zinc-200 dark:border-zinc-800 hover:scale-105"}`}
-                >
-                  <img
-                    src={imageUrl}
-                    alt={cat}
-                    width={56}
-                    height={56}
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => {
-                      if (rawCategoryImg && e.currentTarget.src !== rawCategoryImg) {
-                        e.currentTarget.src = rawCategoryImg;
-                      } else if (e.currentTarget.src !== fallbackCategoryImg) {
-                        e.currentTarget.src = fallbackCategoryImg;
-                      }
-                    }}
-                    className="w-full h-full rounded-full object-cover border-[1.5px] border-white dark:border-[#121212]"
-                  />
-                </div>
-                <span
-                  className={`text-[11px] md:text-xs font-semibold ${activeCategory === cat ? "text-orange-600 dark:text-orange-400" : "text-zinc-600 dark:text-zinc-400"} text-center w-match truncate max-w-[80px]`}
-                >
-                  {cat}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        )}
-
-        {/* Border Cross / Phones Section */}
-        {products.filter((p) =>
+  const borderCrossPhones = useMemo(
+    () =>
+      products
+        .filter((p) =>
           ["phone", "mobile", "cross", "border"].some((word) =>
-            p.category?.toLowerCase().includes(word),
-          ),
-        ).length > 0 && (
-          <div className="mb-10 w-full group" style={{ contentVisibility: "auto", containIntrinsicSize: "0 360px" }}>
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <h2
-                  className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"
-                  style={{
-                    fontFamily: "'Comfortaa', cursive",
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  Border Cross Phones
-                </h2>
-              </div>
-              <button
-                onClick={() => navigate("/all-products")}
-                className="text-xs font-bold text-orange-600 dark:text-orange-400 hover:underline"
-              >
-                See All
-              </button>
-            </div>
-            
-            {/* Horizontal Scroll Layout */}
-            <div className="flex gap-4 overflow-x-auto pb-4 pt-1 px-1 scrollbar-hide snap-x">
-              {products
-                .filter((p) =>
-                  ["phone", "mobile", "cross", "border"].some((word) =>
-                    p.category?.toLowerCase().includes(word),
-                  ),
-                )
-                .slice(0, 8)
-                .map((product, index) => (
-                  <div key={product.id ? `${product.id}-horiz-${index}` : index} className="min-w-[220px] sm:min-w-[260px] snap-center transform hover:scale-[1.02] transition-all duration-300">
-                    <ProductCard product={product} index={index} />
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
+            p.category?.toLowerCase().includes(word)
+          )
+        )
+        .slice(0, 8),
+    [products]
+  );
 
-        {/* Dedicated Phone & Device Replacement Parts Section */}
-        <div className="mb-8 w-full group" style={{ contentVisibility: "auto", containIntrinsicSize: "0 340px" }}>
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <h2
-                className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center whitespace-nowrap"
-                style={{
-                  fontFamily: "'Comfortaa', cursive",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Phone Parts
-              </h2>
-            </div>
-            <button
-              onClick={() => navigate("/all-products?category=Phone+Parts")}
-              className="text-[11px] sm:text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0 whitespace-nowrap ml-2"
-            >
-              See All
-            </button>
-          </div>
-
-          {/* Parts Product Cards Horizontal Grid */}
-          {products.filter((p) =>
-            ["part", "পার্টস", "display", "স্ক্রিন", "battery", "ব্যাটারি", "camera", "ক্যামেরা", "logic", "motherboard", "মাদারবোর্ড"].some((word) =>
+  const phoneParts = useMemo(
+    () =>
+      products
+        .filter((p) =>
+          [
+            "part",
+            "পার্টস",
+            "display",
+            "স্ক্রিন",
+            "battery",
+            "ব্যাটারি",
+            "camera",
+            "ক্যামেরা",
+            "logic",
+            "motherboard",
+            "মাদারবোর্ড",
+          ].some(
+            (word) =>
               (p.category || "").toLowerCase().includes(word) ||
               (p.name || "").toLowerCase().includes(word)
-            )
-          ).length > 0 && (
-            <div className="flex gap-4 overflow-x-auto pb-4 pt-1 px-1 scrollbar-hide snap-x">
-              {products
-                .filter((p) =>
-                  ["part", "পার্টস", "display", "স্ক্রিন", "battery", "ব্যাটারি", "camera", "ক্যামেরা", "logic", "motherboard", "মাদারবোর্ড"].some((word) =>
-                    (p.category || "").toLowerCase().includes(word) ||
-                    (p.name || "").toLowerCase().includes(word)
-                  )
-                )
-                .slice(0, 8)
-                .map((product, index) => (
-                  <div key={product.id ? `${product.id}-parts-${index}` : index} className="min-w-[200px] sm:min-w-[240px] snap-center transform hover:scale-[1.02] transition-all duration-300">
-                    <ProductCard product={product} index={index} />
+          )
+        )
+        .slice(0, 8),
+    [products]
+  );
+
+  const mobileGear = useMemo(
+    () =>
+      products
+        .filter((p) =>
+          ["accessories", "cover", "charger", "cable", "phone", "mobile"].some((word) =>
+            p.category?.toLowerCase().includes(word)
+          )
+        )
+        .slice(0, 6),
+    [products]
+  );
+
+  const categories = useMemo(
+    () => [
+      "All",
+      ...Array.from(new Set(products.map((p) => p.category).filter(Boolean))),
+    ],
+    [products]
+  );
+
+  const handleHeroDragEnd = (_: any, info: PanInfo) => {
+    if (heroBanners.length <= 1) return;
+    if (info.offset.x < -45 || info.velocity.x < -280) {
+      triggerHaptic();
+      setHeroDirection(1);
+      setActiveBanner((prev) => (prev + 1) % heroBanners.length);
+    } else if (info.offset.x > 45 || info.velocity.x > 280) {
+      triggerHaptic();
+      setHeroDirection(-1);
+      setActiveBanner((prev) => (prev - 1 + heroBanners.length) % heroBanners.length);
+    }
+  };
+
+  const heroTransition = shouldReduceMotion
+    ? { duration: 0.2 }
+    : {
+        x: { type: "spring" as const, bounce: 0, duration: 0.44 },
+        opacity: { duration: 0.24 },
+      };
+
+  const categoryRingSpring = shouldReduceMotion
+    ? { duration: 0.14 }
+    : { type: "spring" as const, bounce: 0, duration: 0.34 };
+
+  return (
+    <div className="ds-apple-shop-canvas relative pt-3 sm:pt-5 w-full min-h-screen pb-0">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-5 md:px-12">
+        <SEO
+          title={
+            seoConfig.metaTitle ||
+            "DEEP SHOP - border cross devices, border cross products, illegal products buy sell site"
+          }
+          description={
+            seoConfig.metaDescription ||
+            "DEEP SHOP is Bangladesh's trusted platform for Border Cross Products & genuine mobiles. Find 100% authentic and trusted global tech products."
+          }
+          image={seoConfig.metaImage || seoConfig.appIconUrl || undefined}
+          canonical="/"
+          exactTitle
+        />
+
+        <CustomSectionEmbed location="home_top" />
+
+        {/* 1. HERO SPOTLIGHT STAGE (Swipeable Spring Carousel) */}
+        {isLoadingBanners ? (
+          <div className="mb-8 w-full space-y-3">
+            <div className="ds-skeleton h-5 w-32 rounded-lg" />
+            <div className="ds-skeleton w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px] md:rounded-[28px]" />
+          </div>
+        ) : (
+          heroBanners.length > 0 && (
+            <section className="mb-9 w-full">
+              <SectionHeader eyebrow="Featured Showcase" title="Hot Deals" />
+              <div
+                id="home-hero"
+                className="ds-apple-surface relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px] md:rounded-[28px] overflow-hidden cursor-pointer select-none"
+                onClick={() => {
+                  triggerHaptic();
+                  if (heroBanners[safeHeroIdx]?.link) {
+                    navigate(heroBanners[safeHeroIdx].link);
+                  }
+                }}
+              >
+                <AnimatePresence initial={false} custom={heroDirection} mode="popLayout">
+                  <motion.div
+                    key={safeHeroIdx}
+                    custom={heroDirection}
+                    initial={
+                      shouldReduceMotion
+                        ? { opacity: 0 }
+                        : { x: heroDirection > 0 ? 140 : -140, opacity: 0.4 }
+                    }
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={
+                      shouldReduceMotion
+                        ? { opacity: 0 }
+                        : { x: heroDirection > 0 ? -140 : 140, opacity: 0.4 }
+                    }
+                    drag={heroBanners.length > 1 ? "x" : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.18}
+                    onDragEnd={handleHeroDragEnd}
+                    transition={heroTransition}
+                    className="absolute inset-0 bg-zinc-200 dark:bg-zinc-900"
+                  >
+                    {(() => {
+                      const rawHeroUrl =
+                        heroBanners[safeHeroIdx]?.imageUrl?.trim() || "";
+                      const heroSrc =
+                        optimizeImageUrl(rawHeroUrl, 1200, 82) || rawHeroUrl;
+                      return heroSrc ? (
+                        <img
+                          src={heroSrc}
+                          loading="eager"
+                          fetchPriority="high"
+                          decoding="async"
+                          draggable={false}
+                          onError={(e) => {
+                            if (rawHeroUrl && e.currentTarget.src !== rawHeroUrl) {
+                              e.currentTarget.src = rawHeroUrl;
+                            }
+                          }}
+                          className="w-full h-full object-cover"
+                          alt={
+                            heroBanners[safeHeroIdx]?.title ||
+                            "Featured Deal Banner"
+                          }
+                        />
+                      ) : null;
+                    })()}
+                  </motion.div>
+                </AnimatePresence>
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent z-10 pointer-events-none" />
+
+                <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7 z-20 flex justify-between items-end gap-4">
+                  <div className="flex flex-col text-white min-w-0 max-w-[78%]">
+                    <h3 className="ds-apple-display text-lg sm:text-2xl font-semibold text-white truncate">
+                      {heroBanners[safeHeroIdx]?.title ||
+                        "Discover the latest arrivals"}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-white/80 mt-1 truncate">
+                      {heroBanners[safeHeroIdx]?.subtitle || "Exclusive collection"}
+                    </p>
                   </div>
-                ))}
+                  <motion.div
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
+                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/90 text-[#1d1d1f] flex items-center justify-center shadow-sm backdrop-blur-md shrink-0"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </motion.div>
+                </div>
+
+                {heroBanners.length > 1 && (
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 z-20 bg-black/35 backdrop-blur-md px-2.5 py-1.5 rounded-full">
+                    {heroBanners.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          triggerHaptic();
+                          setHeroDirection(i >= safeHeroIdx ? 1 : -1);
+                          setActiveBanner(i);
+                        }}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                          safeHeroIdx === i
+                            ? "bg-white w-5"
+                            : "bg-white/45 w-1.5 hover:bg-white/75"
+                        }`}
+                        aria-label={`Go to slide ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )
+        )}
+
+        {/* 2. EDITORIAL PROGRAM ROW (Reseller VIP & Referral Reward) */}
+        <section
+          className={`mb-10 w-full grid grid-cols-1 gap-4 items-stretch ${
+            !userData ? "lg:grid-cols-12" : ""
+          }`}
+        >
+          <motion.div
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
+            onPointerDown={() => triggerHaptic()}
+            onClick={() => navigate("/subscription")}
+            className={`ds-apple-surface group relative overflow-hidden rounded-[24px] p-6 sm:p-7 cursor-pointer flex flex-col justify-between gap-5 ${
+              !userData ? "lg:col-span-8" : ""
+            }`}
+          >
+            <div className="space-y-2 max-w-2xl">
+              <p className="ds-apple-eyebrow ds-apple-muted text-[11px]">
+                Reseller Program · VIP Masterclass
+              </p>
+              <h3 className="ds-apple-display text-[19px] sm:text-[23px] font-semibold">
+                রিসেলারদের জন্য ০৳ অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারি
+              </h3>
+              <p className="ds-apple-muted text-[13px] sm:text-sm leading-relaxed line-clamp-2">
+                কোনো অগ্রিম চার্জ ছাড়া সরাসরি কাস্টমারকে পার্সেল পাঠান। রিসেলার মাস্টারক্লাসের স্টেপ-বাই-স্টেপ গাইড ও ভিআইপি প্ল্যান দেখুন।
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <button
+                type="button"
+                className="ds-apple-btn-primary rounded-full px-5 h-10 text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              >
+                <span>গাইড ও প্ল্যান দেখুন</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <span className="ds-apple-muted text-xs font-medium hidden sm:inline">
+                Official Certification &amp; Priority Support
+              </span>
+            </div>
+          </motion.div>
+
+          {!userData && (
+            <motion.div
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+              onPointerDown={() => triggerHaptic()}
+              onClick={() => navigate("/auth-selector")}
+              className="lg:col-span-4 rounded-[24px] bg-[#1d1d1f] dark:bg-[#1c1c1e] border border-white/10 text-white p-6 sm:p-7 cursor-pointer flex flex-col justify-between gap-5"
+            >
+              <div className="space-y-2">
+                <p className="ds-apple-eyebrow text-white/60 text-[11px]">
+                  Referral Reward
+                </p>
+                <h3 className="ds-apple-display text-[20px] sm:text-[22px] font-semibold text-white">
+                  Sign in to refer &amp; earn
+                </h3>
+                <p className="text-[13px] text-white/75 leading-relaxed tabular-nums">
+                  Earn up to {formatPrice(200)} credit on every verified referral order.
+                </p>
+              </div>
+
+              <div>
+                <span className="inline-flex items-center gap-1.5 h-10 px-5 rounded-full bg-white text-[#1d1d1f] text-xs sm:text-sm font-semibold whitespace-nowrap">
+                  <span>Sign In</span>
+                  <ArrowUpRight className="w-4 h-4" />
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </section>
+
+        {/* 3. TRENDING PRODUCTS SHOWCASE (Draggable Spring HeroSlider) */}
+        {isLoadingProducts ? (
+          <div className="mb-10 w-full">
+            <SectionShowcaseSkeleton cards={4} />
+          </div>
+        ) : (
+          products.length > 0 && (
+            <section id="home-products" className="mb-10 w-full">
+              <SectionHeader
+                eyebrow="Curated Selection"
+                title="Trending Products"
+                actionLabel="See All"
+                onAction={() => navigate("/all-products")}
+              />
+              <HeroSlider
+                autoSlideDelay={4500}
+                pauseDurationAfterInteract={10000}
+                cards={products.slice(0, 6).map((p) => ({
+                  id: p.id,
+                  title: p.name,
+                  description:
+                    p.description || "Discover authentic products at DEEP SHOP.",
+                  category: p.category,
+                  image: getProductDisplayImage(p),
+                  date:
+                    p.isOffer && p.offerPrice
+                      ? formatPrice(p.offerPrice)
+                      : formatPrice(p.price),
+                  actionText: "Buy Now",
+                }))}
+              />
+            </section>
+          )
+        )}
+
+        {/* 4. SPECIAL OFFERS CAROUSEL */}
+        {products.some((p) => p.isOffer) && (
+          <section className="mb-10 w-full">
+            <SectionHeader
+              eyebrow="Limited Pricing"
+              title="Special Offers"
+              actionLabel="See All"
+              onAction={() => navigate("/flash-sale")}
+            />
+            <OfferSlider
+              products={products.filter((p) => p.isOffer).slice(0, 8)}
+              autoSlide={true}
+            />
+          </section>
+        )}
+
+        {/* 5. BORDER STOCK INTERACTIVE SPRING STACK */}
+        <BorderOfferSection products={products} />
+
+        {/* 6. CATEGORY FILTER STRIP */}
+        <section className="mb-9 w-full relative z-10">
+          <SectionHeader eyebrow="Browse by Type" title="Categories" />
+          {isLoadingProducts ? (
+            <StoryRowSkeleton count={7} />
+          ) : (
+            <div className="flex items-center gap-3.5 sm:gap-4 overflow-x-auto pt-1 pb-3 px-0.5 scrollbar-hide snap-x">
+              {categories.map((cat) => {
+                const isSelected = activeCategory === cat;
+                const firstProduct =
+                  cat !== "All" ? products.find((p) => p.category === cat) : undefined;
+                const rawCategoryImg =
+                  firstProduct?.images
+                    ?.find((u) => typeof u === "string" && u.trim() !== "")
+                    ?.trim() ||
+                  (typeof firstProduct?.image === "string" &&
+                  firstProduct.image.trim() !== ""
+                    ? firstProduct.image.trim()
+                    : "");
+                const imageUrl = rawCategoryImg
+                  ? optimizeImageUrl(rawCategoryImg, 128, 75) || rawCategoryImg
+                  : "";
+
+                return (
+                  <motion.button
+                    key={cat}
+                    type="button"
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
+                    onClick={() => {
+                      triggerHaptic();
+                      setActiveCategory(cat);
+                      document
+                        .getElementById("popular-products")
+                        ?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="flex flex-col items-center gap-2 snap-center shrink-0 cursor-pointer group focus:outline-none"
+                  >
+                    <div className="relative w-16 h-16 md:w-[70px] md:h-[70px] rounded-full p-1 flex items-center justify-center">
+                      {isSelected && (
+                        <motion.span
+                          layoutId="homeCategoryRing"
+                          transition={categoryRingSpring}
+                          className="absolute inset-0 rounded-full ring-2 ring-[#0071E3] dark:ring-[#0A84FF]"
+                        />
+                      )}
+                      <div className="ds-apple-surface w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                        {cat === "All" ? (
+                          <span className="text-xs font-semibold tracking-tight">
+                            All
+                          </span>
+                        ) : imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={cat}
+                            width={64}
+                            height={64}
+                            loading="lazy"
+                            decoding="async"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-semibold uppercase">
+                            {cat.slice(0, 2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[11px] md:text-xs font-medium text-center truncate max-w-[82px] transition-colors ${
+                        isSelected
+                          ? "ds-apple-accent-text font-semibold"
+                          : "ds-apple-muted"
+                      }`}
+                    >
+                      {cat}
+                    </span>
+                  </motion.button>
+                );
+              })}
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Original Mobiles & Gear Section - Skinny List Style Layout ("chikon shape list") */}
-        {products.filter((p) =>
-          ["accessories", "cover", "charger", "cable", "phone", "mobile"].some((word) =>
-            p.category?.toLowerCase().includes(word),
-          ),
-        ).length > 0 && (
-          <div className="mb-10 w-full group" style={{ contentVisibility: "auto", containIntrinsicSize: "0 320px" }}>
-            <div className="flex justify-between items-center mb-5">
-              <div className="flex items-center gap-2">
-                <h2
-                  className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"
-                  style={{
-                    fontFamily: "'Comfortaa', cursive",
-                    letterSpacing: "-0.02em",
-                  }}
+        {/* 7. BORDER CROSS PHONES */}
+        {borderCrossPhones.length > 0 && (
+          <section
+            className="mb-10 w-full"
+            style={{ contentVisibility: "auto", containIntrinsicSize: "0 360px" }}
+          >
+            <SectionHeader
+              eyebrow="Direct Intake"
+              title="Border Cross Phones"
+              actionLabel="See All"
+              onAction={() => navigate("/all-products")}
+            />
+            <div className="flex gap-4 overflow-x-auto pb-3 pt-1 px-0.5 scrollbar-hide snap-x">
+              {borderCrossPhones.map((product, index) => (
+                <div
+                  key={product.id ? `${product.id}-horiz-${index}` : index}
+                  className="min-w-[220px] sm:min-w-[260px] snap-center"
                 >
-                  Original Mobiles & Gear
-                </h2>
-              </div>
-              <button
-                onClick={() => navigate("/all-products")}
-                className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline whitespace-nowrap"
-              >
-                See All
-              </button>
+                  <ProductCard product={product} index={index} />
+                </div>
+              ))}
             </div>
+          </section>
+        )}
 
-            {/* Compact Liquid Glass horizontal list rows */}
+        {/* 8. PHONE PARTS */}
+        {phoneParts.length > 0 && (
+          <section
+            className="mb-10 w-full"
+            style={{ contentVisibility: "auto", containIntrinsicSize: "0 340px" }}
+          >
+            <SectionHeader
+              eyebrow="OEM Components"
+              title="Phone Parts"
+              actionLabel="See All"
+              onAction={() => navigate("/all-products?category=Phone+Parts")}
+            />
+            <div className="flex gap-4 overflow-x-auto pb-3 pt-1 px-0.5 scrollbar-hide snap-x">
+              {phoneParts.map((product, index) => (
+                <div
+                  key={product.id ? `${product.id}-parts-${index}` : index}
+                  className="min-w-[205px] sm:min-w-[240px] snap-center"
+                >
+                  <ProductCard product={product} index={index} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 9. ORIGINAL MOBILES & GEAR COMPACT LIST */}
+        {mobileGear.length > 0 && (
+          <section
+            className="mb-10 w-full"
+            style={{ contentVisibility: "auto", containIntrinsicSize: "0 320px" }}
+          >
+            <SectionHeader
+              eyebrow="Essential Companions"
+              title="Original Mobiles & Gear"
+              actionLabel="See All"
+              onAction={() => navigate("/all-products")}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {products
-                .filter((p) =>
-                  ["accessories", "cover", "charger", "cable", "phone", "mobile"].some((word) =>
-                    p.category?.toLowerCase().includes(word),
-                  ),
-                )
-                .slice(0, 6)
-                .map((product, idx) => {
-                  const price = product.isOffer && product.offerPrice ? product.offerPrice : product.price;
-                  const slug = (product.name || "product")
+              {mobileGear.map((product, idx) => {
+                const price =
+                  product.isOffer && product.offerPrice
+                    ? product.offerPrice
+                    : product.price;
+                const slug =
+                  (product.name || "product")
                     .toLowerCase()
                     .replace(/[^a-z0-9]+/g, "-")
                     .replace(/(^-|-$)/g, "") || "item";
-                  return (
-                    <div 
-                      key={product.id ? `${product.id}-chikon-${idx}` : idx}
-                      onClick={() => navigate(`/product/${slug}/${product.id}`)}
-                      className="ds-liquid-product-card flex items-center gap-3.5 p-3 rounded-[20px] cursor-pointer group/row"
-                    >
-                      {/* Left Studio Media Square */}
-                      <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-2xl overflow-hidden ds-liquid-product-media shrink-0">
-                        <PixelImage 
-                          src={getProductDisplayImage(product)} 
-                          alt={product.name}
-                          maxWidth={160}
-                          className="w-full h-full bg-transparent"
-                          imgClassName="w-full h-full object-cover group-hover/row:scale-105 transition-transform duration-300" 
-                        />
-                      </div>
-                      
-                      {/* Center Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mb-0.5 truncate">
-                          {product.brand || product.category || "Authentic Gear"}
-                        </p>
-                        <h4 className="font-bold text-[14px] text-slate-900 dark:text-white truncate group-hover/row:text-sky-600 dark:group-hover/row:text-sky-400 transition-colors">
-                          {product.name}
-                        </h4>
-                        {product.description && (
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                            {product.description.replace(/<[^>]*>?/gm, " ").replace(/\s+/g, " ").trim()}
-                          </p>
-                        )}
-                        <div className="flex items-baseline gap-2 mt-1 tabular-nums">
-                          <span className="text-[14px] font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
-                            {formatPrice(price)}
-                          </span>
-                          {product.isOffer && product.offerPrice && product.offerPrice < product.price && (
-                            <span className="text-[11px] text-slate-400 line-through whitespace-nowrap">
+                return (
+                  <motion.div
+                    key={product.id ? `${product.id}-gear-${idx}` : idx}
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+                    onPointerDown={() => triggerHaptic()}
+                    onClick={() => navigate(`/product/${slug}/${product.id}`)}
+                    className="ds-apple-surface flex items-center gap-3.5 p-3 rounded-[20px] cursor-pointer group/row transition-transform duration-200 hover:-translate-y-0.5"
+                  >
+                    <div className="ds-apple-surface-subtle w-16 h-16 sm:w-[70px] sm:h-[70px] rounded-2xl overflow-hidden shrink-0">
+                      <PixelImage
+                        src={getProductDisplayImage(product)}
+                        alt={product.name}
+                        maxWidth={160}
+                        className="w-full h-full bg-transparent"
+                        imgClassName="w-full h-full object-cover transition-transform duration-300 group-hover/row:scale-105"
+                      />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="ds-apple-muted text-[11px] font-medium mb-0.5 truncate">
+                        {product.brand || product.category || "Authentic Gear"}
+                      </p>
+                      <h4 className="font-semibold text-[14px] truncate">
+                        {product.name}
+                      </h4>
+                      <div className="flex items-baseline gap-2 mt-1 tabular-nums">
+                        <span className="text-[14px] font-semibold whitespace-nowrap">
+                          {formatPrice(price)}
+                        </span>
+                        {product.isOffer &&
+                          product.offerPrice &&
+                          product.offerPrice < product.price && (
+                            <span className="ds-apple-muted text-[11px] line-through whitespace-nowrap">
                               {formatPrice(product.price)}
                             </span>
                           )}
-                        </div>
-                      </div>
-
-                      {/* Right View Arrow */}
-                      <div className="w-8 h-8 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0">
-                        <Icon name="chevron-right" className="w-4 h-4" />
                       </div>
                     </div>
-                  );
-                })}
+
+                    <div className="ds-apple-surface-subtle w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
+          </section>
         )}
 
-        {gifBanners.length > 0 && (
-          <ThinBanner banner={gifBanners[0]} navigate={navigate} />
-        )}
+        {gifBanners.length > 0 && <ThinBanner banner={gifBanners[0]} />}
 
-        {/* Popular Product Section */}
-        <div id="popular-products" className="mb-10 w-full group" style={{ contentVisibility: "auto", containIntrinsicSize: "0 680px" }}>
-          <div className="flex justify-between items-center mb-6">
-            <h2
-              className="text-[20px] font-bold text-zinc-900 dark:text-zinc-100 tracking-tight"
-              style={{
-                fontFamily: "'Comfortaa', cursive",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Popular Products
-            </h2>
-            <button
-              onClick={() => navigate("/all-products")}
-              className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white transition-colors"
-            >
-              See All
-            </button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8 mb-6">
-            {isLoadingProducts || products.length === 0
-              ? Array(8)
-                  .fill(0)
-                  .map((_, i) => <ProductSkeleton key={i} />)
-              : (
-                <>
-                  {filteredProducts
-                    .slice(0, displayedCount)
-                    .map((product, index) => (
-                      <ProductCard key={product.id ? `${product.id}-${index}` : index} product={product} index={index} />
+        {/* 10. POPULAR PRODUCTS CATALOG GRID */}
+        <section
+          id="popular-products"
+          className="mb-12 w-full"
+          style={{ contentVisibility: "auto", containIntrinsicSize: "0 680px" }}
+        >
+          <SectionHeader
+            eyebrow={
+              activeCategory === "All"
+                ? "Complete Storefront"
+                : `${activeCategory} Collection`
+            }
+            title="Popular Products"
+            actionLabel="See All"
+            onAction={() => navigate("/all-products")}
+          />
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mb-7">
+            {isLoadingProducts || products.length === 0 ? (
+              Array(8)
+                .fill(0)
+                .map((_, i) => <ProductSkeleton key={i} />)
+            ) : (
+              <>
+                {filteredProducts
+                  .slice(0, displayedCount)
+                  .map((product, index) => (
+                    <ProductCard
+                      key={product.id ? `${product.id}-${index}` : index}
+                      product={product}
+                      index={index}
+                    />
+                  ))}
+                {loadingMore &&
+                  Array(4)
+                    .fill(0)
+                    .map((_, idx) => (
+                      <ProductSkeleton key={`more-skel-${idx}`} />
                     ))}
-                  {loadingMore &&
-                    Array(4)
-                      .fill(0)
-                      .map((_, idx) => <ProductSkeleton key={`more-skel-${idx}`} />)}
-                </>
-              )}
+              </>
+            )}
           </div>
-          
+
           {filteredProducts.length > displayedCount && (
             <div className="flex justify-center w-full">
-               <button 
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="btn-loadmore font-bold py-3.5 px-8 rounded-full shadow-[0_7px_29px_0px_rgba(100,100,111,0.2)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.3)] bg-[#204ecf] dark:bg-[#3b82f6] text-[#fffdfc] hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center min-w-[160px]"
-               >
-                 {loadingMore ? (
-                    <span className="w-24 h-4 rounded-full ds-skeleton inline-block" />
-                 ) : (
-                    "Load More"
-                 )}
-               </button>
+              <motion.button
+                type="button"
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="ds-apple-btn-secondary font-semibold h-11 px-8 rounded-full flex items-center justify-center min-w-[164px] text-sm cursor-pointer transition-colors"
+              >
+                {loadingMore ? (
+                  <span className="w-20 h-3.5 rounded-full ds-skeleton inline-block" />
+                ) : (
+                  "Show More"
+                )}
+              </motion.button>
             </div>
           )}
-        </div>
-      </div>
+        </section>
 
-      {gifBanners.length > 1 && (
-        <ThinBanner banner={gifBanners[1]} navigate={navigate} />
-      )}
+        {gifBanners.length > 1 && <ThinBanner banner={gifBanners[1]} />}
+      </div>
 
       {sellerLogos.length > 0 && (
         <LogoTimeline
@@ -1001,85 +998,91 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         />
       )}
 
-      {gifBanners.length > 2 && (
-        <ThinBanner banner={gifBanners[2]} navigate={navigate} />
-      )}
-      {gifBanners.length > 3 && (
-        <ThinBanner banner={gifBanners[3]} navigate={navigate} />
-      )}
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-5 md:px-12">
+        {gifBanners.length > 2 && <ThinBanner banner={gifBanners[2]} />}
+        {gifBanners.length > 3 && <ThinBanner banner={gifBanners[3]} />}
 
-      {categoryBanners.length > 0 && (
-        <div className="mb-4 w-full animate-fade-in group px-0">
-          <div
-            className="rounded-[24px] overflow-hidden shadow-sm aspect-[21/9] relative group cursor-pointer"
-            onClick={() =>
-              navigate(
-                categoryBanners[safeCategoryBannerIdx]?.link || "/all-products",
-              )
-            }
-          >
+        {categoryBanners.length > 0 && (
+          <div className="mb-6 w-full">
             <div
-              className="flex transition-transform duration-700 ease-[cubic-bezier(0.23, 1, 0.32, 1)] h-full"
-              style={{
-                transform: `translateX(-${safeCategoryBannerIdx * 100}%)`,
+              className="ds-apple-surface rounded-[24px] overflow-hidden aspect-[21/9] relative cursor-pointer"
+              onClick={() => {
+                triggerHaptic();
+                navigate(
+                  categoryBanners[safeCategoryBannerIdx]?.link || "/all-products"
+                );
               }}
             >
-              {categoryBanners.map((banner, idx) => (
-                <div key={banner.id ? `${banner.id}-${idx}` : idx} className="min-w-full h-full relative">
-                  <PixelImage
-                    src={banner.imageUrl}
-                    alt="Banner"
-                    className="w-full h-full"
-                    imgClassName="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-            {categoryBanners.length > 1 && (
-              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-semibold z-10">
-                {safeCategoryBannerIdx + 1} / {categoryBanners.length}
+              <div
+                className="flex transition-transform duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] h-full"
+                style={{
+                  transform: `translateX(-${safeCategoryBannerIdx * 100}%)`,
+                }}
+              >
+                {categoryBanners.map((banner, idx) => (
+                  <div
+                    key={banner.id ? `${banner.id}-${idx}` : idx}
+                    className="min-w-full h-full relative"
+                  >
+                    <PixelImage
+                      src={banner.imageUrl}
+                      alt={banner.title || "Category Feature"}
+                      className="w-full h-full"
+                      imgClassName="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
               </div>
-            )}
+              {categoryBanners.length > 1 && (
+                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-md text-white text-[11px] font-semibold tabular-nums z-10">
+                  {safeCategoryBannerIdx + 1} / {categoryBanners.length}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {bottomBanners.length > 0 && (
-        <div className="mb-2 w-full animate-fade-in group px-0">
-          <div
-            className="rounded-[24px] overflow-hidden shadow-sm aspect-[21/9] relative group cursor-pointer"
-            onClick={() =>
-              navigate(
-                bottomBanners[safeBottomBannerIdx]?.link || "/all-products",
-              )
-            }
-          >
+        {bottomBanners.length > 0 && (
+          <div className="mb-6 w-full">
             <div
-              className="flex transition-transform duration-700 ease-[cubic-bezier(0.23, 1, 0.32, 1)] h-full"
-              style={{ transform: `translateX(-${safeBottomBannerIdx * 100}%)` }}
+              className="ds-apple-surface rounded-[24px] overflow-hidden aspect-[21/9] relative cursor-pointer"
+              onClick={() => {
+                triggerHaptic();
+                navigate(
+                  bottomBanners[safeBottomBannerIdx]?.link || "/all-products"
+                );
+              }}
             >
-              {bottomBanners.map((banner, idx) => (
-                <div key={banner.id ? `${banner.id}-${idx}` : idx} className="min-w-full h-full relative">
-                  <PixelImage
-                    src={banner.imageUrl}
-                    alt="Banner"
-                    className="w-full h-full"
-                    imgClassName="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-            {bottomBanners.length > 1 && (
-              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-semibold z-10">
-                {safeBottomBannerIdx + 1} / {bottomBanners.length}
+              <div
+                className="flex transition-transform duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] h-full"
+                style={{ transform: `translateX(-${safeBottomBannerIdx * 100}%)` }}
+              >
+                {bottomBanners.map((banner, idx) => (
+                  <div
+                    key={banner.id ? `${banner.id}-${idx}` : idx}
+                    className="min-w-full h-full relative"
+                  >
+                    <PixelImage
+                      src={banner.imageUrl}
+                      alt={banner.title || "Featured Collection"}
+                      className="w-full h-full"
+                      imgClassName="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
               </div>
-            )}
+              {bottomBanners.length > 1 && (
+                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-md text-white text-[11px] font-semibold tabular-nums z-10">
+                  {safeBottomBannerIdx + 1} / {bottomBanners.length}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <CustomSectionEmbed location="home_bottom" />
+        <CustomSectionEmbed location="home_bottom" />
       </div>
+
       <div className="w-full">
         <Footer />
       </div>
