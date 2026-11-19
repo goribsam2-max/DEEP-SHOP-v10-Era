@@ -27,6 +27,7 @@ import {
   VoiceNoteCard,
 } from "./NewsPostMedia";
 import { resolvePostVideoSource, toPlayableAudioUrl } from "../lib/videoEmbed";
+import { ResilientAudioPlayer } from "../lib/audioPlayback";
 import { NewsVideoPlayer } from "./NewsVideoPlayer";
 import { NewsRichText, NewsLinkPreviewCards } from "./NewsRichText";
 import { DottedGhostCatIcon } from "./ComposerLiquidGlassSheets";
@@ -264,7 +265,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
   const [translationSettingsOpen, setTranslationSettingsOpen] = useState(false);
 
   // Normal Post Background Music state
-  const cardMusicAudioRef = useRef<HTMLAudioElement | null>(null);
+  const cardMusicPlayerRef = useRef<ResilientAudioPlayer | null>(null);
   const [cardMusicPlaying, setCardMusicPlaying] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
@@ -283,11 +284,18 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
   }, [post.id]);
 
   useEffect(() => {
+    return () => {
+      cardMusicPlayerRef.current?.stop();
+      cardMusicPlayerRef.current = null;
+    };
+  }, [post.id]);
+
+  useEffect(() => {
     const onOtherVideoActive = (ev: Event) => {
       const customEv = ev as CustomEvent<{ id?: string }>;
       if (customEv.detail?.id && customEv.detail.id !== `card-music-${post.id}`) {
-        if (cardMusicAudioRef.current) {
-          cardMusicAudioRef.current.pause();
+        if (cardMusicPlayerRef.current) {
+          cardMusicPlayerRef.current.pause();
           setCardMusicPlaying(false);
         }
       }
@@ -630,22 +638,46 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
   const handleToggleCardBgMusic = (e: React.MouseEvent) => {
     e.stopPropagation();
     triggerHaptic();
-    const el = cardMusicAudioRef.current;
-    if (!el || !playableCardBgMusicUrl) return;
+    const musicSource = rawCardBgMusicUrl || playableCardBgMusicUrl;
+    if (!musicSource) return;
+
     if (cardMusicPlaying) {
-      el.pause();
+      cardMusicPlayerRef.current?.pause();
       setCardMusicPlaying(false);
-    } else {
-      window.dispatchEvent(
-        new CustomEvent("deepshop:news-active-video", {
-          detail: { id: `card-music-${post.id}` },
-        })
-      );
-      el.volume = Math.max(0, Math.min(1, Number(post.music?.bgMusicVolume ?? 1)));
-      el.play()
-        .then(() => setCardMusicPlaying(true))
-        .catch(() => setCardMusicPlaying(false));
+      return;
     }
+
+    window.dispatchEvent(
+      new CustomEvent("deepshop:news-active-video", {
+        detail: { id: `card-music-${post.id}` },
+      })
+    );
+
+    const targetVol = Math.max(
+      0,
+      Math.min(1, Number(post.music?.bgMusicVolume ?? 1))
+    );
+    if (!cardMusicPlayerRef.current) {
+      cardMusicPlayerRef.current = new ResilientAudioPlayer({
+        loop: true,
+        volume: targetVol,
+        onPlay: () => setCardMusicPlaying(true),
+        onPause: () => setCardMusicPlaying(false),
+        onEnded: () => setCardMusicPlaying(false),
+        onError: () => setCardMusicPlaying(false),
+      });
+    } else {
+      cardMusicPlayerRef.current.setVolume(targetVol);
+    }
+
+    cardMusicPlayerRef.current
+      .play(musicSource, {
+        preferVideoElement: Boolean((post.music as any)?.isFromVideo),
+        muted: false,
+      })
+      .then((ok) => {
+        if (!ok) setCardMusicPlaying(false);
+      });
   };
 
   const savedItemPreview = {
@@ -942,8 +974,8 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
               onClick={handleFollowAction}
               className={
                 effectiveFollowing
-                  ? "px-3 py-1.5 rounded-[9px] border loops-divider text-[13px] font-semibold text-zinc-600 dark:text-zinc-300 active:scale-95 transition cursor-pointer"
-                  : "loops-card-follow-pill px-4 py-1.5 rounded-[9px] text-[13.5px] font-semibold active:scale-95 transition cursor-pointer"
+                  ? "min-h-[34px] px-3.5 py-1.5 rounded-full border loops-divider text-[13px] font-semibold text-zinc-600 dark:text-zinc-300 active:scale-95 transition cursor-pointer whitespace-nowrap"
+                  : "loops-card-follow-pill min-h-[34px] px-4 py-1.5 rounded-full text-[13.5px] font-semibold active:scale-95 transition cursor-pointer whitespace-nowrap"
               }
             >
               {effectiveFollowing ? "Following" : "Follow"}
@@ -977,15 +1009,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
         </div>
       )}
 
-      {playableCardBgMusicUrl && (
-        <audio
-          ref={cardMusicAudioRef}
-          src={playableCardBgMusicUrl}
-          preload="none"
-          loop
-          onEnded={() => setCardMusicPlaying(false)}
-        />
-      )}
+      {/* Card background music is managed cleanly via cardMusicPlayerRef */}
 
       {/* 2A. Full-Bleed Edge-to-Edge Visual Media (Photos, Carousel, Video, GIF — Zero Radius) */}
       {!resolvedVideo && images.length === 1 && (

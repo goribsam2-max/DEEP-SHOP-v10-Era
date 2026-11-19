@@ -7,9 +7,11 @@ import { ScamPost, ImageLayoutStyle, ImageAspectMode, PostPoll } from "../types"
 import { triggerHaptic } from "../lib/haptics";
 import {
   resolvePostVideoSource,
+  toPlayableAudioUrl,
   toPlayableMediaUrl,
   toProxiedMediaStreamUrl,
 } from "../lib/videoEmbed";
+import { ResilientAudioPlayer } from "../lib/audioPlayback";
 import { NewsVideoPlayer } from "./NewsVideoPlayer";
 import { NewsRichText } from "./NewsRichText";
 import { SmoothImage, preloadImageUrl } from "./SmoothImage";
@@ -249,7 +251,7 @@ export const VoiceNoteCard: React.FC<{
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
-  const resolvedVoiceAudioSrc = toPlayableMediaUrl(audioUrl);
+  const resolvedVoiceAudioSrc = toPlayableAudioUrl(audioUrl);
   if (!resolvedVoiceAudioSrc) return null;
 
   return (
@@ -346,26 +348,50 @@ export const VoiceNoteCard: React.FC<{
 const MusicPostCard: React.FC<{
   music: NonNullable<ScamPost["music"]>;
 }> = ({ music }) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerRef = useRef<ResilientAudioPlayer | null>(null);
   const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      playerRef.current?.stop();
+      playerRef.current = null;
+    };
+  }, [music?.audioUrl]);
 
   const toggleMusic = (e: React.MouseEvent) => {
     e.stopPropagation();
     triggerHaptic();
-    const el = audioRef.current;
-    if (!el) return;
+    const rawUrl = (music?.audioUrl || "").trim();
+    if (!rawUrl) return;
     if (playing) {
-      el.pause();
+      playerRef.current?.pause();
       setPlaying(false);
-    } else {
-      el.play()
-        .then(() => setPlaying(true))
-        .catch(() => setPlaying(false));
+      return;
     }
+
+    if (!playerRef.current) {
+      playerRef.current = new ResilientAudioPlayer({
+        loop: true,
+        volume: 0.9,
+        onPlay: () => setPlaying(true),
+        onPause: () => setPlaying(false),
+        onEnded: () => setPlaying(false),
+        onError: () => setPlaying(false),
+      });
+    }
+
+    playerRef.current
+      .play(rawUrl, {
+        preferVideoElement: Boolean((music as any)?.isFromVideo),
+        muted: false,
+      })
+      .then((ok) => {
+        if (!ok) setPlaying(false);
+      });
   };
 
   const resolvedMusicAudioSrc = music?.audioUrl
-    ? toPlayableMediaUrl(music.audioUrl)
+    ? toPlayableAudioUrl(music.audioUrl)
     : "";
   if (!resolvedMusicAudioSrc) return null;
 
@@ -374,23 +400,6 @@ const MusicPostCard: React.FC<{
       onClick={toggleMusic}
       className="w-full rounded-[22px] bg-white/85 dark:bg-zinc-800/85 backdrop-blur-xl border border-slate-200/80 dark:border-zinc-700/70 p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800 transition shadow-2xs"
     >
-      <audio
-        ref={audioRef}
-        src={resolvedMusicAudioSrc}
-        preload="none"
-        onError={(e) => {
-          const a = e.currentTarget;
-          const fallback = toProxiedMediaStreamUrl(music.audioUrl);
-          if (fallback && !a.dataset.proxiedFallback && a.src !== fallback) {
-            a.dataset.proxiedFallback = "1";
-            a.src = fallback;
-            a.load();
-          }
-        }}
-        onEnded={() => setPlaying(false)}
-        onPause={() => setPlaying(false)}
-        onPlay={() => setPlaying(true)}
-      />
       <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-200 dark:bg-zinc-700 shrink-0">
         {music.cover?.trim() ? (
           <img

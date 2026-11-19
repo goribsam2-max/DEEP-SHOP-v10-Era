@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Music, Volume2, VolumeX, Play, Pause } from 'lucide-react';
 import { AttachedMusic } from './DeezerMusicPickerModal';
+import { createResilientAudioPlayer, ResilientAudioPlayer } from '../lib/audioPlayback';
 
 interface FloatingMusicBadgeProps {
   music?: AttachedMusic | null;
@@ -19,40 +20,47 @@ export const FloatingMusicBadge: React.FC<FloatingMusicBadgeProps> = ({
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerRef = useRef<ResilientAudioPlayer | null>(null);
 
   useEffect(() => {
-    const audio = new Audio(music.audioUrl);
-    audio.loop = true;
-    audioRef.current = audio;
+    const player = createResilientAudioPlayer({
+      loop: true,
+      muted: isMuted,
+      onPlay: () => setIsPlaying(true),
+      onPause: () => setIsPlaying(false),
+      onEnded: () => setIsPlaying(false),
+      onError: () => setIsPlaying(false),
+    });
+    playerRef.current = player;
 
-    if (autoPlay) {
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    if (autoPlay && music.audioUrl) {
+      player.play(music.audioUrl);
     }
 
     return () => {
-      audio.pause();
-      audioRef.current = null;
+      player.stop();
+      playerRef.current = null;
     };
   }, [music.audioUrl, autoPlay]);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!audioRef.current) return;
+    const player = playerRef.current;
+    if (!player) return;
 
     if (isPlaying) {
-      audioRef.current.pause();
+      player.pause();
       setIsPlaying(false);
-    } else {
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    } else if (music?.audioUrl) {
+      player.play(music.audioUrl, { muted: isMuted });
     }
   };
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!audioRef.current) return;
-    audioRef.current.muted = !isMuted;
-    setIsMuted(!isMuted);
+    const nextMuted = !isMuted;
+    playerRef.current?.setMuted(nextMuted);
+    setIsMuted(nextMuted);
   };
 
   if (compact) {

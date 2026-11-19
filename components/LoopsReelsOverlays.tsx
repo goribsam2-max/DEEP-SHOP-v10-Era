@@ -27,6 +27,7 @@ import {
   toPlayableAudioUrl,
   toPlayableMediaUrl,
 } from "../lib/videoEmbed";
+import { ResilientAudioPlayer } from "../lib/audioPlayback";
 import {
   formatCompactNumber,
   getSafePublicUsername,
@@ -241,7 +242,7 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const notify = useNotify();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioPlayerRef = useRef<ResilientAudioPlayer | null>(null);
 
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [durationSeconds, setDurationSeconds] = useState<number>(0);
@@ -277,12 +278,13 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      audioPlayerRef.current?.stop();
       setIsPlayingPreview(false);
       setDurationSeconds(0);
     }
+    return () => {
+      audioPlayerRef.current?.stop();
+    };
   }, [isOpen, sourcePost?.id]);
 
   const creatorInfo = useMemo(() => {
@@ -455,21 +457,44 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
 
   const handleTogglePlayPreview = () => {
     triggerHaptic();
-    const el = audioRef.current;
-    if (!el || !audioMeta.playableUrl) {
+    const targetSrc = audioMeta.rawAudioUrl || audioMeta.playableUrl;
+    if (!targetSrc) {
       notify("Audio preview unavailable for external stream", "info");
       return;
     }
     if (isPlayingPreview) {
-      el.pause();
+      audioPlayerRef.current?.pause();
       setIsPlayingPreview(false);
-    } else {
-      el.play()
-        .then(() => setIsPlayingPreview(true))
-        .catch(() => {
-          notify("Tap again to play audio preview", "info");
-        });
+      return;
     }
+
+    if (!audioPlayerRef.current) {
+      audioPlayerRef.current = new ResilientAudioPlayer({
+        loop: false,
+        volume: 0.95,
+        onPlay: () => setIsPlayingPreview(true),
+        onPause: () => setIsPlayingPreview(false),
+        onEnded: () => setIsPlayingPreview(false),
+        onDurationChange: (dur) => {
+          if (Number.isFinite(dur) && dur > 0) {
+            setDurationSeconds(dur);
+          }
+        },
+        onError: () => {
+          setIsPlayingPreview(false);
+          notify("Could not play this audio preview", "info");
+        },
+      });
+    }
+
+    audioPlayerRef.current
+      .play(targetSrc, {
+        preferVideoElement: Boolean((sourcePost?.music as any)?.isFromVideo),
+        muted: false,
+      })
+      .then((ok) => {
+        if (!ok) setIsPlayingPreview(false);
+      });
   };
 
   const handleToggleSaveAudio = async () => {
@@ -505,9 +530,7 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
 
   const handleUseAudio = () => {
     triggerHaptic();
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    audioPlayerRef.current?.stop();
     setIsPlayingPreview(false);
 
     if (audioMeta.rawAudioUrl) {
@@ -553,21 +576,6 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-[135] bg-white text-zinc-950 dark:bg-[#0B0C10] dark:text-white flex justify-center overflow-hidden"
         >
-          {audioMeta.playableUrl && (
-            <audio
-              ref={audioRef}
-              src={audioMeta.playableUrl}
-              preload="metadata"
-              onLoadedMetadata={(e) => {
-                const dur = e.currentTarget.duration;
-                if (Number.isFinite(dur) && dur > 0) {
-                  setDurationSeconds(dur);
-                }
-              }}
-              onEnded={() => setIsPlayingPreview(false)}
-            />
-          )}
-
           <div className="w-full max-w-[520px] h-[100dvh] flex flex-col bg-white dark:bg-[#0B0C10] md:border-x md:border-zinc-200 dark:md:border-white/10 overflow-y-auto no-scrollbar">
             {/* Top Navigation Bar (Exact IMG_5300) */}
             <header className="sticky top-0 z-20 bg-white/95 dark:bg-[#0B0C10]/95 backdrop-blur-md px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2.5 flex items-center justify-between gap-3">
@@ -762,11 +770,11 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
                 </div>
               </div>
 
-              {/* Primary CTA: Use audio (Exact IMG_5300 Royal-Blue Full-Width Button) */}
+              {/* Primary CTA: Use audio */}
               <button
                 type="button"
                 onClick={handleUseAudio}
-                className="w-full h-11 rounded-[12px] bg-[#4150F7] hover:bg-[#3544E8] active:scale-[0.99] text-white text-[15.5px] font-bold flex items-center justify-center transition cursor-pointer whitespace-nowrap"
+                className="w-full min-h-[44px] h-11 rounded-full bg-[#0071E3] hover:bg-[#0077ED] dark:bg-[#0A84FF] active:scale-[0.98] text-white text-[15px] font-semibold flex items-center justify-center transition cursor-pointer whitespace-nowrap shadow-[0_4px_14px_-3px_rgba(0,113,227,0.38)]"
               >
                 Use audio
               </button>

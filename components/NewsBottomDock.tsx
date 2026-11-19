@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { triggerHaptic } from "../lib/haptics";
+import { prefetchLoopsBootstrap } from "../lib/loopsCache";
 import { LoopsSvgIcon } from "./LoopsSvgIcon";
-import Icon from "./Icon";
 
 export const NewsBottomDock: React.FC<{
   variant?: "default" | "reels";
@@ -14,11 +15,18 @@ export const NewsBottomDock: React.FC<{
   const path = location.pathname;
   const searchParams = new URLSearchParams(location.search);
   const currentFilter = searchParams.get("filter");
+  const prefersReducedMotion = useReducedMotion();
 
+  const dockContainerRef = useRef<HTMLDivElement | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>(
     () => auth.currentUser?.photoURL || ""
   );
   const [imgErr, setImgErr] = useState(false);
+
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const isPointerDownRef = useRef(false);
+  const pointerStartXRef = useRef(0);
+  const wasScrubDraggedRef = useRef(false);
 
   useEffect(() => {
     let unsubDoc: (() => void) | null = null;
@@ -95,7 +103,8 @@ export const NewsBottomDock: React.FC<{
       );
     };
     window.addEventListener("deepshop:bottom-nav-visibility", syncVisibility);
-    return () => window.removeEventListener("deepshop:bottom-nav-visibility", syncVisibility);
+    return () =>
+      window.removeEventListener("deepshop:bottom-nav-visibility", syncVisibility);
   }, []);
 
   useEffect(() => {
@@ -109,28 +118,32 @@ export const NewsBottomDock: React.FC<{
       }
       lastY = currentY;
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Listen for unread messages if user logged in
   useEffect(() => {
     const u = auth.currentUser;
     if (!u) return;
-    const unsub = onSnapshot(doc(db, "users", u.uid), (snap) => {
-      if (snap.exists()) {
-        setHasUnreadMessages(Boolean(snap.data()?.unreadMessageCount || snap.data()?.hasUnreadMessages));
-      }
-    }, () => {});
+    const unsub = onSnapshot(
+      doc(db, "users", u.uid),
+      (snap) => {
+        if (snap.exists()) {
+          setHasUnreadMessages(
+            Boolean(snap.data()?.unreadMessageCount || snap.data()?.hasUnreadMessages)
+          );
+        }
+      },
+      () => {}
+    );
     return () => unsub();
   }, []);
 
-  const iconSizeClass = isReelsVariant || isScrolledCompact
-    ? "w-[20px] h-[20px]"
-    : "w-[23px] h-[23px]";
-  const homeIconSizeClass = isReelsVariant || isScrolledCompact
-    ? "w-[20px] h-[20px]"
-    : "w-[24px] h-[24px]";
+  const iconSizeClass =
+    isReelsVariant || isScrolledCompact ? "w-[20px] h-[20px]" : "w-[23px] h-[23px]";
+  const homeIconSizeClass =
+    isReelsVariant || isScrolledCompact ? "w-[20px] h-[20px]" : "w-[24px] h-[24px]";
 
   const items = [
     {
@@ -194,7 +207,9 @@ export const NewsBottomDock: React.FC<{
               referrerPolicy="no-referrer"
               onError={() => setImgErr(true)}
               className={`${
-                isReelsVariant || isScrolledCompact ? "w-[24px] h-[24px]" : "w-[29px] h-[29px]"
+                isReelsVariant || isScrolledCompact
+                  ? "w-[24px] h-[24px]"
+                  : "w-[29px] h-[29px]"
               } rounded-full object-cover transition ${
                 active
                   ? isReelsVariant
@@ -209,15 +224,100 @@ export const NewsBottomDock: React.FC<{
         ) : (
           <LoopsSvgIcon
             name="loops-nav-profile"
-            className={isReelsVariant || isScrolledCompact ? "w-[20px] h-[20px]" : "w-[22px] h-[22px]"}
+            className={
+              isReelsVariant || isScrolledCompact
+                ? "w-[20px] h-[20px]"
+                : "w-[22px] h-[22px]"
+            }
           />
         ),
     },
   ];
 
+  const activeIndex = Math.max(
+    0,
+    items.findIndex((it) => it.isActive)
+  );
+
+  const navigateToItem = (idx: number) => {
+    const item = items[idx];
+    if (!item) return;
+    triggerHaptic("selection");
+    if (item.id === "messages") {
+      try {
+        sessionStorage.setItem("deepshop_last_section_home", "/loops");
+        localStorage.setItem("deepshop_last_section_home", "/loops");
+      } catch {}
+      navigate(item.path, { state: { fromSection: "loops" } });
+    } else {
+      navigate(item.path);
+    }
+  };
+
+  const getTargetIndexFromClientX = (clientX: number): number => {
+    const dockEl = dockContainerRef.current;
+    if (!dockEl) return activeIndex;
+    const rect = dockEl.getBoundingClientRect();
+    if (!rect.width) return activeIndex;
+    const clampedX = Math.max(rect.left, Math.min(rect.right, clientX));
+    const ratio = (clampedX - rect.left) / rect.width;
+    const idx = Math.floor(ratio * items.length);
+    return Math.max(0, Math.min(items.length - 1, idx));
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    isPointerDownRef.current = true;
+    pointerStartXRef.current = e.clientX;
+    wasScrubDraggedRef.current = false;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    const idx = getTargetIndexFromClientX(e.clientX);
+    setScrubIndex(idx);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPointerDownRef.current) return;
+    if (Math.abs(e.clientX - pointerStartXRef.current) > 8) {
+      wasScrubDraggedRef.current = true;
+    }
+    const idx = getTargetIndexFromClientX(e.clientX);
+    if (idx !== scrubIndex) {
+      setScrubIndex(idx);
+      triggerHaptic("selection");
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPointerDownRef.current) return;
+    isPointerDownRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+
+    const targetIdx = scrubIndex ?? getTargetIndexFromClientX(e.clientX);
+    setScrubIndex(null);
+
+    if (wasScrubDraggedRef.current && targetIdx !== activeIndex) {
+      navigateToItem(targetIdx);
+    }
+    wasScrubDraggedRef.current = false;
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    isPointerDownRef.current = false;
+    setScrubIndex(null);
+    wasScrubDraggedRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+  };
+
   if (hideForModal) {
     return null;
   }
+
+  const effectiveDisplayIdx = scrubIndex ?? activeIndex;
 
   return (
     <nav
@@ -227,44 +327,67 @@ export const NewsBottomDock: React.FC<{
       } inset-x-0 z-50 flex justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom)] transition-all duration-300`}
     >
       <div
+        ref={dockContainerRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onTouchStart={(e) => e.stopPropagation()}
         className={`${
           isReelsVariant || isScrolledCompact
-            ? "loops-reels-dock-pill max-w-[292px] h-[48px] p-1 gap-0.5"
-            : "loops-dock-pill max-w-[356px] h-[60px] p-1.5 gap-1"
-        } pointer-events-auto flex items-center justify-between rounded-full w-full transition-all duration-300 ease-out touch-manipulation shadow-2xl`}
+            ? "loops-reels-dock-pill max-w-[292px] h-[50px] p-1 gap-0.5"
+            : "loops-dock-pill max-w-[364px] h-[60px] p-1.5 gap-1"
+        } pointer-events-auto relative flex items-center justify-between rounded-full w-full transition-all duration-300 ease-out touch-manipulation select-none`}
       >
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => {
-              triggerHaptic();
-              if (item.id === "messages") {
-                try {
-                  sessionStorage.setItem("deepshop_last_section_home", "/loops");
-                  localStorage.setItem("deepshop_last_section_home", "/loops");
-                } catch {}
-                navigate(item.path, { state: { fromSection: "loops" } });
-              } else {
-                navigate(item.path);
-              }
-            }}
-            title={item.label}
-            aria-label={item.label}
-            className={`relative h-full flex-1 rounded-full flex items-center justify-center transition-all duration-150 active:scale-94 cursor-pointer touch-manipulation ${
-              item.isActive
-                ? isReelsVariant
-                  ? "loops-reels-dock-active-pill text-white"
-                  : "loops-dock-active-pill text-[#0f0f0f] dark:text-white"
-                : isReelsVariant
-                ? "text-white/95 hover:bg-white/[0.08]"
-                : "text-[#0f0f0f] dark:text-zinc-200 hover:bg-black/[0.035] dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            {item.render(item.isActive)}
-          </button>
-        ))}
+        {items.map((item, idx) => {
+          const isItemActive = effectiveDisplayIdx === idx;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onPointerEnter={() => {
+                if (item.id === "home" || item.id === "video") {
+                  void prefetchLoopsBootstrap();
+                }
+              }}
+              onFocus={() => {
+                if (item.id === "home" || item.id === "video") {
+                  void prefetchLoopsBootstrap();
+                }
+              }}
+              onClick={(e) => {
+                if (wasScrubDraggedRef.current) return;
+                navigateToItem(idx);
+              }}
+              title={item.label}
+              aria-label={item.label}
+              className={`relative z-10 min-h-[44px] h-full flex-1 rounded-full flex items-center justify-center transition-transform active:scale-92 cursor-pointer touch-manipulation whitespace-nowrap ${
+                isItemActive
+                  ? isReelsVariant
+                    ? "text-white"
+                    : "text-[#0f0f0f] dark:text-white"
+                  : isReelsVariant
+                  ? "text-white/80 hover:text-white"
+                  : "text-[#0f0f0f]/75 dark:text-zinc-300 hover:text-black dark:hover:text-white"
+              }`}
+            >
+              {isItemActive && (
+                <motion.div
+                  layoutId="loopsDockLens"
+                  transition={
+                    prefersReducedMotion
+                      ? { duration: 0 }
+                      : { type: "spring", stiffness: 440, damping: 38 }
+                  }
+                  className={`absolute inset-0 rounded-full pointer-events-none -z-10 ${
+                    isReelsVariant ? "loops-reels-dock-lens" : "loops-dock-lens"
+                  }`}
+                />
+              )}
+              {item.render(isItemActive)}
+            </button>
+          );
+        })}
       </div>
     </nav>
   );

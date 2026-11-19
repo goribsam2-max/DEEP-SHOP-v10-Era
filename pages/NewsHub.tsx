@@ -39,7 +39,18 @@ import {
   NewsRichText,
   NewsLinkPreviewCards,
 } from "../components/NewsRichText";
-import { resolvePostVideoSource } from "../lib/videoEmbed";
+import { resolvePostVideoSource, prewarmVideoFirstChunk } from "../lib/videoEmbed";
+import { ResilientAudioPlayer } from "../lib/audioPlayback";
+import {
+  readCachedLoopsFeed,
+  writeCachedLoopsFeed,
+  readCachedLoopsStories,
+  writeCachedLoopsStories,
+  readCachedCommunityUsers,
+  writeCachedCommunityUsers,
+  readCachedLoopsNotes,
+  writeCachedLoopsNotes,
+} from "../lib/loopsCache";
 import { NewsBottomDock } from "../components/NewsBottomDock";
 import { NewsHubDrawer } from "../components/NewsHubDrawer";
 import { LoopPostCard, LoopHeartIcon } from "../components/LoopPostCard";
@@ -175,37 +186,18 @@ export const NewsHub: React.FC = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [authInitializing, setAuthInitializing] = useState(true);
   const [isStaffDoc, setIsStaffDoc] = useState(false);
-  const [firestorePosts, setFirestorePosts] = useState<ScamPost[]>(() => {
-    try {
-      const cached = JSON.parse(
-        localStorage.getItem("ds_loops_feed_cache_v1") || "[]"
-      );
-      return Array.isArray(cached) ? cached : [];
-    } catch {
-      return [];
-    }
-  });
-  const [communityUsers, setCommunityUsers] = useState<Record<string, any>[]>([]);
-  const [stories, setStories] = useState<any[]>(() => {
-    try {
-      const cached = JSON.parse(
-        localStorage.getItem("ds_loops_stories_cache_v1") || "[]"
-      );
-      return Array.isArray(cached) ? cached : [];
-    } catch {
-      return [];
-    }
-  });
-  const [loading, setLoading] = useState<boolean>(() => {
-    try {
-      const cached = JSON.parse(
-        localStorage.getItem("ds_loops_feed_cache_v1") || "[]"
-      );
-      return !(Array.isArray(cached) && cached.length > 0);
-    } catch {
-      return true;
-    }
-  });
+  const [firestorePosts, setFirestorePosts] = useState<ScamPost[]>(() =>
+    readCachedLoopsFeed()
+  );
+  const [communityUsers, setCommunityUsers] = useState<Record<string, any>[]>(() =>
+    readCachedCommunityUsers()
+  );
+  const [stories, setStories] = useState<any[]>(() =>
+    readCachedLoopsStories()
+  );
+  const [loading, setLoading] = useState<boolean>(() =>
+    readCachedLoopsFeed().length === 0
+  );
   const followedIds = useFollowedIds(currentUser?.uid);
   const [dismissedProfileIds, setDismissedProfileIds] = useState<string[]>(() =>
     getDismissedProfileIds()
@@ -232,12 +224,14 @@ export const NewsHub: React.FC = () => {
   );
   const [reelsOverlayOpen, setReelsOverlayOpen] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);
-  const [userNotes, setUserNotes] = useState<Record<string, any>>({});
+  const [userNotes, setUserNotes] = useState<Record<string, any>>(() =>
+    readCachedLoopsNotes()
+  );
   const [viewingLoopNote, setViewingLoopNote] = useState<any | null>(null);
   const [loopNoteAudioPlaying, setLoopNoteAudioPlaying] = useState<string | null>(null);
   const [loopNoteReplyText, setLoopNoteReplyText] = useState("");
   const [isSendingLoopNoteReply, setIsSendingLoopNoteReply] = useState(false);
-  const loopNoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const loopNotePlayerRef = useRef<ResilientAudioPlayer | null>(null);
 
   const isLoopAdmin = hasImmediateAdminOrStaffRole(userProfile, currentUser) || isStaffDoc;
 
@@ -272,6 +266,7 @@ export const NewsHub: React.FC = () => {
           }
         });
         setUserNotes(map);
+        writeCachedLoopsNotes(map);
       });
       return () => unsub();
     } catch (e) {
@@ -294,44 +289,51 @@ export const NewsHub: React.FC = () => {
     };
   }, [Boolean(viewingLoopNote)]);
 
-  // Auto-play attached music immediately when opening a Loop Note
+  // Auto-play attached music immediately when opening a Loop Note via ResilientAudioPlayer
   useEffect(() => {
+    if (!loopNotePlayerRef.current) {
+      loopNotePlayerRef.current = new ResilientAudioPlayer({
+        loop: false,
+        onEnded: () => setLoopNoteAudioPlaying(null),
+      });
+    }
+    const player = loopNotePlayerRef.current;
     setLoopNoteReplyText("");
     if (!viewingLoopNote) {
-      loopNoteAudioRef.current?.pause();
+      player.pause();
       setLoopNoteAudioPlaying(null);
       return;
     }
-    const url = viewingLoopNote.musicAudioUrl;
+    const url = (viewingLoopNote.musicAudioUrl || "").trim();
     if (!url) {
-      loopNoteAudioRef.current?.pause();
+      player.pause();
       setLoopNoteAudioPlaying(null);
       return;
     }
-    loopNoteAudioRef.current?.pause();
-    const a = new Audio(url);
-    loopNoteAudioRef.current = a;
     setLoopNoteAudioPlaying(url);
-    a.play().catch(() => {
-      setLoopNoteAudioPlaying(null);
+    void player.play(url, {
+      preferVideoElement: Boolean(viewingLoopNote.isFromVideo),
+      muted: false,
     });
-    a.onended = () => setLoopNoteAudioPlaying(null);
     return () => {
-      a.pause();
+      player.pause();
     };
-  }, [viewingLoopNote?.userId, viewingLoopNote?.musicAudioUrl]);
+  }, [viewingLoopNote?.userId, viewingLoopNote?.musicAudioUrl, viewingLoopNote?.isFromVideo]);
 
   const toggleLoopNoteAudio = (url: string) => {
+    if (!loopNotePlayerRef.current) {
+      loopNotePlayerRef.current = new ResilientAudioPlayer({
+        loop: false,
+        onEnded: () => setLoopNoteAudioPlaying(null),
+      });
+    }
+    const player = loopNotePlayerRef.current;
     if (loopNoteAudioPlaying === url) {
-      loopNoteAudioRef.current?.pause();
+      player.pause();
       setLoopNoteAudioPlaying(null);
     } else {
-      loopNoteAudioRef.current?.pause();
-      const a = new Audio(url);
-      loopNoteAudioRef.current = a;
-      a.play().catch(() => {});
-      a.onended = () => setLoopNoteAudioPlaying(null);
       setLoopNoteAudioPlaying(url);
+      void player.play(url, { muted: false });
     }
   };
 
@@ -343,7 +345,7 @@ export const NewsHub: React.FC = () => {
     triggerHaptic();
     try {
       await deleteDoc(doc(db, "user_notes", noteId));
-      loopNoteAudioRef.current?.pause();
+      loopNotePlayerRef.current?.pause();
       setLoopNoteAudioPlaying(null);
       setViewingLoopNote(null);
       notify("Note deleted", "info");
@@ -773,13 +775,31 @@ export const NewsHub: React.FC = () => {
     } catch {}
   }, []);
 
-  // Real-time Firestore feed listener (ONLY real posts — zero demo posts)
+  // Real-time Firestore feed listener (ONLY real posts — zero demo posts) + instant getDocs warmup
   useEffect(() => {
+    let active = true;
     const q = query(
       collection(db, "scam_posts"),
       orderBy("createdAt", "desc"),
       limit(60)
     );
+
+    // If cache is empty or small, fire fast one-shot query to guarantee ~0s initial load
+    if (firestorePosts.length === 0) {
+      getDocs(query(collection(db, "scam_posts"), orderBy("createdAt", "desc"), limit(16)))
+        .then((snap) => {
+          if (!active || snap.empty) return;
+          const list = snap.docs.map((d) => ({
+            id: d.id,
+            ...(d.data() as Omit<ScamPost, "id">),
+          }));
+          setFirestorePosts((prev) => (prev.length === 0 ? list : prev));
+          setLoading(false);
+          writeCachedLoopsFeed(list);
+        })
+        .catch(() => {});
+    }
+
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -789,18 +809,16 @@ export const NewsHub: React.FC = () => {
         }));
         setFirestorePosts(list);
         setLoading(false);
-        try {
-          localStorage.setItem(
-            "ds_loops_feed_cache_v1",
-            JSON.stringify(list.slice(0, 32))
-          );
-        } catch {}
+        writeCachedLoopsFeed(list);
       },
       () => {
         setLoading(false);
       }
     );
-    return () => unsub();
+    return () => {
+      active = false;
+      unsub();
+    };
   }, []);
 
   // Load real community user profiles for Suggested Profiles discovery
@@ -809,9 +827,9 @@ export const NewsHub: React.FC = () => {
     getDocs(query(collection(db, "users"), limit(40)))
       .then((snap) => {
         if (!mounted) return;
-        setCommunityUsers(
-          snap.docs.map((d) => ({ uid: d.id, ...d.data() }))
-        );
+        const usersList = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+        setCommunityUsers(usersList);
+        writeCachedCommunityUsers(usersList);
       })
       .catch(() => {});
     return () => {
@@ -984,6 +1002,21 @@ export const NewsHub: React.FC = () => {
       (a, b) => getPostTimeMs(b) - getPostTimeMs(a)
     );
   }, [firestorePosts, currentUser?.uid]);
+
+  // Prewarm first chunk of top 3 videos for ~0s instant playback
+  useEffect(() => {
+    let count = 0;
+    allPosts.slice(0, 8).forEach((p: any) => {
+      if (count < 3) {
+        const vid = resolvePostVideoSource(p);
+        const url = vid?.directStreamUrl || vid?.canonicalUrl || p.videoUrl;
+        if (url) {
+          count += 1;
+          prewarmVideoFirstChunk(url);
+        }
+      }
+    });
+  }, [allPosts]);
 
   // Apply Feed Personalization, Scam Shield Toggle & Smart Engagement + Discovery Ranking
   const filteredPosts = React.useMemo(() => {
@@ -2568,7 +2601,7 @@ export const NewsHub: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              loopNoteAudioRef.current?.pause();
+                              loopNotePlayerRef.current?.pause();
                               setLoopNoteAudioPlaying(null);
                               setViewingLoopNote(null);
                             }}
@@ -2787,7 +2820,7 @@ export const NewsHub: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              loopNoteAudioRef.current?.pause();
+                              loopNotePlayerRef.current?.pause();
                               setLoopNoteAudioPlaying(null);
                               setViewingLoopNote(null);
                             }}

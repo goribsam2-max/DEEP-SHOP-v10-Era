@@ -47,6 +47,7 @@ import { isAppleShoppingRoute, isExcludedFromAppleShopping } from './lib/shoppin
 import { hasImmediateAdminOrStaffRole } from './lib/admin';
 import { ReelUploadProgressOverlay } from './components/ReelUploadProgressOverlay';
 import { MobileAppInstallExperience } from './components/MobileAppInstallExperience';
+import { prefetchLoopsBootstrap } from './lib/loopsCache';
 import Messages from './pages/Messages';
 import NewsHub from './pages/NewsHub';
 
@@ -1454,7 +1455,23 @@ const App: React.FC = () => {
     const timer = setTimeout(() => {
       setDeferredReady(true);
     }, 3200);
-    return () => clearTimeout(timer);
+    let idleId: number | null = null;
+    let fallbackIdleTimer: ReturnType<typeof setTimeout> | null = null;
+    const runLoopsWarmup = () => {
+      void prefetchLoopsBootstrap();
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = (window as any).requestIdleCallback(runLoopsWarmup, { timeout: 1400 });
+    } else {
+      fallbackIdleTimer = setTimeout(runLoopsWarmup, 700);
+    }
+    return () => {
+      clearTimeout(timer);
+      if (idleId !== null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+        (window as any).cancelIdleCallback(idleId);
+      }
+      if (fallbackIdleTimer) clearTimeout(fallbackIdleTimer);
+    };
   }, []);
 
   useEffect(() => {

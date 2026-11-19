@@ -150,6 +150,63 @@ const ensureProtocol = (raw: string): string => {
   return `https://${trimmed}`;
 };
 
+export function normalizeDirectShareUrl(rawUrl: string): string {
+  const withProto = ensureProtocol(rawUrl).replace(/^http:\/\//i, "https://");
+  try {
+    const u = new URL(withProto);
+    const host = u.hostname.toLowerCase();
+
+    // Google Drive file share -> direct download/stream endpoint
+    if (host === "drive.google.com" || host === "docs.google.com") {
+      const fileMatch = u.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]{10,})/);
+      const idParam = u.searchParams.get("id");
+      const fileId = fileMatch?.[1] || idParam;
+      if (fileId && !u.pathname.startsWith("/uc")) {
+        return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+      }
+    }
+
+    // Dropbox share -> raw stream
+    if (host === "www.dropbox.com" || host === "dropbox.com") {
+      u.hostname = "dl.dropboxusercontent.com";
+      u.searchParams.delete("dl");
+      return u.toString();
+    }
+
+    // GitHub blob -> raw.githubusercontent.com
+    if (host === "github.com" && u.pathname.includes("/blob/")) {
+      return `https://raw.githubusercontent.com${u.pathname.replace("/blob/", "/")}`;
+    }
+
+    return withProto;
+  } catch {
+    return withProto;
+  }
+}
+
+export function isLikelyVideoMediaUrl(rawUrl?: string | null): boolean {
+  if (!rawUrl || !rawUrl.trim()) return false;
+  const unwrapped = unwrapProxiedMediaUrl(rawUrl);
+  if (AUDIO_ONLY_EXT_REGEX.test(unwrapped)) return false;
+  if (DIRECT_VIDEO_EXT_REGEX.test(unwrapped)) return true;
+  try {
+    const u = new URL(ensureProtocol(unwrapped));
+    const host = u.hostname.toLowerCase();
+    if (/\/video\/upload\//i.test(u.pathname)) return true;
+    if (
+      (host === "files.catbox.moe" ||
+        host === "litter.catbox.moe" ||
+        host === "pomf2.lain.la" ||
+        host === "uguu.se" ||
+        host.endsWith(".uguu.se")) &&
+      !AUDIO_ONLY_EXT_REGEX.test(u.pathname)
+    ) {
+      return false;
+    }
+  } catch {}
+  return false;
+}
+
 export function unwrapProxiedMediaUrl(rawUrl?: string | null): string {
   if (!rawUrl || !rawUrl.trim()) return "";
   const trimmed = rawUrl.trim();
@@ -181,7 +238,9 @@ export function toProxiedMediaStreamUrl(rawUrl?: string | null): string {
     return unwrapped;
   }
   try {
-    return ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
+    const normalized = normalizeDirectShareUrl(unwrapped);
+    if (!/^https?:\/\//i.test(normalized)) return normalized;
+    return `/api/stream-media?url=${encodeURIComponent(normalized)}`;
   } catch {
     return unwrapped;
   }
@@ -199,7 +258,7 @@ export function toPlayableMediaUrl(rawUrl?: string | null): string {
   }
 
   try {
-    return ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
+    return normalizeDirectShareUrl(unwrapped);
   } catch {
     return unwrapped;
   }
@@ -216,8 +275,7 @@ export function prewarmVideoFirstChunk(rawUrl?: string | null): void {
   if (
     !candidate ||
     candidate.startsWith("blob:") ||
-    candidate.startsWith("data:") ||
-    candidate.startsWith("/api/stream-media")
+    candidate.startsWith("data:")
   ) {
     return;
   }
@@ -225,7 +283,7 @@ export function prewarmVideoFirstChunk(rawUrl?: string | null): void {
   const isDirectVideoOrCdn =
     parsed?.platform === "direct" ||
     DIRECT_VIDEO_EXT_REGEX.test(candidate) ||
-    /(catbox\.moe|firebasestorage\.googleapis\.com|cloudinary\.com|res\.cloudinary\.com|pomf|uguu|qu\.ax)/i.test(
+    /(catbox\.moe|firebasestorage\.googleapis\.com|cloudinary\.com|res\.cloudinary\.com|pomf|uguu|qu\.ax|drive\.google\.com)/i.test(
       candidate
     );
   if (!isDirectVideoOrCdn) return;
@@ -237,12 +295,34 @@ export function prewarmVideoFirstChunk(rawUrl?: string | null): void {
   }
   prewarmedVideoUrls.add(candidate);
 
+  if (candidate.startsWith("/api/stream-media")) {
+    fetch(candidate, {
+      method: "GET",
+      headers: { Range: "bytes=0-262143" },
+      credentials: "same-origin",
+    }).catch(() => {});
+    return;
+  }
+
   fetch(candidate, {
     method: "GET",
     headers: { Range: "bytes=0-327679" },
     mode: "cors",
     credentials: "omit",
-  }).catch(() => {});
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("CORS/HTTP warm failed");
+    })
+    .catch(() => {
+      const proxied = toProxiedMediaStreamUrl(candidate);
+      if (proxied && proxied !== candidate) {
+        fetch(proxied, {
+          method: "GET",
+          headers: { Range: "bytes=0-262143" },
+          credentials: "same-origin",
+        }).catch(() => {});
+      }
+    });
 }
 
 export function toPlayableAudioUrl(rawUrl?: string | null): string {
@@ -256,7 +336,12 @@ export function toPlayableAudioUrl(rawUrl?: string | null): string {
     return unwrapped;
   }
   try {
-    return ensureProtocol(unwrapped).replace(/^http:\/\//i, "https://");
+    const normalized = normalizeDirectShareUrl(unwrapped);
+    // Pixabay CDN requires Referer header (handled automatically by /api/stream-media)
+    if (/(^|\.)pixabay\.com/i.test(new URL(normalized).hostname)) {
+      return toProxiedMediaStreamUrl(normalized);
+    }
+    return normalized;
   } catch {
     return unwrapped;
   }
@@ -589,6 +674,10 @@ export function extractFirstVideoUrlFromText(
 export function resolvePostVideoSource(
   post?: {
     videoUrl?: string | null;
+    mediaUrl?: string | null;
+    reelUrl?: string | null;
+    mediaType?: string | null;
+    type?: string | null;
     description?: string | null;
   } | null
 ): ParsedVideoEmbed | null {
@@ -598,6 +687,19 @@ export function resolvePostVideoSource(
       allowFallbackDirectVideo: true,
     });
     if (directParsed) return directParsed;
+  }
+  const extraUrl = (post.reelUrl || post.mediaUrl || "").trim();
+  if (extraUrl) {
+    const isExplicitVideo =
+      post.mediaType === "video" ||
+      post.type === "reel" ||
+      isLikelyVideoMediaUrl(extraUrl);
+    const parsedExtra = parseVideoEmbed(extraUrl, {
+      allowFallbackDirectVideo: isExplicitVideo,
+    });
+    if (parsedExtra && (isExplicitVideo || parsedExtra.platform !== "direct")) {
+      return parsedExtra;
+    }
   }
   const fromCaption = extractFirstVideoUrlFromText(post.description);
   if (fromCaption) {

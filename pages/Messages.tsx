@@ -5271,24 +5271,37 @@ const handleCreateChannel = async () => {
                     }}
                   />
 
-                  {/* Segmented Filter Tabs matching IMG_5470: All | Unread | Groups (zero shadow, faint kalsha active pill) */}
+                  {/* Segmented Filter Tabs: All | Unread | Groups with Apple Liquid Glass sliding lens */}
                   <div className="px-4 pt-1 pb-2">
-                    <div className="bg-white/75 dark:bg-zinc-800/75 p-1 rounded-full border-0 shadow-none grid grid-cols-3 items-center backdrop-blur-md">
-                      {(['all', 'unread', 'groups'] as const).map((tab) => (
-                        <button
-                          key={tab}
-                          type="button"
-                          onClick={() => setMessagesFilterTab(tab)}
-                          className={cn(
-                            "text-[14.5px] transition-all duration-200 cursor-pointer text-center py-2.5 px-3 rounded-full",
-                            messagesFilterTab === tab
-                              ? "bg-[#f2f0f6] dark:bg-white/12 font-semibold text-zinc-950 dark:text-white"
-                              : "bg-transparent font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-                          )}
-                        >
-                          {tab === 'all' ? 'All' : tab === 'unread' ? 'Unread' : 'Groups'}
-                        </button>
-                      ))}
+                    <div className="msg-apple-segmented p-1 rounded-full grid grid-cols-3 items-center relative select-none">
+                      {(['all', 'unread', 'groups'] as const).map((tab) => {
+                        const isActiveTab = messagesFilterTab === tab;
+                        return (
+                          <button
+                            key={tab}
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('selection');
+                              setMessagesFilterTab(tab);
+                            }}
+                            className={cn(
+                              "relative z-10 text-[14px] min-h-[36px] font-semibold transition-colors duration-150 cursor-pointer text-center py-2 px-3 rounded-full whitespace-nowrap",
+                              isActiveTab
+                                ? "text-zinc-950 dark:text-white"
+                                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                            )}
+                          >
+                            {isActiveTab && (
+                              <motion.div
+                                layoutId="msgInboxFilterPill"
+                                transition={{ type: "spring", stiffness: 440, damping: 38 }}
+                                className="msg-apple-segmented-lens absolute inset-0 rounded-full -z-10 pointer-events-none"
+                              />
+                            )}
+                            {tab === 'all' ? 'All' : tab === 'unread' ? 'Unread' : 'Groups'}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </>
@@ -6001,30 +6014,46 @@ const handleCreateChannel = async () => {
             Floating capsule dock (Home, Message, Calendar, Profile) + Black Circle '+' FAB
             =================================================================== */}
         {!activeChat && !activeChannel && (
-          <div className="md:hidden fixed bottom-5 inset-x-0 z-40 px-4 flex items-center justify-between gap-3 pointer-events-none">
-            {/* Left/Center: Clean Frosted White Navigation Bar (Messages, Activity, Profile — no Home icon per user request) */}
-            <div className="pointer-events-auto flex-1 max-w-[260px] h-[56px] px-4 bg-white/92 dark:bg-zinc-900/92 backdrop-blur-xl border-0 shadow-none rounded-full flex items-center justify-around">
-              {/* 1. Message (Active) */}
+          <div className="md:hidden fixed bottom-5 inset-x-0 z-40 px-4 flex items-center justify-between gap-3 pointer-events-none pb-[env(safe-area-inset-bottom)]">
+            {/* Left/Center: Apple Liquid Glass Navigation Bar (Messages, Activity, Profile) */}
+            <div className="msg-apple-dock pointer-events-auto flex-1 max-w-[264px] h-[56px] px-2 rounded-full flex items-center justify-around relative select-none">
+              {/* 1. Message */}
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic('selection');
                   setActiveMessagesTab('chats');
                   setSidebarTab('messages');
                   setShowArchivedOnly(false);
                   setMessagesFilterTab('all');
                 }}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-950 dark:text-white active:scale-95 transition cursor-pointer relative"
+                className={cn(
+                  "relative z-10 w-12 h-11 rounded-full flex items-center justify-center transition-transform active:scale-92 cursor-pointer",
+                  activeMessagesTab === 'chats' && sidebarTab === 'messages' && !showArchivedOnly
+                    ? "text-zinc-950 dark:text-white"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                )}
                 title="Messages"
                 aria-label="Messages"
               >
+                {activeMessagesTab === 'chats' && sidebarTab === 'messages' && !showArchivedOnly && (
+                  <motion.div
+                    layoutId="msgDockLens"
+                    transition={{ type: "spring", stiffness: 440, damping: 38 }}
+                    className="msg-apple-dock-lens absolute inset-0 rounded-full -z-10 pointer-events-none"
+                  />
+                )}
                 <Icon name="messages-inbox" className="w-[22px] h-[22px]" />
               </button>
 
               {/* 2. Activity / Calendar */}
               <button
                 type="button"
-                onClick={() => navigate('/loops/activity')}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white active:scale-95 transition cursor-pointer"
+                onClick={() => {
+                  triggerHaptic('selection');
+                  navigate('/loops/activity');
+                }}
+                className="relative z-10 w-12 h-11 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-transform active:scale-92 cursor-pointer"
                 title="Activity"
                 aria-label="Activity"
               >
@@ -6035,33 +6064,49 @@ const handleCreateChannel = async () => {
               <button
                 type="button"
                 onClick={() => {
+                  triggerHaptic('selection');
                   if (user?.uid) {
                     navigate(`/author/${user.uid}`);
                   } else {
                     setActiveMessagesTab('settings');
                   }
                 }}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white active:scale-95 transition cursor-pointer"
+                className={cn(
+                  "relative z-10 w-12 h-11 rounded-full flex items-center justify-center transition-transform active:scale-92 cursor-pointer",
+                  activeMessagesTab === 'settings'
+                    ? "text-zinc-950 dark:text-white"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                )}
                 title="Profile"
                 aria-label="Profile"
               >
+                {activeMessagesTab === 'settings' && (
+                  <motion.div
+                    layoutId="msgDockLens"
+                    transition={{ type: "spring", stiffness: 440, damping: 38 }}
+                    className="msg-apple-dock-lens absolute inset-0 rounded-full -z-10 pointer-events-none"
+                  />
+                )}
                 <Icon name="messages-profile" className="w-[22px] h-[22px]" />
               </button>
             </div>
 
-            {/* Right: Flat Circular Black Plus FAB (IMG_5470 — no heavy box shadow) */}
-            <button
+            {/* Right: Apple Circular Plus FAB with Spring Tap */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
               type="button"
               onClick={() => {
+                triggerHaptic();
                 setNewMessageInitialStep('new_message');
                 setShowNewMessageModal(true);
               }}
-              className="pointer-events-auto w-[56px] h-[56px] rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-none flex items-center justify-center active:scale-90 transition hover:scale-105 cursor-pointer shrink-0"
+              className="msg-apple-fab pointer-events-auto w-[56px] h-[56px] rounded-full flex items-center justify-center cursor-pointer shrink-0"
               title="New Message"
               aria-label="New Message"
             >
-              <Icon name="messages-plus" className="w-6 h-6" />
-            </button>
+              <Icon name="messages-plus" className="w-6 h-6 stroke-[2.2]" />
+            </motion.button>
           </div>
         )}
       </div>
@@ -7002,7 +7047,7 @@ const handleCreateChannel = async () => {
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); setSearchParams({}); }}
-                                className="md:hidden w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] flex items-center justify-center text-zinc-900 dark:text-zinc-100 hover:bg-white dark:hover:bg-zinc-700/60 active:scale-95 transition shrink-0 cursor-pointer"
+                                className="md:hidden msg-apple-icon-btn min-w-[44px] min-h-[44px] w-11 h-11 rounded-full flex items-center justify-center text-zinc-900 dark:text-zinc-100 active:scale-92 transition shrink-0 cursor-pointer"
                                 title="Back to Communities"
                               >
                                   <MsgBackChevronIcon className="w-5 h-5" />
@@ -7791,7 +7836,7 @@ const handleCreateChannel = async () => {
                          <button
                            type="button"
                            onClick={() => startCall("audio")}
-                           className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-900 dark:text-white hover:bg-white dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                           className="msg-apple-icon-btn min-w-[44px] min-h-[44px] w-11 h-11 rounded-full text-zinc-900 dark:text-white flex items-center justify-center transition active:scale-92 cursor-pointer shrink-0"
                            title="Voice Call"
                            aria-label="Voice Call"
                          >
@@ -7802,7 +7847,7 @@ const handleCreateChannel = async () => {
                          <button
                            type="button"
                            onClick={() => startCall("video")}
-                           className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-900 dark:text-white hover:bg-white dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                           className="msg-apple-icon-btn min-w-[44px] min-h-[44px] w-11 h-11 rounded-full text-zinc-900 dark:text-white flex items-center justify-center transition active:scale-92 cursor-pointer shrink-0"
                            title="Video Call"
                            aria-label="Video Call"
                          >
@@ -7819,7 +7864,7 @@ const handleCreateChannel = async () => {
                                setShowUserInfoModal(true);
                              }
                            }}
-                           className="w-11 h-11 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] text-zinc-900 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-700/60 flex items-center justify-center transition active:scale-95 cursor-pointer shrink-0"
+                           className="msg-apple-icon-btn min-w-[44px] min-h-[44px] w-11 h-11 rounded-full text-zinc-900 dark:text-zinc-200 flex items-center justify-center transition active:scale-92 cursor-pointer shrink-0"
                            title="Conversation details"
                            aria-label="Conversation details"
                          >

@@ -45,6 +45,7 @@ import {
   resolveShortVideoUrl,
   toPlayableMediaUrl,
 } from "../lib/videoEmbed";
+import { createResilientAudioPlayer, ResilientAudioPlayer } from "../lib/audioPlayback";
 import { FEED_THEMES, FEED_THEME_GROUPS } from "../lib/feed-themes";
 import { resolvePostById } from "./NewsHubSubPages";
 import { LiveStreamModal } from "../components/LiveStreamModal";
@@ -1308,24 +1309,39 @@ function cleanPayload<T>(obj: T): T {
     setDrafts(next);
   };
 
+  const resilientMusicPlayerRef = useRef<ResilientAudioPlayer | null>(null);
+
+  useEffect(() => {
+    return () => {
+      resilientMusicPlayerRef.current?.stop();
+      resilientMusicPlayerRef.current = null;
+    };
+  }, []);
+
   const toggleAttachedMusicPreview = () => {
     if (!attachedMusic?.audioUrl) return;
     triggerHaptic();
-    if (playingAttachedMusic && musicPreviewAudioRef.current) {
-      musicPreviewAudioRef.current.pause();
+    if (!resilientMusicPlayerRef.current) {
+      resilientMusicPlayerRef.current = createResilientAudioPlayer({ loop: true });
+    }
+    const player = resilientMusicPlayerRef.current;
+
+    if (playingAttachedMusic) {
+      player.pause();
       setPlayingAttachedMusic(false);
       return;
     }
+
     if (musicPreviewAudioRef.current) {
       musicPreviewAudioRef.current.pause();
     }
-    const audio = new Audio(toPlayableMediaUrl(attachedMusic.audioUrl));
-    audio.onended = () => setPlayingAttachedMusic(false);
-    audio
-      .play()
-      .then(() => setPlayingAttachedMusic(true))
-      .catch(() => setPlayingAttachedMusic(false));
-    musicPreviewAudioRef.current = audio;
+    player.updateCallbacks({
+      onPlay: () => setPlayingAttachedMusic(true),
+      onPause: () => setPlayingAttachedMusic(false),
+      onEnded: () => setPlayingAttachedMusic(false),
+      onError: () => setPlayingAttachedMusic(false),
+    });
+    player.play(attachedMusic.audioUrl);
   };
 
   const handleAddThreadItem = () => {

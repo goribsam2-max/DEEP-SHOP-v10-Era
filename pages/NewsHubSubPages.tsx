@@ -86,6 +86,7 @@ import {
 } from "./seller/AddStory";
 import { ScamPost, StoryHighlightItem, StoryHighlightSnapshot } from "../types";
 import { toPlayableAudioUrl, toPlayableMediaUrl } from "../lib/videoEmbed";
+import { ResilientAudioPlayer } from "../lib/audioPlayback";
 import { NewsPostMedia, isScamPostRecord } from "../components/NewsPostMedia";
 import {
   NewsRichText,
@@ -2780,7 +2781,7 @@ export const NewsStoryViewerPage: React.FC = () => {
   const [audioMuted, setAudioMuted] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<ResilientAudioPlayer | null>(null);
 
   // Interactive Popovers & Sheets State
   const [showOwnMorePopover, setShowOwnMorePopover] = useState(false);
@@ -3304,46 +3305,33 @@ export const NewsStoryViewerPage: React.FC = () => {
     }
   };
 
-  // Sync story background music playback via stream proxy
+  // Sync story background music playback via ResilientAudioPlayer (supports admin tracks + video-extracted audio)
   useEffect(() => {
     if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.loop = true;
-      audioRef.current.preload = "auto";
+      audioRef.current = new ResilientAudioPlayer({ loop: true, volume: 0.9 });
     }
-    const audio = audioRef.current;
-    const rawSongUrl = story?.audioUrl || story?.music?.url || "";
-    const playableSongUrl = toPlayableAudioUrl(rawSongUrl);
-    if (playableSongUrl && !audioMuted) {
-      if (audio.src !== playableSongUrl && audio.src !== rawSongUrl) {
-        audio.onerror = () => {
-          if (rawSongUrl && audio.src !== rawSongUrl) {
-            audio.onerror = null;
-            audio.src = rawSongUrl;
-            audio.play().catch(() => {});
-          }
-        };
-        audio.src = playableSongUrl;
-      }
-      audio.muted = false;
-      const p = audio.play();
-      if (p !== undefined) {
-        p.catch(() => {});
+    const player = audioRef.current;
+    const rawSongUrl = (story?.audioUrl || story?.music?.url || "").trim();
+    if (rawSongUrl && !audioMuted) {
+      player.setMuted(false);
+      if (player.getCurrentUrl() !== rawSongUrl || !player.isPlaying()) {
+        void player.play(rawSongUrl, {
+          preferVideoElement: Boolean(story?.music?.isFromVideo),
+          muted: false,
+        });
       }
     } else {
-      audio.pause();
+      player.pause();
     }
     return () => {
-      audio.pause();
+      player.pause();
     };
-  }, [story?.id, story?.audioUrl, story?.music?.url, audioMuted]);
+  }, [story?.id, story?.audioUrl, story?.music?.url, story?.music?.isFromVideo, audioMuted]);
 
   useEffect(() => {
     return () => {
       if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        audioRef.current.src = "";
+        audioRef.current.stop();
         audioRef.current = null;
       }
     };
@@ -3352,9 +3340,7 @@ export const NewsStoryViewerPage: React.FC = () => {
   const handleCloseViewer = () => {
     triggerHaptic();
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current.src = "";
+      audioRef.current.stop();
     }
     if (fromMessages) {
       navigate("/messages");

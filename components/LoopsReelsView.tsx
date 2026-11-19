@@ -52,6 +52,7 @@ import {
   toPlayableAudioUrl,
   toProxiedMediaStreamUrl,
   prewarmVideoFirstChunk,
+  isLikelyVideoMediaUrl,
 } from "../lib/videoEmbed";
 import {
   CURATED_SUGGESTED_TOPICS,
@@ -366,13 +367,14 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
 }) => {
   const playerId = useId();
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const bgAudioRef = useRef<HTMLMediaElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const [resolved, setResolved] = useState<ParsedVideoEmbed>(videoSource);
   const [directFailed, setDirectFailed] = useState(false);
   const [useRawOriginFallback, setUseRawOriginFallback] = useState(false);
   const [useAudioProxyFallback, setUseAudioProxyFallback] = useState(false);
+  const [useBgVideoElement, setUseBgVideoElement] = useState(false);
   const [hasLoadedFrame, setHasLoadedFrame] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -437,6 +439,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     setDirectFailed(false);
     setUseRawOriginFallback(false);
     setUseAudioProxyFallback(false);
+    setUseBgVideoElement(false);
     setHasLoadedFrame(Boolean(videoRef.current && videoRef.current.readyState >= 2));
     setIsBuffering(false);
     setIsPaused(false);
@@ -599,8 +602,16 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
 
     if (usesNativeVideo && videoRef.current) {
       const v = videoRef.current;
+      const hasUserActivated =
+        typeof navigator !== "undefined" &&
+        Boolean((navigator as any).userActivation?.hasBeenActive);
+      const shouldStartMuted = !hasUserActivated && !isMuted;
       v.volume = reelVideoVolume;
-      v.muted = isMuted || (hasSeparateReelMusic && reelVideoVolume <= 0.01);
+      v.muted = isMuted || shouldStartMuted || (hasSeparateReelMusic && reelVideoVolume <= 0.01);
+      if (shouldStartMuted && !autoMuteNotifiedRef.current) {
+        autoMuteNotifiedRef.current = true;
+        onAutoMuted?.();
+      }
       v.playbackRate = playbackSpeed;
       if (isActive && !isPaused) {
         setIsBuffering(false);
@@ -610,6 +621,10 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
             // If browser blocks unmuted playback on slide change, fallback to muted for this video element
             v.muted = true;
             if (audioEl) audioEl.pause();
+            if (!autoMuteNotifiedRef.current) {
+              autoMuteNotifiedRef.current = true;
+              onAutoMuted?.();
+            }
             v.play().catch(() => {});
           });
         }
@@ -854,12 +869,19 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
                 v.muted = isMuted;
                 v.play().catch(() => {
                   v.muted = true;
+                  if (!autoMuteNotifiedRef.current) {
+                    autoMuteNotifiedRef.current = true;
+                    onAutoMuted?.();
+                  }
                   v.play().catch(() => {});
                 });
               }
             }}
             onLoadedMetadata={(e) => {
               const v = e.currentTarget;
+              if (v.readyState >= 2) {
+                setHasLoadedFrame(true);
+              }
               if (!posterImg && v.currentTime === 0 && v.paused) {
                 try {
                   v.currentTime = 0.001;
@@ -1135,9 +1157,49 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
             : toPlayableAudioUrl(rawMusicAudioUrl)
         ).trim();
         if (!resolvedReelAudioSrc) return null;
+        const preferVideoEl =
+          useBgVideoElement ||
+          isLikelyVideoMediaUrl(rawMusicAudioUrl) ||
+          Boolean((post.music as any)?.isFromVideo);
+
+        if (preferVideoEl) {
+          return (
+            <video
+              ref={bgAudioRef as any}
+              data-active-reel-audio={isActive ? "true" : undefined}
+              src={resolvedReelAudioSrc}
+              preload={isActive ? "auto" : "none"}
+              playsInline
+              loop={!(isImageMusicReel && onVideoEnded)}
+              muted={isMuted}
+              className="fixed w-0 h-0 opacity-0 pointer-events-none -z-10"
+              aria-hidden="true"
+              onError={() => {
+                if (!useAudioProxyFallback) {
+                  setUseAudioProxyFallback(true);
+                }
+              }}
+              onTimeUpdate={(e) => {
+                if (!isImageMusicReel || !isActive) return;
+                const a = e.currentTarget;
+                if (a.duration > 0) {
+                  onProgressUpdate?.(
+                    Math.min(100, (a.currentTime / a.duration) * 100)
+                  );
+                }
+              }}
+              onEnded={() => {
+                if (isImageMusicReel && onVideoEnded) {
+                  onVideoEnded();
+                }
+              }}
+            />
+          );
+        }
+
         return (
           <audio
-            ref={bgAudioRef}
+            ref={bgAudioRef as any}
             data-active-reel-audio={isActive ? "true" : undefined}
             src={resolvedReelAudioSrc}
             preload={isActive ? "auto" : "none"}
@@ -1146,6 +1208,8 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
             onError={() => {
               if (!useAudioProxyFallback) {
                 setUseAudioProxyFallback(true);
+              } else if (!useBgVideoElement) {
+                setUseBgVideoElement(true);
               }
             }}
             onTimeUpdate={(e) => {
@@ -3469,8 +3533,8 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
           activeVid.play().catch(() => {});
         }
       }
-      const activeAudio = document.querySelector<HTMLAudioElement>(
-        'audio[data-active-reel-audio="true"]'
+      const activeAudio = document.querySelector<HTMLMediaElement>(
+        '[data-active-reel-audio="true"]'
       );
       if (activeAudio) {
         activeAudio.muted = false;
@@ -3503,8 +3567,8 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
         activeVid.play().catch(() => {});
       }
     }
-    const activeAudio = document.querySelector<HTMLAudioElement>(
-      'audio[data-active-reel-audio="true"]'
+    const activeAudio = document.querySelector<HTMLMediaElement>(
+      '[data-active-reel-audio="true"]'
     );
     if (activeAudio) {
       activeAudio.muted = nextMuted;
@@ -4143,7 +4207,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setReelsSubTab("reels")}
-                  className="px-4 py-2.5 rounded-full bg-white/15 text-white text-xs font-bold cursor-pointer"
+                  className="min-h-[44px] px-4 py-2.5 rounded-full bg-white/18 hover:bg-white/25 border border-white/20 text-white text-xs font-bold cursor-pointer whitespace-nowrap active:scale-95 transition"
                 >
                   Explore All Reels
                 </button>
@@ -4158,7 +4222,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                     navigate("/create-reel");
                   }
                 }}
-                className="px-5 py-2.5 rounded-full bg-white text-zinc-950 text-xs font-bold cursor-pointer"
+                className="min-h-[44px] px-5 py-2.5 rounded-full bg-white text-zinc-950 text-xs font-bold cursor-pointer whitespace-nowrap active:scale-95 transition hover:bg-white/95"
               >
                 Upload a Reel
               </button>
@@ -4683,10 +4747,10 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                                   creator.displayName
                                 )
                               }
-                              className={`px-3 py-1 rounded-[9px] text-[12.5px] font-semibold transition cursor-pointer shrink-0 whitespace-nowrap ${
+                              className={`min-h-[34px] px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold transition active:scale-92 cursor-pointer shrink-0 whitespace-nowrap ${
                                 isCreatorFollowed
-                                  ? "bg-white/15 border border-white/45 text-white"
-                                  : "bg-transparent border border-white/85 text-white hover:bg-white/10"
+                                  ? "bg-white/20 border border-white/45 text-white"
+                                  : "bg-white text-zinc-950 font-bold hover:bg-white/95"
                               }`}
                             >
                               {isCreatorFollowed ? "Following" : "Follow"}

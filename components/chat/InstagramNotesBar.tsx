@@ -43,6 +43,7 @@ import { cn } from '../../lib/utils';
 import { triggerHaptic } from '../../lib/haptics';
 import { hasImmediateAdminOrStaffRole } from '../../lib/admin';
 import { sendPushNotification } from '../../lib/push';
+import { createResilientAudioPlayer, ResilientAudioPlayer } from '../../lib/audioPlayback';
 
 const MAX_NOTE_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -383,63 +384,67 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
     };
   }, [myNote]);
 
+  const resilientNotePlayerRef = useRef<ResilientAudioPlayer | null>(null);
+
   // Auto-play attached music immediately when viewing a Note
   useEffect(() => {
     setNoteReplyText('');
+    if (!resilientNotePlayerRef.current) {
+      resilientNotePlayerRef.current = createResilientAudioPlayer({ loop: false });
+    }
+    const player = resilientNotePlayerRef.current;
+
     if (!viewingNote) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      player.stop();
       setPlayingAudioUrl(null);
       return;
     }
     const url = viewingNote.musicAudioUrl;
     if (!url) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      player.stop();
       setPlayingAudioUrl(null);
       return;
     }
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    setPlayingAudioUrl(url);
-    audio.play().catch(() => {
-      setPlayingAudioUrl(null);
+
+    player.updateCallbacks({
+      onPlay: () => setPlayingAudioUrl(url),
+      onPause: () => setPlayingAudioUrl((curr) => (curr === url ? null : curr)),
+      onEnded: () => setPlayingAudioUrl(null),
+      onError: () => setPlayingAudioUrl(null),
     });
-    audio.onended = () => setPlayingAudioUrl(null);
+    setPlayingAudioUrl(url);
+    player.play(url);
+
     return () => {
-      audio.pause();
+      player.stop();
     };
   }, [viewingNote?.userId, viewingNote?.musicAudioUrl]);
 
   // Audio helper
   const handleTogglePlayAudio = (url: string) => {
+    if (!resilientNotePlayerRef.current) {
+      resilientNotePlayerRef.current = createResilientAudioPlayer({ loop: false });
+    }
+    const player = resilientNotePlayerRef.current;
     if (playingAudioUrl === url) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      player.stop();
       setPlayingAudioUrl(null);
     } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.play().catch(() => {});
-      audio.onended = () => setPlayingAudioUrl(null);
+      player.updateCallbacks({
+        onPlay: () => setPlayingAudioUrl(url),
+        onPause: () => setPlayingAudioUrl((curr) => (curr === url ? null : curr)),
+        onEnded: () => setPlayingAudioUrl(null),
+        onError: () => setPlayingAudioUrl(null),
+      });
       setPlayingAudioUrl(url);
+      player.play(url);
     }
   };
 
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      resilientNotePlayerRef.current?.stop();
+      resilientNotePlayerRef.current = null;
     };
   }, []);
 

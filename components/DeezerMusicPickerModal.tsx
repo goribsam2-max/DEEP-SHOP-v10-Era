@@ -12,6 +12,7 @@ import {
 import { collection, onSnapshot, query, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import { toPlayableAudioUrl } from "../lib/videoEmbed";
+import { createResilientAudioPlayer, ResilientAudioPlayer } from "../lib/audioPlayback";
 
 export interface DeezerTrack {
   id: number | string;
@@ -109,7 +110,7 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
   const [playingTrackId, setPlayingTrackId] = useState<number | string | null>(
     null
   );
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerRef = useRef<ResilientAudioPlayer | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -268,9 +269,8 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
   }, [allTracks, activeFilter, searchQuery]);
 
   const stopAudioPreview = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    if (playerRef.current) {
+      playerRef.current.stop();
     }
     setPlayingTrackId(null);
   };
@@ -281,6 +281,7 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
     }
     return () => {
       stopAudioPreview();
+      playerRef.current = null;
     };
   }, [isOpen]);
 
@@ -292,20 +293,24 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
     }
 
     stopAudioPreview();
-    const playableUrl = toPlayableAudioUrl(track.preview);
-    if (!playableUrl) return;
+    if (!track.preview?.trim()) return;
 
-    const audio = new Audio(playableUrl);
-    audio.volume = 0.85;
-    audioRef.current = audio;
-    setPlayingTrackId(track.id);
-
-    audio.play().catch(() => {
-      setPlayingTrackId(null);
+    if (!playerRef.current) {
+      playerRef.current = createResilientAudioPlayer({
+        volume: 0.85,
+      });
+    }
+    playerRef.current.updateCallbacks({
+      onPlay: () => setPlayingTrackId(track.id),
+      onPause: () => setPlayingTrackId((curr) => (curr === track.id ? null : curr)),
+      onEnded: () => setPlayingTrackId(null),
+      onError: () => setPlayingTrackId(null),
     });
-    audio.onended = () => {
-      setPlayingTrackId(null);
-    };
+
+    setPlayingTrackId(track.id);
+    playerRef.current.play(track.preview, {
+      preferVideoElement: Boolean(track.isFromVideo),
+    });
   };
 
   const handleChooseTrack = (track: DeezerTrack) => {
@@ -396,25 +401,25 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-900">
+          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-full bg-zinc-100/90 dark:bg-zinc-900 border border-black/[0.04] dark:border-white/[0.08]">
             <button
               type="button"
               onClick={() => setActiveFilter("all")}
-              className={`h-8 rounded-lg text-xs font-semibold transition-all ${
+              className={`min-h-[38px] px-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 activeFilter === "all"
-                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
-              All Sounds ({allTracks.length})
+              All ({allTracks.length})
             </button>
             <button
               type="button"
               onClick={() => setActiveFilter("video_audio")}
-              className={`h-8 rounded-lg text-xs font-semibold transition-all ${
+              className={`min-h-[38px] px-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 activeFilter === "video_audio"
-                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
               Video Audio
@@ -422,10 +427,10 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveFilter("featured")}
-              className={`h-8 rounded-lg text-xs font-semibold transition-all ${
+              className={`min-h-[38px] px-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 activeFilter === "featured"
-                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
               Featured
@@ -533,19 +538,19 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
                       e.stopPropagation();
                       handleChooseTrack(track);
                     }}
-                    className={`h-8 px-3.5 rounded-lg text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-colors ${
+                    className={`min-h-[36px] px-4 rounded-full text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer active:scale-95 ${
                       isSelected
-                        ? "bg-[#1877F2] text-white"
-                        : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white"
+                        ? "bg-[#0071E3] text-white shadow-xs"
+                        : "loops-apple-pill-btn bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white"
                     }`}
                   >
                     {isSelected ? (
                       <>
                         <Check className="w-3.5 h-3.5" />
-                        Selected
+                        <span>Selected</span>
                       </>
                     ) : (
-                      "Use"
+                      <span>Use</span>
                     )}
                   </button>
                 </div>

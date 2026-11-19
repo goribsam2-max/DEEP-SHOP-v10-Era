@@ -14,6 +14,7 @@ import {
   parseVideoEmbed,
   resolveShortVideoUrl,
   getVideoPlatformMeta,
+  isLikelyVideoMediaUrl,
   toPlayableMediaUrl,
   toPlayableAudioUrl,
   toProxiedMediaStreamUrl,
@@ -82,7 +83,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const nativeVideoRef = useRef<HTMLVideoElement | null>(null);
-  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const bgAudioRef = useRef<HTMLMediaElement | null>(null);
   const userPausedRef = useRef(false);
   const bufferingTimerRef = useRef<number | null>(null);
   const singleTapTimerRef = useRef<number | null>(null);
@@ -98,6 +99,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     useState<boolean>(false);
   const [useAudioProxyFallback, setUseAudioProxyFallback] =
     useState<boolean>(false);
+  const [useBgVideoElement, setUseBgVideoElement] = useState<boolean>(false);
   const [hasLoadedFrame, setHasLoadedFrame] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
   const [streamError, setStreamError] = useState<boolean>(false);
@@ -126,6 +128,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     setDirectStreamFailed(false);
     setUseRawOriginFallback(false);
     setUseAudioProxyFallback(false);
+    setUseBgVideoElement(false);
     setIsVideoEnded(false);
     setHasLoadedFrame(false);
     setIsBuffering(false);
@@ -512,7 +515,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     } else if (!isPlaying || !isInView) {
       audioEl.pause();
     }
-  }, [hasSeparateBgMusic, bgMusicUrl, bgMusicVolume, isMuted, isPlaying, isInView]);
+  }, [hasSeparateBgMusic, bgMusicUrl, bgMusicVolume, isMuted, isPlaying, isInView, useBgVideoElement, useAudioProxyFallback]);
 
   const performToggleEmbedPlayPause = () => {
     if (onVideoClick) {
@@ -1068,24 +1071,47 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
 
           {(() => {
             if (!hasSeparateBgMusic || !bgMusicUrl) return null;
+            const preferVideoEl =
+              useBgVideoElement || isLikelyVideoMediaUrl(bgMusicUrl);
             const resolvedBgAudioSrc = (
               useAudioProxyFallback
                 ? toProxiedMediaStreamUrl(bgMusicUrl)
+                : preferVideoEl
+                ? toPlayableMediaUrl(bgMusicUrl)
                 : toPlayableAudioUrl(bgMusicUrl)
             ).trim();
             if (!resolvedBgAudioSrc) return null;
-            return (
+            const handleBgAudioError = () => {
+              if (!useAudioProxyFallback) {
+                setUseAudioProxyFallback(true);
+              } else if (!useBgVideoElement) {
+                setUseBgVideoElement(true);
+              }
+            };
+            return preferVideoEl ? (
+              <video
+                ref={(node) => {
+                  bgAudioRef.current = node;
+                }}
+                src={resolvedBgAudioSrc}
+                preload={isInView ? "auto" : "none"}
+                playsInline
+                loop
+                muted={isMuted}
+                onError={handleBgAudioError}
+                className="fixed w-0 h-0 opacity-0 pointer-events-none"
+                aria-hidden="true"
+              />
+            ) : (
               <audio
-                ref={bgAudioRef}
+                ref={(node) => {
+                  bgAudioRef.current = node;
+                }}
                 src={resolvedBgAudioSrc}
                 preload={isInView ? "auto" : "none"}
                 loop
                 muted={isMuted}
-                onError={() => {
-                  if (!useAudioProxyFallback) {
-                    setUseAudioProxyFallback(true);
-                  }
-                }}
+                onError={handleBgAudioError}
               />
             );
           })()}
