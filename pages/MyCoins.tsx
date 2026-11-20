@@ -70,7 +70,7 @@ export default function MyCoins() {
         const oSnap = await getDocs(oq);
         oSnap.forEach((d) => {
           const data = d.data();
-          if (data.paymentType === "vgcoin") {
+          if (data.paymentType === "dpcoin" || data.paymentType === "vgcoin") {
             historyArr.push({
               id: d.id,
               type: "usage",

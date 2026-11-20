@@ -140,15 +140,14 @@ export const NewsBottomDock: React.FC<{
     return () => unsub();
   }, []);
 
-  const iconSizeClass =
-    isReelsVariant || isScrolledCompact ? "w-[20px] h-[20px]" : "w-[23px] h-[23px]";
-  const homeIconSizeClass =
-    isReelsVariant || isScrolledCompact ? "w-[20px] h-[20px]" : "w-[24px] h-[24px]";
+  const iconSizeClass = "w-[19px] h-[19px]";
+  const homeIconSizeClass = "w-[19px] h-[19px]";
 
   const items = [
     {
       id: "home",
       label: "Loops Home",
+      shortLabel: "Home",
       path: "/loops",
       isActive: isHomeActive,
       render: (active: boolean) => (
@@ -161,6 +160,7 @@ export const NewsBottomDock: React.FC<{
     {
       id: "video",
       label: "Video Loops",
+      shortLabel: "Reels",
       path: "/loops?filter=video",
       isActive: isVideoActive,
       render: (active: boolean) => (
@@ -173,13 +173,14 @@ export const NewsBottomDock: React.FC<{
     {
       id: "messages",
       label: "Messages",
+      shortLabel: "Chats",
       path: "/messages",
       isActive: isMessagesActive,
       render: () => (
         <span className="relative inline-flex items-center justify-center">
           <LoopsSvgIcon name="loops-nav-messages" className={iconSizeClass} />
           {hasUnreadMessages && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#FF3040] ring-1 ring-black/75 animate-pulse" />
+            <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-[#FF3040] ring-1 ring-white dark:ring-black animate-pulse" />
           )}
         </span>
       ),
@@ -187,6 +188,7 @@ export const NewsBottomDock: React.FC<{
     {
       id: "search",
       label: "Search",
+      shortLabel: "Search",
       path: "/loops/search",
       isActive: isSearchActive,
       render: () => (
@@ -196,6 +198,7 @@ export const NewsBottomDock: React.FC<{
     {
       id: "profile",
       label: "Profile",
+      shortLabel: "Profile",
       path: "/loops/profile",
       isActive: isProfileActive,
       render: (active: boolean) =>
@@ -206,29 +209,21 @@ export const NewsBottomDock: React.FC<{
               alt="Profile"
               referrerPolicy="no-referrer"
               onError={() => setImgErr(true)}
-              className={`${
-                isReelsVariant || isScrolledCompact
-                  ? "w-[24px] h-[24px]"
-                  : "w-[29px] h-[29px]"
-              } rounded-full object-cover transition ${
+              className={`w-[21px] h-[21px] rounded-full object-cover transition ${
                 active
                   ? isReelsVariant
                     ? "ring-2 ring-white"
-                    : "ring-2 ring-[#0f0f0f] dark:ring-white"
+                    : "ring-2 ring-[#0066CC] dark:ring-[#409CFF]"
                   : isReelsVariant
-                  ? "ring-1 ring-white/25"
-                  : "ring-1 ring-black/[0.06] dark:ring-white/15"
+                  ? "ring-1 ring-white/30"
+                  : "ring-1 ring-black/[0.08] dark:ring-white/20"
               }`}
             />
           </span>
         ) : (
           <LoopsSvgIcon
             name="loops-nav-profile"
-            className={
-              isReelsVariant || isScrolledCompact
-                ? "w-[20px] h-[20px]"
-                : "w-[22px] h-[22px]"
-            }
+            className={iconSizeClass}
           />
         ),
     },
@@ -318,26 +313,25 @@ export const NewsBottomDock: React.FC<{
   }
 
   const effectiveDisplayIdx = scrubIndex ?? activeIndex;
+  const springTransition = prefersReducedMotion
+    ? { duration: 0.14, ease: "easeOut" as const }
+    : { type: "spring" as const, stiffness: 520, damping: 36, mass: 0.8 };
 
   return (
-    <nav
-      aria-label="Loops Bottom Navigation"
-      className={`fixed ${
-        isReelsVariant ? "bottom-2.5" : isScrolledCompact ? "bottom-3" : "bottom-4"
-      } inset-x-0 z-50 flex justify-center px-4 pointer-events-none pb-[env(safe-area-inset-bottom)] transition-all duration-300`}
-    >
-      <div
+    <div className="fixed bottom-[max(14px,env(safe-area-inset-bottom))] inset-x-0 z-50 px-4 pointer-events-none flex justify-center">
+      <nav
         ref={dockContainerRef}
+        aria-label="Loops Bottom Navigation"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
         onTouchStart={(e) => e.stopPropagation()}
         className={`${
-          isReelsVariant || isScrolledCompact
-            ? "loops-reels-dock-pill max-w-[292px] h-[50px] p-1 gap-0.5"
-            : "loops-dock-pill max-w-[364px] h-[60px] p-1.5 gap-1"
-        } pointer-events-auto relative flex items-center justify-between rounded-full w-full transition-all duration-300 ease-out touch-manipulation select-none`}
+          isReelsVariant ? "loops-reels-dock-pill" : "ds-shop-bottom-dock"
+        } ${
+          isScrolledCompact ? "scale-[0.98]" : ""
+        } pointer-events-auto relative rounded-full p-1.5 flex items-center justify-between gap-1 w-full max-w-[380px] transition-all duration-200 touch-manipulation select-none`}
       >
         {items.map((item, idx) => {
           const isItemActive = effectiveDisplayIdx === idx;
@@ -355,41 +349,42 @@ export const NewsBottomDock: React.FC<{
                   void prefetchLoopsBootstrap();
                 }
               }}
-              onClick={(e) => {
+              onClick={() => {
                 if (wasScrubDraggedRef.current) return;
                 navigateToItem(idx);
               }}
               title={item.label}
               aria-label={item.label}
-              className={`relative z-10 min-h-[44px] h-full flex-1 rounded-full flex items-center justify-center transition-transform active:scale-92 cursor-pointer touch-manipulation whitespace-nowrap ${
-                isItemActive
-                  ? isReelsVariant
+              className={`relative z-10 flex-1 h-[50px] min-h-[44px] rounded-full flex flex-col items-center justify-center gap-[3px] transition-colors duration-150 active:scale-95 cursor-pointer touch-manipulation whitespace-nowrap ${
+                isReelsVariant
+                  ? isItemActive
                     ? "text-white"
-                    : "text-[#0f0f0f] dark:text-white"
-                  : isReelsVariant
-                  ? "text-white/80 hover:text-white"
-                  : "text-[#0f0f0f]/75 dark:text-zinc-300 hover:text-black dark:hover:text-white"
+                    : "text-white/75 hover:text-white"
+                  : isItemActive
+                  ? "ds-shop-bottom-btn-active"
+                  : "ds-shop-bottom-btn"
               }`}
             >
               {isItemActive && (
                 <motion.div
                   layoutId="loopsDockLens"
-                  transition={
-                    prefersReducedMotion
-                      ? { duration: 0 }
-                      : { type: "spring", stiffness: 440, damping: 38 }
-                  }
+                  transition={springTransition}
                   className={`absolute inset-0 rounded-full pointer-events-none -z-10 ${
-                    isReelsVariant ? "loops-reels-dock-lens" : "loops-dock-lens"
+                    isReelsVariant ? "loops-reels-dock-lens" : "ds-shop-bottom-lens"
                   }`}
                 />
               )}
-              {item.render(isItemActive)}
+              <div className="relative flex items-center justify-center w-5 h-5">
+                {item.render(isItemActive)}
+              </div>
+              <span className="text-[10.5px] leading-none font-semibold tracking-[-0.01em] whitespace-nowrap shrink-0">
+                {item.shortLabel}
+              </span>
             </button>
           );
         })}
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 };
 

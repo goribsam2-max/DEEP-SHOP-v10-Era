@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   useParams,
   useNavigate,
@@ -251,22 +251,140 @@ export const NewsPhotoViewerPage: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState<number>(
     Math.max(0, Number(index) || 0)
   );
-  const [zoomed, setZoomed] = useState(false);
+  const [zoomScale, setZoomScale] = useState<number>(1);
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [isInteracting, setIsInteracting] = useState(false);
+  const zoomed = zoomScale > 1.02;
+
   const [chromeVisible, setChromeVisible] = useState(true);
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [loading, setLoading] = useState(
     !Boolean(navCommentState?.commentImageUrl)
   );
 
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const zoomScaleRef = useRef<number>(1);
+  const panOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pinchStateRef = useRef<{
+    active: boolean;
+    initialDist: number;
+    initialScale: number;
+    initialMidX: number;
+    initialMidY: number;
+    initialOffsetX: number;
+    initialOffsetY: number;
+  } | null>(null);
+  const wasPinchingRef = useRef(false);
+  const panDragRef = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+  } | null>(null);
+  const mouseDragRef = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+  } | null>(null);
+  const ignoreNextClickRef = useRef(false);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const lastTapMsRef = useRef<number>(0);
   const singleTapTimerRef = useRef<number | null>(null);
 
+  const clampPanForScale = useCallback(
+    (x: number, y: number, scale: number): { x: number; y: number } => {
+      if (scale <= 1.02) return { x: 0, y: 0 };
+      const stageEl = stageRef.current;
+      if (!stageEl) return { x: 0, y: 0 };
+
+      const rect = stageEl.getBoundingClientRect();
+      const imgEl = stageEl.querySelector("img");
+      let fittedW = rect.width;
+      let fittedH = rect.height;
+
+      if (imgEl && imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
+        const imgRatio = imgEl.naturalWidth / imgEl.naturalHeight;
+        const stageRatio = rect.width / Math.max(1, rect.height);
+        if (imgRatio > stageRatio) {
+          fittedW = rect.width;
+          fittedH = rect.width / imgRatio;
+        } else {
+          fittedH = rect.height;
+          fittedW = rect.height * imgRatio;
+        }
+      }
+
+      const maxX = Math.max(0, (fittedW * scale - rect.width) / 2);
+      const maxY = Math.max(0, (fittedH * scale - rect.height) / 2);
+
+      return {
+        x: Math.min(maxX, Math.max(-maxX, x)),
+        y: Math.min(maxY, Math.max(-maxY, y)),
+      };
+    },
+    []
+  );
+
+  const applyTransform = useCallback(
+    (nextScaleRaw: number, nextX: number, nextY: number) => {
+      const nextScale = Math.min(4, Math.max(1, nextScaleRaw));
+      const clampedPan = clampPanForScale(nextX, nextY, nextScale);
+      zoomScaleRef.current = nextScale;
+      panOffsetRef.current = clampedPan;
+      setZoomScale(nextScale);
+      setPanOffset(clampedPan);
+    },
+    [clampPanForScale]
+  );
+
+  const resetZoom = useCallback(() => {
+    pinchStateRef.current = null;
+    panDragRef.current = null;
+    mouseDragRef.current = null;
+    wasPinchingRef.current = false;
+    setIsInteracting(false);
+    applyTransform(1, 0, 0);
+  }, [applyTransform]);
+
+  const zoomToPoint = useCallback(
+    (targetScale: number, clientX: number, clientY: number) => {
+      const stageEl = stageRef.current;
+      if (!stageEl) {
+        applyTransform(targetScale, 0, 0);
+        return;
+      }
+      const rect = stageEl.getBoundingClientRect();
+      const stageCenterX = rect.left + rect.width / 2;
+      const stageCenterY = rect.top + rect.height / 2;
+      const curScale = zoomScaleRef.current;
+      const curPan = panOffsetRef.current;
+      const ratio = targetScale / Math.max(1, curScale);
+      const focalX = clientX - stageCenterX;
+      const focalY = clientY - stageCenterY;
+      const nextX = focalX - (focalX - curPan.x) * ratio;
+      const nextY = focalY - (focalY - curPan.y) * ratio;
+      applyTransform(targetScale, nextX, nextY);
+    },
+    [applyTransform]
+  );
+
   useEffect(() => {
     setActiveIndex(Math.max(0, Number(index) || 0));
-    setZoomed(false);
-  }, [index]);
+    resetZoom();
+  }, [index, resetZoom]);
+
+  useEffect(() => {
+    resetZoom();
+  }, [activeIndex, resetZoom]);
 
   useEffect(() => {
     if (navCommentState?.commentImageUrl) {
@@ -376,7 +494,18 @@ export const NewsPhotoViewerPage: React.FC = () => {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        navigate(-1);
+        if (zoomScaleRef.current > 1.02) {
+          resetZoom();
+        } else {
+          navigate(-1);
+        }
+      } else if (e.key === "=" || e.key === "+") {
+        applyTransform(Math.min(4, zoomScaleRef.current + 0.5), panOffsetRef.current.x, panOffsetRef.current.y);
+      } else if (e.key === "-") {
+        const next = Math.max(1, zoomScaleRef.current - 0.5);
+        applyTransform(next, panOffsetRef.current.x, panOffsetRef.current.y);
+      } else if (e.key === "0") {
+        resetZoom();
       } else if (e.key === "ArrowLeft" && !zoomed && activeIndex > 0) {
         setActiveIndex((i) => Math.max(0, i - 1));
       } else if (
@@ -389,7 +518,7 @@ export const NewsPhotoViewerPage: React.FC = () => {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeIndex, images.length, navigate, zoomed]);
+  }, [activeIndex, applyTransform, images.length, navigate, resetZoom, zoomed]);
 
   const handleDownload = () => {
     if (!currentImg) return;
@@ -415,7 +544,13 @@ export const NewsPhotoViewerPage: React.FC = () => {
     }
   };
 
-  const handleImageStageTap = () => {
+  const handleImageStageTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (ignoreNextClickRef.current) {
+      ignoreNextClickRef.current = false;
+      return;
+    }
+    const clientX = e.clientX;
+    const clientY = e.clientY;
     const now = Date.now();
     if (now - lastTapMsRef.current < 280) {
       if (singleTapTimerRef.current) {
@@ -423,33 +558,184 @@ export const NewsPhotoViewerPage: React.FC = () => {
         singleTapTimerRef.current = null;
       }
       triggerHaptic();
-      setZoomed((z) => !z);
+      setIsInteracting(false);
+      if (zoomScaleRef.current > 1.02) {
+        resetZoom();
+      } else {
+        zoomToPoint(2.4, clientX, clientY);
+      }
       lastTapMsRef.current = 0;
       return;
     }
     lastTapMsRef.current = now;
     singleTapTimerRef.current = window.setTimeout(() => {
-      if (!zoomed) {
+      if (zoomScaleRef.current <= 1.02) {
         setChromeVisible((v) => !v);
       }
       singleTapTimerRef.current = null;
     }, 260);
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (zoomed || e.touches.length !== 1) return;
-    touchStartXRef.current = e.touches[0].clientX;
-    touchStartYRef.current = e.touches[0].clientY;
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!currentImg) return;
+
+    if (e.touches.length === 2) {
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      panDragRef.current = null;
+      wasPinchingRef.current = true;
+      setIsInteracting(true);
+
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      pinchStateRef.current = {
+        active: true,
+        initialDist: Math.max(dist, 1),
+        initialScale: zoomScaleRef.current,
+        initialMidX: (t0.clientX + t1.clientX) / 2,
+        initialMidY: (t0.clientY + t1.clientY) / 2,
+        initialOffsetX: panOffsetRef.current.x,
+        initialOffsetY: panOffsetRef.current.y,
+      };
+      return;
+    }
+
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      if (zoomScaleRef.current > 1.02) {
+        touchStartXRef.current = null;
+        touchStartYRef.current = null;
+        setIsInteracting(true);
+        panDragRef.current = {
+          active: true,
+          startX: t.clientX,
+          startY: t.clientY,
+          originX: panOffsetRef.current.x,
+          originY: panOffsetRef.current.y,
+          moved: false,
+        };
+      } else {
+        wasPinchingRef.current = false;
+        panDragRef.current = null;
+        touchStartXRef.current = t.clientX;
+        touchStartYRef.current = t.clientY;
+      }
+    }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!currentImg) return;
+
+    if (e.touches.length === 2 && pinchStateRef.current?.active) {
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      const midX = (t0.clientX + t1.clientX) / 2;
+      const midY = (t0.clientY + t1.clientY) / 2;
+      const {
+        initialDist,
+        initialScale,
+        initialMidX,
+        initialMidY,
+        initialOffsetX,
+        initialOffsetY,
+      } = pinchStateRef.current;
+
+      const nextScale = Math.min(4, Math.max(1, initialScale * (dist / initialDist)));
+      const stageEl = stageRef.current;
+      const rect = stageEl?.getBoundingClientRect();
+      const stageCenterX = rect ? rect.left + rect.width / 2 : initialMidX;
+      const stageCenterY = rect ? rect.top + rect.height / 2 : initialMidY;
+      const ratio = nextScale / Math.max(1, initialScale);
+      const focalX = initialMidX - stageCenterX;
+      const focalY = initialMidY - stageCenterY;
+      const nextX = focalX - (focalX - initialOffsetX) * ratio + (midX - initialMidX);
+      const nextY = focalY - (focalY - initialOffsetY) * ratio + (midY - initialMidY);
+
+      applyTransform(nextScale, nextX, nextY);
+      return;
+    }
+
+    if (e.touches.length === 1 && panDragRef.current?.active) {
+      const t = e.touches[0];
+      const dx = t.clientX - panDragRef.current.startX;
+      const dy = t.clientY - panDragRef.current.startY;
+      if (Math.hypot(dx, dy) > 4) {
+        panDragRef.current.moved = true;
+      }
+      applyTransform(
+        zoomScaleRef.current,
+        panDragRef.current.originX + dx,
+        panDragRef.current.originY + dy
+      );
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (pinchStateRef.current?.active) {
+      if (e.touches.length === 1) {
+        pinchStateRef.current = null;
+        if (zoomScaleRef.current > 1.04) {
+          const remaining = e.touches[0];
+          panDragRef.current = {
+            active: true,
+            startX: remaining.clientX,
+            startY: remaining.clientY,
+            originX: panOffsetRef.current.x,
+            originY: panOffsetRef.current.y,
+            moved: true,
+          };
+        }
+        return;
+      }
+
+      if (e.touches.length === 0) {
+        pinchStateRef.current = null;
+        setIsInteracting(false);
+        ignoreNextClickRef.current = true;
+        window.setTimeout(() => {
+          ignoreNextClickRef.current = false;
+        }, 60);
+        if (zoomScaleRef.current < 1.08) {
+          resetZoom();
+        }
+        wasPinchingRef.current = false;
+        return;
+      }
+    }
+
+    if (panDragRef.current?.active) {
+      const moved = panDragRef.current.moved;
+      panDragRef.current = null;
+      if (e.touches.length === 0) {
+        setIsInteracting(false);
+        if (moved) {
+          ignoreNextClickRef.current = true;
+          window.setTimeout(() => {
+            ignoreNextClickRef.current = false;
+          }, 60);
+        }
+      }
+      return;
+    }
+
+    if (e.touches.length === 0 && wasPinchingRef.current) {
+      wasPinchingRef.current = false;
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      setIsInteracting(false);
+      return;
+    }
+
     if (
-      zoomed ||
+      zoomScaleRef.current > 1.02 ||
       touchStartXRef.current === null ||
       touchStartYRef.current === null
     ) {
       return;
     }
+
     const endX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
     const endY = e.changedTouches[0]?.clientY ?? touchStartYRef.current;
     const dx = touchStartXRef.current - endX;
@@ -470,6 +756,59 @@ export const NewsPhotoViewerPage: React.FC = () => {
       } else if (dx < 0 && activeIndex > 0) {
         setActiveIndex((i) => Math.max(0, i - 1));
       }
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!currentImg || zoomScaleRef.current <= 1.02 || e.button !== 0) return;
+    setIsInteracting(true);
+    mouseDragRef.current = {
+      active: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: panOffsetRef.current.x,
+      originY: panOffsetRef.current.y,
+      moved: false,
+    };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!mouseDragRef.current?.active) return;
+    const dx = e.clientX - mouseDragRef.current.startX;
+    const dy = e.clientY - mouseDragRef.current.startY;
+    if (Math.hypot(dx, dy) > 4) {
+      mouseDragRef.current.moved = true;
+    }
+    applyTransform(
+      zoomScaleRef.current,
+      mouseDragRef.current.originX + dx,
+      mouseDragRef.current.originY + dy
+    );
+  };
+
+  const handleMouseUp = () => {
+    if (!mouseDragRef.current?.active) return;
+    const moved = mouseDragRef.current.moved;
+    mouseDragRef.current = null;
+    setIsInteracting(false);
+    if (moved) {
+      ignoreNextClickRef.current = true;
+      window.setTimeout(() => {
+        ignoreNextClickRef.current = false;
+      }, 60);
+    }
+  };
+
+  const handleStageWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!currentImg) return;
+    e.preventDefault();
+    setIsInteracting(false);
+    const deltaScale = -e.deltaY * (e.ctrlKey || e.metaKey ? 0.012 : 0.003);
+    const nextScale = Math.min(4, Math.max(1, zoomScaleRef.current + deltaScale));
+    if (nextScale <= 1.02) {
+      resetZoom();
+    } else {
+      zoomToPoint(nextScale, e.clientX, e.clientY);
     }
   };
 
@@ -560,7 +899,12 @@ export const NewsPhotoViewerPage: React.FC = () => {
             type="button"
             onClick={() => {
               triggerHaptic();
-              setZoomed((z) => !z);
+              setIsInteracting(false);
+              if (zoomScaleRef.current > 1.02) {
+                resetZoom();
+              } else {
+                applyTransform(2.4, 0, 0);
+              }
             }}
             className="w-10 h-10 rounded-full bg-white/12 hover:bg-white/20 backdrop-blur-xl border border-white/15 flex items-center justify-center text-white active:scale-95 transition cursor-pointer"
             aria-label={zoomed ? "Zoom out" : "Zoom in"}
@@ -588,10 +932,18 @@ export const NewsPhotoViewerPage: React.FC = () => {
 
       {/* Center Edge-to-Edge Cinema Stage */}
       <div
+        ref={stageRef}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`relative flex-1 w-full h-full flex items-center justify-center ${
-          zoomed ? "overflow-auto" : "overflow-hidden"
+        onTouchCancel={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleStageWheel}
+        className={`relative flex-1 w-full h-full flex items-center justify-center overflow-hidden ${
+          currentImg ? "touch-none" : ""
         }`}
       >
         {loading ? (
@@ -618,30 +970,58 @@ export const NewsPhotoViewerPage: React.FC = () => {
               <motion.div
                 key={`${currentImg}-${activeIndex}`}
                 initial={{ opacity: 0.4, scale: 0.985 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={{
+                  opacity: 1,
+                  scale: zoomScale,
+                  x: panOffset.x,
+                  y: panOffset.y,
+                }}
                 exit={{ opacity: 0.3, scale: 0.985 }}
-                transition={{ duration: 0.16, ease: "easeOut" }}
+                transition={
+                  isInteracting
+                    ? { duration: 0 }
+                    : { type: "spring", stiffness: 360, damping: 32 }
+                }
                 onClick={handleImageStageTap}
-                className="w-full h-full flex items-center justify-center"
+                className={`w-full h-full flex items-center justify-center origin-center ${
+                  zoomed
+                    ? isInteracting
+                      ? "cursor-grabbing"
+                      : "cursor-grab"
+                    : "cursor-zoom-in"
+                }`}
               >
                 <SmoothImage
                   src={currentImg}
                   alt={headerTitle}
                   eager
+                  draggable={false}
                   onLoad={() => {
                     preloadImageUrl(images[activeIndex + 1]);
                     preloadImageUrl(images[activeIndex - 1]);
                   }}
                   wrapperClassName="bg-transparent flex items-center justify-center w-full h-full rounded-none"
                   skeletonClassName="bg-zinc-900/60 rounded-none"
-                  className={`rounded-none select-none transition-transform duration-200 ${
-                    zoomed
-                      ? "scale-[2.15] cursor-zoom-out max-h-none w-auto"
-                      : "max-h-[100dvh] w-full object-contain cursor-zoom-in"
-                  }`}
+                  className="rounded-none select-none max-h-[100dvh] w-full object-contain pointer-events-none"
                 />
               </motion.div>
             </AnimatePresence>
+
+            {zoomed && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic();
+                  resetZoom();
+                }}
+                className="fixed bottom-7 left-1/2 -translate-x-1/2 z-30 px-3.5 h-8 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-xl border border-white/15 text-xs font-semibold text-white tabular-nums flex items-center gap-1.5 active:scale-95 transition cursor-pointer"
+                aria-label="Reset zoom"
+              >
+                <span>{zoomScale.toFixed(1)}×</span>
+                <span className="text-white/60">· Reset</span>
+              </button>
+            )}
 
             {images.length > 1 && !zoomed && chromeVisible && (
               <>
@@ -723,7 +1103,7 @@ export const NewsPhotoViewerPage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    setZoomed(false);
+                    resetZoom();
                     setActiveIndex(idx);
                   }}
                   aria-label={`View photo ${idx + 1}`}

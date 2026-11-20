@@ -161,6 +161,7 @@ import { LiquidGlassShareModal } from "../components/LiquidGlassPostInteractions
 import { SmoothImage } from "../components/SmoothImage";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import SEO from "../components/SEO";
 import { formatDhakaDateTime, formatDhakaFeedTime } from "../lib/dhakaTime";
 import { hasImmediateAdminOrStaffRole } from "../lib/admin";
@@ -471,6 +472,48 @@ export const NewsProfilePage: React.FC = () => {
     push: false,
   });
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  const profileTabsOrder: ("posts" | "replies" | "media" | "reposts")[] = [
+    "posts",
+    "replies",
+    "media",
+    "reposts",
+  ];
+
+  const { swipeHandlers: profileTabSwipeHandlers } = useSwipeNavigation({
+    disabled:
+      showFeedsDrawer ||
+      showOptionsSheet ||
+      showAboutSheet ||
+      showQrModal ||
+      showScannerModal ||
+      showAvatarViewerModal ||
+      showNotifBellSheet,
+    onEdgeSwipeRight: () => {
+      const idx = profileTabsOrder.indexOf(activeTab);
+      if (idx > 0) {
+        triggerHaptic("selection");
+        setActiveTab(profileTabsOrder[idx - 1]);
+      } else {
+        triggerHaptic("light");
+        navigate(-1);
+      }
+    },
+    onSwipeLeft: () => {
+      const idx = profileTabsOrder.indexOf(activeTab);
+      if (idx >= 0 && idx < profileTabsOrder.length - 1) {
+        triggerHaptic("selection");
+        setActiveTab(profileTabsOrder[idx + 1]);
+      }
+    },
+    onSwipeRight: () => {
+      const idx = profileTabsOrder.indexOf(activeTab);
+      if (idx > 0) {
+        triggerHaptic("selection");
+        setActiveTab(profileTabsOrder[idx - 1]);
+      }
+    },
+  });
 
   // Edit Profile Form State
   const [editName, setEditName] = useState("");
@@ -2997,7 +3040,7 @@ export const NewsProfilePage: React.FC = () => {
         </div>
 
         {/* Tab Content Display */}
-        <div className="mt-6 space-y-4">
+        <div {...profileTabSwipeHandlers} className="mt-6 space-y-4">
           {activeTab === "posts" && (
             userPosts.length === 0 ? (
               isOwnProfile ? (

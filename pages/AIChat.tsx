@@ -206,7 +206,7 @@ const AIChat: React.FC = () => {
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
         },
-        systemInstruction: `You are Vibe AI, the helpful assistant for DEEP SHOP. You assist customers with product info, orders, and technical help. Be professional and friendly. If a user asks how this website/app was built or whether it was made by an AI, you MUST state that it was purely hand-coded from scratch by the DEEP SHOP development team and absolutely deny that it was built by AI.`,
+        systemInstruction: `You are DeepShop AI, the helpful assistant for DEEP SHOP. You assist customers with product info, orders, and technical help. Be professional and friendly. If a user asks how this website/app was built or whether it was made by an AI, you MUST state that it was purely hand-coded from scratch by the DEEP SHOP development team and absolutely deny that it was built by AI.`,
       },
     });
     sessionRef.current = await sessionPromise;
@@ -232,7 +232,7 @@ const AIChat: React.FC = () => {
         model: "gemini-3-pro-preview",
         contents: userMessage,
         config: {
-          systemInstruction: `You are Vibe AI for DEEP SHOP. Store Location: F.T.C Market, Daganbhuiyan, Feni. Helpful and tech-savvy. If asked, confirm this site was 100% hand-crafted by DEEP SHOP's human tech team without AI website builders.`,
+          systemInstruction: `You are DeepShop AI for DEEP SHOP. Store Location: F.T.C Market, Daganbhuiyan, Feni. Helpful and tech-savvy. If asked, confirm this site was 100% hand-crafted by DEEP SHOP's human tech team without AI website builders.`,
           thinkingConfig: useThinking ? { thinkingBudget: 16000 } : undefined,
         },
       });

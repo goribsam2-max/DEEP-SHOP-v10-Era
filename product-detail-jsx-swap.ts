@@ -278,10 +278,10 @@ const newJSX = `
                <div className="flex justify-between items-center p-4 bg-white dark:bg-zinc-900/80 backdrop-blur-sm rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                   <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12 border-2 border-emerald-100 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/20">
-                          <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold dark:bg-emerald-900/30 dark:text-emerald-400">VG</AvatarFallback>
+                          <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold dark:bg-emerald-900/30 dark:text-emerald-400">DS</AvatarFallback>
                       </Avatar>
                       <div>
-                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">Vibe Gadget</p>
+                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">DEEP SHOP</p>
                           <div className="flex items-center space-x-1 mt-0.5">
                             <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
                             <span className="text-xs font-medium text-zinc-500">4.9 Seller Rating</span>

@@ -14,6 +14,8 @@ import { useIllustrations } from "../lib/useIllustrations";
 import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 import { triggerHaptic } from "../lib/haptics";
 import { APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
+import { readOfflineProducts, writeOfflineProducts } from "../lib/offlineStore";
 
 const Search: React.FC = () => {
   const navigate = useNavigate();
@@ -24,16 +26,25 @@ const Search: React.FC = () => {
   const [recent, setRecent] = useState<string[]>(
     JSON.parse(localStorage.getItem("vibe_recent_searches") || '["Mobiles", "Border Cross", "Original Phones", "Chargers", "Type-C"]'),
   );
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>(() =>
+    readOfflineProducts()
+  );
+  const [favoriteProducts, setFavoriteProducts] = useState<Product[]>(() =>
+    readOfflineProducts().slice(0, 4)
+  );
 
   useEffect(() => {
     const q = collection(db, "products");
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const prods = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Product);
-      setAllProducts(prods);
-      setFavoriteProducts(prods.slice(0, 4));
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const prods = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Product);
+        setAllProducts(prods);
+        setFavoriteProducts(prods.slice(0, 4));
+        writeOfflineProducts(prods);
+      },
+      () => {}
+    );
     return unsubscribe;
   }, []);
 
@@ -65,8 +76,45 @@ const Search: React.FC = () => {
     { name: "Accessories", color: "bg-black/[0.06] text-[#1D1D1F] dark:bg-white/[0.1] dark:text-[#F5F5F7]", icon: "link" },
   ];
 
+  const swipeScopes = [
+    "",
+    ...favoriteCategories.map((c) => c.name),
+  ];
+
+  const { swipeHandlers } = useSwipeNavigation({
+    onEdgeSwipeRight: () => {
+      triggerHaptic("light");
+      navigate(-1);
+    },
+    onSwipeLeft: () => {
+      const curIdx = swipeScopes.findIndex(
+        (s) => s.toLowerCase() === searchTerm.trim().toLowerCase()
+      );
+      const nextIdx = curIdx >= 0 ? Math.min(swipeScopes.length - 1, curIdx + 1) : 1;
+      if (nextIdx !== curIdx && swipeScopes[nextIdx] !== undefined) {
+        triggerHaptic("selection");
+        setSearchTerm(swipeScopes[nextIdx]);
+      }
+    },
+    onSwipeRight: () => {
+      const curIdx = swipeScopes.findIndex(
+        (s) => s.toLowerCase() === searchTerm.trim().toLowerCase()
+      );
+      if (curIdx > 0) {
+        triggerHaptic("selection");
+        setSearchTerm(swipeScopes[curIdx - 1]);
+      } else if (searchTerm.trim() !== "") {
+        triggerHaptic("selection");
+        setSearchTerm("");
+      }
+    },
+  });
+
   return (
-    <div className="pt-6 pb-[120px] px-4 sm:px-6 min-h-screen bg-[#F5F5F7] dark:bg-black mx-auto font-sans">
+    <div
+      {...swipeHandlers}
+      className="pt-6 pb-[120px] px-4 sm:px-6 min-h-screen bg-[#F5F5F7] dark:bg-black mx-auto font-sans"
+    >
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-7">
           <div className="relative flex-1">

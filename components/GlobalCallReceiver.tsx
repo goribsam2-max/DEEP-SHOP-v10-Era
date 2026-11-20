@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc, updateDoc, onSnapshot, query, collection, getDoc, where } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot, query, collection, getDoc, where, arrayUnion } from 'firebase/firestore';
 import { audioHelper } from '../lib/AudioHelper';
 import { useNotify } from './Notifications';
 import Icon from './Icon';
@@ -220,12 +220,12 @@ export const GlobalCallReceiver: React.FC = () => {
                                      new URLSearchParams(window.location.search).get('chatId') === otherUid;
 
             if (!isMe && !isCurrentChatPage) {
-              let senderName = "Vibe Partner";
+              let senderName = "DeepShop Partner";
               if (otherUid) {
                 try {
                   const uDoc = await getDoc(doc(db, 'users', otherUid));
                   if (uDoc.exists()) {
-                    senderName = uDoc.data().displayName || uDoc.data().shopName || "Vibe Partner";
+                    senderName = uDoc.data().displayName || uDoc.data().shopName || "DeepShop Partner";
                   }
                 } catch (e) {}
               }

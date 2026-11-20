@@ -103,6 +103,7 @@ import {
 import { uploadDataUrlToImgbb } from "../services/imgbb";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import SEO from "../components/SEO";
 import {
   NewsPostDetailPageSkeleton,
@@ -281,6 +282,24 @@ export const NewsDetails: React.FC = () => {
   const [topicPostCount, setTopicPostCount] = useState<number>(1);
   const [detailCarouselIdx, setDetailCarouselIdx] = useState(0);
   const detailTouchStartXRef = useRef<number | null>(null);
+
+  const { swipeHandlers: detailSwipeHandlers } = useSwipeNavigation({
+    disabled:
+      showShareModal ||
+      showStickersSheet ||
+      showGiphySheet ||
+      showExpandedComposer ||
+      showPostOptionsSheet,
+    threshold: 68,
+    onSwipeRight: () => {
+      triggerHaptic("light");
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate("/loops");
+      }
+    },
+  });
 
   const [contextMenuConfig, setContextMenuConfig] = useState<{
     isOpen: boolean;
@@ -2034,7 +2053,10 @@ export const NewsDetails: React.FC = () => {
       />
 
       {/* Centered Loops Column */}
-      <div className="max-w-[620px] mx-auto min-h-screen sm:border-x loops-divider">
+      <div
+        {...detailSwipeHandlers}
+        className="max-w-[620px] mx-auto min-h-screen sm:border-x loops-divider"
+      >
         {/* Sticky Top Header (IMG_5091: < | Loop + N views | Bell + Circle More) */}
         <header className="sticky top-0 z-30 loops-surface/95 backdrop-blur-md border-b loops-divider px-3 sm:px-4 h-[56px] flex items-center justify-between">
           <button
@@ -2320,6 +2342,7 @@ export const NewsDetails: React.FC = () => {
           {Array.isArray(post.images) && post.images.length > 1 && (
             <div className="-mx-4 w-[calc(100%+2rem)] max-w-none">
               <div
+                data-no-swipe="true"
                 onTouchStart={(e) => {
                   detailTouchStartXRef.current = e.touches[0]?.clientX ?? null;
                 }}

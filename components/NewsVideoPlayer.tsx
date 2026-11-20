@@ -517,6 +517,21 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
     }
   }, [hasSeparateBgMusic, bgMusicUrl, bgMusicVolume, isMuted, isPlaying, isInView, useBgVideoElement, useAudioProxyFallback]);
 
+  useEffect(() => {
+    if (!hasSeparateBgMusic || !isPlaying || !isInView || isMuted) return;
+    const timer = window.setTimeout(() => {
+      const a = bgAudioRef.current;
+      if (!a || a.readyState < 2) {
+        if (!useAudioProxyFallback) {
+          setUseAudioProxyFallback(true);
+        } else if (!useBgVideoElement) {
+          setUseBgVideoElement(true);
+        }
+      }
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [hasSeparateBgMusic, isPlaying, isInView, isMuted, useAudioProxyFallback, useBgVideoElement]);
+
   const performToggleEmbedPlayPause = () => {
     if (onVideoClick) {
       onVideoClick();
@@ -1090,6 +1105,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
             };
             return preferVideoEl ? (
               <video
+                key={`nvp_vid_${useAudioProxyFallback ? "proxy" : "direct"}`}
                 ref={(node) => {
                   bgAudioRef.current = node;
                 }}
@@ -1098,12 +1114,20 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
                 playsInline
                 loop
                 muted={isMuted}
+                onCanPlay={(e) => {
+                  const el = e.currentTarget;
+                  el.volume = Math.max(0, Math.min(1, Number(bgMusicVolume ?? 1)));
+                  if (isPlaying && isInView && !isMuted && el.paused) {
+                    el.play().catch(() => {});
+                  }
+                }}
                 onError={handleBgAudioError}
                 className="fixed w-0 h-0 opacity-0 pointer-events-none"
                 aria-hidden="true"
               />
             ) : (
               <audio
+                key={`nvp_aud_${useAudioProxyFallback ? "proxy" : "direct"}`}
                 ref={(node) => {
                   bgAudioRef.current = node;
                 }}
@@ -1111,6 +1135,13 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
                 preload={isInView ? "auto" : "none"}
                 loop
                 muted={isMuted}
+                onCanPlay={(e) => {
+                  const el = e.currentTarget;
+                  el.volume = Math.max(0, Math.min(1, Number(bgMusicVolume ?? 1)));
+                  if (isPlaying && isInView && !isMuted && el.paused) {
+                    el.play().catch(() => {});
+                  }
+                }}
                 onError={handleBgAudioError}
               />
             );

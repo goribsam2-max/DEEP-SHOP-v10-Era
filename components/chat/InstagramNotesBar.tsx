@@ -82,6 +82,7 @@ export interface UserNoteData {
   musicArtist?: string;
   musicCover?: string;
   musicAudioUrl?: string;
+  isFromVideo?: boolean;
   location?: string;
   audience?: 'public' | 'friends_connections' | 'friends' | 'custom';
   durationHours?: number;
@@ -226,50 +227,123 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
   const [loopsTracks, setLoopsTracks] = useState<any[]>([]);
   const [musicSearchQuery, setMusicSearchQuery] = useState('');
 
-  // Fetch real Loops music from Firestore
+  // Fetch real Loops music from Firestore (background_music, story_songs, scam_posts video audio)
   useEffect(() => {
     try {
-      const unsubBg = onSnapshot(query(collection(db, 'background_music'), limit(80)), (snap) => {
-        const bgList = snap.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: `bg_${d.id}`,
-            title: data.title || data.name || 'Loops Audio Track',
-            artist: data.artist || data.addedBy || 'Loops Artist',
-            cover: data.coverUrl || data.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&auto=format&fit=crop&q=80',
-            audioUrl: data.audioUrl || data.url || data.mp3Url || ''
-          };
-        }).filter((t) => Boolean(t.audioUrl));
+      const mergeAndDedupeTracks = (incoming: any[]) => {
         setLoopsTracks((prev) => {
-          const combined = [...bgList, ...prev];
-          const uniqueMap = new Map();
-          combined.forEach((item) => uniqueMap.set(item.audioUrl, item));
-          return Array.from(uniqueMap.values());
+          const map = new Map<string, any>();
+          [...incoming, ...prev].forEach((item) => {
+            if (!item?.audioUrl) return;
+            const key = String(item.audioUrl).trim();
+            if (!key) return;
+            const existing = map.get(key);
+            if (!existing || (item.createdAtMs || 0) > (existing.createdAtMs || 0)) {
+              map.set(key, item);
+            }
+          });
+          return Array.from(map.values()).sort(
+            (a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0)
+          );
         });
+      };
+
+      const toMs = (val: any) =>
+        typeof val === 'number'
+          ? val
+          : val?.toMillis
+          ? val.toMillis()
+          : val
+          ? new Date(val).getTime() || 0
+          : 0;
+
+      const unsubBg = onSnapshot(query(collection(db, 'background_music'), limit(200)), (snap) => {
+        const bgList = snap.docs
+          .map((d) => {
+            const data = d.data();
+            const audioUrl = String(data.audioUrl || data.url || data.mp3Url || '').trim();
+            return {
+              id: `bg_${d.id}`,
+              title: data.title || data.name || 'Loops Audio Track',
+              artist: data.artist || data.addedBy || 'Loops Artist',
+              cover:
+                data.coverUrl ||
+                data.cover ||
+                'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&auto=format&fit=crop&q=80',
+              audioUrl,
+              isFromVideo: Boolean(data.isFromVideo || data.sourceCollection === 'scam_posts'),
+              createdAtMs: toMs(data.createdAtMs || data.createdAt),
+            };
+          })
+          .filter((t) => Boolean(t.audioUrl));
+        mergeAndDedupeTracks(bgList);
       });
 
-      const unsubStory = onSnapshot(query(collection(db, 'story_songs'), limit(80)), (snap) => {
-        const storyList = snap.docs.map((d) => {
+      const unsubStory = onSnapshot(query(collection(db, 'story_songs'), limit(200)), (snap) => {
+        const storyList = snap.docs
+          .map((d) => {
+            const data = d.data();
+            const audioUrl = String(data.audioUrl || data.url || data.mp3Url || '').trim();
+            return {
+              id: `story_${d.id}`,
+              title: data.title || data.name || 'Loops Story Song',
+              artist: data.artist || data.addedBy || 'Loops Artist',
+              cover:
+                data.coverUrl ||
+                data.cover ||
+                'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=150&auto=format&fit=crop&q=80',
+              audioUrl,
+              isFromVideo: Boolean(data.isFromVideo),
+              createdAtMs: toMs(data.createdAtMs || data.createdAt),
+            };
+          })
+          .filter((t) => Boolean(t.audioUrl));
+        mergeAndDedupeTracks(storyList);
+      });
+
+      const unsubPosts = onSnapshot(query(collection(db, 'scam_posts'), limit(120)), (snap) => {
+        const videoAudioList: any[] = [];
+        snap.docs.forEach((d) => {
           const data = d.data();
-          return {
-            id: `story_${d.id}`,
-            title: data.title || data.name || 'Loops Story Song',
-            artist: data.artist || data.addedBy || 'Loops Artist',
-            cover: data.coverUrl || data.cover || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=150&auto=format&fit=crop&q=80',
-            audioUrl: data.audioUrl || data.url || data.mp3Url || ''
-          };
-        }).filter((t) => Boolean(t.audioUrl));
-        setLoopsTracks((prev) => {
-          const combined = [...prev, ...storyList];
-          const uniqueMap = new Map();
-          combined.forEach((item) => uniqueMap.set(item.audioUrl, item));
-          return Array.from(uniqueMap.values());
+          if (data.isDeleted || data.isRemoved || data.isRemovedByAdmin) return;
+          const m = data.music;
+          const mUrl = String(m?.audioUrl || m?.url || '').trim();
+          const vUrl = String(
+            data.videoUrl ||
+              data.reelUrl ||
+              data.mediaUrl ||
+              data.audioUrl ||
+              data.video ||
+              ''
+          ).trim();
+          const isDirectVid =
+            /\.(mp4|webm|mov|m4v)($|[?#])/i.test(vUrl) ||
+            vUrl.includes('/video/upload/') ||
+            vUrl.includes('catbox.moe') ||
+            vUrl.includes('firebasestorage.googleapis.com');
+          const resolvedUrl = mUrl || (isDirectVid ? vUrl : '');
+          if (!resolvedUrl) return;
+          const authorName =
+            data.reporterName || data.authorName || data.shopName || 'Loops Creator';
+          videoAudioList.push({
+            id: `post_audio_${d.id}`,
+            title:
+              m?.title ||
+              (data.title ? `${String(data.title).slice(0, 32)} · Audio` : `Original audio · ${authorName}`),
+            artist: m?.artist || authorName,
+            cover: m?.coverUrl || m?.cover || data.reporterAvatar || '',
+            audioUrl: resolvedUrl,
+            isFromVideo: Boolean(m?.isFromVideo || !mUrl),
+            createdAtMs: toMs(data.createdAtMs || data.createdAt),
+          });
         });
+        mergeAndDedupeTracks(videoAudioList);
       });
 
       return () => {
         unsubBg();
         unsubStory();
+        unsubPosts();
       };
     } catch (e) {
       console.warn('Error listening to Loops music:', e);
@@ -413,15 +487,18 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
       onError: () => setPlayingAudioUrl(null),
     });
     setPlayingAudioUrl(url);
-    player.play(url);
+    player.play(url, {
+      preferVideoElement: Boolean(viewingNote.isFromVideo),
+      muted: false,
+    });
 
     return () => {
       player.stop();
     };
-  }, [viewingNote?.userId, viewingNote?.musicAudioUrl]);
+  }, [viewingNote?.userId, viewingNote?.musicAudioUrl, viewingNote?.isFromVideo]);
 
   // Audio helper
-  const handleTogglePlayAudio = (url: string) => {
+  const handleTogglePlayAudio = (url: string, isFromVideo?: boolean) => {
     if (!resilientNotePlayerRef.current) {
       resilientNotePlayerRef.current = createResilientAudioPlayer({ loop: false });
     }
@@ -437,7 +514,10 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
         onError: () => setPlayingAudioUrl(null),
       });
       setPlayingAudioUrl(url);
-      player.play(url);
+      player.play(url, {
+        preferVideoElement: Boolean(isFromVideo),
+        muted: false,
+      });
     }
   };
 
@@ -511,6 +591,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
         musicArtist: selectedMusic?.artist || '',
         musicCover: selectedMusic?.cover || '',
         musicAudioUrl: selectedMusic?.audioUrl || '',
+        isFromVideo: Boolean(selectedMusic?.isFromVideo),
         audience: noteAudience,
         durationHours: noteDurationHours,
         createdAtMs: nowMs,
@@ -866,13 +947,13 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                 onClick={handleShareNote}
                 disabled={!noteText.trim() || isSaving}
                 className={cn(
-                  "font-bold text-base transition px-2 py-1 rounded-lg cursor-pointer",
+                  "ds-apple-btn-primary min-h-[34px] px-4 py-1.5 rounded-full font-semibold text-[13.5px] whitespace-nowrap",
                   noteText.trim() && !isSaving
-                    ? "text-[#0064E0] hover:opacity-80 active:scale-95"
-                    : "text-zinc-300 dark:text-zinc-600 cursor-not-allowed"
+                    ? "cursor-pointer"
+                    : "opacity-40 cursor-not-allowed"
                 )}
               >
-                {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Share'}
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Share'}
               </button>
             </div>
 
@@ -1098,7 +1179,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
               <button
                 type="button"
                 onClick={() => setShowNoteSettings(false)}
-                className="text-base text-[#0064E0] font-medium cursor-pointer"
+                className="ds-apple-btn-secondary min-h-[34px] px-3.5 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap cursor-pointer"
               >
                 Cancel
               </button>
@@ -1110,7 +1191,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
               <button
                 type="button"
                 onClick={() => setShowNoteSettings(false)}
-                className="text-base text-[#0064E0] font-bold cursor-pointer"
+                className="ds-apple-btn-primary min-h-[34px] px-4 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap cursor-pointer"
               >
                 Save
               </button>
@@ -1861,9 +1942,9 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleTogglePlayAudio(track.audioUrl);
+                        handleTogglePlayAudio(track.audioUrl, track.isFromVideo);
                       }}
-                      className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:scale-105 shrink-0"
+                      className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:scale-105 shrink-0 cursor-pointer"
                     >
                       {playingAudioUrl === track.audioUrl ? (
                         <Pause className="w-4 h-4" />

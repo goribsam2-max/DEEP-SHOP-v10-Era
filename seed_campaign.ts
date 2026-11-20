@@ -47,7 +47,7 @@ async function seed() {
         address: `${loc}, Bangladesh`,
         tiktokUsername: tiktok,
         foundSource: sources[Math.floor(Math.random() * sources.length)],
-        reason: "I want to join this campaign because I love Vibe Gadget products.",
+        reason: "I want to join this campaign because I love DeepShop products.",
         status: "pending",
         isDemo: true,
         createdAt: Date.now() - Math.floor(Math.random() * 1000000000), // Random time in last ~11 days

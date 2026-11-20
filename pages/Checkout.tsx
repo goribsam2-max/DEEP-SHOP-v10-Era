@@ -179,10 +179,13 @@ export default function CheckoutPage() {
       ? "bangla_qr"
       : null;
   const defaultPaymentType =
-    prefMeth === "Cash on Delivery" ? "cod" : prefMeth === "DP Coin" ? "vgcoin" : defaultBank ? "advance" : "cod";
+    prefMeth === "Cash on Delivery" ? "cod" : prefMeth === "DP Coin" ? "dpcoin" : defaultBank ? "advance" : "cod";
   const [paymentType, setPaymentType] = useState<
-    "cod" | "advance" | "vgcoin" | null
-  >(() => getSavedState("paymentType", defaultPaymentType));
+    "cod" | "advance" | "dpcoin" | null
+  >(() => {
+    const saved = getSavedState("paymentType", defaultPaymentType);
+    return saved === "vgcoin" ? "dpcoin" : saved;
+  });
   const [advanceType, setAdvanceType] = useState<"full" | "delivery" | null>(() => getSavedState("advanceType", null));
   const [bankingMethod, setBankingMethod] = useState<"bangla_qr" | "bank" | null>(() => getSavedState("bankingMethod", defaultBank as any));
   const [bankingAccountName, setBankingAccountName] = useState(() => getSavedState("bankingAccountName", ""));
@@ -761,7 +764,7 @@ export default function CheckoutPage() {
       validGuardian = guardianVal.normalized;
     }
 
-    if (paymentType === "vgcoin") {
+    if (paymentType === "dpcoin") {
       const coinCost = advanceType === "full" ? total : requiredAdvance;
       if (userCoins < coinCost) {
         notify(`Not enough DP Coins. You need ${coinCost - userCoins} more coins. Please deposit.`, "error");
@@ -780,7 +783,7 @@ export default function CheckoutPage() {
       let paymentStr = "Cash on Delivery";
       let paymentOptStr = "Cash on Delivery";
 
-      if (paymentType === "vgcoin") {
+      if (paymentType === "dpcoin") {
         paymentStr = "DP Coins";
         paymentOptStr = advanceType === "full" ? "Full Payment with DP Coins" : `Advance ৳${requiredAdvance} with DP Coins`;
       } else if (isVipSubscriber) {
@@ -851,7 +854,7 @@ export default function CheckoutPage() {
         finalized: true,
       };
 
-      const requiresAdvanceGateway = requiredAdvance > 0 && paymentType !== "vgcoin";
+      const requiresAdvanceGateway = requiredAdvance > 0 && paymentType !== "dpcoin";
       if (requiresAdvanceGateway) {
         orderData.status = "awaiting_payment";
         orderData.paymentStatus = "unpaid";
@@ -977,7 +980,7 @@ export default function CheckoutPage() {
         } catch (e) {}
       }
 
-      if (paymentType === "vgcoin" && auth.currentUser) {
+      if (paymentType === "dpcoin" && auth.currentUser) {
         try {
           const { increment } = await import("firebase/firestore");
           const coinCost = advanceType === "full" ? total : requiredAdvance;
@@ -1017,7 +1020,7 @@ export default function CheckoutPage() {
       localStorage.removeItem("f_cart");
       localStorage.setItem("vibe_last_order", Date.now().toString());
 
-      if (requiredAdvance > 0 && paymentType !== "vgcoin") {
+      if (requiredAdvance > 0 && paymentType !== "dpcoin") {
         navigate(`/payment/${finalDocId}`);
       } else {
         navigate(`/success?orderId=${finalDocId}`);
@@ -1039,7 +1042,7 @@ export default function CheckoutPage() {
       return true;
     }
     if (step === 2) {
-      if (paymentType === "vgcoin") {
+      if (paymentType === "dpcoin") {
         return userCoins >= (advanceType === "full" ? total : requiredAdvance);
       }
       return true;
@@ -1084,7 +1087,7 @@ export default function CheckoutPage() {
       }
     }
     if (currentStep === 2) {
-      if (paymentType === "vgcoin") {
+      if (paymentType === "dpcoin") {
         const coinCost = advanceType === "full" ? total : requiredAdvance;
         if (userCoins < coinCost) {
           triggerHaptic("error");
@@ -1967,12 +1970,12 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setPaymentType(paymentType === "vgcoin" ? "advance" : "vgcoin");
+                          setPaymentType(paymentType === "dpcoin" ? "advance" : "dpcoin");
                           setAdvanceType("full");
                         }}
                         className={cn(
                           "w-full p-4 flex items-center justify-between gap-3 text-xs sm:text-sm transition-all cursor-pointer",
-                          paymentType === "vgcoin"
+                          paymentType === "dpcoin"
                             ? "ds-liquid-subpanel-active"
                             : "ds-liquid-subpanel hover:opacity-90"
                         )}
@@ -1981,7 +1984,7 @@ export default function CheckoutPage() {
                           ডিপি কয়েন ব্যালেন্স: {userCoins} কয়েন
                         </span>
                         <span className="font-bold text-sky-600 dark:text-sky-400 whitespace-nowrap shrink-0">
-                          {paymentType === "vgcoin" ? "সক্রিয় আছে ✓" : "কয়েন ব্যবহার করুন"}
+                          {paymentType === "dpcoin" ? "সক্রিয় আছে ✓" : "কয়েন ব্যবহার করুন"}
                         </span>
                       </button>
                     )}
@@ -2079,7 +2082,7 @@ export default function CheckoutPage() {
                         </button>
                       </div>
 
-                      {paymentType === "vgcoin" ? (
+                      {paymentType === "dpcoin" ? (
                         <div className="space-y-1">
                           <p className="font-bold text-sm text-zinc-900 dark:text-white">
                             DP Coins ({advanceType === "full" ? "সম্পূর্ণ পেমেন্ট" : "অগ্রিম বুকিং"})

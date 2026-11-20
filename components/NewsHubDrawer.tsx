@@ -375,10 +375,10 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="h-8 px-2.5 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08] flex items-center gap-1 text-[12.5px] font-semibold text-zinc-500 dark:text-zinc-400 cursor-pointer transition"
+                      className="ds-apple-btn-secondary h-8 min-h-[34px] px-3 rounded-full gap-1 text-[12.5px] font-semibold cursor-pointer whitespace-nowrap"
                       title="Reset menu"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
+                      <RotateCcw className="w-3.5 h-3.5 shrink-0" />
                       <span>Reset</span>
                     </button>
                     <button
@@ -387,7 +387,7 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
                         triggerHaptic();
                         setIsCustomizing(false);
                       }}
-                      className="h-8 px-3.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[12.5px] font-bold cursor-pointer active:scale-95 transition"
+                      className="ds-apple-btn-primary h-8 min-h-[34px] px-3.5 rounded-full text-[12.5px] font-semibold cursor-pointer whitespace-nowrap"
                     >
                       Done
                     </button>

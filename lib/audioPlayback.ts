@@ -39,6 +39,7 @@ export class ResilientAudioPlayer {
   private activeEl: HTMLMediaElement | null = null;
   private isHiddenVideoEl = false;
   private sessionSeq = 0;
+  private candidateTimer: number | null = null;
 
   constructor(options: ResilientAudioOptions = {}) {
     this.callbacks = {
@@ -89,7 +90,15 @@ export class ResilientAudioPlayer {
     }
   }
 
+  private clearCandidateTimer() {
+    if (this.candidateTimer !== null && typeof window !== "undefined") {
+      window.clearTimeout(this.candidateTimer);
+      this.candidateTimer = null;
+    }
+  }
+
   private cleanupElement() {
+    this.clearCandidateTimer();
     const el = this.activeEl;
     if (!el) return;
     try {
@@ -98,6 +107,8 @@ export class ResilientAudioPlayer {
       el.onended = null;
       el.onerror = null;
       el.onloadedmetadata = null;
+      el.oncanplay = null;
+      el.onplaying = null;
       el.pause();
       el.removeAttribute("src");
       el.load();
@@ -111,6 +122,7 @@ export class ResilientAudioPlayer {
 
   public pause() {
     this.sessionSeq += 1;
+    this.clearCandidateTimer();
     if (this.activeEl) {
       try {
         this.activeEl.pause();
@@ -151,10 +163,10 @@ export class ResilientAudioPlayer {
 
     if (videoLikely) {
       // On many browsers <audio> works fast on .mp4, but on iOS/some WebViews only <video> decodes it.
-      pushUnique("audio", playableAudio);
       pushUnique("video", playableMedia);
-      pushUnique("audio", proxied);
+      pushUnique("audio", playableAudio);
       pushUnique("video", proxied);
+      pushUnique("audio", proxied);
     } else {
       pushUnique("audio", playableAudio);
       pushUnique("audio", proxied);
@@ -233,16 +245,36 @@ export class ResilientAudioPlayer {
 
         let settled = false;
         const failover = () => {
+          this.clearCandidateTimer();
           if (settled || mySeq !== this.sessionSeq) return;
           settled = true;
           tryCandidate(idx + 1).then(resolve);
         };
+
+        // If a CDN silently stalls without firing onerror, fail over automatically
+        this.candidateTimer = window.setTimeout(() => {
+          if (mySeq !== this.sessionSeq || settled) return;
+          if (el.readyState < 2 && idx + 1 < candidates.length) {
+            failover();
+          }
+        }, 2200);
 
         el.onloadedmetadata = () => {
           if (mySeq !== this.sessionSeq) return;
           if (Number.isFinite(el.duration) && el.duration > 0) {
             this.callbacks.onDurationChange?.(el.duration);
           }
+        };
+
+        el.oncanplay = () => {
+          if (mySeq !== this.sessionSeq) return;
+          this.clearCandidateTimer();
+        };
+
+        el.onplaying = () => {
+          if (mySeq !== this.sessionSeq) return;
+          this.clearCandidateTimer();
+          this.callbacks.onPlay?.();
         };
 
         el.onplay = () => {
@@ -270,6 +302,7 @@ export class ResilientAudioPlayer {
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
+              this.clearCandidateTimer();
               if (settled || mySeq !== this.sessionSeq) {
                 try {
                   el.pause();
@@ -282,6 +315,7 @@ export class ResilientAudioPlayer {
               resolve(true);
             })
             .catch((err) => {
+              this.clearCandidateTimer();
               // If autoplay blocked by policy (NotAllowedError), don't cycle endlessly unless src failed
               const name = String(err?.name || "");
               if (name === "NotAllowedError") {
@@ -297,6 +331,7 @@ export class ResilientAudioPlayer {
               failover();
             });
         } else {
+          this.clearCandidateTimer();
           settled = true;
           this.callbacks.onPlay?.();
           resolve(true);

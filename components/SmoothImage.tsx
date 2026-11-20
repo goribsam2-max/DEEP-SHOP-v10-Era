@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { Image as ImageIcon } from "lucide-react";
 
 const loadedImageCache = new Set<string>();
@@ -85,7 +85,7 @@ export const SmoothImage: React.FC<SmoothImageProps> = ({
   const [errored, setErrored] = useState<boolean>(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setErrored(false);
     if (!normalizedSrc) {
       setLoaded(false);
@@ -108,21 +108,11 @@ export const SmoothImage: React.FC<SmoothImageProps> = ({
   }, [normalizedSrc]);
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.currentTarget;
     onLoad?.(e);
-
-    const reveal = () => {
-      if (normalizedSrc) {
-        loadedImageCache.add(normalizedSrc);
-      }
-      setLoaded(true);
-    };
-
-    if (typeof target.decode === "function") {
-      target.decode().then(reveal).catch(reveal);
-    } else {
-      reveal();
+    if (normalizedSrc) {
+      loadedImageCache.add(normalizedSrc);
     }
+    setLoaded(true);
   };
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -165,11 +155,12 @@ export const SmoothImage: React.FC<SmoothImageProps> = ({
         src={normalizedSrc}
         alt={alt}
         loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : "auto"}
         decoding="async"
         referrerPolicy={referrerPolicy}
         onLoad={handleLoad}
         onError={handleError}
-        className={`${className} transition-opacity duration-200 ease-out ${
+        className={`${className} transition-opacity duration-150 ease-out ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
         {...rest}

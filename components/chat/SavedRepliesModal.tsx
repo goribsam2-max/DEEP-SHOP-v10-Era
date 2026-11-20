@@ -277,9 +277,9 @@ export const SavedRepliesModal: React.FC<SavedRepliesModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsCreating(true)}
-                    className="mt-6 px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md transition flex items-center gap-2 mx-auto"
+                    className="ds-apple-btn-primary mt-6 min-h-[42px] px-5 py-2.5 rounded-full font-semibold text-sm mx-auto whitespace-nowrap cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 shrink-0" />
                     <span>New saved reply</span>
                   </button>
                 </div>

@@ -96,7 +96,7 @@ export const generateStickerGif = async (
       
       ctx.font = '700 16px Outfit, sans-serif';
       ctx.fillStyle = '#f97316';
-      ctx.fillText('VIBE GADGET', 0, 60);
+      ctx.fillText('DEEP SHOP', 0, 60);
 
     } else if (id === 'discount_tag') {
       const yOffset = Math.sin(time) * -10;
@@ -177,7 +177,7 @@ export const generateStickerGif = async (
       
       ctx.font = '800 16px Outfit, sans-serif';
       ctx.fillStyle = txtCol;
-      ctx.fillText('VIBE GADGET', 0, 60);
+      ctx.fillText('DEEP SHOP', 0, 60);
 
     } else if (id === 'new_arrival') {
       const rot = time;
@@ -214,7 +214,7 @@ export const generateStickerGif = async (
       
       ctx.font = '700 16px Outfit, sans-serif';
       ctx.fillStyle = '#ca8a04';
-      ctx.fillText('LATEST VIBE', 0, 60);
+      ctx.fillText('DEEP SHOP', 0, 60);
     }
 
     ctx.restore();

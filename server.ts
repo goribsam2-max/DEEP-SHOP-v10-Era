@@ -684,7 +684,7 @@ app.use(async (req, res, next) => {
          title: title,
          body: body,
          icon: "/favicon.png",
-         data: { url: link || "/admin/vg-helpline" }
+         data: { url: link || "/admin/deepshop-helpline" }
       });
 
       const promises = subscriptions.map((sub) =>
@@ -776,7 +776,7 @@ app.use(async (req, res, next) => {
           const payload = JSON.stringify({
               title,
               body,
-              icon: 'https://vibe-gadget.vercel.app/apple-touch-icon.png',
+              icon: 'https://www.deepshop.top/apple-touch-icon.png',
               image: image || undefined,
               url: link || '/'
           });
@@ -1263,7 +1263,12 @@ app.use(async (req, res, next) => {
     ) {
       return cleanUpstream;
     }
-    const lowerPath = targetUrl.split("?")[0].toLowerCase();
+    const rawPath = targetUrl.split("?")[0];
+    let decodedPath = rawPath;
+    try {
+      decodedPath = decodeURIComponent(rawPath);
+    } catch {}
+    const lowerPath = decodedPath.toLowerCase();
     if (lowerPath.endsWith(".webm")) return "video/webm";
     if (lowerPath.endsWith(".mov")) return "video/quicktime";
     if (lowerPath.endsWith(".ogv") || lowerPath.endsWith(".ogg")) return "audio/ogg";
@@ -1390,6 +1395,27 @@ app.use(async (req, res, next) => {
         }
 
         const upstreamCt = String(upstreamRes.headers["content-type"] || "");
+        if (
+          upstreamCt.toLowerCase().includes("text/html") &&
+          hostLower === "drive.google.com" &&
+          redirectsLeft > 0
+        ) {
+          const driveId =
+            target.searchParams.get("id") ||
+            target.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]{10,})/)?.[1];
+          if (driveId) {
+            upstreamRes.resume();
+            streamFromUrl(
+              `https://drive.usercontent.google.com/download?id=${encodeURIComponent(
+                driveId
+              )}&export=download&confirm=t`,
+              redirectsLeft - 1,
+              true
+            );
+            return;
+          }
+        }
+
         if (upstreamCt.toLowerCase().includes("text/html") || status >= 400) {
           upstreamRes.resume();
           if (!res.headersSent) {
@@ -1456,7 +1482,7 @@ app.use(async (req, res, next) => {
       upstreamReq.end();
     };
 
-    streamFromUrl(parsedInitial.toString(), 4, true);
+    streamFromUrl(parsedInitial.toString(), 6, true);
   });
 
   // 🎵 Server-Side Deezer Music Search Proxy (Eliminates flaky client CORS proxies)

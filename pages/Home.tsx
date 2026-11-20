@@ -1,5 +1,5 @@
 import { useRegion } from "@/components/RegionContext";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   collection,
@@ -17,6 +17,7 @@ import { motion, AnimatePresence, useReducedMotion, PanInfo } from "framer-motio
 import { optimizeImageUrl } from "../lib/imageOptimize";
 import SEO from "../components/SEO";
 import { useTheme } from "../components/ThemeContext";
+import { readOfflineProducts, writeOfflineProducts } from "../lib/offlineStore";
 import { ProductSkeleton } from "../components/Skeletons";
 import { SectionShowcaseSkeleton, StoryRowSkeleton } from "../components/PageSkeletons";
 import { CustomSectionEmbed } from "../components/CustomSectionEmbed";
@@ -30,6 +31,7 @@ import { HeroSlider } from "../components/ui/hero-slider";
 import { LogoTimeline, type LogoItem } from "../components/ui/logo-timeline";
 import { Footer } from "../components/Footer";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import {
   DeepShopSponsoredAd,
   isLikelyVideoUrl,
@@ -116,26 +118,12 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const shouldReduceMotion = useReducedMotion();
   useTheme();
 
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const raw = localStorage.getItem("ds_home_products_v1");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return [];
-  });
-  const [isLoadingProducts, setIsLoadingProducts] = useState(() => {
-    try {
-      const raw = localStorage.getItem("ds_home_products_v1");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return !(Array.isArray(parsed) && parsed.length > 0);
-      }
-    } catch {}
-    return true;
-  });
+  const [products, setProducts] = useState<Product[]>(() =>
+    readOfflineProducts()
+  );
+  const [isLoadingProducts, setIsLoadingProducts] = useState(
+    () => readOfflineProducts().length === 0
+  );
   const [banners, setBanners] = useState<any[]>(() => {
     try {
       const raw = localStorage.getItem("ds_home_banners_v1");
@@ -265,12 +253,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         );
         setProducts(nextProducts);
         setIsLoadingProducts(false);
-        try {
-          localStorage.setItem(
-            "ds_home_products_v1",
-            JSON.stringify(nextProducts.slice(0, 48))
-          );
-        } catch {}
+        writeOfflineProducts(nextProducts);
       },
       () => {
         setIsLoadingProducts(false);
@@ -429,6 +412,38 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     [products]
   );
 
+  const categoryPillRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const selectDiscoveryCategory = (nextCategory: string) => {
+    triggerHaptic("selection");
+    setActiveCategory(nextCategory);
+    const pill = categoryPillRefs.current[nextCategory];
+    if (pill) {
+      pill.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  };
+
+  const { swipeHandlers: discoverySwipeHandlers } = useSwipeNavigation({
+    disabled: categories.length <= 1,
+    onSwipeLeft: () => {
+      const idx = categories.indexOf(activeCategory);
+      const nextIdx = idx >= 0 ? Math.min(categories.length - 1, idx + 1) : 0;
+      if (nextIdx !== idx) {
+        selectDiscoveryCategory(categories[nextIdx]);
+      }
+    },
+    onSwipeRight: () => {
+      const idx = categories.indexOf(activeCategory);
+      if (idx > 0) {
+        selectDiscoveryCategory(categories[idx - 1]);
+      }
+    },
+  });
+
   const handleHeroDragEnd = (_: any, info: PanInfo) => {
     if (heroBanners.length <= 1) return;
     if (info.offset.x < -45 || info.velocity.x < -280) {
@@ -484,6 +499,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
               <SectionHeader eyebrow="Featured Showcase" title="Hot Deals" />
               <div
                 id="home-hero"
+                data-no-swipe="true"
                 className="ds-apple-surface relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-[24px] md:rounded-[28px] overflow-hidden cursor-pointer select-none"
                 onClick={() => {
                   triggerHaptic();
@@ -738,6 +754,9 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                 return (
                   <motion.button
                     key={cat}
+                    ref={(el) => {
+                      categoryPillRefs.current[cat] = el;
+                    }}
                     type="button"
                     whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
                     onClick={() => {
@@ -927,6 +946,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
         {/* 10. POPULAR PRODUCTS CATALOG GRID */}
         <section
           id="popular-products"
+          {...discoverySwipeHandlers}
           className="mb-12 w-full"
           style={{ contentVisibility: "auto", containIntrinsicSize: "0 680px" }}
         >

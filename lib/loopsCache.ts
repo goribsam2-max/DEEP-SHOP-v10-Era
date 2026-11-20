@@ -135,17 +135,22 @@ export async function prefetchLoopsBootstrap(force = false): Promise<void> {
 
   inflightBootstrap = (async () => {
     try {
-      const [postsSnap, usersSnap, notesSnap] = await Promise.all([
-        getDocs(
-          query(
-            collection(db, "scam_posts"),
-            orderBy("createdAt", "desc"),
-            limit(18)
-          )
-        ).catch(() => null),
-        getDocs(query(collection(db, "users"), limit(40))).catch(() => null),
-        getDocs(query(collection(db, "user_notes"), limit(30))).catch(() => null),
-      ]);
+      const [postsSnap, usersSnap, notesSnap, storiesSnap, creatorStoriesSnap] =
+        await Promise.all([
+          getDocs(
+            query(
+              collection(db, "scam_posts"),
+              orderBy("createdAt", "desc"),
+              limit(20)
+            )
+          ).catch(() => null),
+          getDocs(query(collection(db, "users"), limit(40))).catch(() => null),
+          getDocs(query(collection(db, "user_notes"), limit(30))).catch(() => null),
+          getDocs(query(collection(db, "stories"), limit(30))).catch(() => null),
+          getDocs(query(collection(db, "creator_videos"), limit(30))).catch(
+            () => null
+          ),
+        ]);
 
       if (postsSnap && !postsSnap.empty) {
         const list = postsSnap.docs.map((d) => ({
@@ -157,13 +162,16 @@ export async function prefetchLoopsBootstrap(force = false): Promise<void> {
           writeCachedLoopsFeed(list);
         }
 
-        // Prewarm top 3 videos and top 4 post visuals in background
+        // Prewarm top 4 videos and top 6 post visuals in background
         let videosWarmed = 0;
-        list.slice(0, 10).forEach((post: any, idx) => {
-          if (idx < 4 && Array.isArray(post.images) && post.images[0]) {
+        list.slice(0, 12).forEach((post: any, idx) => {
+          if (idx < 6 && Array.isArray(post.images) && post.images[0]) {
             preloadImageUrl(post.images[0]);
           }
-          if (videosWarmed < 3) {
+          if (post.reporterAvatar) {
+            preloadImageUrl(post.reporterAvatar);
+          }
+          if (videosWarmed < 4) {
             const vid = resolvePostVideoSource(post);
             const url =
               vid?.directStreamUrl || vid?.canonicalUrl || post.videoUrl || "";
@@ -181,6 +189,63 @@ export async function prefetchLoopsBootstrap(force = false): Promise<void> {
           ...d.data(),
         }));
         writeCachedCommunityUsers(usersList);
+      }
+
+      if (storiesSnap || creatorStoriesSnap) {
+        const nowMs = Date.now();
+        const STORY_TTL_MS = 24 * 60 * 60 * 1000;
+        const mapStory = (id: string, data: Record<string, any>) => {
+          const rawLabel =
+            data.userName || data.sellerName || data.category || "Story";
+          const createdAtMs =
+            typeof data.createdAtMs === "number"
+              ? data.createdAtMs
+              : data.createdAt
+              ? new Date(data.createdAt).getTime() || 0
+              : 0;
+          const avatar =
+            data.userAvatar ||
+            data.sellerLogo ||
+            data.sellerAvatar ||
+            (data.type !== "video" &&
+            data.mediaType !== "video" &&
+            !/\.(?:mp4|webm|mov|m4v)(?:$|[?#])/i.test(String(data.mediaUrl || ""))
+              ? data.mediaUrl
+              : "") ||
+            "";
+          return {
+            id,
+            userId: data.userId || data.sellerId || "",
+            name: String(rawLabel).split(" ")[0],
+            avatar,
+            isCloseFriends: Boolean(data.isCloseFriends),
+            closeFriendIds: Array.isArray(data.closeFriendIds)
+              ? data.closeFriendIds
+              : [],
+            isArchived: Boolean(data.isArchived),
+            createdAtMs,
+          };
+        };
+        const merged = new Map<string, any>();
+        storiesSnap?.docs.forEach((d) =>
+          merged.set(d.id, mapStory(d.id, d.data()))
+        );
+        creatorStoriesSnap?.docs
+          .filter((d) => d.data()?.kind === "news_story")
+          .forEach((d) => merged.set(d.id, mapStory(d.id, d.data())));
+        const sortedStories = Array.from(merged.values())
+          .filter(
+            (s) =>
+              !s.isArchived &&
+              !(s.createdAtMs > 0 && nowMs - s.createdAtMs > STORY_TTL_MS)
+          )
+          .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+        if (sortedStories.length > 0) {
+          writeCachedLoopsStories(sortedStories);
+          sortedStories.slice(0, 6).forEach((s) => {
+            if (s.avatar) preloadImageUrl(s.avatar);
+          });
+        }
       }
 
       if (notesSnap) {
@@ -214,6 +279,7 @@ export async function prefetchLoopsBootstrap(force = false): Promise<void> {
               musicArtist: data.musicArtist || "",
               musicCover: data.musicCover || "",
               musicAudioUrl: data.musicAudioUrl || "",
+              isFromVideo: Boolean(data.isFromVideo),
               audience: data.audience || "friends",
               durationHours: data.durationHours || 24,
               createdAtMs: createdMs,

@@ -77,6 +77,7 @@ import {
 } from "./NewsHubSubPages";
 import { useNotify, useConfirm } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import { sendPushNotification } from "../lib/push";
 import SEO from "../components/SEO";
 import { formatDhakaFeedTime } from "../lib/dhakaTime";
@@ -195,9 +196,17 @@ export const NewsHub: React.FC = () => {
   const [stories, setStories] = useState<any[]>(() =>
     readCachedLoopsStories()
   );
-  const [loading, setLoading] = useState<boolean>(() =>
-    readCachedLoopsFeed().length === 0
-  );
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (readCachedLoopsFeed().length > 0) return false;
+    try {
+      const localList = JSON.parse(
+        localStorage.getItem("deep_scam_posts") || "[]"
+      );
+      return !Array.isArray(localList) || localList.length === 0;
+    } catch {
+      return true;
+    }
+  });
   const followedIds = useFollowedIds(currentUser?.uid);
   const [dismissedProfileIds, setDismissedProfileIds] = useState<string[]>(() =>
     getDismissedProfileIds()
@@ -466,6 +475,66 @@ export const NewsHub: React.FC = () => {
   const stickyFeedMenuRef = useRef<HTMLDivElement | null>(null);
   const lastVerticalScrollYRef = useRef<number>(0);
   const directionalDeltaRef = useRef<number>(0);
+
+  const loopsFeedModes = React.useMemo(
+    () => ["", "following", "favourites"] as const,
+    []
+  );
+
+  const navigateFeedMode = (mode: string) => {
+    triggerHaptic("selection");
+    setFeedMenuOpen(false);
+    setStickyFeedMenuOpen(false);
+    setScamOnlyMode(false);
+    navigate(mode ? `/loops?filter=${mode}` : "/loops");
+  };
+
+  const { swipeHandlers: feedSwipeHandlers } = useSwipeNavigation({
+    disabled:
+      drawerOpen ||
+      reelsOverlayOpen ||
+      feedMenuOpen ||
+      stickyFeedMenuOpen ||
+      Boolean(viewingLoopNote) ||
+      chooserOpen ||
+      activeFeedFilter === "video",
+    onEdgeSwipeRight: () => {
+      if (activeFeedFilter === "ghost" || activeFeedFilter === "scam") {
+        navigateFeedMode("");
+        return;
+      }
+      const curIdx = loopsFeedModes.indexOf(
+        (activeFeedFilter || "") as (typeof loopsFeedModes)[number]
+      );
+      if (curIdx > 0) {
+        navigateFeedMode(loopsFeedModes[curIdx - 1]);
+      } else {
+        triggerHaptic("light");
+        setDrawerOpen(true);
+      }
+    },
+    onSwipeLeft: () => {
+      if (activeFeedFilter === "ghost" || activeFeedFilter === "scam") return;
+      const curIdx = loopsFeedModes.indexOf(
+        (activeFeedFilter || "") as (typeof loopsFeedModes)[number]
+      );
+      if (curIdx >= 0 && curIdx < loopsFeedModes.length - 1) {
+        navigateFeedMode(loopsFeedModes[curIdx + 1]);
+      }
+    },
+    onSwipeRight: () => {
+      if (activeFeedFilter === "ghost" || activeFeedFilter === "scam") {
+        navigateFeedMode("");
+        return;
+      }
+      const curIdx = loopsFeedModes.indexOf(
+        (activeFeedFilter || "") as (typeof loopsFeedModes)[number]
+      );
+      if (curIdx > 0) {
+        navigateFeedMode(loopsFeedModes[curIdx - 1]);
+      }
+    },
+  });
 
   useEffect(() => {
     const getVerticalScrollOffset = (): number => {
@@ -915,6 +984,16 @@ export const NewsHub: React.FC = () => {
       } catch {}
     };
 
+    // Instant one-shot story warmup so story rings render at ~0s when cache is empty
+    getDocs(query(collection(db, "stories"), limit(24)))
+      .then((snap) => {
+        if (!snap.empty && mainStories.length === 0) {
+          mainStories = snap.docs.map((d) => mapStoryDoc(d.id, d.data()));
+          emitMergedStories();
+        }
+      })
+      .catch(() => {});
+
     const unsubStories = onSnapshot(
       query(collection(db, "stories"), limit(40)),
       (snap) => {
@@ -1003,11 +1082,14 @@ export const NewsHub: React.FC = () => {
     );
   }, [firestorePosts, currentUser?.uid]);
 
-  // Prewarm first chunk of top 3 videos for ~0s instant playback
+  // Prewarm first chunk of top 4 videos & top 6 post visuals for ~0s instant playback
   useEffect(() => {
     let count = 0;
-    allPosts.slice(0, 8).forEach((p: any) => {
-      if (count < 3) {
+    allPosts.slice(0, 10).forEach((p: any, idx) => {
+      if (idx < 6 && Array.isArray(p.images) && p.images[0]) {
+        preloadImageUrl(p.images[0]);
+      }
+      if (count < 4) {
         const vid = resolvePostVideoSource(p);
         const url = vid?.directStreamUrl || vid?.canonicalUrl || p.videoUrl;
         if (url) {
@@ -1852,7 +1934,10 @@ export const NewsHub: React.FC = () => {
             </aside>
 
             {/* CENTER LOOPS COLUMN */}
-            <div className="lg:col-span-6 max-w-[620px] w-full mx-auto space-y-1.5 sm:space-y-4 bg-transparent">
+            <div
+              {...feedSwipeHandlers}
+              className="lg:col-span-6 max-w-[620px] w-full mx-auto space-y-1.5 sm:space-y-4 bg-transparent"
+            >
 
             {/* 1. Clean 3-Slot Loops Header (IMG_5123, IMG_5124, IMG_5108) */}
             {activeFeedFilter === "ghost" ? (
@@ -2824,7 +2909,7 @@ export const NewsHub: React.FC = () => {
                               setLoopNoteAudioPlaying(null);
                               setViewingLoopNote(null);
                             }}
-                            className="w-full max-w-md mx-auto py-3 rounded-full bg-[#0064E0] text-white font-bold text-sm block transition hover:bg-[#0057C2] cursor-pointer"
+                            className="ds-apple-btn-primary w-full max-w-md mx-auto min-h-[44px] py-2.5 px-6 rounded-full font-semibold text-sm flex whitespace-nowrap cursor-pointer"
                           >
                             Close Note
                           </button>
@@ -2881,7 +2966,7 @@ export const NewsHub: React.FC = () => {
                   triggerHaptic();
                   setChooserOpen(true);
                 }}
-                className="px-4 py-1.5 rounded-full border loops-divider text-[13.5px] font-semibold text-zinc-950 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition shrink-0 cursor-pointer"
+                className="ds-apple-btn-secondary min-h-[36px] px-4 py-1.5 rounded-full text-[13.5px] font-semibold shrink-0 cursor-pointer whitespace-nowrap"
               >
                 Create
               </button>
@@ -2930,12 +3015,12 @@ export const NewsHub: React.FC = () => {
                     ? "Reset your filter or customize your feed preferences."
                     : "Start the first Loop with photos, voice notes, links, or #hashtags!"}
                 </p>
-                <div className="flex items-center justify-center gap-2 pt-2">
+                <div className="flex items-center justify-center gap-2.5 pt-2">
                   {(scamOnlyMode || isPersonalizedActive) && (
                     <button
                       type="button"
                       onClick={() => navigate("/loops/personalization")}
-                      className="px-4 py-2 rounded-full border loops-divider text-xs font-semibold cursor-pointer"
+                      className="ds-apple-btn-secondary min-h-[40px] px-4 py-2 rounded-full text-xs font-semibold cursor-pointer whitespace-nowrap"
                     >
                       Personalize
                     </button>
@@ -2946,7 +3031,7 @@ export const NewsHub: React.FC = () => {
                       triggerHaptic();
                       setChooserOpen(true);
                     }}
-                    className="px-5 py-2 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-semibold cursor-pointer"
+                    className="ds-apple-btn-primary min-h-[40px] px-5 py-2 rounded-full text-xs font-semibold cursor-pointer whitespace-nowrap"
                   >
                     Create a Loop
                   </button>
@@ -3066,7 +3151,7 @@ export const NewsHub: React.FC = () => {
                                   onClick={(e) =>
                                     handleFollowSuggestedProfile(e, prof)
                                   }
-                                  className="loops-follow-btn w-full py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+                                  className="ds-apple-btn-primary w-full min-h-[34px] py-1.5 px-3 rounded-full text-xs font-semibold cursor-pointer whitespace-nowrap"
                                 >
                                   Follow
                                 </button>
@@ -3108,7 +3193,7 @@ export const NewsHub: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate("/creator-dashboard")}
-                className="w-full py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                className="ds-apple-btn-primary w-full min-h-[40px] py-2.5 px-4 rounded-full text-xs font-semibold cursor-pointer whitespace-nowrap"
               >
                 <Icon name="layout-dashboard" className="w-3.5 h-3.5 shrink-0" />
                 <span>Open Creator Dashboard</span>
@@ -3159,7 +3244,7 @@ export const NewsHub: React.FC = () => {
                       <button
                         type="button"
                         onClick={(e) => handleFollowSuggestedProfile(e, prof)}
-                        className="loops-follow-btn px-3.5 py-1 rounded-full text-xs font-semibold transition cursor-pointer shrink-0 whitespace-nowrap"
+                        className="ds-apple-btn-primary min-h-[32px] px-3.5 py-1 rounded-full text-xs font-semibold cursor-pointer shrink-0 whitespace-nowrap"
                       >
                         Follow
                       </button>
@@ -3281,7 +3366,7 @@ export const NewsHub: React.FC = () => {
                   setShowGhostIntroSheet(false);
                   navigate("/loops/create?ghost=1");
                 }}
-                className="w-full py-4 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[15.5px] font-bold active:scale-[0.98] transition cursor-pointer"
+                className="ds-apple-btn-primary w-full min-h-[48px] py-3.5 px-6 rounded-full text-[15px] font-semibold cursor-pointer whitespace-nowrap"
               >
                 Try It
               </button>

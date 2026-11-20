@@ -323,11 +323,11 @@ const ADMIN_PIN_ITEMS: PinListItem[] = [
   },
   {
     id: 'manage-vg-helpline',
-    name: 'Manage VGHelpline',
+    name: 'Manage DeepShop Helpline',
     info: 'Helpline audio/video calls & chat',
     icon: Phone,
     pinned: true,
-    href: 'vg-helpline'
+    href: 'deepshop-helpline'
   }
 ];
 

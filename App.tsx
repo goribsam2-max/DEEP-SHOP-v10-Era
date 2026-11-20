@@ -48,6 +48,7 @@ import { hasImmediateAdminOrStaffRole } from './lib/admin';
 import { ReelUploadProgressOverlay } from './components/ReelUploadProgressOverlay';
 import { MobileAppInstallExperience } from './components/MobileAppInstallExperience';
 import { prefetchLoopsBootstrap } from './lib/loopsCache';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import Messages from './pages/Messages';
 import NewsHub from './pages/NewsHub';
 
@@ -1199,6 +1200,7 @@ const AppContent: React.FC = () => {
                   <Route path="security" element={<PageWrapper><ManageSecurity /></PageWrapper>} />
                   <Route path="diagnostics" element={<PageWrapper><SystemHealthDiagnostics /></PageWrapper>} />
                   <Route path="health" element={<PageWrapper><SystemHealthDiagnostics /></PageWrapper>} />
+                  <Route path="deepshop-helpline" element={<PageWrapper><ManageVGHelpline /></PageWrapper>} />
                   <Route path="vg-helpline" element={<PageWrapper><ManageVGHelpline /></PageWrapper>} />
                   <Route path="helpdesk" element={<PageWrapper><ManageHelpDesk /></PageWrapper>} />
                   <Route path="staff" element={<PageWrapper><ManageStaff /></PageWrapper>} />
@@ -1414,11 +1416,17 @@ const GlobalRouteAwareOverlays: React.FC<{ deferredReady: boolean }> = ({ deferr
   const isMessagesRoute = location.pathname.startsWith('/messages');
 
   if (isAuthScreen) {
-    return <NetworkStatus />;
+    return (
+      <>
+        <OfflineIndicator />
+        <NetworkStatus />
+      </>
+    );
   }
 
   return (
     <>
+      <OfflineIndicator />
       <NetworkStatus />
       {deferredReady && (
         <Suspense fallback={null}>
@@ -1461,9 +1469,9 @@ const App: React.FC = () => {
       void prefetchLoopsBootstrap();
     };
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleId = (window as any).requestIdleCallback(runLoopsWarmup, { timeout: 1400 });
+      idleId = (window as any).requestIdleCallback(runLoopsWarmup, { timeout: 350 });
     } else {
-      fallbackIdleTimer = setTimeout(runLoopsWarmup, 700);
+      fallbackIdleTimer = setTimeout(runLoopsWarmup, 80);
     }
     return () => {
       clearTimeout(timer);

@@ -162,7 +162,10 @@ export function normalizeDirectShareUrl(rawUrl: string): string {
       const idParam = u.searchParams.get("id");
       const fileId = fileMatch?.[1] || idParam;
       if (fileId && !u.pathname.startsWith("/uc")) {
-        return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+        return `https://drive.google.com/uc?export=download&confirm=t&id=${encodeURIComponent(fileId)}`;
+      }
+      if (fileId && u.pathname.startsWith("/uc") && !u.searchParams.get("confirm")) {
+        return `https://drive.google.com/uc?export=download&confirm=t&id=${encodeURIComponent(fileId)}`;
       }
     }
 
@@ -674,6 +677,7 @@ export function extractFirstVideoUrlFromText(
 export function resolvePostVideoSource(
   post?: {
     videoUrl?: string | null;
+    video?: string | null;
     mediaUrl?: string | null;
     reelUrl?: string | null;
     mediaType?: string | null;
@@ -682,8 +686,9 @@ export function resolvePostVideoSource(
   } | null
 ): ParsedVideoEmbed | null {
   if (!post) return null;
-  if (post.videoUrl && post.videoUrl.trim()) {
-    const directParsed = parseVideoEmbed(post.videoUrl.trim(), {
+  const primaryVideo = (post.videoUrl || post.video || "").trim();
+  if (primaryVideo) {
+    const directParsed = parseVideoEmbed(primaryVideo, {
       allowFallbackDirectVideo: true,
     });
     if (directParsed) return directParsed;

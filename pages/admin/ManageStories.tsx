@@ -7,6 +7,7 @@ import { uploadToImgbb } from "../../services/imgbb";
 import Icon from "../../components/Icon";
 import { Play, Pause } from "lucide-react";
 import { toPlayableAudioUrl } from "../../lib/videoEmbed";
+import { createResilientAudioPlayer, ResilientAudioPlayer } from "../../lib/audioPlayback";
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemTitle, ItemActions } from "../../components/ui/item";
 import { Button } from "../../components/ui/button";
 import ReactPlayer from "react-player";
@@ -96,7 +97,7 @@ const ManageStories: React.FC = () => {
   const [audioStart, setAudioStart] = useState(0);
   const [playingSongId, setPlayingSongId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const previewSongAudioRef = useRef<HTMLAudioElement | null>(null);
+  const previewSongPlayerRef = useRef<ResilientAudioPlayer | null>(null);
 
   useEffect(() => {
     let storySongDocs: any[] = [];
@@ -213,9 +214,9 @@ const ManageStories: React.FC = () => {
       unsubSongs();
       unsubBgMusic();
       unsubVideoPosts();
-      if (previewSongAudioRef.current) {
-        previewSongAudioRef.current.pause();
-        previewSongAudioRef.current = null;
+      if (previewSongPlayerRef.current) {
+        previewSongPlayerRef.current.stop();
+        previewSongPlayerRef.current = null;
       }
     };
   }, []);
@@ -224,26 +225,39 @@ const ManageStories: React.FC = () => {
     const rawUrl = String(song.url || song.audioUrl || "").trim();
     if (!rawUrl) return;
     if (playingSongId === song.id) {
-      previewSongAudioRef.current?.pause();
+      previewSongPlayerRef.current?.stop();
       setPlayingSongId(null);
       return;
     }
-    if (previewSongAudioRef.current) {
-      previewSongAudioRef.current.pause();
+    if (!previewSongPlayerRef.current) {
+      previewSongPlayerRef.current = createResilientAudioPlayer({
+        volume: 0.9,
+      });
+    } else {
+      previewSongPlayerRef.current.stop();
     }
-    const playable = toPlayableAudioUrl(rawUrl);
-    const audio = new Audio(playable);
-    previewSongAudioRef.current = audio;
-    audio.onended = () => setPlayingSongId(null);
-    audio.onerror = () => {
-      setPlayingSongId(null);
-      notify("Could not play this audio stream.", "error");
-    };
-    setPlayingSongId(song.id);
-    audio.play().catch(() => {
-      setPlayingSongId(null);
-      notify("Browser blocked audio playback — tap Play again.", "info");
+    previewSongPlayerRef.current.updateCallbacks({
+      onPlay: () => setPlayingSongId(song.id),
+      onPause: () => setPlayingSongId((curr) => (curr === song.id ? null : curr)),
+      onEnded: () => setPlayingSongId(null),
+      onError: () => {
+        setPlayingSongId(null);
+        notify("Could not play this audio stream.", "error");
+      },
     });
+    setPlayingSongId(song.id);
+    previewSongPlayerRef.current
+      .play(rawUrl, {
+        preferVideoElement: Boolean(
+          song.isFromVideo || song.sourceCollection === "scam_posts"
+        ),
+        muted: false,
+      })
+      .then((ok) => {
+        if (!ok) {
+          setPlayingSongId(null);
+        }
+      });
   };
 
   const [songAudioUploading, setSongAudioUploading] = useState(false);

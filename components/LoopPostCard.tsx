@@ -974,8 +974,8 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
               onClick={handleFollowAction}
               className={
                 effectiveFollowing
-                  ? "min-h-[34px] px-3.5 py-1.5 rounded-full border loops-divider text-[13px] font-semibold text-zinc-600 dark:text-zinc-300 active:scale-95 transition cursor-pointer whitespace-nowrap"
-                  : "loops-card-follow-pill min-h-[34px] px-4 py-1.5 rounded-full text-[13.5px] font-semibold active:scale-95 transition cursor-pointer whitespace-nowrap"
+                  ? "ds-apple-btn-secondary min-h-[34px] px-3.5 py-1.5 rounded-full text-[13px] font-semibold cursor-pointer whitespace-nowrap"
+                  : "ds-apple-btn-primary min-h-[34px] px-4 py-1.5 rounded-full text-[13px] font-semibold cursor-pointer whitespace-nowrap"
               }
             >
               {effectiveFollowing ? "Following" : "Follow"}
@@ -1070,6 +1070,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
       {!resolvedVideo && images.length > 1 && (
         <div className="w-full">
           <div
+            data-no-swipe="true"
             onTouchStart={(e) => {
               touchStartXRef.current = e.touches[0]?.clientX ?? null;
             }}
@@ -1271,7 +1272,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
               e.stopPropagation();
               navigate(`/sponsor-creator?postId=${post.id}`);
             }}
-            className="px-4 py-1.5 rounded-lg bg-[#0095F6] hover:bg-blue-600 text-white font-bold text-xs shadow-xs active:scale-95 transition cursor-pointer"
+            className="ds-apple-btn-primary min-h-[34px] px-4 py-1.5 rounded-full font-semibold text-xs whitespace-nowrap cursor-pointer"
           >
             Boost post
           </button>

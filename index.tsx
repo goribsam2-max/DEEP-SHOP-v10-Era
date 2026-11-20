@@ -9,13 +9,15 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { sendSystemAlertToTelegram } from './services/telegram';
 import { HelmetProvider } from 'react-helmet-async';
 
-// Purge legacy JS chunk caches that could serve stale chunks or HTML fallbacks across deployments
+import { registerSW } from 'virtual:pwa-register';
+
+// Purge legacy custom JS chunk cache name only (preserve Workbox offline precaches)
 if (typeof window !== 'undefined' && 'caches' in window) {
   caches
     .keys()
     .then((keys) => {
       keys.forEach((key) => {
-        if (key === 'app-js-chunks' || key.startsWith('workbox-precache')) {
+        if (key === 'app-js-chunks') {
           caches.delete(key).catch(() => {});
         }
       });
@@ -155,24 +157,16 @@ root.render(
   </React.StrictMode>
 );
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener(
-    'load',
-    () => {
-      const registerIdleSw = () => {
-        navigator.serviceWorker
-          .register('/sw.js', { scope: '/' })
-          .then((reg) => {
-            reg.update().catch(() => {});
-          })
-          .catch(() => {});
-      };
-      if ('requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(registerIdleSw, { timeout: 3500 });
-      } else {
-        setTimeout(registerIdleSw, 2200);
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  const updateSW = registerSW({
+    immediate: true,
+    onRegisteredSW(_swUrl, reg) {
+      if (reg && navigator.onLine) {
+        reg.update().catch(() => {});
       }
     },
-    { once: true }
-  );
+    onNeedRefresh() {
+      updateSW(true).catch(() => {});
+    },
+  });
 }

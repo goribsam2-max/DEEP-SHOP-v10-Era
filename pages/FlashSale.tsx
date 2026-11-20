@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { Product } from "../types";
@@ -7,11 +8,25 @@ import { Zap, Clock } from "lucide-react";
 import { ProductSkeleton } from "../components/Skeletons";
 import { motion, useReducedMotion } from "framer-motion";
 import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
+import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
+import { readOfflineProducts, writeOfflineProducts } from "../lib/offlineStore";
 
 export default function FlashSale() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [products, setProducts] = useState<Product[]>(() =>
+    readOfflineProducts().filter((p) => p.isOffer)
+  );
+  const [loading, setLoading] = useState(
+    () => readOfflineProducts().length === 0
+  );
   const prefersReducedMotion = useReducedMotion();
+  const { swipeHandlers } = useSwipeNavigation({
+    onEdgeSwipeRight: () => {
+      triggerHaptic("light");
+      navigate(-1);
+    },
+  });
 
   useEffect(() => {
     const qProds = query(collection(db, "products"));
@@ -23,6 +38,7 @@ export default function FlashSale() {
         );
         setProducts(prods.filter((p) => p.isOffer));
         setLoading(false);
+        writeOfflineProducts(prods);
       },
       (err) => {
         console.warn("Products fetch error:", err.message);
@@ -33,7 +49,10 @@ export default function FlashSale() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] pb-24 transition-colors">
+    <div
+      {...swipeHandlers}
+      className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] pb-24 transition-colors"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7 space-y-6 sm:space-y-8">
         {/* Studio Neutral Editorial Hero */}
         <motion.section

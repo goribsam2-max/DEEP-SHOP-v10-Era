@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "vibe-gadget",
+      "name": "deepshop",
       "dependencies": {
         "@google/genai": "^2.32.0",
         "@hugeicons/core-free-icons": "^4.1.3",

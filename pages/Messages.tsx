@@ -5137,7 +5137,7 @@ const handleCreateChannel = async () => {
                         setChatSearchQuery('');
                         setShowInboxSearch(false);
                       }}
-                      className="text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white px-1.5 py-1 cursor-pointer"
+                      className="ds-apple-btn-secondary min-h-[34px] px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -6014,10 +6014,13 @@ const handleCreateChannel = async () => {
             Floating capsule dock (Home, Message, Calendar, Profile) + Black Circle '+' FAB
             =================================================================== */}
         {!activeChat && !activeChannel && (
-          <div className="md:hidden fixed bottom-5 inset-x-0 z-40 px-4 flex items-center justify-between gap-3 pointer-events-none pb-[env(safe-area-inset-bottom)]">
-            {/* Left/Center: Apple Liquid Glass Navigation Bar (Messages, Activity, Profile) */}
-            <div className="msg-apple-dock pointer-events-auto flex-1 max-w-[264px] h-[56px] px-2 rounded-full flex items-center justify-around relative select-none">
-              {/* 1. Message */}
+          <div className="md:hidden fixed bottom-[max(14px,env(safe-area-inset-bottom))] inset-x-0 z-40 px-4 flex items-center justify-center gap-2.5 pointer-events-none">
+            {/* Left/Center: Apple Liquid Glass Navigation Bar (Chats, Activity, Profile) */}
+            <nav
+              aria-label="Messages Navigation"
+              className="ds-shop-bottom-dock pointer-events-auto flex-1 max-w-[308px] rounded-full p-1.5 flex items-center justify-between gap-1 relative select-none"
+            >
+              {/* 1. Chats */}
               <button
                 type="button"
                 onClick={() => {
@@ -6028,10 +6031,10 @@ const handleCreateChannel = async () => {
                   setMessagesFilterTab('all');
                 }}
                 className={cn(
-                  "relative z-10 w-12 h-11 rounded-full flex items-center justify-center transition-transform active:scale-92 cursor-pointer",
+                  "relative z-10 flex-1 h-[50px] min-h-[44px] rounded-full flex flex-col items-center justify-center gap-[3px] transition-colors duration-150 active:scale-95 cursor-pointer whitespace-nowrap",
                   activeMessagesTab === 'chats' && sidebarTab === 'messages' && !showArchivedOnly
-                    ? "text-zinc-950 dark:text-white"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    ? "ds-shop-bottom-btn-active"
+                    : "ds-shop-bottom-btn"
                 )}
                 title="Messages"
                 aria-label="Messages"
@@ -6039,25 +6042,35 @@ const handleCreateChannel = async () => {
                 {activeMessagesTab === 'chats' && sidebarTab === 'messages' && !showArchivedOnly && (
                   <motion.div
                     layoutId="msgDockLens"
-                    transition={{ type: "spring", stiffness: 440, damping: 38 }}
-                    className="msg-apple-dock-lens absolute inset-0 rounded-full -z-10 pointer-events-none"
+                    transition={{ type: "spring", stiffness: 520, damping: 36, mass: 0.8 }}
+                    className="ds-shop-bottom-lens absolute inset-0 rounded-full -z-10 pointer-events-none"
                   />
                 )}
-                <Icon name="messages-inbox" className="w-[22px] h-[22px]" />
+                <div className="relative flex items-center justify-center w-5 h-5">
+                  <Icon name="messages-inbox" className="w-[19px] h-[19px]" />
+                </div>
+                <span className="text-[10.5px] leading-none font-semibold tracking-[-0.01em] whitespace-nowrap shrink-0">
+                  Chats
+                </span>
               </button>
 
-              {/* 2. Activity / Calendar */}
+              {/* 2. Activity */}
               <button
                 type="button"
                 onClick={() => {
                   triggerHaptic('selection');
                   navigate('/loops/activity');
                 }}
-                className="relative z-10 w-12 h-11 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-transform active:scale-92 cursor-pointer"
+                className="ds-shop-bottom-btn relative z-10 flex-1 h-[50px] min-h-[44px] rounded-full flex flex-col items-center justify-center gap-[3px] transition-colors duration-150 active:scale-95 cursor-pointer whitespace-nowrap"
                 title="Activity"
                 aria-label="Activity"
               >
-                <Icon name="messages-activity" className="w-[22px] h-[22px]" />
+                <div className="relative flex items-center justify-center w-5 h-5">
+                  <Icon name="messages-activity" className="w-[19px] h-[19px]" />
+                </div>
+                <span className="text-[10.5px] leading-none font-semibold tracking-[-0.01em] whitespace-nowrap shrink-0">
+                  Activity
+                </span>
               </button>
 
               {/* 3. Profile */}
@@ -6072,10 +6085,10 @@ const handleCreateChannel = async () => {
                   }
                 }}
                 className={cn(
-                  "relative z-10 w-12 h-11 rounded-full flex items-center justify-center transition-transform active:scale-92 cursor-pointer",
+                  "relative z-10 flex-1 h-[50px] min-h-[44px] rounded-full flex flex-col items-center justify-center gap-[3px] transition-colors duration-150 active:scale-95 cursor-pointer whitespace-nowrap",
                   activeMessagesTab === 'settings'
-                    ? "text-zinc-950 dark:text-white"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    ? "ds-shop-bottom-btn-active"
+                    : "ds-shop-bottom-btn"
                 )}
                 title="Profile"
                 aria-label="Profile"
@@ -6083,29 +6096,34 @@ const handleCreateChannel = async () => {
                 {activeMessagesTab === 'settings' && (
                   <motion.div
                     layoutId="msgDockLens"
-                    transition={{ type: "spring", stiffness: 440, damping: 38 }}
-                    className="msg-apple-dock-lens absolute inset-0 rounded-full -z-10 pointer-events-none"
+                    transition={{ type: "spring", stiffness: 520, damping: 36, mass: 0.8 }}
+                    className="ds-shop-bottom-lens absolute inset-0 rounded-full -z-10 pointer-events-none"
                   />
                 )}
-                <Icon name="messages-profile" className="w-[22px] h-[22px]" />
+                <div className="relative flex items-center justify-center w-5 h-5">
+                  <Icon name="messages-profile" className="w-[19px] h-[19px]" />
+                </div>
+                <span className="text-[10.5px] leading-none font-semibold tracking-[-0.01em] whitespace-nowrap shrink-0">
+                  Profile
+                </span>
               </button>
-            </div>
+            </nav>
 
             {/* Right: Apple Circular Plus FAB with Spring Tap */}
             <motion.button
               whileTap={{ scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              transition={{ type: "spring", stiffness: 560, damping: 34 }}
               type="button"
               onClick={() => {
                 triggerHaptic();
                 setNewMessageInitialStep('new_message');
                 setShowNewMessageModal(true);
               }}
-              className="msg-apple-fab pointer-events-auto w-[56px] h-[56px] rounded-full flex items-center justify-center cursor-pointer shrink-0"
+              className="ds-apple-btn-primary pointer-events-auto w-12 h-12 rounded-full flex items-center justify-center cursor-pointer shrink-0"
               title="New Message"
               aria-label="New Message"
             >
-              <Icon name="messages-plus" className="w-6 h-6 stroke-[2.2]" />
+              <Icon name="messages-plus" className="w-5 h-5 stroke-[2.3]" />
             </motion.button>
           </div>
         )}
@@ -6134,7 +6152,7 @@ const handleCreateChannel = async () => {
                <button
                  type="button"
                  onClick={() => setActiveMessagesTab('chats')}
-                 className="px-4 py-2 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition cursor-pointer"
+                 className="ds-apple-btn-primary min-h-[36px] px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer"
                >
                  Done
                </button>
@@ -6152,8 +6170,9 @@ const handleCreateChannel = async () => {
                          আপনার আইডি এই কমিউনিটি চ্যানেল থেকে ব্যান করা হয়েছে। আপনি এই চ্যানেলের কোনো মেসেজ বা আপডেট দেখতে পারবেন না।
                      </p>
                      <button
+                         type="button"
                          onClick={() => setSearchParams({})}
-                         className="mt-6 px-6 py-3 bg-white/95 dark:bg-zinc-800/90 hover:bg-white text-zinc-900 dark:text-white rounded-full text-xs font-bold shadow-[0_4px_16px_rgba(120,90,160,0.08)] border-0 transition-all cursor-pointer"
+                         className="ds-apple-btn-primary mt-6 min-h-[42px] px-6 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer"
                      >
                          Back to Chats
                      </button>
@@ -6623,7 +6642,7 @@ const handleCreateChannel = async () => {
                                                               <button
                                                                   type="button"
                                                                   onClick={handleAddAdmin}
-                                                                  className="w-full py-3 bg-[#F246F5] hover:bg-[#e135e4] text-white font-bold text-xs rounded-full shadow-sm tracking-wide transition-all cursor-pointer"
+                                                                  className="ds-apple-btn-primary w-full min-h-[42px] py-2.5 px-5 rounded-full font-semibold text-xs whitespace-nowrap cursor-pointer"
                                                               >
                                                                   Save & Add Admin
                                                               </button>
@@ -7892,7 +7911,7 @@ const handleCreateChannel = async () => {
                      <button
                        type="button"
                        onClick={() => { setShowP2pSearch(false); setP2pSearchQuery(''); }}
-                       className="text-xs font-semibold text-[#2F80ED] px-2.5 py-1 hover:bg-[#2F80ED]/10 rounded-lg transition cursor-pointer"
+                       className="ds-apple-btn-primary min-h-[32px] px-3.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer"
                      >
                        Done
                      </button>
@@ -8939,14 +8958,15 @@ const handleCreateChannel = async () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateChannelModal(false)}
-                  className="flex-1 py-3 rounded-full bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] text-zinc-900 dark:text-white font-bold transition hover:bg-white dark:hover:bg-zinc-800 cursor-pointer"
+                  className="ds-apple-btn-secondary flex-1 min-h-[44px] py-2.5 px-5 rounded-full text-sm font-semibold whitespace-nowrap cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleCreateCommunityChannel}
                   disabled={isCreatingChannel || !chanName.trim() || !chanLink.trim()}
-                  className="flex-1 py-3 rounded-full bg-[#F246F5] hover:bg-[#e135e4] text-white font-bold shadow-[0_6px_18px_rgba(242,70,245,0.25)] disabled:opacity-50 disabled:cursor-not-allowed transition flex justify-center items-center gap-2 cursor-pointer"
+                  className="ds-apple-btn-primary flex-1 min-h-[44px] py-2.5 px-5 rounded-full text-sm font-semibold whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isCreatingChannel ? (
                       <Icon name="loader-2" className="w-5 h-5 animate-spin" />
@@ -9561,10 +9581,10 @@ const handleCreateChannel = async () => {
                                     disabled={isSent}
                                     onClick={() => handleSendForward(c, false)}
                                     className={cn(
-                                      'h-9 min-w-[74px] px-4 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0',
+                                      'min-h-[34px] min-w-[74px] px-4 py-1.5 rounded-full text-xs font-semibold gap-1.5 shrink-0 whitespace-nowrap',
                                       isSent
-                                        ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-300 cursor-default'
-                                        : 'bg-[#F246F5] hover:bg-[#e135e4] text-white shadow-[0_4px_14px_rgba(242,70,245,0.25)] cursor-pointer'
+                                        ? 'ds-apple-btn-secondary cursor-default opacity-80'
+                                        : 'ds-apple-btn-primary cursor-pointer'
                                     )}
                                   >
                                     {isSent ? (
@@ -9625,10 +9645,10 @@ const handleCreateChannel = async () => {
                                     disabled={isSent}
                                     onClick={() => handleSendForward(ch, true)}
                                     className={cn(
-                                      'h-9 min-w-[74px] px-4 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 shrink-0',
+                                      'min-h-[34px] min-w-[74px] px-4 py-1.5 rounded-full text-xs font-semibold gap-1.5 shrink-0 whitespace-nowrap',
                                       isSent
-                                        ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-300 cursor-default'
-                                        : 'bg-[#F246F5] hover:bg-[#e135e4] text-white shadow-[0_4px_14px_rgba(242,70,245,0.25)] cursor-pointer'
+                                        ? 'ds-apple-btn-secondary cursor-default opacity-80'
+                                        : 'ds-apple-btn-primary cursor-pointer'
                                     )}
                                   >
                                     {isSent ? (
@@ -9662,7 +9682,7 @@ const handleCreateChannel = async () => {
                       setForwardSearchQuery('');
                       setForwardedTargetsMap({});
                     }}
-                    className="w-full h-11 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-sm font-semibold transition active:scale-[0.99] cursor-pointer"
+                    className="ds-apple-btn-primary w-full min-h-[44px] py-2.5 px-6 rounded-full text-sm font-semibold whitespace-nowrap cursor-pointer"
                   >
                     Done
                   </button>

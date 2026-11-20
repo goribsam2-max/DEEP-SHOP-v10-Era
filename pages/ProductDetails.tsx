@@ -24,6 +24,11 @@ import {
 } from "framer-motion";
 import Icon from "../components/Icon";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
+import {
+  findOfflineProductByIdOrSlug,
+  upsertOfflineProduct,
+} from "../lib/offlineStore";
 import {
   APPLE_SPRING_DEFAULT,
   APPLE_SPRING_SNAPPY,
@@ -78,33 +83,10 @@ const ProductDetails: React.FC = () => {
   const { id, slug } = useParams();
   const { isDark, toggleTheme } = useTheme();
   const shouldReduceMotion = useReducedMotion();
-  const initialCachedProduct = React.useMemo<Product | null>(() => {
-    try {
-      const cached: Product[] = JSON.parse(
-        localStorage.getItem("ds_home_products_v1") || "[]"
-      );
-      if (!Array.isArray(cached) || cached.length === 0) return null;
-      const slugify = (s: string) =>
-        String(s || "")
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, "");
-      if (id) {
-        return cached.find((p) => p.id === id) || null;
-      }
-      if (slug) {
-        return (
-          cached.find(
-            (p) =>
-              p.id === slug ||
-              slugify(p.name) === slug ||
-              p.name === decodeURIComponent(slug)
-          ) || null
-        );
-      }
-    } catch {}
-    return null;
-  }, [id, slug]);
+  const initialCachedProduct = React.useMemo<Product | null>(
+    () => findOfflineProductByIdOrSlug(id || slug),
+    [id, slug]
+  );
 
   const [product, setProduct] = useState<Product | null>(initialCachedProduct);
   const [isNotFound, setIsNotFound] = useState(false);
@@ -188,6 +170,13 @@ const ProductDetails: React.FC = () => {
   const notify = useNotify();
   const confirm = useConfirm();
   const navigate = useNavigate();
+
+  const { swipeHandlers: mobileSwipeHandlers } = useSwipeNavigation({
+    onEdgeSwipeRight: () => {
+      triggerHaptic("light");
+      navigate(-1);
+    },
+  });
 
   const handleNotifyMe = async () => {
     if (!product) return;
@@ -280,6 +269,7 @@ const ProductDetails: React.FC = () => {
             setProduct(matchedProduct);
             setResolvedId(snap.id);
             setIsNotFound(false);
+            upsertOfflineProduct(matchedProduct);
             const prodSlug = toSlug(matchedProduct.name) || "item";
             const targetPath = `/product/${prodSlug}/${snap.id}`;
             if (window.location.pathname !== targetPath) {
@@ -292,7 +282,7 @@ const ProductDetails: React.FC = () => {
                 await updateDoc(doc(db, "products", snap.id), { views: increment(1) });
               } catch {}
             }
-          } else {
+          } else if (!initialCachedProduct && (typeof navigator === "undefined" || navigator.onLine)) {
             setIsNotFound(true);
           }
         },
@@ -317,6 +307,7 @@ const ProductDetails: React.FC = () => {
             setProduct(matchedProduct);
             setResolvedId(matchedProduct.id);
             setIsNotFound(false);
+            upsertOfflineProduct(matchedProduct);
             const prodSlug = toSlug(matchedProduct.name) || "item";
             const targetPath = `/product/${prodSlug}/${matchedProduct.id}`;
             if (window.location.pathname !== targetPath) {
@@ -329,7 +320,7 @@ const ProductDetails: React.FC = () => {
                 await updateDoc(doc(db, "products", matchedProduct.id), { views: increment(1) });
               } catch {}
             }
-          } else {
+          } else if (!initialCachedProduct && (typeof navigator === "undefined" || navigator.onLine)) {
             setIsNotFound(true);
           }
         },
@@ -1400,7 +1391,7 @@ const ProductDetails: React.FC = () => {
         {/* =====================================================================
             MOBILE LIQUID GLASS UTILITY BAR & SWIPE GALLERY (< lg)
            ===================================================================== */}
-        <div className="flex lg:hidden flex-col gap-4">
+        <div {...mobileSwipeHandlers} className="flex lg:hidden flex-col gap-4">
           {/* Mobile Breadcrumb + Quick Wishlist/Share */}
           <div className="flex items-center justify-between gap-2 px-0.5">
             <nav
@@ -1459,7 +1450,7 @@ const ProductDetails: React.FC = () => {
           </div>
 
           {/* Mobile Touch Swipe Studio Gallery */}
-          <div className="space-y-3">
+          <div className="space-y-3" data-no-swipe="true">
             <div className="relative aspect-square w-full ds-liquid-gallery-stage overflow-hidden">
               <AnimatePresence mode="popLayout" custom={direction}>
                 <motion.div
@@ -1649,7 +1640,7 @@ const ProductDetails: React.FC = () => {
                 </span>
                 <span className="text-zinc-500 dark:text-zinc-400">
                   ডেলিভারি ৩০-৪৫ দিন
-                  {actualReward > 0 ? ` · +${actualReward} VG Coins` : ""}
+                  {actualReward > 0 ? ` · +${actualReward} DP Coins` : ""}
                 </span>
               </div>
             </div>
@@ -1950,7 +1941,7 @@ const ProductDetails: React.FC = () => {
                       রিওয়ার্ড বোনাস
                     </span>
                     <span className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">
-                      +{actualReward} VG Coins অর্জন করুন
+                      +{actualReward} DP Coins অর্জন করুন
                     </span>
                   </div>
                 )}

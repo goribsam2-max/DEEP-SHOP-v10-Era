@@ -256,7 +256,7 @@ export const sendDepositRequestToTelegram = async (data: any) => {
 <b>User Email:</b> ${data.userEmail || 'Unknown'}
 
 <b>💰 DEPOSIT DETAILS</b>
-<b>Amount:</b> ${data.amount} VG Coins
+<b>Amount:</b> ${data.amount} DP Coins
 <b>Payment Method:</b> ${data.method.toUpperCase()}
 <b>Transaction ID:</b> <code>${data.trxId}</code>
 

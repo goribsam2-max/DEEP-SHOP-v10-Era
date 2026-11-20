@@ -1,5 +1,5 @@
 import { formatPrice } from "@/lib/utils";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -10,6 +10,8 @@ import { ProductCard } from "../components/ui/ProductCard";
 import SEO from "../components/SEO";
 import { ProductSkeleton } from "../components/Skeletons";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
+import { readOfflineProducts, writeOfflineProducts } from "../lib/offlineStore";
 import {
   APPLE_SPRING_DEFAULT,
   APPLE_SPRING_SNAPPY,
@@ -277,8 +279,8 @@ const AllProducts: React.FC = () => {
   const initialCategory =
     searchParams.get("category") || (location.state as any)?.category || "All";
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(() => readOfflineProducts());
+  const [loading, setLoading] = useState(() => readOfflineProducts().length === 0);
   const [activeTab, setActiveTab] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("featured");
@@ -289,10 +291,23 @@ const AllProducts: React.FC = () => {
   const [mobileFilterSheetOpen, setMobileFilterSheetOpen] = useState(false);
   const [quickViewImg, setQuickViewImg] = useState<string | null>(null);
 
+  const mobileTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
   useEffect(() => {
     const paramCat = new URLSearchParams(location.search).get("category");
     setActiveTab(paramCat || "All");
   }, [location.search]);
+
+  useEffect(() => {
+    const btn = mobileTabRefs.current[activeTab];
+    if (btn) {
+      btn.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [activeTab]);
 
   const handleTabChange = (tab: string) => {
     triggerHaptic("selection");
@@ -303,14 +318,42 @@ const AllProducts: React.FC = () => {
     );
   };
 
+  const { swipeHandlers } = useSwipeNavigation({
+    disabled: mobileFilterSheetOpen || Boolean(quickViewImg),
+    onEdgeSwipeRight: () => {
+      const curIdx = TABS.indexOf(activeTab);
+      if (curIdx > 0) {
+        handleTabChange(TABS[curIdx - 1]);
+      } else {
+        triggerHaptic("light");
+        navigate(-1);
+      }
+    },
+    onSwipeLeft: () => {
+      const curIdx = TABS.indexOf(activeTab);
+      const nextIdx = curIdx >= 0 ? curIdx + 1 : 0;
+      if (nextIdx < TABS.length) {
+        handleTabChange(TABS[nextIdx]);
+      }
+    },
+    onSwipeRight: () => {
+      const curIdx = TABS.indexOf(activeTab);
+      if (curIdx > 0) {
+        handleTabChange(TABS[curIdx - 1]);
+      }
+    },
+  });
+
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, "products"),
       (snapshot) => {
-        setProducts(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Product)
+        const nextProducts = snapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() }) as Product
         );
+        setProducts(nextProducts);
         setLoading(false);
+        writeOfflineProducts(nextProducts);
       },
       () => {
         setLoading(false);
@@ -430,7 +473,10 @@ const AllProducts: React.FC = () => {
   };
 
   return (
-    <div className="ds-liquid-checkout-shell min-h-screen font-sans relative transition-colors pb-16">
+    <div
+      {...swipeHandlers}
+      className="ds-liquid-checkout-shell min-h-screen font-sans relative transition-colors pb-16"
+    >
       <SEO
         title={`${activeDetails.bnTitle} | Catalog`}
         description="Browse our vast collection of premium border cross phones, original mobiles, phone parts, chargers, and tech at DEEP SHOP."
@@ -619,6 +665,9 @@ const AllProducts: React.FC = () => {
               return (
                 <button
                   key={tab}
+                  ref={(el) => {
+                    mobileTabRefs.current[tab] = el;
+                  }}
                   type="button"
                   onClick={() => handleTabChange(tab)}
                   className={`px-3.5 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${

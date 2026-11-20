@@ -33,23 +33,34 @@ export default defineConfig(({ mode }) => {
       },
       VitePWA({
         registerType: "autoUpdate",
-        injectRegister: null,
-        includeManifestIcons: false,
+        injectRegister: "auto",
+        includeManifestIcons: true,
         devOptions: {
-          enabled: false,
+          enabled: true,
+          type: "module",
+          navigateFallback: "index.html",
         },
-        includeAssets: [],
+        includeAssets: [
+          "favicon.ico",
+          "favicon.png",
+          "apple-touch-icon.png",
+          "icon.svg",
+        ],
         workbox: {
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
-          navigateFallback: null,
-          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-          globPatterns: ["**/*.{css,ico,woff2}"],
+          navigateFallback: "/index.html",
+          navigateFallbackDenylist: [
+            /^\/api\//,
+            /^\/sitemap.*\.xml$/i,
+            /^\/robots\.txt$/i,
+          ],
+          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
           globIgnores: [
             "**/assets/aistudio/**",
-            "**/*.js",
-            "**/*.html",
+            "**/sitemap*.xml",
           ],
           runtimeCaching: [
             {
@@ -58,7 +69,7 @@ export default defineConfig(({ mode }) => {
               options: {
                 cacheName: "external-static-resources",
                 expiration: {
-                  maxEntries: 30,
+                  maxEntries: 40,
                   maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {
@@ -72,8 +83,22 @@ export default defineConfig(({ mode }) => {
               options: {
                 cacheName: "static-images-fonts",
                 expiration: {
-                  maxEntries: 120,
+                  maxEntries: 200,
                   maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/(res\.cloudinary\.com|firebasestorage\.googleapis\.com|wsrv\.nl|images\.unsplash\.com)\/.*/i,
+              handler: "StaleWhileRevalidate",
+              options: {
+                cacheName: "product-media-images",
+                expiration: {
+                  maxEntries: 220,
+                  maxAgeSeconds: 60 * 60 * 24 * 14,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
@@ -93,7 +118,26 @@ export default defineConfig(({ mode }) => {
           orientation: "portrait",
           start_url: "/",
           scope: "/",
-          icons: [],
+          icons: [
+            {
+              src: "/pwa-192x192.png",
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "/pwa-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "/pwa-maskable-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
+            },
+          ],
         },
       }),
     ],

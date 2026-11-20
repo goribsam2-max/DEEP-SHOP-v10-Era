@@ -144,6 +144,11 @@ const Cart: React.FC = () => {
   const applyPromo = async () => {
     setPromoError("");
     if (!promoCode.trim()) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      triggerHaptic("warning");
+      setPromoError("অফলাইন মোডে প্রোমো কোড যাচাই করা সম্ভব নয়");
+      return;
+    }
     triggerHaptic("light");
     try {
       const q = query(

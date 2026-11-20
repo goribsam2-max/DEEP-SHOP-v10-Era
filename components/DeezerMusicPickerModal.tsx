@@ -9,9 +9,9 @@ import {
   Volume2,
   Film,
 } from "lucide-react";
-import { collection, onSnapshot, query, limit } from "firebase/firestore";
+import { collection, onSnapshot, query, limit, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
-import { toPlayableAudioUrl } from "../lib/videoEmbed";
+import { isLikelyVideoMediaUrl } from "../lib/videoEmbed";
 import { createResilientAudioPlayer, ResilientAudioPlayer } from "../lib/audioPlayback";
 
 export interface DeezerTrack {
@@ -35,6 +35,7 @@ export interface AttachedMusic {
   artist: string;
   cover: string;
   coverUrl?: string;
+  isFromVideo?: boolean;
 }
 
 interface DeezerMusicPickerModalProps {
@@ -115,18 +116,23 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    const getTrackTs = (data: any) =>
+      Number(data?.updatedAt || data?.createdAtMs || data?.createdAt || 0);
+
     const unsubBg = onSnapshot(
-      query(collection(db, "background_music"), limit(120)),
+      query(collection(db, "background_music"), limit(200)),
       (snap) => {
         const list = snap.docs
-          .map((d) => {
-            const data = d.data();
+          .map((d) => ({ id: d.id, data: d.data() }))
+          .sort((a, b) => getTrackTs(b.data) - getTrackTs(a.data))
+          .map(({ id, data }) => {
             const rawUrl = String(
               data.audioUrl || data.url || data.mp3Url || ""
             ).trim();
-            const fromVideo = Boolean(data.isFromVideo);
+            const fromVideo =
+              Boolean(data.isFromVideo) || isLikelyVideoMediaUrl(rawUrl);
             return {
-              id: `bg_${d.id}`,
+              id: `bg_${id}`,
               title: data.title || data.name || "Original Audio",
               preview: rawUrl,
               isFromVideo: fromVideo,
@@ -149,17 +155,19 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
     );
 
     const unsubStory = onSnapshot(
-      query(collection(db, "story_songs"), limit(120)),
+      query(collection(db, "story_songs"), limit(200)),
       (snap) => {
         const list = snap.docs
-          .map((d) => {
-            const data = d.data();
+          .map((d) => ({ id: d.id, data: d.data() }))
+          .sort((a, b) => getTrackTs(b.data) - getTrackTs(a.data))
+          .map(({ id, data }) => {
             const rawUrl = String(
               data.audioUrl || data.url || data.mp3Url || ""
             ).trim();
-            const fromVideo = Boolean(data.isFromVideo);
+            const fromVideo =
+              Boolean(data.isFromVideo) || isLikelyVideoMediaUrl(rawUrl);
             return {
-              id: `story_${d.id}`,
+              id: `story_${id}`,
               title: data.title || data.name || "Story Sound",
               preview: rawUrl,
               isFromVideo: fromVideo,
@@ -182,18 +190,35 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
     );
 
     const unsubVideos = onSnapshot(
-      query(collection(db, "scam_posts"), limit(80)),
+      query(collection(db, "scam_posts"), orderBy("createdAt", "desc"), limit(120)),
       (snap) => {
         const extracted: DeezerTrack[] = [];
         snap.docs.forEach((d) => {
           const data = d.data();
           const audioSource = String(
-            data.music?.audioUrl || data.music?.url || data.videoUrl || ""
+            data.music?.audioUrl ||
+              data.music?.url ||
+              data.videoUrl ||
+              (data as any).video ||
+              data.reelUrl ||
+              data.mediaUrl ||
+              data.audioUrl ||
+              ""
           ).trim();
           if (!audioSource || !isDirectPlayableMediaUrl(audioSource)) return;
+          const looksLikeVideo =
+            isLikelyVideoMediaUrl(audioSource) ||
+            Boolean(
+              data.videoUrl ||
+                (data as any).video ||
+                data.reelUrl ||
+                data.mediaType === "video" ||
+                data.type === "reel" ||
+                data.music?.isFromVideo
+            );
 
           const authorName = String(
-            data.music?.artist || data.authorName || "Creator"
+            data.music?.artist || data.authorName || data.reporterName || "Creator"
           ).trim();
           const captionTitle = String(
             data.music?.title ||
@@ -205,19 +230,20 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
               data.music?.coverUrl ||
               data.thumbnailUrl ||
               data.authorPhoto ||
+              data.reporterAvatar ||
               ""
           );
           extracted.push({
             id: `post_audio_${d.id}`,
             title: captionTitle,
             preview: audioSource,
-            isFromVideo: true,
+            isFromVideo: looksLikeVideo,
             artist: {
               name: authorName,
               picture_medium: coverImg,
             },
             album: {
-              title: "Video Audio",
+              title: looksLikeVideo ? "Video Audio" : "Community Audio",
               cover_medium: coverImg,
             },
           });
@@ -323,6 +349,7 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
       artist: track.artist.name,
       cover: coverImg,
       coverUrl: coverImg,
+      isFromVideo: Boolean(track.isFromVideo),
     };
     onSelectTrack?.(payload);
     onSelectMusic?.(payload);

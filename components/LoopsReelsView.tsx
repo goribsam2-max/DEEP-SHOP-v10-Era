@@ -558,6 +558,8 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
   };
 
   const rawStreamCandidate = resolved.directStreamUrl || resolved.canonicalUrl || "";
+  const directStreamCandidate = toPlayableMediaUrl(rawStreamCandidate);
+  const proxyStreamCandidate = toProxiedMediaStreamUrl(rawStreamCandidate);
   const hasSeparateReelMusic =
     isImageMusicReel ||
     Boolean(
@@ -574,6 +576,71 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     0,
     Math.min(1, Number(post.music?.bgMusicVolume ?? 1))
   );
+
+  // Prewarm active & upcoming native reel streams immediately for ~0s start
+  useEffect(() => {
+    if ((isActive || shouldPreload) && !isImageMusicReel && rawStreamCandidate) {
+      prewarmVideoFirstChunk(rawStreamCandidate);
+    }
+  }, [isActive, shouldPreload, isImageMusicReel, rawStreamCandidate]);
+
+  // Fast watchdog: if direct CDN stream stalls silently without firing onError, flip to /api/stream-media proxy
+  useEffect(() => {
+    if (
+      !isActive ||
+      isPaused ||
+      !usesNativeVideo ||
+      hasLoadedFrame ||
+      directFailed ||
+      useRawOriginFallback ||
+      !proxyStreamCandidate ||
+      proxyStreamCandidate === directStreamCandidate
+    ) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const v = videoRef.current;
+      if (!v || v.readyState < 2) {
+        setUseRawOriginFallback(true);
+      }
+    }, 950);
+    return () => window.clearTimeout(timer);
+  }, [
+    isActive,
+    isPaused,
+    usesNativeVideo,
+    hasLoadedFrame,
+    directFailed,
+    useRawOriginFallback,
+    proxyStreamCandidate,
+    directStreamCandidate,
+  ]);
+
+  // Bg music stall watchdog: switch silently stalling tracks to proxy stream or <video> decoder
+  useEffect(() => {
+    if (!isActive || isPaused || isMuted || !hasSeparateReelMusic || !rawMusicAudioUrl) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const a = bgAudioRef.current;
+      if (!a || a.readyState < 2) {
+        if (!useAudioProxyFallback) {
+          setUseAudioProxyFallback(true);
+        } else if (!useBgVideoElement) {
+          setUseBgVideoElement(true);
+        }
+      }
+    }, 1700);
+    return () => window.clearTimeout(timer);
+  }, [
+    isActive,
+    isPaused,
+    isMuted,
+    hasSeparateReelMusic,
+    rawMusicAudioUrl,
+    useAudioProxyFallback,
+    useBgVideoElement,
+  ]);
 
   // Sync active autoplay / pause
   useEffect(() => {
@@ -658,6 +725,8 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     isImageMusicReel,
     usesNativeVideo,
     useRawOriginFallback,
+    useAudioProxyFallback,
+    useBgVideoElement,
     resolved.platform,
     hasSeparateReelMusic,
     reelVideoVolume,
@@ -748,18 +817,37 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     }, 240);
   };
 
-  const posterImg =
+  const authorAvatarSet = new Set(
+    [
+      post.reporterAvatar,
+      (post as any).authorPhoto,
+      (post as any).photoURL,
+    ]
+      .filter((u): u is string => typeof u === "string" && u.trim().length > 0)
+      .map((u) => u.trim())
+  );
+  const firstPostImg =
+    typeof post.images?.[0] === "string" &&
+    !authorAvatarSet.has(post.images[0].trim()) &&
+    post.images[0].trim() !== (post.music?.cover || "").trim() &&
+    post.images[0].trim() !== (post.music?.coverUrl || "").trim()
+      ? post.images[0].trim()
+      : "";
+
+  const rawPosterCandidate =
     resolved.thumbnailUrl ||
     (post as any).thumbnailUrl ||
     (post as any).videoThumbnail ||
     (post as any).coverUrl ||
     (post as any).posterUrl ||
-    post.images?.[0] ||
-    post.music?.cover ||
-    post.music?.coverUrl ||
+    firstPostImg ||
     (resolved.platform === "youtube" && resolved.videoId
       ? `https://i.ytimg.com/vi/${resolved.videoId}/hqdefault.jpg`
       : "");
+  const posterImg =
+    rawPosterCandidate && !authorAvatarSet.has(rawPosterCandidate.trim())
+      ? rawPosterCandidate.trim()
+      : "";
 
   const renderMediaElement = () => {
     if (isImageMusicReel) {
@@ -825,26 +913,27 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       if (!src) {
         return <div className="w-full h-full bg-black" />;
       }
+      const hasUserActivatedSync =
+        typeof navigator !== "undefined" &&
+        Boolean((navigator as any).userActivation?.hasBeenActive);
+      const effectiveInitialMuted =
+        isMuted ||
+        !hasUserActivatedSync ||
+        (hasSeparateReelMusic && reelVideoVolume <= 0.01);
+
       return (
         <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
-          {posterImg && !hasLoadedFrame && (
-            <img
-              src={posterImg}
-              alt={post.title || "Reel thumbnail"}
-              referrerPolicy="no-referrer"
-              className="absolute inset-0 z-[1] w-full h-full object-contain bg-black pointer-events-none transition-opacity duration-200"
-            />
-          )}
           <video
+            key={useRawOriginFallback ? `${post.id}_proxy` : `${post.id}_direct`}
             ref={videoRef}
             data-active-reel-video={isActive ? "true" : undefined}
             data-reel-user-paused={isPaused ? "true" : undefined}
             src={src}
-            poster={posterImg?.trim() || undefined}
+            poster={posterImg || undefined}
             preload={isActive || shouldPreload ? "auto" : "metadata"}
             playsInline
             loop={!onVideoEnded}
-            muted={isMuted}
+            muted={effectiveInitialMuted}
             autoPlay={isActive}
             onPlaying={() => {
               setHasLoadedFrame(true);
@@ -858,7 +947,10 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
               setIsBuffering(false);
               const v = e.currentTarget;
               if (isActive && !isPaused && v.paused) {
-                v.play().catch(() => {});
+                v.play().catch(() => {
+                  v.muted = true;
+                  v.play().catch(() => {});
+                });
               }
             }}
             onLoadedData={(e) => {
@@ -866,7 +958,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
               setIsBuffering(false);
               const v = e.currentTarget;
               if (isActive && !isPaused && v.paused) {
-                v.muted = isMuted;
+                v.muted = effectiveInitialMuted;
                 v.play().catch(() => {
                   v.muted = true;
                   if (!autoMuteNotifiedRef.current) {
@@ -948,7 +1040,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
                     videoRef.current.play().catch(() => {});
                   }
                 }}
-                className="px-4 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold backdrop-blur-md border border-white/20 cursor-pointer active:scale-95 transition"
+                className="ds-apple-btn-primary min-h-[40px] px-5 py-2 rounded-full text-xs font-semibold cursor-pointer whitespace-nowrap"
               >
                 Tap to Retry
               </button>
@@ -1151,20 +1243,23 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       {renderMediaElement()}
       {(() => {
         if (!hasSeparateReelMusic || !rawMusicAudioUrl) return null;
-        const resolvedReelAudioSrc = (
-          useAudioProxyFallback
-            ? toProxiedMediaStreamUrl(rawMusicAudioUrl)
-            : toPlayableAudioUrl(rawMusicAudioUrl)
-        ).trim();
-        if (!resolvedReelAudioSrc) return null;
         const preferVideoEl =
           useBgVideoElement ||
           isLikelyVideoMediaUrl(rawMusicAudioUrl) ||
           Boolean((post.music as any)?.isFromVideo);
+        const resolvedReelAudioSrc = (
+          useAudioProxyFallback
+            ? toProxiedMediaStreamUrl(rawMusicAudioUrl)
+            : preferVideoEl
+            ? toPlayableMediaUrl(rawMusicAudioUrl)
+            : toPlayableAudioUrl(rawMusicAudioUrl)
+        ).trim();
+        if (!resolvedReelAudioSrc) return null;
 
         if (preferVideoEl) {
           return (
             <video
+              key={`${post.id}_bgaudio_vid_${useAudioProxyFallback ? "proxy" : "direct"}`}
               ref={bgAudioRef as any}
               data-active-reel-audio={isActive ? "true" : undefined}
               src={resolvedReelAudioSrc}
@@ -1174,6 +1269,13 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
               muted={isMuted}
               className="fixed w-0 h-0 opacity-0 pointer-events-none -z-10"
               aria-hidden="true"
+              onCanPlay={(e) => {
+                const el = e.currentTarget;
+                el.volume = reelMusicVolume;
+                if (isActive && !isPaused && !isMuted && el.paused) {
+                  el.play().catch(() => {});
+                }
+              }}
               onError={() => {
                 if (!useAudioProxyFallback) {
                   setUseAudioProxyFallback(true);
@@ -1199,12 +1301,20 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
 
         return (
           <audio
+            key={`${post.id}_bgaudio_${useAudioProxyFallback ? "proxy" : "direct"}`}
             ref={bgAudioRef as any}
             data-active-reel-audio={isActive ? "true" : undefined}
             src={resolvedReelAudioSrc}
             preload={isActive ? "auto" : "none"}
             loop={!(isImageMusicReel && onVideoEnded)}
             muted={isMuted}
+            onCanPlay={(e) => {
+              const el = e.currentTarget;
+              el.volume = reelMusicVolume;
+              if (isActive && !isPaused && !isMuted && el.paused) {
+                el.play().catch(() => {});
+              }
+            }}
             onError={() => {
               if (!useAudioProxyFallback) {
                 setUseAudioProxyFallback(true);
@@ -4222,7 +4332,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                     navigate("/create-reel");
                   }
                 }}
-                className="min-h-[44px] px-5 py-2.5 rounded-full bg-white text-zinc-950 text-xs font-bold cursor-pointer whitespace-nowrap active:scale-95 transition hover:bg-white/95"
+                className="ds-apple-btn-primary min-h-[44px] px-5 py-2.5 rounded-full text-xs font-semibold cursor-pointer whitespace-nowrap"
               >
                 Upload a Reel
               </button>
@@ -4747,10 +4857,10 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                                   creator.displayName
                                 )
                               }
-                              className={`min-h-[34px] px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold transition active:scale-92 cursor-pointer shrink-0 whitespace-nowrap ${
+                              className={`min-h-[34px] px-4 py-1.5 rounded-full text-[12.5px] font-semibold transition active:scale-95 cursor-pointer shrink-0 whitespace-nowrap ${
                                 isCreatorFollowed
-                                  ? "bg-white/20 border border-white/45 text-white"
-                                  : "bg-white text-zinc-950 font-bold hover:bg-white/95"
+                                  ? "bg-white/20 border border-white/40 text-white backdrop-blur-md"
+                                  : "ds-apple-btn-primary"
                               }`}
                             >
                               {isCreatorFollowed ? "Following" : "Follow"}

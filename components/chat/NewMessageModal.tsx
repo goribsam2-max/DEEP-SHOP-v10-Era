@@ -363,14 +363,14 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               <button 
                 type="button"
                 onClick={handleModalClose}
-                className="text-[#007AFF] hover:text-[#0A84FF] font-medium text-[16px] cursor-pointer active:opacity-70 transition-opacity"
+                className="ds-apple-btn-secondary min-h-[34px] px-3.5 py-1.5 rounded-full font-semibold text-[13px] whitespace-nowrap cursor-pointer"
               >
                 Cancel
               </button>
               <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
                 New message
               </h2>
-              <div className="w-12" /> {/* Balancing spacer */}
+              <div className="w-16" /> {/* Balancing spacer */}
             </div>
 
             {/* "To:" search bar */}
@@ -513,7 +513,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               <button 
                 type="button"
                 onClick={() => setStep('new_message')}
-                className="text-[#007AFF] hover:text-[#0A84FF] font-medium text-[16px] cursor-pointer active:opacity-70 transition-opacity"
+                className="ds-apple-btn-secondary min-h-[34px] px-3.5 py-1.5 rounded-full font-semibold text-[13px] whitespace-nowrap cursor-pointer"
               >
                 Cancel
               </button>
@@ -525,10 +525,10 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                 disabled={selectedUsers.length === 0}
                 onClick={() => setStep('new_group_details')}
                 className={cn(
-                  "font-semibold text-[16px] transition-all cursor-pointer",
+                  "ds-apple-btn-primary min-h-[34px] px-4 py-1.5 rounded-full font-semibold text-[13px] whitespace-nowrap",
                   selectedUsers.length > 0 
-                    ? "text-[#007AFF] hover:text-[#0A84FF] active:scale-95" 
-                    : "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                    ? "cursor-pointer" 
+                    : "opacity-40 cursor-not-allowed"
                 )}
               >
                 Next
@@ -660,9 +660,10 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               <button 
                 type="button"
                 onClick={() => setStep('new_group_select')}
-                className="text-[#007AFF] hover:text-[#0A84FF] flex items-center -ml-1 text-[16px] cursor-pointer"
+                className="ds-apple-btn-secondary w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
+                aria-label="Back"
               >
-                <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
+                <ChevronLeft className="w-5 h-5 stroke-[2.3]" />
               </button>
               <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
                 New group
@@ -671,10 +672,10 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                 type="button"
                 disabled={isCreatingGroup}
                 onClick={handleCreateGroup}
-                className="font-bold text-[16px] text-[#007AFF] hover:text-[#0A84FF] active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                className="ds-apple-btn-primary min-h-[34px] px-4 py-1.5 rounded-full font-semibold text-[13px] whitespace-nowrap cursor-pointer disabled:opacity-50"
               >
-                {isCreatingGroup && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
-                Create
+                {isCreatingGroup && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Create</span>
               </button>
             </div>
 
@@ -816,7 +817,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               <button 
                 type="button"
                 onClick={() => setStep('new_message')}
-                className="text-[#007AFF] hover:text-[#0A84FF] font-medium text-[16px] cursor-pointer"
+                className="ds-apple-btn-secondary min-h-[34px] px-3.5 py-1.5 rounded-full font-semibold text-[13px] whitespace-nowrap cursor-pointer"
               >
                 Cancel
               </button>
@@ -828,8 +829,8 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                 disabled={!noteText.trim() || isSavingNote}
                 onClick={handleShareNote}
                 className={cn(
-                  "font-bold text-[16px] transition-all cursor-pointer",
-                  noteText.trim() ? "text-[#007AFF] hover:text-[#0A84FF]" : "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                  "ds-apple-btn-primary min-h-[34px] px-4 py-1.5 rounded-full font-semibold text-[13px] whitespace-nowrap",
+                  noteText.trim() ? "cursor-pointer" : "opacity-40 cursor-not-allowed"
                 )}
               >
                 Share

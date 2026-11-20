@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="dsBg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A0A0D" />
+      <stop offset="100%" stop-color="#141720" />
+    </linearGradient>
+    <linearGradient id="dsAccent" x1="120" y1="120" x2="392" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A84FF" />
+      <stop offset="100%" stop-color="#0071E3" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#dsBg)" />
+  <rect x="16" y="16" width="480" height="480" rx="106" stroke="rgba(255,255,255,0.12)" stroke-width="4" />
+  <path
+    d="M274 128v172c0 46-33 78-78 78-44 0-76-32-76-76s32-76 76-76c16 0 30 5 42 13V128h36zm-78 134c-23 0-40 17-40 40s17 40 40 40 42-17 42-40-18-40-42-40z"
+    fill="#FFFFFF"
+  />
+  <circle cx="348" cy="340" r="34" fill="url(#dsAccent)" />
+</svg>
