@@ -395,8 +395,8 @@ const SavedAccountsPage: React.FC = () => {
                   exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
                   transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
                   drag={prefersReducedMotion ? false : "y"}
-                  dragConstraints={{ top: 0 }}
-                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.02, bottom: 0.45 }}
                   onDragEnd={(_, info) => {
                     const projected = info.offset.y + projectMomentum(info.velocity.y);
                     if (projected > 100 || info.velocity.y > 400) {
@@ -404,7 +404,7 @@ const SavedAccountsPage: React.FC = () => {
                       setManageSheetOpen(false);
                     }
                   }}
-                  className="ds-apple-sheet relative z-10 w-full sm:max-w-[440px] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 max-h-[82vh] flex flex-col"
+                  className="ds-apple-sheet relative z-10 w-full max-w-none sm:max-w-[440px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] sm:pb-7 pt-2.5 max-h-[82dvh] flex flex-col"
                 >
                   <div className="w-10 h-1 rounded-full bg-black/[0.15] dark:bg-white/[0.2] mx-auto mb-2 shrink-0" />
                   <div className="relative flex items-center justify-center h-12 px-4 border-b border-black/[0.06] dark:border-white/[0.08] shrink-0">

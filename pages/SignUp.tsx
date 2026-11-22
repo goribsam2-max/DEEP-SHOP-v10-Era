@@ -392,19 +392,19 @@ const SignUp: React.FC = () => {
       playAuthVoice("আপনার প্রথম নাম লিখুন।");
       return;
     }
-    const fnRealCheck = validateRealPersonName(draft.firstName, "ফার্স্ট নাম");
+    const fnRealCheck = validateRealPersonName(draft.firstName, "first name");
     if (!fnRealCheck.isValid) {
       setFieldError(fnRealCheck.errorMsg);
-      playAuthVoice(fnRealCheck.errorMsg);
+      playAuthVoice(fnRealCheck.voiceMsg || fnRealCheck.errorMsg);
       return;
     }
     const fnCheck = validateInappropriateContent(
       draft.firstName,
-      "ফার্স্ট নেমে"
+      "first name"
     );
     if (!fnCheck.isValid) {
       setFieldError(fnCheck.errorMsg);
-      playAuthVoice(fnCheck.errorMsg);
+      playAuthVoice(fnCheck.voiceMsg || fnCheck.errorMsg);
       return;
     }
     if (!draft.surname.trim()) {
@@ -413,25 +413,25 @@ const SignUp: React.FC = () => {
       playAuthVoice("আপনার সারনেম বা পদবী লিখুন।");
       return;
     }
-    const snRealCheck = validateRealPersonName(draft.surname, "সারনেম");
+    const snRealCheck = validateRealPersonName(draft.surname, "surname");
     if (!snRealCheck.isValid) {
       setFieldError(snRealCheck.errorMsg);
-      playAuthVoice(snRealCheck.errorMsg);
+      playAuthVoice(snRealCheck.voiceMsg || snRealCheck.errorMsg);
       return;
     }
-    const snCheck = validateInappropriateContent(draft.surname, "সারনেমে");
+    const snCheck = validateInappropriateContent(draft.surname, "surname");
     if (!snCheck.isValid) {
       setFieldError(snCheck.errorMsg);
-      playAuthVoice(snCheck.errorMsg);
+      playAuthVoice(snCheck.voiceMsg || snCheck.errorMsg);
       return;
     }
     const fullRealCheck = validateRealPersonName(
       `${draft.firstName.trim()} ${draft.surname.trim()}`,
-      "পূর্ণ নাম"
+      "full name"
     );
     if (!fullRealCheck.isValid) {
       setFieldError(fullRealCheck.errorMsg);
-      playAuthVoice(fullRealCheck.errorMsg);
+      playAuthVoice(fullRealCheck.voiceMsg || fullRealCheck.errorMsg);
       return;
     }
     navigate(`/signup/birthday${querySuffix}`);
@@ -496,13 +496,13 @@ const SignUp: React.FC = () => {
     const emailCheck = validateRealEmail(trimmed);
     if (!emailCheck.isValid) {
       setFieldError(emailCheck.errorMsg);
-      playAuthVoice(emailCheck.errorMsg);
+      playAuthVoice(emailCheck.voiceMsg || emailCheck.errorMsg);
       return;
     }
-    const profCheck = validateInappropriateContent(trimmed, "ইমেইলে");
+    const profCheck = validateInappropriateContent(trimmed, "email");
     if (!profCheck.isValid) {
       setFieldError(profCheck.errorMsg);
-      playAuthVoice(profCheck.errorMsg);
+      playAuthVoice(profCheck.voiceMsg || profCheck.errorMsg);
       return;
     }
     updateDraft({ contactMode: "email" });
@@ -528,67 +528,63 @@ const SignUp: React.FC = () => {
     setFieldError("");
 
     if (!draft.shopName.trim()) {
-      const msg = "অনুগ্রহ করে আপনার দোকানের নাম লিখুন।";
-      setFieldError(msg);
-      playAuthVoice(msg);
+      setFieldError("Please enter your shop or store name.");
+      playAuthVoice("অনুগ্রহ করে আপনার দোকানের নাম লিখুন।");
       return;
     }
     const shopRealCheck = validateRealPersonName(
       draft.shopName,
-      "দোকানের নাম"
+      "shop name"
     );
     if (!shopRealCheck.isValid) {
       setFieldError(shopRealCheck.errorMsg);
-      playAuthVoice(shopRealCheck.errorMsg);
+      playAuthVoice(shopRealCheck.voiceMsg || shopRealCheck.errorMsg);
       return;
     }
     const shopProf = validateInappropriateContent(
       draft.shopName,
-      "দোকানের নামে"
+      "shop name"
     );
     if (!shopProf.isValid) {
       setFieldError(shopProf.errorMsg);
-      playAuthVoice(shopProf.errorMsg);
+      playAuthVoice(shopProf.voiceMsg || shopProf.errorMsg);
       return;
     }
 
     if (!draft.firstName.trim()) {
-      const msg = "এন আই ডি অনুযায়ী মালিকের পূর্ণ নাম লিখুন।";
-      setFieldError(msg);
-      playAuthVoice(msg);
+      setFieldError("Please enter the owner's full name as on their NID.");
+      playAuthVoice("এন আই ডি অনুযায়ী মালিকের পূর্ণ নাম লিখুন।");
       return;
     }
     const ownerRealCheck = validateRealPersonName(
       draft.firstName,
-      "মালিকের নাম"
+      "owner name"
     );
     if (!ownerRealCheck.isValid) {
       setFieldError(ownerRealCheck.errorMsg);
-      playAuthVoice(ownerRealCheck.errorMsg);
+      playAuthVoice(ownerRealCheck.voiceMsg || ownerRealCheck.errorMsg);
       return;
     }
     const ownerProf = validateInappropriateContent(
       draft.firstName,
-      "মালিকের নামে"
+      "owner name"
     );
     if (!ownerProf.isValid) {
       setFieldError(ownerProf.errorMsg);
-      playAuthVoice(ownerProf.errorMsg);
+      playAuthVoice(ownerProf.voiceMsg || ownerProf.errorMsg);
       return;
     }
 
     if (draft.storeType === "physical" && !draft.shopAddress.trim()) {
-      const msg = "অনুগ্রহ করে আপনার দোকানের নম্বর এবং মার্কেটের ঠিকানা লিখুন।";
-      setFieldError(msg);
-      playAuthVoice(msg);
+      setFieldError("Please enter your shop number and market address.");
+      playAuthVoice("অনুগ্রহ করে আপনার দোকানের নম্বর এবং মার্কেটের ঠিকানা লিখুন।");
       return;
     }
 
     const cleanedPhone = draft.mobileNumber.trim().replace(/[\s\-().]/g, "");
     if (!/^\+?[0-9]{8,15}$/.test(cleanedPhone)) {
-      const msg = "অনুগ্রহ করে সেলারের সঠিক মোবাইল নম্বর প্রদান করুন।";
-      setFieldError(msg);
-      playAuthVoice(msg);
+      setFieldError("Please enter a valid seller mobile number.");
+      playAuthVoice("অনুগ্রহ করে সেলারের সঠিক মোবাইল নম্বর প্রদান করুন।");
       return;
     }
 
@@ -596,13 +592,13 @@ const SignUp: React.FC = () => {
     const emailCheck = validateRealEmail(trimmedEmail);
     if (!emailCheck.isValid) {
       setFieldError(emailCheck.errorMsg);
-      playAuthVoice(emailCheck.errorMsg);
+      playAuthVoice(emailCheck.voiceMsg || emailCheck.errorMsg);
       return;
     }
-    const emailProf = validateInappropriateContent(trimmedEmail, "ইমেইলে");
+    const emailProf = validateInappropriateContent(trimmedEmail, "email");
     if (!emailProf.isValid) {
       setFieldError(emailProf.errorMsg);
-      playAuthVoice(emailProf.errorMsg);
+      playAuthVoice(emailProf.voiceMsg || emailProf.errorMsg);
       return;
     }
 
@@ -692,17 +688,17 @@ const SignUp: React.FC = () => {
 
     const pwdState = checkPasswordRules(password);
     if (!pwdState.isAllValid) {
-      const err =
-        "পাসওয়ার্ডের সবকটি শর্ত পূরণ করুন: কমপক্ষে ৮+ অক্ষর, সংখ্যা (0-9), ছোট অক্ষর (a-z), বড় অক্ষর (A-Z) এবং স্পেশাল চিহ্ন (!@#$)।";
-      setFieldError(err);
+      setFieldError(
+        "Please meet all password requirements: at least 8+ characters, a number (0-9), lowercase (a-z), uppercase (A-Z), and a special symbol (!@#$)."
+      );
       playAuthVoice("পাসওয়ার্ডের সকল শর্তসমূহ পূরণ করুন।");
       return;
     }
 
-    const pwdCheck = validateInappropriateContent(password, "পাসওয়ার্ডে");
+    const pwdCheck = validateInappropriateContent(password, "password");
     if (!pwdCheck.isValid) {
       setFieldError(pwdCheck.errorMsg);
-      playAuthVoice(pwdCheck.errorMsg);
+      playAuthVoice(pwdCheck.voiceMsg || pwdCheck.errorMsg);
       return;
     }
 
@@ -720,11 +716,11 @@ const SignUp: React.FC = () => {
     }
 
     const fullName = `${draft.firstName.trim()} ${draft.surname.trim()}`.trim();
-    const fullNameCheck = validateRealPersonName(fullName, "পূর্ণ নাম");
+    const fullNameCheck = validateRealPersonName(fullName, "full name");
     if (!fullName || !fullNameCheck.isValid) {
       if (fullNameCheck.errorMsg) {
         notify(fullNameCheck.errorMsg, "error");
-        playAuthVoice(fullNameCheck.errorMsg);
+        playAuthVoice(fullNameCheck.voiceMsg || fullNameCheck.errorMsg);
       }
       navigate(
         `/signup/${roleParam === "seller" ? "seller" : "name"}${querySuffix}`
@@ -748,7 +744,7 @@ const SignUp: React.FC = () => {
       const emailCheck = validateRealEmail(authEmail);
       if (!emailCheck.isValid) {
         notify(emailCheck.errorMsg, "error");
-        playAuthVoice(emailCheck.errorMsg);
+        playAuthVoice(emailCheck.voiceMsg || emailCheck.errorMsg);
         navigate(
           `/signup/${roleParam === "seller" ? "seller" : "email"}${querySuffix}`
         );
@@ -1500,8 +1496,8 @@ const SignUp: React.FC = () => {
                     exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
                     transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
                     drag={prefersReducedMotion ? false : "y"}
-                    dragConstraints={{ top: 0 }}
-                    dragElastic={{ top: 0.08, bottom: 0.45 }}
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={{ top: 0.02, bottom: 0.45 }}
                     onDragEnd={(_, info) => {
                       const projected = info.offset.y + projectMomentum(info.velocity.y);
                       if (projected > 100 || info.velocity.y > 400) {
@@ -1509,7 +1505,7 @@ const SignUp: React.FC = () => {
                         setShowDatePickerSheet(false);
                       }
                     }}
-                    className="ds-apple-sheet relative z-10 w-full sm:max-w-[420px] rounded-t-[28px] sm:rounded-[28px] p-5 pb-7"
+                    className="ds-apple-sheet relative z-10 w-full max-w-none sm:max-w-[420px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] p-5 pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] sm:pb-7"
                   >
                     <div className="w-10 h-1 rounded-full bg-black/[0.15] dark:bg-white/[0.2] mx-auto mb-3" />
                     <div className="flex items-center justify-between mb-4">
@@ -2194,15 +2190,15 @@ const SignUp: React.FC = () => {
                     exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
                     transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
                     drag={prefersReducedMotion ? false : "y"}
-                    dragConstraints={{ top: 0 }}
-                    dragElastic={{ top: 0.08, bottom: 0.45 }}
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={{ top: 0.02, bottom: 0.45 }}
                     onDragEnd={(_, info) => {
                       if (info.offset.y + projectMomentum(info.velocity.y) > 100 || info.velocity.y > 400) {
                         triggerHaptic("selection");
                         setShowTermsLearnMoreSheet(false);
                       }
                     }}
-                    className="ds-apple-sheet relative z-10 w-full sm:max-w-[430px] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl"
+                    className="ds-apple-sheet relative z-10 w-full max-w-none sm:max-w-[430px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] sm:pb-7 pt-2.5 shadow-2xl"
                   >
                     <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-2" />
                     <div className="relative flex items-center justify-center h-12 px-4 border-b border-black/[0.08] dark:border-white/[0.1]">
@@ -2577,15 +2573,15 @@ const SignUp: React.FC = () => {
                     exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
                     transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
                     drag={prefersReducedMotion ? false : "y"}
-                    dragConstraints={{ top: 0 }}
-                    dragElastic={{ top: 0.08, bottom: 0.45 }}
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={{ top: 0.02, bottom: 0.45 }}
                     onDragEnd={(_, info) => {
                       if (info.offset.y + projectMomentum(info.velocity.y) > 100 || info.velocity.y > 400) {
                         triggerHaptic("selection");
                         setShowNotificationsInfoSheet(false);
                       }
                     }}
-                    className="ds-apple-sheet relative z-10 w-full sm:max-w-[430px] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl"
+                    className="ds-apple-sheet relative z-10 w-full max-w-none sm:max-w-[430px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] sm:pb-7 pt-2.5 shadow-2xl"
                   >
                     <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-2" />
                     <div className="relative flex items-center justify-center h-12 px-4 border-b border-black/[0.08] dark:border-white/[0.1]">
@@ -2674,7 +2670,7 @@ const SignUp: React.FC = () => {
               return (
                 <div className="p-3.5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.08] dark:border-white/[0.1] space-y-2">
                   <p className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
-                    পাসওয়ার্ডের প্রয়োজনীয় শর্তাবলী (Password Rules):
+                    Password Rules:
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-[12px] font-semibold">
                     <div
@@ -2693,7 +2689,7 @@ const SignUp: React.FC = () => {
                       >
                         {pwdRules.hasMinLen ? "✓" : "○"}
                       </span>
-                      <span>৮+ অক্ষর</span>
+                      <span>8+ characters</span>
                     </div>
 
                     <div
@@ -2712,7 +2708,7 @@ const SignUp: React.FC = () => {
                       >
                         {pwdRules.hasNumber ? "✓" : "○"}
                       </span>
-                      <span>সংখ্যা (0-9)</span>
+                      <span>Number (0-9)</span>
                     </div>
 
                     <div
@@ -2731,7 +2727,7 @@ const SignUp: React.FC = () => {
                       >
                         {pwdRules.hasLower ? "✓" : "○"}
                       </span>
-                      <span>ছোট অক্ষর (a-z)</span>
+                      <span>Lowercase (a-z)</span>
                     </div>
 
                     <div
@@ -2750,7 +2746,7 @@ const SignUp: React.FC = () => {
                       >
                         {pwdRules.hasUpper ? "✓" : "○"}
                       </span>
-                      <span>বড় অক্ষর (A-Z)</span>
+                      <span>Uppercase (A-Z)</span>
                     </div>
 
                     <div
@@ -2769,7 +2765,7 @@ const SignUp: React.FC = () => {
                       >
                         {pwdRules.hasSpecial ? "✓" : "○"}
                       </span>
-                      <span>স্পেশাল চিহ্ন (!@#$%^&*)</span>
+                      <span>Special symbol (!@#$%^&*)</span>
                     </div>
                   </div>
                 </div>
@@ -2845,15 +2841,15 @@ const SignUp: React.FC = () => {
                   exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%", opacity: 0.85 }}
                   transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
                   drag={prefersReducedMotion ? false : "y"}
-                  dragConstraints={{ top: 0 }}
-                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.02, bottom: 0.45 }}
                   onDragEnd={(_, info) => {
                     if (info.offset.y + projectMomentum(info.velocity.y) > 100 || info.velocity.y > 400) {
                       triggerHaptic("selection");
                       setShowRememberInfoSheet(false);
                     }
                   }}
-                  className="ds-apple-sheet relative z-10 w-full sm:max-w-[420px] rounded-t-[28px] sm:rounded-[28px] pb-7 pt-2.5 shadow-2xl"
+                  className="ds-apple-sheet relative z-10 w-full max-w-none sm:max-w-[420px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] pb-[calc(1.75rem+env(safe-area-inset-bottom,0px))] sm:pb-7 pt-2.5 shadow-2xl"
                 >
                   <div className="w-10 h-1 rounded-full bg-black/15 dark:bg-white/20 mx-auto mb-2" />
                   <div className="relative flex items-center justify-center h-12 px-4 border-b border-black/[0.08] dark:border-white/[0.1]">

@@ -37,6 +37,13 @@ import {
   isLikelyVideoUrl,
   readHiddenAdIds,
 } from "../components/DeepShopSponsoredAd";
+import {
+  computeBestSellerCutoff,
+  computeProductTags,
+  computeProductTrendScore,
+  useProductOrderStats,
+  type ProductAutoTagId,
+} from "../lib/productTags";
 
 const ThinBanner = ({ banner }: { banner: any }) => {
   const [hiddenTick, setHiddenTick] = useState(0);
@@ -162,8 +169,10 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const [activeCategoryBanner, setActiveCategoryBanner] = useState(0);
   const [activeBottomBanner, setActiveBottomBanner] = useState(0);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [activeTrendFilter, setActiveTrendFilter] = useState<"all" | ProductAutoTagId>("all");
   const [displayedCount, setDisplayedCount] = useState(8);
   const [loadingMore, setLoadingMore] = useState(false);
+  const orderStats = useProductOrderStats();
   const [sellers, setSellers] = useState<any[]>(() => {
     try {
       const raw = sessionStorage.getItem("ds_home_sellers_v1");
@@ -174,6 +183,47 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
     } catch {}
     return [];
   });
+
+  const bestSellerCutoff = useMemo(
+    () => computeBestSellerCutoff(products, orderStats.salesByProductId),
+    [products, orderStats.salesByProductId]
+  );
+
+  const trendingProducts = useMemo(() => {
+    return [...products].sort(
+      (a, b) =>
+        computeProductTrendScore(b, orderStats.salesByProductId, bestSellerCutoff) -
+        computeProductTrendScore(a, orderStats.salesByProductId, bestSellerCutoff)
+    );
+  }, [products, orderStats.salesByProductId, bestSellerCutoff]);
+
+  const taggedHighlightProducts = useMemo(() => {
+    return trendingProducts.filter((p) => {
+      const tags = computeProductTags(p, orderStats.salesByProductId, bestSellerCutoff);
+      if (activeTrendFilter === "all") return tags.length > 0;
+      return tags.some((t) => t.id === activeTrendFilter);
+    });
+  }, [trendingProducts, orderStats.salesByProductId, bestSellerCutoff, activeTrendFilter]);
+
+  const availableTrendTabs = useMemo(() => {
+    const counts: Record<ProductAutoTagId, number> = {
+      best_seller: 0,
+      new_arrival: 0,
+      low_stock: 0,
+    };
+    for (const p of products) {
+      const tags = computeProductTags(p, orderStats.salesByProductId, bestSellerCutoff);
+      for (const t of tags) {
+        counts[t.id] += 1;
+      }
+    }
+    return [
+      { id: "all" as const, label: "All Highlights", count: counts.best_seller + counts.new_arrival + counts.low_stock },
+      ...(counts.best_seller > 0 ? [{ id: "best_seller" as const, label: "Best Seller", count: counts.best_seller }] : []),
+      ...(counts.new_arrival > 0 ? [{ id: "new_arrival" as const, label: "New Arrival", count: counts.new_arrival }] : []),
+      ...(counts.low_stock > 0 ? [{ id: "low_stock" as const, label: "Low Stock", count: counts.low_stock }] : []),
+    ];
+  }, [products, orderStats.salesByProductId, bestSellerCutoff]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => activeCategory === "All" || p.category === activeCategory);
@@ -524,11 +574,13 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                         : { x: heroDirection > 0 ? -140 : 140, opacity: 0.4 }
                     }
                     drag={heroBanners.length > 1 ? "x" : false}
+                    dragDirectionLock
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.18}
                     onDragEnd={handleHeroDragEnd}
                     transition={heroTransition}
-                    className="absolute inset-0 bg-zinc-200 dark:bg-zinc-900"
+                    style={{ touchAction: "pan-y" }}
+                    className="absolute inset-0 bg-zinc-200 dark:bg-zinc-900 touch-pan-y"
                   >
                     {(() => {
                       const rawHeroUrl =
@@ -624,10 +676,10 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                 Reseller Program · VIP Masterclass
               </p>
               <h3 className="ds-apple-display text-[19px] sm:text-[23px] font-semibold">
-                রিসেলারদের জন্য ০৳ অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারি
+                Unlimited 100% Cash on Delivery with ৳0 Advance for Resellers
               </h3>
               <p className="ds-apple-muted text-[13px] sm:text-sm leading-relaxed line-clamp-2">
-                কোনো অগ্রিম চার্জ ছাড়া সরাসরি কাস্টমারকে পার্সেল পাঠান। রিসেলার মাস্টারক্লাসের স্টেপ-বাই-স্টেপ গাইড ও ভিআইপি প্ল্যান দেখুন।
+                Ship directly to your customers with zero upfront charges. Explore the step-by-step Reseller Masterclass guide and VIP plans.
               </p>
             </div>
 
@@ -636,7 +688,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                 type="button"
                 className="ds-apple-btn-primary rounded-full px-5 h-10 text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
-                <span>গাইড ও প্ল্যান দেখুন</span>
+                <span>View Guide &amp; Plans</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
               <span className="ds-apple-muted text-xs font-medium hidden sm:inline">
@@ -674,37 +726,103 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           )}
         </section>
 
-        {/* 3. TRENDING PRODUCTS SHOWCASE (Draggable Spring HeroSlider) */}
+        {/* 3. TRENDING PRODUCTS SHOWCASE (Order-Driven Ranking & Draggable Spring HeroSlider) */}
         {isLoadingProducts ? (
           <div className="mb-10 w-full">
             <SectionShowcaseSkeleton cards={4} />
           </div>
         ) : (
           products.length > 0 && (
-            <section id="home-products" className="mb-10 w-full">
-              <SectionHeader
-                eyebrow="Curated Selection"
-                title="Trending Products"
-                actionLabel="See All"
-                onAction={() => navigate("/all-products")}
-              />
-              <HeroSlider
-                autoSlideDelay={4500}
-                pauseDurationAfterInteract={10000}
-                cards={products.slice(0, 6).map((p) => ({
-                  id: p.id,
-                  title: p.name,
-                  description:
-                    p.description || "Discover authentic products at DEEP SHOP.",
-                  category: p.category,
-                  image: getProductDisplayImage(p),
-                  date:
-                    p.isOffer && p.offerPrice
-                      ? formatPrice(p.offerPrice)
-                      : formatPrice(p.price),
-                  actionText: "Buy Now",
-                }))}
-              />
+            <section id="home-products" className="mb-10 w-full space-y-6">
+              <div>
+                <SectionHeader
+                  eyebrow="Order & Demand Driven"
+                  title="Trending Products"
+                  actionLabel="See All"
+                  onAction={() => navigate("/all-products")}
+                />
+                <HeroSlider
+                  autoSlideDelay={4500}
+                  pauseDurationAfterInteract={10000}
+                  cards={trendingProducts.slice(0, 6).map((p) => {
+                    const topTag = computeProductTags(
+                      p,
+                      orderStats.salesByProductId,
+                      bestSellerCutoff
+                    )[0];
+                    return {
+                      id: p.id,
+                      title: p.name,
+                      description:
+                        p.description || "Discover authentic products at DEEP SHOP.",
+                      category: topTag
+                        ? `${topTag.label} · ${p.category}`
+                        : p.category,
+                      image: getProductDisplayImage(p),
+                      date:
+                        p.isOffer && p.offerPrice
+                          ? formatPrice(p.offerPrice)
+                          : formatPrice(p.price),
+                      actionText: "Buy Now",
+                    };
+                  })}
+                />
+              </div>
+
+              {taggedHighlightProducts.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="ds-apple-eyebrow ds-apple-muted text-[11px] mb-0.5">
+                        Live Catalog Signals
+                      </p>
+                      <h3 className="ds-apple-display text-[19px] sm:text-[22px] font-semibold">
+                        Trending &amp; Highlights
+                      </h3>
+                    </div>
+
+                    {availableTrendTabs.length > 2 && (
+                      <div className="ds-apple-segmented inline-flex items-center gap-1 p-1 rounded-full overflow-x-auto max-w-full no-scrollbar">
+                        {availableTrendTabs.map((tab) => {
+                          const active = activeTrendFilter === tab.id;
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic("selection");
+                                setActiveTrendFilter(tab.id);
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                                active
+                                  ? "bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-xs"
+                                  : "ds-apple-muted hover:text-[#1D1D1F] dark:hover:text-white"
+                              }`}
+                            >
+                              {tab.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-4 overflow-x-auto pb-2 pt-1 px-0.5 scrollbar-hide snap-x">
+                    {taggedHighlightProducts.slice(0, 8).map((product, index) => (
+                      <div
+                        key={product.id ? `${product.id}-trend-${index}` : index}
+                        className="min-w-[205px] max-w-[230px] sm:min-w-[245px] sm:max-w-[260px] snap-start shrink-0"
+                      >
+                        <ProductCard
+                          product={product}
+                          index={index}
+                          bestSellerCutoff={bestSellerCutoff}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )
         )}
@@ -820,10 +938,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
 
         {/* 7. BORDER CROSS PHONES */}
         {borderCrossPhones.length > 0 && (
-          <section
-            className="mb-10 w-full"
-            style={{ contentVisibility: "auto", containIntrinsicSize: "0 360px" }}
-          >
+          <section className="mb-10 w-full">
             <SectionHeader
               eyebrow="Direct Intake"
               title="Border Cross Phones"
@@ -836,7 +951,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                   key={product.id ? `${product.id}-horiz-${index}` : index}
                   className="min-w-[220px] sm:min-w-[260px] snap-center"
                 >
-                  <ProductCard product={product} index={index} />
+                  <ProductCard product={product} index={index} bestSellerCutoff={bestSellerCutoff} />
                 </div>
               ))}
             </div>
@@ -845,10 +960,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
 
         {/* 8. PHONE PARTS */}
         {phoneParts.length > 0 && (
-          <section
-            className="mb-10 w-full"
-            style={{ contentVisibility: "auto", containIntrinsicSize: "0 340px" }}
-          >
+          <section className="mb-10 w-full">
             <SectionHeader
               eyebrow="OEM Components"
               title="Phone Parts"
@@ -861,7 +973,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                   key={product.id ? `${product.id}-parts-${index}` : index}
                   className="min-w-[205px] sm:min-w-[240px] snap-center"
                 >
-                  <ProductCard product={product} index={index} />
+                  <ProductCard product={product} index={index} bestSellerCutoff={bestSellerCutoff} />
                 </div>
               ))}
             </div>
@@ -870,10 +982,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
 
         {/* 9. ORIGINAL MOBILES & GEAR COMPACT LIST */}
         {mobileGear.length > 0 && (
-          <section
-            className="mb-10 w-full"
-            style={{ contentVisibility: "auto", containIntrinsicSize: "0 320px" }}
-          >
+          <section className="mb-10 w-full">
             <SectionHeader
               eyebrow="Essential Companions"
               title="Original Mobiles & Gear"
@@ -948,7 +1057,6 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
           id="popular-products"
           {...discoverySwipeHandlers}
           className="mb-12 w-full"
-          style={{ contentVisibility: "auto", containIntrinsicSize: "0 680px" }}
         >
           <SectionHeader
             eyebrow={
@@ -975,6 +1083,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
                       key={product.id ? `${product.id}-${index}` : index}
                       product={product}
                       index={index}
+                      bestSellerCutoff={bestSellerCutoff}
                     />
                   ))}
                 {loadingMore &&

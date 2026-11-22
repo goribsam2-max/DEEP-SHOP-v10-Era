@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
         includeManifestIcons: true,
         devOptions: {
           enabled: true,
-          type: "module",
+          type: "classic",
           navigateFallback: "index.html",
         },
         includeAssets: [
@@ -45,8 +45,10 @@ export default defineConfig(({ mode }) => {
           "favicon.png",
           "apple-touch-icon.png",
           "icon.svg",
+          "push-sw.js",
         ],
         workbox: {
+          importScripts: ["/push-sw.js"],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
@@ -147,10 +149,37 @@ export default defineConfig(({ mode }) => {
         "firebase/auth",
         "firebase/firestore",
         "react",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
         "react-dom",
         "react-dom/client",
         "react-router-dom",
+        "react-helmet-async",
         "framer-motion",
+        "embla-carousel-react",
+        "goey-toast",
+        "sonner",
+        "vaul",
+        "recharts",
+        "react-easy-crop",
+        "react-player",
+        "react-slick",
+        "react-use-measure",
+        "@react-oauth/google",
+        "@radix-ui/react-alert-dialog",
+        "@radix-ui/react-avatar",
+        "@radix-ui/react-checkbox",
+        "@radix-ui/react-dialog",
+        "@radix-ui/react-dropdown-menu",
+        "@radix-ui/react-label",
+        "@radix-ui/react-navigation-menu",
+        "@radix-ui/react-radio-group",
+        "@radix-ui/react-select",
+        "@radix-ui/react-separator",
+        "@radix-ui/react-slot",
+        "@radix-ui/react-switch",
+        "@radix-ui/react-tabs",
+        "@radix-ui/react-tooltip",
       ],
     },
     build: {
@@ -167,6 +196,14 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (!id.includes("node_modules")) return undefined;
+            if (
+              id.includes("/node_modules/react/") ||
+              id.includes("/node_modules/react-dom/") ||
+              id.includes("/node_modules/react-router") ||
+              id.includes("/node_modules/scheduler/")
+            ) {
+              return "vendor-react";
+            }
             if (id.includes("firebase")) return "vendor-firebase";
             if (id.includes("framer-motion")) return "vendor-motion";
             if (id.includes("lucide-react")) return "vendor-lucide";
@@ -186,9 +223,21 @@ export default defineConfig(({ mode }) => {
       "process.env.GEMINI_API_KEY": JSON.stringify(env.GEMINI_API_KEY),
     },
     resolve: {
-      dedupe: ["react", "react-dom"],
+      dedupe: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+        "react-router-dom",
+        "react-helmet-async",
+        "framer-motion",
+      ],
       alias: {
         "@": path.resolve(process.cwd()),
+        "react/jsx-runtime": path.resolve(process.cwd(), "node_modules/react/jsx-runtime.js"),
+        "react/jsx-dev-runtime": path.resolve(process.cwd(), "node_modules/react/jsx-dev-runtime.js"),
+        "react-dom/client": path.resolve(process.cwd(), "node_modules/react-dom/client.js"),
         "react": path.resolve(process.cwd(), "node_modules/react"),
         "react-dom": path.resolve(process.cwd(), "node_modules/react-dom"),
         "lucide-react": path.resolve(

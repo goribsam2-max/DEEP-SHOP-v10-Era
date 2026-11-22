@@ -1007,7 +1007,7 @@ export const NewsProfilePage: React.FC = () => {
     triggerHaptic();
     setSavingEdit(true);
 
-    const nameValidation = validateRealPersonName(editName, "নাম");
+    const nameValidation = validateRealPersonName(editName, "name");
     if (!nameValidation.isValid) {
       setSavingEdit(false);
       notify(nameValidation.errorMsg, "error");
@@ -4125,7 +4125,7 @@ export const NewsProfilePage: React.FC = () => {
                           Congratulations! You Won COD Access 🎉
                         </h4>
                         <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                          অভিনন্দন! ক্যাশ অন ক্যাম্পেইনে আপনি বিজয়ী হিসেবে নির্বাচিত হয়েছেন। এখন থেকে আপনি ডিপ শপে ক্যাশ অন ডেলিভারিতে অর্ডার করতে পারবেন।
+                          Congratulations! You have been selected as a winner in the Cash on Campaign. You can now place Cash on Delivery orders on DEEP SHOP.
                         </p>
                         <button
                           type="button"
@@ -4136,7 +4136,7 @@ export const NewsProfilePage: React.FC = () => {
                           }}
                           className="w-full py-3 rounded-xl bg-amber-400 text-zinc-950 font-bold text-xs hover:brightness-105 active:scale-95 transition cursor-pointer shadow-md"
                         >
-                          Order with Cash on Delivery (ক্যাশ অন ডেলিভারিতে অর্ডার করুন)
+                          Order with Cash on Delivery
                         </button>
                       </div>
                     ) : (
@@ -4149,7 +4149,7 @@ export const NewsProfilePage: React.FC = () => {
                           Better Luck Next Time!
                         </h4>
                         <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                          আপনার ক্যাশ অন ক্যাম্পেইন আবেদনটি সফলভাবে ড্র-তালিকায় অন্তর্ভুক্ত রয়েছে। পরবর্তী বিজয়ী তালিকায় আপনার নাম থাকলে সেলার ড্যাশবোর্ড থেকে নোটিফিকেশন পাবেন।
+                          Your Cash on Campaign application is included in the draw list. If your name is drawn in the next round, you will receive a notification from the seller dashboard.
                         </p>
                         <button
                           type="button"
@@ -4160,7 +4160,7 @@ export const NewsProfilePage: React.FC = () => {
                           }}
                           className="w-full py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-xs active:scale-95 transition cursor-pointer"
                         >
-                          View Application Details (আবেদন দেখুন)
+                          View Application Details
                         </button>
                       </div>
                     )}

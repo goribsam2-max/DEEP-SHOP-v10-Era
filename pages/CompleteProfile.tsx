@@ -22,7 +22,7 @@ const CompleteProfile: React.FC = () => {
     e.preventDefault();
     if (!auth.currentUser) return;
 
-    const nameCheck = validateRealPersonName(formData.name, "নাম");
+    const nameCheck = validateRealPersonName(formData.name, "name");
     if (!nameCheck.isValid) {
       notify(nameCheck.errorMsg, "error");
       return;

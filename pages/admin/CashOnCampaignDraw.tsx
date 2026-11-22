@@ -228,7 +228,7 @@ export default function CashOnCampaignDraw() {
                 Ready to Select Winner
               </h2>
               <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
-                ১০ সেকেন্ডের এনিমেশনের মাধ্যমে যেকোনো ১ জন বিজয়ী নির্বাচন করতে নিচের বাটনে চাপ দিন।
+                Click the button below to select a random winner with a 10-second draw animation.
               </p>
             </div>
           )}

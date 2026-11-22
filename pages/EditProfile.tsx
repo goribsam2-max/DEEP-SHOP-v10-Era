@@ -150,7 +150,7 @@ export default function EditProfile() {
     if (!auth.currentUser) return;
 
     const candidateName = `${firstName.trim()} ${lastName.trim()}`.trim();
-    const nameCheck = validateRealPersonName(candidateName, "নাম");
+    const nameCheck = validateRealPersonName(candidateName, "name");
     if (!nameCheck.isValid) {
       triggerHaptic("error");
       notify(nameCheck.errorMsg, "error");

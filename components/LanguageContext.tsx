@@ -137,18 +137,22 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     const saved = localStorage.getItem('language') as Language | null;
-    if (saved) {
+    if (saved && saved !== 'bn' && translations[saved]) {
       setLanguageState(saved);
+    } else if (saved === 'bn') {
+      localStorage.setItem('language', 'en');
     }
   }, []);
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem('language', lang);
+    const normalized: Language = lang === 'bn' ? 'en' : lang;
+    setLanguageState(normalized);
+    localStorage.setItem('language', normalized);
   };
 
   const t = (key: string): string => {
-    const val = translations[language]?.[key];
+    const activeLang: Language = language === 'bn' ? 'en' : language;
+    const val = translations[activeLang]?.[key];
     if (val) return val;
     if (key.includes('_')) {
       return key

@@ -472,10 +472,10 @@ const ManagePayments: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-sm font-bold text-pink-700 dark:text-pink-300">
-                  Multiple bKash Numbers (অ্যাডমিন বিকাশ নাম্বারসমূহ - Personal, Payment, Cash Out)
+                  Multiple bKash Numbers (Personal, Payment, Cash Out)
                 </label>
                 <p className="text-xs text-zinc-500">
-                  নাম্বার যোগ করার সময় ধরণ (Personal / Payment / Cash Out) নির্বাচন করুন। চেকআউট পেজে উপযুক্ত ধরণ অনুযায়ী ইনস্ট্রাকশন দেখানো হবে।
+                  Select an account type (Personal / Payment / Cash Out) when adding each number. Checkout instructions will match the selected type.
                 </p>
               </div>
             </div>
@@ -523,7 +523,7 @@ const ManagePayments: React.FC = () => {
                     handleSave(nextData);
                   }
                 }}
-                placeholder="নতুন বিকাশ নাম্বার লিখুন (যেমন: 017XXXXXXXX)"
+                placeholder="Enter new bKash number (e.g., 017XXXXXXXX)"
                 className="flex-1 bg-white dark:bg-zinc-800 border border-pink-200 dark:border-pink-800/50 rounded-xl px-4 py-2.5 text-sm text-zinc-900 dark:text-white"
               />
               <Button
@@ -621,7 +621,7 @@ const ManagePayments: React.FC = () => {
                 );
               })}
               {(!data.bkashAccounts || data.bkashAccounts.length === 0) && (
-                <p className="text-xs text-amber-600 font-medium">কোনো বিকাশ নাম্বার যোগ করা নেই (গ্রাহক বিকাশ নির্বাচন করতে পারবে না)</p>
+                <p className="text-xs text-amber-600 font-medium">No bKash number added (customers cannot select bKash at checkout)</p>
               )}
             </div>
           </div>
@@ -631,10 +631,10 @@ const ManagePayments: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <label className="block text-sm font-bold text-orange-700 dark:text-orange-300">
-                  Multiple Nagad Numbers (অ্যাডমিন নগদ নাম্বারসমূহ - Personal, Payment, Cash Out)
+                  Multiple Nagad Numbers (Personal, Payment, Cash Out)
                 </label>
                 <p className="text-xs text-zinc-500">
-                  নাম্বার যোগ করার সময় ধরণ (Personal / Payment / Cash Out) নির্বাচন করুন। চেকআউট পেজে উপযুক্ত ধরণ অনুযায়ী ইনস্ট্রাকশন দেখানো হবে।
+                  Select an account type (Personal / Payment / Cash Out) when adding each number. Checkout instructions will match the selected type.
                 </p>
               </div>
             </div>
@@ -682,7 +682,7 @@ const ManagePayments: React.FC = () => {
                     handleSave(nextData);
                   }
                 }}
-                placeholder="নতুন নগদ নাম্বার লিখুন (যেমন: 018XXXXXXXX)"
+                placeholder="Enter new Nagad number (e.g., 018XXXXXXXX)"
                 className="flex-1 bg-white dark:bg-zinc-800 border border-orange-200 dark:border-orange-800/50 rounded-xl px-4 py-2.5 text-sm text-zinc-900 dark:text-white"
               />
               <Button
@@ -780,7 +780,7 @@ const ManagePayments: React.FC = () => {
                 );
               })}
               {(!data.nagadAccounts || data.nagadAccounts.length === 0) && (
-                <p className="text-xs text-amber-600 font-medium">কোনো নগদ নাম্বার যোগ করা নেই (গ্রাহক নগদ নির্বাচন করতে পারবে না)</p>
+                <p className="text-xs text-amber-600 font-medium">No Nagad number added (customers cannot select Nagad at checkout)</p>
               )}
             </div>
           </div>

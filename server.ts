@@ -569,6 +569,70 @@ app.use(async (req, res, next) => {
     res.json({ publicKey: vapidPublicKey });
   });
 
+  // Aggregated Historical Order Volume per Product (Zero PII — Cached 3m)
+  let cachedOrderStats: {
+    salesByProductId: Record<string, number>;
+    orderCount: number;
+    updatedAt: number;
+  } | null = null;
+  let cachedOrderStatsAt = 0;
+
+  app.get("/api/products/order-stats", async (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=120, stale-while-revalidate=300");
+    const now = Date.now();
+    if (cachedOrderStats && now - cachedOrderStatsAt < 3 * 60 * 1000) {
+      return res.json({ ...cachedOrderStats, source: "cache" });
+    }
+
+    if (!hasValidFirebaseAdmin) {
+      return res.json({
+        salesByProductId: {},
+        orderCount: 0,
+        updatedAt: now,
+        source: "client_fallback",
+      });
+    }
+
+    try {
+      const snap = await admin
+        .firestore()
+        .collection("orders")
+        .orderBy("createdAt", "desc")
+        .limit(250)
+        .get();
+
+      const salesByProductId: Record<string, number> = {};
+      let orderCount = 0;
+
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() as any;
+        const status = String(data?.status || "").trim().toLowerCase();
+        if (status === "cancelled" || status === "returned") return;
+
+        orderCount += 1;
+        const items = Array.isArray(data?.items) ? data.items : [];
+        for (const item of items) {
+          const pid = String(item?.productId || item?.id || "").trim();
+          if (!pid) continue;
+          const qty = Math.max(1, Math.min(99, Number(item?.quantity) || 1));
+          salesByProductId[pid] = (salesByProductId[pid] || 0) + qty;
+        }
+      });
+
+      cachedOrderStats = { salesByProductId, orderCount, updatedAt: now };
+      cachedOrderStatsAt = now;
+      return res.json({ ...cachedOrderStats, source: "admin_firestore" });
+    } catch (err) {
+      console.warn("Order stats aggregation error:", err);
+      return res.json({
+        salesByProductId: cachedOrderStats?.salesByProductId || {},
+        orderCount: cachedOrderStats?.orderCount || 0,
+        updatedAt: now,
+        source: "client_fallback",
+      });
+    }
+  });
+
   app.get("/api/gifs", async (req, res) => {
     const q = String(req.query.q || "").trim();
     const limit = Math.min(36, Math.max(8, Number(req.query.limit) || 24));
@@ -681,14 +745,16 @@ app.use(async (req, res, next) => {
       let successCount = 0;
       
       const payload = JSON.stringify({
-         title: title,
-         body: body,
-         icon: "/favicon.png",
+         title: title || "DEEP SHOP Admin",
+         body: body || "",
+         icon: "/pwa-192x192.png",
+         badge: "/favicon.png",
+         url: link || "/admin/deepshop-helpline",
          data: { url: link || "/admin/deepshop-helpline" }
       });
 
       const promises = subscriptions.map((sub) =>
-          webpush.sendNotification(sub, payload).catch((e) => {
+          webpush.sendNotification(sub, payload, { TTL: 86400, headers: { Urgency: "high" } }).catch((e) => {
               console.error("Web push to admin failed:", e);
               return null;
           })
@@ -729,7 +795,7 @@ app.use(async (req, res, next) => {
       }
       
       if (!loadedFromFirestore) {
-         const subsPath = path.resolve(process.cwd(), "web_push_subscriptions.json");
+         const subsPath = getLocalFilePath("web_push_subscriptions.json");
          if (fs.existsSync(subsPath)) {
              try {
                  const subs = JSON.parse(fs.readFileSync(subsPath, "utf-8"));
@@ -738,7 +804,7 @@ app.use(async (req, res, next) => {
              } catch(e) {}
          }
       }
-      subscriptions = Array.from(new Map(subscriptions.map((s: any) => [s.endpoint, s])).values());
+      subscriptions = Array.from(new Map(subscriptions.filter((s: any) => s && s.endpoint).map((s: any) => [s.endpoint, s])).values());
       
       let successCount = 0;
 
@@ -811,33 +877,42 @@ app.use(async (req, res, next) => {
   app.post("/api/web-push/subscribe", express.json(), async (req, res) => {
     try {
         const { subscription, uid } = req.body;
-        if (!subscription) return res.status(400).json({ error: "Missing subscription" });
-        
+        if (!subscription || !subscription.endpoint) {
+          return res.status(400).json({ error: "Missing subscription" });
+        }
+
         const endpointHash = Buffer.from(subscription.endpoint).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
-        
-        let savedToFirestore = false;
+
         if (hasValidFirebaseAdmin) {
            try {
-              await admin.firestore().collection("web_push_subscriptions").doc(endpointHash).set({
+              const docRef = admin.firestore().collection("web_push_subscriptions").doc(endpointHash);
+              const existingDoc = await docRef.get();
+              const resolvedUid = uid || (existingDoc.exists ? existingDoc.data()?.uid : null) || null;
+              await docRef.set({
                   subscription,
-                  uid: uid || null,
-                  createdAt: admin.firestore.FieldValue.serverTimestamp()
-              });
-              savedToFirestore = true;
-           } catch(err) {
-              console.warn("Failed to save to Firestore web_push_subscriptions, using file fallback:", err.message || err);
+                  uid: resolvedUid,
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                  createdAt: existingDoc.exists ? (existingDoc.data()?.createdAt || admin.firestore.FieldValue.serverTimestamp()) : admin.firestore.FieldValue.serverTimestamp()
+              }, { merge: true });
+           } catch(err: any) {
+              console.warn("Failed to save to Firestore web_push_subscriptions:", err.message || err);
            }
         }
-        
-        if (!savedToFirestore) {
-           const subsPath = getLocalFilePath("web_push_subscriptions.json");
-           let subs: any = {};
-           if (fs.existsSync(subsPath)) {
-               try { subs = JSON.parse(fs.readFileSync(subsPath, "utf-8")); } catch(e) {}
-           }
-           subs[endpointHash] = { subscription, uid: uid || null, createdAt: Date.now() };
-           safeWriteFileSync(subsPath, JSON.stringify(subs, null, 2));
+
+        // Always keep local file store updated as fallback / multi-environment cache
+        const subsPath = getLocalFilePath("web_push_subscriptions.json");
+        let subs: any = {};
+        if (fs.existsSync(subsPath)) {
+            try { subs = JSON.parse(fs.readFileSync(subsPath, "utf-8")); } catch(e) {}
         }
+        const existingLocal = subs[endpointHash];
+        subs[endpointHash] = {
+          subscription,
+          uid: uid || existingLocal?.uid || null,
+          updatedAt: Date.now(),
+          createdAt: existingLocal?.createdAt || Date.now(),
+        };
+        safeWriteFileSync(subsPath, JSON.stringify(subs, null, 2));
 
         res.json({ success: true });
     } catch(e) {
@@ -846,63 +921,148 @@ app.use(async (req, res, next) => {
     }
   });
 
+  async function dispatchUserWebPush(rawBody: any) {
+    const userId = rawBody?.userId || rawBody?.targetUserId;
+    if (!userId) {
+      return { status: 400, json: { error: "Missing userId" } };
+    }
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      await initializeVapid();
+    }
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      return { status: 500, json: { error: "VAPID keys not configured" } };
+    }
+
+    const nested = rawBody?.payload && typeof rawBody.payload === "object" ? rawBody.payload : {};
+    const title = rawBody?.title || nested?.title || "DEEP SHOP";
+    const body = rawBody?.body || nested?.body || "You have a new notification.";
+    const link = rawBody?.link || rawBody?.url || nested?.url || nested?.link || "/messages";
+    const icon = rawBody?.icon || nested?.icon || "/pwa-192x192.png";
+    const image = rawBody?.image || nested?.image || undefined;
+    const type = rawBody?.type || nested?.type || undefined;
+    const tag = rawBody?.tag || nested?.tag || undefined;
+    const extraData = rawBody?.data || nested?.data || {};
+
+    let subscriptions: any[] = [];
+
+    if (hasValidFirebaseAdmin) {
+      try {
+        const subSnap = await admin.firestore().collection("web_push_subscriptions").where("uid", "==", userId).get();
+        const listSubs = subSnap.docs.map(doc => doc.data().subscription).filter(Boolean);
+        subscriptions.push(...listSubs);
+      } catch(err) {
+        console.error("Failed to fetch user web_push_subscriptions", err);
+      }
+
+      try {
+        const userSnap = await admin.firestore().collection("users").doc(userId).get();
+        if (userSnap.exists) {
+          const userData = userSnap.data();
+          if (userData && userData.webPushSub) {
+            subscriptions.push(userData.webPushSub);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch user webPushSub from users collection", err);
+      }
+    }
+
+    // Read local file fallback / mirror as well
+    const subsPath = getLocalFilePath("web_push_subscriptions.json");
+    let localSubsObj: Record<string, any> = {};
+    if (fs.existsSync(subsPath)) {
+      try {
+        localSubsObj = JSON.parse(fs.readFileSync(subsPath, "utf-8"));
+        Object.values(localSubsObj).forEach((entry: any) => {
+          if (entry && entry.uid === userId && entry.subscription?.endpoint) {
+            subscriptions.push(entry.subscription);
+          }
+        });
+      } catch {}
+    }
+
+    subscriptions = Array.from(
+      new Map(subscriptions.filter((s) => s && s.endpoint).map((s) => [s.endpoint, s])).values()
+    );
+
+    if (subscriptions.length === 0) {
+      return { status: 200, json: { message: "No subscriptions found for user", count: 0 } };
+    }
+
+    const payload = JSON.stringify({
+      title,
+      body,
+      icon,
+      badge: "/favicon.png",
+      ...(image ? { image } : {}),
+      url: link,
+      ...(type ? { type } : {}),
+      ...(tag ? { tag } : {}),
+      data: {
+        ...extraData,
+        url: link,
+        ...(type ? { type } : {}),
+        ...(tag ? { tag } : {}),
+      }
+    });
+
+    const staleEndpoints: string[] = [];
+    const results = await Promise.all(
+      subscriptions.map((sub) =>
+        webpush.sendNotification(sub, payload, {
+          TTL: type === "call" ? 60 : 86400,
+          headers: { Urgency: "high" },
+        }).catch((e: any) => {
+          if (e?.statusCode === 404 || e?.statusCode === 410) {
+            if (sub?.endpoint) staleEndpoints.push(sub.endpoint);
+          } else {
+            console.error("Web push to user failed:", e?.statusCode || e?.message || e);
+          }
+          return null;
+        })
+      )
+    );
+
+    if (staleEndpoints.length > 0) {
+      try {
+        let localChanged = false;
+        staleEndpoints.forEach((ep) => {
+          const epHash = Buffer.from(ep).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
+          if (localSubsObj[epHash]) {
+            delete localSubsObj[epHash];
+            localChanged = true;
+          }
+          if (hasValidFirebaseAdmin) {
+            admin.firestore().collection("web_push_subscriptions").doc(epHash).delete().catch(() => {});
+          }
+        });
+        if (localChanged) {
+          safeWriteFileSync(subsPath, JSON.stringify(localSubsObj, null, 2));
+        }
+      } catch {}
+    }
+
+    const successCount = results.filter(r => r !== null).length;
+    return { status: 200, json: { success: true, count: successCount } };
+  }
+
   app.post("/api/send-push-user", express.json(), async (req, res) => {
     try {
-      const { userId, title, body, link } = req.body;
-      if (!userId) return res.status(400).json({ error: "Missing userId" });
-      
-      let subscriptions = [];
-      if (hasValidFirebaseAdmin) {
-         try {
-             const subSnap = await admin.firestore().collection("web_push_subscriptions").where("uid", "==", userId).get();
-             const listSubs = subSnap.docs.map(doc => doc.data().subscription).filter(Boolean);
-             subscriptions = [...subscriptions, ...listSubs];
-         } catch(err) {
-             console.error("Failed to fetch user web_push_subscriptions", err);
-         }
-
-         // Backup: Fetch directly from users collection webPushSub field
-         try {
-             const userSnap = await admin.firestore().collection("users").doc(userId).get();
-             if (userSnap.exists) {
-                 const userData = userSnap.data();
-                 if (userData && userData.webPushSub) {
-                     subscriptions.push(userData.webPushSub);
-                 }
-             }
-         } catch (err) {
-             console.error("Failed to fetch user webPushSub from users collection", err);
-         }
-      }
-      
-      // De-duplicate subscriptions by endpoint URL
-      subscriptions = Array.from(
-        new Map(subscriptions.map((s) => [s.endpoint, s])).values()
-      );
-      
-      if (subscriptions.length === 0) {
-        return res.status(200).json({ message: "No subscriptions found for user" });
-      }
-      
-      const payload = JSON.stringify({
-         title,
-         body,
-         icon: "/favicon.png",
-         data: { url: link || "/help-center" }
-      });
-
-      const promises = subscriptions.map((sub) =>
-          webpush.sendNotification(sub, payload).catch((e) => {
-              console.error("Web push to user failed:", e);
-              return null;
-          })
-      );
-      
-      const results = await Promise.all(promises);
-      const successCount = results.filter(r => r !== null).length;
-      res.json({ success: true, count: successCount });
+      const result = await dispatchUserWebPush(req.body);
+      res.status(result.status).json(result.json);
     } catch (error: any) {
       console.error("Error sending user push:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/web-push/send-p2p", express.json(), async (req, res) => {
+    try {
+      const result = await dispatchUserWebPush(req.body);
+      res.status(result.status).json(result.json);
+    } catch (error: any) {
+      console.error("Error sending p2p push:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1876,7 +2036,9 @@ app.use(async (req, res, next) => {
       const payload = JSON.stringify({
         title,
         body,
-        icon: "/favicon.png",
+        icon: "/pwa-192x192.png",
+        badge: "/favicon.png",
+        url: link || `/messages?chatId=${channelId}`,
         data: { url: link || `/messages?chatId=${channelId}` }
       });
 
@@ -1884,7 +2046,7 @@ app.use(async (req, res, next) => {
       await Promise.all(
         uniqueSubs.map(async (sub) => {
           try {
-            await webpush.sendNotification(sub, payload);
+            await webpush.sendNotification(sub, payload, { TTL: 86400, headers: { Urgency: "high" } });
             successCount++;
           } catch (err: any) {
             // silent ignore

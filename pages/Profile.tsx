@@ -1303,7 +1303,7 @@ export const Profile: React.FC<ProfileProps> = ({
                   }
                   drag={shouldReduceMotion ? false : "y"}
                   dragConstraints={{ top: 0, bottom: 0 }}
-                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  dragElastic={{ top: 0.02, bottom: 0.45 }}
                   onDragEnd={(_, info) => {
                     const projected = info.offset.y + projectMomentum(info.velocity.y);
                     if (projected > 120 || info.velocity.y > 420) {
@@ -1312,7 +1312,7 @@ export const Profile: React.FC<ProfileProps> = ({
                     }
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="ds-apple-sheet relative z-[281] w-full max-w-lg mx-auto rounded-t-[28px] px-5 pt-3 pb-8 space-y-4"
+                  className="ds-apple-sheet relative z-[281] w-full max-w-none sm:max-w-lg mx-auto rounded-t-[28px] rounded-b-none sm:rounded-[28px] px-5 pt-3 pb-[calc(24px+env(safe-area-inset-bottom,0px))] sm:pb-8 space-y-4"
                 >
                   <div className="w-10 h-1 rounded-full bg-black/20 dark:bg-white/25 mx-auto mb-1 shrink-0" />
 

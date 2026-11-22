@@ -740,7 +740,7 @@ const SellerDashboard: React.FC = () => {
           msgLink = `/orders`; // direct them to orders
         } else if (status === OrderStatus.RETURNED) {
           msgTitle = "❌ Order Returned";
-          msgBody = `Product return চলে যাচ্ছে। কারণ: ${rejectReason || 'Unknown'}`;
+          msgBody = `Product return initiated. Reason: ${rejectReason || 'Unknown'}`;
           msgLink = `/orders`;
         }
         
@@ -2376,9 +2376,9 @@ const SellerDashboard: React.FC = () => {
                                       isSold: newSold,
                                       stock: newSold ? 0 : 1
                                     });
-                                    notify(newSold ? "প্রোডাক্টটি 'সোল্ড আউট' চিহ্নিত করা হয়েছে!" : "প্রোডাক্টটি ইন স্টক করা হয়েছে!", "success");
+                                    notify(newSold ? "Product marked as Sold Out!" : "Product marked as In Stock!", "success");
                                   } catch(err) {
-                                    notify("স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে", "error");
+                                    notify("Failed to update product status", "error");
                                   }
                                 }}
                                 className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition border cursor-pointer ${
@@ -2387,7 +2387,7 @@ const SellerDashboard: React.FC = () => {
                                     : "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-400 hover:bg-amber-500/20"
                                 }`}
                               >
-                                {p.isSold ? "🔴 SOLD OUT (ইন স্টক করুন)" : "🏷️ সোল্ড আউট চিহ্নিত করুন"}
+                                {p.isSold ? "🔴 SOLD OUT (Mark In Stock)" : "🏷️ Mark as Sold Out"}
                               </button>
 
                               {p.isBorderOffer && (
@@ -2442,7 +2442,7 @@ const SellerDashboard: React.FC = () => {
                     </div>
                     <div>
                        <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">
-                         Advance Payment Option (এডভান্স পেমেন্ট অপশন)
+                         Advance Payment Option
                        </Label>
                        
                        <div className="grid grid-cols-2 gap-3 mb-3">
@@ -2455,7 +2455,7 @@ const SellerDashboard: React.FC = () => {
                                : "border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#2C2C2E] ds-apple-muted"
                            }`}
                          >
-                           Custom Advance (কাস্টম)
+                           Custom Advance
                          </button>
                          <button
                            type="button"
@@ -2466,7 +2466,7 @@ const SellerDashboard: React.FC = () => {
                                : "border-black/[0.08] dark:border-white/[0.1] bg-white dark:bg-[#2C2C2E] ds-apple-muted"
                            }`}
                          >
-                           Full Amount Advance (100% ফুল)
+                           Full Amount Advance (100%)
                          </button>
                        </div>
 
@@ -2528,10 +2528,10 @@ const SellerDashboard: React.FC = () => {
                           <span className="text-amber-500 text-lg">⚡</span>
                           <div>
                             <Label className="text-xs font-bold text-amber-500 block cursor-pointer">
-                              Border Stock Phone Offer (বর্ডার স্টক মোবাইল অফার)
+                              Border Stock Phone Offer
                             </Label>
                             <p className="text-[10px] text-zinc-400">
-                              এই অফার প্রোডাক্টগুলোতে ১০০% ফুল এডভান্স বাধ্যতামূলক থাকবে।
+                              These special offer products require 100% full advance payment.
                             </p>
                           </div>
                         </div>
@@ -2595,17 +2595,17 @@ const SellerDashboard: React.FC = () => {
 
                           <div className="sm:col-span-2 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
                             <Label className="text-[11px] font-bold text-amber-400 block mb-1">
-                              অফারের জন্য নির্দিষ্ট এডভান্স টাকা (৳) - Dedicated Advance Amount
+                              Dedicated Advance Amount (৳)
                             </Label>
                             <Input
                               type="number"
                               value={productForm.borderOfferAdvanceAmount}
                               onChange={(e) => setProductForm({ ...productForm, borderOfferAdvanceAmount: e.target.value })}
-                              placeholder={`যেমন: 500 বা 1000 বা সম্পূর্ণ ৳${productForm.price || 0}`}
+                              placeholder={`e.g. 500, 1000, or full ৳${productForm.price || 0}`}
                               className="h-10 text-xs bg-zinc-900 border-zinc-700 rounded-xl text-white placeholder:text-zinc-500"
                             />
                             <p className="text-[10px] text-zinc-400 mt-1">
-                              এই টাকাটি কাস্টমারের জন্য স্বয়ংক্রিয়ভাবে পেমেন্ট পেজে এডভান্স হিসেবে ধার্য হবে এবং বাকি টাকা ডেলিভারির সময় প্রদেয় হবে।
+                              This amount will automatically be set as the advance payment at checkout, with the remainder due on delivery.
                             </p>
                           </div>
                         </div>
@@ -2794,10 +2794,10 @@ const SellerDashboard: React.FC = () => {
                           <div className="flex items-center justify-between gap-2">
                              <div>
                                 <Label className="text-xs font-bold text-[#E2125B] dark:text-pink-300 block">
-                                   Multiple bKash Numbers (বিকাশ নাম্বারসমূহ — Personal / Payment / Agent)
+                                   Multiple bKash Numbers (Personal / Payment / Agent)
                                 </Label>
                                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                   প্রতিটি বিকাশ নাম্বারের জন্য Personal, Payment অথবা Agent টাইপ সিলেক্ট করে যোগ করুন।
+                                   Select Personal, Payment, or Agent account type for each bKash number added.
                                 </p>
                              </div>
                           </div>
@@ -2833,11 +2833,11 @@ const SellerDashboard: React.FC = () => {
                                       const val = newBkashInput.trim();
                                       if (!val) return;
                                       if (isForbiddenNumber(val)) {
-                                         notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
+                                         notify("This number is not permitted in the system.", "error");
                                          return;
                                       }
                                       if (bkashAccounts.some((a) => a.number === val && a.type === newBkashType)) {
-                                         notify("এই নাম্বার এবং টাইপ ইতিমধ্যে তালিকায় রয়েছে", "error");
+                                         notify("This number and account type are already in the list", "error");
                                          return;
                                       }
                                       const nextAccs = [...bkashAccounts, { number: val, type: newBkashType }];
@@ -2853,7 +2853,7 @@ const SellerDashboard: React.FC = () => {
                                       });
                                    }
                                 }}
-                                placeholder={`নতুন bKash (${newBkashType}) নাম্বার লিখুন (017XXXXXXXX)`}
+                                placeholder={`Enter new bKash (${newBkashType}) number (017XXXXXXXX)`}
                                 className="rounded-xl bg-white dark:bg-zinc-800 border-pink-200 dark:border-pink-800/40 h-11 text-xs text-zinc-900 dark:text-zinc-100 flex-1"
                              />
                              <Button
@@ -2862,11 +2862,11 @@ const SellerDashboard: React.FC = () => {
                                    const val = newBkashInput.trim();
                                    if (!val) return;
                                    if (isForbiddenNumber(val)) {
-                                      notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
+                                      notify("This number is not permitted in the system.", "error");
                                       return;
                                    }
                                    if (bkashAccounts.some((a) => a.number === val && a.type === newBkashType)) {
-                                      notify("এই নাম্বার এবং টাইপ ইতিমধ্যে তালিকায় রয়েছে", "error");
+                                      notify("This number and account type are already in the list", "error");
                                       return;
                                    }
                                    const nextAccs = [...bkashAccounts, { number: val, type: newBkashType }];
@@ -2941,7 +2941,7 @@ const SellerDashboard: React.FC = () => {
                                 </div>
                              ))}
                              {bkashAccounts.length === 0 && (
-                                <p className="text-[11px] text-pink-700/70 dark:text-pink-400/70 font-medium">কোনো বিকাশ নাম্বার যোগ করা নেই</p>
+                                <p className="text-[11px] text-pink-700/70 dark:text-pink-400/70 font-medium">No bKash numbers added yet</p>
                              )}
                           </div>
                        </div>
@@ -2951,10 +2951,10 @@ const SellerDashboard: React.FC = () => {
                           <div className="flex items-center justify-between gap-2">
                              <div>
                                 <Label className="text-xs font-bold text-[#F57C20] dark:text-orange-300 block">
-                                   Multiple Nagad Numbers (নগদ নাম্বারসমূহ — Personal / Payment / Agent)
+                                   Multiple Nagad Numbers (Personal / Payment / Agent)
                                 </Label>
                                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                   প্রতিটি নগদ নাম্বারের জন্য Personal, Payment অথবা Agent টাইপ সিলেক্ট করে যোগ করুন।
+                                   Select Personal, Payment, or Agent account type for each Nagad number added.
                                 </p>
                              </div>
                           </div>
@@ -2990,11 +2990,11 @@ const SellerDashboard: React.FC = () => {
                                       const val = newNagadInput.trim();
                                       if (!val) return;
                                       if (isForbiddenNumber(val)) {
-                                         notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
+                                         notify("This number is not permitted in the system.", "error");
                                          return;
                                       }
                                       if (nagadAccounts.some((a) => a.number === val && a.type === newNagadType)) {
-                                         notify("এই নাম্বার এবং টাইপ ইতিমধ্যে তালিকায় রয়েছে", "error");
+                                         notify("This number and account type are already in the list", "error");
                                          return;
                                       }
                                       const nextAccs = [...nagadAccounts, { number: val, type: newNagadType }];
@@ -3010,7 +3010,7 @@ const SellerDashboard: React.FC = () => {
                                       });
                                    }
                                 }}
-                                placeholder={`নতুন Nagad (${newNagadType}) নাম্বার লিখুন (018XXXXXXXX)`}
+                                placeholder={`Enter new Nagad (${newNagadType}) number (018XXXXXXXX)`}
                                 className="rounded-xl bg-white dark:bg-zinc-800 border-orange-200 dark:border-orange-800/40 h-11 text-xs text-zinc-900 dark:text-zinc-100 flex-1"
                              />
                              <Button
@@ -3019,11 +3019,11 @@ const SellerDashboard: React.FC = () => {
                                    const val = newNagadInput.trim();
                                    if (!val) return;
                                    if (isForbiddenNumber(val)) {
-                                      notify("নাম্বারটি সিস্টেমে অনুমোদিত নয়।", "error");
+                                      notify("This number is not permitted in the system.", "error");
                                       return;
                                    }
                                    if (nagadAccounts.some((a) => a.number === val && a.type === newNagadType)) {
-                                      notify("এই নাম্বার এবং টাইপ ইতিমধ্যে তালিকায় রয়েছে", "error");
+                                      notify("This number and account type are already in the list", "error");
                                       return;
                                    }
                                    const nextAccs = [...nagadAccounts, { number: val, type: newNagadType }];
@@ -3098,7 +3098,7 @@ const SellerDashboard: React.FC = () => {
                                 </div>
                              ))}
                              {nagadAccounts.length === 0 && (
-                                <p className="text-[11px] text-orange-700/70 dark:text-orange-400/70 font-medium">কোনো নগদ নাম্বার যোগ করা নেই</p>
+                                <p className="text-[11px] text-orange-700/70 dark:text-orange-400/70 font-medium">No Nagad numbers added yet</p>
                              )}
                            </div>
                         </div>

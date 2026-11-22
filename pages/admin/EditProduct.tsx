@@ -264,7 +264,7 @@ const EditProduct: React.FC = () => {
           </div>
 
           <div className="border-t border-zinc-200 dark:border-zinc-700 pt-6 space-y-4">
-            <h3 className="font-bold text-sm text-zinc-700 dark:text-zinc-300">Advance Payment Setting (এডভান্স অপশন)</h3>
+            <h3 className="font-bold text-sm text-zinc-700 dark:text-zinc-300">Advance Payment Setting</h3>
             
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <button
@@ -322,19 +322,19 @@ const EditProduct: React.FC = () => {
 
             {formData.advanceType === "normal" && (
               <div className="p-3.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-xl text-xs text-blue-700 dark:text-blue-300 font-semibold">
-                📦 <strong>Normal Border Cross:</strong> কাস্টমার চেকআউটে ৫০% (হাফ এডভান্স ৳{Math.round((Number(formData.price || 0) * 0.5))}) বিকাশ বা নগদে পে করবে। বাকি ৫০% ক্যাশ অন ডেলিভারিতে পরিশোধ করবে।
+                📦 <strong>Normal Border Cross:</strong> Customers pay 50% advance (৳{Math.round((Number(formData.price || 0) * 0.5))}) at checkout via bKash or Nagad, and pay the remaining 50% on Cash on Delivery.
               </div>
             )}
 
             {formData.advanceType === "offer" && (
               <div className="p-3.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl text-xs text-red-700 dark:text-red-300 font-semibold">
-                🔥 <strong>Offer Product:</strong> কাস্টমার চেকআউটে ১০০% ফুল এডভান্স (৳{formData.isOffer && formData.offerPrice ? formData.offerPrice : formData.price || 0}) বিকাশ বা নগদে পরিশোধ করবে।
+                🔥 <strong>Offer Product:</strong> Customers pay 100% full advance (৳{formData.isOffer && formData.offerPrice ? formData.offerPrice : formData.price || 0}) at checkout via bKash or Nagad.
               </div>
             )}
 
             {formData.advanceType === "bypass" && (
               <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 rounded-xl text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
-                ⚡ <strong>Bypass Product (Cash on Delivery):</strong> কোনো এডভান্স নেওয়া হবে না। চেকআউট করার সময় কাস্টমারকে অবশ্যই গার্ডিয়ান নাম্বার দিতে হবে (কল করে ভেরিফাই করা হতে পারে) এবং চাইলে NID কার্ড সংযুক্ত করতে পারবে।
+                ⚡ <strong>Bypass Product (Cash on Delivery):</strong> No advance payment required. Customers must provide a guardian contact number at checkout (which may be verified by phone) and can optionally attach their NID card.
               </div>
             )}
 

@@ -236,10 +236,10 @@ function PlanCard({
   const pal = CARD_PALETTES[plan.palette];
 
   return (
-    <div className="flex flex-col rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-1.5 shadow-sm transition-all hover:shadow-md">
+    <div className="flex flex-col min-w-0 w-full max-w-full overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/70 p-1.5 shadow-sm transition-all hover:shadow-md">
       <div
         className={cn(
-          "relative overflow-hidden rounded-2xl border border-black/5 dark:border-white/10 p-5",
+          "relative overflow-hidden rounded-2xl border border-black/5 dark:border-white/10 p-4 sm:p-5 min-w-0",
           pal.base,
         )}
       >
@@ -256,40 +256,40 @@ function PlanCard({
           )}
         />
 
-        <div className="relative z-10 flex flex-col gap-3.5">
-          <div className="flex items-center gap-2 justify-between">
-            <div className="flex items-center gap-2 min-w-0">
+        <div className="relative z-10 flex flex-col gap-3.5 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 justify-between min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <Avatar shape="squircle" size="sm" color={pal.avatarColor} />
-              <h3 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100 truncate">
+              <h3 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100 leading-snug break-words min-w-0">
                 {plan.name}
               </h3>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 max-w-full">
               {onListenPlan && (
                 <button
                   type="button"
                   onClick={() => onListenPlan(plan)}
                   title={`${plan.name} সম্পর্কে শুনুন`}
                   aria-label={`${plan.name} সম্পর্কে শুনুন`}
-                  className="w-7 h-7 rounded-full bg-white/80 dark:bg-zinc-900/70 hover:bg-white dark:hover:bg-zinc-800 border border-black/10 dark:border-white/15 flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer active:scale-95"
+                  className="w-7 h-7 rounded-full bg-white/80 dark:bg-zinc-900/70 hover:bg-white dark:hover:bg-zinc-800 border border-black/10 dark:border-white/15 flex items-center justify-center text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer active:scale-95 shrink-0"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                 </button>
               )}
               {plan.featuredLabel && (
-                <span className="rounded-full bg-black/10 dark:bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-zinc-800 dark:text-zinc-200 backdrop-blur-sm whitespace-nowrap shrink-0">
+                <span className="rounded-full bg-black/10 dark:bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-zinc-800 dark:text-zinc-200 backdrop-blur-sm whitespace-nowrap max-w-full truncate">
                   {plan.featuredLabel}
                 </span>
               )}
             </div>
           </div>
 
-          <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed break-words">
             {plan.description}
           </p>
 
-          <div className="space-y-0.5 pt-1">
-            <div className="flex items-baseline gap-2">
+          <div className="space-y-0.5 pt-1 min-w-0">
+            <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-white">
                 {plan.price}
               </span>
@@ -298,7 +298,7 @@ function PlanCard({
               </span>
             </div>
             {plan.priceNote && (
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium truncate">
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium break-words">
                 {plan.priceNote}
               </p>
             )}
@@ -307,7 +307,7 @@ function PlanCard({
           <Button
             onClick={() => onSelectPlan && onSelectPlan(plan)}
             className={cn(
-              "w-full rounded-full font-bold text-xs sm:text-sm py-2.5 transition-all shadow-sm",
+              "w-full min-w-0 max-w-full overflow-hidden rounded-full font-bold text-xs sm:text-sm py-2.5 px-3 transition-all shadow-sm whitespace-normal [&_span]:!whitespace-normal text-center leading-tight",
               plan.ctaDark
                 ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
                 : "bg-white/90 text-zinc-900 border border-zinc-200/80 hover:bg-white dark:bg-white/15 dark:text-white dark:border-white/10 dark:hover:bg-white/25",
@@ -318,32 +318,32 @@ function PlanCard({
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 px-2 pt-4 pb-2">
-        <ul className="space-y-2">
+      <div className="flex flex-col gap-4 px-2.5 pt-4 pb-2 min-w-0">
+        <ul className="space-y-2 min-w-0">
           {plan.features.map((f) => (
             <li
               key={f}
-              className="flex items-center gap-2 text-xs sm:text-[13px] text-zinc-700 dark:text-zinc-300"
+              className="flex items-start gap-2 text-xs sm:text-[13px] text-zinc-700 dark:text-zinc-300 min-w-0"
             >
               <HugeiconsIcon
                 icon={Tick02Icon}
-                className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                className="size-3.5 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400"
                 strokeWidth={2.5}
               />
-              <span className="truncate">{f}</span>
+              <span className="min-w-0 flex-1 leading-snug break-words">{f}</span>
             </li>
           ))}
         </ul>
 
         {(plan.footerNote || plan.footerDesc) && (
-          <div className="space-y-0.5 border-t border-zinc-100 dark:border-zinc-800 pt-3">
+          <div className="space-y-0.5 border-t border-zinc-100 dark:border-zinc-800 pt-3 min-w-0">
             {plan.footerNote && (
-              <p className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200 truncate">
+              <p className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200 break-words">
                 {plan.footerNote}
               </p>
             )}
             {plan.footerDesc && (
-              <p className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+              <p className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 break-words leading-relaxed">
                 {plan.footerDesc}
               </p>
             )}
@@ -382,17 +382,17 @@ export default function Pricing6({
   const plans = activeTab === "individuals" ? individualPlans : teamsPlans;
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-0.5">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+    <div className="w-full min-w-0 max-w-full overflow-x-clip space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0 w-full">
+        <div className="space-y-0.5 min-w-0 flex-1">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white break-words">
             {title}
           </h2>
-          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 truncate">
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 break-words leading-relaxed">
             {subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 p-1 shrink-0 self-start sm:self-auto">
+        <div className="grid grid-cols-2 sm:inline-flex items-center gap-1 rounded-2xl sm:rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 p-1 w-full sm:w-auto max-w-full shrink-0 overflow-hidden">
           {(
             [
               ["individuals", individualsLabel],
@@ -407,7 +407,7 @@ export default function Pricing6({
                 onTabChange?.(key);
               }}
               className={cn(
-                "rounded-full px-3 sm:px-4 py-1 text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer",
+                "rounded-xl sm:rounded-full px-2 sm:px-4 py-2 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all duration-200 leading-tight text-center sm:whitespace-nowrap cursor-pointer min-w-0 overflow-hidden",
                 activeTab === key
                   ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
                   : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white",
@@ -419,7 +419,7 @@ export default function Pricing6({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:gap-5 md:grid-cols-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] w-full min-w-0 gap-4 sm:gap-5 md:grid-cols-3">
         {plans.map((plan) => (
           <PlanCard
             key={plan.id}

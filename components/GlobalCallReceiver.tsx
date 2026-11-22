@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc, updateDoc, onSnapshot, query, collection, getDoc, where, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot, query, collection, getDoc, where, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { audioHelper } from '../lib/AudioHelper';
 import { useNotify } from './Notifications';
 import Icon from './Icon';
@@ -14,21 +14,12 @@ const triggerBrowserNotification = (title: string, options?: NotificationOptions
     try {
       new window.Notification(title, options);
     } catch (e) {
-      console.warn("Notification constructor failed, trying ServiceWorker...", e);
       if (navigator.serviceWorker && navigator.serviceWorker.ready) {
         navigator.serviceWorker.ready.then(reg => {
           reg.showNotification(title, options);
-        });
+        }).catch(() => {});
       }
     }
-  } else if (window.Notification.permission === "default") {
-    window.Notification.requestPermission().then(permission => {
-      if (permission === "granted") {
-        try {
-          new window.Notification(title, options);
-        } catch (e) {}
-      }
-    }).catch(() => {});
   }
 };
 
@@ -53,6 +44,8 @@ export const GlobalCallReceiver: React.FC = () => {
     callerId: string;
     callerName: string;
     callerAvatar: string;
+    chatId?: string;
+    callMessageId?: string;
   } | null>(null);
   
   const navigate = useNavigate();
@@ -119,7 +112,7 @@ export const GlobalCallReceiver: React.FC = () => {
               lastNotifiedCallId.current = callId;
               triggerBrowserNotification("Incoming Helpline Call", {
                 body: `Incoming ${data.type || 'audio'} helpline call from support. Click to answer.`,
-                icon: '/favicon.ico'
+                icon: '/pwa-192x192.png'
               });
             }
           } else if (data.status === 'ended') {
@@ -170,7 +163,9 @@ export const GlobalCallReceiver: React.FC = () => {
         type: data.type || 'audio',
         callerId: data.callerId,
         callerName: data.callerName || 'Someone',
-        callerAvatar: data.callerAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + data.callerId
+        callerAvatar: data.callerAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + data.callerId,
+        chatId: data.chatId,
+        callMessageId: data.callMessageId,
       });
 
       if (data.status === 'calling') {
@@ -182,7 +177,7 @@ export const GlobalCallReceiver: React.FC = () => {
         lastNotifiedCallId.current = activeCallDoc.id;
         triggerBrowserNotification(`Incoming Call from ${data.callerName || 'Someone'}`, {
           body: `Incoming ${data.type || 'audio'} call. Click to answer.`,
-          icon: '/favicon.ico'
+          icon: '/pwa-192x192.png'
         });
       }
     });
@@ -216,8 +211,9 @@ export const GlobalCallReceiver: React.FC = () => {
           if (updatedAtVal > prevTime) {
             const isMe = data.lastSenderId === myId;
             const otherUid = data.participants.find((p: string) => p !== myId);
-            const isCurrentChatPage = window.location.pathname === '/messages' && 
-                                     new URLSearchParams(window.location.search).get('chatId') === otherUid;
+            const activeUrlChatParam = new URLSearchParams(window.location.search).get('chatId');
+            const isCurrentChatPage = window.location.pathname === '/messages' &&
+                                     Boolean(activeUrlChatParam && (activeUrlChatParam === otherUid || activeUrlChatParam === chatId));
 
             if (!isMe && !isCurrentChatPage) {
               let senderName = "DeepShop Partner";
@@ -244,7 +240,7 @@ export const GlobalCallReceiver: React.FC = () => {
               );
               triggerBrowserNotification(`New Message from ${senderName}`, {
                 body: messageText,
-                icon: '/favicon.ico'
+                icon: '/pwa-192x192.png'
               });
             }
           }
@@ -259,13 +255,6 @@ export const GlobalCallReceiver: React.FC = () => {
       unsub();
     };
   }, [myId]);
-
-  // Request browser Notification permission on mount
-  useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window && window.Notification && window.Notification.permission === "default") {
-      window.Notification.requestPermission().catch(() => {});
-    }
-  }, []);
 
   // Listen to new orders for sellers to trigger browser notifications
   useEffect(() => {
@@ -324,9 +313,30 @@ export const GlobalCallReceiver: React.FC = () => {
   const declineP2PCall = async () => {
     audioHelper.playEndBip();
     if (incomingP2PCall) {
-      await updateDoc(doc(db, 'p2p_calls', incomingP2PCall.id), {
-        status: 'ended'
+      const { id, chatId, callMessageId, type, callerId } = incomingP2PCall;
+      await updateDoc(doc(db, 'p2p_calls', id), {
+        status: 'ended',
+        endReason: 'declined'
       }).catch(console.error);
+
+      if (chatId) {
+        const missedTitle = type === 'video' ? 'Missed video call' : 'Missed audio call';
+        const missedPreview = type === 'video' ? '📹 Missed video call' : '📞 Missed audio call';
+        if (callMessageId) {
+          updateDoc(doc(db, 'p2p_chats', chatId, 'messages', callMessageId), {
+            callStatus: 'missed',
+            isMissed: true,
+            text: missedTitle,
+          }).catch(console.error);
+        }
+        updateDoc(doc(db, 'p2p_chats', chatId), {
+          lastMessage: missedPreview,
+          lastSenderId: callerId,
+          lastMessageDeleted: false,
+          deletedLastFor: {},
+          updatedAt: serverTimestamp(),
+        }).catch(console.error);
+      }
     }
     setIncomingP2PCall(null);
   };

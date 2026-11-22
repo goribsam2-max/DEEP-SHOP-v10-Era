@@ -264,11 +264,11 @@ const ManageProducts: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
                   {Array.from(new Set([
-                    "Phone Parts (পার্টস)",
-                    "Display (ডিসপ্লে)",
-                    "Battery (ব্যাটারি)",
-                    "Camera (ক্যামেরা)",
-                    "Logic Board (মাদারবোর্ড)",
+                    "Phone Parts",
+                    "Display",
+                    "Battery",
+                    "Camera",
+                    "Logic Board",
                     "Mobile",
                     "Border Cross",
                     "Mobiles",
@@ -338,7 +338,7 @@ const ManageProducts: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <Label className="font-medium text-xs text-zinc-500 block">
-                        Upload Images (অপশনাল)
+                        Upload Images (Optional)
                       </Label>
                       {formData.name.trim().length > 0 && formData.imageFiles.length === 0 && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
@@ -375,10 +375,10 @@ const ManageProducts: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
                             <Sparkles className="w-3 h-3 text-amber-500" />
-                            অটো ডাইনামিক ইমেজ সিস্টেম:
+                            Auto Dynamic Image System:
                           </p>
                           <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                            আপনি ছবি আপলোড না করলেও টাইটেল অনুযায়ী (Display, Battery, Camera, Logic) হাই-কোয়ালিটি ব্র্যান্ডেড ইমেজ ও ফোন মডেল অটোমেটিকভাবে জেনারেট হয়ে যাবে!
+                            Even if you don&apos;t upload photos, high-quality branded artwork and phone model visuals matching the title (Display, Battery, Camera, Logic) will be generated automatically!
                           </p>
                         </div>
                       </div>
@@ -415,7 +415,7 @@ const ManageProducts: React.FC = () => {
                   {/* Product Type & Advance Policy */}
                   <div className="space-y-3 p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl border border-zinc-200 dark:border-zinc-700">
                     <Label className="font-bold text-xs text-zinc-700 dark:text-zinc-300 block">
-                      Product Type & Advance Payment Policy (প্রোডাক্ট ধরণ ও এডভান্স রুলস)
+                      Product Type &amp; Advance Payment Policy
                     </Label>
                     
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

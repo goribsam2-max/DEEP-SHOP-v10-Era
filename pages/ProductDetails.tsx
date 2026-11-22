@@ -987,7 +987,7 @@ const ProductDetails: React.FC = () => {
           })}
         </div>
         <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 truncate shrink-0 tabular-nums">
-          {rating > 0 ? `${rating.toFixed(1)} রেটিং` : "নতুন স্টোর"}
+          {rating > 0 ? `${rating.toFixed(1)} Rating` : "New Store"}
         </span>
       </div>
     );
@@ -1007,39 +1007,39 @@ const ProductDetails: React.FC = () => {
 
     if (isBypass) {
       return {
-        label: "ক্যাশ অন ডেলিভারি (COD)",
-        sublabel: "অগ্রিম ছাড়াই পণ্য হাতে পেয়ে মূল্য পরিশোধের সুবিধা",
+        label: "Cash on Delivery (COD)",
+        sublabel: "Pay the full amount upon receiving and inspecting the product",
         boxClass: "ds-liquid-callout-emerald",
         accentText: "text-emerald-700 dark:text-emerald-300",
       };
     }
     if (isOffer) {
       return {
-        label: "১০০% ফুল এডভান্স",
-        sublabel: "স্পেশাল অফার প্রাইসে অর্ডার বুকিংয়ের জন্য পূর্ণ অগ্রিম প্রযোজ্য",
+        label: "100% Full Advance",
+        sublabel: "Full advance payment is required to lock in this special offer price",
         boxClass: "ds-liquid-callout-rose",
         accentText: "text-rose-700 dark:text-rose-300",
       };
     }
     if (isCustom && p.advanceAmount) {
       return {
-        label: `৳${p.advanceAmount} বুকিং এডভান্স`,
-        sublabel: "বাকি মূল্য ডেলিভারির সময় পরিশোধযোগ্য",
+        label: `৳${p.advanceAmount} Booking Advance`,
+        sublabel: "Remaining balance is payable on delivery",
         boxClass: "ds-liquid-callout-amber",
         accentText: "text-amber-800 dark:text-amber-300",
       };
     }
     if (p.isBorderOffer || p.productType === "border_offer") {
       return {
-        label: "বর্ডার ক্রস প্রি-অর্ডার",
-        sublabel: "অর্ডার কনফার্ম করার পর নির্ধারিত সময়ে নিরাপদে কুরিয়ার ডেলিভারি সম্পন্ন হয়",
+        label: "Border Cross Pre-Order",
+        sublabel: "Safely delivered via courier within the estimated timeframe after confirmation",
         boxClass: "ds-liquid-subpanel-active",
         accentText: "text-sky-700 dark:text-sky-300",
       };
     }
     return {
-      label: "নিরাপদ পেমেন্ট ও কুরিয়ার ডেলিভারি",
-      sublabel: "চেকআউট ধাপে প্রযোজ্য পেমেন্ট ও ডেলিভারি সুবিধা বিস্তারিত দেখুন",
+      label: "Secure Payment & Courier Delivery",
+      sublabel: "View applicable payment and delivery options in the checkout step",
       boxClass: "ds-liquid-subpanel-active",
       accentText: "text-sky-700 dark:text-sky-300",
     };
@@ -1071,7 +1071,7 @@ const ProductDetails: React.FC = () => {
         .catch(() => {});
     } else {
       navigator.clipboard.writeText(shareUrl);
-      notify("লিংক কপি হয়েছে!", "success");
+      notify("Link copied!", "success");
     }
   };
 
@@ -1080,15 +1080,15 @@ const ProductDetails: React.FC = () => {
     shortLabel: string;
     fullLabel: string;
   }[] = [
-    { key: "description", shortLabel: "বিবরণ", fullLabel: "পণ্যের বিবরণ" },
-    { key: "policy", shortLabel: "পলিসি", fullLabel: "গ্যারান্টি ও রিটার্ন" },
-    { key: "faq", shortLabel: "প্রশ্নোত্তর", fullLabel: "সাধারণ প্রশ্ন (FAQ)" },
+    { key: "description", shortLabel: "Details", fullLabel: "Product Description" },
+    { key: "policy", shortLabel: "Policy", fullLabel: "Warranty & Returns" },
+    { key: "faq", shortLabel: "FAQ", fullLabel: "Frequently Asked Questions" },
     ...(hasVideo
       ? ([
           {
             key: "video",
-            shortLabel: "ভিডিও",
-            fullLabel: "প্রোডাক্ট ভিডিও",
+            shortLabel: "Video",
+            fullLabel: "Product Video",
           },
         ] as const)
       : []),
@@ -1118,20 +1118,20 @@ const ProductDetails: React.FC = () => {
           <div className="ds-liquid-subpanel p-4 space-y-2">
             <div className="flex items-center gap-2 text-zinc-900 dark:text-white font-bold text-sm">
               <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-              <span>১০০% অরিজিনাল গ্যারান্টি</span>
+              <span>100% Authentic Guarantee</span>
             </div>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              DEEP SHOP-এর প্রতিটি বর্ডার ক্রস ডিভাইস ও গ্যাজেট সরাসরি ভেরিফাইড সোর্স থেকে সংগৃহীত এবং শতভাগ অথেনটিক।
+              Every border cross device and gadget on DEEP SHOP is sourced from verified suppliers and 100% authentic.
             </p>
           </div>
 
           <div className="ds-liquid-callout-amber p-4 space-y-2">
             <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
               <Box className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span>আনবক্সিং ও রিটার্ন নীতিমালা</span>
+              <span>Unboxing &amp; Return Policy</span>
             </div>
             <p className="text-xs sm:text-sm text-amber-900/85 dark:text-amber-200/85 leading-relaxed">
-              বর্ডার ক্রস পণ্যের ক্ষেত্রে পার্সেল খোলার সময় সম্পূর্ণ আনবক্সিং ভিডিও ধারণ করা আবশ্যক। ফিজিক্যাল ড্যামেজ প্রমাণে ৭ দিনের রিটার্ন সুবিধা প্রযোজ্য।
+              Recording a complete unboxing video while opening your parcel is mandatory for border cross products. A 7-day return applies for proven physical damage.
             </p>
           </div>
         </div>
@@ -1143,18 +1143,18 @@ const ProductDetails: React.FC = () => {
         <div className="space-y-3">
           <article className="ds-liquid-subpanel p-4 space-y-1">
             <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
-              {product.name} কি ১০০% আসল (Authentic)?
+              Is {product.name} 100% Authentic?
             </h3>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              হ্যাঁ, আমাদের সকল বর্ডার ক্রস ফোন, ডিভাইস এবং অ্যাক্সেসরিজ ১০০% অরিজিনাল ও কোয়ালিটি চেককৃত।
+              Yes, all our border cross phones, devices, and accessories are 100% original and quality-checked.
             </p>
           </article>
           <article className="ds-liquid-subpanel p-4 space-y-1">
             <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
-              ডেলিভারি পেতে কতদিন সময় লাগে?
+              How long does delivery take?
             </h3>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
-              বর্ডার ক্রস ইমপোর্ট পণ্যের স্ট্যান্ডার্ড ডেলিভারি সময় সাধারণত ১ মাস+ (আনুমানিক ৩০ থেকে ৪৫ কার্যদিবস)।
+              Standard delivery time for border cross imported products is typically 1 month+ (approx. 30 to 45 business days).
             </p>
           </article>
         </div>
@@ -1211,7 +1211,7 @@ const ProductDetails: React.FC = () => {
                   <VerifiedIcon className="w-4 h-4 text-emerald-500 shrink-0" />
                 ) : (
                   <span className="text-[11px] font-semibold text-rose-500 whitespace-nowrap">
-                    · আনভেরিফাইড
+                    · Unverified
                   </span>
                 )
               ) : (
@@ -1233,7 +1233,7 @@ const ProductDetails: React.FC = () => {
           className="px-3.5 py-2.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
         >
           <MessageSquare className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
-          <span>মেসেজ দিন</span>
+          <span>Message</span>
         </button>
         <button
           type="button"
@@ -1243,7 +1243,7 @@ const ProductDetails: React.FC = () => {
           }}
           className="px-3.5 py-2.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
         >
-          <span>স্টোর দেখুন</span>
+          <span>Visit Store</span>
           <ChevronRight className="w-3.5 h-3.5 shrink-0" />
         </button>
       </div>
@@ -1251,7 +1251,7 @@ const ProductDetails: React.FC = () => {
   );
 
   return (
-    <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell text-foreground pb-28 lg:pb-16 overflow-x-hidden">
+    <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell text-foreground pb-28 lg:pb-16 overflow-x-clip">
       <SEO
         title={product.name}
         description={product.description || product.name}
@@ -1358,7 +1358,7 @@ const ProductDetails: React.FC = () => {
                 className="px-3.5 py-1.5 ds-liquid-dock rounded-full text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer tabular-nums whitespace-nowrap"
               >
                 <ShoppingCart className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-                <span>কার্ট ({totalCartQty})</span>
+                <span>Cart ({totalCartQty})</span>
               </button>
             )}
 
@@ -1460,6 +1460,7 @@ const ProductDetails: React.FC = () => {
                   exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction < 0 ? 40 : -40 }}
                   transition={shouldReduceMotion ? { duration: 0.14 } : APPLE_SPRING_SNAPPY}
                   drag="x"
+                  dragDirectionLock
                   dragConstraints={{ left: 0, right: 0 }}
                   dragElastic={0.9}
                   onDragEnd={(_, { offset, velocity }) => {
@@ -1475,7 +1476,8 @@ const ProductDetails: React.FC = () => {
                     }
                   }}
                   onClick={() => setIsLightboxOpen(true)}
-                  className="absolute inset-0 w-full h-full p-5 flex items-center justify-center cursor-zoom-in"
+                  style={{ touchAction: "pan-y" }}
+                  className="absolute inset-0 w-full h-full p-5 flex items-center justify-center cursor-zoom-in touch-pan-y"
                 >
                   <PixelImage
                     src={images[activeImg]}
@@ -1532,14 +1534,14 @@ const ProductDetails: React.FC = () => {
                   className="pointer-events-auto px-3 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
                   <Camera className="w-3.5 h-3.5" />
-                  <span>বড় করে দেখুন</span>
+                  <span>View Large</span>
                 </button>
               </div>
 
               {product.stock <= 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                   <div className="ds-liquid-panel px-5 py-2.5 text-xs font-extrabold text-zinc-900 dark:text-white">
-                    স্টক শেষ · শীঘ্রই আসছে
+                    Out of Stock · Coming Soon
                   </div>
                 </div>
               )}
@@ -1599,7 +1601,7 @@ const ProductDetails: React.FC = () => {
                     : "font-semibold text-rose-500"
                 }
               >
-                {product.stock > 0 ? "স্টকে আছে" : "স্টক নেই"}
+                {product.stock > 0 ? "In Stock" : "Out of Stock"}
               </span>
             </div>
 
@@ -1622,14 +1624,14 @@ const ProductDetails: React.FC = () => {
                 </div>
                 {savingsAmount > 0 && (
                   <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                    সাশ্রয় {formatPrice(savingsAmount)}
+                    Save {formatPrice(savingsAmount)}
                   </span>
                 )}
               </div>
 
               {timeLeft && (
                 <div className="text-xs font-semibold text-sky-600 dark:text-sky-400 tabular-nums">
-                  স্পেশাল অফার বাকি: {timeLeft.d > 0 ? `${timeLeft.d}d ` : ""}
+                  Special offer ends in: {timeLeft.d > 0 ? `${timeLeft.d}d ` : ""}
                   {timeLeft.h}h {timeLeft.m}m {timeLeft.s}s
                 </div>
               )}
@@ -1639,7 +1641,7 @@ const ProductDetails: React.FC = () => {
                   {paymentTermInfo.label}
                 </span>
                 <span className="text-zinc-500 dark:text-zinc-400">
-                  ডেলিভারি ৩০-৪৫ দিন
+                  Delivery 30–45 days
                   {actualReward > 0 ? ` · +${actualReward} DP Coins` : ""}
                 </span>
               </div>
@@ -1649,7 +1651,7 @@ const ProductDetails: React.FC = () => {
             {product.stock > 0 && (
               <div className="flex items-center justify-between gap-3 pt-0.5">
                 <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                  পরিমাণ নির্বাচন করুন
+                  Select Quantity
                 </span>
                 <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-2">
                   <button
@@ -1810,7 +1812,7 @@ const ProductDetails: React.FC = () => {
 
                 <div className="absolute bottom-4 inset-x-4 flex items-center justify-between pointer-events-none z-10">
                   <span className="px-3 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-700 dark:text-zinc-200 tabular-nums">
-                    ছবি {activeImg + 1} / {images.length}
+                    Photo {activeImg + 1} / {images.length}
                   </span>
                   <button
                     type="button"
@@ -1821,14 +1823,14 @@ const ProductDetails: React.FC = () => {
                     className="pointer-events-auto px-4 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     <Camera className="w-4 h-4" />
-                    <span>ফুল স্ক্রিন ভিউ</span>
+                    <span>Full Screen View</span>
                   </button>
                 </div>
 
                 {product.stock <= 0 && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                     <div className="ds-liquid-panel px-6 py-3 text-sm font-extrabold text-zinc-900 dark:text-white">
-                      স্টক শেষ (Restocking Soon)
+                      Out of Stock (Restocking Soon)
                     </div>
                   </div>
                 )}
@@ -1872,7 +1874,7 @@ const ProductDetails: React.FC = () => {
               {/* Unboxed Product Metadata */}
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                 <span>
-                  {product.category || "Premium"} · ১০০% অরিজিনাল · বর্ডার ক্রস
+                  {product.category || "Premium"} · 100% Authentic · Border Cross
                 </span>
                 <button
                   type="button"
@@ -1917,20 +1919,20 @@ const ProductDetails: React.FC = () => {
                         : "text-rose-500"
                     }`}
                   >
-                    {product.stock > 0 ? "স্টকে উপলব্ধ" : "স্টক শেষ"}
+                    {product.stock > 0 ? "In Stock" : "Out of Stock"}
                   </span>
                 </div>
 
                 {savingsAmount > 0 && (
                   <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                    আপনি সাশ্রয় করছেন {formatPrice(savingsAmount)}
+                    You save {formatPrice(savingsAmount)}
                     {mysteryOffer ? " (Mystery Box Offer)" : ""}
                   </p>
                 )}
 
                 {timeLeft && (
                   <div className="text-xs font-semibold text-sky-600 dark:text-sky-400 tabular-nums">
-                    অফার সময় বাকি: {timeLeft.d > 0 ? `${timeLeft.d}d ` : ""}
+                    Offer ends in: {timeLeft.d > 0 ? `${timeLeft.d}d ` : ""}
                     {timeLeft.h}h {timeLeft.m}m {timeLeft.s}s
                   </div>
                 )}
@@ -1938,10 +1940,10 @@ const ProductDetails: React.FC = () => {
                 {actualReward > 0 && (
                   <div className="pt-2 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex items-center justify-between text-xs">
                     <span className="text-zinc-500 dark:text-zinc-400">
-                      রিওয়ার্ড বোনাস
+                      Reward Bonus
                     </span>
                     <span className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">
-                      +{actualReward} DP Coins অর্জন করুন
+                      Earn +{actualReward} DP Coins
                     </span>
                   </div>
                 )}
@@ -1954,7 +1956,7 @@ const ProductDetails: React.FC = () => {
                     {paymentTermInfo.label}
                   </span>
                   <span className="text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">
-                    ডেলিভারি ৩০-৪৫ দিন
+                    Delivery 30–45 days
                   </span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -1968,7 +1970,7 @@ const ProductDetails: React.FC = () => {
                   <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-semibold min-w-0">
                     <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
                     <span className="truncate">
-                      সেলার সাময়িকভাবে অর্ডার গ্রহণ বন্ধ রেখেছেন
+                      Seller is temporarily not accepting orders
                     </span>
                   </div>
                   <button
@@ -1976,7 +1978,7 @@ const ProductDetails: React.FC = () => {
                     onClick={() => setShowOrdersPausedModal(true)}
                     className="font-bold text-amber-800 dark:text-amber-300 underline shrink-0 cursor-pointer whitespace-nowrap"
                   >
-                    কারণ দেখুন
+                    View Reason
                   </button>
                 </div>
               )}
@@ -1989,7 +1991,7 @@ const ProductDetails: React.FC = () => {
                     disabled
                     className="w-full py-3.5 rounded-full ds-liquid-subpanel text-sm font-bold text-zinc-400 cursor-not-allowed whitespace-nowrap"
                   >
-                    স্টক নেই (Out of Stock)
+                    Out of Stock
                   </button>
                   <button
                     type="button"
@@ -2000,8 +2002,8 @@ const ProductDetails: React.FC = () => {
                     <Bell className="w-4 h-4" />
                     <span>
                       {notifying
-                        ? "নোটিফিকেশন সেট হচ্ছে..."
-                        : "স্টকে এলে আমাকে জানান"}
+                        ? "Setting reminder..."
+                        : "Notify Me When Available"}
                     </span>
                   </button>
                 </div>
@@ -2009,7 +2011,7 @@ const ProductDetails: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
-                      পরিমাণ (Quantity)
+                      Quantity
                     </span>
                     <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-2">
                       <button
@@ -2054,7 +2056,7 @@ const ProductDetails: React.FC = () => {
                       ) : (
                         <>
                           <ShoppingCart className="w-4 h-4 shrink-0" />
-                          <span>কার্টে রাখুন</span>
+                          <span>Add to Cart</span>
                         </>
                       )}
                     </button>
@@ -2064,7 +2066,7 @@ const ProductDetails: React.FC = () => {
                       onClick={() => addToCart(true)}
                       className="px-4 py-3.5 ds-liquid-btn-primary text-sm font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                     >
-                      <span>এখনই কিনুন</span>
+                      <span>Buy Now</span>
                     </button>
                   </div>
                 </div>
@@ -2080,7 +2082,7 @@ const ProductDetails: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
                     <ShoppingCart className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                    <span>আপনার কার্ট ({totalCartQty})</span>
+                    <span>Your Cart ({totalCartQty})</span>
                   </h3>
                   <button
                     type="button"
@@ -2181,7 +2183,7 @@ const ProductDetails: React.FC = () => {
                 <div className="pt-3 border-t border-slate-900/[0.08] dark:border-white/[0.1] space-y-3">
                   <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-zinc-500 dark:text-zinc-400 font-medium">
-                      সাবটোটাল
+                      Subtotal
                     </span>
                     <span className="font-extrabold text-zinc-900 dark:text-white tabular-nums">
                       {formatPrice(
@@ -2197,7 +2199,7 @@ const ProductDetails: React.FC = () => {
                     onClick={() => navigate("/checkout")}
                     className="w-full py-3 ds-liquid-btn-primary text-xs sm:text-sm font-bold cursor-pointer whitespace-nowrap"
                   >
-                    চেকআউট করুন
+                    Checkout
                   </button>
                 </div>
               </div>
@@ -2407,14 +2409,14 @@ const ProductDetails: React.FC = () => {
             {reviews.length > 0 && filteredProductReviews.length === 0 && (
               <div className="py-10 px-6 ds-liquid-subpanel text-center space-y-2">
                 <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
-                  নির্বাচিত ফিল্টারে কোনো রিভিউ পাওয়া যায়নি।
+                  No reviews found for the selected filter.
                 </p>
                 <button
                   type="button"
                   onClick={() => setReviewFilter("all")}
                   className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
                 >
-                  সব রিভিউ দেখুন
+                  View All Reviews
                 </button>
               </div>
             )}
@@ -2449,7 +2451,7 @@ const ProductDetails: React.FC = () => {
                 onClick={() => navigate("/all-products")}
                 className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer whitespace-nowrap"
               >
-                <span>সব পণ্য দেখুন</span>
+                <span>View All Products</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -2479,14 +2481,14 @@ const ProductDetails: React.FC = () => {
         {sellerInfo?.ordersPaused && (
           <div className="max-w-xl mx-auto mb-2 px-3 py-1.5 ds-liquid-callout-amber flex items-center justify-between gap-2 text-[11px]">
             <span className="font-semibold text-amber-800 dark:text-amber-200 truncate">
-              সেলার সাময়িকভাবে অর্ডার গ্রহণ বন্ধ রেখেছেন
+              Seller is temporarily not accepting orders
             </span>
             <button
               type="button"
               onClick={() => setShowOrdersPausedModal(true)}
               className="font-bold text-amber-800 dark:text-amber-300 underline shrink-0 cursor-pointer whitespace-nowrap"
             >
-              কারণ
+              Reason
             </button>
           </div>
         )}
@@ -2494,7 +2496,7 @@ const ProductDetails: React.FC = () => {
         <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
           <div className="min-w-0">
             <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 block whitespace-nowrap">
-              মোট মূল্য ({quantity}টি)
+              Total ({quantity} {quantity === 1 ? "item" : "items"})
             </span>
             <span className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white tabular-nums whitespace-nowrap">
               {formatPrice(Number(basePrice) * quantity)}
@@ -2509,7 +2511,7 @@ const ProductDetails: React.FC = () => {
               className="flex-1 max-w-[220px] py-2.5 px-4 ds-liquid-btn-secondary !min-h-0 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <Bell className="w-3.5 h-3.5 shrink-0" />
-              <span>{notifying ? "অপেক্ষা করুন..." : "স্টকে এলে জানান"}</span>
+              <span>{notifying ? "Please wait..." : "Notify Me"}</span>
             </button>
           ) : (
             <div className="flex items-center gap-2 shrink-0">
@@ -2521,14 +2523,14 @@ const ProductDetails: React.FC = () => {
                 className="px-4 py-2.5 ds-liquid-btn-secondary !min-h-0 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
                 <ShoppingCart className="w-4 h-4 shrink-0" />
-                <span>কার্ট</span>
+                <span>Cart</span>
               </button>
               <button
                 type="button"
                 onClick={() => addToCart(true)}
                 className="px-5 py-2.5 ds-liquid-btn-primary !min-h-0 text-xs sm:text-sm font-bold flex items-center justify-center cursor-pointer whitespace-nowrap"
               >
-                এখনই কিনুন
+                Buy Now
               </button>
             </div>
           )}
@@ -2552,13 +2554,13 @@ const ProductDetails: React.FC = () => {
                 }}
               >
                 <motion.div
-                  initial={shouldReduceMotion ? { opacity: 0 } : { y: 40, opacity: 0, scale: 0.98 }}
-                  animate={shouldReduceMotion ? { opacity: 1 } : { y: 0, opacity: 1, scale: 1 }}
-                  exit={shouldReduceMotion ? { opacity: 0 } : { y: 40, opacity: 0, scale: 0.98 }}
+                  initial={shouldReduceMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
+                  animate={shouldReduceMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
                   transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
                   drag={shouldReduceMotion ? false : "y"}
-                  dragConstraints={{ top: 0 }}
-                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.02, bottom: 0.45 }}
                   onDragEnd={(_, info) => {
                     const projected = info.offset.y + projectMomentum(info.velocity.y, 0.99);
                     if (projected > 110) {
@@ -2567,7 +2569,7 @@ const ProductDetails: React.FC = () => {
                     }
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="ds-apple-modal w-full max-w-lg rounded-t-[26px] sm:rounded-[26px] p-6 pb-[calc(24px+env(safe-area-inset-bottom))] sm:pb-6 space-y-4 max-h-[85vh] overflow-y-auto"
+                  className="ds-apple-sheet sm:ds-apple-modal w-full max-w-none sm:max-w-lg rounded-t-[28px] rounded-b-none sm:rounded-[26px] p-6 pb-[calc(24px+env(safe-area-inset-bottom,0px))] sm:pb-6 space-y-4 max-h-[85dvh] overflow-y-auto"
                 >
                   <div className="flex justify-center sm:hidden -mt-2 pb-1" aria-hidden="true">
                     <div className="w-9 h-1 rounded-full bg-black/[0.16] dark:bg-white/[0.22]" />
@@ -2579,7 +2581,7 @@ const ProductDetails: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="text-base sm:text-lg font-extrabold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug tracking-tight">
-                          অর্ডার নেওয়া সাময়িকভাবে বন্ধ আছে
+                          Orders Temporarily Paused
                         </h3>
                         <button
                           type="button"
@@ -2593,7 +2595,7 @@ const ProductDetails: React.FC = () => {
                         </button>
                       </div>
                       <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5 font-medium">
-                        বিক্রেতা:{" "}
+                        Seller:{" "}
                         {sellerInfo?.shopName ||
                           sellerInfo?.displayName ||
                           "Official Seller"}
@@ -2603,18 +2605,18 @@ const ProductDetails: React.FC = () => {
 
                   <div className="rounded-2xl bg-[#FF9500]/[0.08] border border-[#FF9500]/25 p-4 space-y-1.5">
                     <p className="text-xs font-bold uppercase tracking-wider text-[#B25000] dark:text-[#FF9F0A]">
-                      সেলারের দেওয়া কারণ
+                      Seller&apos;s Reason
                     </p>
                     <p className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] leading-relaxed">
-                      "
+                      &ldquo;
                       {sellerInfo?.pauseReason ||
-                        "বিক্রেতা সাময়িক বিরতিতে বা স্টক আপডেটে থাকায় বর্তমানে কোনো নতুন অর্ডার গ্রহণ করা হচ্ছে না।"}
-                      "
+                        "The seller is currently on a short break or updating stock and is not accepting new orders."}
+                      &rdquo;
                     </p>
                   </div>
 
                   <p className="text-xs text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
-                    এই সেলার আবার অর্ডার গ্রহণ চালু না করা পর্যন্ত নতুন অর্ডার প্লেস করা যাবে না। প্রয়োজনে সরাসরি সেলারকে মেসেজ পাঠাতে পারেন।
+                    New orders cannot be placed until this seller resumes taking orders. You can message the seller directly if needed.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
@@ -2630,7 +2632,7 @@ const ProductDetails: React.FC = () => {
                       className="py-3 px-4 ds-apple-btn-secondary rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                     >
                       <MessageCircle className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF]" />
-                      <span>সেলারকে মেসেজ দিন</span>
+                      <span>Message Seller</span>
                     </button>
                     <button
                       type="button"
@@ -2640,7 +2642,7 @@ const ProductDetails: React.FC = () => {
                       }}
                       className="py-3 px-4 ds-apple-btn-primary rounded-full text-xs sm:text-sm font-semibold cursor-pointer whitespace-nowrap"
                     >
-                      বুঝেছি
+                      Got It
                     </button>
                   </div>
                 </motion.div>

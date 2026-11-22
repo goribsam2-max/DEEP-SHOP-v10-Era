@@ -182,10 +182,10 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full min-w-0 max-w-full overflow-x-clip space-y-6">
       {/* 1. Professional Live Alert Bar (Interactive & Expandable) */}
       <div
-        className="w-full rounded-[20px] bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] shadow-[0_4px_18px_rgba(0,0,0,0.03)] dark:shadow-none p-3.5 transition-colors"
+        className="w-full min-w-0 max-w-full overflow-hidden rounded-[20px] bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] shadow-[0_4px_18px_rgba(0,0,0,0.03)] dark:shadow-none p-3.5 transition-colors"
         onMouseEnter={() => setIsAlertPaused(true)}
         onMouseLeave={() => setIsAlertPaused(false)}
       >
@@ -334,7 +334,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
       </AnimatePresence>
 
       {/* 2. Executive Reseller Masterclass Header */}
-      <div className="rounded-[26px] bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] p-5 sm:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.03)] dark:shadow-none space-y-5">
+      <div className="min-w-0 max-w-full overflow-hidden rounded-[26px] bg-white dark:bg-[#1C1C1E] border border-black/[0.08] dark:border-white/[0.1] p-4 sm:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.03)] dark:shadow-none space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-black/[0.06] dark:border-white/[0.08] pb-5">
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] text-xs font-semibold border border-black/[0.06] dark:border-white/[0.08]">
@@ -444,7 +444,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={APPLE_SPRING_SNAPPY}
-          className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-6"
+          className="ds-apple-surface rounded-[26px] p-4 sm:p-7 space-y-6 min-w-0 max-w-full overflow-hidden"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
             <div className="min-w-0">
@@ -457,7 +457,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
             </div>
 
             {/* Toggle VIP vs Free Member */}
-            <div className="ds-apple-segmented inline-flex items-center p-1 rounded-full self-start sm:self-auto text-xs shrink-0">
+            <div className="ds-apple-segmented inline-flex flex-wrap max-w-full items-center p-1 rounded-full self-start sm:self-auto text-xs shrink-0">
               <button
                 type="button"
                 onPointerDown={() => triggerHaptic("selection")}
@@ -747,7 +747,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={APPLE_SPRING_SNAPPY}
-          className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-6"
+          className="ds-apple-surface rounded-[26px] p-4 sm:p-7 space-y-6 min-w-0 max-w-full overflow-hidden"
         >
           <div className="border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
             <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -837,7 +837,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={APPLE_SPRING_SNAPPY}
-          className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-6"
+          className="ds-apple-surface rounded-[26px] p-4 sm:p-7 space-y-6 min-w-0 max-w-full overflow-hidden"
         >
           <div className="border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
             <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -952,7 +952,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={APPLE_SPRING_SNAPPY}
-          className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-6"
+          className="ds-apple-surface rounded-[26px] p-4 sm:p-7 space-y-6 min-w-0 max-w-full overflow-hidden"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
             <div className="min-w-0">
@@ -1024,7 +1024,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                 type="text"
                 readOnly
                 value={shareLink}
-                className="ds-apple-input flex-1 px-3.5 py-2.5 text-xs font-medium rounded-xl outline-none select-all"
+                className="ds-apple-input flex-1 min-w-0 px-3.5 py-2.5 text-xs font-medium rounded-xl outline-none select-all"
               />
               <div className="flex items-center gap-2 shrink-0">
                 <button
@@ -1058,7 +1058,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={APPLE_SPRING_SNAPPY}
-          className="ds-apple-surface rounded-[26px] p-5 sm:p-7 space-y-4"
+          className="ds-apple-surface rounded-[26px] p-4 sm:p-7 space-y-4 min-w-0 max-w-full overflow-hidden"
         >
           <div className="border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
             <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">

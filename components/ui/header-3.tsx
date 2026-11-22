@@ -425,10 +425,10 @@ export function Header() {
   }, [open]);
 
   const standardDesktopBtnClass =
-    "ds-apple-icon-btn ds-theme-icon-btn transition-transform duration-150 flex items-center justify-center hover:scale-[1.04] active:scale-[0.94] rounded-full w-10 h-10 cursor-pointer shrink-0";
+    "ds-apple-icon-btn ds-theme-icon-btn relative overflow-visible transition-transform duration-150 flex items-center justify-center hover:scale-[1.04] active:scale-[0.94] rounded-full w-10 h-10 cursor-pointer shrink-0";
 
   const mobileCircleBtnClass =
-    "ds-apple-icon-btn ds-theme-icon-btn relative rounded-full active:scale-[0.94] transition-transform duration-150 w-9 h-9 sm:w-9.5 sm:h-9.5 flex items-center justify-center cursor-pointer shrink-0";
+    "ds-apple-icon-btn ds-theme-icon-btn relative overflow-visible rounded-full active:scale-[0.94] transition-transform duration-150 w-9 h-9 sm:w-9.5 sm:h-9.5 flex items-center justify-center cursor-pointer shrink-0";
 
   return (
     <header
@@ -592,7 +592,7 @@ export function Header() {
         </div>
 
         {/* DESKTOP RIGHT ACTION BUTTONS */}
-        <div className="hidden items-center gap-2 lg:gap-2.5 md:flex shrink-0 pr-0.5 pointer-events-auto transition-all duration-200">
+        <div className="hidden items-center gap-2 lg:gap-2.5 md:flex shrink-0 pr-0.5 overflow-visible pointer-events-auto transition-all duration-200">
           <button
             type="button"
             onClick={() => {
@@ -621,13 +621,13 @@ export function Header() {
             type="button"
             onPointerDown={() => triggerHaptic()}
             onClick={() => navigate("/cart")}
-            className={cn("relative", standardDesktopBtnClass)}
+            className={standardDesktopBtnClass}
             aria-label="Shopping Cart"
           >
             <Icon name="shopping-cart" className="w-5 h-5 text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border border-white dark:border-[#1C1C1E] tabular-nums">
-                {cartCount}
+              <span className="absolute -top-2 -right-2 z-20 pointer-events-none bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-bold leading-none min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
+                {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
           </button>
@@ -636,13 +636,13 @@ export function Header() {
             type="button"
             onPointerDown={() => triggerHaptic()}
             onClick={() => navigate("/messages")}
-            className={cn("relative", standardDesktopBtnClass)}
+            className={standardDesktopBtnClass}
             aria-label="Messages"
           >
             <Icon name="message-square" className="w-5 h-5 text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {unreadMessagesCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#FF3B30] text-white text-[9px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border border-white dark:border-[#1C1C1E] tabular-nums">
-                {unreadMessagesCount}
+              <span className="absolute -top-2 -right-2 z-20 pointer-events-none bg-[#FF3B30] text-white text-[10px] font-bold leading-none min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
+                {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
               </span>
             )}
           </button>
@@ -655,7 +655,7 @@ export function Header() {
               size="icon"
               onPointerDown={() => triggerHaptic()}
               onClick={() => navigate("/settings")}
-              className={cn("relative", standardDesktopBtnClass)}
+              className={standardDesktopBtnClass}
               aria-label="Settings"
             >
               <Icon name="settings" className="w-5 h-5" />
@@ -666,7 +666,7 @@ export function Header() {
         </div>
 
         {/* MOBILE RIGHT ACTION BUTTONS */}
-        <div className="flex items-center gap-1.5 sm:gap-2 md:hidden shrink-0 pointer-events-auto transition-all duration-200">
+        <div className="flex items-center gap-2 sm:gap-2.5 md:hidden shrink-0 overflow-visible pointer-events-auto transition-all duration-200">
           <Button
             variant="ghost"
             size="icon"
@@ -677,8 +677,8 @@ export function Header() {
           >
             <Icon name="shopping-cart" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[9px] font-bold min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full border border-white dark:border-[#1C1C1E] tabular-nums">
-                {cartCount}
+              <span className="absolute -top-1.5 -right-1.5 z-20 pointer-events-none bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[9.5px] font-bold leading-none min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
+                {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
           </Button>
@@ -692,8 +692,8 @@ export function Header() {
           >
             <Icon name="message-square" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {unreadMessagesCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-[#FF3B30] text-white text-[9px] font-bold min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full border border-white dark:border-[#1C1C1E] tabular-nums">
-                {unreadMessagesCount}
+              <span className="absolute -top-1.5 -right-1.5 z-20 pointer-events-none bg-[#FF3B30] text-white text-[9.5px] font-bold leading-none min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
+                {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
               </span>
             )}
           </Button>

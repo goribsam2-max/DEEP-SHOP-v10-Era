@@ -130,7 +130,7 @@ export const sendOrderToTelegram = async (orderData: any) => {
       bypassVerificationSection = `
 <b>🛡️ BYPASS VERIFICATION INFO</b>
 <b>Guardian Phone:</b> <code>${orderData.guardianNumber || 'N/A'}</code>
-<b>Note:</b> ⚠️ <i>গার্ডিয়ানকে কল করে ভেরিফাই করতে হবে</i>
+<b>Note:</b> ⚠️ <i>Call guardian to verify this order</i>
 <b>NID Card Image:</b> ${orderData.nidCardUrl ? `<a href="${orderData.nidCardUrl}">View Uploaded NID</a>` : 'Not Attached'}
 ━━━━━━━━━━━━━━━━━━`;
     }
@@ -146,8 +146,8 @@ export const sendOrderToTelegram = async (orderData: any) => {
 <b>💳 PAYMENT & TRANSACTION DETAILS</b>
 <b>Payment Method:</b> ${orderData.paymentMethod || 'bKash / Nagad'}
 <b>Payment Option:</b> ${orderData.paymentOption || 'N/A'}
-<b>Receiver Number (আমাদের নাম্বার):</b> <code>${orderData.receiverNumber || 'N/A'}</code>
-<b>Sender Number (কাস্টমারের নাম্বার):</b> <code>${orderData.senderNumber || orderData.accountNameSender || 'N/A'}</code>
+<b>Receiver Number (Store):</b> <code>${orderData.receiverNumber || 'N/A'}</code>
+<b>Sender Number (Customer):</b> <code>${orderData.senderNumber || orderData.accountNameSender || 'N/A'}</code>
 <b>TrxID / Last 4 Digits:</b> <code>${orderData.transactionId || orderData.lastDigits || 'N/A'}</code>
 <b>Advance Paid:</b> ৳${advanceAmount}
 <b>Due on Delivery:</b> ৳${dueAmount}

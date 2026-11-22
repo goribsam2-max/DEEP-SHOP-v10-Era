@@ -290,8 +290,8 @@ export const AuthVoiceToggle: React.FC<{
         aria-pressed={!muted}
         title={
           muted
-            ? "মুখ থেকে হাত সরিয়ে ভয়েস চালু করুন"
-            : "হাত দিয়ে মুখ বন্ধ করে ভয়েস থামান"
+            ? "Uncover mouth to enable voice guide"
+            : "Cover mouth to mute voice guide"
         }
         className={`min-h-[42px] pl-1.5 pr-3.5 py-1 rounded-full border shadow-2xs flex items-center gap-2 transition-colors duration-200 cursor-pointer active:scale-[0.97] select-none ${
           muted
@@ -303,7 +303,7 @@ export const AuthVoiceToggle: React.FC<{
 
         <div className="flex items-center gap-1.5">
           <span className="text-[12px] font-bold tracking-tight whitespace-nowrap">
-            {muted ? "ভয়েস বন্ধ" : isSpeaking ? "বলছি..." : "ভয়েস চালু"}
+            {muted ? "Voice Off" : isSpeaking ? "Speaking..." : "Voice On"}
           </span>
 
           {/* Smooth non-blinking voice equalizer bars ONLY while speaking */}

@@ -163,7 +163,7 @@ const CreateCustomOrder: React.FC = () => {
         setSellerProfile(profileData);
 
         if (!canAccessSellerDashboard(profileData, u)) {
-          notify("আপনার সেলার ড্যাশবোর্ডে প্রবেশের অনুমতি নেই।", "error");
+          notify("You do not have permission to access the seller dashboard.", "error");
           navigate("/", { replace: true });
           return;
         }
@@ -293,7 +293,7 @@ const CreateCustomOrder: React.FC = () => {
       email: (u.email || prev.email || "").trim(),
       address: extractUserAddress(u) || prev.address || "",
     }));
-    notify("কাস্টমার অ্যাকাউন্ট যুক্ত করা হয়েছে!", "success");
+    notify("Customer account linked!", "success");
   };
 
   const handleCustomItemImageUpload = async (
@@ -306,10 +306,10 @@ const CreateCustomOrder: React.FC = () => {
       const url = await uploadToImgbb(file);
       if (url) {
         setItemForm((prev) => ({ ...prev, image: url }));
-        notify("প্রোডাক্টের ছবি আপলোড হয়েছে", "success");
+        notify("Product photo uploaded", "success");
       }
     } catch {
-      notify("ছবি আপলোড করতে সমস্যা হয়েছে", "error");
+      notify("Failed to upload photo", "error");
     } finally {
       setUploadingItemImage(false);
       e.target.value = "";
@@ -318,12 +318,12 @@ const CreateCustomOrder: React.FC = () => {
 
   const handleAddProductItem = () => {
     if (!itemForm.name.trim()) {
-      notify("অনুগ্রহ করে প্রোডাক্টের নাম লিখুন", "error");
+      notify("Please enter product name", "error");
       return;
     }
     const unitPrice = Number(itemForm.price);
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
-      notify("অনুগ্রহ করে সঠিক মূল্য লিখুন", "error");
+      notify("Please enter a valid price", "error");
       return;
     }
     const qty = Math.max(1, Number(itemForm.quantity || 1));
@@ -354,7 +354,7 @@ const CreateCustomOrder: React.FC = () => {
       image: "",
       size: "",
     });
-    notify("প্রোডাক্ট অর্ডার লিস্টে যোগ করা হয়েছে", "success");
+    notify("Product added to order list", "success");
   };
 
   const handleRemoveItem = (idx: number) => {
@@ -378,7 +378,7 @@ const CreateCustomOrder: React.FC = () => {
   const handleSaveCustomOrder = async () => {
     if (!user) return;
     if (orderItems.length === 0) {
-      notify("কমপক্ষে ১টি প্রোডাক্ট যোগ করুন", "error");
+      notify("Please add at least 1 product", "error");
       return;
     }
 
@@ -388,11 +388,11 @@ const CreateCustomOrder: React.FC = () => {
     const custAddress = customerDetails.address.trim() || "Store Direct Order";
 
     if (!custName) {
-      notify("কাস্টমারের নাম লিখুন", "error");
+      notify("Please enter customer name", "error");
       return;
     }
     if (!custPhone) {
-      notify("কাস্টমারের মোবাইল নম্বর লিখুন", "error");
+      notify("Please enter customer phone number", "error");
       return;
     }
 
@@ -499,10 +499,10 @@ const CreateCustomOrder: React.FC = () => {
         try {
           await addDoc(collection(db, "notifications"), {
             userId: resolvedUid,
-            title: "নতুন কাস্টম অর্ডার যুক্ত হয়েছে",
-            message: `${shopName || "Deep Shop"} আপনার অ্যাকাউন্টে একটি নতুন অর্ডার (#${docRef.id
+            title: "New Custom Order Added",
+            message: `${shopName || "Deep Shop"} created a new order (#${docRef.id
               .slice(0, 8)
-              .toUpperCase()}) যুক্ত করেছে। মোট মূল্য: ${formatPrice(grandTotal)}`,
+              .toUpperCase()}) in your account. Total: ${formatPrice(grandTotal)}`,
             type: "order",
             orderId: docRef.id,
             link: "/orders",
@@ -516,18 +516,18 @@ const CreateCustomOrder: React.FC = () => {
 
       notify(
         resolvedUid
-          ? `কাস্টম অর্ডার তৈরি হয়েছে এবং কাস্টমারের অ্যাকাউন্টে যুক্ত হয়েছে! (#${docRef.id.slice(
+          ? `Custom order created and linked to customer account! (#${docRef.id.slice(
               0,
               8
             )})`
-          : `কাস্টম অর্ডার সফলভাবে তৈরি হয়েছে! (#${docRef.id.slice(0, 8)})`,
+          : `Custom order created successfully! (#${docRef.id.slice(0, 8)})`,
         "success"
       );
 
       navigate("/seller/dashboard?tab=orders");
     } catch (err) {
       console.error("Save custom order error:", err);
-      notify("কাস্টম অর্ডার তৈরি করতে সমস্যা হয়েছে", "error");
+      notify("Failed to create custom order", "error");
     } finally {
       setSavingOrder(false);
     }
@@ -563,7 +563,7 @@ const CreateCustomOrder: React.FC = () => {
                 Create Custom Order
               </h1>
               <p className="text-[11.5px] ds-apple-muted truncate">
-                কাস্টমার অ্যাকাউন্ট লিংক, প্রোডাক্ট ও পেমেন্ট হিসাবসহ নতুন অর্ডার
+                Create a new order with linked customer account, items, and payment details
               </p>
             </div>
           </div>
@@ -598,7 +598,7 @@ const CreateCustomOrder: React.FC = () => {
                   1. Customer Account & Delivery Info
                 </h2>
                 <p className="text-[11.5px] ds-apple-muted">
-                  রেজিস্টার্ড কাস্টমার সার্চ করে সিলেক্ট করলে অর্ডারটি সরাসরি তার অ্যাকাউন্টে দেখাবে
+                  Search and select a registered customer to link this order directly to their account
                 </p>
               </div>
             </div>
@@ -607,7 +607,7 @@ const CreateCustomOrder: React.FC = () => {
           {/* Search Registered Customer Box */}
           <div className="space-y-2.5">
             <Label className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-              Search Customer Account (নাম, ইমেইল, ফোন নম্বর বা UID দিয়ে খুঁজুন)
+              Search Customer Account (by Name, Email, Phone, or UID)
             </Label>
             <div className="relative">
               <Search className="w-4 h-4 text-[#8E8E93] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -617,7 +617,7 @@ const CreateCustomOrder: React.FC = () => {
                 onFocus={() => {
                   if (allUsersCache.length === 0) ensureUsersLoaded();
                 }}
-                placeholder="কাস্টমারের নাম, ইমেইল বা 01XXXXXXXXX লিখে সার্চ করুন..."
+                placeholder="Search by customer name, email, or 01XXXXXXXXX..."
                 className="ds-apple-input pl-10 pr-9 h-11 text-sm rounded-xl"
               />
               {isSearchingCustomers ? (
@@ -688,7 +688,7 @@ const CreateCustomOrder: React.FC = () => {
               !isSearchingCustomers &&
               customerSearchResults.length === 0 && (
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 px-1">
-                  কোনো রেজিস্টার্ড অ্যাকাউন্ট পাওয়া যায়নি। নিচে ম্যানুয়ালি নাম, ফোন ও ইমেইল লিখতে পারেন।
+                  No registered account found. You can enter the customer's name, phone, and email manually below.
                 </p>
               )}
 
@@ -727,7 +727,7 @@ const CreateCustomOrder: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
             <div>
               <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                Customer Name (পূর্ণ নাম) *
+                Customer Name *
               </Label>
               <Input
                 value={customerDetails.name}
@@ -737,7 +737,7 @@ const CreateCustomOrder: React.FC = () => {
                     name: e.target.value,
                   })
                 }
-                placeholder="কাস্টমারের নাম লিখুন"
+                placeholder="Enter customer full name"
                 className="h-11 text-sm rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
               />
             </div>
@@ -745,7 +745,7 @@ const CreateCustomOrder: React.FC = () => {
             <div>
               <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Contact Phone (মোবাইল নম্বর) *</span>
+                <span>Contact Phone *</span>
               </Label>
               <Input
                 value={customerDetails.phone}
@@ -763,7 +763,7 @@ const CreateCustomOrder: React.FC = () => {
             <div>
               <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Customer Email (অ্যাকাউন্ট সিঙ্কের জন্য ঐচ্ছিক)</span>
+                <span>Customer Email (Optional for Account Sync)</span>
               </Label>
               <Input
                 type="email"
@@ -782,7 +782,7 @@ const CreateCustomOrder: React.FC = () => {
             <div>
               <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Delivery Address (ডেলিভারি ঠিকানা)</span>
+                <span>Delivery Address</span>
               </Label>
               <Input
                 value={customerDetails.address}
@@ -792,7 +792,7 @@ const CreateCustomOrder: React.FC = () => {
                     address: e.target.value,
                   })
                 }
-                placeholder="বাসা, রোড, থানা ও জেলা"
+                placeholder="House, Road, Thana & District"
                 className="h-11 text-sm rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
               />
             </div>
@@ -808,10 +808,10 @@ const CreateCustomOrder: React.FC = () => {
               </div>
               <div>
                 <h2 className="text-sm sm:text-base font-semibold tracking-[-0.015em] text-[#1D1D1F] dark:text-white">
-                  2. Order Products (প্রোডাক্টসমূহ)
+                  2. Order Products
                 </h2>
                 <p className="text-[11.5px] ds-apple-muted">
-                  স্টোরের প্রোডাক্ট অথবা যেকোনো কাস্টম প্রোডাক্ট অর্ডারে যোগ করুন
+                  Add products from your store catalog or create a custom product item
                 </p>
               </div>
             </div>
@@ -895,11 +895,10 @@ const CreateCustomOrder: React.FC = () => {
             </div>
           ) : (
             <div className="py-5 px-4 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 text-center text-xs text-zinc-500 dark:text-zinc-400">
-              এখনো কোনো প্রোডাক্ট যোগ করা হয়নি। নিচে প্রোডাক্ট সিলেক্ট বা লিখে{" "}
+              No products added yet. Select or enter an item below and click{" "}
               <strong className="text-zinc-800 dark:text-zinc-200">
                 Add Item
-              </strong>{" "}
-              বাটনে ক্লিক করুন।
+              </strong>.
             </div>
           )}
 
@@ -908,7 +907,7 @@ const CreateCustomOrder: React.FC = () => {
             {itemMode === "store" ? (
               <div className="sm:col-span-12">
                 <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                  Select Store Product (স্টোর থেকে প্রোডাক্ট নির্বাচন)
+                  Select Store Product
                 </Label>
                 <select
                   value={itemForm.selectedProductId}
@@ -937,7 +936,7 @@ const CreateCustomOrder: React.FC = () => {
                   className="w-full h-11 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 outline-none text-zinc-900 dark:text-white"
                 >
                   <option value="">
-                    -- স্টোরের প্রোডাক্ট লিস্ট থেকে নির্বাচন করুন --
+                    -- Select a product from store catalog --
                   </option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -950,20 +949,20 @@ const CreateCustomOrder: React.FC = () => {
               <>
                 <div className="sm:col-span-8">
                   <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                    Custom Product Title (প্রোডাক্টের নাম) *
+                    Custom Product Title *
                   </Label>
                   <Input
                     value={itemForm.name}
                     onChange={(e) =>
                       setItemForm({ ...itemForm, name: e.target.value })
                     }
-                    placeholder="যেমন: iPhone 15 Pro Max 256GB Natural Titanium"
+                    placeholder="e.g. iPhone 15 Pro Max 256GB Natural Titanium"
                     className="h-11 text-sm rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
                   />
                 </div>
                 <div className="sm:col-span-4">
                   <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                    Product Photo (ঐচ্ছিক)
+                    Product Photo (Optional)
                   </Label>
                   <label className="h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex items-center justify-center gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition">
                     {uploadingItemImage ? (
@@ -1010,7 +1009,7 @@ const CreateCustomOrder: React.FC = () => {
 
             <div className="sm:col-span-3">
               <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                Quantity (পরিমাণ)
+                Quantity
               </Label>
               <Input
                 type="number"
@@ -1061,10 +1060,10 @@ const CreateCustomOrder: React.FC = () => {
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-semibold tracking-[-0.015em] text-[#1D1D1F] dark:text-white">
-                3. Payment & Calculation (পেমেন্ট ও হিসাব)
+                3. Payment & Calculation
               </h2>
               <p className="text-[11.5px] ds-apple-muted">
-                অগ্রিম জমা, ডেলিভারি চার্জ ও অর্ডারের বর্তমান স্ট্যাটাস নির্ধারণ করুন
+                Configure advance payment, delivery fee, and current order status
               </p>
             </div>
           </div>
@@ -1153,10 +1152,10 @@ const CreateCustomOrder: React.FC = () => {
                 }}
                 className="w-full h-11 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 outline-none text-zinc-900 dark:text-white"
               >
-                <option value="bKash">bKash (বিকাশ)</option>
-                <option value="Nagad">Nagad (নগদ)</option>
+                <option value="bKash">bKash</option>
+                <option value="Nagad">Nagad</option>
                 <option value="Cash on Delivery">
-                  Cash on Delivery (ক্যাশ অন ডেলিভারি)
+                  Cash on Delivery
                 </option>
                 <option value="Bank Transfer">Bank Transfer</option>
                 <option value="Rocket">Rocket</option>
@@ -1173,11 +1172,11 @@ const CreateCustomOrder: React.FC = () => {
                 onChange={(e) => setPaymentStatus(e.target.value)}
                 className="w-full h-11 text-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 outline-none text-zinc-900 dark:text-white"
               >
-                <option value="Paid">Paid (পরিশোধিত)</option>
+                <option value="Paid">Paid</option>
                 <option value="Partial Paid">
-                  Partial Paid (আংশিক পরিশোধিত)
+                  Partial Paid
                 </option>
-                <option value="Unpaid">Unpaid (বাকি / COD)</option>
+                <option value="Unpaid">Unpaid (COD Due)</option>
                 <option value="Pending">Pending Verification</option>
               </select>
             </div>
@@ -1192,46 +1191,46 @@ const CreateCustomOrder: React.FC = () => {
                 className="w-full h-11 text-sm font-semibold bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 outline-none text-zinc-900 dark:text-white"
               >
                 <option value={OrderStatus.PENDING}>
-                  Pending (পেন্ডিং অর্ডার)
+                  Pending
                 </option>
                 <option value={OrderStatus.APPROVED}>
-                  Approved (কনফার্মড অর্ডার)
+                  Approved
                 </option>
                 <option value={OrderStatus.PROCESSING}>
-                  Processing (প্রসেসিং)
+                  Processing
                 </option>
                 <option value={OrderStatus.SHIPPED_IN_COURIER}>
-                  Shipped in Courier (কুরিয়ারে পাঠানো)
+                  Shipped in Courier
                 </option>
                 <option value={OrderStatus.ON_THE_WAY}>
-                  On the Way (পথে আছে)
+                  On the Way
                 </option>
                 <option value={OrderStatus.DELIVERED}>
-                  Delivered (ডেলিভার্ড)
+                  Delivered
                 </option>
               </select>
             </div>
 
             <div>
               <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                Sender Phone Number (প্রেরক নম্বর)
+                Sender Phone Number
               </Label>
               <Input
                 value={senderNumber}
                 onChange={(e) => setSenderNumber(e.target.value)}
-                placeholder="যেই নম্বর থেকে টাকা এসেছে"
+                placeholder="Number payment was sent from"
                 className="h-11 text-sm font-mono rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
               />
             </div>
 
             <div>
               <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                Received On (স্টোর রিসিভ নম্বর)
+                Received On (Store Account)
               </Label>
               <Input
                 value={receiverNumber}
                 onChange={(e) => setReceiverNumber(e.target.value)}
-                placeholder="স্টোর পেমেন্ট নম্বর"
+                placeholder="Store receiving number"
                 className="h-11 text-sm font-mono rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
               />
             </div>
@@ -1250,12 +1249,12 @@ const CreateCustomOrder: React.FC = () => {
 
             <div className="sm:col-span-3">
               <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 block">
-                Order Note / Internal Memo (ঐচ্ছিক)
+                Order Note / Internal Memo (Optional)
               </Label>
               <Textarea
                 value={orderNote}
                 onChange={(e) => setOrderNote(e.target.value)}
-                placeholder="অর্ডারের সাথে বিশেষ কোনো নির্দেশনা বা নোট থাকলে লিখুন..."
+                placeholder="Add any special instructions or notes for this order..."
                 className="min-h-[76px] text-sm rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 resize-none"
               />
             </div>
@@ -1297,7 +1296,7 @@ const CreateCustomOrder: React.FC = () => {
               {savingOrder ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>অর্ডার সেভ হচ্ছে...</span>
+                  <span>Saving Order...</span>
                 </>
               ) : (
                 <>

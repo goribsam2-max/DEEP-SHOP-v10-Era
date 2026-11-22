@@ -371,7 +371,7 @@ export const MobileAppInstallExperience: React.FC = () => {
     <AnimatePresence>
       {visibleMode === "android" && (
         <div
-          className={`fixed inset-0 z-[995] flex items-end sm:items-center justify-center p-3 sm:p-5 ${
+          className={`fixed inset-0 z-[995] flex items-end sm:items-center justify-center p-0 sm:p-5 ${
             isAppleShop ? "ds-apple-portal" : ""
           }`}
         >
@@ -389,19 +389,19 @@ export const MobileAppInstallExperience: React.FC = () => {
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 36, scale: 0.97 }}
-            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 30, scale: 0.97 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
             transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
             drag={isAppleShop && !prefersReducedMotion ? "y" : false}
-            dragConstraints={{ top: 0 }}
-            dragElastic={{ top: 0.06, bottom: 0.5 }}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.02, bottom: 0.5 }}
             onDragEnd={isAppleShop ? handleSheetDragEnd : undefined}
             onClick={(e) => e.stopPropagation()}
-            className={`relative z-10 w-full max-w-[420px] rounded-[28px] p-5 overflow-hidden ${
+            className={`relative z-10 w-full max-w-none sm:max-w-[420px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-5 overflow-hidden ${
               isAppleShop
                 ? "ds-apple-sheet"
-                : "bg-white dark:bg-zinc-950 border border-zinc-200/85 dark:border-zinc-800 shadow-[0_24px_70px_rgba(0,0,0,0.28)] text-zinc-950 dark:text-white"
+                : "bg-white dark:bg-zinc-950 border-t sm:border border-zinc-200/85 dark:border-zinc-800 shadow-[0_24px_70px_rgba(0,0,0,0.28)] text-zinc-950 dark:text-white"
             }`}
           >
             {isAppleShop && (
@@ -511,7 +511,7 @@ export const MobileAppInstallExperience: React.FC = () => {
 
       {visibleMode === "ios" && (
         <div
-          className={`fixed inset-0 z-[995] flex items-end sm:items-center justify-center p-3 sm:p-5 ${
+          className={`fixed inset-0 z-[995] flex items-end sm:items-center justify-center p-0 sm:p-5 ${
             isAppleShop ? "ds-apple-portal" : ""
           }`}
         >
@@ -529,19 +529,19 @@ export const MobileAppInstallExperience: React.FC = () => {
           <motion.div
             role="dialog"
             aria-modal="true"
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 38, scale: 0.97 }}
-            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 30, scale: 0.97 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
+            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
             transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
             drag={isAppleShop && !prefersReducedMotion ? "y" : false}
-            dragConstraints={{ top: 0 }}
-            dragElastic={{ top: 0.06, bottom: 0.5 }}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.02, bottom: 0.5 }}
             onDragEnd={isAppleShop ? handleSheetDragEnd : undefined}
             onClick={(e) => e.stopPropagation()}
-            className={`relative z-10 w-full max-w-[430px] rounded-[28px] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] overflow-hidden ${
+            className={`relative z-10 w-full max-w-none sm:max-w-[430px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-5 overflow-hidden ${
               isAppleShop
                 ? "ds-apple-sheet"
-                : "bg-white dark:bg-zinc-950 border border-zinc-200/85 dark:border-zinc-800 shadow-[0_26px_74px_rgba(0,0,0,0.34)] text-zinc-950 dark:text-white"
+                : "bg-white dark:bg-zinc-950 border-t sm:border border-zinc-200/85 dark:border-zinc-800 shadow-[0_26px_74px_rgba(0,0,0,0.34)] text-zinc-950 dark:text-white"
             }`}
           >
             {isAppleShop && (

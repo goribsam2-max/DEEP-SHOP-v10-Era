@@ -375,7 +375,7 @@ export default function SubscriptionPage() {
     : null;
 
   return (
-    <div className="ds-apple-shop-canvas min-h-screen pb-28">
+    <div className="ds-apple-shop-canvas min-h-screen pb-28 overflow-x-clip">
       <SEO
         title="VIP Subscription & Reseller Pass — DEEP SHOP"
         description="Activate 0 Taka Advance 100% Cash on Delivery, Free Express Shipping across Bangladesh, and Reseller Masterclass benefits on DEEP SHOP."
@@ -399,11 +399,11 @@ export default function SubscriptionPage() {
         />
       )}
 
-      <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6 sm:space-y-9">
+      <div className="max-w-6xl w-full min-w-0 mx-auto px-3.5 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6 sm:space-y-9 overflow-x-clip">
         {/* Responsive Asymmetric 12-Column Hero & Live Membership Pass */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-stretch">
+        <section className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-12 gap-5 lg:gap-6 items-stretch min-w-0">
           {/* Left 7 Cols: Editorial Value Proposition */}
-          <div className="ds-apple-surface lg:col-span-7 relative overflow-hidden rounded-[28px] p-5 sm:p-8 lg:p-9 flex flex-col justify-between">
+          <div className="ds-apple-surface lg:col-span-7 relative overflow-hidden rounded-[28px] p-5 sm:p-8 lg:p-9 flex flex-col justify-between min-w-0">
             <div className="space-y-4 sm:space-y-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#B26A00] dark:text-[#FFD60A] min-w-0">
@@ -452,7 +452,7 @@ export default function SubscriptionPage() {
           </div>
 
           {/* Right 5 Cols: Live Membership Entitlement Ledger */}
-          <div className="ds-apple-surface lg:col-span-5 rounded-[28px] p-5 sm:p-7 flex flex-col justify-between divide-y divide-black/[0.06] dark:divide-white/[0.08]">
+          <div className="ds-apple-surface lg:col-span-5 rounded-[28px] p-5 sm:p-7 flex flex-col justify-between divide-y divide-black/[0.06] dark:divide-white/[0.08] min-w-0">
             <div className="pb-4 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <span className="text-xs font-medium ds-apple-muted block">
@@ -558,7 +558,7 @@ export default function SubscriptionPage() {
         </section>
 
         {/* Responsive 4-Column VIP Value Metrics Strip */}
-        <section className="ds-apple-surface rounded-[24px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-black/[0.06] dark:divide-white/[0.08]">
+        <section className="ds-apple-surface rounded-[24px] grid grid-cols-[minmax(0,1fr)] sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-black/[0.06] dark:divide-white/[0.08] min-w-0 max-w-full overflow-hidden">
           <div className="p-5 flex items-start gap-3.5">
             <BadgeCheck className="w-5 h-5 text-[#248A3D] dark:text-[#30D158] shrink-0 mt-0.5" />
             <div className="min-w-0">
@@ -609,7 +609,7 @@ export default function SubscriptionPage() {
         </section>
 
         {/* Pricing6 Component */}
-        <div id="vip-plans" ref={pricingRef} className="relative scroll-mt-20">
+        <div id="vip-plans" ref={pricingRef} className="relative scroll-mt-20 w-full min-w-0">
           {creatingOrder && (
             <div className="ds-apple-backdrop absolute inset-0 z-30 flex items-center justify-center rounded-3xl">
               <div className="ds-apple-popover flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -647,7 +647,7 @@ export default function SubscriptionPage() {
         </div>
 
         {/* How VIP Works */}
-        <section className="ds-apple-surface rounded-[24px] overflow-hidden">
+        <section className="ds-apple-surface rounded-[24px] overflow-hidden min-w-0 max-w-full">
           <div className="px-5 sm:px-8 py-5 sm:py-6 border-b border-black/[0.06] dark:border-white/[0.08]">
             <h2 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
               মাত্র ৩টি সহজ ধাপে ভিআইপি সুবিধা শুরু করুন
@@ -688,7 +688,7 @@ export default function SubscriptionPage() {
         </section>
 
         {/* Reseller Masterclass & Interactive Profit Tools */}
-        <div ref={guideRef} className="scroll-mt-20">
+        <div ref={guideRef} className="scroll-mt-20 min-w-0 w-full max-w-full overflow-x-clip">
           <ResellerTeacherGuide
             user={currentUser}
             userData={userData}
@@ -698,7 +698,7 @@ export default function SubscriptionPage() {
         </div>
 
         {/* Free vs VIP Comparison Matrix */}
-        <section className="ds-apple-surface rounded-[24px] overflow-hidden">
+        <section className="ds-apple-surface rounded-[24px] overflow-hidden min-w-0 max-w-full">
           <div className="px-5 sm:px-7 py-5 border-b border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
@@ -755,27 +755,27 @@ export default function SubscriptionPage() {
           {/* Mobile Responsive Hairline-Divided Comparison (< md) */}
           <div className="md:hidden divide-y divide-black/[0.06] dark:divide-white/[0.08]">
             {TIER_COMPARISONS.map((row, idx) => (
-              <div key={idx} className="p-4 sm:p-5 space-y-2.5">
+              <div key={idx} className="p-4 sm:p-5 space-y-2.5 min-w-0">
                 <div className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   {row.feature}
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-1">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-1 min-w-0">
+                  <div className="space-y-1 min-w-0">
                     <span className="text-xs font-semibold text-[#FF3B30] dark:text-[#FF453A] flex items-center gap-1">
                       <XCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>ফ্রি মেম্বার</span>
                     </span>
-                    <p className="text-xs ds-apple-muted leading-relaxed">
+                    <p className="text-xs ds-apple-muted leading-relaxed break-words">
                       {row.free}
                     </p>
                   </div>
 
-                  <div className="space-y-1 border-l border-black/[0.06] dark:border-white/[0.08] pl-3.5">
+                  <div className="space-y-1 border-l border-black/[0.06] dark:border-white/[0.08] pl-3 sm:pl-3.5 min-w-0">
                     <span className="text-xs font-semibold text-[#248A3D] dark:text-[#30D158] flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                       <span>VIP মেম্বার</span>
                     </span>
-                    <p className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-relaxed">
+                    <p className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-relaxed break-words">
                       {row.vip}
                     </p>
                   </div>

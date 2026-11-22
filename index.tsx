@@ -68,7 +68,9 @@ const isStaleChunkOrMimeError = (msg: string): boolean => {
     lower.includes('module is not valid') ||
     lower.includes('importing a module script failed') ||
     lower.includes('loading chunk') ||
-    lower.includes("unexpected token '<'")
+    lower.includes("unexpected token '<'") ||
+    lower.includes('dispatcher.usecontext') ||
+    lower.includes('invalid hook call')
   );
 };
 

@@ -92,10 +92,10 @@ export default function BanOverlay() {
           <ShieldAlert className="w-8 h-8 text-[#FF453A]" />
         </div>
         <h1 className="ds-apple-display text-[22px] font-bold text-[#F5F5F7] mb-2 tracking-tight">
-          Access Denied (ব্যান করা হয়েছে)
+          Access Denied
         </h1>
         <p className="text-[14px] text-[#98989D] mb-6 leading-relaxed">
-          আপনার অ্যাকাউন্ট বা ডিভাইস থেকে এই সাইটে প্রবেশ সম্পূর্ণ নিষিদ্ধ করা হয়েছে। ৩ বার গালিগালাজ বা আপত্তিকর তথ্য ব্যবহার করার কারণে আপনার ডিভাইস স্থায়ীভাবে ব্যান করা হয়েছে।
+          Access to this site from your account or device has been permanently restricted due to 3 repeated violations involving abusive language or fraudulent details.
         </p>
         <div className="bg-[#2C2C2E] p-4 rounded-2xl border border-red-500/20">
           <p className="text-xs font-bold text-[#FF453A] uppercase tracking-wider">

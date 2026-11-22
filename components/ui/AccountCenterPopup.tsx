@@ -120,20 +120,20 @@ export function AccountCenterPopup({ isOpen, onClose, savedAccounts, currentUid 
           className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[99999] flex items-end justify-center sm:items-center p-0 sm:p-4"
         >
           <motion.div
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 48, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 48, scale: 0.98 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
             transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
             drag={prefersReducedMotion ? false : "y"}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.12, bottom: 0.45 }}
+            dragElastic={{ top: 0.02, bottom: 0.45 }}
             onDragEnd={(_, info) => {
               if (info.offset.y > 110 || info.velocity.y > 420) {
                 onClose();
               }
             }}
             onClick={(e) => e.stopPropagation()}
-            className="ds-apple-sheet w-full sm:max-w-md rounded-t-[28px] sm:rounded-[28px] overflow-hidden flex flex-col touch-pan-y"
+            className="ds-apple-sheet w-full max-w-none sm:max-w-md rounded-t-[28px] rounded-b-none sm:rounded-[28px] pb-[env(safe-area-inset-bottom,0px)] sm:pb-0 overflow-hidden flex flex-col touch-pan-y"
           >
             <div className="sm:hidden flex justify-center pt-2.5 pb-1">
               <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/25" />

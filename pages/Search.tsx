@@ -7,7 +7,7 @@ import {
 import { motion, useReducedMotion } from "framer-motion";
 import { db } from "../firebase";
 import { Product } from "../types";
-import { Search as SearchIcon, X } from "lucide-react";
+import { Search as SearchIcon, X, Clock } from "lucide-react";
 import { ProductCard } from "../components/ui/ProductCard";
 import Icon from "../components/Icon";
 import { useIllustrations } from "../lib/useIllustrations";
@@ -17,15 +17,53 @@ import { APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
 import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import { readOfflineProducts, writeOfflineProducts } from "../lib/offlineStore";
 
+const SEARCH_HISTORY_KEY = "deepshop_recent_searches";
+const LEGACY_SEARCH_HISTORY_KEY = "vibe_recent_searches";
+const MAX_RECENT_SEARCHES = 5;
+
+function readSavedSearchHistory(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw =
+      window.localStorage.getItem(SEARCH_HISTORY_KEY) ||
+      window.localStorage.getItem(LEGACY_SEARCH_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const seen = new Set<string>();
+    const normalized: string[] = [];
+    for (const item of parsed) {
+      if (typeof item !== "string") continue;
+      const clean = item.trim();
+      if (!clean) continue;
+      const key = clean.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      normalized.push(clean);
+      if (normalized.length >= MAX_RECENT_SEARCHES) break;
+    }
+    return normalized;
+  } catch {
+    return [];
+  }
+}
+
+function writeSavedSearchHistory(items: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const cleanList = items.slice(0, MAX_RECENT_SEARCHES);
+    window.localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(cleanList));
+    window.localStorage.removeItem(LEGACY_SEARCH_HISTORY_KEY);
+  } catch {}
+}
+
 const Search: React.FC = () => {
   const navigate = useNavigate();
   const illustrations = useIllustrations();
   const shouldReduceMotion = useReducedMotion();
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState<Product[]>([]);
-  const [recent, setRecent] = useState<string[]>(
-    JSON.parse(localStorage.getItem("vibe_recent_searches") || '["Mobiles", "Border Cross", "Original Phones", "Chargers", "Type-C"]'),
-  );
+  const [recent, setRecent] = useState<string[]>(() => readSavedSearchHistory());
   const [allProducts, setAllProducts] = useState<Product[]>(() =>
     readOfflineProducts()
   );
@@ -62,10 +100,31 @@ const Search: React.FC = () => {
   }, [searchTerm, allProducts]);
 
   const saveSearch = (term: string) => {
-    if (!term.trim()) return;
-    const updated = [term, ...recent.filter((r) => r !== term)].slice(0, 6);
-    setRecent(updated);
-    localStorage.setItem("vibe_recent_searches", JSON.stringify(updated));
+    const clean = term.trim();
+    if (!clean) return;
+    setRecent((prev) => {
+      const updated = [
+        clean,
+        ...prev.filter((r) => r.toLowerCase() !== clean.toLowerCase()),
+      ].slice(0, MAX_RECENT_SEARCHES);
+      writeSavedSearchHistory(updated);
+      return updated;
+    });
+  };
+
+  const removeSearchItem = (term: string) => {
+    triggerHaptic("light");
+    setRecent((prev) => {
+      const updated = prev.filter((r) => r.toLowerCase() !== term.toLowerCase());
+      writeSavedSearchHistory(updated);
+      return updated;
+    });
+  };
+
+  const clearSearchHistory = () => {
+    triggerHaptic("light");
+    setRecent([]);
+    writeSavedSearchHistory([]);
   };
 
   const favoriteCategories = [
@@ -116,20 +175,22 @@ const Search: React.FC = () => {
       className="pt-6 pb-[120px] px-4 sm:px-6 min-h-screen bg-[#F5F5F7] dark:bg-black mx-auto font-sans"
     >
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-7">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            triggerHaptic("light");
+            saveSearch(searchTerm);
+          }}
+          className="flex items-center gap-3 mb-7"
+        >
           <div className="relative flex-1">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#86868B] pointer-events-none" />
             <input
-              type="text"
+              type="search"
+              enterKeyHint="search"
               placeholder="Search border cross, mobiles & gear..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  triggerHaptic("light");
-                  saveSearch(searchTerm);
-                }
-              }}
               className="ds-apple-input w-full bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] rounded-full py-3.5 pl-11 pr-10 border border-black/[0.08] dark:border-white/[0.12] focus:outline-none focus:border-[#0071E3] dark:focus:border-[#0A84FF] text-[15px] font-medium shadow-xs"
             />
             {searchTerm && (
@@ -146,7 +207,7 @@ const Search: React.FC = () => {
               </button>
             )}
           </div>
-        </div>
+        </form>
 
         {searchTerm.trim() === "" ? (
           <motion.div
@@ -154,26 +215,48 @@ const Search: React.FC = () => {
             animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
             transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_SNAPPY}
           >
-            {/* Recent Searches */}
+            {/* Recent Searches (Last 5 Saved Queries) */}
             {recent.length > 0 && (
               <div className="mb-8">
-                <h2 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-3.5 tracking-tight">
-                  Recent Searches
-                </h2>
+                <div className="flex items-center justify-between gap-3 mb-3.5">
+                  <h2 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                    Recent Searches
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={clearSearchHistory}
+                    className="text-xs font-semibold text-[#0071E3] dark:text-[#0A84FF] hover:underline cursor-pointer px-1.5 py-1"
+                  >
+                    Clear
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {recent.map((item, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic("selection");
-                        setSearchTerm(item);
-                        saveSearch(item);
-                      }}
-                      className="px-4 py-2 bg-white dark:bg-[#1C1C1E] rounded-full text-[13.5px] font-medium text-[#1D1D1F] dark:text-[#F5F5F7] border border-black/[0.06] dark:border-white/[0.1] hover:border-[#0071E3]/40 dark:hover:border-[#0A84FF]/40 active:scale-[0.97] transition-all cursor-pointer"
+                  {recent.map((item) => (
+                    <div
+                      key={item}
+                      className="inline-flex items-center bg-white dark:bg-[#1C1C1E] rounded-full border border-black/[0.06] dark:border-white/[0.1] hover:border-[#0071E3]/40 dark:hover:border-[#0A84FF]/40 transition-all shadow-2xs"
                     >
-                      {item}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic("selection");
+                          setSearchTerm(item);
+                          saveSearch(item);
+                        }}
+                        className="inline-flex items-center gap-1.5 pl-3.5 pr-1.5 py-2 text-[13.5px] font-medium text-[#1D1D1F] dark:text-[#F5F5F7] active:scale-[0.98] transition-transform cursor-pointer"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-[#86868B] shrink-0" />
+                        <span>{item}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSearchItem(item)}
+                        aria-label={`Remove ${item} from search history`}
+                        className="w-7 h-7 mr-1 rounded-full flex items-center justify-center text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] cursor-pointer transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -266,7 +349,14 @@ const Search: React.FC = () => {
             <h3 className="text-xs font-bold text-[#6E6E73] dark:text-[#98989D] tracking-wider uppercase tabular-nums">
               Search Results ({results.length})
             </h3>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pb-2">
+            <div
+              onClickCapture={() => {
+                if (searchTerm.trim().length >= 2) {
+                  saveSearch(searchTerm);
+                }
+              }}
+              className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 pb-2"
+            >
               {results.map((product, index) => (
                 <ProductCard key={product.id} product={product} index={index} />
               ))}

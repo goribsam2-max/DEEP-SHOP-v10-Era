@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useId } from "react";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 
 export type AvatarColor =
   | "blue"

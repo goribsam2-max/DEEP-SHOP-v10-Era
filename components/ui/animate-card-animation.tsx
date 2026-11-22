@@ -84,8 +84,8 @@ function CardContent({
           <Lock className="w-2.5 h-2.5" />
           <span>
             {isFullAdvance
-              ? "১০০% ফুল এডভান্স"
-              : `এডভান্স ${formatPrice(advanceAmount)}`}
+              ? "100% Full Advance"
+              : `Advance ${formatPrice(advanceAmount)}`}
           </span>
         </div>
 
@@ -149,8 +149,8 @@ function CardContent({
           </div>
           <span className="ds-apple-muted text-[10px] font-medium truncate">
             {isFullAdvance
-              ? "১০০% ফুল এডভান্স প্রযোজ্য"
-              : `নির্ধারিত এডভান্স: ${formatPrice(advanceAmount)}`}
+              ? "100% Full Advance Applicable"
+              : `Required Advance: ${formatPrice(advanceAmount)}`}
           </span>
         </div>
 
@@ -169,7 +169,7 @@ function CardContent({
             onClick={() => onBuyNow(product)}
             className="ds-apple-btn-primary flex h-9 shrink-0 cursor-pointer select-none items-center gap-1 rounded-full pl-4 pr-3 text-xs sm:text-sm font-semibold active:scale-95 transition-transform"
           >
-            <span>অর্ডার করুন</span>
+            <span>Order Now</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         )}
@@ -276,7 +276,7 @@ export default function AnimatedCardStack({
             onClick={handleAnimate}
             className="ds-apple-btn-secondary flex h-9 cursor-pointer select-none items-center justify-center gap-1 rounded-full px-5 text-xs font-semibold active:scale-95 transition-transform"
           >
-            <span>পরবর্তী অফার</span>
+            <span>Next Offer</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>

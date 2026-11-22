@@ -125,7 +125,7 @@ const Cart: React.FC = () => {
     triggerHaptic("medium");
     const newItems = items.filter((_, i) => i !== index);
     persistCart(newItems);
-    notify("কার্ট থেকে পণ্য সরানো হয়েছে", "info");
+    notify("Removed item from cart", "info");
   };
 
   const handleClearCart = () => {
@@ -138,7 +138,7 @@ const Cart: React.FC = () => {
     persistCart([]);
     setAppliedPromo(null);
     setConfirmClear(false);
-    notify("কার্ট খালি করা হয়েছে", "info");
+    notify("Cart cleared", "info");
   };
 
   const applyPromo = async () => {
@@ -146,7 +146,7 @@ const Cart: React.FC = () => {
     if (!promoCode.trim()) return;
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       triggerHaptic("warning");
-      setPromoError("অফলাইন মোডে প্রোমো কোড যাচাই করা সম্ভব নয়");
+      setPromoError("Promo codes cannot be verified in offline mode");
       return;
     }
     triggerHaptic("light");
@@ -158,27 +158,27 @@ const Cart: React.FC = () => {
       const snap = await getDocs(q);
       if (snap.empty) {
         triggerHaptic("error");
-        setPromoError("প্রোমো কোডটি সঠিক নয়");
+        setPromoError("Invalid promo code");
       } else {
         const c = snap.docs[0].data();
         if (!c.isActive) {
           triggerHaptic("error");
-          setPromoError("এই প্রোমো কোডটি বর্তমানে নিষ্ক্রিয়");
+          setPromoError("This promo code is currently inactive");
         } else if (c.expiresAt && c.expiresAt < Date.now()) {
           triggerHaptic("error");
-          setPromoError("প্রোমো কোডের মেয়াদ শেষ হয়েছে");
+          setPromoError("This promo code has expired");
         } else if (c.minOrderValue && total < c.minOrderValue) {
           triggerHaptic("warning");
-          setPromoError(`সর্বনিম্ন অর্ডার মূল্য ${formatPrice(c.minOrderValue)} হতে হবে`);
+          setPromoError(`Minimum order of ${formatPrice(c.minOrderValue)} required`);
         } else {
           triggerHaptic("success");
           setAppliedPromo({ id: snap.docs[0].id, ...c, isVoucher: false });
-          notify("প্রোমো কোড সফলভাবে যুক্ত হয়েছে!", "success");
+          notify("Promo code applied!", "success");
         }
       }
     } catch {
       triggerHaptic("error");
-      setPromoError("প্রোমো কোড যাচাই করতে সমস্যা হয়েছে");
+      setPromoError("Failed to verify promo code");
     }
   };
 
@@ -186,7 +186,7 @@ const Cart: React.FC = () => {
     if (voucher.minOrderValue && total < voucher.minOrderValue) {
       triggerHaptic("warning");
       notify(
-        `সর্বনিম্ন অর্ডার মূল্য ${formatPrice(voucher.minOrderValue)} প্রয়োজন`,
+        `Minimum order of ${formatPrice(voucher.minOrderValue)} required`,
         "error"
       );
       return;
@@ -194,7 +194,7 @@ const Cart: React.FC = () => {
     triggerHaptic("success");
     setAppliedPromo(voucher);
     setShowCouponsModal(false);
-    notify("ভাউচার সফলভাবে যুক্ত হয়েছে!", "success");
+    notify("Voucher applied successfully!", "success");
   };
 
   const getItemImage = (item: any) => {
@@ -240,10 +240,10 @@ const Cart: React.FC = () => {
             )}
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">
-              আপনার কার্ট বর্তমানে খালি
+              Your cart is empty
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300/85 mb-8 max-w-md leading-relaxed">
-              আপনার পছন্দের স্মার্টফোন, অরিজিনাল পার্টস বা এক্সেসরিজ কার্টে যোগ করে সহজেই অর্ডার সম্পন্ন করুন।
+              Add your favorite smartphones, original parts, or accessories to your cart and place your order easily.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
@@ -252,7 +252,7 @@ const Cart: React.FC = () => {
                 onClick={() => navigate("/all-products")}
                 className="ds-liquid-btn-primary px-7 py-3 w-full sm:w-auto flex items-center justify-center gap-2 whitespace-nowrap"
               >
-                <span>ক্যাটালগ ঘুরে দেখুন</span>
+                <span>Browse Catalog</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
               <button
@@ -260,7 +260,7 @@ const Cart: React.FC = () => {
                 onClick={() => navigate("/")}
                 className="ds-liquid-btn-secondary px-7 py-3 w-full sm:w-auto flex items-center justify-center gap-2 whitespace-nowrap"
               >
-                <span>হোম পেজে যান</span>
+                <span>Go to Home</span>
               </button>
             </div>
           </motion.div>
@@ -275,10 +275,10 @@ const Cart: React.FC = () => {
               <div className="ds-liquid-panel p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-                    আপনার কার্ট
+                    Your Cart
                   </h1>
                   <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
-                    {items.length}টি পণ্য · মোট {totalUnits} ইউনিট
+                    {items.length} {items.length === 1 ? "item" : "items"} · {totalUnits} total {totalUnits === 1 ? "unit" : "units"}
                   </p>
                 </div>
 
@@ -292,7 +292,7 @@ const Cart: React.FC = () => {
                         : "ds-liquid-subpanel text-slate-600 dark:text-slate-300"
                     }`}
                   >
-                    {confirmClear ? "নিশ্চিত মুছুন?" : "খালি করুন"}
+                    {confirmClear ? "Confirm Clear?" : "Clear All"}
                   </button>
                 </div>
               </div>
@@ -347,9 +347,9 @@ const Cart: React.FC = () => {
                             </div>
 
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                              {item.variant || "স্ট্যান্ডার্ড ভেরিয়েন্ট"}
+                              {item.variant || "Standard Edition"}
                               {item.brand ? ` · ${item.brand}` : ""}
-                              {` · একক ${formatPrice(unitPrice)}`}
+                              {` · Unit ${formatPrice(unitPrice)}`}
                             </p>
 
                             <div className="mt-2.5 pt-2.5 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
@@ -393,7 +393,7 @@ const Cart: React.FC = () => {
               <div className="ds-liquid-panel p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    প্রোমো কোড বা ভাউচার
+                    Promo Code or Voucher
                   </span>
                   {myCoupons.length > 0 && !appliedPromo && (
                     <button
@@ -402,7 +402,7 @@ const Cart: React.FC = () => {
                       className="text-xs font-semibold text-sky-600 dark:text-sky-400 inline-flex items-center gap-1 whitespace-nowrap"
                     >
                       <Ticket className="w-3.5 h-3.5" />
-                      <span>{myCoupons.length}টি ভাউচার দেখুন</span>
+                      <span>View {myCoupons.length} {myCoupons.length === 1 ? "voucher" : "vouchers"}</span>
                     </button>
                   )}
                 </div>
@@ -415,8 +415,8 @@ const Cart: React.FC = () => {
                     disabled={!!appliedPromo}
                     placeholder={
                       appliedPromo
-                        ? `${appliedPromo.code || appliedPromo.title} যুক্ত`
-                        : "প্রোমো কোড লিখুন (যেমন FESTIVE10)"
+                        ? `${appliedPromo.code || appliedPromo.title} applied`
+                        : "Enter promo code (e.g. FESTIVE10)"
                     }
                     className="ds-liquid-input flex-1 min-w-0 px-3.5 py-2.5 text-xs font-semibold outline-none placeholder:text-slate-400 disabled:opacity-60"
                   />
@@ -426,7 +426,7 @@ const Cart: React.FC = () => {
                       onClick={() => setAppliedPromo(null)}
                       className="ds-liquid-btn-secondary !min-h-[40px] !text-xs px-4 whitespace-nowrap shrink-0"
                     >
-                      বাতিল
+                      Remove
                     </button>
                   ) : (
                     <button
@@ -434,7 +434,7 @@ const Cart: React.FC = () => {
                       onClick={applyPromo}
                       className="ds-liquid-btn-primary !min-h-[40px] !text-xs px-4 whitespace-nowrap shrink-0"
                     >
-                      প্রয়োগ করুন
+                      Apply
                     </button>
                   )}
                 </div>
@@ -447,30 +447,30 @@ const Cart: React.FC = () => {
               {/* Mobile Price Breakdown Card */}
               <div className="ds-liquid-panel p-4 space-y-3">
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  অর্ডার সামারি
+                  Order Summary
                 </h2>
                 <div className="space-y-2.5 text-xs sm:text-sm tabular-nums">
                   <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                    <span>সাবটোটাল ({totalUnits} ইউনিট)</span>
+                    <span>Subtotal ({totalUnits} {totalUnits === 1 ? "unit" : "units"})</span>
                     <span className="font-semibold text-slate-900 dark:text-white">
                       {formatPrice(total)}
                     </span>
                   </div>
                   {appliedPromo && (
                     <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                      <span>ডিসকাউন্ট ছাড়</span>
+                      <span>Discount</span>
                       <span className="font-bold">-{formatPrice(promoDiscount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                    <span>আনুমানিক ডেলিভারি চার্জ</span>
+                    <span>Estimated Delivery Charge</span>
                     <span className="font-semibold text-slate-900 dark:text-white">
                       {formatPrice(deliveryCharge)}
                     </span>
                   </div>
                   <div className="pt-2.5 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex justify-between items-baseline">
                     <span className="font-bold text-slate-900 dark:text-white">
-                      সর্বমোট দেয়
+                      Total Payable
                     </span>
                     <span className="text-xl font-extrabold text-slate-900 dark:text-white">
                       {formatPrice(grandTotal)}
@@ -479,7 +479,7 @@ const Cart: React.FC = () => {
                 </div>
 
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed pt-1">
-                  চেকআউট ধাপে ক্যাশ অন ডেলিভারি (COD), মোবাইল ব্যাংকিং অথবা ভিআইপি ফ্রি ডেলিভারি সুবিধা নির্বাচন করা যাবে।
+                  You can select Cash on Delivery (COD), Mobile Banking, or VIP Free Delivery options at checkout.
                 </p>
               </div>
             </div>
@@ -493,10 +493,10 @@ const Cart: React.FC = () => {
               <div className="ds-liquid-panel px-7 py-5 flex items-center justify-between gap-6">
                 <div>
                   <h1 className="text-2xl xl:text-[28px] font-extrabold tracking-tight text-slate-900 dark:text-white">
-                    শপিং কার্ট · Shopping Bag
+                    Shopping Bag
                   </h1>
                   <p className="text-sm text-slate-600 dark:text-slate-300/85 mt-1 tabular-nums">
-                    আপনার কার্টে {items.length}টি ভিন্ন পণ্য · সর্বমোট {totalUnits} ইউনিট সংরক্ষিত আছে
+                    {items.length} distinct {items.length === 1 ? "item" : "items"} · {totalUnits} total {totalUnits === 1 ? "unit" : "units"} saved in your bag
                   </p>
                 </div>
 
@@ -507,7 +507,7 @@ const Cart: React.FC = () => {
                     className="ds-liquid-btn-secondary !min-h-[44px] !text-sm px-5 flex items-center gap-2 whitespace-nowrap cursor-pointer"
                   >
                     <ShoppingBag className="w-4 h-4 shrink-0" />
-                    <span>কেনাকাটা চালিয়ে যান</span>
+                    <span>Continue Shopping</span>
                   </button>
                   <button
                     type="button"
@@ -518,7 +518,7 @@ const Cart: React.FC = () => {
                         : "ds-liquid-subpanel text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400"
                     }`}
                   >
-                    {confirmClear ? "সত্যিই সব মুছবেন?" : "কার্ট খালি করুন"}
+                    {confirmClear ? "Confirm Clear All?" : "Clear Bag"}
                   </button>
                 </div>
               </div>
@@ -530,9 +530,9 @@ const Cart: React.FC = () => {
                   <div className="ds-liquid-panel p-6">
                     {/* Column Labels */}
                     <div className="grid grid-cols-12 gap-4 pb-3.5 border-b border-slate-900/[0.07] dark:border-white/[0.08] text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      <div className="col-span-6">প্রোডাক্ট ও বিবরণ</div>
-                      <div className="col-span-3 text-center">পরিমাণ</div>
-                      <div className="col-span-3 text-right">মোট মূল্য</div>
+                      <div className="col-span-6">Product &amp; Details</div>
+                      <div className="col-span-3 text-center">Quantity</div>
+                      <div className="col-span-3 text-right">Total Price</div>
                     </div>
 
                     {/* Product Rows */}
@@ -576,7 +576,7 @@ const Cart: React.FC = () => {
                                   </Link>
 
                                   <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                    <span>{item.variant || "স্ট্যান্ডার্ড ভেরিয়েন্ট"}</span>
+                                    <span>{item.variant || "Standard Edition"}</span>
                                     {item.brand && (
                                       <>
                                         <span className="mx-1.5" aria-hidden="true">
@@ -588,7 +588,7 @@ const Cart: React.FC = () => {
                                   </div>
 
                                   <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
-                                    একক মূল্য: {formatPrice(unitPrice)}
+                                    Unit Price: {formatPrice(unitPrice)}
                                   </div>
                                 </div>
                               </div>
@@ -629,7 +629,7 @@ const Cart: React.FC = () => {
                                   className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors cursor-pointer whitespace-nowrap"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                  <span>সরান</span>
+                                  <span>Remove</span>
                                 </button>
                               </div>
                             </motion.div>
@@ -643,14 +643,14 @@ const Cart: React.FC = () => {
                   <div className="ds-liquid-panel px-6 py-4 flex items-center justify-between gap-6 text-xs text-slate-600 dark:text-slate-300">
                     <div className="flex items-center gap-2.5">
                       <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-                      <span>১০০% কোয়ালিটি চেকড অরিজিনাল পণ্য</span>
+                      <span>100% Quality-Checked Authentic Products</span>
                     </div>
                     <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">
                       |
                     </span>
                     <div className="flex items-center gap-2.5">
                       <PackageCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span>আনবক্সিং ভিডিও প্রোটেকশন ও নিরাপদ কুরিয়ার ট্র্যাকিং</span>
+                      <span>Unboxing Video Protection &amp; Secure Courier Tracking</span>
                     </div>
                   </div>
                 </div>
@@ -660,10 +660,10 @@ const Cart: React.FC = () => {
                   <div className="ds-liquid-panel p-6 space-y-6">
                     <div>
                       <h2 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-                        অর্ডার সামারি
+                        Order Summary
                       </h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        চেকআউটের পূর্বে প্রোমো কোড বা ভাউচার যোগ করুন
+                        Add a promo code or voucher before proceeding to checkout
                       </p>
                     </div>
 
@@ -678,7 +678,7 @@ const Cart: React.FC = () => {
                           placeholder={
                             appliedPromo
                               ? `${appliedPromo.code || appliedPromo.title}`
-                              : "প্রোমো কোড (যেমন FESTIVE10)"
+                              : "Promo code (e.g. FESTIVE10)"
                           }
                           className="ds-liquid-input flex-1 min-w-0 px-4 py-2.5 text-sm font-semibold outline-none placeholder:text-slate-400 disabled:opacity-60"
                         />
@@ -688,7 +688,7 @@ const Cart: React.FC = () => {
                             onClick={() => setAppliedPromo(null)}
                             className="ds-liquid-btn-secondary !min-h-[42px] !text-xs px-4 whitespace-nowrap shrink-0"
                           >
-                            সরান
+                            Remove
                           </button>
                         ) : (
                           <button
@@ -696,7 +696,7 @@ const Cart: React.FC = () => {
                             onClick={applyPromo}
                             className="ds-liquid-btn-primary !min-h-[42px] !text-xs px-4 whitespace-nowrap shrink-0"
                           >
-                            প্রয়োগ
+                            Apply
                           </button>
                         )}
                       </div>
@@ -712,7 +712,7 @@ const Cart: React.FC = () => {
                           <span className="inline-flex items-center gap-1.5 truncate">
                             <CheckCircle2 className="w-4 h-4 shrink-0" />
                             <span className="truncate">
-                              {appliedPromo.code || appliedPromo.title} যুক্ত হয়েছে
+                              {appliedPromo.code || appliedPromo.title} applied
                             </span>
                           </span>
                           <span className="tabular-nums shrink-0">
@@ -729,10 +729,10 @@ const Cart: React.FC = () => {
                         >
                           <span className="inline-flex items-center gap-2">
                             <Ticket className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-                            <span>আপনার {myCoupons.length}টি ভাউচার প্রস্তুত আছে</span>
+                            <span>You have {myCoupons.length} {myCoupons.length === 1 ? "voucher" : "vouchers"} ready</span>
                           </span>
                           <span className="text-sky-600 dark:text-sky-400 whitespace-nowrap">
-                            দেখুন
+                            View
                           </span>
                         </button>
                       )}
@@ -741,7 +741,7 @@ const Cart: React.FC = () => {
                     {/* Tabular Price Breakdown */}
                     <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] space-y-3 text-sm tabular-nums">
                       <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                        <span>সাবটোটাল ({totalUnits} ইউনিট)</span>
+                        <span>Subtotal ({totalUnits} {totalUnits === 1 ? "unit" : "units"})</span>
                         <span className="font-semibold text-slate-900 dark:text-white">
                           {formatPrice(total)}
                         </span>
@@ -749,7 +749,7 @@ const Cart: React.FC = () => {
 
                       {appliedPromo && (
                         <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                          <span>ভাউচার / প্রোমো ছাড়</span>
+                          <span>Voucher / Promo Discount</span>
                           <span className="font-bold">
                             -{formatPrice(promoDiscount)}
                           </span>
@@ -757,7 +757,7 @@ const Cart: React.FC = () => {
                       )}
 
                       <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                        <span>ডেলিভারি চার্জ (আনুমানিক)</span>
+                        <span>Delivery Charge (Estimated)</span>
                         <span className="font-semibold text-slate-900 dark:text-white">
                           {formatPrice(deliveryCharge)}
                         </span>
@@ -765,7 +765,7 @@ const Cart: React.FC = () => {
 
                       <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex justify-between items-baseline">
                         <span className="text-base font-bold text-slate-900 dark:text-white">
-                          সর্বমোট
+                          Total
                         </span>
                         <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                           {formatPrice(grandTotal)}
@@ -780,12 +780,12 @@ const Cart: React.FC = () => {
                         onClick={() => navigate("/checkout")}
                         className="w-full ds-liquid-btn-primary py-3.5 px-6 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                       >
-                        <span>চেকআউটে এগিয়ে যান</span>
+                        <span>Proceed to Checkout</span>
                         <ArrowRight className="w-4 h-4 shrink-0" />
                       </button>
 
                       <p className="text-[11px] text-center text-slate-500 dark:text-slate-400 leading-relaxed">
-                        পরবর্তী ধাপে শিপিং ঠিকানা ও নিরাপদ পেমেন্ট পদ্ধতি নির্বাচন করুন
+                        Choose your shipping address and secure payment method in the next step
                       </p>
                     </div>
                   </div>
@@ -808,7 +808,7 @@ const Cart: React.FC = () => {
           <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
             <div className="min-w-0 tabular-nums">
               <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-none">
-                সর্বমোট ({totalUnits} ইউনিট)
+                Total ({totalUnits} {totalUnits === 1 ? "unit" : "units"})
               </div>
               <div className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mt-0.5 truncate">
                 {formatPrice(grandTotal)}
@@ -820,7 +820,7 @@ const Cart: React.FC = () => {
               onClick={() => navigate("/checkout")}
               className="ds-liquid-btn-primary !min-h-[44px] !text-sm px-6 flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0"
             >
-              <span>চেকআউট করুন</span>
+              <span>Checkout</span>
               <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
           </div>
@@ -846,13 +846,13 @@ const Cart: React.FC = () => {
                 className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
               >
                 <motion.div
-                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 36, scale: 0.98 }}
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
                   transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
                   drag={prefersReducedMotion ? false : "y"}
                   dragConstraints={{ top: 0, bottom: 0 }}
-                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  dragElastic={{ top: 0.02, bottom: 0.45 }}
                   onDragEnd={(_, info) => {
                     const projected = info.offset.y + projectMomentum(info.velocity.y);
                     if (projected > 110 || info.velocity.y > 420) {
@@ -861,16 +861,16 @@ const Cart: React.FC = () => {
                     }
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full max-w-md ds-apple-modal rounded-t-[28px] sm:rounded-[28px] p-5 sm:p-6 overflow-hidden flex flex-col max-h-[82vh]"
+                  className="w-full max-w-none sm:max-w-md ds-apple-sheet sm:ds-apple-modal rounded-t-[28px] rounded-b-none sm:rounded-[28px] p-5 pb-[calc(20px+env(safe-area-inset-bottom,0px))] sm:p-6 overflow-hidden flex flex-col max-h-[82dvh]"
                 >
                   <div className="w-9 h-1 rounded-full bg-black/20 dark:bg-white/25 mx-auto mb-3 sm:hidden" />
                   <div className="pb-4 border-b border-black/[0.06] dark:border-white/[0.08] flex justify-between items-center shrink-0">
                     <div>
                       <h3 className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        আপনার ভাউচারসমূহ
+                        Your Vouchers
                       </h3>
                       <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">
-                        যেকোনো একটি ভাউচার অর্ডারে যুক্ত করুন
+                        Select a voucher to apply to your order
                       </p>
                     </div>
                     <button
@@ -897,7 +897,7 @@ const Cart: React.FC = () => {
                             {voucher.title}
                           </h4>
                           <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-0.5 tabular-nums">
-                            সর্বনিম্ন অর্ডার: {formatPrice(voucher.minOrderValue || 0)}
+                            Minimum Order: {formatPrice(voucher.minOrderValue || 0)}
                           </p>
                         </div>
                         <button
@@ -905,7 +905,7 @@ const Cart: React.FC = () => {
                           onClick={() => applyVoucher(voucher)}
                           className="ds-liquid-btn-primary !min-h-[36px] !text-xs px-4 whitespace-nowrap shrink-0 active:scale-[0.97]"
                         >
-                          ব্যবহার করুন
+                          Use Voucher
                         </button>
                       </div>
                     ))}

@@ -230,9 +230,29 @@ const renderTextWithLinks = (text: string, isMe?: boolean) => {
   });
 };
 
+const getChatListPreview = (chat: any, currentUid?: string): { text: string; isDeleted: boolean; isMissedCall: boolean } => {
+  if (!chat) return { text: '', isDeleted: false, isMissedCall: false };
+  if (currentUid && chat.deletedLastFor && chat.deletedLastFor[currentUid]) {
+    return { text: '🚫 Message deleted', isDeleted: true, isMissedCall: false };
+  }
+  const raw = String(chat.lastMessage || '');
+  if (chat.lastMessageDeleted || raw === '🚫 Message deleted') {
+    return { text: '🚫 Message deleted', isDeleted: true, isMissedCall: false };
+  }
+  if (raw === '📞 Missed audio call' || raw === '📹 Missed video call') {
+    const isVideo = raw.toLowerCase().includes('video');
+    if (currentUid && chat.lastSenderId === currentUid) {
+      return { text: isVideo ? '📹 Video call' : '📞 Audio call', isDeleted: false, isMissedCall: false };
+    }
+    return { text: raw, isDeleted: false, isMissedCall: true };
+  }
+  return { text: raw, isDeleted: false, isMissedCall: false };
+};
+
 const CallBubble = ({ msg, isMe, onCallback }: { msg: any; isMe?: boolean; onCallback?: () => void }) => {
   const isVideo = msg.text?.toLowerCase().includes('video') || msg.systemType === 'video';
-  const isMissed = Boolean(msg.text?.includes('Missed') || msg.isMissed);
+  const isMissed = Boolean(msg.callStatus === 'missed' || msg.text?.includes('Missed') || msg.isMissed);
+  const isActiveRinging = msg.callStatus === 'calling' || msg.callStatus === 'ringing';
   
   let title = isVideo ? "Video call" : "Audio call";
   let subtext = "Tap to call again";
@@ -241,17 +261,22 @@ const CallBubble = ({ msg, isMe, onCallback }: { msg: any; isMe?: boolean; onCal
 
   if (isMissed) {
     if (!isMe) {
-      // Receiver side of a missed call (IMG_5588 top left: red circle + "Missed audio call" + "Tap to call back")
       iconBg = "bg-[#FA3E3E]";
       title = isVideo ? "Missed video call" : "Missed audio call";
       subtext = "Tap to call back";
     } else {
-      // Caller side of missed/unanswered call (IMG_5588 middle right: grey circle + "Audio call" + "Tap to call again")
       iconBg = "bg-[#8E8E93]";
       title = isVideo ? "Video call" : "Audio call";
       subtext = "Tap to call again";
     }
-  } else if (msg.duration || msg.callDuration) {
+  } else if (msg.callStatus === 'connected') {
+    isCompleted = true;
+    iconBg = "bg-[#34C759]";
+    subtext = "In progress...";
+  } else if (isActiveRinging) {
+    iconBg = isMe ? "bg-[#0071E3]" : "bg-[#34C759]";
+    subtext = isMe ? "Calling..." : "Incoming call...";
+  } else if (msg.duration || msg.callDuration || msg.callStatus === 'ended') {
     isCompleted = true;
     const totalSecs = Number(msg.duration || msg.callDuration || 0);
     const mins = Math.floor(totalSecs / 60);
@@ -273,21 +298,18 @@ const CallBubble = ({ msg, isMe, onCallback }: { msg: any; isMe?: boolean; onCal
     >
       <div className={cn("w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-xs", iconBg)}>
         {isMissed && !isMe ? (
-          /* Red circle with handset + 'x' matching IMG_5588 top left */
           <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
             <line x1="16" y1="3" x2="21" y2="8" stroke="white" strokeWidth="2.4" />
             <line x1="21" y1="3" x2="16" y2="8" stroke="white" strokeWidth="2.4" />
           </svg>
-        ) : isCompleted ? (
-          /* Grey circle with handset + top-right arrow matching IMG_5588 bottom right */
+        ) : isCompleted || isActiveRinging ? (
           <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
             <polyline points="15 3 21 3 21 9" stroke="white" strokeWidth="2.3" />
             <line x1="14" y1="10" x2="21" y2="3" stroke="white" strokeWidth="2.3" />
           </svg>
         ) : (
-          /* Grey circle with handset + 'x' matching IMG_5588 middle right */
           <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
             <line x1="16" y1="3" x2="21" y2="8" stroke="white" strokeWidth="2.4" />
@@ -2362,25 +2384,14 @@ const handleCreateChannel = async () => {
             updatedAt: serverTimestamp(),
             lastMessage: previewSummary,
             lastSenderId: user.uid,
-            seenBy: [user.uid]
+            seenBy: [user.uid],
+            lastMessageDeleted: false,
+            deletedLastFor: {}
           });
         }
 
         await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), msgData);
         const recipientId = targetChatOrChannel.otherUser?.id || targetChatOrChannel.otherUser?.uid;
-        if (recipientId) {
-          fetch('/api/web-push/send-p2p', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              targetUserId: recipientId,
-              title: `${user.displayName || 'Someone'} forwarded a message`,
-              body: previewSummary,
-              link: `/messages?chatId=${user.uid}`
-            })
-          }).catch(() => {});
-        }
-
         if (recipientId && recipientId !== 'system') {
           fetch('/api/send-push-user', {
             method: 'POST',
@@ -2389,7 +2400,9 @@ const handleCreateChannel = async () => {
               userId: recipientId,
               title: user.displayName || 'New Message',
               body: `Forwarded: ${previewSummary}`,
-              link: `/messages?chatId=${user.uid}`
+              link: `/messages?chatId=${user.uid}`,
+              type: 'message',
+              tag: `chat-${user.uid}`
             })
           }).catch(() => {});
         }
@@ -2591,6 +2604,8 @@ const handleCreateChannel = async () => {
             participants: c.participants,
             lastMessage: c.lastMessage || '',
             lastSenderId: c.lastSenderId || '',
+            lastMessageDeleted: Boolean(c.lastMessageDeleted),
+            deletedLastFor: c.deletedLastFor || {},
             seenBy: c.seenBy || [],
             type: c.type,
             isGroup: c.isGroup,
@@ -3268,6 +3283,8 @@ const handleCreateChannel = async () => {
           lastMessage: lastMessageText,
           lastSenderId: user.uid,
           seenBy: [user.uid],
+          lastMessageDeleted: false,
+          deletedLastFor: {},
           ...(isAdminRole && !isGroup ? { aiDisabled: true } : {}),
         }).catch(() => {}),
       ]);
@@ -3282,7 +3299,9 @@ const handleCreateChannel = async () => {
             userId: recipientId,
             title: user.displayName || 'New Message',
             body: lastMessageText,
-            link: `/messages?chatId=${user.uid}`
+            link: `/messages?chatId=${user.uid}`,
+            type: 'message',
+            tag: `chat-${user.uid}`
           })
         }).catch(() => {});
 
@@ -3433,7 +3452,7 @@ const handleCreateChannel = async () => {
         );
       }
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-      notify('মেসেজ পাঠাতে সমস্যা হয়েছে: ' + (err?.message || 'নেটওয়ার্ক সমস্যা'), 'error');
+      notify('Failed to send message: ' + (err?.message || 'Network error'), 'error');
     }
   };
 
@@ -3472,7 +3491,25 @@ const handleCreateChannel = async () => {
         lastSenderId: user.uid,
         updatedAt: serverTimestamp(),
         seenBy: [user.uid],
+        lastMessageDeleted: false,
+        deletedLastFor: {},
       });
+
+      const directRecipientId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
+      if (directRecipientId && directRecipientId !== 'system') {
+        fetch('/api/send-push-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: directRecipientId,
+            title: user.displayName || 'New Message',
+            body: isSticker ? '✨ Sent a sticker' : '📷 Sent an image',
+            link: `/messages?chatId=${user.uid}`,
+            type: 'message',
+            tag: `chat-${user.uid}`
+          })
+        }).catch(() => {});
+      }
 
       (audioHelper as any)?.playMessageSentSound?.();
       setTimeout(() => {
@@ -3503,6 +3540,77 @@ const handleCreateChannel = async () => {
   // --- Calling Logic (Real-time P2P) ---
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [webRTCError, setWebRTCError] = useState<string | null>(null);
+  const activeCallMetaRef = useRef<{
+    callId: string;
+    chatId: string;
+    callMessageId: string;
+    type: 'audio' | 'video';
+    callerId: string;
+    wasConnected: boolean;
+  } | null>(null);
+  const callStatusRef = useRef<'connecting' | 'ringing' | 'connected' | 'ended'>('connecting');
+  const callDurationRef = useRef<number>(0);
+  const finalizedCallIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    callStatusRef.current = callStatus;
+  }, [callStatus]);
+
+  useEffect(() => {
+    callDurationRef.current = callDuration;
+  }, [callDuration]);
+
+  const finalizeCallLog = async (opts: {
+    callId: string;
+    chatId?: string;
+    callMessageId?: string;
+    type: 'audio' | 'video';
+    callerId?: string;
+    wasConnected: boolean;
+    durationSeconds: number;
+  }) => {
+    if (!opts.callId || finalizedCallIdsRef.current.has(opts.callId)) return;
+    finalizedCallIdsRef.current.add(opts.callId);
+    if (!opts.chatId || !opts.callMessageId) return;
+
+    const isVideo = opts.type === 'video';
+    if (opts.wasConnected) {
+      const secs = Math.max(0, Number(opts.durationSeconds || 0));
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      const summaryPreview = isVideo
+        ? `📹 Video call (${formatDuration(secs)})`
+        : `📞 Audio call (${formatDuration(secs)})`;
+      await updateDoc(doc(db, 'p2p_chats', opts.chatId, 'messages', opts.callMessageId), {
+        callStatus: 'ended',
+        isMissed: false,
+        duration: secs,
+        callDuration: secs,
+        text: `${isVideo ? 'Video' : 'Audio'} call ended (${m}m ${s}s)`,
+      }).catch(() => {});
+      await updateDoc(doc(db, 'p2p_chats', opts.chatId), {
+        lastMessage: summaryPreview,
+        lastMessageDeleted: false,
+        deletedLastFor: {},
+        updatedAt: serverTimestamp(),
+      }).catch(() => {});
+    } else {
+      const missedTitle = isVideo ? 'Missed video call' : 'Missed audio call';
+      const missedPreview = isVideo ? '📹 Missed video call' : '📞 Missed audio call';
+      await updateDoc(doc(db, 'p2p_chats', opts.chatId, 'messages', opts.callMessageId), {
+        callStatus: 'missed',
+        isMissed: true,
+        text: missedTitle,
+      }).catch(() => {});
+      await updateDoc(doc(db, 'p2p_chats', opts.chatId), {
+        lastMessage: missedPreview,
+        ...(opts.callerId ? { lastSenderId: opts.callerId } : {}),
+        lastMessageDeleted: false,
+        deletedLastFor: {},
+        updatedAt: serverTimestamp(),
+      }).catch(() => {});
+    }
+  };
 
   // Sync with activeCallIdParam (if accepted from incoming call overlay)
   useEffect(() => {
@@ -3513,7 +3621,29 @@ const handleCreateChannel = async () => {
       setCurrentCallId(activeCallIdParam);
       setIsCalling(true);
       setCallStatus('connected');
+      callStatusRef.current = 'connected';
       if (callTypeParam) setCallType(callTypeParam);
+
+      getDoc(doc(db, 'p2p_calls', activeCallIdParam)).then((snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          const resolvedType = (d.type === 'video' ? 'video' : 'audio') as 'audio' | 'video';
+          activeCallMetaRef.current = {
+            callId: activeCallIdParam,
+            chatId: d.chatId || activeChat?.id || '',
+            callMessageId: d.callMessageId || '',
+            type: resolvedType,
+            callerId: d.callerId || '',
+            wasConnected: true,
+          };
+          if (d.chatId && d.callMessageId) {
+            updateDoc(doc(db, 'p2p_chats', d.chatId, 'messages', d.callMessageId), {
+              callStatus: 'connected',
+              isMissed: false,
+            }).catch(() => {});
+          }
+        }
+      }).catch(() => {});
       
       // Clean query params so we don't trigger it again
       const params = new URLSearchParams(searchParams);
@@ -3534,27 +3664,28 @@ const handleCreateChannel = async () => {
       if (data.status === 'ringing') {
         setCallStatus('ringing');
       } else if (data.status === 'connected') {
-        if (callStatus !== 'connected') {
+        if (activeCallMetaRef.current && activeCallMetaRef.current.callId === currentCallId) {
+          activeCallMetaRef.current.wasConnected = true;
+        }
+        if (callStatusRef.current !== 'connected') {
           setCallStatus('connected');
+          callStatusRef.current = 'connected';
           if (audioHelper && typeof audioHelper.stop === 'function') {
             audioHelper.stop();
           }
           setCallDuration(0);
-          
-          // Log start of call in chat if we are the caller
-          if (data.callerId === user?.uid && activeChat && !activeChat?.isNew) {
-            addDoc(collection(db, 'p2p_chats', activeChat?.id, 'messages'), {
-              text: `Started ${data.type} call`,
-              senderId: user?.uid,
-              systemType: data.type,
-              timestamp: Date.now()
-            }).catch(console.error);
+          callDurationRef.current = 0;
+
+          if (data.callerId === user?.uid && data.chatId && data.callMessageId) {
+            updateDoc(doc(db, 'p2p_chats', data.chatId, 'messages', data.callMessageId), {
+              callStatus: 'connected',
+              isMissed: false,
+            }).catch(() => {});
           }
         }
       } else if (data.status === 'ended') {
         setIsCalling(false);
 
-        // Thoroughly stop and clean up all WebRTC streams, microphone & camera tracks
         if (localStreamRef.current) {
           localStreamRef.current.getTracks().forEach((track: any) => {
             try {
@@ -3604,32 +3735,62 @@ const handleCreateChannel = async () => {
         if (audioHelper && typeof audioHelper.playEndBip === 'function') {
           audioHelper.playEndBip();
         }
-        
-        // Log end of call in chat if we are the caller and we were connected
-        if (data.callerId === user?.uid && activeChat && !activeChat?.isNew && callStatus === 'connected') {
-          addDoc(collection(db, 'p2p_chats', activeChat?.id, 'messages'), {
-            text: `${callType} call ended (${Math.floor(callDuration / 60)}m ${callDuration % 60}s)`,
-            senderId: user?.uid,
-            systemType: callType,
-            timestamp: serverTimestamp()
-          }).catch(console.error);
+
+        const meta = activeCallMetaRef.current;
+        const resolvedWasConnected =
+          data.endReason === 'declined' || data.endReason === 'cancelled' || data.endReason === 'missed'
+            ? false
+            : Boolean(meta?.wasConnected || callStatusRef.current === 'connected');
+
+        if (data.callerId === user?.uid || meta?.callerId === user?.uid || resolvedWasConnected) {
+          finalizeCallLog({
+            callId: currentCallId,
+            chatId: data.chatId || meta?.chatId || activeChat?.id,
+            callMessageId: data.callMessageId || meta?.callMessageId,
+            type: (data.type || meta?.type || callType) === 'video' ? 'video' : 'audio',
+            callerId: data.callerId || meta?.callerId,
+            wasConnected: resolvedWasConnected,
+            durationSeconds: callDurationRef.current,
+          }).catch(() => {});
         }
-        
+
+        activeCallMetaRef.current = null;
         setCurrentCallId(null);
       }
     });
 
     return () => unsub();
-  }, [currentCallId, callStatus, activeChat, user, callType, callDuration]);
+  }, [currentCallId, activeChat?.id, user?.uid, callType]);
+
+  // Auto-mark unanswered outgoing call as missed after 45 seconds
+  useEffect(() => {
+    if (!isCalling || !currentCallId) return;
+    if (callStatus !== 'connecting' && callStatus !== 'ringing') return;
+    const isCaller = activeCallMetaRef.current?.callerId === user?.uid;
+    if (!isCaller) return;
+
+    const timeoutId = setTimeout(() => {
+      if (callStatusRef.current === 'connecting' || callStatusRef.current === 'ringing') {
+        endCall();
+      }
+    }, 45000);
+
+    return () => clearTimeout(timeoutId);
+  }, [isCalling, currentCallId, callStatus, user?.uid]);
 
   const startCall = async (type: 'audio' | 'video') => {
-    if (!user || !activeChat || activeChat?.isNew) {
-      notify("Please open an active chat to make a call.", "error");
+    if (!user || !activeChat) {
+      notify("Please open a chat to make a call.", "error");
       return;
     }
 
-    const targetUserId = activeChat?.otherUser?.id;
-    if (targetUserId && targetUserId !== "system") {
+    const targetUserId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
+    if (!targetUserId) {
+      notify("Cannot place call in this conversation.", "error");
+      return;
+    }
+
+    if (targetUserId !== "system") {
       try {
         const uDoc = await getDoc(doc(db, 'users', targetUserId));
         if (uDoc.exists()) {
@@ -3648,6 +3809,9 @@ const handleCreateChannel = async () => {
     setCallType(type);
     setIsCalling(true);
     setCallStatus('connecting');
+    callStatusRef.current = 'connecting';
+    setCallDuration(0);
+    callDurationRef.current = 0;
 
     // Immediately request camera and microphone stream so video preview works instantly
     try {
@@ -3673,37 +3837,82 @@ const handleCreateChannel = async () => {
     }
 
     try {
-      fetch('/api/web-push/send-p2p', {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({
-               targetUserId: activeChat?.otherUser?.id,
-               title: `Incoming ${callType} call 📞`,
-               body: `${user.displayName || 'Someone'} is calling you...`,
-               link: `/messages?chatId=${user.uid}`
-           })
-       }).catch(() => {});
-       
+      let chatId = activeChat?.id;
+      const callPreviewLabel = type === 'video' ? '📹 Video call' : '📞 Audio call';
+      const callBubbleTitle = type === 'video' ? 'Video call' : 'Audio call';
+
+      if (activeChat?.isNew || !chatId) {
+        const chatRef = await addDoc(collection(db, 'p2p_chats'), {
+          participants: [user.uid, targetUserId],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          lastMessage: callPreviewLabel,
+          lastSenderId: user.uid,
+          seenBy: [user.uid],
+          lastMessageDeleted: false,
+          deletedLastFor: {}
+        });
+        chatId = chatRef.id;
+        setTempActiveChat({ ...activeChat, id: chatId, isNew: false, seenBy: [user.uid] });
+        setSearchParams({ chatId }, { replace: true });
+      }
+
+      // Immediately write outgoing call bubble in chat so both sides see it right away
+      const callMsgRef = await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), {
+        text: callBubbleTitle,
+        senderId: user.uid,
+        senderName: userShopName || user.displayName || 'User',
+        senderPhoto: user.photoURL || '',
+        systemType: type,
+        callStatus: 'calling',
+        isMissed: false,
+        createdAt: Date.now(),
+        timestamp: serverTimestamp(),
+        seenBy: [user.uid],
+      });
+
+      await updateDoc(doc(db, 'p2p_chats', chatId), {
+        updatedAt: serverTimestamp(),
+        lastMessage: callPreviewLabel,
+        lastSenderId: user.uid,
+        seenBy: [user.uid],
+        lastMessageDeleted: false,
+        deletedLastFor: {},
+      }).catch(() => {});
+
       const callRef = await addDoc(collection(db, 'p2p_calls'), {
         callerId: user.uid,
         callerName: user.displayName || 'Deep Shop Customer',
         callerAvatar: user.photoURL || '',
-        receiverId: activeChat?.otherUser?.id,
+        receiverId: targetUserId,
+        chatId,
+        callMessageId: callMsgRef.id,
         status: 'calling',
         type,
         timestamp: Date.now()
       });
+
+      activeCallMetaRef.current = {
+        callId: callRef.id,
+        chatId,
+        callMessageId: callMsgRef.id,
+        type,
+        callerId: user.uid,
+        wasConnected: false,
+      };
       setCurrentCallId(callRef.id);
 
-      // Send push notification to receiver!
+      // Send background Web Push notification for the incoming call
       fetch("/api/send-push-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: activeChat?.otherUser?.id || activeChat?.otherUser?.uid,
-          title: `Incoming ${type === 'audio' ? 'Voice' : 'Video'} Call...`,
+          userId: targetUserId,
+          title: `Incoming ${type === 'video' ? 'Video' : 'Audio'} Call`,
           body: `${user.displayName || 'Someone'} is calling you on Deep Shop.`,
-          link: `/messages?chatId=${user.uid}&autoCall=true`
+          link: `/messages?chatId=${user.uid}`,
+          type: 'call',
+          tag: `call-${callRef.id}`
         })
       }).catch(err => console.error("Call push notification failed:", err));
     } catch (e) {
@@ -3981,8 +4190,11 @@ const handleCreateChannel = async () => {
   }, [currentCallId, callStatus]);
 
   const endCall = async () => {
-    const finalDuration = callDuration;
-    
+    const finalDuration = callDurationRef.current;
+    const meta = activeCallMetaRef.current;
+    const wasConnected = Boolean(meta?.wasConnected || callStatusRef.current === 'connected');
+    const activeId = currentCallId || meta?.callId;
+
     setIsCalling(false);
     setWebRTCError(null);
     
@@ -4034,22 +4246,24 @@ const handleCreateChannel = async () => {
       audioHelper.playEndBip();
     }
     
-    if (currentCallId) {
-      await updateDoc(doc(db, 'p2p_calls', currentCallId), {
-        status: 'ended'
+    if (activeId) {
+      await updateDoc(doc(db, 'p2p_calls', activeId), {
+        status: 'ended',
+        endReason: wasConnected ? 'completed' : 'cancelled'
       }).catch(console.error);
+
+      await finalizeCallLog({
+        callId: activeId,
+        chatId: meta?.chatId || activeChat?.id,
+        callMessageId: meta?.callMessageId,
+        type: meta?.type || callType,
+        callerId: meta?.callerId || user?.uid,
+        wasConnected,
+        durationSeconds: finalDuration,
+      }).catch(() => {});
+
+      activeCallMetaRef.current = null;
       setCurrentCallId(null);
-    }
-    
-    if (finalDuration > 0 && activeChat && activeChat?.id) {
-       try {
-         await addDoc(collection(db, 'p2p_chats', activeChat?.id, 'messages'), {
-            text: `Call ended. Duration: ${formatDuration(finalDuration)}`,
-            senderId: 'system',
-            timestamp: Date.now(),
-            readBy: [user.uid]
-         });
-       } catch (e) { console.error(e); }
     }
   };
   
@@ -5189,11 +5403,24 @@ const handleCreateChannel = async () => {
                             <p className="font-semibold text-zinc-900 dark:text-white text-sm truncate">
                               {getChatDisplayName(chat)}
                             </p>
-                            {chat.lastMessage && (
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                                {chat.lastMessage}
-                              </p>
-                            )}
+                            {(() => {
+                              const matchPreview = getChatListPreview(chat, user?.uid);
+                              if (!matchPreview.text) return null;
+                              return (
+                                <p
+                                  className={cn(
+                                    "text-xs truncate mt-0.5",
+                                    matchPreview.isDeleted
+                                      ? "italic text-zinc-400 dark:text-zinc-500"
+                                      : matchPreview.isMissedCall
+                                      ? "text-rose-500 font-medium"
+                                      : "text-zinc-500 dark:text-zinc-400"
+                                  )}
+                                >
+                                  {matchPreview.text}
+                                </p>
+                              );
+                            })()}
                           </div>
                         </div>
                       );
@@ -5698,41 +5925,74 @@ const handleCreateChannel = async () => {
                                   </div>
 
                                   <div className="mt-0.5 flex items-center gap-1 min-w-0">
-                                    {isChatOtherTyping ? (
-                                      <p className="text-[13.5px] font-medium text-[#2F80ED] truncate">typing...</p>
-                                    ) : isChatOtherRecording ? (
-                                      <p className="text-[13.5px] font-medium text-rose-500 truncate flex items-center gap-1">
-                                        <Icon name="mic" className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                                        <span>recording voice...</span>
-                                      </p>
-                                    ) : chat.lastSenderId === user?.uid && chat.lastMessage ? (
-                                      <div className="flex items-center gap-1 min-w-0">
-                                        <MsgCheckDoubleIcon
+                                    {(() => {
+                                      const previewInfo = getChatListPreview(chat, user?.uid);
+                                      if (isChatOtherTyping) {
+                                        return <p className="text-[13.5px] font-medium text-[#2F80ED] truncate">typing...</p>;
+                                      }
+                                      if (isChatOtherRecording) {
+                                        return (
+                                          <p className="text-[13.5px] font-medium text-rose-500 truncate flex items-center gap-1">
+                                            <Icon name="mic" className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                            <span>recording voice...</span>
+                                          </p>
+                                        );
+                                      }
+                                      if (chat.lastSenderId === user?.uid && previewInfo.text) {
+                                        return (
+                                          <div className="flex items-center gap-1 min-w-0">
+                                            <MsgCheckDoubleIcon
+                                              className={cn(
+                                                'w-[16px] h-[16px] shrink-0',
+                                                isSeenByOtherInList ? 'text-[#2F80ED]' : 'text-zinc-400 dark:text-zinc-500'
+                                              )}
+                                            />
+                                            <p
+                                              className={cn(
+                                                'text-[13.5px] truncate',
+                                                previewInfo.isDeleted
+                                                  ? 'italic text-zinc-400 dark:text-zinc-500'
+                                                  : 'text-zinc-500 dark:text-zinc-400'
+                                              )}
+                                            >
+                                              {previewInfo.text}
+                                            </p>
+                                          </div>
+                                        );
+                                      }
+                                      if ((chat.isGroup || chat.type === 'group') && chat.lastSenderName && previewInfo.text) {
+                                        return (
+                                          <p
+                                            className={cn(
+                                              'text-[13.5px] truncate',
+                                              previewInfo.isDeleted
+                                                ? 'italic text-zinc-400 dark:text-zinc-500'
+                                                : 'text-zinc-500 dark:text-zinc-400'
+                                            )}
+                                          >
+                                            {previewInfo.isDeleted
+                                              ? previewInfo.text
+                                              : `${String(chat.lastSenderName).split(' ')[0]}: ${previewInfo.text}`}
+                                          </p>
+                                        );
+                                      }
+                                      return (
+                                        <p
                                           className={cn(
-                                            'w-[16px] h-[16px] shrink-0',
-                                            isSeenByOtherInList ? 'text-[#2F80ED]' : 'text-zinc-400 dark:text-zinc-500'
+                                            'text-[13.5px] truncate',
+                                            previewInfo.isDeleted
+                                              ? 'italic text-zinc-400 dark:text-zinc-500'
+                                              : previewInfo.isMissedCall
+                                              ? 'text-rose-500 font-medium'
+                                              : isUnread
+                                              ? 'text-zinc-700 dark:text-zinc-200 font-medium'
+                                              : 'text-zinc-500 dark:text-zinc-400'
                                           )}
-                                        />
-                                        <p className="text-[13.5px] text-zinc-500 dark:text-zinc-400 truncate">
-                                          {chat.lastMessage}
+                                        >
+                                          {previewInfo.text || 'Tap to chat'}
                                         </p>
-                                      </div>
-                                    ) : (chat.isGroup || chat.type === 'group') && chat.lastSenderName && chat.lastMessage ? (
-                                      <p className="text-[13.5px] text-zinc-500 dark:text-zinc-400 truncate">
-                                        {String(chat.lastSenderName).split(' ')[0]}: {chat.lastMessage}
-                                      </p>
-                                    ) : (
-                                      <p
-                                        className={cn(
-                                          'text-[13.5px] truncate',
-                                          isUnread
-                                            ? 'text-zinc-700 dark:text-zinc-200 font-medium'
-                                            : 'text-zinc-500 dark:text-zinc-400'
-                                        )}
-                                      >
-                                        {chat.lastMessage || 'Tap to chat'}
-                                      </p>
-                                    )}
+                                      );
+                                    })()}
                                   </div>
                                 </div>
 
@@ -6167,7 +6427,7 @@ const handleCreateChannel = async () => {
                      </div>
                      <h3 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">You are Banned from this Channel</h3>
                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm leading-relaxed">
-                         আপনার আইডি এই কমিউনিটি চ্যানেল থেকে ব্যান করা হয়েছে। আপনি এই চ্যানেলের কোনো মেসেজ বা আপডেট দেখতে পারবেন না।
+                         Your account has been banned from this community channel. You cannot view messages or updates in this channel.
                      </p>
                      <button
                          type="button"
@@ -7222,10 +7482,10 @@ const handleCreateChannel = async () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h5 className="font-bold text-xs text-zinc-900 dark:text-amber-300 flex items-center gap-1.5">
-                            নিরাপত্তা সতর্কতা ও লেনদেন নির্দেশিকা
+                            Safety Warning &amp; Transaction Guidelines
                           </h5>
                           <p className="text-[11px] text-zinc-600 dark:text-amber-200/80 mt-0.5 leading-relaxed font-medium">
-                            গ্রুপে বা কারো পার্সোনাল ইনবক্সে অগ্রিম টাকা লেনদেন করার ক্ষেত্রে নিজ দায়িত্বে করবেন। প্ল্যাটফর্মের অফিশিয়াল চেকআউট ছাড়া যেকোনো ব্যক্তিগত লেনদেনের জন্য DEEP SHOP কর্তৃপক্ষ কোনোভাবেই দায়ী থাকবে না।
+                            Any advance payments made directly in groups or personal chats are strictly at your own risk. DEEP SHOP is not responsible for personal transactions conducted outside the official platform checkout.
                           </p>
                         </div>
                       </div>
@@ -7238,7 +7498,7 @@ const handleCreateChannel = async () => {
                         className="px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10.5px] shrink-0 self-center transition active:scale-95 flex items-center gap-1 cursor-pointer"
                         title="Dismiss Safety Notice"
                       >
-                        <span>বুঝেছি</span>
+                        <span>Got it</span>
                         <Icon name="x" className="w-3 h-3" />
                       </button>
                     </div>
@@ -7996,8 +8256,7 @@ const handleCreateChannel = async () => {
                          }
 
                          if (isSystem) {
-                             const isMissed = Boolean(msg.text?.includes('Missed') || msg.isMissed);
-                             const alignRight = isMe && !isMissed;
+                             const alignRight = isMe;
                              return (
                                  <React.Fragment key={`${msg.id || idx}-${idx}`}>
                                      {showDate && (
@@ -9722,9 +9981,18 @@ const handleCreateChannel = async () => {
                         } else {
                           colRef = collection(db, 'p2p_chats', activeChat?.id, 'messages');
                         }
+                        const visibleMsgs = messages.filter(m => !m.deletedFor?.includes(user.uid));
+                        const isLatestP2PMsg = !activeChannel && activeChat?.id && (
+                          visibleMsgs.length === 0 || visibleMsgs[visibleMsgs.length - 1]?.id === deleteMessageId
+                        );
                         await updateDoc(doc(colRef, deleteMessageId), {
                           deletedFor: arrayUnion(user.uid)
                         });
+                        if (isLatestP2PMsg) {
+                          await updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+                            [`deletedLastFor.${user.uid}`]: true
+                          }).catch(() => {});
+                        }
                       } catch(e) {
                         console.error(e);
                       }
@@ -9745,9 +10013,19 @@ const handleCreateChannel = async () => {
                           } else {
                             colRef = collection(db, 'p2p_chats', activeChat?.id, 'messages');
                           }
+                          const visibleMsgs = messages.filter(m => !m.deletedFor?.includes(user.uid));
+                          const isLatestP2PMsg = !activeChannel && activeChat?.id && (
+                            visibleMsgs.length === 0 || visibleMsgs[visibleMsgs.length - 1]?.id === deleteMessageId
+                          );
                           await updateDoc(doc(colRef, deleteMessageId), {
                             isDeletedForEveryone: true
                           });
+                          if (isLatestP2PMsg) {
+                            await updateDoc(doc(db, 'p2p_chats', activeChat.id), {
+                              lastMessage: '🚫 Message deleted',
+                              lastMessageDeleted: true
+                            }).catch(() => {});
+                          }
                         } catch(e) {
                           console.error(e);
                         }
@@ -10047,6 +10325,9 @@ const handleCreateChannel = async () => {
                             }
                           });
                           await batch.commit();
+                          await updateDoc(doc(db, 'p2p_chats', chatId), {
+                            [`deletedLastFor.${user.uid}`]: true
+                          }).catch(() => {});
                           notify("Conversation cleared for you", "success");
                         }
                         setShowClearChatModal(false);

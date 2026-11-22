@@ -63,13 +63,13 @@ export const BanglaVoiceAssistant: React.FC<BanglaVoiceAssistantProps> = ({
         </div>
         <div className="text-left min-w-0">
           <h4 className="text-[13px] sm:text-[14px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-1.5">
-            <span>ভয়েস নির্দেশিকা (Bangla Voice Guide)</span>
+            <span>Bangla Voice Guide</span>
             <span className="px-1.5 py-0.5 rounded-md bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF] text-[10px] font-semibold">
               Audio
             </span>
           </h4>
           <p className="text-[12px] text-[#6E6E73] dark:text-[#98989D] truncate mt-0.5">
-            ফর্ম পূরণের নিয়ম বাংলায় শুনতে স্পিকার বাটনে চাপুন
+            Tap Listen to hear form instructions in Bangla
           </p>
         </div>
       </div>
@@ -86,12 +86,12 @@ export const BanglaVoiceAssistant: React.FC<BanglaVoiceAssistantProps> = ({
         {isPlaying ? (
           <>
             <VolumeX className="w-4 h-4" />
-            <span>থামুন (Stop)</span>
+            <span>Stop</span>
           </>
         ) : (
           <>
             <Volume2 className="w-4 h-4" />
-            <span>শুনুন (Listen)</span>
+            <span>Listen</span>
           </>
         )}
       </button>

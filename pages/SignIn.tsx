@@ -185,17 +185,16 @@ const SignIn: React.FC = () => {
 
     const trimmedId = identifier.trim();
     if (!trimmedId) {
-      const err = "আপনার ইমেইল বা ফোন নম্বর প্রদান করুন।";
-      setFieldError(err);
-      playAuthVoice(err);
+      setFieldError("Please enter your email or phone number.");
+      playAuthVoice("আপনার ইমেইল বা ফোন নম্বর প্রদান করুন।");
       return;
     }
 
-    const badContent = validateInappropriateContent(trimmedId, "ইমেইল বা ফোন নম্বরে");
+    const badContent = validateInappropriateContent(trimmedId, "email or phone number");
     if (!badContent.isValid) {
       setFieldError(badContent.errorMsg);
       notify(badContent.errorMsg, "error");
-      playAuthVoice(badContent.errorMsg);
+      playAuthVoice(badContent.voiceMsg || badContent.errorMsg);
       return;
     }
 
@@ -204,32 +203,31 @@ const SignIn: React.FC = () => {
       if (!emailCheck.isValid) {
         setFieldError(emailCheck.errorMsg);
         notify(emailCheck.errorMsg, "error");
-        playAuthVoice(emailCheck.errorMsg);
+        playAuthVoice(emailCheck.voiceMsg || emailCheck.errorMsg);
         return;
       }
     } else if (!isLikelyPhoneNumber(trimmedId)) {
       const emailLikeCheck = validateRealEmail(`${trimmedId}@gmail.com`);
       if (!emailLikeCheck.isValid) {
         const msg =
-          "ইমেইল বা ইউজার আইডিতে 'test', 'user' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না। সঠিক ইমেইল বা ফোন নম্বর দিন।";
+          "Placeholder words like 'test' or 'user' are not allowed. Please enter a valid email or phone number.";
         setFieldError(msg);
         notify(msg, "error");
-        playAuthVoice(msg);
+        playAuthVoice("ইমেইল বা ইউজার আইডিতে 'test', 'user' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না। সঠিক ইমেইল বা ফোন নম্বর দিন।");
         return;
       }
     }
 
     if (!password) {
-      const err = "অনুগ্রহ করে আপনার পাসওয়ার্ড লিখুন।";
-      notify(err, "error");
-      playAuthVoice(err);
+      notify("Please enter your password.", "error");
+      playAuthVoice("অনুগ্রহ করে আপনার পাসওয়ার্ড লিখুন।");
       return;
     }
 
-    const badPwd = validateInappropriateContent(password, "পাসওয়ার্ডে");
+    const badPwd = validateInappropriateContent(password, "password");
     if (!badPwd.isValid) {
       notify(badPwd.errorMsg, "error");
-      playAuthVoice(badPwd.errorMsg);
+      playAuthVoice(badPwd.voiceMsg || badPwd.errorMsg);
       return;
     }
 
@@ -369,10 +367,10 @@ const SignIn: React.FC = () => {
         {hasPendingOrder && (
           <div className="mb-4 p-3.5 rounded-2xl bg-[#0071E3]/8 dark:bg-[#0A84FF]/14 border border-[#0071E3]/20 dark:border-[#0A84FF]/25 text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">
             <p className="font-bold">
-              অর্ডারটি দেখতে লগইন করুন অথবা নতুন অ্যাকাউন্ট খুলুন
+              Log in or create a new account to view your order
             </p>
             <p className="mt-0.5 text-[11px] opacity-80">
-              লগইন করার সাথে সাথেই আপনার অর্ডারটি স্বয়ংক্রিয়ভাবে যুক্ত হয়ে যাবে।
+              Your order will automatically link to your account as soon as you sign in.
             </p>
           </div>
         )}

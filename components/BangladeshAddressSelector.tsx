@@ -96,9 +96,9 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
 
     let error = "";
     if (abuseInDetails.hasAbuse || abuseInArea.hasAbuse) {
-      error = "ঠিকানায় আপত্তিকর বা অশালীন শব্দ ব্যবহার সম্পূর্ণ নিষিদ্ধ!";
+      error = "Abusive or offensive words are strictly prohibited in the address.";
     } else if (!detailedHouseRoad.trim()) {
-      error = "বাসা নং / রোড / হোল্ডিং / গ্রাম / পাড়া এর বিবরণ লিখুন।";
+      error = "Please enter your house no., road, holding, or village details.";
     }
 
     setValidationError(error);
@@ -107,9 +107,9 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
     }
 
     const structured = {
-      division: curDiv ? `${curDiv.name} (${curDiv.bnName})` : "",
-      district: curDist ? `${curDist.name} (${curDist.bnName})` : "",
-      upazila: curUpz ? `${curUpz.name} (${curUpz.bnName})` : "",
+      division: curDiv ? curDiv.name : "",
+      district: curDist ? curDist.name : "",
+      upazila: curUpz ? curUpz.name : "",
       areaUnion: areaUnion.trim(),
       detailedHouseRoad: detailedHouseRoad.trim()
     };
@@ -130,14 +130,14 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
       <div className="flex items-center gap-2 pb-2.5 border-b border-black/[0.06] dark:border-white/[0.08]">
         <MapPin className="w-5 h-5 text-[#0071E3] dark:text-[#0A84FF]" />
         <h4 className="text-[14px] font-semibold tracking-[-0.01em] text-[#1D1D1F] dark:text-[#F5F5F7]">
-          বাংলাদেশ ডেলিভারি ঠিকানা (A-Z Official BD Location)
+          Bangladesh Delivery Address (Official Location)
         </h4>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
           <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
-            ১. বিভাগ (Division) <span className="text-[#FF3B30]">*</span>
+            1. Division <span className="text-[#FF3B30]">*</span>
           </label>
           <select
             value={selectedDivisionId}
@@ -154,7 +154,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           >
             {BD_DIVISIONS.map((div) => (
               <option key={div.id} value={div.id}>
-                {div.bnName} ({div.name})
+                {div.name}
               </option>
             ))}
           </select>
@@ -162,7 +162,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
 
         <div>
           <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
-            ২. জেলা (District / Zila) <span className="text-[#FF3B30]">*</span>
+            2. District (Zila) <span className="text-[#FF3B30]">*</span>
           </label>
           <select
             value={selectedDistrictId}
@@ -179,7 +179,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           >
             {availableDistricts.map((dist) => (
               <option key={dist.id} value={dist.id}>
-                {dist.bnName} ({dist.name})
+                {dist.name}
               </option>
             ))}
           </select>
@@ -187,7 +187,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
 
         <div>
           <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
-            ৩. উপজেলা / থানা (Upazila / Thana) <span className="text-[#FF3B30]">*</span>
+            3. Upazila / Thana <span className="text-[#FF3B30]">*</span>
           </label>
           <select
             value={selectedUpazilaId}
@@ -208,7 +208,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           >
             {availableUpazilas.map((upz) => (
               <option key={upz.id} value={upz.id}>
-                {upz.bnName} ({upz.name})
+                {upz.name}
               </option>
             ))}
           </select>
@@ -216,7 +216,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
 
         <div>
           <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
-            ৪. ইউনিয়ন / এলাকা / ডাকঘর (Union / Area) <span className="text-[#FF3B30]">*</span>
+            4. Union / Area / Post Office <span className="text-[#FF3B30]">*</span>
           </label>
           <div className="relative">
             <input
@@ -229,7 +229,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
                 }
               }}
               onChange={(e) => setAreaUnion(e.target.value)}
-              placeholder="এলাকা বা ইউনিয়ন লিখুন অথবা সিলেক্ট করুন"
+              placeholder="Enter or select your area or union"
               className="w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.08] dark:border-white/[0.1] rounded-xl px-3 py-2.5 text-xs md:text-sm text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/25 focus:border-[#0071E3]"
             />
             {currentUpazila?.areas && currentUpazila.areas.length > 0 && (
@@ -242,7 +242,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
           </div>
           {currentUpazila?.areas && currentUpazila.areas.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
-              <span className="text-[10px] text-[#86868B] self-center">জনপ্রিয় এলাকা:</span>
+              <span className="text-[10px] text-[#86868B] self-center">Popular Areas:</span>
               {currentUpazila.areas.slice(0, 4).map((a, idx) => (
                 <button
                   key={idx}
@@ -267,7 +267,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
 
       <div>
         <label className="block text-xs font-semibold text-[#6E6E73] dark:text-[#A1A1A6] mb-1.5">
-          ৫. বাসা নং / রোড / হোল্ডিং / গ্রাম / পাড়া / মহল্লা (House, Road, Village, Moholla) <span className="text-[#FF3B30]">*</span>
+          5. House No. / Road / Holding / Village / Moholla <span className="text-[#FF3B30]">*</span>
         </label>
         <textarea
           rows={2}
@@ -280,7 +280,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
             }
           }}
           onChange={(e) => setDetailedHouseRoad(e.target.value)}
-          placeholder="যেমন: বাসা #১২, রোড #০৪, ব্লক-বি, গ্রাম: রসুলপুর, পাড়া: পূর্ব পাড়া"
+          placeholder="e.g., House #12, Road #04, Block-B, Village: Rasulpur"
           className={`w-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border rounded-xl px-3 py-2.5 text-xs md:text-sm text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 resize-none ${
             detectAbuse(detailedHouseRoad).hasAbuse
               ? "border-[#FF3B30] focus:ring-[#FF3B30]/25 bg-[#FF3B30]/5"
@@ -290,7 +290,7 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
         {detectAbuse(detailedHouseRoad).hasAbuse && (
           <p className="text-[11px] text-[#FF3B30] dark:text-[#FF453A] font-semibold mt-1 flex items-center gap-1">
             <AlertTriangle className="w-3.5 h-3.5" />
-            সতর্কতা: আপত্তিকর বা গালিযুক্ত শব্দ ব্যবহার করবেন না! ৩ বার ব্যবহারে চিরতরে ব্যান করা হবে।
+            Warning: Do not use offensive or abusive language! 3 strikes result in a permanent ban.
           </p>
         )}
       </div>
@@ -298,12 +298,12 @@ export const BangladeshAddressSelector: React.FC<BangladeshAddressSelectorProps>
       <div className="bg-[#248A3D]/8 dark:bg-[#30D158]/10 border border-[#248A3D]/20 dark:border-[#30D158]/20 rounded-2xl p-3.5 text-xs">
         <div className="flex items-center gap-1.5 text-[#248A3D] dark:text-[#30D158] font-semibold mb-1">
           <CheckCircle2 className="w-3.5 h-3.5" />
-          সম্পূর্ণ ঠিকানা প্রিভিউ:
+          Full Address Preview:
         </div>
         <p className="text-[#1D1D1F] dark:text-[#F5F5F7] font-medium break-words">
           {detailedHouseRoad.trim() ? detailedHouseRoad.trim() + ", " : ""}
           {areaUnion.trim() ? areaUnion.trim() + ", " : ""}
-          {currentUpazila?.name ? `${currentUpazila.name} (${currentUpazila.bnName}), ` : ""}
+          {currentUpazila?.name ? `${currentUpazila.name}, ` : ""}
           {availableDistricts.find((d) => d.id === selectedDistrictId)?.name ? `${availableDistricts.find((d) => d.id === selectedDistrictId)?.name}, ` : ""}
           {BD_DIVISIONS.find((d) => d.id === selectedDivisionId)?.name ? `${BD_DIVISIONS.find((d) => d.id === selectedDivisionId)?.name} Division` : ""}
         </p>

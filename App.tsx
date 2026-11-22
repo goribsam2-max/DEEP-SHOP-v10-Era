@@ -1,16 +1,15 @@
 import { subscribeToWebPush } from './lib/push';
 
-import React, { useState, useEffect, useRef, createContext, useContext, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { lazyRetry } from './lib/lazyRetry';
+import {
+  PageLoadingContext,
+  PageLoadingProvider,
+  usePageLoading,
+} from './lib/PageLoadingContext';
 
-export const PageLoadingContext = createContext<{
-  isPageLoading: boolean;
-  setIsPageLoading: (val: boolean) => void;
-}>({
-  isPageLoading: false,
-  setIsPageLoading: () => {}
-});
+export { PageLoadingContext };
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, updateDoc, collection, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
@@ -431,16 +430,18 @@ const MigrationHelper = () => {
 
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const { setIsPageLoading } = useContext(PageLoadingContext);
+  const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    // Explicitly restore document and body scrolling for all pages outside messages
+    // Explicitly restore native root scrolling for all pages outside messages
     if (!location.pathname.startsWith('/messages')) {
       document.documentElement.style.overflow = '';
-      document.documentElement.style.overflowY = 'auto';
+      document.documentElement.style.overflowY = '';
+      document.documentElement.style.overflowX = '';
       document.body.style.overflow = '';
-      document.body.style.overflowY = 'auto';
+      document.body.style.overflowY = '';
+      document.body.style.overflowX = '';
       document.body.style.overscrollBehavior = '';
     }
     setIsPageLoading(false);
@@ -518,7 +519,7 @@ const fetchIPAndLocation = async () => {
 const AppContent: React.FC = () => {
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
-  const { isPageLoading } = useContext(PageLoadingContext);
+  const { isPageLoading } = usePageLoading();
   const location = useLocation();
   const navigate = useNavigate();
   const notify = useNotify();
@@ -711,6 +712,22 @@ const AppContent: React.FC = () => {
     notifyRef.current = notify;
   }, [navigate, notify]);
 
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    const onSwMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PUSH_NAVIGATE' && typeof event.data.url === 'string') {
+        try {
+          const parsed = new URL(event.data.url, window.location.origin);
+          navigateRef.current(parsed.pathname + parsed.search + parsed.hash);
+        } catch {
+          navigateRef.current(event.data.url);
+        }
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', onSwMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onSwMessage);
+  }, []);
+
   // Background-preload primary customer routes right after first paint so navigation is instantaneous (<0.1s chunk wait)
   useEffect(() => {
     const preloadCoreRoutes = () => {
@@ -793,7 +810,7 @@ const AppContent: React.FC = () => {
               window.Notification.permission === 'granted'
             ) {
               pushSubscribedUid = currentUser.uid;
-              subscribeToWebPush(currentUser.uid);
+              subscribeToWebPush(currentUser.uid, 'granted');
             }
           } else {
             // Auto-create document if missing to avoid orphaned auth users
@@ -1013,7 +1030,7 @@ const AppContent: React.FC = () => {
         className={`${
           location.pathname.startsWith('/messages')
             ? 'h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none'
-            : 'min-h-screen overflow-x-hidden'
+            : 'min-h-screen overflow-x-clip'
         } selection:bg-zinc-900 selection:text-white relative w-full max-w-full`}
       >
         <ErrorBoundary>
@@ -1490,7 +1507,7 @@ const App: React.FC = () => {
         window.Notification &&
         window.Notification.permission === 'granted'
       ) {
-        subscribeToWebPush(user?.uid).catch(() => {});
+        subscribeToWebPush(user?.uid, 'granted').catch(() => {});
       }
     });
     return () => unsubscribe();
@@ -1499,8 +1516,8 @@ const App: React.FC = () => {
   return (
     <LanguageProvider>
       <ThemeProvider>
-        <BanOverlay />
-        <PageLoadingContext.Provider value={{ isPageLoading, setIsPageLoading }}>
+        <PageLoadingProvider value={{ isPageLoading, setIsPageLoading }}>
+          <BanOverlay />
           <ToastProvider>
             {deferredReady && (
               <Suspense fallback={null}>
@@ -1527,7 +1544,7 @@ const App: React.FC = () => {
               {!isPageLoading && <GlobalRouteAwareOverlays deferredReady={deferredReady} />}
             </Router>
           </ToastProvider>
-        </PageLoadingContext.Provider>
+        </PageLoadingProvider>
       </ThemeProvider>
     </LanguageProvider>
   );

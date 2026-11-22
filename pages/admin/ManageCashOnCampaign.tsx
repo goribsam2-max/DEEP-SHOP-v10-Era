@@ -120,13 +120,13 @@ export default function ManageCashOnCampaign() {
       setIsEnabled(nextState);
       notify(
         nextState
-          ? "ক্যাশ অন ক্যাম্পেইন চালু করা হয়েছে (Form & Home banner visible)"
-          : "ক্যাশ অন ক্যাম্পেইন বন্ধ করা হয়েছে (Form will show 'Soon Available')",
+          ? "Cash on Campaign enabled (Form & Home banner visible)"
+          : "Cash on Campaign paused (Form will show 'Soon Available')",
         "info"
       );
     } catch (e) {
       console.error(e);
-      notify("স্টেট আপডেট করতে সমস্যা হয়েছে", "error");
+      notify("Failed to update campaign status", "error");
     } finally {
       setToggling(false);
     }

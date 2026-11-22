@@ -926,7 +926,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 360 }}
                 onClick={(e) => e.stopPropagation()}
-                className="ds-sponsored-sheet w-full max-w-[480px] rounded-t-[28px] sm:rounded-[28px] px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl space-y-3.5 max-h-[90dvh] overflow-y-auto"
+                className="ds-sponsored-sheet w-full max-w-none sm:max-w-[480px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl space-y-3.5 max-h-[90dvh] overflow-y-auto"
               >
                 <div className="w-11 h-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600 mx-auto mb-1" />
 
@@ -1051,7 +1051,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 360 }}
                 onClick={(e) => e.stopPropagation()}
-                className="ds-sponsored-sheet w-full max-w-[480px] rounded-t-[28px] sm:rounded-[28px] px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl space-y-3.5"
+                className="ds-sponsored-sheet w-full max-w-none sm:max-w-[480px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl space-y-3.5"
               >
                 <div className="w-11 h-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600 mx-auto" />
                 <div className="flex items-center justify-between px-1">
@@ -1097,7 +1097,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 360 }}
                 onClick={(e) => e.stopPropagation()}
-                className="ds-sponsored-sheet-white w-full max-w-[480px] rounded-t-[28px] sm:rounded-[28px] px-5 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl max-h-[92dvh] overflow-y-auto"
+                className="ds-sponsored-sheet-white w-full max-w-none sm:max-w-[480px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] px-5 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl max-h-[92dvh] overflow-y-auto"
               >
                 {/* Header */}
                 <div className="relative flex items-center justify-center py-1">
@@ -1314,7 +1314,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 360 }}
                 onClick={(e) => e.stopPropagation()}
-                className="ds-sponsored-sheet w-full max-w-[480px] rounded-t-[28px] sm:rounded-[28px] px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto"
+                className="ds-sponsored-sheet w-full max-w-none sm:max-w-[480px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto"
               >
                 <div className="w-11 h-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600 mx-auto" />
 
@@ -1434,7 +1434,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 360 }}
                 onClick={(e) => e.stopPropagation()}
-                className="ds-sponsored-sheet-white w-full max-w-[480px] rounded-t-[28px] sm:rounded-[28px] px-6 pt-3 pb-[max(2.25rem,env(safe-area-inset-bottom))] shadow-2xl space-y-4 text-center"
+                className="ds-sponsored-sheet-white w-full max-w-none sm:max-w-[480px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] px-6 pt-3 pb-[max(2.25rem,env(safe-area-inset-bottom))] shadow-2xl space-y-4 text-center"
               >
                 <div className="w-11 h-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600 mx-auto" />
 
@@ -1472,7 +1472,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 360 }}
                 onClick={(e) => e.stopPropagation()}
-                className="ds-sponsored-sheet w-full max-w-[500px] rounded-t-[28px] sm:rounded-[28px] px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl space-y-3.5 max-h-[90dvh] overflow-y-auto"
+                className="ds-sponsored-sheet w-full max-w-none sm:max-w-[500px] rounded-t-[28px] rounded-b-none sm:rounded-[28px] px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl space-y-3.5 max-h-[90dvh] overflow-y-auto"
               >
                 <div className="w-11 h-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600 mx-auto" />
                 <div className="flex items-center justify-between px-1">

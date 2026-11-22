@@ -21,7 +21,7 @@ export const LanguageSwitcher = ({ className }: { className?: string }) => {
 
   const languagesList = [
     { id: 'en', label: 'English' },
-    { id: 'bn', label: 'বাংলা' },
+    { id: 'bn', label: 'Bengali' },
     { id: 'hi', label: 'हिन्दी' },
     { id: 'ar', label: 'العربية' },
     { id: 'es', label: 'Español' },

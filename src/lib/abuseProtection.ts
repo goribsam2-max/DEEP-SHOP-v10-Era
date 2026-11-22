@@ -8,7 +8,7 @@ export function validateBangladeshiPhone(rawPhone: string): {
   error?: string;
 } {
   if (!rawPhone || typeof rawPhone !== "string") {
-    return { isValid: false, normalized: "", error: "মোবাইল নম্বর লিখুন (Phone number required)" };
+    return { isValid: false, normalized: "", error: "Phone number is required" };
   }
 
   // Remove spaces, dashes, dots, parentheses
@@ -35,7 +35,7 @@ export function validateBangladeshiPhone(rawPhone: string): {
     return {
       isValid: false,
       normalized: cleaned,
-      error: "নম্বরে শুধুমাত্র সংখ্যা ব্যবহার করুন (Only numbers allowed)"
+      error: "Only numbers are allowed in the phone number"
     };
   }
 
@@ -44,7 +44,7 @@ export function validateBangladeshiPhone(rawPhone: string): {
     return {
       isValid: false,
       normalized: cleaned,
-      error: "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন (Must be exactly 11 digits)"
+      error: "Please enter a valid 11-digit Bangladeshi phone number"
     };
   }
 
@@ -55,7 +55,7 @@ export function validateBangladeshiPhone(rawPhone: string): {
     return {
       isValid: false,
       normalized: cleaned,
-      error: "অকার্যকর নম্বর! নম্বরটি 013, 014, 015, 016, 017, 018 অথবা 019 দিয়ে শুরু হতে হবে"
+      error: "Invalid prefix! Number must start with 013, 014, 015, 016, 017, 018, or 019"
     };
   }
 
@@ -69,7 +69,7 @@ export function validateBangladeshiPhone(rawPhone: string): {
     return {
       isValid: false,
       normalized: cleaned,
-      error: "ভুয়া বা টেস্ট নম্বর গ্রহণযোগ্য নয়। আপনার আসল সচল নম্বর দিন।"
+      error: "Dummy or test numbers are not accepted. Please enter your active phone number."
     };
   }
 
@@ -79,7 +79,7 @@ export function validateBangladeshiPhone(rawPhone: string): {
     return {
       isValid: false,
       normalized: cleaned,
-      error: "সঠিক সক্রিয় বাংলাদেশি মোবাইল নম্বর দিন।"
+      error: "Please enter a valid, active Bangladeshi mobile number."
     };
   }
 
@@ -279,11 +279,11 @@ export async function recordAbuseStrike(contextMessage?: string): Promise<{
   }
 
   if (currentStrikes >= 3) {
-    await banCurrentDevice(`৩ বার গালি ও আপত্তিকর শব্দ ব্যবহারের কারণে নিষিদ্ধ করা হয়েছে। (${contextMessage || "অশালীন আচরণ"})`);
+    await banCurrentDevice(`Banned after 3 strikes for abusive language and policy violations. (${contextMessage || "Inappropriate conduct"})`);
     return {
       strikes: 3,
       isBanned: true,
-      message: "৩ বার সতর্কতা অতিক্রম করায় আপনার অ্যাকাউন্ট ও ডিভাইস আজীবনের জন্য ব্যান করা হয়েছে!"
+      message: "Your account and device have been permanently banned after exceeding 3 warnings."
     };
   }
 
@@ -291,6 +291,6 @@ export async function recordAbuseStrike(contextMessage?: string): Promise<{
   return {
     strikes: currentStrikes,
     isBanned: false,
-    message: `⚠️ সতর্কতা (${currentStrikes}/৩): আপত্তিকর ভাষা বা গালি সনাক্ত করা হয়েছে! আর ${remaining} বার এরূপ আচরণ করলে সাইট থেকে চিরতরে ব্যান করা হবে!`
+    message: `Warning (${currentStrikes}/3): Abusive or inappropriate language detected! ${remaining} more violation(s) will result in a permanent ban.`
   };
 }

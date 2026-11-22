@@ -85,171 +85,217 @@ export async function unsubscribeFromWebPush() {
     }
 }
 
+let activePushSyncPromise: Promise<any> | null = null;
+let lastSyncedEndpointUidKey = '';
+
+async function waitForActiveServiceWorkerRegistration(timeoutMs = 7000): Promise<ServiceWorkerRegistration | null> {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+        return null;
+    }
+
+    try {
+        const existing = await navigator.serviceWorker.getRegistration();
+        if (existing?.active) {
+            return existing;
+        }
+    } catch {}
+
+    try {
+        const readyWithTimeout = Promise.race<ServiceWorkerRegistration | null>([
+            navigator.serviceWorker.ready,
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+        ]);
+        const readyReg = await readyWithTimeout;
+        if (readyReg) return readyReg;
+    } catch {}
+
+    try {
+        return await navigator.serviceWorker.getRegistration() || null;
+    } catch {
+        return null;
+    }
+}
+
 export async function subscribeToWebPush(
     uidParam?: string,
     preAcquiredPermission?: NotificationPermission | 'unsupported'
 ) {
-    try {
-        let permission: NotificationPermission | 'unsupported' =
-            preAcquiredPermission || 'default';
+    const targetUid = uidParam || auth.currentUser?.uid || '';
+    if (activePushSyncPromise && preAcquiredPermission === 'granted') {
+        return activePushSyncPromise;
+    }
 
-        if (!preAcquiredPermission) {
-            const attempt = await requestBrowserNotificationPermissionWithMeta();
-            permission = attempt.permission;
-        }
-
-        if (permission === 'unsupported') {
-            return { error: "Push notifications are not supported on this device/browser", unsupported: true };
-        }
-
-        if (permission !== 'granted') {
-            return {
-                error: "Notification permission was denied. Please allow notifications in your browser settings.",
-                denied: true,
-            };
-        }
-
-        const uid = uidParam || auth.currentUser?.uid;
+    const runSync = async () => {
         try {
-            localStorage.setItem('deepshop_push_enabled', 'true');
-        } catch {}
+            let permission: NotificationPermission | 'unsupported' =
+                preAcquiredPermission || 'default';
 
-        if (uid) {
-            setDoc(
-                doc(db, 'users', uid),
-                {
-                    notificationsEnabled: true,
-                    pushAlertsOptIn: true,
-                    pushUpdatedAt: Date.now(),
-                },
-                { merge: true }
-            ).catch(() => {});
-        }
-
-        // If browser supports Notification API but not ServiceWorker/PushManager (e.g., certain mobile browsers),
-        // still succeed because browser notification permission was granted!
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-            try {
-                new window.Notification('DEEP SHOP', {
-                    body: 'Push notifications are now enabled for your account!',
-                    icon: '/favicon.svg',
-                });
-            } catch {}
-            return { ok: true, permission: 'granted', browserNotificationOnly: true };
-        }
-
-        const res = await fetch('/api/web-push/public-key');
-        if (!res.ok) {
-            return { ok: true, permission: 'granted', browserNotificationOnly: true };
-        }
-        const { publicKey } = await res.json();
-
-        if (publicKey) {
-            let registration = await navigator.serviceWorker.getRegistration();
-            if (!registration) {
-                try {
-                    registration = await navigator.serviceWorker.register('/custom-sw.js');
-                } catch (e: any) {
-                    console.warn("Service worker registration fallback:", e?.message);
-                    return { ok: true, permission: 'granted', browserNotificationOnly: true };
-                }
+            if (!preAcquiredPermission) {
+                const attempt = await requestBrowserNotificationPermissionWithMeta();
+                permission = attempt.permission;
             }
 
-            registration = await navigator.serviceWorker.ready;
+            if (permission === 'unsupported') {
+                return { error: "Push notifications are not supported on this device/browser", unsupported: true };
+            }
 
-            if (!registration || !registration.pushManager) {
+            if (permission !== 'granted') {
+                return {
+                    error: "Notification permission was denied. Please allow notifications in your browser settings.",
+                    denied: true,
+                };
+            }
+
+            const uid = uidParam || auth.currentUser?.uid;
+            try {
+                localStorage.setItem('deepshop_push_enabled', 'true');
+                localStorage.setItem('vibe_push_enabled', 'true');
+            } catch {}
+
+            if (uid) {
+                setDoc(
+                    doc(db, 'users', uid),
+                    {
+                        notificationsEnabled: true,
+                        pushAlertsOptIn: true,
+                        pushUpdatedAt: Date.now(),
+                    },
+                    { merge: true }
+                ).catch(() => {});
+            }
+
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                try {
+                    new window.Notification('DEEP SHOP', {
+                        body: 'Push notifications are now enabled for your account!',
+                        icon: '/pwa-192x192.png',
+                    });
+                } catch {}
                 return { ok: true, permission: 'granted', browserNotificationOnly: true };
             }
 
-            const existingSub = await registration.pushManager.getSubscription();
+            const res = await fetch('/api/web-push/public-key');
+            if (!res.ok) {
+                return { ok: true, permission: 'granted', browserNotificationOnly: true };
+            }
+            const { publicKey } = await res.json();
 
-            const urlB64ToUint8Array = (base64String: string) => {
-                const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-                const base64 = (base64String + padding)
-                    .replace(/-/g, '+')
-                    .replace(/_/g, '/');
-                const rawData = window.atob(base64);
-                const outputArray = new Uint8Array(rawData.length);
-                for (let i = 0; i < rawData.length; ++i) {
-                    outputArray[i] = rawData.charCodeAt(i);
+            if (publicKey) {
+                const registration = await waitForActiveServiceWorkerRegistration();
+
+                if (!registration || !registration.pushManager) {
+                    return { ok: true, permission: 'granted', browserNotificationOnly: true };
                 }
-                return outputArray;
-            };
 
-            let subscription = existingSub;
-            let isFreshSub = false;
+                const existingSub = await registration.pushManager.getSubscription();
 
-            if (existingSub) {
-                const currentKey = existingSub.options.applicationServerKey;
-                const newKey = urlB64ToUint8Array(publicKey);
-
-                let match = true;
-                if (currentKey && currentKey.byteLength === newKey.byteLength) {
-                    const currArr = new Uint8Array(currentKey);
-                    for (let i = 0; i < 5; i++) {
-                        if (currArr[i] !== newKey[i]) match = false;
+                const urlB64ToUint8Array = (base64String: string) => {
+                    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+                    const base64 = (base64String + padding)
+                        .replace(/-/g, '+')
+                        .replace(/_/g, '/');
+                    const rawData = window.atob(base64);
+                    const outputArray = new Uint8Array(rawData.length);
+                    for (let i = 0; i < rawData.length; ++i) {
+                        outputArray[i] = rawData.charCodeAt(i);
                     }
-                } else {
-                    match = false;
+                    return outputArray;
+                };
+
+                let subscription = existingSub;
+                let isFreshSub = false;
+
+                if (existingSub) {
+                    const currentKey = existingSub.options.applicationServerKey;
+                    const newKey = urlB64ToUint8Array(publicKey);
+
+                    let match = true;
+                    if (currentKey && currentKey.byteLength === newKey.byteLength) {
+                        const currArr = new Uint8Array(currentKey);
+                        for (let i = 0; i < currArr.length; i++) {
+                            if (currArr[i] !== newKey[i]) {
+                                match = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        match = false;
+                    }
+
+                    if (!match) {
+                        await existingSub.unsubscribe().catch(() => {});
+                        subscription = null;
+                    }
                 }
 
-                if (!match) {
-                    await existingSub.unsubscribe();
-                    subscription = null;
+                if (!subscription) {
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlB64ToUint8Array(publicKey),
+                    });
+                    isFreshSub = true;
                 }
-            }
 
-            if (!subscription) {
-                subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlB64ToUint8Array(publicKey),
-                });
-                isFreshSub = true;
-            }
+                const subJson = subscription?.toJSON ? subscription.toJSON() : subscription;
+                const endpointKey = `${(subJson as any)?.endpoint || ''}::${uid || ''}`;
 
-            const subJson = subscription?.toJSON ? subscription.toJSON() : subscription;
-
-            try {
-                await fetch('/api/web-push/subscribe', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subscription: subJson, uid }),
-                });
-            } catch (err) {
-                console.error("Failed to save subscription to API", err);
-            }
-
-            if (isFreshSub && subJson) {
-                fetch('/api/send-welcome-push', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subscription: subJson }),
-                }).catch(() => {});
-            }
-
-            if (uid) {
-                try {
-                    await setDoc(
-                        doc(db, 'users', uid),
-                        {
-                            webPushSub: subJson,
-                            notificationsEnabled: true,
-                        },
-                        { merge: true }
-                    );
-                } catch (e) {
-                    console.error("Failed to save to users doc", e);
+                if (isFreshSub || lastSyncedEndpointUidKey !== endpointKey) {
+                    try {
+                        const saveRes = await fetch('/api/web-push/subscribe', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ subscription: subJson, uid: uid || null }),
+                        });
+                        if (saveRes.ok) {
+                            lastSyncedEndpointUidKey = endpointKey;
+                        }
+                    } catch (err) {
+                        console.error("Failed to save subscription to API", err);
+                    }
                 }
+
+                if (isFreshSub && subJson) {
+                    fetch('/api/send-welcome-push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subscription: subJson }),
+                    }).catch(() => {});
+                }
+
+                if (uid) {
+                    try {
+                        await setDoc(
+                            doc(db, 'users', uid),
+                            {
+                                webPushSub: subJson,
+                                notificationsEnabled: true,
+                            },
+                            { merge: true }
+                        );
+                    } catch (e) {
+                        console.error("Failed to save to users doc", e);
+                    }
+                }
+
+                return subscription;
             }
 
-            return subscription;
+            return { ok: true, permission: 'granted' };
+        } catch (e: any) {
+            console.warn('Web Push setup notice:', e?.message || e);
+            return { error: e?.message || "Failed to subscribe" };
         }
+    };
 
-        return { ok: true, permission: 'granted' };
-    } catch (e: any) {
-        console.warn('Web Push setup notice:', e?.message || e);
-        return { error: e?.message || "Failed to subscribe" };
+    const promise = runSync().finally(() => {
+        if (activePushSyncPromise === promise) {
+            activePushSyncPromise = null;
+        }
+    });
+    if (targetUid || preAcquiredPermission === 'granted') {
+        activePushSyncPromise = promise;
     }
+    return promise;
 }
 
 export async function sendPushNotification(

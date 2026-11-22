@@ -39,157 +39,157 @@ interface CategoryDetailSpec {
 
 const CATALOG_DETAILS: Record<string, CategoryDetailSpec> = {
   All: {
-    bnTitle: "সম্পূর্ণ প্রোডাক্ট ক্যাটালগ",
+    bnTitle: "Complete Product Catalog",
     enSubtitle: "Complete Verified Inventory",
     description:
-      "এখানে আমাদের সব ক্যাটাগরির যাচাইকৃত স্মার্টফোন, বর্ডার ক্রস ডিভাইস, অরিজিনাল রিপ্লেসমেন্ট পার্টস (ডিসপ্লে, ব্যাটারি, ক্যামেরা, মাদারবোর্ড) এবং ফাস্ট চার্জার একসাথে সাজানো রয়েছে। প্রতিটি পণ্যের দাম, সংক্ষিপ্ত বিবরণ এবং সেলারের তথ্য সরাসরি কার্ড থেকেই দেখে নিতে পারবেন।",
+      "Browse all verified smartphones, Border Cross devices, original replacement parts (displays, batteries, cameras, logic boards), and fast chargers in one place. Check pricing, key specs, and seller details directly from each card.",
     highlights: [
-      "১০০% কোয়ালিটি চেকড স্টক",
-      "ক্যাশ অন ডেলিভারি ও নিরাপদ পেমেন্ট সুবিধা",
-      "সারা বাংলাদেশে নিরাপদ কুরিয়ার",
+      "100% Quality-Checked Stock",
+      "Cash on Delivery & Secure Payment",
+      "Safe Nationwide Courier Delivery",
     ],
     warrantyNote:
-      "সব পণ্য পাঠানোর আগে হার্ডওয়্যার ও ফিজিক্যাল কন্ডিশন যাচাই করে ডিসপ্যাচ করা হয়। আনবক্সিং ভিডিও সংরক্ষণ করলে রিপ্লেসমেন্ট সুরক্ষা প্রযোজ্য।",
+      "Every item undergoes hardware and physical condition verification before dispatch. Please record an unboxing video for replacement protection.",
   },
-  "Phone Parts (পার্টস)": {
-    bnTitle: "অরিজিনাল ফোন পার্টস ক্যাটালগ",
+  "Phone Parts": {
+    bnTitle: "Original Phone Parts Catalog",
     enSubtitle: "OEM & Tested Replacement Components",
     description:
-      "স্মার্টফোন রিপেয়ার ও সার্ভিসিংয়ের জন্য অরিজিনাল পুলড (Pulled) এবং প্রিমিয়াম গ্রেড ডিসপ্লে, ব্যাটারি, ক্যামেরা মডিউল ও লজিক বোর্ড। অর্ডার করার পূর্বে আপনার ফোনের সঠিক মডেল নম্বর মিলিয়ে নিন।",
+      "Original pulled and premium-grade displays, batteries, camera modules, and logic boards for smartphone repair and servicing. Please verify your exact phone model number before ordering.",
     highlights: [
-      "মডেল ভিত্তিক নিখুঁত ফিটমেন্ট",
-      "টেস্টেড টাচ, সেন্সর ও ভোল্টেজ",
-      "টেকনিশিয়ান ও কাস্টমার বান্ধব প্যাকিং",
+      "Model-Accurate Fitment",
+      "Tested Touch, Sensors & Voltage",
+      "Technician & Customer-Safe Packing",
     ],
     warrantyNote:
-      "পার্টস ইনস্টলেশন বা সিল খোলার পূর্বে ফ্লেক্স কেবল সংযোগ দিয়ে টেস্ট করে নেওয়া আবশ্যক।",
+      "Please test by connecting the flex cable before final installation or removing protective seals.",
   },
-  "Display (ডিসপ্লে)": {
-    bnTitle: "স্মার্টফোন ডিসপ্লে ও OLED প্যানেল",
+  Display: {
+    bnTitle: "Smartphone Displays & OLED Panels",
     enSubtitle: "Original Pulled & AMOLED Screen Assemblies",
     description:
-      "ট্রু-টোন, হাই রিফ্রেশ রেট এবং নিখুঁত কালার অ্যাকুরেসি সমৃদ্ধ অরিজিনাল ও প্রিমিয়াম ডিসপ্লে প্যানেল। প্রতিটি স্ক্রিন ডেড-পিক্সেল এবং টাচ রেসপন্স চেক করে বক্সিং করা হয়।",
+      "Original and premium display panels featuring True Tone, high refresh rates, and accurate color calibration. Every screen is checked for dead pixels and touch response before boxing.",
     highlights: [
-      "ডেড-পিক্সেল ও টাচ সেন্সিটিভিটি চেকড",
-      "শক-প্রুফ হার্ড বক্স প্যাকেজিং",
-      "অরিজিনাল ব্রাইটনেস ও কালার প্রোফাইল",
+      "Dead-Pixel & Touch Sensitivity Checked",
+      "Shock-Proof Hard Box Packaging",
+      "Original Brightness & Color Profile",
     ],
     warrantyNote:
-      "আঠা (Glue) লাগানোর পূর্বে ডিসপ্লে ফ্লেক্স লাগিয়ে সম্পূর্ণ টেস্ট করে নিন।",
+      "Test the display flex connection thoroughly before applying adhesive or glue.",
   },
-  "Battery (ব্যাটারি)": {
-    bnTitle: "হাই-ক্যাপাসিটি অরিজিনাল ব্যাটারি",
+  Battery: {
+    bnTitle: "High-Capacity Original Batteries",
     enSubtitle: "Certified mAh Cells & IC Protected Batteries",
     description:
-      "ওভারহিটিং ও দ্রুত চার্জ শেষ হওয়ার সমস্যা সমাধানে ডুয়াল IC প্রোটেকশন যুক্ত অরিজিনাল ক্যাপাসিটির স্মার্টফোন ব্যাটারি। দীর্ঘস্থায়ী ব্যাকআপ ও নিরাপদ চার্জিং সাইকেল নিশ্চিত করে।",
+      "Original-capacity smartphone batteries with dual IC protection to resolve overheating and rapid drain issues. Ensures long-lasting backup and safe charging cycles.",
     highlights: [
-      "জেনুইন mAh ক্যাপাসিটি সেল",
-      "ওভারচার্জ ও শর্ট-সার্কিট প্রোটেকশন",
-      "ফ্রেশ ম্যানুফ্যাকচারিং ব্যাচ",
+      "Genuine mAh Capacity Cells",
+      "Overcharge & Short-Circuit Protection",
+      "Fresh Manufacturing Batch",
     ],
     warrantyNote:
-      "প্রথম ৩–৫ বার ১০% থেকে ১০০% পূর্ণ চার্জ সাইকেল সম্পন্ন করলে সেরা ব্যাকআপ পাওয়া যায়।",
+      "Complete 3–5 full 10% to 100% charge cycles initially for optimal battery calibration.",
   },
-  "Camera (ক্যামেরা)": {
-    bnTitle: "অরিজিনাল ক্যামেরা মডিউল ও লেন্স",
+  Camera: {
+    bnTitle: "Original Camera Modules & Lenses",
     enSubtitle: "OIS Main, Ultra-Wide & Front Camera Sensors",
     description:
-      "ঝাপসা ছবি, ফোকাস সমস্যা বা OIS কাঁপুনি দূর করতে ১০০% অরিজিনাল ক্যামেরা সেন্সর মডিউল। অটোফোকাস, পোর্ট্রেট ও ভিডিও স্ট্যাবিলাইজেশন পূর্ব-পরীক্ষিত।",
+      "100% original camera sensor modules to fix blurry photos, focus issues, or OIS jitter. Autofocus, portrait mode, and video stabilization are pre-tested.",
     highlights: [
-      "অটোফোকাস ও OIS স্ট্যাবিলাইজেশন টেস্টেড",
-      "ডাস্ট-ফ্রি ক্লিন সেন্সর গ্লাস",
-      "প্লাগ-অ্যান্ড-প্লে অরিজিনাল ফ্লেক্স",
+      "Autofocus & OIS Stabilization Tested",
+      "Dust-Free Clean Sensor Glass",
+      "Plug-and-Play Original Flex",
     ],
     warrantyNote:
-      "সেন্সর লেন্সে হাতের ছাপ বা ধুলো লাগানো থেকে বিরত থেকে পরিষ্কার পরিবেশে সংযোজন করুন।",
+      "Install in a clean environment and avoid fingerprints or dust on the sensor lens.",
   },
-  "Logic Board (মাদারবোর্ড)": {
-    bnTitle: "টেস্টেড লজিক বোর্ড ও মাদারবোর্ড",
+  "Logic Board": {
+    bnTitle: "Tested Logic Boards & Motherboards",
     enSubtitle: "Clean Unlocked & Diagnostics-Passed Motherboards",
     description:
-      "সম্পূর্ণ আনলকড, নেটওয়ার্ক, ওয়াইফাই, চার্জিং IC ও অডিও সেকশন পরীক্ষা করা স্মার্টফোন মাদারবোর্ড। ডেড ফোন সচল করার জন্য নির্ভরযোগ্য সমাধান।",
+      "Fully unlocked smartphone motherboards tested for network, Wi-Fi, charging IC, and audio sections. A reliable solution to restore dead or damaged devices.",
     highlights: [
-      "নেটওয়ার্ক ও বেসব্যান্ড যাচাইকৃত",
-      "কোনো রিপেয়ার হিস্ট্রি ছাড়া ক্লিন বোর্ড",
-      "স্টোরেজ ও মডেল ভেরিয়েন্ট উল্লেখসহ",
+      "Network & Baseband Verified",
+      "Clean Boards with No Repair History",
+      "Verified Storage & Model Variants",
     ],
     warrantyNote:
-      "অভিজ্ঞ টেকনিশিয়ান দ্বারা থার্মাল পেস্ট ও শিল্ডিং ঠিক রেখে মাদারবোর্ড স্থাপন করার পরামর্শ দেওয়া হয়।",
+      "Recommended to be installed by an experienced technician with proper thermal paste and shielding.",
   },
   "Border Cross": {
-    bnTitle: "বর্ডার ক্রস স্মার্টফোন কালেকশন",
+    bnTitle: "Border Cross Smartphone Collection",
     enSubtitle: "Direct Cross-Border Import Smartphones",
     description:
-      "সাশ্রয়ী মূল্যে সরাসরি বর্ডার ক্রস ইমপোর্টকৃত ফ্ল্যাগশিপ ও মিড-রেঞ্জ স্মার্টফোন। বর্ডার ক্রস প্রি-অর্ডারে বুকিং কনফার্ম করার পর নির্ধারিত সময়ের মধ্যে নিরাপদে কুরিয়ারে ডেলিভারি সম্পন্ন হয়।",
+      "Directly imported Border Cross flagship and mid-range smartphones at competitive prices. After pre-order confirmation, devices are safely delivered by courier within the scheduled window.",
     highlights: [
-      "৩০–৪৫ কার্যদিবস ইমপোর্ট টাইমলাইন",
-      "সহজ প্রি-অর্ডার ও নির্ধারিত বুকিং সুবিধা",
-      "আইএমইআই ও হার্ডওয়্যার চেকড ডিভাইস",
+      "30–45 Business Days Import Timeline",
+      "Simple Pre-Order & Scheduled Booking",
+      "IMEI & Hardware Checked Devices",
     ],
     warrantyNote:
-      "বর্ডার ক্রস অর্ডারের ক্ষেত্রে চেকআউট পেজে প্রদর্শিত ডেলিভারি সময়সীমা ও পেমেন্ট শর্তাবলি প্রযোজ্য হবে।",
+      "Delivery timelines and payment terms displayed at checkout apply to all Border Cross orders.",
   },
   "Original Phones": {
-    bnTitle: "অরিজিনাল ও ভেরিফায়েড স্মার্টফোন",
+    bnTitle: "Original & Verified Smartphones",
     enSubtitle: "100% Authentic & Diagnostics-Verified Phones",
     description:
-      "ব্যাটারি হেলথ, ডিসপ্লে অরিজিনালিটি, ক্যামেরা এবং সকল সেন্সর ৩০-পয়েন্ট চেকলিস্টে যাচাইকৃত অরিজিনাল স্মার্টফোন কালেকশন।",
+      "Original smartphone collection verified through a 30-point checklist covering battery health, display authenticity, cameras, and all sensors.",
     highlights: [
-      "৩০-পয়েন্ট ফুল ডায়াগনস্টিক চেকড",
-      "ক্যাশ অন ডেলিভারি ও ইনস্ট্যান্ট ডিসপ্যাচ",
-      "ভেরিফায়েড সেলার ওয়ারেন্টি সাপোর্ট",
+      "30-Point Full Diagnostic Check",
+      "Cash on Delivery & Instant Dispatch",
+      "Verified Seller Warranty Support",
     ],
     warrantyNote:
-      "প্রতিটি ফোনের কন্ডিশন, স্টোরেজ ও ব্যাটারি হেলথ প্রোডাক্ট ডিটেইলস পেজে স্পষ্টভাবে উল্লেখ থাকে।",
+      "Condition, storage, and battery health are clearly stated on every product detail page.",
   },
   Mobile: {
-    bnTitle: "মোবাইল ফোন কালেকশন",
+    bnTitle: "Mobile Phone Collection",
     enSubtitle: "Curated Everyday & Flagship Handsets",
     description:
-      "দৈনন্দিন ব্যবহার থেকে শুরু করে গেমিং ও ফটোগ্রাফির জন্য বাছাইকৃত স্মার্টফোনসমূহ। বাজেট ও ফিচার অনুযায়ী সর্ট করে আপনার পছন্দের সেটটি বেছে নিন।",
+      "Handpicked smartphones for everyday use, gaming, and mobile photography. Sort by budget and specifications to find your ideal device.",
     highlights: [
-      "বাজেট থেকে ফ্ল্যাগশিপ ভেরিয়েন্ট",
-      "দ্রুত কুরিয়ার ডেলিভারি",
-      "সহজ চেকআউট ও ট্র্যাকিং",
+      "Budget to Flagship Variants",
+      "Fast Courier Delivery",
+      "Easy Checkout & Tracking",
     ],
     warrantyNote:
-      "পার্সেল গ্রহণের সময় ডেলিভারি ম্যানের সামনে আনবক্সিং ভিডিও ধারণ করার অনুরোধ রইল।",
+      "Please record an unboxing video in front of the delivery rider upon parcel receipt.",
   },
   Mobiles: {
-    bnTitle: "স্মার্টফোন ও হ্যান্ডসেট সম্ভার",
+    bnTitle: "Smartphones & Handsets",
     enSubtitle: "Verified Multi-Brand Smartphones",
     description:
-      "জনপ্রিয় ব্র্যান্ডের চেকড স্মার্টফোন কালেকশন। স্টোরেজ, কন্ডিশন এবং অফার মূল্য তুলনা করে সেরা ডিলটি বেছে নিন।",
+      "Multi-brand checked smartphone collection. Compare storage, condition, and offer prices to pick the best deal.",
     highlights: [
-      "মাল্টি-ব্র্যান্ড ভেরিফায়েড স্টক",
-      "স্বচ্ছ মূল্য ও রিয়েল-টাইম স্টক তথ্য",
-      "সুরক্ষিত প্যাকেজিং",
+      "Multi-Brand Verified Stock",
+      "Transparent Pricing & Live Stock",
+      "Protective Packaging",
     ],
     warrantyNote:
-      "প্রোডাক্ট পেজে প্রতিটি হ্যান্ডসেটের বিস্তারিত স্পেসিফিকেশন ও রিভিউ দেখতে পাবেন।",
+      "Full specifications and customer reviews are available on each handset page.",
   },
   Chargers: {
-    bnTitle: "অরিজিনাল ফাস্ট চার্জার ও অ্যাডাপ্টার",
+    bnTitle: "Original Fast Chargers & Adapters",
     enSubtitle: "GaN, PD & SuperVOOC Certified Power Adapters",
     description:
-      "ফোনের ব্যাটারি হেলথ সুরক্ষিত রাখতে অরিজিনাল সার্কিট ও সঠিক ওয়াটেজের PD, GaN এবং ফাস্ট চার্জিং অ্যাডাপ্টার ও কেবল কালেকশন।",
+      "Original-circuit PD, GaN, and fast-charging adapters and cables in accurate wattages to keep your phone battery healthy.",
     highlights: [
-      "স্টেবল ভোল্টেজ ও তাপমাত্রা নিয়ন্ত্রণ",
-      "আইফোন ও অ্যান্ড্রয়েড ফাস্ট চার্জ সাপোর্ট",
-      "টেকসই অরিজিনাল বিল্ড কোয়ালিটি",
+      "Stable Voltage & Thermal Control",
+      "iPhone & Android Fast Charge Support",
+      "Durable Original Build Quality",
     ],
     warrantyNote:
-      "আপনার ডিভাইসের সাপোর্টেড ওয়াট (20W / 33W / 45W / 67W+) মিলিয়ে চার্জার নির্বাচন করুন।",
+      "Select a charger matching your device's supported wattage (20W / 33W / 45W / 67W+).",
   },
 };
 
 const TABS = [
   "All",
-  "Phone Parts (পার্টস)",
-  "Display (ডিসপ্লে)",
-  "Battery (ব্যাটারি)",
-  "Camera (ক্যামেরা)",
-  "Logic Board (মাদারবোর্ড)",
+  "Phone Parts",
+  "Display",
+  "Battery",
+  "Camera",
+  "Logic Board",
   "Border Cross",
   "Original Phones",
   "Mobile",
@@ -200,11 +200,11 @@ const TABS = [
 type SortOption = "featured" | "price-asc" | "price-desc" | "rating" | "discount";
 
 const SORT_LABELS: Record<SortOption, string> = {
-  featured: "ডিফল্ট সাজানো",
-  "price-asc": "কম থেকে বেশি দাম",
-  "price-desc": "বেশি থেকে কম দাম",
-  rating: "সেরা রেটিং",
-  discount: "সর্বোচ্চ ছাড়",
+  featured: "Featured",
+  "price-asc": "Price: Low to High",
+  "price-desc": "Price: High to Low",
+  rating: "Top Rated",
+  discount: "Biggest Discount",
 };
 
 function matchesCategoryTab(p: Product, tab: string): boolean {
@@ -444,16 +444,16 @@ const AllProducts: React.FC = () => {
 
   const activeDetails: CategoryDetailSpec =
     CATALOG_DETAILS[activeTab] || {
-      bnTitle: `${activeTab} কালেকশন`,
+      bnTitle: `${activeTab} Collection`,
       enSubtitle: "Verified Category Catalog",
-      description: `${activeTab} বিভাগের সকল যাচাইকৃত পণ্য, বর্তমান মূল্য এবং স্টক স্ট্যাটাস নিচে দেখানো হচ্ছে।`,
+      description: `Browse all verified products, current prices, and live stock status in the ${activeTab} category.`,
       highlights: [
-        "কোয়ালিটি চেকড প্রোডাক্ট",
-        "নিরাপদ প্যাকেজিং ও কুরিয়ার",
-        "সরাসরি কার্ট ও দ্রুত চেকআউট",
+        "Quality Checked Products",
+        "Protective Packaging & Courier",
+        "Direct Cart & Fast Checkout",
       ],
       warrantyNote:
-        "প্রোডাক্ট গ্রহণের সময় আনবক্সিং ভিডিও সংরক্ষণ করলে যেকোনো ডেলিভারি সমস্যায় দ্রুত সহায়তা পাওয়া যাবে।",
+        "Recording an unboxing video when receiving your parcel helps ensure quick support for any transit issues.",
     };
 
   const hasActiveFilters =
@@ -526,7 +526,7 @@ const AllProducts: React.FC = () => {
                 onClick={() => setMobileDetailsOpen((prev) => !prev)}
                 className="ds-liquid-subpanel px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0"
               >
-                <span>বিস্তারিত</span>
+                <span>Details</span>
                 {mobileDetailsOpen ? (
                   <ChevronUp className="w-3.5 h-3.5" />
                 ) : (
@@ -538,22 +538,22 @@ const AllProducts: React.FC = () => {
             {/* Inline Unboxed Live Stats */}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600 dark:text-slate-300 tabular-nums">
               <span className="font-semibold text-slate-900 dark:text-white">
-                {catalogMetrics.totalCount}টি পণ্য
+                {catalogMetrics.totalCount} Products
               </span>
               <span aria-hidden="true">·</span>
-              <span>স্টকে {catalogMetrics.inStockCount}টি</span>
+              <span>{catalogMetrics.inStockCount} in stock</span>
               {catalogMetrics.offersCount > 0 && (
                 <>
                   <span aria-hidden="true">·</span>
                   <span className="text-sky-600 dark:text-sky-400 font-semibold">
-                    {catalogMetrics.offersCount}টি অফার
+                    {catalogMetrics.offersCount} offers
                   </span>
                 </>
               )}
               {catalogMetrics.minPrice > 0 && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span>শুরু {formatPrice(catalogMetrics.minPrice)}</span>
+                  <span>From {formatPrice(catalogMetrics.minPrice)}</span>
                 </>
               )}
             </div>
@@ -596,7 +596,7 @@ const AllProducts: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="নাম, ব্র্যান্ড বা মডেল খুঁজুন..."
+                placeholder="Search name, brand, or model..."
                 className="ds-liquid-input w-full pl-9 pr-8 py-2.5 text-xs font-medium outline-none placeholder:text-slate-400"
               />
               {searchQuery && (
@@ -620,7 +620,7 @@ const AllProducts: React.FC = () => {
               className="ds-liquid-dock h-10 px-3.5 rounded-2xl flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap shrink-0 cursor-pointer active:scale-[0.97]"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
-              <span>ফিল্টার</span>
+              <span>Filter</span>
             </button>
 
             <div className="ds-liquid-dock h-10 p-1 rounded-2xl flex items-center shrink-0">
@@ -676,7 +676,7 @@ const AllProducts: React.FC = () => {
                       : "ds-liquid-dock text-slate-700 dark:text-slate-300"
                   }`}
                 >
-                  <span>{tab === "All" ? "সব পণ্য (All)" : tab}</span>
+                  <span>{tab === "All" ? "All Products" : tab}</span>
                   <span className="opacity-75 tabular-nums text-[11px]">
                     ({count})
                   </span>
@@ -718,43 +718,43 @@ const AllProducts: React.FC = () => {
             <div className="col-span-5 grid grid-cols-2 gap-3.5 tabular-nums">
               <div className="ds-liquid-subpanel p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400">
-                  মোট প্রদর্শিত পণ্য
+                  Total Shown
                 </div>
                 <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                   {catalogMetrics.totalCount}
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  মোট ইনভেন্টরি {products.length}টি
+                  Out of {products.length} total inventory
                 </div>
               </div>
 
               <div className="ds-liquid-subpanel p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400">
-                  স্টকে প্রস্তুত (Ready)
+                  Ready in Stock
                 </div>
                 <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
                   {catalogMetrics.inStockCount}
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  তাৎক্ষণিক অর্ডারযোগ্য
+                  Available for immediate order
                 </div>
               </div>
 
               <div className="ds-liquid-subpanel p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400">
-                  স্পেশাল ডিসকাউন্টে
+                  Special Discounts
                 </div>
                 <div className="text-2xl font-extrabold text-sky-600 dark:text-sky-400 mt-1">
                   {catalogMetrics.offersCount}
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  অফার মূল্যে সাশ্রয়
+                  Save with offer prices
                 </div>
               </div>
 
               <div className="ds-liquid-subpanel p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400">
-                  শুরুর মূল্য
+                  Starting Price
                 </div>
                 <div className="text-xl xl:text-2xl font-extrabold text-slate-900 dark:text-white mt-1 truncate">
                   {catalogMetrics.minPrice > 0
@@ -763,8 +763,8 @@ const AllProducts: React.FC = () => {
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                   {catalogMetrics.maxPrice > 0
-                    ? `সর্বোচ্চ ${formatPrice(catalogMetrics.maxPrice)}`
-                    : "স্টক আপডেট হচ্ছে"}
+                    ? `Up to ${formatPrice(catalogMetrics.maxPrice)}`
+                    : "Updating stock"}
                 </div>
               </div>
             </div>
@@ -781,7 +781,7 @@ const AllProducts: React.FC = () => {
             <div className="ds-liquid-panel p-5 space-y-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  ক্যাটাগরি তালিকা
+                  Categories
                 </h2>
                 {hasActiveFilters && (
                   <button
@@ -790,7 +790,7 @@ const AllProducts: React.FC = () => {
                     className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1 whitespace-nowrap cursor-pointer"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    <span>রিসেট</span>
+                    <span>Reset</span>
                   </button>
                 )}
               </div>
@@ -812,7 +812,7 @@ const AllProducts: React.FC = () => {
                       }`}
                     >
                       <span className="truncate">
-                        {tab === "All" ? "সব পণ্য (All Products)" : tab}
+                        {tab === "All" ? "All Products" : tab}
                       </span>
                       <span
                         className={`tabular-nums shrink-0 text-[11px] ${
@@ -831,11 +831,11 @@ const AllProducts: React.FC = () => {
               {/* Availability & Offer Quick Filters */}
               <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] space-y-2.5">
                 <div className="text-xs font-bold text-slate-900 dark:text-white">
-                  দ্রুত ফিল্টার
+                  Quick Filters
                 </div>
 
                 <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer select-none text-xs text-slate-700 dark:text-slate-300">
-                  <span>শুধু স্টকে থাকা পণ্য</span>
+                  <span>In-stock items only</span>
                   <input
                     type="checkbox"
                     checked={inStockOnly}
@@ -845,7 +845,7 @@ const AllProducts: React.FC = () => {
                 </label>
 
                 <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer select-none text-xs text-slate-700 dark:text-slate-300">
-                  <span>স্পেশাল ডিসকাউন্ট অফার</span>
+                  <span>Special discount offers</span>
                   <input
                     type="checkbox"
                     checked={offersOnly}
@@ -858,7 +858,7 @@ const AllProducts: React.FC = () => {
               {/* Category Note Box */}
               <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08]">
                 <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
-                  ক্রয় ও ওয়ারেন্টি নোট
+                  Buying &amp; Warranty Note
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                   {activeDetails.warrantyNote}
@@ -878,7 +878,7 @@ const AllProducts: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="প্রোডাক্টের নাম, ব্র্যান্ড, স্টোরেজ বা মডেল লিখে খুঁজুন..."
+                  placeholder="Search by product name, brand, storage, or model..."
                   className="ds-liquid-input w-full pl-10 pr-9 py-2.5 text-sm font-medium outline-none placeholder:text-slate-400"
                 />
                 {searchQuery && (
@@ -896,7 +896,7 @@ const AllProducts: React.FC = () => {
               {/* Sort + View Controls */}
               <div className="flex items-center gap-3 shrink-0">
                 <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="whitespace-nowrap">সাজান:</span>
+                  <span className="whitespace-nowrap">Sort:</span>
                   <select
                     value={sortBy}
                     onChange={(e) => {
@@ -931,7 +931,7 @@ const AllProducts: React.FC = () => {
                     }`}
                   >
                     <LayoutGrid className="w-3.5 h-3.5" />
-                    <span>গ্রিড ভিউ</span>
+                    <span>Grid View</span>
                   </button>
                   <button
                     type="button"
@@ -946,7 +946,7 @@ const AllProducts: React.FC = () => {
                     }`}
                   >
                     <ListOrdered className="w-3.5 h-3.5" />
-                    <span>বিস্তারিত ভিউ</span>
+                    <span>Detailed View</span>
                   </button>
                 </div>
               </div>
@@ -956,26 +956,26 @@ const AllProducts: React.FC = () => {
             {hasActiveFilters && (
               <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-600 dark:text-slate-300">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span>সক্রিয় ফিল্টার:</span>
+                  <span>Active filters:</span>
                   <span className="font-semibold text-slate-900 dark:text-white">
                     {activeTab}
                   </span>
                   {inStockOnly && (
                     <>
                       <span aria-hidden="true">·</span>
-                      <span>স্টকে আছে</span>
+                      <span>In stock</span>
                     </>
                   )}
                   {offersOnly && (
                     <>
                       <span aria-hidden="true">·</span>
-                      <span>অফার চলছে</span>
+                      <span>Special offers</span>
                     </>
                   )}
                   {searchQuery.trim() && (
                     <>
                       <span aria-hidden="true">·</span>
-                      <span>খোঁজ: &ldquo;{searchQuery.trim()}&rdquo;</span>
+                      <span>Query: &ldquo;{searchQuery.trim()}&rdquo;</span>
                     </>
                   )}
                 </div>
@@ -985,7 +985,7 @@ const AllProducts: React.FC = () => {
                   onClick={resetAllFilters}
                   className="text-sky-600 dark:text-sky-400 font-semibold hover:underline whitespace-nowrap cursor-pointer"
                 >
-                  সব ফিল্টার মুছুন
+                  Clear All Filters
                 </button>
               </div>
             )}
@@ -1022,10 +1022,10 @@ const AllProducts: React.FC = () => {
                   <PackageSearch className="w-7 h-7" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-                  এই ফিল্টারে কোনো পণ্য পাওয়া যায়নি
+                  No Products Match This Filter
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
-                  অন্য কোনো ক্যাটাগরি নির্বাচন করুন অথবা সার্চ ও ফিল্টার রিসেট করে সম্পূর্ণ ক্যাটালগ দেখুন।
+                  Try selecting another category or reset your search and filters to view the full catalog.
                 </p>
                 <button
                   type="button"
@@ -1033,7 +1033,7 @@ const AllProducts: React.FC = () => {
                   className="ds-liquid-btn-primary !min-h-[42px] !text-xs px-6 flex items-center gap-2 whitespace-nowrap cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>সম্পূর্ণ ক্যাটালগ দেখুন</span>
+                  <span>View Full Catalog</span>
                 </button>
               </div>
             )}
@@ -1046,38 +1046,38 @@ const AllProducts: React.FC = () => {
         <section className="ds-liquid-panel p-5 sm:p-7 lg:p-8 space-y-5">
           <div className="max-w-2xl">
             <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              ক্যাটালগ গাইড ও অর্ডার সংক্রান্ত বিস্তারিত তথ্য
+              Catalog Guide &amp; Order Details
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300/85 mt-1 leading-relaxed">
-              স্মার্টফোন, বর্ডার ক্রস ডিভাইস এবং রিপ্লেসমেন্ট পার্টস কেনার পূর্বে আমাদের মান নিয়ন্ত্রণ, পেমেন্ট ও ডেলিভারি নীতিমালা জেনে নিন।
+              Learn about our quality checks, payment methods, and delivery policies before purchasing smartphones, border-cross devices, or replacement parts.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="ds-liquid-subpanel p-4 sm:p-5 space-y-2">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                ০১. কোয়ালিটি চেক ও অরিজিনালিটি
+                01. Quality Check &amp; Authenticity
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-300/90 leading-relaxed">
-                প্রতিটি ফোন ও পার্টস অভিজ্ঞ টেকনিশিয়ান দ্বারা ডিসপ্লে টাচ, ক্যামেরা ফোকাস, নেটওয়ার্ক এবং ব্যাটারি ভোল্টেজ পরীক্ষা করে পাঠানো হয়। প্রোডাক্ট পেজে আসল ছবি ও কন্ডিশন উল্লেখ থাকে।
+                Every phone and part is tested by experienced technicians for display touch, camera focus, network stability, and battery voltage before dispatch. Real photos and exact condition details are listed on each product page.
               </p>
             </div>
 
             <div className="ds-liquid-subpanel p-4 sm:p-5 space-y-2">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                ০২. পেমেন্ট পদ্ধতি ও বর্ডার ক্রস বুকিং
+                02. Payment Methods &amp; Border Cross Booking
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-300/90 leading-relaxed">
-                রেডি স্টক পণ্যে ক্যাশ অন ডেলিভারি (COD) সুবিধা রয়েছে। বর্ডার ক্রস বা স্পেশাল প্রি-অর্ডার ডিভাইসে পণ্যের ধরন অনুযায়ী নির্ধারিত বুকিং পেমেন্ট ও নিরাপদ গেটওয়ে সুবিধা প্রযোজ্য হয়।
+                Cash on Delivery (COD) is available for ready-stock items. Border-cross and special pre-order devices follow the product-specific advance booking and secure gateway terms.
               </p>
             </div>
 
             <div className="ds-liquid-subpanel p-4 sm:p-5 space-y-2">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                ০৩. কুরিয়ার ডেলিভারি ও আনবক্সিং সুরক্ষা
+                03. Courier Delivery &amp; Unboxing Protection
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-300/90 leading-relaxed">
-                শক-প্রুফ বাবল ও হার্ড বক্সে সারা বাংলাদেশে কুরিয়ার করা হয়। পার্সেল খোলার শুরু থেকে শেষ পর্যন্ত একটি নিরবচ্ছিন্ন আনবক্সিং ভিডিও রাখলে যেকোনো ট্রানজিট ক্ষতিতে দ্রুত সমাধান নিশ্চিত করা হয়।
+                Orders ship nationwide in shock-proof bubble wrap and hard boxes. Recording an uninterrupted unboxing video from start to finish ensures fast resolution for any transit damage.
               </p>
             </div>
           </div>
@@ -1100,7 +1100,7 @@ const AllProducts: React.FC = () => {
                   triggerHaptic("light");
                   setMobileFilterSheetOpen(false);
                 }}
-                className="ds-apple-portal ds-apple-backdrop lg:hidden fixed inset-0 z-[1000] flex items-end justify-center p-2 sm:p-3"
+                className="ds-apple-portal ds-apple-backdrop lg:hidden fixed inset-0 z-[1000] flex items-end justify-center p-0"
               >
                 <motion.div
                   initial={shouldReduceMotion ? { opacity: 0 } : { y: "100%" }}
@@ -1108,8 +1108,8 @@ const AllProducts: React.FC = () => {
                   exit={shouldReduceMotion ? { opacity: 0 } : { y: "100%" }}
                   transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
                   drag={shouldReduceMotion ? false : "y"}
-                  dragConstraints={{ top: 0 }}
-                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.02, bottom: 0.45 }}
                   onDragEnd={(_, info) => {
                     const projected = info.offset.y + projectMomentum(info.velocity.y, 0.99);
                     if (projected > 110) {
@@ -1118,7 +1118,7 @@ const AllProducts: React.FC = () => {
                     }
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="ds-apple-sheet w-full max-w-md rounded-t-[26px] rounded-b-[24px] p-5 pb-[calc(20px+env(safe-area-inset-bottom))] space-y-5 shadow-2xl"
+                  className="ds-apple-sheet w-full max-w-none rounded-t-[28px] rounded-b-none p-5 pb-[calc(20px+env(safe-area-inset-bottom,0px))] space-y-5 shadow-2xl max-h-[85dvh] overflow-y-auto"
                 >
                   {/* Grabber */}
                   <div className="flex justify-center -mt-1 pb-1" aria-hidden="true">
@@ -1127,7 +1127,7 @@ const AllProducts: React.FC = () => {
 
                   <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
                     <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
-                      সর্টিং ও ফিল্টার
+                      Sort &amp; Filter
                     </h3>
                     <button
                       type="button"
@@ -1144,7 +1144,7 @@ const AllProducts: React.FC = () => {
 
                   <div className="space-y-2">
                     <div className="text-xs font-bold text-[#6E6E73] dark:text-[#98989D]">
-                      পণ্য সাজানোর ক্রম
+                      Sort Order
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
@@ -1169,7 +1169,7 @@ const AllProducts: React.FC = () => {
 
                   <div className="space-y-2.5 pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
                     <label className="flex items-center justify-between py-1 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] cursor-pointer">
-                      <span>শুধু স্টকে থাকা পণ্য দেখান</span>
+                      <span>Show in-stock items only</span>
                       <input
                         type="checkbox"
                         checked={inStockOnly}
@@ -1182,7 +1182,7 @@ const AllProducts: React.FC = () => {
                     </label>
 
                     <label className="flex items-center justify-between py-1 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] cursor-pointer">
-                      <span>শুধু স্পেশাল অফার পণ্য দেখান</span>
+                      <span>Show special offer items only</span>
                       <input
                         type="checkbox"
                         checked={offersOnly}
@@ -1201,7 +1201,7 @@ const AllProducts: React.FC = () => {
                       onClick={resetAllFilters}
                       className="flex-1 ds-apple-btn-secondary !min-h-[44px] !text-xs whitespace-nowrap rounded-full cursor-pointer"
                     >
-                      রিসেট করুন
+                      Reset
                     </button>
                     <button
                       type="button"
@@ -1211,7 +1211,7 @@ const AllProducts: React.FC = () => {
                       }}
                       className="flex-1 ds-apple-btn-primary !min-h-[44px] !text-xs whitespace-nowrap rounded-full cursor-pointer tabular-nums"
                     >
-                      ফলাফল দেখুন ({catalogMetrics.totalCount})
+                      View Results ({catalogMetrics.totalCount})
                     </button>
                   </div>
                 </motion.div>

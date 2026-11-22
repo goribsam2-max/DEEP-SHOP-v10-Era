@@ -87,7 +87,7 @@ export const StoreProfile: React.FC = () => {
 
   // Report Seller modal states
   const [showReportModal, setShowReportModal] = useState(false);
-  const [reportReason, setReportReason] = useState('নকল বা প্রতারণামূলক পণ্য (Fake / Counterfeit Product)');
+  const [reportReason, setReportReason] = useState('Fake / Counterfeit Product');
   const [reportDetails, setReportDetails] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
 
@@ -272,9 +272,9 @@ export const StoreProfile: React.FC = () => {
   const handleCopyStoreLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      notify("স্টোর লিংক কপি করা হয়েছে!", "success");
+      notify("Store link copied!", "success");
     } catch {
-      notify("লিংক কপি করা যায়নি", "error");
+      notify("Failed to copy link", "error");
     }
     setShowMenu(false);
   };
@@ -315,10 +315,10 @@ export const StoreProfile: React.FC = () => {
       });
       setShowReportModal(false);
       setReportDetails("");
-      notify("রিপোর্ট জমা দেওয়া হয়েছে। অ্যাডমিন টিম এটি যাচাই করবে।", "success");
+      notify("Report submitted. Our admin team will review it.", "success");
     } catch {
       setShowReportModal(false);
-      notify("রিপোর্ট গ্রহণ করা হয়েছে। আমাদের টিম এটি পর্যালোচনা করবে।", "success");
+      notify("Report received. Our team will review it shortly.", "success");
     } finally {
       setSubmittingReport(false);
     }
@@ -333,7 +333,7 @@ export const StoreProfile: React.FC = () => {
         localStorage.setItem("deepshop_blocked_sellers", JSON.stringify(blockedList));
       }
     } catch {}
-    notify("সেলারকে ব্লক করা হয়েছে।", "success");
+    notify("Seller blocked.", "success");
     setShowMenu(false);
   };
 
@@ -346,7 +346,7 @@ export const StoreProfile: React.FC = () => {
         pauseReason: ''
       });
       setSeller((prev: any) => ({ ...prev, ordersPaused: false, pauseReason: '' }));
-      notify("অর্ডার গ্রহণ পুনরায় চালু করা হয়েছে!", "success");
+      notify("Order acceptance resumed!", "success");
     } catch (e) {
       notify("Failed to update status", "error");
     } finally {
@@ -357,7 +357,7 @@ export const StoreProfile: React.FC = () => {
   const handleSavePauseOrders = async () => {
     if (!user || !seller || user.uid !== seller.id) return;
     if (!tempPauseReason.trim()) {
-      return notify("অনুগ্রহ করে কারণ উল্লেখ করুন (Reason is required)", "error");
+      return notify("Reason is required", "error");
     }
     setSavingPause(true);
     try {
@@ -367,7 +367,7 @@ export const StoreProfile: React.FC = () => {
       });
       setSeller((prev: any) => ({ ...prev, ordersPaused: true, pauseReason: tempPauseReason.trim() }));
       setShowPauseModal(false);
-      notify("স্টোরের অর্ডার গ্রহণ বন্ধ করা হয়েছে", "success");
+      notify("Store order acceptance paused", "success");
     } catch (e) {
       notify("Failed to update status", "error");
     } finally {
@@ -547,27 +547,27 @@ export const StoreProfile: React.FC = () => {
     <LiquidGlassPopup
       open={showReportModal}
       onClose={() => setShowReportModal(false)}
-      title="সেলার রিপোর্ট করুন (Report Seller)"
-      description={`${seller.shopName || seller.displayName || "এই সেলার"} সম্পর্কে আপনার অভিযোগের কারণ নির্বাচন করুন।`}
+      title="Report Seller"
+      description={`Select a reason for reporting ${seller.shopName || seller.displayName || "this seller"}.`}
       primaryAction={{
-        label: submittingReport ? "জমা হচ্ছে..." : "রিপোর্ট জমা দিন",
+        label: submittingReport ? "Submitting..." : "Submit Report",
         onClick: handleSubmitReport,
         disabled: submittingReport,
         loading: submittingReport,
       }}
       secondaryAction={{
-        label: "বাতিল",
+        label: "Cancel",
         onClick: () => setShowReportModal(false),
       }}
     >
       <div className="space-y-3 text-left">
         <div className="space-y-2">
           {[
-            "নকল বা প্রতারণামূলক পণ্য (Fake / Counterfeit Product)",
-            "স্ক্যাম বা অগ্রিম টাকা প্রতারণা (Scam / Fraud)",
-            "আপত্তিকর আচরণ বা মেসেজ (Abusive Behavior)",
-            "ভুল তথ্য বা বিভ্রান্তিকর দাম (Misleading Info)",
-            "অন্যান্য (Other)",
+            "Fake / Counterfeit Product",
+            "Scam / Advance Payment Fraud",
+            "Abusive Behavior or Messages",
+            "Misleading Information or Pricing",
+            "Other",
           ].map((reasonOpt) => (
             <label
               key={reasonOpt}
@@ -590,13 +590,13 @@ export const StoreProfile: React.FC = () => {
         </div>
         <div>
           <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
-            বিস্তারিত বিবরণ (ঐচ্ছিক)
+            Additional Details (Optional)
           </label>
           <textarea
             rows={2}
             value={reportDetails}
             onChange={(e) => setReportDetails(e.target.value)}
-            placeholder="কী সমস্যা হয়েছে সংক্ষেপে লিখুন..."
+            placeholder="Briefly describe the issue..."
             className="w-full ds-liquid-input p-3 text-xs font-medium outline-none resize-none rounded-2xl"
           />
         </div>
@@ -644,7 +644,7 @@ export const StoreProfile: React.FC = () => {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2.5 text-[#B25000] dark:text-[#FF9F0A] font-bold text-sm sm:text-base">
                 <AlertTriangle className="w-5 h-5 text-[#FF9500] shrink-0" />
-                <span>অর্ডার গ্রহণ সাময়িকভাবে বন্ধ আছে (Orders Paused)</span>
+                <span>Orders Temporarily Paused</span>
               </div>
               {user?.uid === seller.id && (
                 <button 
@@ -656,12 +656,12 @@ export const StoreProfile: React.FC = () => {
                   disabled={savingPause}
                   className="text-xs px-4 py-2 bg-[#248A3D] dark:bg-[#30D158] text-white font-semibold rounded-full transition shadow-xs cursor-pointer active:scale-95"
                 >
-                  চালু করুন
+                  Resume
                 </button>
               )}
             </div>
             <p className="text-xs sm:text-sm text-[#1D1D1F]/80 dark:text-[#F5F5F7]/80 leading-relaxed font-medium">
-              <strong>কারণ:</strong> "{seller.pauseReason || "বিক্রেতা সাময়িক বিরতিতে থাকায় বর্তমানে অর্ডার গ্রহণ বন্ধ রয়েছে।"}"
+              <strong>Reason:</strong> "{seller.pauseReason || "The seller is currently on a temporary break and not accepting orders right now."}"
             </p>
           </div>
         )}
@@ -671,18 +671,18 @@ export const StoreProfile: React.FC = () => {
           <div className="bg-[#248A3D]/10 dark:bg-[#30D158]/15 border border-[#248A3D]/25 dark:border-[#30D158]/30 rounded-[22px] p-4 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#248A3D] dark:text-[#30D158]">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
-              <span>আপনার সেলার স্টোরে স্বাভাবিকভাবে অর্ডার গ্রহণ চলছে</span>
+              <span>Your seller store is currently accepting orders normally</span>
             </div>
             <button 
               type="button"
               onClick={() => {
                 triggerHaptic("light");
-                setTempPauseReason(seller.pauseReason || "সাময়িক বিরতির কারণে অর্ডার গ্রহণ বন্ধ রাখা হলো।");
+                setTempPauseReason(seller.pauseReason || "Orders are temporarily paused for a short break.");
                 setShowPauseModal(true);
               }}
               className="text-xs px-4 py-2 bg-[#FF9500] hover:bg-[#E08600] text-white font-semibold rounded-full transition shadow-xs cursor-pointer active:scale-95"
             >
-              অর্ডার বন্ধ করুন
+              Pause Orders
             </button>
           </div>
         )}
@@ -1243,29 +1243,29 @@ export const StoreProfile: React.FC = () => {
       <LiquidGlassPopup
         open={showPauseModal}
         onClose={() => setShowPauseModal(false)}
-        title="স্টোরের অর্ডার গ্রহণ বন্ধ রাখুন"
-        description='এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে "Buy Now" ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।'
+        title="Pause Store Orders"
+        description='When enabled, "Buy Now" and new orders will be paused across all products in your store, and customers will see the reason you provide below.'
         primaryAction={{
-          label: "বন্ধ রাখুন (Pause)",
+          label: "Pause Orders",
           onClick: handleSavePauseOrders,
           disabled: !tempPauseReason.trim() || savingPause,
           loading: savingPause,
         }}
         secondaryAction={{
-          label: "বাতিল",
+          label: "Cancel",
           onClick: () => setShowPauseModal(false),
         }}
       >
         <div>
           <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
-            অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
+            Reason to show buyers *
           </label>
           <textarea
             rows={3}
             autoFocus
             className="w-full ds-liquid-input p-3 font-medium outline-none transition placeholder:text-zinc-400 resize-none text-sm rounded-2xl"
             value={tempPauseReason}
-            placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
+            placeholder="e.g., Temporary inventory update / Holiday break / Away on vacation..."
             onChange={(e) => setTempPauseReason(e.target.value)}
           />
         </div>

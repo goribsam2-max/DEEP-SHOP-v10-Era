@@ -122,6 +122,7 @@ export function HeroSlider({
             animate="center"
             exit="exit"
             drag={cards.length > 1 ? "x" : false}
+            dragDirectionLock
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.18}
             onDragEnd={handleDragEnd}
@@ -133,7 +134,8 @@ export function HeroSlider({
                     opacity: { duration: 0.24 },
                   }
             }
-            className="absolute inset-0 flex flex-col md:flex-row items-center justify-between p-6 md:px-14 md:py-10 w-full h-full cursor-pointer select-none"
+            style={{ touchAction: "pan-y" }}
+            className="absolute inset-0 flex flex-col md:flex-row items-center justify-between p-6 md:px-14 md:py-10 w-full h-full cursor-pointer select-none touch-pan-y"
             onClick={() => navigate(`/product/${activeCard.id}`)}
           >
             <div className="flex-1 text-center md:text-left z-10 min-w-0 max-w-xl">

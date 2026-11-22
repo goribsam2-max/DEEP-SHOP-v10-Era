@@ -1538,18 +1538,18 @@ const AffiliatePage: React.FC = () => {
                 <div>
                   <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#B26A00] dark:text-[#FFD60A] uppercase tracking-wider mb-0.5">
                     <GraduationCap className="w-3.5 h-3.5" />
-                    <span>রিসেলিং শিক্ষক ও ভিআইপি মেম্বারশিপ</span>
+                    <span>Reseller Guide &amp; VIP Membership</span>
                   </div>
                   <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                    ০ টাকা অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারিতে প্রোডাক্ট রিসেলিং করুন
+                    Resell products with unlimited 100% Cash on Delivery at ৳0 advance
                   </h4>
                   <p className="text-xs ds-apple-muted mt-0.5">
-                    কোনো প্রোডাক্ট স্টক না রেখে কাস্টমারের ঠিকানায় পার্সেল পাঠিয়ে ঘরে বসে আয়ের সম্পূর্ণ নির্দেশিকা।
+                    Complete step-by-step guide to earning from home by shipping directly to customers without holding inventory.
                   </p>
                 </div>
               </div>
               <span className="ds-apple-btn-primary px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 self-start sm:self-center">
-                গাইড ও প্ল্যান দেখুন
+                View Guide &amp; Plans
               </span>
             </button>
 

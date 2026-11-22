@@ -107,7 +107,7 @@ const ManageWithdrawals: React.FC = () => {
     <div className="max-w-[1200px] mx-auto px-6 py-8 min-h-screen">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-black text-zinc-900 dark:text-zinc-100">Withdrawal Requests (উইথড্র রিকোয়েস্ট)</h1>
+          <h1 className="text-2xl font-black text-zinc-900 dark:text-zinc-100">Withdrawal Requests</h1>
           <p className="text-xs text-zinc-500 font-medium">Manage user DP coin withdrawals and affiliate payout requests.</p>
         </div>
 

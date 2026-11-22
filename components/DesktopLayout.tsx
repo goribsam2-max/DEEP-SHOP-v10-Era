@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
@@ -6,7 +6,7 @@ import { signOut } from 'firebase/auth';
 import { useTheme } from './ThemeContext';
 import { Header } from './ui/header-3';
 import { HeaderNotification } from './HeaderNotification';
-import { PageLoadingContext } from '../App';
+import { usePageLoading } from '../lib/PageLoadingContext';
 import { isAppleShoppingRoute } from '../lib/shoppingRoute';
 
 const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -16,7 +16,7 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [, setCartTotal] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useTheme();
-  const { isPageLoading } = useContext(PageLoadingContext);
+  const { isPageLoading } = usePageLoading();
 
   useEffect(() => {
     const updateSidebar = (e: any) => setSidebarOpen(e.detail);
@@ -115,15 +115,15 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {!isNoHeaderPage && <Header />}
 
       <div
-        className={`relative z-10 flex-1 flex w-full flex-col ${
+        className={`relative z-10 flex-1 flex w-full min-w-0 flex-col ${
           isMessagesPage
             ? 'h-full max-h-[100dvh] overflow-hidden'
-            : 'min-h-[calc(100vh-56px)]'
+            : 'min-h-[calc(100vh-56px)] overflow-x-clip'
         }`}
       >
         {/* Main Content Area */}
         <div
-          className={`transition-all duration-300 flex-1 w-full max-w-full ${
+          className={`transition-all duration-300 flex-1 w-full min-w-0 max-w-full ${
             sidebarOpen && !isMessagesPage ? 'md:pl-72' : ''
           } ${isMessagesPage ? 'h-full overflow-hidden' : ''} bg-transparent`}
         >
@@ -132,7 +132,7 @@ const DesktopLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             className={
               isMessagesPage
                 ? 'w-full h-full max-h-[100dvh] overflow-hidden pb-0'
-                : 'w-full max-w-[1920px] mx-auto pb-0 min-h-[70vh]'
+                : 'w-full min-w-0 max-w-[1920px] mx-auto pb-0 min-h-[70vh]'
             }
           >
             {children}

@@ -86,13 +86,13 @@ const SystemHealthDiagnostics: React.FC = () => {
       results.push({
         id: "db-connection",
         category: "database",
-        titleBn: "ফায়ারবেস ডেটাবেজ সংযোগ",
+        titleBn: "Firestore Database Connectivity",
         titleEn: "Firestore Database Connectivity",
-        descriptionBn: "ফায়ারবেস ফায়ারস্টোর ডেটাবেজের সাথে সংযোগ সম্পূর্ণ সক্রিয় ও সচল রয়েছে।",
+        descriptionBn: "Firestore database is connected and responding properly to read operations.",
         descriptionEn: "Firestore database is connected and responding properly to read operations.",
         status: "healthy",
         details: "Latency: Normal (<120ms)",
-        aiPrompt: "ফায়ারবেস ডেটাবেজ সংযোগ ঠিক আছে কিনা এবং কালেকশনগুলো রেসপন্স করছে কিনা যাচাই করুন।"
+        aiPrompt: "Verify Firestore database connectivity and ensure all collections are responding properly."
       });
 
       // Check 2: Payment Numbers (bKash & Nagad)
@@ -108,26 +108,26 @@ const SystemHealthDiagnostics: React.FC = () => {
         results.push({
           id: "payment-numbers",
           category: "payments",
-          titleBn: "বিকাশ ও নগদ পেমেন্ট নাম্বার কনফিগারেশন",
+          titleBn: "bKash & Nagad Numbers Configured",
           titleEn: "bKash & Nagad Numbers Configured",
-          descriptionBn: `বিকাশ (${bkashAccounts.length || bkashNums.length}টি) ও নগদ (${nagadAccounts.length || nagadNums.length}টি) সচল নাম্বার অ্যাডমিন প্যানেলে কনফিগার করা আছে।`,
+          descriptionBn: `${bkashAccounts.length || bkashNums.length} active bKash and ${nagadAccounts.length || nagadNums.length} active Nagad payment numbers are configured for customer checkout.`,
           descriptionEn: `Active bKash and Nagad payment numbers are configured for customer advance & full payments.`,
           status: "healthy",
           details: `bKash: ${bkashNums[0] || 'Set'}, Nagad: ${nagadNums[0] || 'Set'}`,
-          directLink: { path: "/admin/payment-settings", labelBn: "পেমেন্ট সেটিংস দেখুন", labelEn: "View Payment Settings" },
-          aiPrompt: "পেমেন্ট সেটিংস চেক করুন এবং বিকাশ/নগদ নাম্বারগুলো সঠিক আছে কিনা দেখুন।"
+          directLink: { path: "/admin/payment-settings", labelBn: "View Payment Settings", labelEn: "View Payment Settings" },
+          aiPrompt: "Check payment settings and verify bKash/Nagad payment numbers are configured properly."
         });
       } else {
         results.push({
           id: "payment-numbers",
           category: "payments",
-          titleBn: "বিকাশ অথবা নগদ পেমেন্ট নাম্বার অনুপস্থিত",
+          titleBn: "Missing bKash or Nagad Payment Numbers",
           titleEn: "Missing bKash or Nagad Payment Numbers",
-          descriptionBn: "গ্রাহক চেকআউটে পেমেন্ট করার জন্য পর্যাপ্ত বিকাশ বা নগদ নাম্বার পাওয়া যায়নি। অবিলম্বে নাম্বার যুক্ত করুন।",
+          descriptionBn: "One or more payment providers (bKash/Nagad) do not have active numbers configured for customer checkout.",
           descriptionEn: "One or more payment providers (bKash/Nagad) do not have active numbers configured.",
           status: "error",
           details: `bKash: ${hasBkash ? 'Configured' : 'Missing!'}, Nagad: ${hasNagad ? 'Configured' : 'Missing!'}`,
-          directLink: { path: "/admin/payment-settings", labelBn: "পেমেন্ট সেটিংস থেকে নাম্বার দিন", labelEn: "Add in Payment Settings" },
+          directLink: { path: "/admin/payment-settings", labelBn: "Add in Payment Settings", labelEn: "Add in Payment Settings" },
           autoFixable: true,
           autoFixAction: async () => {
             await setDoc(doc(db, "settings", "payments"), {
@@ -139,7 +139,7 @@ const SystemHealthDiagnostics: React.FC = () => {
               pathaoPayNumber: "01850123456"
             }, { merge: true });
           },
-          aiPrompt: "অ্যাডমিন প্যানেল থেকে বিকাশ এবং নগদ পেমেন্ট নাম্বারগুলো ডিফল্ট ভ্যালু দিয়ে সচল করে দিন।"
+          aiPrompt: "Configure default active bKash and Nagad payment numbers in Admin Payment Settings."
         });
       }
 
@@ -152,25 +152,25 @@ const SystemHealthDiagnostics: React.FC = () => {
         results.push({
           id: "geo-hierarchy",
           category: "geo",
-          titleBn: "বাংলাদেশের প্রশাসনিক লোকেশন ডেটা (A-Z)",
+          titleBn: "Bangladesh Geo Address Hierarchy",
           titleEn: "Bangladesh Geo Address Hierarchy",
-          descriptionBn: `৮টি বিভাগ, ৬৪টি জেলা এবং ${upzCount}+ উপজেলা/থানা সম্পূর্ণ নির্ভুলভাবে লোডেড।`,
+          descriptionBn: `All 8 divisions, 64 districts (zila), and ${upzCount}+ upazilas/thanas are active.`,
           descriptionEn: `All 8 divisions, 64 districts (zila), and ${upzCount}+ upazilas/thanas are active.`,
           status: "healthy",
           details: `8 Divisions • 64 Districts • ${upzCount} Thanas`,
-          aiPrompt: "বাংলাদেশের লোকেশন সিলেক্টর এবং থানা/জেলা ডাটা যাচাই করুন।"
+          aiPrompt: "Verify the Bangladesh location selector and district/thana dataset."
         });
       } else {
         results.push({
           id: "geo-hierarchy",
           category: "geo",
-          titleBn: "লোকেশন ডেটা অসম্পূর্ণ",
+          titleBn: "Incomplete Geographic Hierarchy",
           titleEn: "Incomplete Geographic Hierarchy",
-          descriptionBn: "৬৪টি জেলা বা উপজেলার কিছু ডেটা অনুপস্থিত হতে পারে।",
+          descriptionBn: "Some districts or upazilas might be missing from the local hierarchy module.",
           descriptionEn: "Some districts or upazilas might be missing from the local hierarchy module.",
           status: "warning",
           details: `Districts found: ${distCount}/64, Upazilas: ${upzCount}`,
-          aiPrompt: "বাংলাদেশ জিওগ্রাফিক মডিউল bangladeshGeo.ts এ ৬৪টি জেলা ও উপজেলার পূর্ণাঙ্গ লিস্ট নিশ্চিত করুন।"
+          aiPrompt: "Ensure all 64 districts and upazilas are complete inside src/lib/bangladeshGeo.ts."
         });
       }
 
@@ -180,24 +180,24 @@ const SystemHealthDiagnostics: React.FC = () => {
         results.push({
           id: "abuse-protection",
           category: "abuse",
-          titleBn: "গালি ও ভুয়া তথ্য প্রতিরোধ ইঞ্জিন (৩-স্ট্রাইক রুল)",
+          titleBn: "Abuse & Profanity Filter Engine",
           titleEn: "Abuse & Profanity Filter Engine",
-          descriptionBn: "বাংলা, বাংলিশ ও ইংরেজি আপত্তিকর শব্দ সনাক্তকরণ এবং ৩-স্ট্রাইক ব্যান সিস্টেম সম্পূর্ণ সক্রিয়।",
+          descriptionBn: "Profanity detector, leetspeak cleaner, and 3-strike permanent ban overlay are running.",
           descriptionEn: "Profanity detector, leetspeak cleaner, and 3-strike permanent ban overlay are running.",
           status: "healthy",
           details: "Safe regex engine: Active • Strike Limit: 3 • IP Banning: Enabled",
-          aiPrompt: "গালি ও আপত্তিকর শব্দ ফিল্টার সিস্টেম পরীক্ষা করুন।"
+          aiPrompt: "Test the profanity detection and 3-strike abuse protection system."
         });
       } else {
         results.push({
           id: "abuse-protection",
           category: "abuse",
-          titleBn: "গালি প্রতিরোধ ইঞ্জিনে ত্রুটি",
+          titleBn: "Abuse Filter Validation Failure",
           titleEn: "Abuse Filter Validation Failure",
-          descriptionBn: "আপত্তিকর শব্দ ফিল্টারিং রেগুলার এক্সপ্রেশন ঠিকমতো ক্যাচ করতে পারছে না।",
+          descriptionBn: "Profanity detector failed standard test cases.",
           descriptionEn: "Profanity detector failed standard test cases.",
           status: "error",
-          aiPrompt: "src/lib/abuseProtection.ts ফাইলের detectAbuse ফাংশনটি ঠিক করুন।"
+          aiPrompt: "Fix the detectAbuse function inside src/lib/abuseProtection.ts."
         });
       }
 
@@ -209,25 +209,25 @@ const SystemHealthDiagnostics: React.FC = () => {
         results.push({
           id: "seo-metadata",
           category: "seo",
-          titleBn: "এসইও ও সোশ্যাল শেয়ারিং মেটা ইমেজ (OpenGraph)",
+          titleBn: "SEO Meta Tags & Social Share Cards",
           titleEn: "SEO Meta Tags & Social Share Cards",
-          descriptionBn: "হোমপেজ, প্রোডাক্ট ও ব্লগের মেটা টাইটেল, ডেসক্রিপশন এবং প্রিভিউ ইমেজ কনফিগার করা আছে।",
+          descriptionBn: "Dynamic OpenGraph preview images and Twitter cards are properly integrated.",
           descriptionEn: "Dynamic OpenGraph preview images and Twitter cards are properly integrated.",
           status: "healthy",
           details: `Preview Image: ${seoData.metaImage ? 'Configured' : 'Using App Icon'}`,
-          directLink: { path: "/admin/seo", labelBn: "ম্যানেজ এসইও", labelEn: "Manage SEO" },
-          aiPrompt: "ওয়েবসাইটের এসইও ও সোশ্যাল শেয়ারিং কার্ডের মেটা ট্যাগগুলো চেক করুন।"
+          directLink: { path: "/admin/seo", labelBn: "Manage SEO", labelEn: "Manage SEO" },
+          aiPrompt: "Review the website SEO meta tags and OpenGraph social sharing cards."
         });
       } else {
         results.push({
           id: "seo-metadata",
           category: "seo",
-          titleBn: "সোশ্যাল শেয়ার মেটা ইমেজ সেট করা নেই",
+          titleBn: "Missing Social Share Image (Meta Image)",
           titleEn: "Missing Social Share Image (Meta Image)",
-          descriptionBn: "ফেসবুক বা হোয়াটসঅ্যাপে লিংক শেয়ার করলে প্রিভিউ ইমেজ সুন্দরভাবে দেখানোর জন্য মেটা ইমেজ আপলোড করুন।",
+          descriptionBn: "Meta image or app icon is not set in SEO settings, falling back to default icon.",
           descriptionEn: "Meta image or app icon is not set in SEO settings, falling back to default icon.",
           status: "warning",
-          directLink: { path: "/admin/seo", labelBn: "এসইও পেজ থেকে ছবি দিন", labelEn: "Upload in SEO Settings" },
+          directLink: { path: "/admin/seo", labelBn: "Upload in SEO Settings", labelEn: "Upload in SEO Settings" },
           autoFixable: true,
           autoFixAction: async () => {
             await setDoc(doc(db, "settings", "seo"), {
@@ -237,7 +237,7 @@ const SystemHealthDiagnostics: React.FC = () => {
               appIconUrl: "/favicon.png"
             }, { merge: true });
           },
-          aiPrompt: "SEO সেটিংসের জন্য ডিফল্ট মেটা টাইটেল এবং প্রিভিউ ইমেজ /favicon.png কনফিগার করে দিন।"
+          aiPrompt: "Configure default SEO meta title and /favicon.png preview image in SEO Settings."
         });
       }
 
@@ -247,26 +247,26 @@ const SystemHealthDiagnostics: React.FC = () => {
         results.push({
           id: "footer-logo-sync",
           category: "system",
-          titleBn: "ফুটার ও হেডার লোগো সিঙ্ক্রোনাইজেশন",
+          titleBn: "Header & Footer Logo Sync",
           titleEn: "Header & Footer Logo Sync",
-          descriptionBn: "অ্যাডমিন প্যানেলে আপলোডকৃত লোগোটি ফুটার ও হেডারে স্বয়ংক্রিয়ভাবে সিঙ্ক হচ্ছে।",
+          descriptionBn: "Brand logo is synchronized across Header, Footer, and Invoices.",
           descriptionEn: "Brand logo is synchronized across Header, Footer, and Invoices.",
           status: "healthy",
           details: `Logo URL: ${footerLogo.slice(0, 35)}...`,
-          directLink: { path: "/admin/payment-settings", labelBn: "লোগো পরিবর্তন করুন", labelEn: "Change Logo" },
-          aiPrompt: "ফুটার লোগো সিঙ্ক ঠিক আছে কিনা চেক করুন।"
+          directLink: { path: "/admin/payment-settings", labelBn: "Change Logo", labelEn: "Change Logo" },
+          aiPrompt: "Verify header and footer brand logo synchronization."
         });
       } else {
         results.push({
           id: "footer-logo-sync",
           category: "system",
-          titleBn: "ফুটার লোগো ডিফল্ট ইমেজে চলছে",
+          titleBn: "Custom Brand Logo Not Set",
           titleEn: "Custom Brand Logo Not Set",
-          descriptionBn: "কাস্টম লোগো আপলোড করা হয়নি, বর্তমানে ডিফল্ট লোগো প্রদর্শিত হচ্ছে।",
+          descriptionBn: "A custom logo hasn't been uploaded yet; using fallback /favicon.png.",
           descriptionEn: "A custom logo hasn't been uploaded yet; using fallback /favicon.png.",
           status: "warning",
-          directLink: { path: "/admin/payment-settings", labelBn: "লোগো আপলোড করুন", labelEn: "Upload Brand Logo" },
-          aiPrompt: "পেমেন্ট সেটিংস এবং এসইও সেটিংসে ফুটার ও ব্র্যান্ড লোগো সেট করতে সাহায্য করুন।"
+          directLink: { path: "/admin/payment-settings", labelBn: "Upload Brand Logo", labelEn: "Upload Brand Logo" },
+          aiPrompt: "Help set a custom brand logo in Payment Settings and SEO Settings."
         });
       }
 
@@ -277,13 +277,13 @@ const SystemHealthDiagnostics: React.FC = () => {
           results.push({
             id: "products-catalog",
             category: "products",
-            titleBn: "প্রোডাক্ট ক্যাটালগ ও ডাটা স্কিমা",
+            titleBn: "Product Catalog Schema & Prices",
             titleEn: "Product Catalog Schema & Prices",
-            descriptionBn: `লাইভ প্রোডাক্ট ক্যাটালগ সঠিক মূল্যে এবং ছবি সহ ক্রেতাদের জন্য সক্রিয় আছে।`,
+            descriptionBn: "Products are well-formatted with valid pricing, advance configuration, and images.",
             descriptionEn: "Products are well-formatted with valid pricing, advance configuration, and images.",
             status: "healthy",
-            directLink: { path: "/admin/products", labelBn: "প্রোডাক্ট ম্যানেজ", labelEn: "Manage Products" },
-            aiPrompt: "প্রোডাক্ট ক্যাটালগের প্রাইসিং এবং ভ্যারিয়েন্ট ডাটা চেক করুন।"
+            directLink: { path: "/admin/products", labelBn: "Manage Products", labelEn: "Manage Products" },
+            aiPrompt: "Review product catalog pricing and variant schema."
           });
         }
       } catch (e) {}
@@ -292,17 +292,17 @@ const SystemHealthDiagnostics: React.FC = () => {
       results.push({
         id: "lucide-icons",
         category: "system",
-        titleBn: "আইকন ম্যাপিং ও রেজোলিউশন (Lucide)",
+        titleBn: "Lucide Icon Resolver & Aliases",
         titleEn: "Lucide Icon Resolver & Aliases",
-        descriptionBn: "Logout, LogIn, এবং কাস্টম এসভিজি আইকনগুলো কোনো ওয়ার্নিং ছাড়াই নির্বিঘ্নে রেন্ডার হচ্ছে।",
+        descriptionBn: "All system icon aliases (logout, login, close, menus) are mapped to valid Lucide components.",
         descriptionEn: "All system icon aliases (logout, login, close, menus) are mapped to valid Lucide components.",
         status: "healthy",
-        aiPrompt: "Lucide Icons এর কোনো কনসোল ওয়ার্নিং আছে কিনা যাচাই করুন।"
+        aiPrompt: "Verify there are no missing icon or console warnings for Lucide icons."
       });
 
     } catch (err) {
       console.error("Diagnostic scan error:", err);
-      notify("ডায়াগনস্টিক স্ক্যানে কিছু এরর হয়েছে", "error");
+      notify("An error occurred during the diagnostic scan.", "error");
     } finally {
       setDiagnostics(results);
       setScanning(false);
@@ -334,7 +334,7 @@ const SystemHealthDiagnostics: React.FC = () => {
   const handleCopyPrompt = (id: string, promptText: string) => {
     navigator.clipboard.writeText(promptText);
     setCopiedPromptId(id);
-    notify("এআই প্রম্পট কপি হয়েছে! আমাকে মেসেজে পেস্ট করে দিন।", "success");
+    notify("AI prompt copied to clipboard!", "success");
     setTimeout(() => setCopiedPromptId(null), 3000);
   };
 
@@ -343,11 +343,11 @@ const SystemHealthDiagnostics: React.FC = () => {
     setFixingId(item.id);
     try {
       await item.autoFixAction();
-      notify(`${item.titleBn} সফলভাবে ১-ক্লিকে ফিক্স করা হয়েছে!`, "success");
+      notify(`${item.titleEn} fixed automatically!`, "success");
       await runDiagnosticScan();
     } catch (err) {
       console.error(err);
-      notify("অটো-ফিক্স ব্যর্থ হয়েছে। ম্যানুয়ালি পেজ থেকে ঠিক করুন।", "error");
+      notify("Auto-fix failed. Please update it manually from settings.", "error");
     } finally {
       setFixingId(null);
     }
@@ -379,10 +379,10 @@ const SystemHealthDiagnostics: React.FC = () => {
               <span>Real-Time Health & Error Diagnostics Hub</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
-              সিস্টেম ডায়াগনস্টিক ও এরর সমাধান কেন্দ্র
+              System Diagnostics & Health Monitor
             </h1>
             <p className="text-zinc-400 text-xs md:text-sm leading-relaxed">
-              আপনার ওয়েবসাইটের পেমেন্ট, এসইও, লোকেশন সিলেক্টর, গালি প্রতিরোধ ব্যবস্থা ও ডেটাবেজের রিয়েল-টাইম স্বাস্থ্য পরীক্ষা করুন। যেকোনো ত্রুটি ১-ক্লিকে ফিক্স করুন অথবা এআই প্রম্পট কপি করে অবিলম্বে সমাধান নিন।
+              Check real-time system health across payments, SEO, location hierarchy, profanity filtering, and database connections. Resolve issues with 1-click auto-fix or copy diagnostic prompts.
             </p>
           </div>
 
@@ -393,13 +393,13 @@ const SystemHealthDiagnostics: React.FC = () => {
               className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-black font-extrabold px-5 py-3 rounded-2xl flex items-center gap-2 text-xs md:text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95 cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${scanning ? "animate-spin" : ""}`} />
-              <span>{scanning ? "স্ক্যান হচ্ছে..." : "পুনরায় স্ক্যান করুন"}</span>
+              <span>{scanning ? "Scanning..." : "Run Scan Again"}</span>
             </button>
             <Link
               to="/admin"
               className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold px-4 py-3 rounded-2xl text-xs md:text-sm transition flex items-center gap-1.5 border border-zinc-700"
             >
-              <span>ড্যাশবোর্ড</span>
+              <span>Dashboard</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -413,7 +413,7 @@ const SystemHealthDiagnostics: React.FC = () => {
             </div>
             <div>
               <span className="text-xl font-black text-white block">{healthyCount}</span>
-              <span className="text-[11px] font-semibold text-zinc-400">সচল উপাদান (Healthy)</span>
+              <span className="text-[11px] font-semibold text-zinc-400">Healthy</span>
             </div>
           </div>
 
@@ -423,7 +423,7 @@ const SystemHealthDiagnostics: React.FC = () => {
             </div>
             <div>
               <span className="text-xl font-black text-white block">{errorCount}</span>
-              <span className="text-[11px] font-semibold text-zinc-400">জরুরি সমস্যা (Errors)</span>
+              <span className="text-[11px] font-semibold text-zinc-400">Errors</span>
             </div>
           </div>
 
@@ -433,7 +433,7 @@ const SystemHealthDiagnostics: React.FC = () => {
             </div>
             <div>
               <span className="text-xl font-black text-white block">{warningCount}</span>
-              <span className="text-[11px] font-semibold text-zinc-400">সতর্কবার্তা (Warnings)</span>
+              <span className="text-[11px] font-semibold text-zinc-400">Warnings</span>
             </div>
           </div>
 
@@ -443,7 +443,7 @@ const SystemHealthDiagnostics: React.FC = () => {
             </div>
             <div>
               <span className="text-xl font-black text-white block">{diagnostics.length}</span>
-              <span className="text-[11px] font-semibold text-zinc-400">মোট পরিদর্শিত (Total)</span>
+              <span className="text-[11px] font-semibold text-zinc-400">Total Checks</span>
             </div>
           </div>
         </div>
@@ -460,7 +460,7 @@ const SystemHealthDiagnostics: React.FC = () => {
                 : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
-            সবগুলো ({diagnostics.length})
+            All ({diagnostics.length})
           </button>
           <button
             onClick={() => setActiveTab("error")}
@@ -471,7 +471,7 @@ const SystemHealthDiagnostics: React.FC = () => {
             }`}
           >
             <XCircle className="w-3.5 h-3.5" />
-            <span>ত্রুটি ({errorCount})</span>
+            <span>Errors ({errorCount})</span>
           </button>
           <button
             onClick={() => setActiveTab("warning")}
@@ -482,7 +482,7 @@ const SystemHealthDiagnostics: React.FC = () => {
             }`}
           >
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span>সতর্কতা ({warningCount})</span>
+            <span>Warnings ({warningCount})</span>
           </button>
           <button
             onClick={() => setActiveTab("healthy")}
@@ -493,7 +493,7 @@ const SystemHealthDiagnostics: React.FC = () => {
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>সচল ({healthyCount})</span>
+            <span>Healthy ({healthyCount})</span>
           </button>
         </div>
 
@@ -503,7 +503,7 @@ const SystemHealthDiagnostics: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="সমস্যা বা কি-ওয়ার্ড খুঁজুন..."
+            placeholder="Search issues or keywords..."
             className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-9 pr-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           />
         </div>
@@ -557,11 +557,10 @@ const SystemHealthDiagnostics: React.FC = () => {
 
                     <div>
                       <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                        <span>{item.titleBn}</span>
-                        <span className="text-xs font-medium text-zinc-400 font-sans hidden sm:inline">({item.titleEn})</span>
+                        <span>{item.titleEn}</span>
                       </h3>
                       <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mt-1 leading-relaxed">
-                        {item.descriptionBn}
+                        {item.descriptionEn}
                       </p>
                     </div>
                   </div>
@@ -577,7 +576,7 @@ const SystemHealthDiagnostics: React.FC = () => {
                         className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
                       >
                         <Sparkles className={`w-3.5 h-3.5 ${fixingId === item.id ? "animate-spin" : ""}`} />
-                        <span>{fixingId === item.id ? "ফিক্স হচ্ছে..." : "১-ক্লিক অটো-ফিক্স (Auto Fix)"}</span>
+                        <span>{fixingId === item.id ? "Fixing..." : "1-Click Auto Fix"}</span>
                       </button>
                     )}
 
@@ -589,7 +588,7 @@ const SystemHealthDiagnostics: React.FC = () => {
                         className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
                       >
                         <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
-                        <span>{item.directLink.labelBn}</span>
+                        <span>{item.directLink.labelEn}</span>
                       </button>
                     )}
 
@@ -602,17 +601,17 @@ const SystemHealthDiagnostics: React.FC = () => {
                           ? "bg-blue-600 text-white border-blue-600"
                           : "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900 hover:bg-blue-100"
                       }`}
-                      title="আমাকে ঠিক করার জন্য কী বলবেন তা ১-ক্লিকে কপি করুন"
+                      title="Copy diagnostic prompt"
                     >
                       {copiedPromptId === item.id ? (
                         <>
                           <Check className="w-3.5 h-3.5" />
-                          <span>প্রম্পট কপি হয়েছে!</span>
+                          <span>Prompt Copied!</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3.5 h-3.5" />
-                          <span>আমাকে যা কপি করে বলবেন</span>
+                          <span>Copy Prompt</span>
                         </>
                       )}
                     </button>
@@ -624,8 +623,8 @@ const SystemHealthDiagnostics: React.FC = () => {
         ) : (
           <div className="p-12 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-zinc-900 dark:text-white">কোনো সমস্যা পাওয়া যায়নি</h3>
-            <p className="text-xs text-zinc-500 mt-1">নির্বাচিত ফিল্টারে সকল উপাদান সঠিকভাবে কার্যকর রয়েছে।</p>
+            <h3 className="text-base font-bold text-zinc-900 dark:text-white">No issues found</h3>
+            <p className="text-xs text-zinc-500 mt-1">All items in this filter are operating normally.</p>
           </div>
         )}
       </div>
@@ -635,8 +634,8 @@ const SystemHealthDiagnostics: React.FC = () => {
         <div className="flex items-center gap-2.5 pb-3 border-b border-zinc-100 dark:border-zinc-800">
           <Terminal className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           <div>
-            <h2 className="text-base font-bold text-zinc-900 dark:text-white">লাইভ ভ্যালিডেশন সিমুলেটর (Live Test Simulator)</h2>
-            <p className="text-xs text-zinc-500">যেকোনো ফোন নম্বর, ঠিকানা বা টেস্ট মেসেজ লিখে যাচাই করুন সিস্টেম তা কীভাবে ফিল্টার করছে।</p>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-white">Live Test Simulator</h2>
+            <p className="text-xs text-zinc-500">Enter any phone number, address, or message to test how the system validates and filters it.</p>
           </div>
         </div>
 
@@ -646,14 +645,14 @@ const SystemHealthDiagnostics: React.FC = () => {
             value={testInput}
             onChange={(e) => setTestInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && runLiveTest()}
-            placeholder="পরীক্ষার জন্য ফোন নম্বর বা টেক্সট লিখুন (যেমন: 01724764818 বা কাস্টমার নোট)..."
+            placeholder="Enter a phone number or sample text (e.g. 01724764818 or customer note)..."
             className="flex-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
           />
           <button
             onClick={runLiveTest}
             className="bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold px-6 py-2.5 rounded-xl text-xs sm:text-sm transition cursor-pointer"
           >
-            টেস্ট করুন
+            Run Test
           </button>
         </div>
 
@@ -663,7 +662,7 @@ const SystemHealthDiagnostics: React.FC = () => {
               <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 space-y-1">
                 <span className="font-bold text-zinc-500 block uppercase tracking-wider text-[10px]">Bangladeshi Phone Check</span>
                 <p className="font-semibold">
-                  Status: {testResult.phone.isValid ? <span className="text-emerald-600 font-bold">Valid BD Number (বৈধ)</span> : <span className="text-rose-600 font-bold">Invalid (অবৈধ)</span>}
+                  Status: {testResult.phone.isValid ? <span className="text-emerald-600 font-bold">Valid BD Number</span> : <span className="text-rose-600 font-bold">Invalid</span>}
                 </p>
                 {testResult.phone.error && <p className="text-rose-500 text-[11px]">{testResult.phone.error}</p>}
                 {testResult.phone.normalized && <p className="font-mono text-zinc-600 dark:text-zinc-400">Normalized: {testResult.phone.normalized}</p>}
@@ -672,7 +671,7 @@ const SystemHealthDiagnostics: React.FC = () => {
               <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 space-y-1">
                 <span className="font-bold text-zinc-500 block uppercase tracking-wider text-[10px]">Abuse & Curse Check</span>
                 <p className="font-semibold">
-                  Result: {testResult.abuse.hasAbuse ? <span className="text-rose-600 font-bold">Abuse Detected (গালি সনাক্ত হয়েছে!)</span> : <span className="text-emerald-600 font-bold">Clean / Safe (নিরাপদ)</span>}
+                  Result: {testResult.abuse.hasAbuse ? <span className="text-rose-600 font-bold">Abuse Detected!</span> : <span className="text-emerald-600 font-bold">Clean / Safe</span>}
                 </p>
                 {testResult.abuse.matchedWord && <p className="text-rose-500 text-[11px]">Matched Word: {testResult.abuse.matchedWord}</p>}
               </div>

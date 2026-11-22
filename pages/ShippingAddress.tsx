@@ -156,10 +156,10 @@ const ShippingAddress: React.FC = () => {
       !newAddress.phone?.trim() ||
       !newAddress.street?.trim()
     ) {
-      const msg =
-        "অনুগ্রহ করে প্রাপকের নাম, মোবাইল নম্বর এবং বিস্তারিত ঠিকানা সঠিকভাবে পূরণ করুন।";
-      speakIfUnmuted(msg);
-      return notify(msg, "error");
+      speakIfUnmuted(
+        "অনুগ্রহ করে প্রাপকের নাম, মোবাইল নম্বর এবং বিস্তারিত ঠিকানা সঠিকভাবে পূরণ করুন।"
+      );
+      return notify("Please fill in recipient name, phone number, and detailed address.", "error");
     }
 
     // Abuse check
@@ -176,10 +176,8 @@ const ShippingAddress: React.FC = () => {
     // BD Phone validation
     const phoneVal = validateBangladeshiPhone(newAddress.phone);
     if (!phoneVal.isValid) {
-      const phoneErr =
-        phoneVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন।";
-      speakIfUnmuted(phoneErr);
-      return notify(phoneErr, "error");
+      speakIfUnmuted("সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন।");
+      return notify("Please enter a valid 11-digit Bangladeshi phone number.", "error");
     }
 
     const computedAddress = newAddress.street.trim();
@@ -221,10 +219,10 @@ const ShippingAddress: React.FC = () => {
           isDefault: true,
         });
         speakIfUnmuted("আপনার ডেলিভারি ঠিকানাটি সফলভাবে সেভ করা হয়েছে।");
-        notify("ঠিকানা সফলভাবে সেভ করা হয়েছে!", "success");
+        notify("Address saved successfully!", "success");
       } catch (e) {
         speakIfUnmuted("ঠিকানা সেভ করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।");
-        notify("ঠিকানা সেভ করতে ব্যর্থ হয়েছে।", "error");
+        notify("Failed to save address.", "error");
       }
     } else {
       setSavedAddresses(newAddrs);
@@ -235,7 +233,7 @@ const ShippingAddress: React.FC = () => {
         JSON.stringify(newAddrs)
       );
       speakIfUnmuted("আপনার ডেলিভারি ঠিকানাটি সফলভাবে সেভ করা হয়েছে।");
-      notify("ঠিকানা সফলভাবে সেভ করা হয়েছে!", "success");
+      notify("Address saved successfully!", "success");
     }
   };
 
@@ -251,9 +249,9 @@ const ShippingAddress: React.FC = () => {
         if (selectedAddressId === id)
           setSelectedAddressId(newAddrs.length > 0 ? newAddrs[0].id : null);
         speakIfUnmuted("ঠিকানাটি মুছে ফেলা হয়েছে।");
-        notify("ঠিকানা মুছে ফেলা হয়েছে", "success");
+        notify("Address removed.", "success");
       } catch (e) {
-        notify("ঠিকানা মুছতে সমস্যা হয়েছে", "error");
+        notify("Failed to remove address.", "error");
       }
     } else {
       setSavedAddresses(newAddrs);
@@ -275,12 +273,12 @@ const ShippingAddress: React.FC = () => {
         <div className="flex items-start justify-between gap-3 px-1">
           <div className="min-w-0">
             <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
-              {isAdding ? "নতুন ডেলিভারি ঠিকানা" : "ডেলিভারি ঠিকানা"}
+              {isAdding ? "New Delivery Address" : "Delivery Address"}
             </h1>
             <p className="text-xs sm:text-[13px] ds-apple-muted mt-1">
               {isAdding
-                ? "সঠিক নাম, নম্বর ও লোকেশন পূরণ করুন"
-                : "পার্সেল গ্রহণের ঠিকানা নির্বাচন বা যোগ করুন"}
+                ? "Enter recipient name, phone number, and location"
+                : "Select or add a parcel delivery address"}
             </p>
           </div>
           <div className="shrink-0">
@@ -339,7 +337,7 @@ const ShippingAddress: React.FC = () => {
                         className="inline-flex items-center gap-1 text-xs font-semibold text-[#FF3B30] dark:text-[#FF453A] hover:bg-[#FF3B30]/10 px-2.5 py-1 rounded-full transition-colors cursor-pointer shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        <span>মুছুন</span>
+                        <span>Remove</span>
                       </button>
                     </div>
                     <div className="pl-8 space-y-1">
@@ -362,7 +360,7 @@ const ShippingAddress: React.FC = () => {
                 }}
               >
                 <Plus className="w-4 h-4 shrink-0" />
-                <span>নতুন ডেলিভারি ঠিকানা যোগ করুন</span>
+                <span>Add New Delivery Address</span>
               </button>
             </div>
           ) : (
@@ -373,10 +371,10 @@ const ShippingAddress: React.FC = () => {
                 </div>
                 <div className="space-y-1 max-w-sm">
                   <p className="text-base font-semibold">
-                    কোনো ডেলিভারি ঠিকানা সেভ করা নেই
+                    No Saved Delivery Addresses
                   </p>
                   <p className="text-xs ds-apple-muted leading-relaxed">
-                    আপনার অর্ডার দ্রুত ও সঠিকভাবে পৌঁছে দিতে একটি ডেলিভারি ঠিকানা যোগ করুন।
+                    Add a delivery address so we can deliver your orders accurately and quickly.
                   </p>
                 </div>
                 <button
@@ -388,7 +386,7 @@ const ShippingAddress: React.FC = () => {
                   }}
                 >
                   <Plus className="w-4 h-4 shrink-0" />
-                  <span>নতুন ডেলিভারি ঠিকানা যোগ করুন</span>
+                  <span>Add New Delivery Address</span>
                 </button>
               </div>
             )
@@ -399,12 +397,12 @@ const ShippingAddress: React.FC = () => {
               {/* Contact name */}
               <div className="space-y-2">
                 <Label className="font-medium text-xs ds-apple-muted">
-                  প্রাপকের নাম (Contact Name){" "}
+                  Recipient Name{" "}
                   <span className="text-[#FF3B30]">*</span>
                 </Label>
                 <Input
                   className="ds-apple-input h-12 rounded-2xl text-base"
-                  placeholder="যার নামে পার্সেল রিসিভ হবে তার পূর্ণ নাম"
+                  placeholder="Full name of the parcel recipient"
                   value={newAddress.name}
                   onFocus={() =>
                     speakIfUnmuted(
@@ -420,7 +418,7 @@ const ShippingAddress: React.FC = () => {
               {/* Contact number */}
               <div className="space-y-2">
                 <Label className="font-medium text-xs ds-apple-muted">
-                  সচল মোবাইল নম্বর (Contact Number){" "}
+                  Active Mobile Number{" "}
                   <span className="text-[#FF3B30]">*</span>
                 </Label>
                 <div className="ds-apple-input flex rounded-2xl overflow-hidden">
@@ -434,7 +432,7 @@ const ShippingAddress: React.FC = () => {
                   </div>
                   <input
                     type="tel"
-                    placeholder="01XXXXXXXXX (১১ ডিজিট)"
+                    placeholder="01XXXXXXXXX (11 digits)"
                     value={newAddress.phone}
                     onFocus={() =>
                       speakIfUnmuted(
@@ -466,23 +464,23 @@ const ShippingAddress: React.FC = () => {
               {/* Category */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-2 gap-3">
                 <span className="text-sm font-medium ds-apple-muted">
-                  ঠিকানার ধরন (Address Category)
+                  Address Category
                 </span>
                 <div className="flex flex-wrap gap-4">
                   {[
                     {
                       id: "Home",
-                      label: "বাসা (Home)",
+                      label: "Home",
                       voice: "বাসার ঠিকানা নির্বাচন করা হয়েছে।",
                     },
                     {
                       id: "Office",
-                      label: "অফিস (Office)",
+                      label: "Office",
                       voice: "অফিসের ঠিকানা নির্বাচন করা হয়েছে।",
                     },
                     {
                       id: "Others",
-                      label: "অন্যান্য (Others)",
+                      label: "Others",
                       voice: "অন্যান্য ঠিকানা নির্বাচন করা হয়েছে।",
                     },
                   ].map((cat) => (
@@ -520,7 +518,7 @@ const ShippingAddress: React.FC = () => {
               {/* Default */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <span className="text-sm font-medium ds-apple-muted">
-                  ডিফল্ট ডেলিভারি ঠিকানা
+                  Default Delivery Address
                 </span>
                 <div className="flex gap-4">
                   {["On", "Off"].map((opt) => (
@@ -550,7 +548,7 @@ const ShippingAddress: React.FC = () => {
                         className="sr-only"
                       />
                       <span className="text-sm font-medium">
-                        {opt === "On" ? "হ্যাঁ (On)" : "না (Off)"}
+                        {opt === "On" ? "Yes (Default)" : "No"}
                       </span>
                     </label>
                   ))}
@@ -567,7 +565,7 @@ const ShippingAddress: React.FC = () => {
                   className="ds-apple-btn-primary w-full sm:w-auto sm:flex-1 min-h-[50px] py-3.5 px-6 text-[15px] font-semibold rounded-full inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 active:scale-[0.98] transition-transform cursor-pointer"
                 >
                   <Check className="w-4 h-4 shrink-0" />
-                  <span>ঠিকানা সেভ করুন</span>
+                  <span>Save Address</span>
                 </button>
                 <button
                   type="button"
@@ -577,7 +575,7 @@ const ShippingAddress: React.FC = () => {
                   }}
                   className="ds-apple-btn-secondary w-full sm:w-36 min-h-[50px] py-3.5 px-6 rounded-full text-[15px] font-semibold inline-flex items-center justify-center whitespace-nowrap shrink-0 active:scale-[0.98] transition-transform cursor-pointer"
                 >
-                  <span>বাতিল</span>
+                  <span>Cancel</span>
                 </button>
               </div>
             </div>
@@ -594,7 +592,7 @@ const ShippingAddress: React.FC = () => {
             disabled={!selectedAddressId}
             className="ds-apple-btn-primary w-full mt-2 disabled:opacity-45 min-h-[52px] py-3.5 px-6 rounded-full text-[15px] font-semibold inline-flex items-center justify-center whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <span>চেকআউটে ফিরে যান</span>
+            <span>Return to Checkout</span>
           </button>
         )}
       </div>

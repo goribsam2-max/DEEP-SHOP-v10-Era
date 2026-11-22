@@ -178,13 +178,13 @@ export default function CourierPayment() {
                 </div>
               </div>
               <p className="text-sm leading-relaxed text-[#3A3A3C] dark:text-[#D1D1D6]">
-                দয়া করে বকেয়া টাকার{" "}
+                Please pay{" "}
                 <span className="text-[#FF3B30] dark:text-[#FF453A] font-bold tabular-nums">
-                  ২০% ({formatPrice(payAmount)})
+                  20% ({formatPrice(payAmount)})
                 </span>{" "}
-                পেমেন্ট করুন।{" "}
+                of your remaining due balance.{" "}
                 <span className="text-[#FF3B30] dark:text-[#FF453A] font-semibold">
-                  পেমেন্ট না করলে ১ দিনের মধ্যে কুরিয়ার থেকে প্রোডাক্ট রিটার্ন চলে যাবে।
+                  If payment is not completed within 1 day, the product will be returned from the courier.
                 </span>
               </p>
             </div>

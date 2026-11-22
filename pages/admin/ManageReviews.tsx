@@ -11,7 +11,7 @@ import {
 import { db } from "../../firebase";
 import { useNotify, useConfirm } from "../../components/Notifications";
 import Icon from "../../components/Icon";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Edit } from "lucide-react";
 

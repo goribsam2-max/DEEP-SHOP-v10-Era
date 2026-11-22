@@ -52,7 +52,7 @@ export const BorderOfferCard: React.FC<BorderOfferCardProps> = ({ product, onBuy
                   SOLD OUT
                 </span>
                 <span className="text-[11px] font-medium text-white/75 block mt-1">
-                  সোল্ড আউট হয়ে গেছে
+                  This offer has sold out
                 </span>
               </div>
             </div>
@@ -152,7 +152,7 @@ export const BorderOfferCard: React.FC<BorderOfferCardProps> = ({ product, onBuy
           </div>
 
           <span className="text-[10px] text-[#6E6E73] dark:text-[#98989D] font-semibold bg-[#F2F2F7] dark:bg-[#2C2C2E] px-2 py-0.5 rounded-md whitespace-nowrap">
-            ১০০% এডভান্স
+            100% Advance
           </span>
         </div>
 
@@ -172,7 +172,7 @@ export const BorderOfferCard: React.FC<BorderOfferCardProps> = ({ product, onBuy
             className="ds-apple-btn-primary w-full h-10 px-4 rounded-full font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
           >
             <Zap className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">অর্ডার করুন (১০০% এডভান্স)</span>
+            <span className="truncate">Order Now (100% Advance)</span>
           </button>
         )}
       </div>

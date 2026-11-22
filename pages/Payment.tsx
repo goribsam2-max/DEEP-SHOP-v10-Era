@@ -159,7 +159,7 @@ const Payment: React.FC = () => {
     triggerHaptic("light");
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
-    notify(`${label} কপি হয়েছে!`, "success");
+    notify(`${label} copied!`, "success");
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
@@ -386,7 +386,7 @@ const Payment: React.FC = () => {
     const phoneValidation = validateBangladeshiPhone(senderNumber);
     if (!phoneValidation.isValid) {
       triggerHaptic("error");
-      return notify(phoneValidation.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন।", "error");
+      return notify(phoneValidation.error || "Please enter a valid 11-digit Bangladeshi mobile number.", "error");
     }
     triggerHaptic("selection");
     setSenderNumber(phoneValidation.normalized);
@@ -407,12 +407,12 @@ const Payment: React.FC = () => {
     if (targetStep === 2) {
       if (selectedMethod === "bkash" && !hasBkashNumber) {
         triggerHaptic("error");
-        notify("বিকাশ নম্বর সক্রিয় নেই।", "error");
+        notify("bKash number is currently unavailable.", "error");
         return;
       }
       if (selectedMethod === "nagad" && !hasNagadNumber) {
         triggerHaptic("error");
-        notify("নগদ নম্বর সক্রিয় নেই।", "error");
+        notify("Nagad number is currently unavailable.", "error");
         return;
       }
       triggerHaptic("selection");
@@ -440,14 +440,14 @@ const Payment: React.FC = () => {
     const phoneValidation = validateBangladeshiPhone(senderNumber);
     if (!phoneValidation.isValid) {
       triggerHaptic("error");
-      notify(phoneValidation.error || "অনুগ্রহ করে সঠিক প্রেরক নম্বর লিখুন।", "error");
+      notify(phoneValidation.error || "Please enter a valid sender mobile number.", "error");
       setStep(2);
       return;
     }
     const cleanTrx = trxId.trim();
     if (!cleanTrx || cleanTrx.length < 4) {
       triggerHaptic("warning");
-      notify("অনুগ্রহ করে TrxID অথবা ট্রানজেকশনের শেষ ৪টি ডিজিট লিখুন।", "error");
+      notify("Please enter the TrxID or the last 4 digits of your transaction.", "error");
       setShowTrxAccordion(true);
       return;
     }
@@ -577,11 +577,11 @@ const Payment: React.FC = () => {
         }
 
         setPaymentSuccess(true);
-        notify("পেমেন্ট সফলভাবে সাবমিট হয়েছে!", "success");
+        notify("Payment submitted successfully!", "success");
       }
     } catch (e) {
       console.error(e);
-      notify("পেমেন্ট সাবমিট করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।", "error");
+      notify("Failed to submit payment. Please try again.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -625,10 +625,10 @@ const Payment: React.FC = () => {
             <AlertCircle className="w-7 h-7 text-[#FF3B30] dark:text-[#FF453A]" />
           </div>
           <h2 className="ds-apple-display text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
-            অর্ডার পাওয়া যায়নি
+            Order Not Found
           </h2>
           <p className="text-xs sm:text-sm text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
-            আপনার অর্ডার লিংকটি সঠিক নয় অথবা অর্ডারটি বাতিল করা হয়েছে।
+            Your order link is invalid or the order has been cancelled.
           </p>
           <button
             type="button"
@@ -636,7 +636,7 @@ const Payment: React.FC = () => {
             onClick={() => navigate("/")}
             className="w-full ds-apple-btn-primary rounded-full px-6 py-3 text-sm font-semibold cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
           >
-            হোমে ফিরে যান
+            Back to Home
           </button>
         </motion.div>
       </div>
@@ -666,15 +666,14 @@ const Payment: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-[#FF9500] dark:text-[#FF9F0A]">
-                  যাচাইকরণ প্রক্রিয়া চলমান · ১-৭ ঘণ্টা
+                  Verification in Progress · 1–7 Hours
                 </p>
                 <h2 className="ds-apple-display text-xl sm:text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  পেমেন্ট তথ্য জমা হয়েছে
+                  Payment Details Submitted
                 </h2>
                 <p className="text-xs sm:text-sm text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
-                  আপনার প্রেরিত ট্রানজেকশন ম্যানুয়ালি যাচাই করা হচ্ছে। সাধারণত{" "}
-                  <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">১-৭ ঘণ্টার</strong>{" "}
-                  মধ্যে অর্ডার স্ট্যাটাস আপডেট হয়ে যাবে।
+                  Your transaction is being manually verified. Order status typically updates within{" "}
+                  <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">1–7 hours</strong>.
                 </p>
               </div>
             </div>
@@ -682,11 +681,11 @@ const Payment: React.FC = () => {
             {isGuest && (
               <div className="rounded-2xl bg-[#FF9500]/10 dark:bg-[#FF9F0A]/12 border border-[#FF9500]/20 p-4 space-y-1.5">
                 <p className="text-xs sm:text-sm font-bold text-[#9A5B00] dark:text-[#FFD60A]">
-                  অ্যাকাউন্ট খুলে অর্ডার ট্র্যাক করুন
+                  Create an Account to Track Your Order
                 </p>
                 <p className="text-xs text-[#7D4B00] dark:text-[#FFE57F] leading-relaxed">
-                  আপনার কোনো অ্যাকাউন্ট খোলা নেই। নতুন অ্যাকাউন্ট খুললেই এই অর্ডারটি স্বয়ংক্রিয়ভাবে আপনার{" "}
-                  <strong>My Orders</strong> তালিকায় যুক্ত হয়ে যাবে।
+                  You don&apos;t have an account yet. Once you sign up, this order will automatically appear in your{" "}
+                  <strong>My Orders</strong> list.
                 </p>
               </div>
             )}
@@ -695,10 +694,10 @@ const Payment: React.FC = () => {
             <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 space-y-2.5">
               <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
                 <span className="truncate">
-                  {isGuest ? "অ্যাকাউন্ট পেজে নিয়ে যাওয়া হচ্ছে..." : "My Orders পেজে নিয়ে যাওয়া হচ্ছে..."}
+                  {isGuest ? "Redirecting to account setup..." : "Redirecting to My Orders..."}
                 </span>
                 <span className="font-mono tabular-nums text-[#0071E3] dark:text-[#0A84FF] shrink-0">
-                  {successCountdown}s বাকি
+                  {successCountdown}s left
                 </span>
               </div>
               <div className="w-full bg-black/[0.08] dark:bg-white/[0.12] h-2 rounded-full overflow-hidden">
@@ -708,7 +707,7 @@ const Payment: React.FC = () => {
                 />
               </div>
               <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D]">
-                ৩০ সেকেন্ড পর স্বয়ংক্রিয়ভাবে পরবর্তী পেজে রিডাইরেক্ট হবে।
+                You will be redirected automatically after 30 seconds.
               </p>
             </div>
 
@@ -723,7 +722,7 @@ const Payment: React.FC = () => {
                   }
                   className="w-full ds-apple-btn-primary rounded-full px-6 py-3.5 text-sm font-semibold cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
                 >
-                  নতুন অ্যাকাউন্ট খুলুন ও অর্ডার দেখুন
+                  Create Account &amp; View Order
                 </button>
               ) : (
                 <button
@@ -732,7 +731,7 @@ const Payment: React.FC = () => {
                   onClick={() => navigate("/my-orders")}
                   className="w-full ds-apple-btn-primary rounded-full px-6 py-3.5 text-sm font-semibold cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
                 >
-                  এখনই My Orders পেজে যান
+                  Go to My Orders Now
                 </button>
               )}
             </div>
@@ -743,7 +742,7 @@ const Payment: React.FC = () => {
             <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] pb-3.5">
               <div>
                 <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  পেমেন্ট রিসিপ্ট সামারি
+                  Payment Receipt Summary
                 </h3>
                 <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] font-mono tabular-nums mt-0.5">
                   #{orderId?.slice(0, 10).toUpperCase()}
@@ -754,25 +753,25 @@ const Payment: React.FC = () => {
 
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[#6E6E73] dark:text-[#98989D]">গ্রহণকারী স্টোর</span>
+                <span className="text-[#6E6E73] dark:text-[#98989D]">Recipient Store</span>
                 <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate max-w-[180px]">
                   {storeName}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[#6E6E73] dark:text-[#98989D]">জমাকৃত অর্থ</span>
+                <span className="text-[#6E6E73] dark:text-[#98989D]">Amount Paid</span>
                 <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {formatPrice(calculations.amountToPay)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[#6E6E73] dark:text-[#98989D]">পেমেন্ট মাধ্যম</span>
+                <span className="text-[#6E6E73] dark:text-[#98989D]">Payment Method</span>
                 <span className="font-semibold uppercase text-[#1D1D1F] dark:text-[#F5F5F7]">
                   {selectedMethod === "bkash" ? "bKash" : "Nagad"}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[#6E6E73] dark:text-[#98989D]">প্রেরক নম্বর</span>
+                <span className="text-[#6E6E73] dark:text-[#98989D]">Sender Number</span>
                 <span className="font-mono font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {senderNumber}
                 </span>
@@ -785,7 +784,7 @@ const Payment: React.FC = () => {
               </div>
               {calculations.dueOnDelivery > 0 && (
                 <div className="pt-2.5 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2 text-xs">
-                  <span className="text-[#6E6E73] dark:text-[#98989D]">ডেলিভারিতে বাকি</span>
+                  <span className="text-[#6E6E73] dark:text-[#98989D]">Due on Delivery</span>
                   <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                     {formatPrice(calculations.dueOnDelivery)}
                   </span>
@@ -810,23 +809,23 @@ const Payment: React.FC = () => {
     fullLabel: string;
     icon: React.ElementType;
   }[] = [
-    { stepNum: 1, shortLabel: "১. মাধ্যম", fullLabel: "01. মাধ্যম নির্বাচন", icon: CreditCard },
-    { stepNum: 2, shortLabel: "২. নম্বর", fullLabel: "02. প্রেরক নম্বর", icon: Smartphone },
-    { stepNum: 3, shortLabel: "৩. TrxID", fullLabel: "03. ট্রানজেকশন যাচাই", icon: ShieldCheck },
+    { stepNum: 1, shortLabel: "1. Method", fullLabel: "01. Select Method", icon: CreditCard },
+    { stepNum: 2, shortLabel: "2. Number", fullLabel: "02. Sender Number", icon: Smartphone },
+    { stepNum: 3, shortLabel: "3. TrxID", fullLabel: "03. Verify Transaction", icon: ShieldCheck },
   ];
 
   // Shared Price Breakdown Rows for Mobile Drawer & Desktop Sticky Console
   const renderOrderFinancialBreakdown = () => (
     <div className="space-y-2.5 text-xs sm:text-sm">
       <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-300">
-        <span>পণ্যের মূল্য {totalOrderQty > 0 ? `(${totalOrderQty}টি)` : ""}</span>
+        <span>Items Subtotal {totalOrderQty > 0 ? `(${totalOrderQty})` : ""}</span>
         <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">
           {formatPrice(calculations.subtotal)}
         </span>
       </div>
       {order.type !== "subscription" && (
         <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-300">
-          <span>ডেলিভারি চার্জ</span>
+          <span>Delivery Charge</span>
           <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">
             {formatPrice(calculations.deliveryFee)}
           </span>
@@ -834,14 +833,14 @@ const Payment: React.FC = () => {
       )}
       {Number(order.discount) > 0 && (
         <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-          <span>ডিসকাউন্ট ছাড়</span>
+          <span>Discount</span>
           <span className="tabular-nums">-{formatPrice(order.discount)}</span>
         </div>
       )}
 
       <div className="pt-3 border-t border-slate-900/[0.08] dark:border-white/[0.1] flex items-baseline justify-between gap-2">
         <span className="text-sm font-bold text-zinc-900 dark:text-white">
-          এখন পরিশোধযোগ্য
+          Payable Now
         </span>
         <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
           {formatPrice(calculations.amountToPay)}
@@ -850,14 +849,14 @@ const Payment: React.FC = () => {
 
       <div className="pt-0.5 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
         <span>
-          সর্বমোট অর্ডার:{" "}
+          Order Total:{" "}
           <strong className="text-zinc-800 dark:text-zinc-200">
             {formatPrice(order.total || calculations.amountToPay)}
           </strong>
         </span>
         <span>·</span>
         <span>
-          ডেলিভারিতে বাকি:{" "}
+          Due on Delivery:{" "}
           <strong className="text-zinc-800 dark:text-zinc-200">
             {formatPrice(calculations.dueOnDelivery)}
           </strong>
@@ -875,10 +874,10 @@ const Payment: React.FC = () => {
         <div className="hidden lg:flex items-center justify-between gap-6 ds-apple-topbar rounded-[22px] px-7 py-4">
           <div className="min-w-0">
             <h1 className="ds-apple-display text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
-              সুরক্ষিত পেমেন্ট গেটওয়ে
+              Secure Payment Gateway
             </h1>
             <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5 tabular-nums">
-              {storeName} · রেফারেন্স {displayTrxRef} · সেশন বাকি {formatCountdown(secondsLeft)}
+              {storeName} · Ref {displayTrxRef} · Session expires in {formatCountdown(secondsLeft)}
             </p>
           </div>
 
@@ -928,11 +927,11 @@ const Payment: React.FC = () => {
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="min-w-0">
               <h1 className="ds-apple-display text-lg sm:text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
-                পেমেন্ট গেটওয়ে
+                Payment Gateway
               </h1>
               <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] flex items-center gap-1.5 tabular-nums">
                 <Clock className="w-3 h-3 text-[#FF9500] shrink-0" />
-                <span>{formatCountdown(secondsLeft)} বাকি · ধাপ {step}/3</span>
+                <span>{formatCountdown(secondsLeft)} left · Step {step}/3</span>
               </p>
             </div>
             <AuthVoiceToggle isInline />
@@ -998,7 +997,7 @@ const Payment: React.FC = () => {
                     {storeName}
                   </div>
                   <div className="text-[11px] text-[#6E6E73] dark:text-[#98989D] font-mono tabular-nums truncate">
-                    {displayTrxRef} · হিসাব বিস্তারিত
+                    {displayTrxRef} · Breakdown
                   </div>
                 </div>
               </div>
@@ -1026,10 +1025,10 @@ const Payment: React.FC = () => {
                       >
                         <div className="min-w-0 flex-1">
                           <p className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
-                            {item.name || item.title || "পণ্য"}
+                            {item.name || item.title || "Item"}
                           </p>
                           <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] tabular-nums">
-                            পরিমাণ: {item.quantity || 1}
+                            Qty: {item.quantity || 1}
                           </p>
                         </div>
                         <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
@@ -1058,7 +1057,7 @@ const Payment: React.FC = () => {
               <div className="ds-liquid-callout-rose px-4 py-3 flex items-center gap-2.5 text-xs font-semibold text-rose-700 dark:text-rose-300">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
                 <span>
-                  কুরিয়ার বুকিং নিশ্চিত করতে এখনই পেমেন্ট সম্পন্ন করুন, অন্যথায় ১ দিনের মধ্যে পার্সেল রিটার্ন হতে পারে।
+                  Complete payment now to confirm courier booking; otherwise, the parcel may be returned within 1 day.
                 </span>
               </div>
             )}
@@ -1069,13 +1068,13 @@ const Payment: React.FC = () => {
                   <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <div className="min-w-0">
                     <span className="font-bold text-amber-900 dark:text-amber-200 block truncate">
-                      বর্ডার স্টক অফার স্পেশাল এডভান্স
+                      Border Stock Offer Special Advance
                     </span>
                     <span className="text-[11px] text-amber-800/80 dark:text-amber-300/80 tabular-nums">
-                      এখন প্রদেয় {formatPrice(calculations.amountToPay)}
+                      Pay now {formatPrice(calculations.amountToPay)}
                       {calculations.dueOnDelivery > 0
-                        ? ` · ডেলিভারিতে বাকি ${formatPrice(calculations.dueOnDelivery)}`
-                        : " · সম্পূর্ণ পরিশোধ"}
+                        ? ` · Due on delivery ${formatPrice(calculations.dueOnDelivery)}`
+                        : " · Full Payment"}
                     </span>
                   </div>
                 </div>
@@ -1101,10 +1100,10 @@ const Payment: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                   <div>
                     <h2 className="ds-apple-display text-base sm:text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
-                      পেমেন্ট মাধ্যম নির্বাচন করুন
+                      Select Payment Method
                     </h2>
                     <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
-                      আপনার সুবিধাজনক মোবাইল ব্যাংকিং অ্যাকাউন্ট বেছে নিন
+                      Choose your preferred mobile banking account
                     </p>
                   </div>
 
@@ -1120,7 +1119,7 @@ const Payment: React.FC = () => {
                           : "text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7]"
                       }`}
                     >
-                      সব পদ্ধতি
+                      All Methods
                     </button>
                     <button
                       type="button"
@@ -1132,7 +1131,7 @@ const Payment: React.FC = () => {
                           : "text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7]"
                       }`}
                     >
-                      মোবাইল ব্যাংকিং
+                      Mobile Banking
                     </button>
                   </div>
                 </div>
@@ -1148,7 +1147,7 @@ const Payment: React.FC = () => {
                     }}
                     onClick={() => {
                       if (!hasBkashNumber) {
-                        notify("বর্তমানে কোনো বিকাশ পেমেন্ট নম্বর যুক্ত নেই।", "error");
+                        notify("No bKash payment number is configured right now.", "error");
                         return;
                       }
                       setSelectedMethod("bkash");
@@ -1176,12 +1175,12 @@ const Payment: React.FC = () => {
 
                     <div className="mt-4">
                       <p className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                        বিকাশ পেমেন্ট (bKash)
+                        bKash Payment
                       </p>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                         {hasBkashNumber
-                          ? `${getMobileActionLabel(activeBkashAccount?.type)} · ${activeBkashAccount?.type || "Personal"} নম্বর`
-                          : "বর্তমানে নম্বর অনুপলব্ধ"}
+                          ? `${getMobileActionLabel(activeBkashAccount?.type)} · ${activeBkashAccount?.type || "Personal"} Number`
+                          : "Currently unavailable"}
                       </p>
                     </div>
                   </button>
@@ -1195,7 +1194,7 @@ const Payment: React.FC = () => {
                     }}
                     onClick={() => {
                       if (!hasNagadNumber) {
-                        notify("বর্তমানে কোনো নগদ পেমেন্ট নম্বর যুক্ত নেই।", "error");
+                        notify("No Nagad payment number is configured right now.", "error");
                         return;
                       }
                       setSelectedMethod("nagad");
@@ -1223,12 +1222,12 @@ const Payment: React.FC = () => {
 
                     <div className="mt-4">
                       <p className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                        নগদ পেমেন্ট (Nagad)
+                        Nagad Payment
                       </p>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                         {hasNagadNumber
-                          ? `${getMobileActionLabel(activeNagadAccount?.type)} · ${activeNagadAccount?.type || "Personal"} নম্বর`
-                          : "বর্তমানে নম্বর অনুপলব্ধ"}
+                          ? `${getMobileActionLabel(activeNagadAccount?.type)} · ${activeNagadAccount?.type || "Personal"} Number`
+                          : "Currently unavailable"}
                       </p>
                     </div>
                   </button>
@@ -1236,7 +1235,7 @@ const Payment: React.FC = () => {
 
                 {!hasBkashNumber && !hasNagadNumber && (
                   <div className="ds-liquid-callout-rose p-3.5 text-xs font-semibold text-rose-700 dark:text-rose-300 text-center">
-                    বর্তমানে কোনো বিকাশ বা নগদ নম্বর সক্রিয় নেই। অনুগ্রহ করে অ্যাডমিন বা বিক্রেতার সাথে যোগাযোগ করুন।
+                    No bKash or Nagad number is active right now. Please contact the admin or seller.
                   </div>
                 )}
 
@@ -1251,11 +1250,11 @@ const Payment: React.FC = () => {
                     onPointerDown={() => triggerHaptic("medium")}
                     onClick={() => {
                       if (selectedMethod === "bkash" && !hasBkashNumber) {
-                        notify("বিকাশ নম্বর সক্রিয় নেই।", "error");
+                        notify("bKash number is currently unavailable.", "error");
                         return;
                       }
                       if (selectedMethod === "nagad" && !hasNagadNumber) {
-                        notify("নগদ নম্বর সক্রিয় নেই।", "error");
+                        notify("Nagad number is currently unavailable.", "error");
                         return;
                       }
                       setStep(2);
@@ -1268,7 +1267,7 @@ const Payment: React.FC = () => {
                         : "ds-liquid-btn-nagad"
                     }`}
                   >
-                    <span>{formatPrice(calculations.amountToPay)} পেমেন্ট শুরু করুন</span>
+                    <span>Start Payment {formatPrice(calculations.amountToPay)}</span>
                   </button>
 
                   <div className="text-center">
@@ -1278,7 +1277,7 @@ const Payment: React.FC = () => {
                       onClick={() => navigate("/my-orders")}
                       className="text-xs font-semibold text-[#6E6E73] dark:text-[#98989D] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      বাতিল করে অর্ডার তালিকায় ফিরে যান
+                      Cancel &amp; Return to My Orders
                     </button>
                   </div>
                 </div>
@@ -1306,7 +1305,7 @@ const Payment: React.FC = () => {
                     )}
                     <span className="text-xs text-[#86868B]">·</span>
                     <span className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
-                      প্রেরক নম্বর যাচাই
+                      Verify Sender Number
                     </span>
                   </div>
 
@@ -1317,7 +1316,7 @@ const Payment: React.FC = () => {
                     className="px-3.5 py-1.5 ds-apple-btn-secondary rounded-full !min-h-0 !text-xs flex items-center gap-1 cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>মাধ্যম বদলান</span>
+                    <span>Change Method</span>
                   </button>
                 </div>
 
@@ -1334,10 +1333,10 @@ const Payment: React.FC = () => {
                       htmlFor="sender-phone-input"
                       className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D] block"
                     >
-                      আপনার প্রেরক মোবাইল নম্বর
+                      Your Sender Mobile Number
                     </label>
                     <p className="text-xs sm:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      যে {selectedMethod === "bkash" ? "বিকাশ" : "নগদ"} নম্বর থেকে টাকা পাঠাবেন সেটি লিখুন
+                      Enter the {selectedMethod === "bkash" ? "bKash" : "Nagad"} number you will send money from
                     </p>
                   </div>
 
@@ -1359,7 +1358,7 @@ const Payment: React.FC = () => {
                   />
 
                   <p className="text-[11px] text-center text-[#6E6E73] dark:text-[#98989D]">
-                    পেমেন্ট ভেরিফিকেশনের সময় এই নম্বরের সাথে আপনার লেনদেন মেলানো হবে
+                    Your transaction will be matched against this number during verification
                   </p>
                 </div>
 
@@ -1370,7 +1369,7 @@ const Payment: React.FC = () => {
                     onClick={() => jumpToPaymentStep(1)}
                     className="sm:w-40 px-5 py-3 ds-apple-btn-secondary rounded-full text-xs sm:text-sm font-semibold cursor-pointer whitespace-nowrap active:scale-[0.97] transition-transform"
                   >
-                    পূর্ববর্তী ধাপ
+                    Previous Step
                   </button>
                   <button
                     type="button"
@@ -1378,7 +1377,7 @@ const Payment: React.FC = () => {
                     onClick={handleProceedToStep3}
                     className="flex-1 px-6 py-3 ds-apple-btn-primary rounded-full text-sm sm:text-base font-semibold cursor-pointer whitespace-nowrap active:scale-[0.98] transition-transform"
                   >
-                    জমা দিন ও পরবর্তী ধাপে যান
+                    Continue to Payment Details
                   </button>
                 </div>
               </motion.div>
@@ -1405,7 +1404,7 @@ const Payment: React.FC = () => {
                     )}
                     <span className="text-xs text-[#86868B]">·</span>
                     <span className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
-                      টাকা পাঠান ও TrxID নিশ্চিত করুন
+                      Send Money &amp; Confirm TrxID
                     </span>
                   </div>
 
@@ -1416,7 +1415,7 @@ const Payment: React.FC = () => {
                     className="px-3.5 py-1.5 ds-apple-btn-secondary rounded-full !min-h-0 !text-xs flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap active:scale-[0.97] transition-transform"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>নম্বর বদলান</span>
+                    <span>Change Number</span>
                   </button>
                 </div>
 
@@ -1428,9 +1427,9 @@ const Payment: React.FC = () => {
                       : "ds-liquid-method-nagad"
                   }`}
                 >
-                  আপনার <strong>{selectedMethod === "bkash" ? "bKash" : "Nagad"}</strong> অ্যাপ থেকে{" "}
-                  <strong>{currentActionLabel}</strong> ({currentAccountTypeLabel}) অপশনে গিয়ে নিচের নম্বরে ঠিক{" "}
-                  <strong className="tabular-nums">{formatPrice(calculations.amountToPay)}</strong> পাঠান।
+                  Open your <strong>{selectedMethod === "bkash" ? "bKash" : "Nagad"}</strong> app, choose{" "}
+                  <strong>{currentActionLabel}</strong> ({currentAccountTypeLabel}), and send exactly{" "}
+                  <strong className="tabular-nums">{formatPrice(calculations.amountToPay)}</strong> to the number below.
                 </div>
 
                 {/* 2-Column Copyable Receiver Number & Exact Amount Grid */}
@@ -1438,7 +1437,7 @@ const Payment: React.FC = () => {
                   {/* Receiver Number Card */}
                   <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 flex flex-col justify-between gap-2.5">
                     <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#6E6E73] dark:text-[#98989D]">
-                      <span>{currentActionLabel} নম্বর</span>
+                      <span>{currentActionLabel} Number</span>
                       <span>{currentAccountTypeLabel}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
@@ -1448,7 +1447,7 @@ const Payment: React.FC = () => {
                       <button
                         type="button"
                         onPointerDown={() => triggerHaptic("light")}
-                        onClick={() => handleCopy(currentReceiverNumber, "phone", "নম্বর")}
+                        onClick={() => handleCopy(currentReceiverNumber, "phone", "Number")}
                         className="px-3.5 py-1.5 ds-apple-btn-secondary rounded-full !min-h-0 !text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer whitespace-nowrap active:scale-[0.96] transition-transform"
                       >
                         {copiedKey === "phone" ? (
@@ -1456,7 +1455,7 @@ const Payment: React.FC = () => {
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
-                        <span>{copiedKey === "phone" ? "কপি হয়েছে" : "কপি"}</span>
+                        <span>{copiedKey === "phone" ? "Copied" : "Copy"}</span>
                       </button>
                     </div>
                   </div>
@@ -1464,8 +1463,8 @@ const Payment: React.FC = () => {
                   {/* Exact Amount Card */}
                   <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 flex flex-col justify-between gap-2.5">
                     <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#6E6E73] dark:text-[#98989D]">
-                      <span>পাঠানোর পরিমাণ</span>
-                      <span>সঠিক অংক</span>
+                      <span>Amount to Send</span>
+                      <span>Exact Amount</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-lg sm:text-xl font-bold tabular-nums text-[#0071E3] dark:text-[#0A84FF] tracking-tight">
@@ -1475,7 +1474,7 @@ const Payment: React.FC = () => {
                         type="button"
                         onPointerDown={() => triggerHaptic("light")}
                         onClick={() =>
-                          handleCopy(String(calculations.amountToPay), "amount", "পরিমাণ")
+                          handleCopy(String(calculations.amountToPay), "amount", "Amount")
                         }
                         className="px-3.5 py-1.5 ds-apple-btn-secondary rounded-full !min-h-0 !text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer whitespace-nowrap active:scale-[0.96] transition-transform"
                       >
@@ -1484,7 +1483,7 @@ const Payment: React.FC = () => {
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
-                        <span>{copiedKey === "amount" ? "কপি হয়েছে" : "কপি"}</span>
+                        <span>{copiedKey === "amount" ? "Copied" : "Copy"}</span>
                       </button>
                     </div>
                   </div>
@@ -1493,7 +1492,7 @@ const Payment: React.FC = () => {
                 {/* Confirmed Sender Number Summary Row */}
                 <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] px-4 py-3 flex items-center justify-between gap-2 text-xs">
                   <span className="text-[#6E6E73] dark:text-[#98989D]">
-                    আপনার প্রেরক নম্বর:{" "}
+                    Your Sender Number:{" "}
                     <strong className="font-mono tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7] ml-1">
                       {senderNumber}
                     </strong>
@@ -1504,7 +1503,7 @@ const Payment: React.FC = () => {
                     onClick={() => jumpToPaymentStep(2)}
                     className="text-[#0071E3] dark:text-[#0A84FF] font-semibold hover:underline cursor-pointer whitespace-nowrap"
                   >
-                    পরিবর্তন করুন
+                    Change
                   </button>
                 </div>
 
@@ -1518,7 +1517,7 @@ const Payment: React.FC = () => {
                       Transaction ID (TrxID)
                     </label>
                     <span className="text-[11px] font-mono tabular-nums text-[#6E6E73] dark:text-[#98989D]">
-                      সময় বাকি {formatCountdown(secondsLeft)}
+                      {formatCountdown(secondsLeft)} left
                     </span>
                   </div>
 
@@ -1533,12 +1532,12 @@ const Payment: React.FC = () => {
                         handleConfirmFinalPayment();
                       }
                     }}
-                    placeholder="যেমন: 9J4K2LX9 অথবা শেষ ৪ ডিজিট"
+                    placeholder="e.g., 9J4K2LX9 or last 4 digits"
                     className="h-12 px-4 rounded-xl text-sm sm:text-base font-mono uppercase ds-apple-input"
                   />
 
                   <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
-                    টাকা পাঠানোর পর ফিরতি এসএমএস অথবা অ্যাপের ইনবক্স থেকে পাওয়া TrxID বা শেষ ৪টি ডিজিট লিখুন।
+                    Enter the TrxID or the last 4 digits from your confirmation SMS or app inbox after sending money.
                   </p>
 
                   <button
@@ -1553,7 +1552,7 @@ const Payment: React.FC = () => {
                     }`}
                   >
                     <span>
-                      {submitting ? "যাচাই করা হচ্ছে..." : "পেমেন্ট নিশ্চিত করুন"}
+                      {submitting ? "Verifying Payment..." : "Confirm Payment"}
                     </span>
                   </button>
                 </div>
@@ -1562,7 +1561,7 @@ const Payment: React.FC = () => {
                 <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#6E6E73] dark:text-[#98989D] text-center">
                   <RefreshCw className="w-3 h-3 shrink-0" />
                   <span>
-                    নিরাপত্তার স্বার্থে প্রতিবার পেজ রিফ্রেশ করলে পেমেন্ট নম্বর পরিবর্তিত হতে পারে
+                    For security reasons, the payment number may rotate when you refresh the page
                   </span>
                 </div>
               </motion.div>
@@ -1578,11 +1577,11 @@ const Payment: React.FC = () => {
                 className="flex items-center gap-1.5 font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] hover:text-[#0071E3] dark:hover:text-[#0A84FF] transition-colors cursor-pointer whitespace-nowrap"
               >
                 <Headphones className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF]" />
-                <span>সাপোর্ট কেন্দ্র</span>
+                <span>Support Center</span>
               </button>
               <div className="flex items-center gap-1.5 text-[#6E6E73] dark:text-[#98989D] whitespace-nowrap">
                 <Lock className="w-3.5 h-3.5" />
-                <span>সুরক্ষিত গেটওয়ে · বাংলা</span>
+                <span>Secure Gateway</span>
               </div>
             </div>
           </div>
@@ -1609,7 +1608,7 @@ const Payment: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <span className="text-[11px] text-[#6E6E73] dark:text-[#98989D] block">
-                      পেমেন্ট গ্রহণকারী স্টোর
+                      Recipient Store
                     </span>
                     <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                       {storeName}
@@ -1619,7 +1618,7 @@ const Payment: React.FC = () => {
 
                 <div className="text-right shrink-0">
                   <span className="text-[11px] text-[#6E6E73] dark:text-[#98989D] block">
-                    রেফারেন্স
+                    Reference
                   </span>
                   <span className="text-xs font-mono font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                     {displayTrxRef}
@@ -1635,7 +1634,7 @@ const Payment: React.FC = () => {
                       {order.planName || "VIP Pass Subscription"}
                     </p>
                     <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] tabular-nums">
-                      মেয়াদ: {order.durationDays || 30} দিন
+                      Duration: {order.durationDays || 30} days
                     </p>
                   </div>
                   <span className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
@@ -1648,9 +1647,9 @@ const Payment: React.FC = () => {
                     <div className="flex items-center justify-between text-xs font-semibold text-[#6E6E73] dark:text-[#98989D]">
                       <span className="flex items-center gap-1.5">
                         <ShoppingBag className="w-3.5 h-3.5" />
-                        <span>অর্ডারকৃত পণ্যসমূহ</span>
+                        <span>Ordered Items</span>
                       </span>
-                      <span className="tabular-nums">{totalOrderQty}টি</span>
+                      <span className="tabular-nums">{totalOrderQty} {totalOrderQty === 1 ? "item" : "items"}</span>
                     </div>
                     {orderItemsList.map((item: any, idx: number) => (
                       <div
@@ -1671,7 +1670,7 @@ const Payment: React.FC = () => {
                         )}
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] line-clamp-1">
-                            {item.name || item.title || "পণ্য"}
+                            {item.name || item.title || "Item"}
                           </p>
                           <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] tabular-nums mt-0.5">
                             {item.quantity || 1} × {formatPrice(Number(item.price) || 0)}
@@ -1695,7 +1694,7 @@ const Payment: React.FC = () => {
               <div className="pt-1 flex items-center justify-between gap-3 text-xs text-[#6E6E73] dark:text-[#98989D]">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
-                  <span>যাচাই সময় ১-৭ ঘণ্টা</span>
+                  <span>Verification takes 1–7 hours</span>
                 </div>
                 <button
                   type="button"
@@ -1704,7 +1703,7 @@ const Payment: React.FC = () => {
                   className="flex items-center gap-1.5 font-semibold text-[#0071E3] dark:text-[#0A84FF] hover:underline cursor-pointer whitespace-nowrap"
                 >
                   <Headphones className="w-3.5 h-3.5" />
-                  <span>সাপোর্ট কেন্দ্র</span>
+                  <span>Support Center</span>
                 </button>
               </div>
             </div>

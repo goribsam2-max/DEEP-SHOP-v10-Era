@@ -8,7 +8,7 @@ import {
   AnimatePresence,
   type HTMLMotionProps,
   type Transition,
-} from 'motion/react';
+} from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 

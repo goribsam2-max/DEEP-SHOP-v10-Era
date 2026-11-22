@@ -62,19 +62,23 @@ export const FindAccountPage: React.FC = () => {
 
     const trimmed = queryValue.trim();
     if (!trimmed) {
-      const msg =
+      setErrorText(
+        mode === "mobile"
+          ? "Please enter your mobile number."
+          : "Please enter your email address."
+      );
+      playAuthVoice(
         mode === "mobile"
           ? "অনুগ্রহ করে আপনার ফোন নম্বর লিখুন।"
-          : "অনুগ্রহ করে আপনার ইমেইল ঠিকানা লিখুন।";
-      setErrorText(msg);
-      playAuthVoice(msg);
+          : "অনুগ্রহ করে আপনার ইমেইল ঠিকানা লিখুন।"
+      );
       return;
     }
 
-    const badCheck = validateInappropriateContent(trimmed, "অনুসন্ধান তথ্যে");
+    const badCheck = validateInappropriateContent(trimmed, "search query");
     if (!badCheck.isValid) {
       setErrorText(badCheck.errorMsg);
-      playAuthVoice(badCheck.errorMsg);
+      playAuthVoice(badCheck.voiceMsg || badCheck.errorMsg);
       return;
     }
 
@@ -82,7 +86,7 @@ export const FindAccountPage: React.FC = () => {
       const emailRes = validateRealEmail(trimmed);
       if (!emailRes.isValid) {
         setErrorText(emailRes.errorMsg);
-        playAuthVoice(emailRes.errorMsg);
+        playAuthVoice(emailRes.voiceMsg || emailRes.errorMsg);
         return;
       }
     }
@@ -91,10 +95,8 @@ export const FindAccountPage: React.FC = () => {
     try {
       const matches = await searchMatchingAccounts(trimmed);
       if (matches.length === 0) {
-        const notFound =
-          "কোনো অ্যাকাউন্ট খুঁজে পাওয়া যায়নি। আপনার দেওয়া তথ্য যাচাই করুন।";
-        setErrorText(notFound);
-        playAuthVoice(notFound);
+        setErrorText("No account found. Please check your details and try again.");
+        playAuthVoice("কোনো অ্যাকাউন্ট খুঁজে পাওয়া যায়নি। আপনার দেওয়া তথ্য যাচাই করুন।");
         return;
       }
 
@@ -109,9 +111,8 @@ export const FindAccountPage: React.FC = () => {
         state: { matches, searchedQuery: trimmed },
       });
     } catch {
-      const err = "অনুসন্ধান করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।";
-      setErrorText(err);
-      playAuthVoice(err);
+      setErrorText("Something went wrong while searching. Please try again.");
+      playAuthVoice("অনুসন্ধান করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
     } finally {
       setSearching(false);
     }

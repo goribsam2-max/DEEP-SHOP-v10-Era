@@ -505,23 +505,23 @@ export const Footer: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[10060] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-[env(safe-area-inset-bottom)]"
+              className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[10060] flex items-end sm:items-center justify-center p-0 sm:p-4"
               onClick={() => setIsContactOpen(false)}
             >
               <motion.div
-                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
                 transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
                 drag={prefersReducedMotion ? false : "y"}
                 dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={{ top: 0.12, bottom: 0.45 }}
+                dragElastic={{ top: 0.02, bottom: 0.45 }}
                 onDragEnd={(_, info) => {
                   if (info.offset.y > 100 || info.velocity.y > 400) {
                     setIsContactOpen(false);
                   }
                 }}
-                className="ds-apple-sheet w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] p-6 pt-3 sm:pt-6 max-h-[85vh] overflow-y-auto touch-pan-y"
+                className="ds-apple-sheet w-full max-w-none sm:max-w-sm rounded-t-[28px] rounded-b-none sm:rounded-[28px] p-6 pt-3 sm:pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 max-h-[85dvh] overflow-y-auto touch-pan-y"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="sm:hidden flex justify-center pb-3">
@@ -590,23 +590,23 @@ export const Footer: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[10070] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-[env(safe-area-inset-bottom)]"
+              className="ds-apple-portal ds-apple-backdrop fixed inset-0 z-[10070] flex items-end sm:items-center justify-center p-0 sm:p-4"
               onClick={() => setIsWhatsAppOpen(false)}
             >
               <motion.div
-                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
                 transition={prefersReducedMotion ? { duration: 0.14 } : APPLE_SPRING_DEFAULT}
                 drag={prefersReducedMotion ? false : "y"}
                 dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={{ top: 0.12, bottom: 0.45 }}
+                dragElastic={{ top: 0.02, bottom: 0.45 }}
                 onDragEnd={(_, info) => {
                   if (info.offset.y > 100 || info.velocity.y > 400) {
                     setIsWhatsAppOpen(false);
                   }
                 }}
-                className="ds-apple-sheet w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] p-6 pt-3 sm:pt-6 max-h-[85vh] overflow-y-auto touch-pan-y"
+                className="ds-apple-sheet w-full max-w-none sm:max-w-sm rounded-t-[28px] rounded-b-none sm:rounded-[28px] p-6 pt-3 sm:pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 max-h-[85dvh] overflow-y-auto touch-pan-y"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="sm:hidden flex justify-center pb-3">

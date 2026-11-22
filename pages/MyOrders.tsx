@@ -240,7 +240,7 @@ const MyOrders: React.FC = () => {
           });
           localStorage.removeItem("pending_guest_order_id");
           localStorage.removeItem("pending_guest_order_phone");
-          notify("আপনার অর্ডারটি অ্যাকাউন্টে যুক্ত করা হয়েছে!", "success");
+          notify("Your order has been linked to your account!", "success");
         } catch (err) {
           console.error("Order linking error:", err);
         }
@@ -573,10 +573,10 @@ const MyOrders: React.FC = () => {
   );
 
   const tabs: { id: OrderTab; label: string; count: number }[] = [
-    { id: "Pending", label: "অপেক্ষমাণ", count: tabCounts.Pending },
-    { id: "Active", label: "সক্রিয়", count: tabCounts.Active },
-    { id: "Subscription", label: "সাবস্ক্রিপশন (VIP)", count: tabCounts.Subscription },
-    { id: "Cancelled", label: "বাতিলকৃত", count: tabCounts.Cancelled },
+    { id: "Pending", label: "Pending", count: tabCounts.Pending },
+    { id: "Active", label: "Active", count: tabCounts.Active },
+    { id: "Subscription", label: "Subscription (VIP)", count: tabCounts.Subscription },
+    { id: "Cancelled", label: "Cancelled", count: tabCounts.Cancelled },
   ];
 
   const handleOpenOrderDetail = (order: Order) => {
@@ -807,10 +807,10 @@ const MyOrders: React.FC = () => {
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
-              DEEP SHOP VIP সাবস্ক্রিপশন
+              DEEP SHOP VIP Subscription
             </h2>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              ০ টাকা অগ্রিমে ক্যাশ অন ডেলিভারি সুবিধা
+              ৳0 advance Cash on Delivery benefit
             </p>
           </div>
         </div>
@@ -821,7 +821,7 @@ const MyOrders: React.FC = () => {
           className="px-3.5 py-2 rounded-full orders-v2-btn-explore font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-transform active:scale-95"
         >
           <Crown className="w-3.5 h-3.5" />
-          <span>নতুন পাস নিন</span>
+          <span>Get New Pass</span>
         </button>
       </div>
 
@@ -832,10 +832,10 @@ const MyOrders: React.FC = () => {
           </div>
           <div className="space-y-1.5">
             <h3 className="font-bold text-base text-zinc-900 dark:text-white">
-              কোনো ভিআইপি সাবস্ক্রিপশন রেকর্ড পাওয়া যায়নি
+              No VIP Subscription Record Found
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
-              আপনার অ্যাকাউন্টে কোনো ভিআইপি সাবস্ক্রিপশন চালু নেই। ০ টাকা অগ্রিমে ফুল ক্যাশ অন ডেলিভারিতে যেকোনো পণ্য অর্ডার করতে এখনই DEEP SHOP VIP পাস নিন।
+              You do not have an active VIP subscription yet. Get a DEEP SHOP VIP Pass to order any product with ৳0 advance and full Cash on Delivery.
             </p>
           </div>
           <button
@@ -843,7 +843,7 @@ const MyOrders: React.FC = () => {
             onClick={() => navigate("/subscription")}
             className="px-7 py-2.5 rounded-full orders-v2-btn-explore font-semibold text-xs cursor-pointer transition-transform active:scale-95"
           >
-            ভিআইপি প্ল্যান দেখুন
+            View VIP Plans
           </button>
         </div>
       ) : (
@@ -860,23 +860,23 @@ const MyOrders: React.FC = () => {
               : 0;
 
             const requestedDateStr = reqMs
-              ? new Date(reqMs).toLocaleDateString("bn-BD", {
+              ? new Date(reqMs).toLocaleDateString("en-US", {
                   day: "numeric",
-                  month: "long",
+                  month: "short",
                   year: "numeric",
                 })
               : "N/A";
             const startDateStr = startMs
-              ? new Date(startMs).toLocaleDateString("bn-BD", {
+              ? new Date(startMs).toLocaleDateString("en-US", {
                   day: "numeric",
-                  month: "long",
+                  month: "short",
                   year: "numeric",
                 })
               : "N/A";
             const expiryDateStr = expMs
-              ? new Date(expMs).toLocaleDateString("bn-BD", {
+              ? new Date(expMs).toLocaleDateString("en-US", {
                   day: "numeric",
-                  month: "long",
+                  month: "short",
                   year: "numeric",
                 })
               : "N/A";
@@ -890,7 +890,7 @@ const MyOrders: React.FC = () => {
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1">
                       <Crown className="w-3 h-3" />
-                      <span>DEEP SHOP VIP &bull; {sub.durationDays} দিন</span>
+                      <span>DEEP SHOP VIP &bull; {sub.durationDays} Days</span>
                     </span>
                     <h3 className="font-bold text-base sm:text-lg text-zinc-900 dark:text-white mt-0.5">
                       {sub.planName}
@@ -909,12 +909,12 @@ const MyOrders: React.FC = () => {
                     }`}
                   >
                     {isExpired
-                      ? "মেয়াদ শেষ"
+                      ? "Expired"
                       : sub.status === "approved"
-                      ? "সক্রিয় VIP"
+                      ? "Active VIP"
                       : sub.status === "pending"
-                      ? "অপেক্ষমাণ"
-                      : "বাতিলকৃত"}
+                      ? "Pending"
+                      : "Rejected"}
                   </span>
                 </div>
 
@@ -923,21 +923,21 @@ const MyOrders: React.FC = () => {
                     <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-bold">
                       <span className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>ভিআইপি মেম্বারশিপ সক্রিয় আছে</span>
+                        <span>VIP Membership Active</span>
                       </span>
                       <span className="text-[11px] bg-emerald-500/15 px-2.5 py-0.5 rounded-full font-bold">
-                        অবশিষ্ট {daysRemaining} দিন
+                        {daysRemaining} days left
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-zinc-600 dark:text-zinc-400 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-700/50">
                       <div>
-                        <span className="text-zinc-400 block">শুরুর তারিখ:</span>
+                        <span className="text-zinc-400 block">Start Date:</span>
                         <span className="font-bold text-zinc-800 dark:text-zinc-200">
                           {startDateStr}
                         </span>
                       </div>
                       <div>
-                        <span className="text-zinc-400 block">মেয়াদ শেষের তারিখ:</span>
+                        <span className="text-zinc-400 block">Expiry Date:</span>
                         <span className="font-bold text-zinc-800 dark:text-zinc-200">
                           {expiryDateStr}
                         </span>
@@ -948,27 +948,27 @@ const MyOrders: React.FC = () => {
                   <div className="p-3.5 rounded-2xl orders-v2-seller-box text-xs space-y-1.5">
                     <div className="flex items-center gap-1.5 text-[#FF9500] dark:text-[#FF9F0A] font-bold">
                       <Clock className="w-4 h-4" />
-                      <span>আবেদন ভেরিফিকেশন চলছে</span>
+                      <span>Verification in Progress</span>
                     </div>
                     <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                      আপনার ট্রানজেকশন আইডি (
-                      <span className="font-mono font-bold tabular-nums">{sub.trxId}</span>) যাচাই করা হচ্ছে। সাধারণত ১-৭ ঘণ্টার মধ্যে সাবস্ক্রিপশনটি সক্রিয় করে দেওয়া হয়।
+                      Your Transaction ID (
+                      <span className="font-mono font-bold tabular-nums">{sub.trxId}</span>) is being verified. Subscriptions are typically activated within 1–7 hours.
                     </p>
                   </div>
                 ) : sub.status === "rejected" ? (
                   <div className="p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 text-xs space-y-1.5">
                     <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400 font-bold">
                       <AlertTriangle className="w-4 h-4" />
-                      <span>আবেদনটি বাতিল করা হয়েছে</span>
+                      <span>Request Rejected</span>
                     </div>
                     <p className="font-semibold text-zinc-800 dark:text-zinc-200 text-xs leading-snug">
-                      {sub.rejectionReason || sub.notes || "পেমেন্ট তথ্য বা TrxID মিল পাওয়া যায়নি।"}
+                      {sub.rejectionReason || sub.notes || "Payment details or TrxID did not match."}
                     </p>
                   </div>
                 ) : (
                   <div className="p-3.5 rounded-2xl orders-v2-seller-box text-xs flex items-center justify-between">
                     <span className="font-bold text-zinc-600 dark:text-zinc-300">
-                      মেয়াদ উত্তীর্ণ হয়েছে
+                      Membership Expired
                     </span>
                     <button
                       type="button"
@@ -976,7 +976,7 @@ const MyOrders: React.FC = () => {
                       className="px-3 py-1 rounded-full orders-v2-btn-explore font-bold text-[11px] flex items-center gap-1 cursor-pointer"
                     >
                       <RefreshCw className="w-3 h-3" />
-                      <span>রিনিউ করুন</span>
+                      <span>Renew</span>
                     </button>
                   </div>
                 )}
@@ -984,13 +984,13 @@ const MyOrders: React.FC = () => {
                 <div className="p-3.5 rounded-2xl orders-v2-seller-box text-xs space-y-2">
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <span className="text-[10px] text-zinc-400 block">পেমেন্ট মেথড</span>
+                      <span className="text-[10px] text-zinc-400 block">Payment Method</span>
                       <span className="font-bold text-zinc-800 dark:text-zinc-200">
                         {sub.paymentMethod}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-zinc-400 block">সেন্ডার নম্বর</span>
+                      <span className="text-[10px] text-zinc-400 block">Sender Number</span>
                       <span className="font-bold font-mono text-zinc-800 dark:text-zinc-200">
                         {sub.senderNumber || "N/A"}
                       </span>
@@ -1003,7 +1003,7 @@ const MyOrders: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-zinc-200/60 dark:border-zinc-700/50 text-[11px] text-zinc-500">
-                    <span>আবেদনের সময়: {requestedDateStr}</span>
+                    <span>Requested: {requestedDateStr}</span>
                     <span className="font-extrabold text-zinc-900 dark:text-white text-xs">
                       ৳{sub.price?.toLocaleString("en-BD")}
                     </span>
@@ -1204,7 +1204,7 @@ const MyOrders: React.FC = () => {
             ) : (
               <div className="orders-v2-seller-box rounded-2xl p-3 space-y-2">
                 <p className="text-[11.5px] font-semibold text-zinc-700 dark:text-zinc-300 text-center">
-                  Due থেকে ২০% পে করে কুরিয়ারের নাম এবং ডেলিভারি ম্যানের নাম্বার আনলক করুন।
+                  Pay 20% of the remaining due to unlock the courier name and delivery rider&apos;s number.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -1213,7 +1213,7 @@ const MyOrders: React.FC = () => {
                     className="py-2 px-2.5 rounded-xl orders-v2-btn-explore text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Lock className="w-3.5 h-3.5" />
-                    <span>কুরিয়ার নাম</span>
+                    <span>Courier Name</span>
                   </button>
                   <button
                     type="button"
@@ -1221,7 +1221,7 @@ const MyOrders: React.FC = () => {
                     className="py-2 px-2.5 rounded-xl orders-v2-btn-explore text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Lock className="w-3.5 h-3.5" />
-                    <span>রাইডার নাম্বার</span>
+                    <span>Rider Number</span>
                   </button>
                 </div>
               </div>
@@ -1611,8 +1611,8 @@ const MyOrders: React.FC = () => {
                   exit={prefersReducedMotion ? { opacity: 0 } : { y: "100%" }}
                   transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
                   drag={prefersReducedMotion ? false : "y"}
-                  dragConstraints={{ top: 0 }}
-                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragElastic={{ top: 0.02, bottom: 0.45 }}
                   onDragEnd={(_, info) => {
                     const projected = info.offset.y + projectMomentum(info.velocity.y);
                     if (projected > 110 || info.velocity.y > 420) {
@@ -1621,7 +1621,7 @@ const MyOrders: React.FC = () => {
                     }
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="ds-apple-sheet w-full max-w-lg rounded-t-[28px] p-5 pb-8 max-h-[88vh] overflow-y-auto"
+                  className="ds-apple-sheet w-full max-w-none rounded-t-[28px] rounded-b-none p-5 pb-[calc(24px+env(safe-area-inset-bottom,0px))] max-h-[88dvh] overflow-y-auto"
                 >
                   <div className="w-10 h-1 rounded-full bg-black/[0.15] dark:bg-white/[0.2] mx-auto mb-4" />
                   {renderOrderInspectorContent(mobileDetailOrder, true)}

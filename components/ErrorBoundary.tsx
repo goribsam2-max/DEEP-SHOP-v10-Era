@@ -29,7 +29,9 @@ class ErrorBoundary extends Component<Props, State> {
       msg.includes('loading chunk') ||
       msg.includes('mime type') ||
       msg.includes('valid javascript') ||
-      msg.includes("unexpected token '<'");
+      msg.includes("unexpected token '<'") ||
+      msg.includes('dispatcher.usecontext') ||
+      msg.includes('invalid hook call');
 
     if (isChunkOrMimeError && typeof window !== 'undefined') {
       const reloadKey = 'ds_chunk_reload_' + Math.floor(Date.now() / 60000);

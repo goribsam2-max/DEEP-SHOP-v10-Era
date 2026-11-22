@@ -14,15 +14,14 @@ export function NotificationPermissionModal() {
       const hasDismissed = localStorage.getItem('notificationPromptDismissed');
 
       if (permission === 'granted') {
-        const ensureSubscribed = async () => {
-          if (localStorage.getItem('vibe_push_enabled') !== 'true') {
-            const result: any = await subscribeToWebPush(auth.currentUser?.uid);
-            if (result && !result.error) {
+        subscribeToWebPush(auth.currentUser?.uid, 'granted').then((result: any) => {
+          if (result && !result.error) {
+            try {
+              localStorage.setItem('deepshop_push_enabled', 'true');
               localStorage.setItem('vibe_push_enabled', 'true');
-            }
+            } catch {}
           }
-        };
-        ensureSubscribed();
+        }).catch(() => {});
       } else if (permission === 'default' && !hasDismissed) {
         const timer = setTimeout(() => {
           setOpen(true);

@@ -643,15 +643,36 @@ export const hasBlockedPlaceholderWord = (rawInput: string): boolean => {
   return segments.some(checkToken);
 };
 
+const FIELD_LABEL_BN: Record<string, string> = {
+  "name": "নাম",
+  "first name": "ফার্স্ট নাম",
+  "surname": "সারনেম",
+  "full name": "পূর্ণ নাম",
+  "shop name": "দোকানের নাম",
+  "owner name": "মালিকের নাম",
+  "username": "ইউজারনেমে",
+  "email": "ইমেইলে",
+  "password": "পাসওয়ার্ডে",
+  "email or phone number": "ইমেইল বা ফোন নম্বরে",
+  "search query": "অনুসন্ধান তথ্যে",
+};
+
+const toBanglaLabel = (label: string): string => {
+  const key = label.trim().toLowerCase();
+  return FIELD_LABEL_BN[key] || label;
+};
+
 export const validateRealPersonName = (
   name: string,
-  fieldLabel = "নাম"
-): { isValid: boolean; errorMsg: string } => {
+  fieldLabel = "name"
+): { isValid: boolean; errorMsg: string; voiceMsg?: string } => {
   const trimmed = name.trim();
+  const bnLabel = toBanglaLabel(fieldLabel);
   if (!trimmed || trimmed.length < 2) {
     return {
       isValid: false,
-      errorMsg: `অনুগ্রহ করে সঠিক ${fieldLabel} লিখুন (কমপক্ষে ২ অক্ষর)।`,
+      errorMsg: `Please enter a valid ${fieldLabel} (at least 2 characters).`,
+      voiceMsg: `অনুগ্রহ করে সঠিক ${bnLabel} লিখুন (কমপক্ষে ২ অক্ষর)।`,
     };
   }
 
@@ -660,7 +681,8 @@ export const validateRealPersonName = (
   if (!letterMatches || letterMatches.length < 2) {
     return {
       isValid: false,
-      errorMsg: `${fieldLabel}-এ শুধুমাত্র সংখ্যা বা চিহ্ন ব্যবহার করা যাবে না। আসল নাম লিখুন।`,
+      errorMsg: `${fieldLabel} cannot contain only numbers or symbols. Please enter a real name.`,
+      voiceMsg: `${bnLabel}-এ শুধুমাত্র সংখ্যা বা চিহ্ন ব্যবহার করা যাবে না। আসল নাম লিখুন।`,
     };
   }
 
@@ -668,14 +690,16 @@ export const validateRealPersonName = (
   if (/(.)\1{3,}/i.test(trimmed.replace(/\s+/g, ""))) {
     return {
       isValid: false,
-      errorMsg: `অনুগ্রহ করে অর্থপূর্ণ আসল ${fieldLabel} প্রদান করুন।`,
+      errorMsg: `Please provide a meaningful real ${fieldLabel}.`,
+      voiceMsg: `অনুগ্রহ করে অর্থপূর্ণ আসল ${bnLabel} প্রদান করুন।`,
     };
   }
 
   if (hasBlockedPlaceholderWord(trimmed)) {
     return {
       isValid: false,
-      errorMsg: `${fieldLabel}-এ 'test', 'user', 'demo' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না। আপনার আসল নাম লিখুন।`,
+      errorMsg: `Placeholder words like 'test', 'user', or 'demo' cannot be used in ${fieldLabel}. Please enter your real name.`,
+      voiceMsg: `${bnLabel}-এ 'test', 'user', 'demo' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না। আপনার আসল নাম লিখুন।`,
     };
   }
 
@@ -684,14 +708,15 @@ export const validateRealPersonName = (
 
 export const validatePublicUsername = (
   username: string
-): { isValid: boolean; errorMsg: string } => {
+): { isValid: boolean; errorMsg: string; voiceMsg?: string } => {
   const cleaned = username.trim().replace(/^@+/, "");
   if (!cleaned) return { isValid: true, errorMsg: "" };
 
   if (cleaned.length < 3) {
     return {
       isValid: false,
-      errorMsg: "ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে।",
+      errorMsg: "Username must be at least 3 characters long.",
+      voiceMsg: "ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে।",
     };
   }
 
@@ -699,26 +724,33 @@ export const validatePublicUsername = (
     return {
       isValid: false,
       errorMsg:
+        "Placeholder words like 'test', 'user', or 'demo' cannot be used in your username.",
+      voiceMsg:
         "ইউজারনেমে 'test', 'user', 'demo' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না।",
     };
   }
 
-  return validateInappropriateContent(cleaned, "ইউজারনেমে");
+  return validateInappropriateContent(cleaned, "username");
 };
 
 export const validateRealEmail = (
   email: string
-): { isValid: boolean; errorMsg: string } => {
+): { isValid: boolean; errorMsg: string; voiceMsg?: string } => {
   const trimmed = email.trim().toLowerCase();
   if (!trimmed) {
-    return { isValid: false, errorMsg: "অনুগ্রহ করে আপনার ইমেইল প্রদান করুন।" };
+    return {
+      isValid: false,
+      errorMsg: "Please enter your email address.",
+      voiceMsg: "অনুগ্রহ করে আপনার ইমেইল প্রদান করুন।",
+    };
   }
 
   const parts = trimmed.split("@");
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
     return {
       isValid: false,
-      errorMsg: "একটি সঠিক ইমেইল ঠিকানা প্রদান করুন (যেমন: rahim.ahmed@gmail.com)।",
+      errorMsg: "Please enter a valid email address (e.g., rahim.ahmed@gmail.com).",
+      voiceMsg: "একটি সঠিক ইমেইল ঠিকানা প্রদান করুন (যেমন: rahim.ahmed@gmail.com)।",
     };
   }
 
@@ -739,6 +771,8 @@ export const validateRealEmail = (
     return {
       isValid: false,
       errorMsg:
+        "Placeholder words like 'test', 'user', or 'demo' are not allowed in email addresses. Please use your real email.",
+      voiceMsg:
         "ইমেইলে 'test', 'user', 'demo' বা ডিফল্ট শব্দ ব্যবহার করা যাবে না। অনুগ্রহ করে আপনার আসল ইমেইল দিন।",
     };
   }
@@ -750,7 +784,8 @@ export const validateRealEmail = (
   if (isDisposable || hasBlockedPlaceholderWord(domain.split(".")[0] || "")) {
     return {
       isValid: false,
-      errorMsg: "ফেক বা টেম্পোরারি ইমেইল ব্যবহার করা যাবে না। আসল ইমেইল দিন।",
+      errorMsg: "Disposable or temporary email addresses are not allowed. Please enter a real email.",
+      voiceMsg: "ফেক বা টেম্পোরারি ইমেইল ব্যবহার করা যাবে না। আসল ইমেইল দিন।",
     };
   }
 
@@ -762,6 +797,8 @@ export const validateRealEmail = (
     return {
       isValid: false,
       errorMsg:
+        "Only trusted email providers such as Gmail, Outlook, Yahoo, or iCloud are accepted.",
+      voiceMsg:
         "শুধুমাত্র আসল ইমেইল যেমন Gmail, Outlook, Yahoo, iCloud ইত্যাদি গ্রহণযোগ্য। ভুয়া ইমেইল গ্রহণযোগ্য নয়।",
     };
   }
@@ -771,16 +808,18 @@ export const validateRealEmail = (
 
 export const validateInappropriateContent = (
   text: string,
-  fieldName = "নাম"
-): { isValid: boolean; errorMsg: string } => {
+  fieldName = "name"
+): { isValid: boolean; errorMsg: string; voiceMsg?: string } => {
   const lower = text.toLowerCase().trim();
   if (!lower) return { isValid: true, errorMsg: "" };
 
+  const bnField = toBanglaLabel(fieldName);
   for (const word of INAPPROPRIATE_WORDS) {
     if (lower.includes(word)) {
       return {
         isValid: false,
-        errorMsg: `আপনার ${fieldName}-এ অনাকাঙ্ক্ষিত বা অশালীন শব্দ সনাক্ত হয়েছে। অনুগ্রহ করে সঠিক তথ্য ব্যবহার করুন।`,
+        errorMsg: `Inappropriate or offensive language was detected in ${fieldName}. Please enter valid information.`,
+        voiceMsg: `আপনার ${bnField}-এ অনাকাঙ্ক্ষিত বা অশালীন শব্দ সনাক্ত হয়েছে। অনুগ্রহ করে সঠিক তথ্য ব্যবহার করুন।`,
       };
     }
   }

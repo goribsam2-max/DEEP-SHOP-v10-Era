@@ -8,16 +8,54 @@ import { doc, getDoc } from "firebase/firestore";
 import { PixelImage } from "./PixelImage";
 import { triggerHaptic } from "../../lib/haptics";
 import { APPLE_SPRING_SNAPPY } from "../../lib/shoppingRoute";
-import { Heart, Star, ShoppingBag, Check, ArrowUpRight } from "lucide-react";
+import { Heart, Star, ShoppingBag, Check, ArrowUpRight, Flame, Sparkles, AlertTriangle } from "lucide-react";
 import { getProductDisplayImage } from "../../src/lib/phonePartsArt";
 import { useNotify } from "../Notifications";
 import { VerifiedIcon } from "../SellerBadge";
 import { useIsWishlisted, toggleWishlistItem } from "../../lib/wishlistStore";
+import {
+  computeProductTags,
+  useProductOrderStats,
+  type ProductAutoTag,
+} from "../../lib/productTags";
 
 export interface ProductCardProps {
   product: Product;
   index?: number;
   layout?: "grid" | "list";
+  bestSellerCutoff?: number;
+}
+
+function getAutoTagBadgeStyle(id: ProductAutoTag["id"]): string {
+  switch (id) {
+    case "best_seller":
+      return "bg-[#B25000] text-white dark:bg-[#FF9F0A] dark:text-[#1D1D1F] shadow-sm";
+    case "low_stock":
+      return "bg-[#C92A2A] text-white dark:bg-[#FF453A] dark:text-white shadow-sm";
+    case "new_arrival":
+    default:
+      return "bg-[#005CC5] text-white dark:bg-[#0A84FF] dark:text-white shadow-sm";
+  }
+}
+
+function renderAutoTagBadge(tag: ProductAutoTag, compact = false) {
+  const IconComp =
+    tag.id === "best_seller"
+      ? Flame
+      : tag.id === "low_stock"
+      ? AlertTriangle
+      : Sparkles;
+  return (
+    <span
+      key={tag.id}
+      className={`inline-flex items-center gap-1 rounded-lg font-bold tracking-tight whitespace-nowrap ${getAutoTagBadgeStyle(
+        tag.id
+      )} ${compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-[10.5px]"}`}
+    >
+      <IconComp className={compact ? "w-2.5 h-2.5 shrink-0" : "w-3 h-3 shrink-0"} />
+      <span>{compact ? tag.shortLabel : tag.label}</span>
+    </span>
+  );
 }
 
 interface ResolvedSellerMeta {
@@ -61,11 +99,13 @@ function getInitialSellerMeta(product: Product): ResolvedSellerMeta {
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   layout = "grid",
+  bestSellerCutoff = 3,
 }) => {
   const navigate = useNavigate();
   const notify = useNotify();
   const shouldReduceMotion = useReducedMotion();
   const isWishlisted = useIsWishlisted(product.id);
+  const orderStats = useProductOrderStats();
   const [justAdded, setJustAdded] = useState(false);
   const [sellerMeta, setSellerMeta] = useState<ResolvedSellerMeta>(() =>
     getInitialSellerMeta(product)
@@ -75,6 +115,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const hasDiscount = Boolean(
     product.isOffer && product.offerPrice && product.offerPrice < product.price
   );
+  const autoTags = computeProductTags(
+    product,
+    orderStats.salesByProductId,
+    bestSellerCutoff
+  );
+  const primaryAutoTag = autoTags[0] || null;
 
   const displayPrice =
     product.isOffer && product.offerPrice ? product.offerPrice : product.price;
@@ -186,7 +232,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     e.stopPropagation();
 
     if (!auth.currentUser) {
-      notify("উইশলিস্টে সেভ করতে অনুগ্রহ করে লগইন করুন", "info");
+      notify("Please sign in to save items to your wishlist", "info");
       return;
     }
     if (!product.id) return;
@@ -225,7 +271,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       localStorage.setItem("f_cart", JSON.stringify(existing));
       window.dispatchEvent(new Event("update_cart"));
       setJustAdded(true);
-      notify("কার্টে যুক্ত করা হয়েছে", "success");
+      notify("Added to cart", "success");
       setTimeout(() => setJustAdded(false), 1600);
     } catch (err) {
       console.error("Error adding item to cart:", err);
@@ -239,7 +285,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     navigate(`/store/${sellerMeta.storeId || "system"}`);
   };
 
-  const cleanCategory = (product.category || product.brand || "কালেকশন")
+  const cleanCategory = (product.category || product.brand || "Collection")
     .replace(/\s*\(.*?\)\s*/g, "")
     .trim();
 
@@ -250,7 +296,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       .replace(/[#*`~_>]/g, " ")
       .replace(/\s+/g, " ")
       .trim() ||
-    `${product.name} — যাচাইকৃত অরিজিনাল কোয়ালিটি ও নিরাপদ ডেলিভারি সুবিধা।`;
+    `${product.name} — Verified authentic quality with safe nationwide delivery.`;
 
   const specSummary = [
     product.brand,
@@ -292,15 +338,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   isOutOfStock ? "opacity-40 grayscale" : ""
                 }`}
               />
-              {hasDiscount && discountPercentage > 0 && !isOutOfStock && (
-                <span className="absolute top-2 left-2 z-20 ds-liquid-discount-tag rounded-lg px-1.5 py-0.5 text-[10px] font-bold tabular-nums whitespace-nowrap">
-                  -{discountPercentage}%
-                </span>
+              {!isOutOfStock && ((hasDiscount && discountPercentage > 0) || primaryAutoTag) && (
+                <div className="absolute top-2 left-2 z-20 flex flex-col items-start gap-1 pointer-events-none">
+                  {hasDiscount && discountPercentage > 0 && (
+                    <span className="ds-liquid-discount-tag rounded-lg px-1.5 py-0.5 text-[10px] font-bold tabular-nums whitespace-nowrap">
+                      -{discountPercentage}%
+                    </span>
+                  )}
+                  {primaryAutoTag && renderAutoTagBadge(primaryAutoTag, true)}
+                </div>
               )}
               {isOutOfStock && (
                 <div className="absolute inset-0 z-20 bg-slate-950/55 backdrop-blur-[2px] flex items-center justify-center px-2">
                   <span className="text-[10px] font-semibold text-white tracking-tight whitespace-nowrap">
-                    স্টক শেষ
+                    Out of Stock
                   </span>
                 </div>
               )}
@@ -404,13 +455,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               />
               {hasDiscount && discountPercentage > 0 && !isOutOfStock && (
                 <span className="absolute top-2.5 left-2.5 z-20 ds-liquid-discount-tag rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums whitespace-nowrap">
-                  -{discountPercentage}% ছাড়
+                  -{discountPercentage}% OFF
                 </span>
               )}
               {isOutOfStock && (
                 <div className="absolute inset-0 z-20 bg-slate-950/55 backdrop-blur-[3px] flex items-center justify-center">
                   <span className="text-xs font-semibold text-white px-3 py-1 rounded-full bg-slate-900/75 border border-white/15 whitespace-nowrap">
-                    স্টক শেষ · Out of Stock
+                    Out of Stock
                   </span>
                 </div>
               )}
@@ -441,9 +492,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
                   {ratingLabel}
                   <span className="font-normal text-slate-500 dark:text-slate-400">
-                    ({reviewCount} রিভিউ)
+                    ({reviewCount} {reviewCount === 1 ? "review" : "reviews"})
                   </span>
                 </span>
+                {autoTags.slice(0, 2).map((tag) => renderAutoTagBadge(tag, true))}
               </div>
 
               <h3 className="text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight leading-snug line-clamp-1 group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
@@ -470,10 +522,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   }
                 >
                   {isOutOfStock
-                    ? "স্টক নেই"
+                    ? "Out of stock"
                     : product.stock
-                    ? `স্টকে ${product.stock}টি প্রস্তুত`
-                    : "স্টকে প্রস্তুত"}
+                    ? `${product.stock} in stock`
+                    : "In stock"}
                 </span>
               </div>
             </div>
@@ -519,12 +571,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   {justAdded ? (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      <span>যুক্ত হয়েছে</span>
+                      <span>Added</span>
                     </>
                   ) : (
                     <>
                       <ShoppingBag className="w-3.5 h-3.5" />
-                      <span>কার্টে নিন</span>
+                      <span>Add to Cart</span>
                     </>
                   )}
                 </button>
@@ -567,18 +619,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               }`}
             />
 
-            {/* Single Subtle Frosted Discount Tag (Only when discounted) */}
-            {hasDiscount && discountPercentage > 0 && !isOutOfStock && (
-              <span className="absolute top-2 left-2 z-20 ds-liquid-discount-tag rounded-lg px-2 py-0.5 text-[10px] font-bold tabular-nums tracking-tight whitespace-nowrap">
-                -{discountPercentage}%
-              </span>
+            {/* Single Subtle Frosted Discount / Automated Trend Tag */}
+            {!isOutOfStock && ((hasDiscount && discountPercentage > 0) || primaryAutoTag) && (
+              <div className="absolute top-2 left-2 z-20 flex flex-col items-start gap-1 pointer-events-none">
+                {hasDiscount && discountPercentage > 0 && (
+                  <span className="ds-liquid-discount-tag rounded-lg px-2 py-0.5 text-[10px] font-bold tabular-nums tracking-tight whitespace-nowrap">
+                    -{discountPercentage}%
+                  </span>
+                )}
+                {primaryAutoTag && renderAutoTagBadge(primaryAutoTag, true)}
+              </div>
             )}
 
             {/* Clean Frosted Out-of-Stock Overlay */}
             {isOutOfStock && (
               <div className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px] flex items-center justify-center p-2 z-20">
                 <span className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-white/15 text-[10px] font-semibold text-white tracking-tight whitespace-nowrap">
-                  স্টক শেষ
+                  Out of Stock
                 </span>
               </div>
             )}
@@ -689,18 +746,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               }`}
             />
 
-            {/* Single Subtle Frosted Discount Tag */}
-            {hasDiscount && discountPercentage > 0 && !isOutOfStock && (
-              <span className="absolute top-3 left-3 z-20 ds-liquid-discount-tag rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-tight whitespace-nowrap">
-                -{discountPercentage}%
-              </span>
+            {/* Single Subtle Frosted Discount / Automated Trend Tag */}
+            {!isOutOfStock && ((hasDiscount && discountPercentage > 0) || primaryAutoTag) && (
+              <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-1.5 pointer-events-none">
+                {hasDiscount && discountPercentage > 0 && (
+                  <span className="ds-liquid-discount-tag rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-tight whitespace-nowrap">
+                    -{discountPercentage}%
+                  </span>
+                )}
+                {primaryAutoTag && renderAutoTagBadge(primaryAutoTag, false)}
+              </div>
             )}
 
             {/* Clean Frosted Out-of-Stock Overlay */}
             {isOutOfStock && (
               <div className="absolute inset-0 bg-slate-950/55 backdrop-blur-[3px] flex items-center justify-center p-3 z-20">
                 <span className="px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-white/15 text-xs font-semibold text-white tracking-tight whitespace-nowrap">
-                  স্টক শেষ · Out of Stock
+                  Out of Stock
                 </span>
               </div>
             )}
@@ -752,12 +814,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     {justAdded ? (
                       <>
                         <Check className="w-3.5 h-3.5 shrink-0" />
-                        <span>কার্টে যুক্ত</span>
+                        <span>Added to Cart</span>
                       </>
                     ) : (
                       <>
                         <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
-                        <span>কার্টে যোগ করুন</span>
+                        <span>Add to Cart</span>
                       </>
                     )}
                   </button>
@@ -818,7 +880,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     : "text-emerald-600 dark:text-emerald-400"
                 }`}
               >
-                {isOutOfStock ? "স্টক নেই" : "স্টকে আছে"}
+                {isOutOfStock ? "Out of stock" : "In stock"}
               </span>
             </div>
           </div>

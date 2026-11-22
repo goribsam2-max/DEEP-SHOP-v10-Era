@@ -13,7 +13,7 @@ interface BorderOfferSectionProps {
 
 export const BorderOfferSection: React.FC<BorderOfferSectionProps> = ({
   products,
-  title = "বর্ডার স্টক ফোন বিশেষ অফার",
+  title = "Border Stock Special Offers",
 }) => {
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);

@@ -128,12 +128,12 @@ export default function CashOnCampaignPage() {
       const url = await uploadToImgBB(file);
       setUploadState({ file, url, uploading: false });
       triggerHaptic("success");
-      notify("স্ক্রিনশট সফলভাবে আপলোড হয়েছে", "success");
+      notify("Screenshot uploaded successfully", "success");
     } catch (err) {
       console.error("Screenshot upload failed:", err);
       triggerHaptic("error");
       setUploadState({ file: null, url: "", uploading: false, error: "Upload failed" });
-      notify("স্ক্রিনশট আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন", "error");
+      notify("Screenshot upload failed. Please try again.", "error");
     }
   };
 
@@ -145,25 +145,25 @@ export default function CashOnCampaignPage() {
     triggerHaptic("medium");
     const newErrors: Record<string, string> = {};
 
-    if (!fullName.trim()) newErrors.fullName = "আপনার পুরো নাম লিখুন (Name is required)";
-    if (!phone.trim()) newErrors.phone = "সচল মোবাইল নম্বরটি প্রদান করুন (Phone is required)";
-    if (!tiktokUsername.trim()) newErrors.tiktokUsername = "আপনার টিকটক ইউজারনেম লিখুন (TikTok ID is required)";
+    if (!fullName.trim()) newErrors.fullName = "Full name is required";
+    if (!phone.trim()) newErrors.phone = "Active mobile number is required";
+    if (!tiktokUsername.trim()) newErrors.tiktokUsername = "TikTok username is required";
 
-    if (!followScreenshot.url) newErrors.follow = "TikTok Follow স্ক্রিনশটটি প্রদান করুন";
-    if (!video1Screenshot.url) newErrors.v1 = "Video 1 Like & Comment স্ক্রিনশটটি প্রদান করুন";
-    if (!video2Screenshot.url) newErrors.v2 = "Video 2 Like & Comment স্ক্রিনশটটি প্রদান করুন";
-    if (!video3Screenshot.url) newErrors.v3 = "Video 3 Like & Comment স্ক্রিনশটটি প্রদান করুন";
+    if (!followScreenshot.url) newErrors.follow = "Please upload the TikTok Follow screenshot";
+    if (!video1Screenshot.url) newErrors.v1 = "Please upload Video 1 Like & Comment screenshot";
+    if (!video2Screenshot.url) newErrors.v2 = "Please upload Video 2 Like & Comment screenshot";
+    if (!video3Screenshot.url) newErrors.v3 = "Please upload Video 3 Like & Comment screenshot";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       triggerHaptic("error");
-      notify("অনুগ্রহ করে সকল লাল চিহ্নিত ভুল ও স্ক্রিনশটসমূহ ঠিক করুন", "error");
+      notify("Please fix all highlighted fields and upload all required screenshots", "error");
       return;
     }
 
     if (alreadyApplied) {
       triggerHaptic("error");
-      notify("আপনার এই আইপি থেকে ইতিমধ্যেই আবেদন করা হয়েছে। (Already applied from this IP)", "error");
+      notify("An application has already been submitted from this IP address.", "error");
       return;
     }
 
@@ -207,14 +207,14 @@ export default function CashOnCampaignPage() {
       setSubmitted(true);
       setShowCongratulationsModal(true);
       playAuthVoice("অভিনন্দন! আপনার ক্যাশ অন ক্যাম্পেইন আবেদন সফলভাবে জমা হয়েছে।");
-      notify("আপনার ক্যাশ অন ক্যাম্পেইন আবেদন সফলভাবে জমা হয়েছে!", "success");
+      notify("Your Cash on Campaign application has been submitted successfully!", "success");
     } catch (err) {
       console.warn("Application submit notice:", err);
       triggerHaptic("success");
       setSubmitting(false);
       setSubmitted(true);
       setShowCongratulationsModal(true);
-      notify("আবেদন গ্রহণ করা হয়েছে!", "success");
+      notify("Application received!", "success");
     }
   };
 
@@ -224,7 +224,7 @@ export default function CashOnCampaignPage() {
       "deepshop_cash_on_draft",
       JSON.stringify({ fullName, phone, email, address, tiktokUsername, foundSource, reason }),
     );
-    notify("খসড়া সংরক্ষিত হয়েছে (Draft Saved)", "info");
+    notify("Draft saved", "info");
   };
 
   if (loadingSettings) {
@@ -249,7 +249,7 @@ export default function CashOnCampaignPage() {
               Soon Available
             </h1>
             <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed max-w-sm mx-auto">
-              ক্যাশ অন ক্যাম্পেইনটি সাময়িকভাবে স্থগিত আছে। সেলার প্যানেল থেকে খুব শীঘ্রই ক্যাম্পেইনটি পুনরায় চালু করা হবে। নিয়মিত নোটিফিকেশন চেক করুন!
+              The Cash on Campaign is temporarily paused and will reopen soon from the seller panel. Check your notifications regularly for updates!
             </p>
             <button
               type="button"
@@ -259,7 +259,7 @@ export default function CashOnCampaignPage() {
               }}
               className="ds-apple-btn-primary w-full py-3.5 px-5 rounded-full font-semibold text-[14px] whitespace-nowrap active:scale-[0.98] transition-transform"
             >
-              হোম পেজে ফিরে যান
+              Back to Home
             </button>
           </div>
         </main>
@@ -285,10 +285,10 @@ export default function CashOnCampaignPage() {
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
-              আবেদন সফলভাবে জমা হয়েছে!
+              Application Submitted Successfully!
             </h1>
             <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed max-w-md mx-auto">
-              ধন্যবাদ <b className="text-[#1D1D1F] dark:text-[#F5F5F7]">{fullName}</b>! আপনার আবেদনটি সফলভাবে জমা হয়েছে। বিজয়ী হলে আপনার প্রোফাইল স্ট্যাটাসে নোটিফিকেশন পাবেন।
+              Thank you, <b className="text-[#1D1D1F] dark:text-[#F5F5F7]">{fullName}</b>! Your application has been received. You will receive a notification in your profile status if you are selected.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row gap-3">
               <button
@@ -299,7 +299,7 @@ export default function CashOnCampaignPage() {
                 }}
                 className="ds-apple-btn-primary flex-1 py-3.5 px-5 rounded-full font-semibold text-[14px] whitespace-nowrap active:scale-[0.98] transition-transform"
               >
-                হোমে ফিরে যান
+                Back to Home
               </button>
               <button
                 type="button"
@@ -316,7 +316,7 @@ export default function CashOnCampaignPage() {
                 }}
                 className="ds-apple-btn-secondary py-3.5 px-6 rounded-full font-semibold text-[14px] whitespace-nowrap active:scale-[0.98] transition-transform"
               >
-                নতুন আবেদন করুন
+                Submit New Application
               </button>
             </div>
           </div>
@@ -568,7 +568,7 @@ export default function CashOnCampaignPage() {
                 <div className="p-3.5 rounded-[14px] bg-[#FF3B30]/10 border border-[#FF3B30]/20 flex items-center gap-2.5 text-[#FF3B30] dark:text-[#FF453A]">
                   <Globe className="w-5 h-5 shrink-0" />
                   <p className="text-[12px] font-semibold">
-                    আপনার এই আইপি ({userIp}) থেকে ইতিমধ্যেই একটি আবেদন জমা হয়েছে। আপনি একটি আইপি থেকে একবারই আবেদন করতে পারবেন।
+                    An application has already been submitted from this IP ({userIp}). Only one application per IP address is permitted.
                   </p>
                 </div>
               )}
@@ -642,12 +642,12 @@ export default function CashOnCampaignPage() {
                       Congratulations
                     </span>
                     <h3 className="text-[20px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] pt-1">
-                      আবেদন সফলভাবে গৃহীত হয়েছে!
+                      Application Received!
                     </h3>
                   </div>
 
                   <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
-                    ধন্যবাদ <b className="text-[#1D1D1F] dark:text-[#F5F5F7]">{fullName}</b>! আপনার ক্যাশ অন ডেলিভারি ক্যাম্পেইনের আবেদনটি সফলভাবে নিবন্ধিত হয়েছে। সেলার প্যানেল থেকে দ্রুতই এটি যাচাই করা হবে।
+                    Thank you, <b className="text-[#1D1D1F] dark:text-[#F5F5F7]">{fullName}</b>! Your Cash on Delivery campaign application has been registered and will be reviewed shortly by our team.
                   </p>
 
                   <div className="bg-[#F5F5F7] dark:bg-[#2C2C2E] p-3.5 rounded-[16px] text-[12px] space-y-1.5 text-left">
@@ -674,7 +674,7 @@ export default function CashOnCampaignPage() {
                     }}
                     className="ds-apple-btn-primary w-full py-3.5 rounded-full font-semibold text-[14px] active:scale-[0.98] transition-transform"
                   >
-                    হোম পেজে ফিরে যান (Go to Home)
+                    Back to Home
                   </button>
                 </motion.div>
               </div>

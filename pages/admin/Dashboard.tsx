@@ -100,7 +100,7 @@ const ADMIN_PIN_ITEMS: PinListItem[] = [
   {
     id: 'manage-subscriptions',
     name: 'Manage Subscriptions (VIP COD Club)',
-    info: 'ক্যাশ অন ডেলিভারি (০ অগ্রিম) সাবস্ক্রিপশন আবেদন ও অনুমোদন',
+    info: 'Cash on Delivery (৳0 advance) subscription requests & approvals',
     icon: Crown,
     pinned: true,
     href: 'subscriptions'

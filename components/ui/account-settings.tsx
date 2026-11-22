@@ -126,11 +126,11 @@ export function AccountSettings() {
       }).then(() => {
         setOrdersPaused(false);
         setPauseReason("");
-        notify("অর্ডার গ্রহণ পুনরায় চালু করা হয়েছে (Orders resumed)", "success");
+        notify("Orders resumed", "success");
       }).catch(() => notify("Failed to update setting", "error"));
     } else {
       // Opening modal to enter reason
-      setTempPauseReason(pauseReason || "বর্তমানে শপ সাময়িক বিরতিতে থাকায় নতুন অর্ডার নেওয়া হচ্ছে না।");
+      setTempPauseReason(pauseReason || "Our shop is temporarily on break and not accepting new orders right now.");
       setShowPauseModal(true);
     }
   };
@@ -139,7 +139,7 @@ export function AccountSettings() {
     const user = auth.currentUser;
     if (!user) return;
     if (!tempPauseReason.trim()) {
-      return notify("অর্ডার বন্ধ করার কারণ উল্লেখ করুন (Reason is required)", "error");
+      return notify("Please enter a reason for pausing orders", "error");
     }
     try {
       await updateDoc(doc(db, "users", user.uid), {
@@ -149,7 +149,7 @@ export function AccountSettings() {
       setOrdersPaused(true);
       setPauseReason(tempPauseReason.trim());
       setShowPauseModal(false);
-      notify("অর্ডার গ্রহণ সাময়িকভাবে বন্ধ করা হয়েছে", "success");
+      notify("Order acceptance temporarily paused", "success");
     } catch (e) {
       notify("Failed to save setting", "error");
     }
@@ -426,20 +426,20 @@ export function AccountSettings() {
                 onClick={(e) => e.stopPropagation()}
                 className="ds-apple-modal relative z-10 w-full max-w-[390px] rounded-[26px] px-6 pt-7 pb-6 text-left"
               >
-                <h3 className="text-[19px] font-semibold leading-[1.28] tracking-[-0.02em]">অর্ডার গ্রহণ বন্ধ রাখুন (Pause Orders)</h3>
+                <h3 className="text-[19px] font-semibold leading-[1.28] tracking-[-0.02em]">Pause Order Acceptance</h3>
                 <p className="ds-apple-muted text-[14px] mt-2 mb-4 leading-[1.44]">
-                  এটি চালু করলে আপনার স্টোরের সব প্রোডাক্টে &quot;Buy Now&quot; ও অর্ডার গ্রহণ বন্ধ থাকবে এবং কাস্টমারদের আপনার দেওয়া কারণ দেখানো হবে।
+                  When enabled, &quot;Buy Now&quot; and new orders will be paused across all products in your store, and customers will see the reason you enter below.
                 </p>
                 
                 <label className="text-xs font-semibold ds-apple-muted block mb-1.5">
-                  অর্ডার বন্ধ রাখার কারণ (Reason to show buyers) *
+                  Reason to show buyers *
                 </label>
                 <textarea
                   rows={3}
                   autoFocus
                   className="ds-apple-input w-full rounded-2xl p-3.5 font-medium outline-none resize-none text-sm"
                   value={tempPauseReason}
-                  placeholder="যেমন: সাময়িক স্টক আপডেট চলছে / ঈদের ছুটি / ভ্যাকেশনে আছি..."
+                  placeholder="e.g., Temporary inventory update / Holiday break / Away on vacation..."
                   onChange={(e) => setTempPauseReason(e.target.value)}
                 />
 
@@ -450,14 +450,14 @@ export function AccountSettings() {
                     disabled={!tempPauseReason.trim()}
                     className="ds-apple-btn-primary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform cursor-pointer"
                   >
-                    বন্ধ রাখুন (Pause)
+                    Pause Orders
                   </button>
                   <button
                     type="button"
                     onClick={() => { triggerHaptic(); setShowPauseModal(false); }}
                     className="ds-apple-btn-secondary w-full min-h-[48px] px-5 rounded-full text-[15.5px] font-semibold active:scale-[0.98] transition-transform cursor-pointer"
                   >
-                    বাতিল (Cancel)
+                    Cancel
                   </button>
                 </div>
               </motion.div>
@@ -519,7 +519,7 @@ export function AccountSettings() {
             <SettingItem 
               icon="store" 
               label="Pause All Orders" 
-              subLabel={ordersPaused ? `অর্ডার বন্ধ: "${pauseReason || 'কারণ দেওয়া হয়নি'}"` : "Active — accepting orders normally"} 
+              subLabel={ordersPaused ? `Paused: "${pauseReason || 'No reason provided'}"` : "Active — accepting orders normally"} 
               onClick={() => { triggerHaptic(); handleToggleOrdersPaused(); }} 
               rightElement={<Switch isChecked={ordersPaused} />} 
               isLast={!ordersPaused}

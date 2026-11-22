@@ -501,7 +501,7 @@ export default function CheckoutPage() {
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      notify("NID ছবির সাইজ সর্বোচ্চ 10MB হতে পারে।", "error");
+      notify("NID image size cannot exceed 10MB.", "error");
       return;
     }
 
@@ -510,13 +510,13 @@ export default function CheckoutPage() {
       const url = await uploadToImgbb(file);
       if (url) {
         setNidCardUrl(url);
-        notify("NID ছবি সফলভাবে আপলোড হয়েছে!", "success");
+        notify("NID image uploaded successfully!", "success");
       } else {
-        notify("ছবি আপলোড ব্যর্থ হয়েছে। আবার চেষ্টা করুন।", "error");
+        notify("Failed to upload image. Please try again.", "error");
       }
     } catch (err) {
       console.error("NID upload error:", err);
-      notify("ছবি আপলোড ব্যর্থ হয়েছে।", "error");
+      notify("Failed to upload image.", "error");
     } finally {
       setUploadingNid(false);
     }
@@ -527,7 +527,7 @@ export default function CheckoutPage() {
     triggerHaptic("light");
     navigator.clipboard.writeText(text);
     setCopiedNumber(text);
-    notify(`${label} নম্বর কপি করা হয়েছে: ${text}`, "success");
+    notify(`${label} number copied: ${text}`, "success");
     setTimeout(() => setCopiedNumber(null), 3000);
   };
 
@@ -596,7 +596,7 @@ export default function CheckoutPage() {
 
   const handleSaveAddress = async () => {
     if (!newAddress.name?.trim() || !newAddress.phone?.trim() || !newAddress.address?.trim()) {
-      return notify("অনুগ্রহ করে সকল প্রয়োজনীয় তথ্য পূরণ করুন।", "error");
+      return notify("Please fill in all required fields.", "error");
     }
 
     // Abuse detection
@@ -612,14 +612,14 @@ export default function CheckoutPage() {
     // Bangladeshi Phone validation
     const phoneVal = validateBangladeshiPhone(newAddress.phone);
     if (!phoneVal.isValid) {
-      return notify(phoneVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন।", "error");
+      return notify(phoneVal.error || "Please enter a valid 11-digit Bangladeshi phone number.", "error");
     }
 
     let normalizedAlt = "";
     if (newAddress.altPhone && newAddress.altPhone.trim()) {
       const altVal = validateBangladeshiPhone(newAddress.altPhone);
       if (!altVal.isValid) {
-        return notify(altVal.error || "বিকল্প নম্বরটি সঠিক বাংলাদেশি নম্বর নয়।", "error");
+        return notify(altVal.error || "Alternative phone number is not a valid Bangladeshi number.", "error");
       }
       normalizedAlt = altVal.normalized;
     }
@@ -647,9 +647,9 @@ export default function CheckoutPage() {
         setSavedAddresses(newAddrs);
         setSelectedAddressId(newAddrObj.id);
         setIsAddingNewAddress(false);
-        notify("ঠিকানা সফলভাবে সেভ করা হয়েছে।", "success");
+        notify("Address saved successfully.", "success");
       } catch (e) {
-        notify("ঠিকানা সেভ করতে ব্যর্থ হয়েছে।", "error");
+        notify("Failed to save address.", "error");
       }
     } else {
       setSavedAddresses(newAddrs);
@@ -659,7 +659,7 @@ export default function CheckoutPage() {
         "vibe_shipping_addresses_v2",
         JSON.stringify(newAddrs),
       );
-      notify("ঠিকানা সফলভাবে যুক্ত করা হয়েছে।", "success");
+      notify("Address added successfully.", "success");
     }
   };
 
@@ -730,7 +730,7 @@ export default function CheckoutPage() {
     const rawActiveAddress = savedAddresses.find(
       (a) => a.id === selectedAddressId,
     );
-    if (!rawActiveAddress) return notify("ডেলিভারি ঠিকানা আবশ্যক (Address required)", "error");
+    if (!rawActiveAddress) return notify("Delivery address is required.", "error");
 
     const activeAddress = {
       ...rawActiveAddress,
@@ -752,14 +752,14 @@ export default function CheckoutPage() {
     // Validate phone numbers
     const phoneVal = validateBangladeshiPhone(activeAddress.phone);
     if (!phoneVal.isValid) {
-      return notify(`গ্রাহকের ফোন নম্বর সঠিক নয়: ${phoneVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন"}`, "error");
+      return notify(`Invalid customer phone number: ${phoneVal.error || "Please enter a valid 11-digit Bangladeshi number"}`, "error");
     }
 
     let validGuardian = "";
     if (hasBypassProduct && !isVipSubscriber) {
       const guardianVal = validateBangladeshiPhone(guardianNumber);
       if (!guardianVal.isValid) {
-        return notify(`অভিভাবকের ফোন নম্বর সঠিক নয়: ${guardianVal.error || "সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর দিন"}`, "error");
+        return notify(`Invalid guardian phone number: ${guardianVal.error || "Please enter a valid 11-digit Bangladeshi number"}`, "error");
       }
       validGuardian = guardianVal.normalized;
     }
@@ -1072,7 +1072,7 @@ export default function CheckoutPage() {
     if (currentStep === 1) {
       if (!selectedAddressId) {
         triggerHaptic("error");
-        return notify("অনুগ্রহ করে একটি ডেলিভারি ঠিকানা নির্বাচন করুন।", "error");
+        return notify("Please select a delivery address.", "error");
       }
       if (
         hasBypassProduct &&
@@ -1081,7 +1081,7 @@ export default function CheckoutPage() {
       ) {
         triggerHaptic("error");
         return notify(
-          "বাইপাস অর্ডারের জন্য গার্ডিয়ান / অভিভাবকের ১১ ডিজিটের মোবাইল নম্বর প্রদান করুন।",
+          "Please provide an 11-digit guardian phone number for Bypass COD verification.",
           "error"
         );
       }
@@ -1092,7 +1092,7 @@ export default function CheckoutPage() {
         if (userCoins < coinCost) {
           triggerHaptic("error");
           return notify(
-            `পর্যাপ্ত ডিপি কয়েন নেই। আপনার প্রয়োজন আরও ${coinCost - userCoins} কয়েন।`,
+            `Not enough DP Coins. You need ${coinCost - userCoins} more coins.`,
             "error"
           );
         }
@@ -1106,7 +1106,7 @@ export default function CheckoutPage() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       triggerHaptic("warning");
-      notify("অনুগ্রহ করে প্রয়োজনীয় তথ্যগুলো সঠিকভাবে পূরণ করুন।", "error");
+      notify("Please fill in all required details accurately.", "error");
     }
   };
 
@@ -1133,9 +1133,9 @@ export default function CheckoutPage() {
   const selectedAddrObj = savedAddresses.find((a) => a.id === selectedAddressId);
 
   const stepsMeta = [
-    { step: 1, shortLabel: "ডেলিভারি", fullLabel: "01. ডেলিভারি ঠিকানা", icon: Truck },
-    { step: 2, shortLabel: "পেমেন্ট", fullLabel: "02. পেমেন্ট পদ্ধতি", icon: CreditCard },
-    { step: 3, shortLabel: "রিভিউ", fullLabel: "03. চূড়ান্ত রিভিউ", icon: Check },
+    { step: 1, shortLabel: "Delivery", fullLabel: "01. Delivery Address", icon: Truck },
+    { step: 2, shortLabel: "Payment", fullLabel: "02. Payment Method", icon: CreditCard },
+    { step: 3, shortLabel: "Review", fullLabel: "03. Final Review", icon: Check },
   ];
 
   // Shared Voucher & Promo Input Block (rendered inside Mobile Sheet & Desktop Sticky Console)
@@ -1150,17 +1150,17 @@ export default function CheckoutPage() {
           >
             <span className="flex items-center gap-2 whitespace-nowrap">
               <Ticket className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-              <span>ভাউচার বা কুপন নির্বাচন করুন</span>
+              <span>Select a Voucher or Coupon</span>
             </span>
             <span className="text-[11px] text-sky-600 dark:text-sky-400 font-bold whitespace-nowrap">
-              দেখুন
+              Browse
             </span>
           </button>
 
           <div className="flex items-center gap-2">
             <input
               type="text"
-              placeholder="প্রোমো বা অ্যাফিলিয়েট কোড লিখুন"
+              placeholder="Enter promo or affiliate code"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
               className="flex-1 min-w-0 h-10 px-3.5 text-xs font-medium ds-liquid-input outline-none focus:ring-2 focus:ring-sky-500/40"
@@ -1170,7 +1170,7 @@ export default function CheckoutPage() {
               onClick={applyPromo}
               className="px-4 h-10 ds-liquid-btn-secondary !min-h-0 !text-xs !font-bold shrink-0 whitespace-nowrap cursor-pointer"
             >
-              প্রয়োগ করুন
+              Apply
             </button>
           </div>
           {couponError && (
@@ -1187,15 +1187,15 @@ export default function CheckoutPage() {
               </div>
               <div className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium tabular-nums">
                 {appliedPromo.type === "percent"
-                  ? `${appliedPromo.discount}% ছাড় যুক্ত হয়েছে`
-                  : `${formatPrice(appliedPromo.discount)} ছাড় যুক্ত হয়েছে`}
+                  ? `${appliedPromo.discount}% discount applied`
+                  : `${formatPrice(appliedPromo.discount)} discount applied`}
               </div>
             </div>
           </div>
           <button
             type="button"
             onClick={removePromo}
-            aria-label="প্রোমো কোড সরান"
+            aria-label="Remove promo code"
             className="w-7 h-7 rounded-full ds-liquid-btn-secondary !min-h-0 p-0 flex items-center justify-center shrink-0 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
@@ -1209,19 +1209,19 @@ export default function CheckoutPage() {
   const renderPriceBreakdown = () => (
     <div className="space-y-2.5 text-xs sm:text-sm">
       <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-300">
-        <span>{t("Subtotal") || "সাবটোটাল"} ({totalItemQty}টি পণ্য)</span>
+        <span>{t("Subtotal") || "Subtotal"} ({totalItemQty} {totalItemQty === 1 ? "item" : "items"})</span>
         <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">
           {formatPrice(subtotal)}
         </span>
       </div>
       {discount > 0 && (
         <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-          <span>ডিসকাউন্ট ছাড়</span>
+          <span>Discount</span>
           <span className="tabular-nums">-{formatPrice(discount)}</span>
         </div>
       )}
       <div className="flex items-center justify-between text-zinc-600 dark:text-zinc-300">
-        <span>{t("Delivery Fee") || "ডেলিভারি চার্জ"}</span>
+        <span>{t("Delivery Fee") || "Delivery Fee"}</span>
         <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">
           {formatPrice(deliveryFee)}
         </span>
@@ -1229,7 +1229,7 @@ export default function CheckoutPage() {
 
       <div className="pt-3 border-t border-slate-900/[0.08] dark:border-white/[0.1] flex items-baseline justify-between gap-2">
         <span className="text-sm font-bold text-zinc-900 dark:text-white">
-          {t("Total") || "সর্বমোট মূল্য"}
+          {t("Total") || "Total"}
         </span>
         <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
           {formatPrice(total)}
@@ -1239,14 +1239,14 @@ export default function CheckoutPage() {
       {/* Advance vs Due Transparency Line */}
       <div className="pt-1 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
         <span>
-          এখন অগ্রিম প্রদেয়:{" "}
+          Pay Advance Now:{" "}
           <strong className="text-zinc-900 dark:text-white">
-            {requiredAdvance === 0 ? "৳০" : formatPrice(requiredAdvance)}
+            {requiredAdvance === 0 ? "৳0" : formatPrice(requiredAdvance)}
           </strong>
         </span>
         <span>·</span>
         <span>
-          ডেলিভারিতে বাকি:{" "}
+          Due on Delivery:{" "}
           <strong className="text-zinc-900 dark:text-white">
             {formatPrice(dueOnDelivery)}
           </strong>
@@ -1290,10 +1290,10 @@ export default function CheckoutPage() {
         <div className="hidden lg:flex items-center justify-between gap-6 ds-liquid-panel px-7 py-4">
           <div className="min-w-0">
             <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white whitespace-nowrap">
-              সুরক্ষিত চেকআউট
+              Secure Checkout
             </h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
-              {totalItemQty}টি পণ্য · ধাপ {currentStep}/3 · এনক্রিপ্টেড অর্ডার প্রসেসিং
+              {totalItemQty} {totalItemQty === 1 ? "item" : "items"} · Step {currentStep}/3 · Encrypted Order Processing
             </p>
           </div>
 
@@ -1341,10 +1341,10 @@ export default function CheckoutPage() {
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-bold tracking-tight text-zinc-900 dark:text-white truncate">
-                চেকআউট
+                Checkout
               </h1>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
-                {totalItemQty}টি পণ্য · ধাপ {currentStep}/3
+                {totalItemQty} {totalItemQty === 1 ? "item" : "items"} · Step {currentStep}/3
               </p>
             </div>
             <AuthVoiceToggle isInline />
@@ -1406,7 +1406,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1 whitespace-nowrap">
-                    <span>অর্ডার সামারি ও ভাউচার</span>
+                    <span>Order Summary & Vouchers</span>
                     <ChevronDown
                       className={cn(
                         "w-4 h-4 text-zinc-500 transition-transform duration-200 shrink-0",
@@ -1415,7 +1415,7 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate tabular-nums">
-                    {mobileSummaryOpen ? "সংক্ষিপ্ত করতে ট্যাপ করুন" : `${totalItemQty}টি পণ্য · ভাউচার যোগ করুন`}
+                    {mobileSummaryOpen ? "Tap to collapse" : `${totalItemQty} ${totalItemQty === 1 ? "item" : "items"} · Add voucher`}
                   </div>
                 </div>
               </div>
@@ -1426,7 +1426,7 @@ export default function CheckoutPage() {
                 </div>
                 {discount > 0 && (
                   <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                    -{formatPrice(discount)} ছাড়
+                    -{formatPrice(discount)} off
                   </div>
                 )}
               </div>
@@ -1453,7 +1453,7 @@ export default function CheckoutPage() {
                           {item.name}
                         </div>
                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
-                          পরিমাণ: {item.quantity} × {formatPrice(item.price)}
+                          Qty: {item.quantity} × {formatPrice(item.price)}
                         </div>
                       </div>
                       <div className="text-xs font-bold text-zinc-900 dark:text-white shrink-0 tabular-nums">
@@ -1489,10 +1489,10 @@ export default function CheckoutPage() {
                     </div>
                     <div className="min-w-0">
                       <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">
-                        {t("Shipping Information") || "ডেলিভারি ঠিকানা"}
+                        {t("Shipping Information") || "Shipping Address"}
                       </h2>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                        পার্সেল রিসিভ করার ঠিকানা নির্বাচন বা নতুন যোগ করুন
+                        Select a delivery address or add a new one
                       </p>
                     </div>
                   </div>
@@ -1552,7 +1552,7 @@ export default function CheckoutPage() {
                                   </span>
                                   {addr?.isDefault && (
                                     <span className="text-[11px] font-medium text-sky-600 dark:text-sky-400 shrink-0">
-                                      ডিফল্ট
+                                      Default
                                     </span>
                                   )}
                                 </div>
@@ -1580,7 +1580,7 @@ export default function CheckoutPage() {
                         className="px-4 py-3 ds-liquid-btn-secondary !min-h-[44px] !text-xs sm:!text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                       >
                         <Plus className="w-4 h-4 shrink-0" />
-                        <span>নতুন ঠিকানা যোগ করুন</span>
+                        <span>Add New Address</span>
                       </button>
                       <button
                         type="button"
@@ -1588,7 +1588,7 @@ export default function CheckoutPage() {
                         className="px-4 py-3 ds-liquid-subpanel hover:opacity-90 text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer transition-opacity"
                       >
                         <Settings className="w-4 h-4 text-zinc-500 shrink-0" />
-                        <span>ঠিকানা ম্যানেজ করুন</span>
+                        <span>Manage Addresses</span>
                       </button>
                     </div>
                   </div>
@@ -1599,10 +1599,10 @@ export default function CheckoutPage() {
                     </div>
                     <div className="space-y-1 max-w-xs mx-auto">
                       <h4 className="font-bold text-zinc-900 dark:text-white text-sm sm:text-base">
-                        কোনো ডেলিভারি ঠিকানা পাওয়া যায়নি
+                        No Delivery Address Found
                       </h4>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        অর্ডার সম্পন্ন করতে অনুগ্রহ করে আপনার ডেলিভারি ঠিকানা যুক্ত করুন।
+                        Please add your delivery address to complete this order.
                       </p>
                     </div>
                     <button
@@ -1611,7 +1611,7 @@ export default function CheckoutPage() {
                       className="px-6 py-3 ds-liquid-btn-primary !min-h-[44px] !text-xs sm:!text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>নতুন ঠিকানা যোগ করুন</span>
+                      <span>Add New Address</span>
                     </button>
                   </div>
                 )}
@@ -1632,10 +1632,10 @@ export default function CheckoutPage() {
                         <div className="min-w-0">
                           <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white flex items-center gap-1.5">
                             <Gift className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-                            <span>উপহার হিসেবে পাঠান (Send as a Gift)</span>
+                            <span>Send as a Gift</span>
                           </div>
                           <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                            ইনভয়েসে পণ্যের দাম গোপন থাকবে
+                            Product prices will be hidden on the invoice
                           </p>
                         </div>
                       </label>
@@ -1644,11 +1644,11 @@ export default function CheckoutPage() {
                     {isGift && (
                       <div className="pt-1 space-y-1.5">
                         <Label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                          গিফট নোট (শুভেচ্ছা বার্তা)
+                          Gift Note (Personal Message)
                         </Label>
                         <input
                           type="text"
-                          placeholder="যেমন: শুভ জন্মদিন!..."
+                          placeholder="e.g., Happy Birthday!..."
                           value={giftNote}
                           onChange={(e) => setGiftNote(e.target.value)}
                           className="w-full h-11 px-3.5 text-sm ds-liquid-input outline-none focus:ring-2 focus:ring-sky-500/40"
@@ -1667,14 +1667,14 @@ export default function CheckoutPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white">
-                              বাইপাস ক্যাশ অন ডেলিভারি ভেরিফিকেশন
+                              Bypass Cash on Delivery Verification
                             </h4>
                             <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 shrink-0">
-                              COD সুবিধা
+                              COD Eligible
                             </span>
                           </div>
                           <p className="text-[11px] sm:text-xs text-zinc-600 dark:text-zinc-300 mt-0.5 leading-relaxed">
-                            অগ্রিম ছাড়া ক্যাশ অন ডেলিভারি নিশ্চিত করতে অভিভাবকের সচল নম্বর দিন
+                            Provide an active guardian phone number to confirm Cash on Delivery without advance payment
                           </p>
                         </div>
                       </div>
@@ -1685,10 +1685,10 @@ export default function CheckoutPage() {
                           className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center justify-between"
                         >
                           <span>
-                            অভিভাবকের মোবাইল নম্বর <span className="text-rose-500">*</span>
+                            Guardian Mobile Number <span className="text-rose-500">*</span>
                           </span>
                           <span className="text-[11px] text-amber-700 dark:text-amber-300 font-normal">
-                            ১১ ডিজিট আবশ্যক
+                            11 digits required
                           </span>
                         </Label>
                         <input
@@ -1708,16 +1708,16 @@ export default function CheckoutPage() {
                         />
                         <p className="text-[11px] text-amber-800 dark:text-amber-200 flex items-center gap-1.5 pt-0.5 font-medium">
                           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>অর্ডার কনফার্ম করতে অভিভাবককে ভেরিফিকেশন কল করা হতে পারে</span>
+                          <span>A verification call may be placed to your guardian to confirm the order</span>
                         </p>
                       </div>
 
                       <div className="space-y-2 pt-3 border-t border-amber-500/20">
                         <div className="flex items-center justify-between">
                           <Label className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                            NID কার্ড সংযুক্তকরণ (ঐচ্ছিক)
+                            Attach NID Card (Optional)
                           </Label>
-                          <span className="text-[11px] text-zinc-500">সর্বোচ্চ 10MB</span>
+                          <span className="text-[11px] text-zinc-500">Max 10MB</span>
                         </div>
 
                         {nidCardUrl ? (
@@ -1731,10 +1731,10 @@ export default function CheckoutPage() {
                               />
                               <div className="min-w-0">
                                 <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 truncate">
-                                  NID কার্ড ছবি সংযুক্ত হয়েছে
+                                  NID Card Image Attached
                                 </p>
                                 <p className="text-[11px] text-zinc-500 truncate">
-                                  ভেরিফিকেশনের জন্য সংরক্ষিত
+                                  Saved for verification
                                 </p>
                               </div>
                             </div>
@@ -1743,7 +1743,7 @@ export default function CheckoutPage() {
                               onClick={() => setNidCardUrl("")}
                               className="px-3 py-1.5 rounded-full text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer shrink-0"
                             >
-                              মুছুন
+                              Remove
                             </button>
                           </div>
                         ) : (
@@ -1758,13 +1758,13 @@ export default function CheckoutPage() {
                             {uploadingNid ? (
                               <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-xs font-semibold">
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>NID ছবি আপলোড হচ্ছে...</span>
+                                <span>Uploading NID image...</span>
                               </div>
                             ) : (
                               <div className="flex items-center gap-2 text-center">
                                 <Upload className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                                 <span className="text-xs font-medium text-zinc-700 dark:text-zinc-200">
-                                  আপনার বা অভিভাবকের NID কার্ডের ছবি আপলোড করুন
+                                  Upload your or your guardian&apos;s NID card photo
                                 </span>
                               </div>
                             )}
@@ -1783,7 +1783,7 @@ export default function CheckoutPage() {
                     disabled={!validateStep(1)}
                     className="w-full sm:w-auto sm:min-w-[230px] px-7 py-3.5 ds-liquid-btn-primary flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap cursor-pointer"
                   >
-                    <span>পেমেন্ট ধাপে যান</span>
+                    <span>Continue to Payment</span>
                     <ArrowRight className="w-4 h-4 shrink-0" />
                   </button>
                 </div>
@@ -1799,10 +1799,10 @@ export default function CheckoutPage() {
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">
-                      পেমেন্ট পদ্ধতি ও বিবরণ
+                      Payment Method & Breakdown
                     </h2>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                      আপনার অর্ডারের প্রদেয় হিসাব ও পেমেন্ট মাধ্যম দেখুন
+                      Review your payable breakdown and payment method
                     </p>
                   </div>
                 </div>
@@ -1822,39 +1822,39 @@ export default function CheckoutPage() {
                         <div className="min-w-0">
                           <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">
                             {isVipSubscriber
-                              ? "ভিআইপি শতভাগ ক্যাশ অন ডেলিভারি"
-                              : "ক্যাশ অন ডেলিভারি (COD)"}
+                              ? "VIP 100% Cash on Delivery"
+                              : "Cash on Delivery (COD)"}
                           </h3>
                           <p className="text-xs text-zinc-600 dark:text-zinc-300 mt-0.5 leading-relaxed">
                             {isVipSubscriber
-                              ? "আপনার ভিআইপি পাস সক্রিয় থাকায় কোনো অগ্রিম টাকা ছাড়াই সরাসরি অর্ডার কনফার্ম হবে।"
-                              : "এই অর্ডারে এখন কোনো অগ্রিম পেমেন্ট করতে হবে না।"}
+                              ? "Your VIP Pass is active—this order confirms with zero advance payment."
+                              : "No advance payment is required for this order right now."}
                           </p>
                         </div>
                       </div>
                       <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0 whitespace-nowrap">
-                        {isVipSubscriber ? "VIP মেম্বার · ০৳ অগ্রিম" : "বাইপাস · ০৳ অগ্রিম"}
+                        {isVipSubscriber ? "VIP Member · ৳0 Advance" : "Bypass · ৳0 Advance"}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">মোট অর্ডার মূল্য</span>
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">Total Order Value</span>
                         <span className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white tabular-nums">
                           {formatPrice(total)}
                         </span>
                       </div>
                       <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
                         <span className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
-                          অগ্রিম প্রদেয়
+                          Advance Due Now
                         </span>
                         <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                          ৳০
+                          ৳0
                         </span>
                       </div>
                       <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
                         <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                          ডেলিভারিতে প্রদেয়
+                          Due on Delivery
                         </span>
                         <span className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white tabular-nums">
                           {formatPrice(total)}
@@ -1865,11 +1865,11 @@ export default function CheckoutPage() {
                     <div className="p-3.5 ds-liquid-subpanel text-xs space-y-1 text-zinc-700 dark:text-zinc-300">
                       {!isVipSubscriber && guardianNumber && (
                         <p className="font-semibold text-zinc-900 dark:text-white tabular-nums">
-                          অভিভাবক নম্বর: {guardianNumber}
+                          Guardian Number: {guardianNumber}
                         </p>
                       )}
                       <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        পার্সেল হাতে পেয়ে যাচাই করে ডেলিভারি ম্যানকে সম্পূর্ণ মূল্য ক্যাশে পরিশোধ করবেন।
+                        Inspect your parcel upon arrival and pay the full amount in cash to the delivery rider.
                       </p>
                     </div>
                   </div>
@@ -1884,10 +1884,10 @@ export default function CheckoutPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white">
-                            ০৳ অগ্রিমে ফুল ক্যাশ অন ডেলিভারিতে অর্ডার করতে চান?
+                            Want to order with ৳0 Advance &amp; Full Cash on Delivery?
                           </div>
                           <div className="text-[11px] text-zinc-600 dark:text-zinc-300 mt-0.5 tabular-nums">
-                            ভিআইপি পাস নিলে এই অর্ডারের ৳{requiredAdvance} অগ্রিম ছাড়াই অর্ডার করতে পারবেন।
+                            Get a VIP Pass to skip the ৳{requiredAdvance} advance payment on this order.
                           </div>
                         </div>
                       </div>
@@ -1896,7 +1896,7 @@ export default function CheckoutPage() {
                         className="px-4 py-2.5 rounded-full bg-amber-400 hover:bg-amber-500 text-zinc-950 font-bold text-xs shrink-0 text-center transition-colors inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
                       >
                         <Crown className="w-3.5 h-3.5" />
-                        <span>ভিআইপি পাস নিন</span>
+                        <span>Get VIP Pass</span>
                       </Link>
                     </div>
 
@@ -1906,13 +1906,13 @@ export default function CheckoutPage() {
                       <div className="text-xs leading-relaxed">
                         <p className="font-bold text-zinc-900 dark:text-white">
                           {isAllOffer
-                            ? "অফার পণ্যের ক্ষেত্রে ১০০% ফুল অগ্রিম পেমেন্ট প্রযোজ্য।"
+                            ? "100% full advance payment applies to offer items."
                             : hasOfferProduct
-                              ? "অফার বা কাস্টম প্রোডাক্ট থাকায় নির্ধারিত অগ্রিম বুকিং পেমেন্ট প্রযোজ্য।"
-                              : "বর্ডার ইমপোর্ট পণ্যের ক্ষেত্রে নির্ধারিত অগ্রিম বুকিং এবং বাকি মূল্য ডেলিভারির সময় ক্যাশে প্রদেয়।"}
+                              ? "A required booking advance applies due to offer or custom items in your cart."
+                              : "Border import items require an advance booking payment, with the remaining balance payable in cash on delivery."}
                         </p>
                         <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">
-                          রিভিউ কনফার্ম করার পর সুরক্ষিত পেমেন্ট গেটওয়ে পেজে বিকাশ বা নগদ বেছে নিতে পারবেন।
+                          After confirming your order review, you can choose bKash or Nagad on our secure payment gateway page.
                         </p>
                       </div>
                     </div>
@@ -1922,21 +1922,21 @@ export default function CheckoutPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-3 border-b border-rose-500/15">
                         <div>
                           <div className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-                            মোবাইল ব্যাংকিং · বিকাশ / নগদ
+                            Mobile Banking · bKash / Nagad
                           </div>
                           <h4 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
-                            সুরক্ষিত সেন্ড মানি গেটওয়ে
+                            Secure Send Money Gateway
                           </h4>
                         </div>
                         <span className="text-xs font-bold text-[#D12053] dark:text-rose-300 whitespace-nowrap">
-                          পরবর্তী ধাপে পরিশোধযোগ্য
+                          Payable in next step
                         </span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
                           <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                            মোট অর্ডার মূল্য
+                            Total Order Value
                           </span>
                           <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
                             {formatPrice(total)}
@@ -1944,7 +1944,7 @@ export default function CheckoutPage() {
                         </div>
                         <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
                           <span className="text-[11px] font-semibold text-[#D12053] dark:text-rose-300">
-                            এখন অগ্রিম প্রদেয়
+                            Advance Due Now
                           </span>
                           <span className="text-base sm:text-lg font-extrabold text-[#D12053] dark:text-rose-300 tabular-nums">
                             ৳{requiredAdvance}
@@ -1952,7 +1952,7 @@ export default function CheckoutPage() {
                         </div>
                         <div className="p-3.5 ds-liquid-subpanel flex sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
                           <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                            ডেলিভারিতে বাকি
+                            Due on Delivery
                           </span>
                           <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
                             ৳{dueOnDelivery}
@@ -1961,7 +1961,7 @@ export default function CheckoutPage() {
                       </div>
 
                       <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                        এখানে কোনো TrxID দিতে হবে না। অর্ডার রিভিউ কনফার্ম করলেই আপনাকে ডেডিকেটেড পেমেন্ট পেজে সক্রিয় বিকাশ ও নগদ নম্বর দেখানো হবে।
+                        No TrxID needed here. Once you confirm your review, active bKash &amp; Nagad numbers will be displayed on the dedicated payment page.
                       </p>
                     </div>
 
@@ -1981,10 +1981,10 @@ export default function CheckoutPage() {
                         )}
                       >
                         <span className="font-bold text-zinc-900 dark:text-white truncate tabular-nums">
-                          ডিপি কয়েন ব্যালেন্স: {userCoins} কয়েন
+                          DP Coin Balance: {userCoins} Coins
                         </span>
                         <span className="font-bold text-sky-600 dark:text-sky-400 whitespace-nowrap shrink-0">
-                          {paymentType === "dpcoin" ? "সক্রিয় আছে ✓" : "কয়েন ব্যবহার করুন"}
+                          {paymentType === "dpcoin" ? "Active ✓" : "Use Coins"}
                         </span>
                       </button>
                     )}
@@ -1999,7 +1999,7 @@ export default function CheckoutPage() {
                     className="px-5 py-3 ds-liquid-btn-secondary !min-h-[46px] !text-xs sm:!text-sm flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
                   >
                     <ChevronLeft className="w-4 h-4 shrink-0" />
-                    <span>পিছনে</span>
+                    <span>Back</span>
                   </button>
                   <button
                     type="button"
@@ -2007,7 +2007,7 @@ export default function CheckoutPage() {
                     disabled={!validateStep(2)}
                     className="flex-1 sm:flex-none sm:min-w-[220px] px-7 py-3 ds-liquid-btn-primary !min-h-[46px] !text-xs sm:!text-sm flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap cursor-pointer"
                   >
-                    <span>অর্ডার রিভিউ করুন</span>
+                    <span>Review Order</span>
                     <ArrowRight className="w-4 h-4 shrink-0" />
                   </button>
                 </div>
@@ -2023,10 +2023,10 @@ export default function CheckoutPage() {
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">
-                      অর্ডার রিভিউ ও কনফার্মেশন
+                      Order Review & Confirmation
                     </h2>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                      সকল তথ্য যাচাই করে আপনার অর্ডার চূড়ান্ত করুন
+                      Verify all details before finalizing your order
                     </p>
                   </div>
                 </div>
@@ -2038,7 +2038,7 @@ export default function CheckoutPage() {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                          ডেলিভারি ঠিকানা
+                          Delivery Address
                         </span>
                         <button
                           type="button"
@@ -2046,7 +2046,7 @@ export default function CheckoutPage() {
                           className="text-xs font-bold text-sky-600 dark:text-sky-400 inline-flex items-center gap-1 hover:underline cursor-pointer whitespace-nowrap"
                         >
                           <Edit3 className="w-3 h-3" />
-                          <span>পরিবর্তন</span>
+                          <span>Edit</span>
                         </button>
                       </div>
                       <p className="font-bold text-sm text-zinc-900 dark:text-white truncate">
@@ -2070,7 +2070,7 @@ export default function CheckoutPage() {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                          {t("Payment Details") || "পেমেন্ট বিবরণ"}
+                          {t("Payment Details") || "Payment Details"}
                         </span>
                         <button
                           type="button"
@@ -2078,49 +2078,49 @@ export default function CheckoutPage() {
                           className="text-xs font-bold text-sky-600 dark:text-sky-400 inline-flex items-center gap-1 hover:underline cursor-pointer whitespace-nowrap"
                         >
                           <Edit3 className="w-3 h-3" />
-                          <span>পরিবর্তন</span>
+                          <span>Edit</span>
                         </button>
                       </div>
 
                       {paymentType === "dpcoin" ? (
                         <div className="space-y-1">
                           <p className="font-bold text-sm text-zinc-900 dark:text-white">
-                            DP Coins ({advanceType === "full" ? "সম্পূর্ণ পেমেন্ট" : "অগ্রিম বুকিং"})
+                            DP Coins ({advanceType === "full" ? "Full Payment" : "Advance Booking"})
                           </p>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            ডিপি কয়েন ব্যালেন্স থেকে সমন্বয় হবে
+                            Will be deducted from your DP Coin balance
                           </p>
                         </div>
                       ) : requiredAdvance === 0 ? (
                         <div className="space-y-1">
                           <p className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
                             {isVipSubscriber
-                              ? "ভিআইপি ফুল ক্যাশ অন ডেলিভারি"
-                              : "ক্যাশ অন ডেলিভারি (বাইপাস)"}
+                              ? "VIP Full Cash on Delivery"
+                              : "Cash on Delivery (Bypass)"}
                           </p>
                           <p className="text-xs text-zinc-600 dark:text-zinc-300 tabular-nums">
-                            অগ্রিম: ৳০ · ডেলিভারিতে প্রদেয়: {formatPrice(total)}
+                            Advance: ৳0 · Due on Delivery: {formatPrice(total)}
                           </p>
                           {!isVipSubscriber && guardianNumber && (
                             <p className="text-xs text-zinc-500 tabular-nums">
-                              অভিভাবক: {guardianNumber}
+                              Guardian: {guardianNumber}
                             </p>
                           )}
                         </div>
                       ) : (
                         <div className="space-y-1.5">
                           <p className="font-bold text-sm text-zinc-900 dark:text-white">
-                            মোবাইল ব্যাংকিং (বিকাশ / নগদ গেটওয়ে)
+                            Mobile Banking (bKash / Nagad Gateway)
                           </p>
                           <div className="text-xs text-zinc-600 dark:text-zinc-300 space-y-0.5 tabular-nums">
                             <div>
-                              এখন অগ্রিম প্রদেয়:{" "}
+                              Advance Due Now:{" "}
                               <strong className="text-[#D12053] dark:text-rose-300">
                                 ৳{requiredAdvance}
                               </strong>
                             </div>
                             <div>
-                              ডেলিভারিতে বাকি:{" "}
+                              Due on Delivery:{" "}
                               <strong className="text-zinc-900 dark:text-white">
                                 ৳{dueOnDelivery}
                               </strong>
@@ -2135,7 +2135,7 @@ export default function CheckoutPage() {
                 {/* Mobile-Only Compact Receipt Recap right before confirmation */}
                 <div className="lg:hidden p-4 ds-liquid-subpanel space-y-3">
                   <div className="text-xs font-bold text-zinc-900 dark:text-white pb-2 border-b border-slate-900/[0.07] dark:border-white/[0.08]">
-                    চূড়ান্ত হিসাব সংক্ষেপ
+                    Final Cost Summary
                   </div>
                   {renderPriceBreakdown()}
                 </div>
@@ -2143,12 +2143,12 @@ export default function CheckoutPage() {
                 {/* Delivery & Unboxing Policies in Clean Refractive Glass */}
                 <div className="space-y-3">
                   <div className="p-3.5 sm:p-4 ds-liquid-subpanel text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
-                    <strong className="text-zinc-900 dark:text-white">ডেলিভারি সময়সীমা:</strong>{" "}
-                    বর্ডার ক্রস ইমপোর্টেড পণ্যের ক্ষেত্রে নির্ধারিত ডেলিভারি সময় আনুমানিক ৩০–৪৫ কার্যদিবস (ডেডিকেটেড ট্র্যাকিং সুবিধাসহ)।
+                    <strong className="text-zinc-900 dark:text-white">Delivery Timeline:</strong>{" "}
+                    Border-cross imported items have an estimated delivery window of 30–45 business days (with dedicated order tracking).
                   </div>
                   <div className="p-3.5 sm:p-4 ds-liquid-callout-amber text-xs leading-relaxed text-zinc-700 dark:text-zinc-200">
-                    <strong className="text-zinc-900 dark:text-white">গুরুত্বপূর্ণ নির্দেশনা:</strong>{" "}
-                    ভুল ট্রানজেকশন তথ্য দিলে অর্ডার বাতিল হতে পারে। যেকোনো রিটার্ন বা ওয়ারেন্টি দাবির জন্য পার্সেল খোলার আনবক্সিং ভিডিও থাকা আবশ্যক।
+                    <strong className="text-zinc-900 dark:text-white">Important Notice:</strong>{" "}
+                    Providing incorrect transaction details may lead to order cancellation. An uninterrupted unboxing video is required for any return or warranty claims.
                   </div>
                 </div>
 
@@ -2165,7 +2165,7 @@ export default function CheckoutPage() {
                       htmlFor="terms"
                       className="cursor-pointer font-semibold text-zinc-900 dark:text-white mr-1"
                     >
-                      আমি ডিপশপের
+                      I agree to DEEP SHOP&apos;s
                     </label>
                     <button
                       type="button"
@@ -2176,7 +2176,7 @@ export default function CheckoutPage() {
                       }}
                       className="underline text-sky-600 dark:text-sky-400 font-bold cursor-pointer"
                     >
-                      শর্তাবলী (Terms)
+                      Terms &amp; Conditions
                     </button>
                     {", "}
                     <button
@@ -2188,9 +2188,9 @@ export default function CheckoutPage() {
                       }}
                       className="underline text-sky-600 dark:text-sky-400 font-bold cursor-pointer"
                     >
-                      প্রাইভেসি পলিসি
+                      Privacy Policy
                     </button>{" "}
-                    এবং{" "}
+                    and{" "}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -2200,9 +2200,9 @@ export default function CheckoutPage() {
                       }}
                       className="underline text-sky-600 dark:text-sky-400 font-bold cursor-pointer"
                     >
-                      রিফান্ড নীতিমালায়
-                    </button>{" "}
-                    সম্মতি প্রদান করছি।
+                      Refund Policy
+                    </button>
+                    .
                   </div>
                 </div>
 
@@ -2214,7 +2214,7 @@ export default function CheckoutPage() {
                     className="px-5 py-3 ds-liquid-btn-secondary !min-h-[48px] !text-xs sm:!text-sm flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
                   >
                     <ChevronLeft className="w-4 h-4 shrink-0" />
-                    <span>পিছনে</span>
+                    <span>Back</span>
                   </button>
 
                   <button
@@ -2226,10 +2226,10 @@ export default function CheckoutPage() {
                     <Lock className="w-4 h-4 shrink-0" />
                     <span>
                       {isLoading
-                        ? "অর্ডার তৈরি হচ্ছে..."
+                        ? "Placing Order..."
                         : requiredAdvance === 0
-                          ? "অর্ডার কনফার্ম করুন (COD)"
-                          : "সুরক্ষিত পেমেন্ট পেজে যান"}
+                          ? "Confirm Order (COD)"
+                          : "Proceed to Secure Payment"}
                     </span>
                   </button>
                 </div>
@@ -2246,11 +2246,11 @@ export default function CheckoutPage() {
                 <div className="flex items-center gap-2.5">
                   <ShoppingBag className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0" />
                   <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                    {t("Order Summary") || "অর্ডার সামারি"}
+                    {t("Order Summary") || "Order Summary"}
                   </h3>
                 </div>
                 <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 tabular-nums">
-                  {totalItemQty}টি পণ্য
+                  {totalItemQty} {totalItemQty === 1 ? "item" : "items"}
                 </span>
               </div>
 
@@ -2274,7 +2274,7 @@ export default function CheckoutPage() {
                         {item.name}
                       </div>
                       <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
-                        পরিমাণ: {item.quantity} × {formatPrice(item.price)}
+                        Qty: {item.quantity} × {formatPrice(item.price)}
                       </div>
                     </div>
                     <div className="font-bold text-sm text-zinc-900 dark:text-white shrink-0 tabular-nums">
@@ -2299,7 +2299,7 @@ export default function CheckoutPage() {
             <div className="px-5 py-3.5 ds-liquid-subpanel flex items-center justify-between gap-3 text-xs text-zinc-600 dark:text-zinc-300">
               <div className="flex items-center gap-2 min-w-0">
                 <Shield className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-                <span className="truncate">১০০% সুরক্ষিত পেমেন্ট ও অথেনটিক ইমপোর্ট গ্যারান্টি</span>
+                <span className="truncate">100% Secure Payment &amp; Authentic Import Guarantee</span>
               </div>
             </div>
           </aside>
@@ -2325,13 +2325,13 @@ export default function CheckoutPage() {
                 }}
               >
                 <motion.div
-                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 36, scale: 0.98 }}
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: "100%" }}
                   transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
                   drag={prefersReducedMotion ? false : "y"}
                   dragConstraints={{ top: 0, bottom: 0 }}
-                  dragElastic={{ top: 0.08, bottom: 0.45 }}
+                  dragElastic={{ top: 0.02, bottom: 0.45 }}
                   onDragEnd={(_, info) => {
                     const projected = info.offset.y + projectMomentum(info.velocity.y);
                     if (projected > 110 || info.velocity.y > 420) {
@@ -2339,17 +2339,17 @@ export default function CheckoutPage() {
                       setShowCouponsModal(false);
                     }
                   }}
-                  className="w-full max-w-md ds-apple-modal rounded-t-[28px] md:rounded-[28px] p-6 pb-10 md:pb-6"
+                  className="w-full max-w-none md:max-w-md ds-apple-sheet md:ds-apple-modal rounded-t-[28px] rounded-b-none md:rounded-[28px] p-6 pb-[calc(24px+env(safe-area-inset-bottom,0px))] md:pb-6 max-h-[85dvh] overflow-y-auto"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="w-9 h-1 rounded-full bg-black/20 dark:bg-white/25 mx-auto mb-3 md:hidden" />
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        আমার ভাউচারসমূহ
+                        My Vouchers
                       </h3>
                       <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-0.5">
-                        অর্ডারে ছাড় পেতে যেকোনো সক্রিয় ভাউচার নির্বাচন করুন
+                        Select any active voucher to get a discount on your order
                       </p>
                     </div>
                     <button
@@ -2358,7 +2358,7 @@ export default function CheckoutPage() {
                         triggerHaptic("light");
                         setShowCouponsModal(false);
                       }}
-                      aria-label="বন্ধ করুন"
+                      aria-label="Close"
                       className="ds-apple-icon-btn w-8 h-8 flex items-center justify-center active:scale-95 transition-transform"
                     >
                       <X className="w-4 h-4" />
@@ -2384,7 +2384,7 @@ export default function CheckoutPage() {
                                   {c.type === "percent"
                                     ? `${c.discount}%`
                                     : formatPrice(c.discount)}{" "}
-                                  ছাড়
+                                  Off
                                 </span>
                                 <span className="text-xs text-zinc-400">·</span>
                                 <span className="font-bold text-xs sm:text-sm text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
@@ -2393,12 +2393,12 @@ export default function CheckoutPage() {
                               </div>
                               <div className="text-[11px] text-[#6E6E73] dark:text-[#8E8E93] mt-0.5 tabular-nums">
                                 {c.minOrderAmount > 0
-                                  ? `সর্বনিম্ন অর্ডার ${formatPrice(c.minOrderAmount)}`
-                                  : "যেকোনো অর্ডারে প্রযোজ্য"}
+                                  ? `Minimum order ${formatPrice(c.minOrderAmount)}`
+                                  : "Valid on any order"}
                               </div>
                               {!minMet && (
                                 <div className="text-[11px] text-[#FF3B30] dark:text-[#FF453A] font-semibold mt-0.5 tabular-nums">
-                                  আরও {formatPrice(c.minOrderAmount - subtotal)} প্রয়োজন
+                                  Add {formatPrice(c.minOrderAmount - subtotal)} more to qualify
                                 </div>
                               )}
                             </div>
@@ -2415,11 +2415,11 @@ export default function CheckoutPage() {
                                 });
                                 setCouponCode(c.code);
                                 setShowCouponsModal(false);
-                                notify("ভাউচার সফলভাবে যুক্ত হয়েছে!", "success");
+                                notify("Voucher applied successfully!", "success");
                               }}
                               className="px-4 py-2 ds-liquid-btn-primary !min-h-0 !text-xs shrink-0 disabled:opacity-40 whitespace-nowrap cursor-pointer"
                             >
-                              ব্যবহার করুন
+                              Apply
                             </button>
                           </div>
                         );
@@ -2429,7 +2429,7 @@ export default function CheckoutPage() {
                       <div className="text-center py-10 ds-liquid-section">
                         <Ticket className="w-9 h-9 text-[#8E8E93] mx-auto mb-2" />
                         <p className="text-sm font-semibold text-[#6E6E73] dark:text-[#8E8E93]">
-                          আপনার কোনো সংরক্ষিত ভাউচার নেই
+                          You have no saved vouchers
                         </p>
                       </div>
                     )}
