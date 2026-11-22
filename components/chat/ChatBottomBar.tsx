@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import Icon from '../Icon';
+import { triggerHaptic } from '../../lib/haptics';
 import {
   MsgCameraIcon,
   MsgCloseIcon,
@@ -69,6 +70,22 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
 }) => {
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [slideCancelX, setSlideCancelX] = useState(0);
+  const [cancelArmed, setCancelArmed] = useState(false);
+  const micHoldRef = useRef<{
+    startX: number;
+    startedAt: number;
+    isTouchHold: boolean;
+    didCancel: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isRecording) {
+      setSlideCancelX(0);
+      setCancelArmed(false);
+      micHoldRef.current = null;
+    }
+  }, [isRecording]);
 
   if (isBlocked) {
     return (
@@ -367,16 +384,65 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         ) : (
           <button
             type="button"
-            onClick={startRecording}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#F246F5] text-white flex items-center justify-center hover:brightness-105 active:scale-92 transition-all shrink-0 cursor-pointer"
-            title="Speak / Voice message"
+            onTouchStart={(e) => {
+              if (e.touches.length !== 1) return;
+              triggerHaptic('medium');
+              micHoldRef.current = {
+                startX: e.touches[0].clientX,
+                startedAt: Date.now(),
+                isTouchHold: true,
+                didCancel: false,
+              };
+              setSlideCancelX(0);
+              setCancelArmed(false);
+              startRecording();
+            }}
+            onTouchMove={(e) => {
+              const h = micHoldRef.current;
+              if (!h || !e.touches[0]) return;
+              const dx = e.touches[0].clientX - h.startX;
+              const clamped = Math.min(0, Math.max(-140, dx));
+              setSlideCancelX(clamped);
+              const armed = clamped <= -78;
+              if (armed !== cancelArmed) {
+                setCancelArmed(armed);
+                triggerHaptic(armed ? 'warning' : 'selection');
+              }
+            }}
+            onTouchEnd={(e) => {
+              const h = micHoldRef.current;
+              micHoldRef.current = null;
+              if (!h) return;
+              e.preventDefault();
+              const elapsed = Date.now() - h.startedAt;
+              if (cancelArmed || slideCancelX <= -78) {
+                setSlideCancelX(0);
+                setCancelArmed(false);
+                cancelRecording();
+                return;
+              }
+              setSlideCancelX(0);
+              setCancelArmed(false);
+              // Hold > 420ms -> release to send; quick tap stays recording hands-free
+              if (elapsed > 420) {
+                triggerHaptic('success');
+                stopRecording(true);
+              }
+            }}
+            onClick={() => {
+              if (!isRecording) {
+                startRecording();
+              }
+            }}
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#F246F5] text-white flex items-center justify-center hover:brightness-105 active:scale-92 transition-all shrink-0 cursor-pointer touch-none"
+            title="Tap or hold to record voice message"
           >
             <MsgMicIcon className="w-5 h-5" />
           </button>
         )}
       </div>
 
-      {/* Bottom White Rounded "Listening..." Panel with Pastel Fluid Pearl Orb (IMG_5472) */}
+      {/* Bottom White Rounded "Listening..." Panel with Pastel Fluid Pearl Orb & Slide-to-Cancel */}
       <AnimatePresence>
         {isRecording && (
           <motion.div
@@ -386,11 +452,46 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
             className="overflow-hidden"
+            onTouchStart={(e) => {
+              if (e.touches.length !== 1) return;
+              micHoldRef.current = {
+                startX: e.touches[0].clientX,
+                startedAt: Date.now(),
+                isTouchHold: false,
+                didCancel: false,
+              };
+            }}
+            onTouchMove={(e) => {
+              const h = micHoldRef.current;
+              if (!h || !e.touches[0]) return;
+              const dx = e.touches[0].clientX - h.startX;
+              const clamped = Math.min(0, Math.max(-140, dx));
+              setSlideCancelX(clamped);
+              const armed = clamped <= -78;
+              if (armed !== cancelArmed) {
+                setCancelArmed(armed);
+                triggerHaptic(armed ? 'warning' : 'selection');
+              }
+            }}
+            onTouchEnd={() => {
+              micHoldRef.current = null;
+              if (cancelArmed || slideCancelX <= -78) {
+                setSlideCancelX(0);
+                setCancelArmed(false);
+                cancelRecording();
+              } else {
+                setSlideCancelX(0);
+                setCancelArmed(false);
+              }
+            }}
           >
-            <div className="w-full flex flex-col items-center justify-center bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-[28px] px-6 pt-5 pb-7 shadow-[0_6px_28px_rgba(120,90,160,0.06)] relative">
+            <div
+              style={{ transform: `translate3d(${slideCancelX * 0.35}px, 0, 0)` }}
+              className="w-full flex flex-col items-center justify-center bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-[28px] px-6 pt-5 pb-6 shadow-[0_6px_28px_rgba(120,90,160,0.06)] relative transition-transform duration-75"
+            >
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-[18px] font-bold text-zinc-950 dark:text-white tracking-tight">
-                  Listening...
+                  {cancelArmed ? 'Release to cancel' : 'Listening...'}
                 </h3>
                 <span className="text-[11px] font-mono font-semibold text-zinc-400 dark:text-zinc-500 tabular-nums">
                   {formattedRecTime}
@@ -450,6 +551,17 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                     }}
                   />
                 </div>
+              </div>
+
+              <div
+                className={cn(
+                  'mt-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors',
+                  cancelArmed
+                    ? 'bg-rose-500 text-white shadow-sm'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                )}
+              >
+                {cancelArmed ? 'Release finger to discard' : '← Slide left to cancel'}
               </div>
             </div>
           </motion.div>

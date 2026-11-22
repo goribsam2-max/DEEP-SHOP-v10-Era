@@ -18,6 +18,7 @@ import { useNotify, useConfirm } from "../components/Notifications";
 import { useIllustrations } from "../lib/useIllustrations";
 import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY, projectMomentum } from "../lib/shoppingRoute";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import Icon from "../components/Icon";
 import {
   Zap,
@@ -184,6 +185,29 @@ const MyOrders: React.FC = () => {
   const prefersReducedMotion = useReducedMotion();
 
   const hasAutoSelectedTabRef = useRef(false);
+
+  const tabOrder: OrderTab[] = ["Pending", "Active", "Subscription", "Cancelled"];
+  const { swipeHandlers: ordersSwipeHandlers } = useSwipeNavigation({
+    disabled: Boolean(mobileDetailOrder),
+    onSwipeLeft: () => {
+      const idx = tabOrder.indexOf(activeTab);
+      if (idx >= 0 && idx < tabOrder.length - 1) {
+        triggerHaptic("selection");
+        setActiveTab(tabOrder[idx + 1]);
+      }
+    },
+    onSwipeRight: () => {
+      const idx = tabOrder.indexOf(activeTab);
+      if (idx > 0) {
+        triggerHaptic("selection");
+        setActiveTab(tabOrder[idx - 1]);
+      }
+    },
+    onEdgeSwipeRight: () => {
+      triggerHaptic("light");
+      navigate(-1);
+    },
+  });
 
   useEffect(() => {
     let orderUnsubs: Array<() => void> = [];
@@ -1267,7 +1291,10 @@ const MyOrders: React.FC = () => {
   };
 
   return (
-    <div className="orders-v2-shell min-h-screen pb-[120px] lg:pb-16">
+    <div
+      {...ordersSwipeHandlers}
+      className="orders-v2-shell min-h-screen pb-[120px] lg:pb-16"
+    >
       <div className="max-w-md lg:max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 pt-5 lg:pt-8">
         {/* Top Editorial Header + Desktop Summary Strip */}
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-5 lg:mb-7">

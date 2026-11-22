@@ -7,6 +7,7 @@ import { auth, db } from "../firebase";
 import { handleCoinDeductionWithExpiry } from "../lib/coinExpiry";
 import { APPLE_SPRING_DEFAULT, projectMomentum } from "../lib/shoppingRoute";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import {
   collection,
   addDoc,
@@ -1118,6 +1119,23 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const { swipeHandlers: checkoutSwipeHandlers } = useSwipeNavigation({
+    disabled: showCouponsModal,
+    onSwipeRight: () => {
+      if (currentStep > 1) {
+        prevStep();
+      }
+    },
+    onEdgeSwipeRight: () => {
+      if (currentStep > 1) {
+        prevStep();
+      } else {
+        triggerHaptic("light");
+        navigate(-1);
+      }
+    },
+  });
+
   const jumpToStep = (step: number) => {
     if (step < currentStep) {
       triggerHaptic("selection");
@@ -1281,7 +1299,10 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell py-4 sm:py-7 lg:py-9 px-3.5 sm:px-6 pb-28 lg:pb-16">
+    <div
+      {...checkoutSwipeHandlers}
+      className="w-full min-h-[calc(100vh-56px)] ds-liquid-checkout-shell py-4 sm:py-7 lg:py-9 px-3.5 sm:px-6 pb-28 lg:pb-16"
+    >
       <div className="max-w-6xl mx-auto space-y-5 lg:space-y-7">
         {/* =====================================================================
             DESKTOP LIQUID GLASS TOP BAR (lg and up)

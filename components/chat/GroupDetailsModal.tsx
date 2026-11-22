@@ -20,6 +20,8 @@ import { db } from '../../firebase';
 import { uploadToImgbb } from '../../services/imgbb';
 import { cn, getSafeDisplayName, getSafePublicUsername } from '../../lib/utils';
 import { ProgressiveImage } from './ProgressiveImage';
+import { useSwipeNavigation } from '../../lib/useSwipeNavigation';
+import { triggerHaptic } from '../../lib/haptics';
 
 export interface GroupMember {
   id: string;
@@ -705,18 +707,45 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     );
   });
 
+  const { swipeHandlers } = useSwipeNavigation({
+    disabled: !isOpen || Boolean(previewMediaUrl),
+    ignoreDialogs: false,
+    onEdgeSwipeRight: () => {
+      triggerHaptic('light');
+      if (currentView !== 'main') {
+        setCurrentView('main');
+      } else {
+        onClose();
+      }
+    },
+    onSwipeRight: () => {
+      triggerHaptic('light');
+      if (currentView !== 'main') {
+        setCurrentView('main');
+      } else {
+        onClose();
+      }
+    },
+  });
+
   if (!isOpen || !activeChat) return null;
 
   const currentGroupName = activeChat.name || activeChat.groupName || 'Group Chat';
   const currentGroupAvatar = activeChat.photoURL || '';
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
-      {/* Background click to close if on desktop */}
-      <div className="hidden sm:block absolute inset-0 -z-10" onClick={onClose} />
+    <div
+      role="dialog"
+      aria-modal="true"
+      data-no-pull-refresh="true"
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm animate-fadeIn"
+    >
+      {/* Background click to close */}
+      <div className="absolute inset-0 -z-10" onClick={onClose} />
 
       {/* Main Dialog / Card Container */}
       <motion.div
+        {...(swipeHandlers as any)}
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 15 }}

@@ -134,11 +134,52 @@ const BottomNav: React.FC = () => {
     ? { duration: 0.14, ease: "easeOut" as const }
     : { type: "spring" as const, stiffness: 520, damping: 36, mass: 0.8 };
 
+  const swipeableRoutes = ["/", "/orders", "/loops", "/profile"];
+  const navTouchStartRef = React.useRef<{ x: number; y: number; at: number } | null>(null);
+
+  const handleDockTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    if (e.touches.length !== 1) {
+      navTouchStartRef.current = null;
+      return;
+    }
+    navTouchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      at: Date.now(),
+    };
+  };
+
+  const handleDockTouchEnd = (e: React.TouchEvent<HTMLElement>) => {
+    const start = navTouchStartRef.current;
+    navTouchStartRef.current = null;
+    if (!start || !e.changedTouches[0]) return;
+    const dx = e.changedTouches[0].clientX - start.x;
+    const dy = e.changedTouches[0].clientY - start.y;
+    if (Math.abs(dx) < 42 || Math.abs(dy) > Math.abs(dx) * 0.75 || Date.now() - start.at > 600) {
+      return;
+    }
+    const currentIdx = swipeableRoutes.findIndex((route) =>
+      route === "/" ? location.pathname === "/" : location.pathname.startsWith(route)
+    );
+    const baseIdx = currentIdx === -1 ? 0 : currentIdx;
+    const nextIdx =
+      dx < 0
+        ? Math.min(swipeableRoutes.length - 1, baseIdx + 1)
+        : Math.max(0, baseIdx - 1);
+    if (nextIdx !== currentIdx) {
+      triggerHaptic("selection");
+      navigate(swipeableRoutes[nextIdx]);
+    }
+  };
+
   return (
     <div className="fixed bottom-[max(14px,env(safe-area-inset-bottom))] inset-x-0 z-[100] md:hidden px-4 pointer-events-none flex justify-center">
       <nav
         aria-label="Shopping Navigation"
-        className="ds-shop-bottom-dock pointer-events-auto rounded-full p-1.5 flex items-center justify-between gap-1 w-full max-w-[380px]"
+        data-no-swipe="true"
+        onTouchStart={handleDockTouchStart}
+        onTouchEnd={handleDockTouchEnd}
+        className="ds-shop-bottom-dock pointer-events-auto rounded-full p-1.5 flex items-center justify-between gap-1 w-full max-w-[380px] touch-pan-y"
       >
         {navItems.map((item) => {
           const isActive =

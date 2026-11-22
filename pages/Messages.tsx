@@ -3,17 +3,19 @@ import { uploadFileToCatbox } from '../lib/catboxUpload';
 import { VerifiedIcon } from '../components/SellerBadge';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { subscribeToWebPush } from '../lib/push';
 import SEO from '../components/SEO';
 import { audioHelper } from '../lib/AudioHelper';
 import { triggerHaptic } from '../lib/haptics';
+import { useSwipeNavigation } from '../lib/useSwipeNavigation';
+import { SwipeableInboxRow, SwipeableMessageBubble } from '../components/chat/ChatGestures';
 import { useNotify } from '../components/Notifications';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, addDoc, getDoc, query, where, orderBy, serverTimestamp, getDocs, limit, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, addDoc, getDoc, query, where, orderBy, serverTimestamp, getDocs, limit, deleteDoc, writeBatch, increment } from 'firebase/firestore';
 import { cn, formatDisplayEmail, getPublicShareOrigin } from '../lib/utils';
 import { checkContainsBannedWord } from '../lib/wordFilter';
 import VoiceMessageBubble from '../components/ui/voice-message-bubble';
@@ -141,6 +143,28 @@ const getLastActiveText = (presence: any) => {
   return `last seen ${lastActiveDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
 };
 
+const formatShortActiveAgo = (lastActive: any, nowMs: number = Date.now()): string | null => {
+  if (!lastActive) return null;
+  let ms = 0;
+  if (typeof lastActive === 'number') {
+    ms = lastActive;
+  } else if (lastActive?.toMillis) {
+    ms = lastActive.toMillis();
+  } else if (lastActive?.seconds) {
+    ms = lastActive.seconds * 1000;
+  } else {
+    ms = new Date(lastActive).getTime();
+  }
+  if (!ms || isNaN(ms)) return null;
+  const diffMs = Math.max(0, nowMs - ms);
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return '1 m';
+  if (diffMins < 60) return `${diffMins} m`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} h`;
+  return null;
+};
+
 const LinkPreviewCard = ({ text }: { text: string }) => {
   const urlRegex = /(https?:\/\/[^\s]+)/gi;
   const match = text.match(urlRegex);
@@ -230,23 +254,71 @@ const renderTextWithLinks = (text: string, isMe?: boolean) => {
   });
 };
 
-const getChatListPreview = (chat: any, currentUid?: string): { text: string; isDeleted: boolean; isMissedCall: boolean } => {
-  if (!chat) return { text: '', isDeleted: false, isMissedCall: false };
+const getChatListPreview = (
+  chat: any,
+  currentUid?: string,
+  displayNameOverride?: string
+): { text: string; isDeleted: boolean; isMissedCall: boolean; isCall: boolean } => {
+  if (!chat) return { text: '', isDeleted: false, isMissedCall: false, isCall: false };
   if (currentUid && chat.deletedLastFor && chat.deletedLastFor[currentUid]) {
-    return { text: '🚫 Message deleted', isDeleted: true, isMissedCall: false };
+    return { text: '🚫 Message deleted', isDeleted: true, isMissedCall: false, isCall: false };
   }
   const raw = String(chat.lastMessage || '');
   if (chat.lastMessageDeleted || raw === '🚫 Message deleted') {
-    return { text: '🚫 Message deleted', isDeleted: true, isMissedCall: false };
+    return { text: '🚫 Message deleted', isDeleted: true, isMissedCall: false, isCall: false };
   }
-  if (raw === '📞 Missed audio call' || raw === '📹 Missed video call') {
-    const isVideo = raw.toLowerCase().includes('video');
-    if (currentUid && chat.lastSenderId === currentUid) {
-      return { text: isVideo ? '📹 Video call' : '📞 Audio call', isDeleted: false, isMissedCall: false };
+
+  const isLegacyCall =
+    raw === '📞 Missed audio call' ||
+    raw === '📹 Missed video call' ||
+    raw.startsWith('📞 Audio call') ||
+    raw.startsWith('📹 Video call');
+
+  if (chat.lastMessageType === 'call' || isLegacyCall) {
+    const isGroup = Boolean(chat.isGroup || chat.type === 'group' || (chat.participants && chat.participants.length > 2));
+    const rawName = String(
+      displayNameOverride || chat.otherUser?.displayName || chat.otherUser?.shopName || ''
+    ).trim();
+    const firstName = rawName.split(/\s+/)[0] || 'User';
+    const isMissed =
+      chat.lastCallStatus === 'missed' ||
+      raw === '📞 Missed audio call' ||
+      raw === '📹 Missed video call';
+
+    if (isMissed) {
+      if (currentUid && chat.lastSenderId === currentUid) {
+        return {
+          text: isGroup ? 'Missed group call.' : `${firstName} missed your call.`,
+          isDeleted: false,
+          isMissedCall: false,
+          isCall: true,
+        };
+      }
+      return {
+        text: isGroup ? 'Missed group call.' : `You missed a call from ${firstName}.`,
+        isDeleted: false,
+        isMissedCall: true,
+        isCall: true,
+      };
     }
-    return { text: raw, isDeleted: false, isMissedCall: true };
+
+    if (currentUid && chat.lastSenderId === currentUid) {
+      return {
+        text: isGroup ? 'You started a call.' : `You called ${firstName}.`,
+        isDeleted: false,
+        isMissedCall: false,
+        isCall: true,
+      };
+    }
+    return {
+      text: isGroup ? 'Group call' : `${firstName} called you.`,
+      isDeleted: false,
+      isMissedCall: false,
+      isCall: true,
+    };
   }
-  return { text: raw, isDeleted: false, isMissedCall: false };
+
+  return { text: raw, isDeleted: false, isMissedCall: false, isCall: false };
 };
 
 const CallBubble = ({ msg, isMe, onCallback }: { msg: any; isMe?: boolean; onCallback?: () => void }) => {
@@ -389,6 +461,9 @@ export default function Messages() {
   });
 
   const [swipedChatId, setSwipedChatId] = useState<string | null>(null);
+  const [clearTargetChat, setClearTargetChat] = useState<any | null>(null);
+  const forwardSheetDragControls = useDragControls();
+  const wallpaperDragControls = useDragControls();
   const touchStartRef = useRef<{ x: number; y: number; cId: string } | null>(null);
   const longPressTimerRef = useRef<any>(null);
 
@@ -741,6 +816,14 @@ export default function Messages() {
     setActiveMessageMenuId(msgId);
   };
 
+  const cancelMsgHoldTimer = () => {
+    if (msgHoldTimerRef.current) {
+      clearTimeout(msgHoldTimerRef.current);
+      msgHoldTimerRef.current = null;
+    }
+    msgHoldTouchPosRef.current = null;
+  };
+
   const getMsgHoldHandlers = (msgId: string) => ({
     onContextMenu: (e: React.MouseEvent) => {
       e.preventDefault();
@@ -763,18 +846,15 @@ export default function Messages() {
       if (!touch) return;
       const dx = Math.abs(touch.clientX - msgHoldTouchPosRef.current.x);
       const dy = Math.abs(touch.clientY - msgHoldTouchPosRef.current.y);
-      if (dx > 10 || dy > 10) {
-        if (msgHoldTimerRef.current) clearTimeout(msgHoldTimerRef.current);
-        msgHoldTouchPosRef.current = null;
+      if (dx > 8 || dy > 10) {
+        cancelMsgHoldTimer();
       }
     },
     onTouchEnd: () => {
-      if (msgHoldTimerRef.current) clearTimeout(msgHoldTimerRef.current);
-      msgHoldTouchPosRef.current = null;
+      cancelMsgHoldTimer();
     },
     onTouchCancel: () => {
-      if (msgHoldTimerRef.current) clearTimeout(msgHoldTimerRef.current);
-      msgHoldTouchPosRef.current = null;
+      cancelMsgHoldTimer();
     },
   });
 
@@ -783,14 +863,13 @@ export default function Messages() {
     const d = new Date(ms);
     const now = new Date();
     if (d.toDateString() === now.toDateString()) {
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      return `${hh}:${mm}`;
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
     }
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (d.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfMsgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diffDays = Math.round((startOfToday - startOfMsgDay) / 86400000);
+    if (diffDays >= 1 && diffDays < 7) {
+      return d.toLocaleDateString([], { weekday: 'short' });
     }
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
@@ -809,12 +888,26 @@ export default function Messages() {
         unread.map((c) =>
           updateDoc(doc(db, 'p2p_chats', c.id), {
             seenBy: arrayUnion(user.uid),
+            [`unreadCount.${user.uid}`]: 0,
           }).catch(() => {})
         )
       );
       notify('Marked all chats as read', 'success');
     } catch {
       notify('Could not mark chats as read', 'error');
+    }
+  };
+
+  const toggleChatUnreadStatus = async (chat: any, currentlyUnread: boolean) => {
+    if (!user?.uid || !chat?.id) return;
+    try {
+      await updateDoc(doc(db, 'p2p_chats', chat.id), {
+        seenBy: currentlyUnread ? arrayUnion(user.uid) : arrayRemove(user.uid),
+        [`unreadCount.${user.uid}`]: currentlyUnread ? 0 : 1,
+      });
+      notify(currentlyUnread ? 'Marked as read' : 'Marked as unread', 'info');
+    } catch {
+      notify('Could not update read status', 'error');
     }
   };
 
@@ -1099,6 +1192,13 @@ export default function Messages() {
   const [callStatus, setCallStatus] = useState<'connecting' | 'ringing' | 'connected'>('connecting');
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaker, setIsSpeaker] = useState(false);
+  const [unansweredCallState, setUnansweredCallState] = useState<{
+    targetUser: { id?: string; displayName: string; photoURL?: string };
+    chatId?: string;
+    callType: 'audio' | 'video';
+  } | null>(null);
+  const noAnswerShownIdsRef = useRef<Set<string>>(new Set());
+  const [presenceNowMs, setPresenceNowMs] = useState<number>(() => Date.now());
 
   // Review states
   const [hasReviewed, setHasReviewed] = useState(false);
@@ -1137,11 +1237,29 @@ export default function Messages() {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const localStreamPromiseRef = useRef<Promise<MediaStream | null> | null>(null);
+  const remoteMediaStreamRef = useRef<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ringStartedAtRef = useRef<number>(0);
+  const isMutedRef = useRef<boolean>(false);
+  const [swapCallVideos, setSwapCallVideos] = useState(false);
   const shouldAutoSendRef = useRef<boolean>(false);
   const isTouchActiveRef = useRef<boolean>(false);
+
+  const unlockRemoteAudioElement = () => {
+    const audioEl = remoteAudioRef.current;
+    if (!audioEl) return;
+    try {
+      audioEl.muted = false;
+      audioEl.volume = 1;
+      const playPromise = audioEl.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
+      }
+    } catch {}
+  };
 
   // Community Channel States
   const [sidebarTab, setSidebarTab] = useState<'messages' | 'community' | 'calls'>('messages');
@@ -1504,7 +1622,7 @@ export default function Messages() {
               ? uData.lastActive.toMillis()
               : (uData.lastActive?.seconds ? uData.lastActive.seconds * 1000 : (typeof uData.lastActive === 'string' ? new Date(uData.lastActive).getTime() : 0));
           
-          const isRecentlyActive = lastActiveMs > 0 && (Date.now() - lastActiveMs < 60000);
+          const isRecentlyActive = lastActiveMs > 0 && (Date.now() - lastActiveMs < 90000);
           const isUserOnline = Boolean(uData.isOnline && isRecentlyActive);
 
           setChatUsersData(prev => ({
@@ -1523,6 +1641,11 @@ export default function Messages() {
     });
     return () => unsubscribes.forEach(unsub => unsub());
   }, [chats]);
+
+  useEffect(() => {
+    const id = setInterval(() => setPresenceNowMs(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   // Debounced search for users by name or username
   useEffect(() => {
@@ -2369,6 +2492,7 @@ const handleCreateChannel = async () => {
         }).catch(() => {});
       } else {
         let chatId = targetChatOrChannel.id;
+        const fwdRecipientId = targetChatOrChannel.otherUser?.id || targetChatOrChannel.otherUser?.uid;
         if (targetChatOrChannel.isNew || !chatId) {
           const chatRef = await addDoc(collection(db, 'p2p_chats'), {
             participants: [user.uid, targetChatOrChannel.otherUser.id],
@@ -2376,7 +2500,8 @@ const handleCreateChannel = async () => {
             updatedAt: serverTimestamp(),
             lastMessage: previewSummary,
             lastSenderId: user.uid,
-            seenBy: [user.uid]
+            seenBy: [user.uid],
+            ...(fwdRecipientId ? { unreadCount: { [fwdRecipientId]: 1, [user.uid]: 0 } } : {}),
           });
           chatId = chatRef.id;
         } else {
@@ -2386,7 +2511,9 @@ const handleCreateChannel = async () => {
             lastSenderId: user.uid,
             seenBy: [user.uid],
             lastMessageDeleted: false,
-            deletedLastFor: {}
+            deletedLastFor: {},
+            [`unreadCount.${user.uid}`]: 0,
+            ...(fwdRecipientId ? { [`unreadCount.${fwdRecipientId}`]: increment(1) } : {}),
           });
         }
 
@@ -2869,11 +2996,10 @@ const handleCreateChannel = async () => {
       } catch {}
 
       if (user && activeId) {
-        if (currentUserProfile?.readReceipts !== false) {
-          updateDoc(doc(db, 'p2p_chats', activeId), {
-            seenBy: arrayUnion(user.uid)
-          }).catch(() => {});
-        }
+        updateDoc(doc(db, 'p2p_chats', activeId), {
+          [`unreadCount.${user.uid}`]: 0,
+          ...(currentUserProfile?.readReceipts !== false ? { seenBy: arrayUnion(user.uid) } : {}),
+        }).catch(() => {});
       }
 
       requestAnimationFrame(() => {
@@ -2895,11 +3021,10 @@ const handleCreateChannel = async () => {
   // Effect 5: Mark chat as seen when opened
   useEffect(() => {
     if (user && activeChat && activeChat?.id && !activeChat?.isNew) {
-      if (currentUserProfile?.readReceipts !== false) {
-        updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
-          seenBy: arrayUnion(user.uid)
-        }).catch(console.error);
-      }
+      updateDoc(doc(db, 'p2p_chats', activeChat?.id), {
+        [`unreadCount.${user.uid}`]: 0,
+        ...(currentUserProfile?.readReceipts !== false ? { seenBy: arrayUnion(user.uid) } : {}),
+      }).catch(console.error);
     }
   }, [activeChat?.id, user]);
 
@@ -3227,7 +3352,8 @@ const handleCreateChannel = async () => {
               updatedAt: serverTimestamp(),
               lastMessage: lastMessageText,
               lastSenderId: user.uid,
-              seenBy: [user.uid]
+              seenBy: [user.uid],
+              unreadCount: { [otherUserId]: 1, [user.uid]: 0 },
             });
             chatId = chatRef.id;
           }
@@ -3276,15 +3402,31 @@ const handleCreateChannel = async () => {
         }
       }
 
+      const unreadUpdatePayload: Record<string, any> = {
+        [`unreadCount.${user.uid}`]: 0,
+      };
+      if (!isGroup && otherUserId && otherUserId !== 'system') {
+        unreadUpdatePayload[`unreadCount.${otherUserId}`] = increment(1);
+      } else if (isGroup && Array.isArray(activeChat?.participants)) {
+        activeChat.participants.forEach((p: any) => {
+          const pid = typeof p === 'string' ? p : p?.id || p?.uid;
+          if (pid && pid !== user.uid) {
+            unreadUpdatePayload[`unreadCount.${pid}`] = increment(1);
+          }
+        });
+      }
+
       await Promise.all([
         addDoc(collection(db, 'p2p_chats', chatId, 'messages'), firestoreMsgData),
         updateDoc(doc(db, 'p2p_chats', chatId), {
           updatedAt: serverTimestamp(),
           lastMessage: lastMessageText,
+          lastMessageType: 'text',
           lastSenderId: user.uid,
           seenBy: [user.uid],
           lastMessageDeleted: false,
           deletedLastFor: {},
+          ...unreadUpdatePayload,
           ...(isAdminRole && !isGroup ? { aiDisabled: true } : {}),
         }).catch(() => {}),
       ]);
@@ -3292,6 +3434,12 @@ const handleCreateChannel = async () => {
       // Send push notification + Dynamic AI Auto-Reply
       const recipientId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
       if (recipientId && recipientId !== 'system' && !isGroup) {
+        const cachedRecipient = chatUsersData?.[recipientId];
+        const fallbackSubs = [
+          ...(Array.isArray(cachedRecipient?.webPushSubs) ? cachedRecipient.webPushSubs : []),
+          ...(cachedRecipient?.webPushSub ? [cachedRecipient.webPushSub] : []),
+        ].filter((s: any) => s && s.endpoint);
+
         fetch('/api/send-push-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3301,7 +3449,8 @@ const handleCreateChannel = async () => {
             body: lastMessageText,
             link: `/messages?chatId=${user.uid}`,
             type: 'message',
-            tag: `chat-${user.uid}`
+            tag: `chat-${user.uid}`,
+            ...(fallbackSubs.length > 0 ? { fallbackSubs } : {}),
           })
         }).catch(() => {});
 
@@ -3423,8 +3572,11 @@ const handleCreateChannel = async () => {
                       await updateDoc(doc(db, 'p2p_chats', chatId), {
                         updatedAt: serverTimestamp(),
                         lastMessage: aiText,
+                        lastMessageType: 'text',
                         lastSenderId: recipientId,
-                        seenBy: [recipientId]
+                        seenBy: [recipientId],
+                        [`unreadCount.${user.uid}`]: increment(1),
+                        [`unreadCount.${recipientId}`]: 0,
                       });
                     }
                   }
@@ -3460,14 +3612,17 @@ const handleCreateChannel = async () => {
     if (!activeChat || !user) return;
     try {
       let chatId = activeChat?.id;
+      const directOtherId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
       if (activeChat?.isNew) {
         const chatRef = await addDoc(collection(db, 'p2p_chats'), {
-          participants: [user.uid, activeChat?.otherUser?.id],
+          participants: [user.uid, directOtherId],
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastMessage: isSticker ? '✨ Sticker' : 'Sent an image',
+          lastMessageType: 'text',
           lastSenderId: user.uid,
           seenBy: [user.uid],
+          ...(directOtherId ? { unreadCount: { [directOtherId]: 1, [user.uid]: 0 } } : {}),
         });
         chatId = chatRef.id;
         setTempActiveChat({ ...activeChat, id: chatId, isNew: false, seenBy: [user.uid] });
@@ -3488,15 +3643,24 @@ const handleCreateChannel = async () => {
       await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), msgData);
       await updateDoc(doc(db, 'p2p_chats', chatId), {
         lastMessage: isSticker ? '✨ Sticker' : 'Sent an image',
+        lastMessageType: 'text',
         lastSenderId: user.uid,
         updatedAt: serverTimestamp(),
         seenBy: [user.uid],
         lastMessageDeleted: false,
         deletedLastFor: {},
+        [`unreadCount.${user.uid}`]: 0,
+        ...(directOtherId && directOtherId !== 'system' ? { [`unreadCount.${directOtherId}`]: increment(1) } : {}),
       });
 
       const directRecipientId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
       if (directRecipientId && directRecipientId !== 'system') {
+        const cachedRecipient = chatUsersData?.[directRecipientId];
+        const fallbackSubs = [
+          ...(Array.isArray(cachedRecipient?.webPushSubs) ? cachedRecipient.webPushSubs : []),
+          ...(cachedRecipient?.webPushSub ? [cachedRecipient.webPushSub] : []),
+        ].filter((s: any) => s && s.endpoint);
+
         fetch('/api/send-push-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3506,7 +3670,8 @@ const handleCreateChannel = async () => {
             body: isSticker ? '✨ Sent a sticker' : '📷 Sent an image',
             link: `/messages?chatId=${user.uid}`,
             type: 'message',
-            tag: `chat-${user.uid}`
+            tag: `chat-${user.uid}`,
+            ...(fallbackSubs.length > 0 ? { fallbackSubs } : {}),
           })
         }).catch(() => {});
       }
@@ -3547,6 +3712,7 @@ const handleCreateChannel = async () => {
     type: 'audio' | 'video';
     callerId: string;
     wasConnected: boolean;
+    targetUser?: { id?: string; displayName: string; photoURL?: string };
   } | null>(null);
   const callStatusRef = useRef<'connecting' | 'ringing' | 'connected' | 'ended'>('connecting');
   const callDurationRef = useRef<number>(0);
@@ -3559,6 +3725,10 @@ const handleCreateChannel = async () => {
   useEffect(() => {
     callDurationRef.current = callDuration;
   }, [callDuration]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   const finalizeCallLog = async (opts: {
     callId: string;
@@ -3590,6 +3760,10 @@ const handleCreateChannel = async () => {
       }).catch(() => {});
       await updateDoc(doc(db, 'p2p_chats', opts.chatId), {
         lastMessage: summaryPreview,
+        lastMessageType: 'call',
+        lastCallType: opts.type,
+        lastCallStatus: 'ended',
+        ...(opts.callerId ? { lastSenderId: opts.callerId } : {}),
         lastMessageDeleted: false,
         deletedLastFor: {},
         updatedAt: serverTimestamp(),
@@ -3604,6 +3778,9 @@ const handleCreateChannel = async () => {
       }).catch(() => {});
       await updateDoc(doc(db, 'p2p_chats', opts.chatId), {
         lastMessage: missedPreview,
+        lastMessageType: 'call',
+        lastCallType: opts.type,
+        lastCallStatus: 'missed',
         ...(opts.callerId ? { lastSenderId: opts.callerId } : {}),
         lastMessageDeleted: false,
         deletedLastFor: {},
@@ -3617,6 +3794,9 @@ const handleCreateChannel = async () => {
     const activeCallIdParam = searchParams.get('activeCallId');
     const callTypeParam = searchParams.get('callType') as 'audio' | 'video' | null;
     if (activeCallIdParam) {
+      unlockRemoteAudioElement();
+      setUnansweredCallState(null);
+      setSwapCallVideos(false);
       setWebRTCError(null);
       setCurrentCallId(activeCallIdParam);
       setIsCalling(true);
@@ -3628,6 +3808,7 @@ const handleCreateChannel = async () => {
         if (snap.exists()) {
           const d = snap.data();
           const resolvedType = (d.type === 'video' ? 'video' : 'audio') as 'audio' | 'video';
+          setCallType(resolvedType);
           activeCallMetaRef.current = {
             callId: activeCallIdParam,
             chatId: d.chatId || activeChat?.id || '',
@@ -3635,6 +3816,17 @@ const handleCreateChannel = async () => {
             type: resolvedType,
             callerId: d.callerId || '',
             wasConnected: true,
+            targetUser: {
+              id: d.callerId === user?.uid ? d.receiverId : d.callerId,
+              displayName:
+                d.callerId === user?.uid
+                  ? (getChatDisplayName(activeChat) || 'User')
+                  : (d.callerName || getChatDisplayName(activeChat) || 'User'),
+              photoURL:
+                d.callerId === user?.uid
+                  ? (activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatar || '')
+                  : (d.callerAvatar || activeChat?.otherUser?.photoURL || ''),
+            },
           };
           if (d.chatId && d.callMessageId) {
             updateDoc(doc(db, 'p2p_chats', d.chatId, 'messages', d.callMessageId), {
@@ -3644,8 +3836,7 @@ const handleCreateChannel = async () => {
           }
         }
       }).catch(() => {});
-      
-      // Clean query params so we don't trigger it again
+
       const params = new URLSearchParams(searchParams);
       params.delete('activeCallId');
       params.delete('callType');
@@ -3662,7 +3853,10 @@ const handleCreateChannel = async () => {
       if (!data) return;
 
       if (data.status === 'ringing') {
-        setCallStatus('ringing');
+        if (callStatusRef.current !== 'connected') {
+          setCallStatus('ringing');
+          callStatusRef.current = 'ringing';
+        }
       } else if (data.status === 'connected') {
         if (activeCallMetaRef.current && activeCallMetaRef.current.callId === currentCallId) {
           activeCallMetaRef.current.wasConnected = true;
@@ -3685,38 +3879,25 @@ const handleCreateChannel = async () => {
         }
       } else if (data.status === 'ended') {
         setIsCalling(false);
+        setSwapCallVideos(false);
 
         if (localStreamRef.current) {
           localStreamRef.current.getTracks().forEach((track: any) => {
             try {
               track.enabled = false;
               track.stop();
-            } catch (e) {}
+            } catch {}
           });
           localStreamRef.current = null;
         }
-        if (localStream) {
-          localStream.getTracks().forEach((track: any) => {
-            try {
-              track.enabled = false;
-              track.stop();
-            } catch (e) {}
-          });
-        }
-        if (remoteStream) {
-          remoteStream.getTracks().forEach((track: any) => {
-            try {
-              track.enabled = false;
-              track.stop();
-            } catch (e) {}
-          });
-        }
+        localStreamPromiseRef.current = null;
+        remoteMediaStreamRef.current = null;
         setLocalStream(null);
         setRemoteStream(null);
         if (peerConnectionRef.current) {
           try {
             peerConnectionRef.current.close();
-          } catch (e) {}
+          } catch {}
           peerConnectionRef.current = null;
         }
         if (remoteVideoRef.current) {
@@ -3742,12 +3923,42 @@ const handleCreateChannel = async () => {
             ? false
             : Boolean(meta?.wasConnected || callStatusRef.current === 'connected');
 
-        if (data.callerId === user?.uid || meta?.callerId === user?.uid || resolvedWasConnected) {
+        const isCallerEnding = Boolean(data.callerId === user?.uid || meta?.callerId === user?.uid);
+        const resolvedCallType: 'audio' | 'video' =
+          (data.type || meta?.type || callType) === 'video' ? 'video' : 'audio';
+
+        if (
+          isCallerEnding &&
+          !resolvedWasConnected &&
+          (data.endReason === 'declined' || data.endReason === 'missed') &&
+          !noAnswerShownIdsRef.current.has(currentCallId)
+        ) {
+          noAnswerShownIdsRef.current.add(currentCallId);
+          setUnansweredCallState({
+            targetUser: {
+              id: meta?.targetUser?.id || activeChat?.otherUser?.id || activeChat?.otherUser?.uid || data.receiverId,
+              displayName:
+                meta?.targetUser?.displayName ||
+                getChatDisplayName(activeChat) ||
+                activeChat?.otherUser?.displayName ||
+                'User',
+              photoURL:
+                meta?.targetUser?.photoURL ||
+                activeChat?.otherUser?.photoURL ||
+                activeChat?.otherUser?.avatar ||
+                '',
+            },
+            chatId: data.chatId || meta?.chatId || activeChat?.id,
+            callType: resolvedCallType,
+          });
+        }
+
+        if (isCallerEnding || resolvedWasConnected) {
           finalizeCallLog({
             callId: currentCallId,
             chatId: data.chatId || meta?.chatId || activeChat?.id,
             callMessageId: data.callMessageId || meta?.callMessageId,
-            type: (data.type || meta?.type || callType) === 'video' ? 'video' : 'audio',
+            type: resolvedCallType,
             callerId: data.callerId || meta?.callerId,
             wasConnected: resolvedWasConnected,
             durationSeconds: callDurationRef.current,
@@ -3762,84 +3973,165 @@ const handleCreateChannel = async () => {
     return () => unsub();
   }, [currentCallId, activeChat?.id, user?.uid, callType]);
 
-  // Auto-mark unanswered outgoing call as missed after 45 seconds
+  // Auto-mark unanswered outgoing call as missed after 12s (>10s) & show No Answer screen
+  // Never resets when status changes from 'connecting' -> 'ringing'
   useEffect(() => {
     if (!isCalling || !currentCallId) return;
-    if (callStatus !== 'connecting' && callStatus !== 'ringing') return;
+    if (callStatus === 'connected') return;
     const isCaller = activeCallMetaRef.current?.callerId === user?.uid;
     if (!isCaller) return;
 
+    const CALL_RING_TIMEOUT_MS = 12000;
+    const startedAt = ringStartedAtRef.current || Date.now();
+    const remainingMs = Math.max(400, CALL_RING_TIMEOUT_MS - (Date.now() - startedAt));
+
     const timeoutId = setTimeout(() => {
       if (callStatusRef.current === 'connecting' || callStatusRef.current === 'ringing') {
-        endCall();
+        endCall('missed');
       }
-    }, 45000);
+    }, remainingMs);
 
     return () => clearTimeout(timeoutId);
-  }, [isCalling, currentCallId, callStatus, user?.uid]);
+  }, [isCalling, currentCallId, callStatus === 'connected', user?.uid]);
 
-  const startCall = async (type: 'audio' | 'video') => {
-    if (!user || !activeChat) {
+  const startCall = async (
+    type: 'audio' | 'video',
+    targetOverride?: {
+      targetUser?: { id?: string; uid?: string; displayName?: string; photoURL?: string; avatar?: string };
+      chatId?: string;
+    }
+  ) => {
+    if (!user) {
+      notify("Please sign in to make a call.", "error");
+      return;
+    }
+
+    const resolvedTargetUser = targetOverride?.targetUser || activeChat?.otherUser;
+    const targetUserId = resolvedTargetUser?.id || resolvedTargetUser?.uid;
+    if (!targetUserId) {
       notify("Please open a chat to make a call.", "error");
       return;
     }
 
-    const targetUserId = activeChat?.otherUser?.id || activeChat?.otherUser?.uid;
-    if (!targetUserId) {
-      notify("Cannot place call in this conversation.", "error");
-      return;
-    }
+    const resolvedDisplayName =
+      resolvedTargetUser?.displayName ||
+      getChatDisplayName(activeChat) ||
+      'User';
+    const resolvedPhotoUrl =
+      resolvedTargetUser?.photoURL ||
+      resolvedTargetUser?.avatar ||
+      '';
 
-    if (targetUserId !== "system") {
-      try {
-        const uDoc = await getDoc(doc(db, 'users', targetUserId));
-        if (uDoc.exists()) {
-          const targetData = uDoc.data();
-          if (targetData.disableCalls === true) {
-            setDisabledCallUser(targetData);
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Error checking target user call status:", err);
-      }
-    }
-
+    // Synchronously unlock audio & open call overlay immediately inside click gesture
+    unlockRemoteAudioElement();
+    setUnansweredCallState(null);
+    setSwapCallVideos(false);
     setWebRTCError(null);
     setCallType(type);
     setIsCalling(true);
     setCallStatus('connecting');
     callStatusRef.current = 'connecting';
+    ringStartedAtRef.current = Date.now();
     setCallDuration(0);
     callDurationRef.current = 0;
 
-    // Immediately request camera and microphone stream so video preview works instantly
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: type === 'video',
-          audio: true,
-        });
-        setLocalStream(stream);
-        if (localVideoRef.current && type === 'video') {
-          localVideoRef.current.srcObject = stream;
-          localVideoRef.current.play().catch(() => {});
-        }
-      }
-    } catch (mediaErr) {
-      console.warn("Could not acquire media stream immediately:", mediaErr);
+    // Clean up any leftover media tracks from a prior call before acquiring once
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((t) => {
+        try { t.enabled = false; t.stop(); } catch {}
+      });
+      localStreamRef.current = null;
     }
+    remoteMediaStreamRef.current = null;
+    setRemoteStream(null);
 
+    // Start ringback sound immediately
     if (audioHelper && typeof audioHelper.play === 'function') {
       audioHelper.play('calling');
     } else if (audioHelper && typeof audioHelper.playCalling === 'function') {
       audioHelper.playCalling();
     }
 
+    // Acquire camera & microphone stream once and share promise with setupWebRTC
+    const acquireMediaPromise = (async (): Promise<MediaStream | null> => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: type === 'video'
+            ? {
+                facingMode: 'user',
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+              }
+            : false,
+        });
+        stream.getAudioTracks().forEach((track) => {
+          track.enabled = !isMutedRef.current;
+        });
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        if (localVideoRef.current && type === 'video') {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.muted = true;
+          localVideoRef.current.play().catch(() => {});
+        }
+        return stream;
+      } catch (mediaErr) {
+        console.warn("Could not acquire media stream immediately:", mediaErr);
+        return null;
+      }
+    })();
+    localStreamPromiseRef.current = acquireMediaPromise;
+
     try {
-      let chatId = activeChat?.id;
+      // Check recipient call setting & push subscriptions in parallel while media warms up
+      let recipientUserData: any = chatUsersData?.[targetUserId] || null;
+      if (targetUserId !== 'system') {
+        try {
+          const uDoc = await getDoc(doc(db, 'users', targetUserId));
+          if (uDoc.exists()) {
+            recipientUserData = uDoc.data();
+            if (recipientUserData?.disableCalls === true) {
+              setIsCalling(false);
+              if (audioHelper && typeof audioHelper.stop === 'function') audioHelper.stop();
+              const acquired = await acquireMediaPromise.catch(() => null);
+              acquired?.getTracks().forEach((t) => {
+                try { t.enabled = false; t.stop(); } catch {}
+              });
+              localStreamRef.current = null;
+              localStreamPromiseRef.current = null;
+              setLocalStream(null);
+              setDisabledCallUser(recipientUserData);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Error checking target user call status:", err);
+        }
+      }
+
+      let chatId = targetOverride?.chatId || activeChat?.id;
       const callPreviewLabel = type === 'video' ? '📹 Video call' : '📞 Audio call';
       const callBubbleTitle = type === 'video' ? 'Video call' : 'Audio call';
+
+      if (!chatId) {
+        const existingChat = chats.find(
+          (c) =>
+            !c.isGroup &&
+            c.type !== 'group' &&
+            Array.isArray(c.participants) &&
+            c.participants.includes(targetUserId) &&
+            c.participants.includes(user.uid)
+        );
+        if (existingChat?.id) {
+          chatId = existingChat.id;
+        }
+      }
 
       if (activeChat?.isNew || !chatId) {
         const chatRef = await addDoc(collection(db, 'p2p_chats'), {
@@ -3847,50 +4139,63 @@ const handleCreateChannel = async () => {
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastMessage: callPreviewLabel,
+          lastMessageType: 'call',
+          lastCallType: type,
+          lastCallStatus: 'calling',
           lastSenderId: user.uid,
           seenBy: [user.uid],
           lastMessageDeleted: false,
           deletedLastFor: {}
         });
         chatId = chatRef.id;
-        setTempActiveChat({ ...activeChat, id: chatId, isNew: false, seenBy: [user.uid] });
-        setSearchParams({ chatId }, { replace: true });
+        if (activeChat) {
+          setTempActiveChat({ ...activeChat, id: chatId, isNew: false, seenBy: [user.uid] });
+          setSearchParams({ chatId }, { replace: true });
+        }
       }
 
-      // Immediately write outgoing call bubble in chat so both sides see it right away
-      const callMsgRef = await addDoc(collection(db, 'p2p_chats', chatId, 'messages'), {
-        text: callBubbleTitle,
-        senderId: user.uid,
-        senderName: userShopName || user.displayName || 'User',
-        senderPhoto: user.photoURL || '',
-        systemType: type,
-        callStatus: 'calling',
-        isMissed: false,
-        createdAt: Date.now(),
-        timestamp: serverTimestamp(),
-        seenBy: [user.uid],
-      });
+      // Create chat call bubble & p2p_calls signaling doc simultaneously for instant ringing
+      const [callMsgRef, callRef] = await Promise.all([
+        addDoc(collection(db, 'p2p_chats', chatId, 'messages'), {
+          text: callBubbleTitle,
+          senderId: user.uid,
+          senderName: userShopName || user.displayName || 'User',
+          senderPhoto: user.photoURL || '',
+          systemType: type,
+          callStatus: 'calling',
+          isMissed: false,
+          createdAt: Date.now(),
+          timestamp: serverTimestamp(),
+          seenBy: [user.uid],
+        }),
+        addDoc(collection(db, 'p2p_calls'), {
+          callerId: user.uid,
+          callerName: user.displayName || 'Deep Shop Customer',
+          callerAvatar: user.photoURL || '',
+          receiverId: targetUserId,
+          chatId,
+          status: 'calling',
+          type,
+          timestamp: Date.now(),
+        }),
+      ]);
 
-      await updateDoc(doc(db, 'p2p_chats', chatId), {
+      // Attach callMessageId without blocking Signaling start
+      updateDoc(doc(db, 'p2p_calls', callRef.id), {
+        callMessageId: callMsgRef.id,
+      }).catch(() => {});
+
+      updateDoc(doc(db, 'p2p_chats', chatId), {
         updatedAt: serverTimestamp(),
         lastMessage: callPreviewLabel,
+        lastMessageType: 'call',
+        lastCallType: type,
+        lastCallStatus: 'calling',
         lastSenderId: user.uid,
         seenBy: [user.uid],
         lastMessageDeleted: false,
         deletedLastFor: {},
       }).catch(() => {});
-
-      const callRef = await addDoc(collection(db, 'p2p_calls'), {
-        callerId: user.uid,
-        callerName: user.displayName || 'Deep Shop Customer',
-        callerAvatar: user.photoURL || '',
-        receiverId: targetUserId,
-        chatId,
-        callMessageId: callMsgRef.id,
-        status: 'calling',
-        type,
-        timestamp: Date.now()
-      });
 
       activeCallMetaRef.current = {
         callId: callRef.id,
@@ -3899,8 +4204,19 @@ const handleCreateChannel = async () => {
         type,
         callerId: user.uid,
         wasConnected: false,
+        targetUser: {
+          id: targetUserId,
+          displayName: resolvedDisplayName,
+          photoURL: resolvedPhotoUrl,
+        },
       };
+      // Trigger setupWebRTC immediately while ringing so offer & ICE candidates are pre-staged!
       setCurrentCallId(callRef.id);
+
+      const fallbackSubs = [
+        ...(Array.isArray(recipientUserData?.webPushSubs) ? recipientUserData.webPushSubs : []),
+        ...(recipientUserData?.webPushSub ? [recipientUserData.webPushSub] : []),
+      ].filter((s: any) => s && s.endpoint);
 
       // Send background Web Push notification for the incoming call
       fetch("/api/send-push-user", {
@@ -3912,7 +4228,8 @@ const handleCreateChannel = async () => {
           body: `${user.displayName || 'Someone'} is calling you on Deep Shop.`,
           link: `/messages?chatId=${user.uid}`,
           type: 'call',
-          tag: `call-${callRef.id}`
+          tag: `call-${callRef.id}`,
+          ...(fallbackSubs.length > 0 ? { fallbackSubs } : {}),
         })
       }).catch(err => console.error("Call push notification failed:", err));
     } catch (e) {
@@ -3921,13 +4238,21 @@ const handleCreateChannel = async () => {
       if (audioHelper && typeof audioHelper.stop === 'function') {
         audioHelper.stop();
       }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => {
+          try { t.enabled = false; t.stop(); } catch {}
+        });
+        localStreamRef.current = null;
+      }
+      localStreamPromiseRef.current = null;
+      setLocalStream(null);
     }
   };
 
   useEffect(() => {
     let interval: any;
     if (callStatus === 'connected') {
-        interval = setInterval(() => setCallDuration(p => p + 1), 1000);
+      interval = setInterval(() => setCallDuration(p => p + 1), 1000);
     }
     return () => clearInterval(interval);
   }, [callStatus]);
@@ -3940,8 +4265,9 @@ const handleCreateChannel = async () => {
   }, [activeChat?.id]);
 
   useEffect(() => {
-    if (localStream) {
-      localStream.getAudioTracks().forEach(track => {
+    const activeLocal = localStreamRef.current || localStream;
+    if (activeLocal) {
+      activeLocal.getAudioTracks().forEach(track => {
         track.enabled = !isMuted;
       });
     }
@@ -3949,13 +4275,16 @@ const handleCreateChannel = async () => {
 
   // Synchronize local and remote streams to video/audio HTML tags reactively
   useEffect(() => {
-    if (localStream && callType === 'video' && localVideoRef.current) {
-      if (localVideoRef.current.srcObject !== localStream) {
-        localVideoRef.current.srcObject = localStream;
+    const activeLocal = localStreamRef.current || localStream;
+    if (activeLocal && callType === 'video' && localVideoRef.current) {
+      if (localVideoRef.current.srcObject !== activeLocal) {
+        localVideoRef.current.srcObject = activeLocal;
       }
-      localVideoRef.current.play().catch(e => console.warn("Local video play warning:", e));
+      localVideoRef.current.muted = true;
+      localVideoRef.current.playsInline = true;
+      localVideoRef.current.play().catch(() => {});
     }
-  }, [localStream, callType]);
+  }, [localStream, callType, isCalling, swapCallVideos]);
 
   useEffect(() => {
     if (remoteStream) {
@@ -3963,19 +4292,28 @@ const handleCreateChannel = async () => {
         if (remoteVideoRef.current.srcObject !== remoteStream) {
           remoteVideoRef.current.srcObject = remoteStream;
         }
-        remoteVideoRef.current.play().catch(e => console.warn("Remote video play warning:", e));
+        // Audio plays cleanly through remoteAudioRef; muting <video> avoids autoplay blocking and echo
+        remoteVideoRef.current.muted = true;
+        remoteVideoRef.current.playsInline = true;
+        remoteVideoRef.current.play().catch(() => {});
       }
       if (remoteAudioRef.current) {
         if (remoteAudioRef.current.srcObject !== remoteStream) {
           remoteAudioRef.current.srcObject = remoteStream;
         }
-        remoteAudioRef.current.play().catch(e => console.warn("Remote audio play warning:", e));
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.volume = 1;
+        remoteAudioRef.current.play().catch((e) => {
+          console.warn("Remote audio play warning:", e);
+        });
       }
     }
-  }, [remoteStream, callType]);
+  }, [remoteStream, callType, isCalling, swapCallVideos, callStatus]);
 
+  // Start WebRTC signaling immediately as soon as currentCallId exists (do NOT wait for 'connected')
+  // Only re-runs if currentCallId itself changes!
   useEffect(() => {
-    if (!currentCallId || callStatus !== 'connected') {
+    if (!currentCallId) {
       return;
     }
 
@@ -3983,72 +4321,165 @@ const handleCreateChannel = async () => {
     let unsubCandidates1: any = null;
     let unsubCallDoc: any = null;
 
+    const getDynamicIceServers = async (): Promise<RTCIceServer[]> => {
+      const fallbackServers: RTCIceServer[] = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject',
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject',
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject',
+        },
+      ];
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 1400);
+        const res = await fetch('/api/webrtc-ice', { cache: 'no-store', signal: controller.signal });
+        clearTimeout(timer);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data?.iceServers) && data.iceServers.length > 0) {
+            return data.iceServers;
+          }
+        }
+      } catch {}
+      return fallbackServers;
+    };
+
     const setupWebRTC = async () => {
       try {
-        console.log("Setting up WebRTC connection... callId:", currentCallId);
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          },
-          video: callType === 'video' ? {
-            facingMode: 'user',
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-          } : false
-        });
-        
+        const callDocRef = doc(db, 'p2p_calls', currentCallId);
+        const [callSnap, iceServers] = await Promise.all([
+          getDoc(callDocRef),
+          getDynamicIceServers(),
+        ]);
+
+        if (!isSubscribed || !callSnap.exists()) return;
+        const callData = callSnap.data();
+        const isCaller = callData.callerId === user?.uid;
+        const resolvedNeedVideo = callData.type === 'video' || callType === 'video';
+
+        // Reuse existing live stream from startCall if already acquired to avoid double getUserMedia hardware lock
+        let stream: MediaStream | null = null;
+        const existingLocal = localStreamRef.current;
+        if (
+          existingLocal &&
+          existingLocal.getAudioTracks().some((t) => t.readyState === 'live') &&
+          (!resolvedNeedVideo || existingLocal.getVideoTracks().some((t) => t.readyState === 'live'))
+        ) {
+          stream = existingLocal;
+        } else if (localStreamPromiseRef.current) {
+          stream = await localStreamPromiseRef.current.catch(() => null);
+        }
+
+        if (
+          !stream ||
+          !stream.getAudioTracks().some((t) => t.readyState === 'live') ||
+          (resolvedNeedVideo && !stream.getVideoTracks().some((t) => t.readyState === 'live'))
+        ) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+              },
+              video: resolvedNeedVideo
+                ? {
+                    facingMode: 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                  }
+                : false,
+            });
+          } catch (mediaErr) {
+            if (resolvedNeedVideo) {
+              // Fallback to audio-only if camera fails on receiver/caller
+              stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                },
+                video: false,
+              });
+            } else {
+              throw mediaErr;
+            }
+          }
+        }
+
         if (!isSubscribed) {
-          stream.getTracks().forEach(track => {
-            track.enabled = false;
-            track.stop();
+          stream?.getTracks().forEach((track) => {
+            try {
+              track.enabled = false;
+              track.stop();
+            } catch {}
           });
           return;
         }
 
-        setLocalStream(stream);
-        localStreamRef.current = stream;
+        if (stream) {
+          stream.getAudioTracks().forEach((track) => {
+            track.enabled = !isMutedRef.current;
+          });
+          localStreamRef.current = stream;
+          setLocalStream(stream);
+        }
 
         const pc = new RTCPeerConnection({
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' }
-          ]
+          iceServers,
+          iceCandidatePoolSize: 10,
         });
         peerConnectionRef.current = pc;
 
-        // Logs for debugging WebRTC state transitions
-        pc.oniceconnectionstatechange = () => {
-          console.log("ICE Connection State changed:", pc.iceConnectionState);
-        };
-        pc.onconnectionstatechange = () => {
-          console.log("Peer Connection State changed:", pc.connectionState);
-        };
-        pc.onsignalingstatechange = () => {
-          console.log("Signaling State changed:", pc.signalingState);
-        };
-
-        stream.getTracks().forEach(track => {
-          pc.addTrack(track, stream);
+        stream?.getTracks().forEach((track) => {
+          pc.addTrack(track, stream!);
         });
 
-        pc.ontrack = (event) => {
-          console.log("Remote stream track received:", event);
-          if (event.streams && event.streams[0]) {
-            setRemoteStream(event.streams[0]);
-          } else if (event.track) {
-            const inboundStream = new MediaStream([event.track]);
-            setRemoteStream(inboundStream);
+        // Accumulate all remote audio & video tracks in one persistent MediaStream and clone reference for React updates
+        remoteMediaStreamRef.current = new MediaStream();
+        const pushRemoteTrack = (track: MediaStreamTrack) => {
+          const master = remoteMediaStreamRef.current || new MediaStream();
+          remoteMediaStreamRef.current = master;
+          const alreadyExists = master.getTracks().some((t) => t.id === track.id);
+          if (!alreadyExists) {
+            master.addTrack(track);
           }
+          const cloned = new MediaStream(master.getTracks());
+          setRemoteStream(cloned);
+
+          track.onunmute = () => {
+            if (!isSubscribed) return;
+            const refreshed = new MediaStream(master.getTracks());
+            setRemoteStream(refreshed);
+            if (track.kind === 'audio' && remoteAudioRef.current) {
+              remoteAudioRef.current.muted = false;
+              remoteAudioRef.current.volume = 1;
+              remoteAudioRef.current.play().catch(() => {});
+            }
+          };
         };
 
-        const callDocRef = doc(db, 'p2p_calls', currentCallId);
-        const callSnap = await getDoc(callDocRef);
-        if (!callSnap.exists()) return;
-        const callData = callSnap.data();
-        const isCaller = callData.callerId === user?.uid;
+        pc.ontrack = (event) => {
+          if (event.track) {
+            pushRemoteTrack(event.track);
+          }
+          if (event.streams && event.streams[0]) {
+            event.streams[0].getTracks().forEach((t) => pushRemoteTrack(t));
+          }
+        };
 
         pc.onicecandidate = (event) => {
           if (event.candidate) {
@@ -4059,28 +4490,31 @@ const handleCreateChannel = async () => {
           }
         };
 
-        // Buffer candidate logic to prevent adding before remote description is set
         const iceCandidatesBuffer: RTCIceCandidateInit[] = [];
-        
+        let answerApplied = false;
+        let offerApplied = false;
+
         const processIceBuffer = () => {
-          console.log(`Processing ${iceCandidatesBuffer.length} buffered ICE candidates.`);
           while (iceCandidatesBuffer.length > 0) {
             const candidateInit = iceCandidatesBuffer.shift();
             if (candidateInit) {
-              const candidate = new RTCIceCandidate(candidateInit);
-              pc.addIceCandidate(candidate).catch(e => console.error("Error adding buffered ice candidate:", e));
+              pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(() => {});
             }
           }
         };
 
-        const remoteCandidateCol = collection(db, 'p2p_calls', currentCallId, isCaller ? 'receiverCandidates' : 'callerCandidates');
+        const remoteCandidateCol = collection(
+          db,
+          'p2p_calls',
+          currentCallId,
+          isCaller ? 'receiverCandidates' : 'callerCandidates'
+        );
         unsubCandidates1 = onSnapshot(remoteCandidateCol, (snapshot) => {
           snapshot.docChanges().forEach((change) => {
             if (change.type === 'added') {
               const candidateInit = change.doc.data() as RTCIceCandidateInit;
               if (pc.remoteDescription && pc.remoteDescription.type) {
-                const candidate = new RTCIceCandidate(candidateInit);
-                pc.addIceCandidate(candidate).catch(e => console.error("Error adding remote ice candidate:", e));
+                pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(() => {});
               } else {
                 iceCandidatesBuffer.push(candidateInit);
               }
@@ -4089,68 +4523,80 @@ const handleCreateChannel = async () => {
         });
 
         if (isCaller) {
-          console.log("Initializing as Caller: Creating Offer");
-          const offerDescription = await pc.createOffer();
+          const offerDescription = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true,
+          });
+          if (!isSubscribed) return;
           await pc.setLocalDescription(offerDescription);
-          
+
           await updateDoc(callDocRef, {
             offer: {
               type: offerDescription.type,
-              sdp: offerDescription.sdp
-            }
+              sdp: offerDescription.sdp,
+            },
           });
 
           unsubCallDoc = onSnapshot(callDocRef, (snap) => {
             const data = snap.data();
-            if (data && data.answer && !pc.currentRemoteDescription) {
-              console.log("Caller received Answer: setting remote description");
-              const answerDescription = new RTCSessionDescription(data.answer);
-              pc.setRemoteDescription(answerDescription)
+            if (!isSubscribed || !data) return;
+            if (data.answer && !answerApplied && !pc.currentRemoteDescription) {
+              answerApplied = true;
+              pc.setRemoteDescription(new RTCSessionDescription(data.answer))
                 .then(processIceBuffer)
                 .catch(e => console.error("Error setting remote description on caller:", e));
+            } else if (data.offer && data.renegotiatedBy === 'receiver' && data.offer.sdp !== pc.localDescription?.sdp) {
+              pc.setRemoteDescription(new RTCSessionDescription(data.offer))
+                .then(() => pc.createAnswer())
+                .then((ans) => pc.setLocalDescription(ans).then(() => ans))
+                .then((ans) =>
+                  updateDoc(callDocRef, {
+                    answer: { type: ans.type, sdp: ans.sdp },
+                  })
+                )
+                .catch(() => {});
             }
           });
         } else {
-          console.log("Initializing as Receiver");
-          if (callData.offer) {
-            console.log("Receiver setting offer immediately");
-            const offerDescription = new RTCSessionDescription(callData.offer);
-            await pc.setRemoteDescription(offerDescription)
-              .then(processIceBuffer)
-              .catch(e => console.error("Error setting remote description on receiver:", e));
-            
+          const applyOfferAndAnswer = async (offerObj: RTCSessionDescriptionInit) => {
+            if (offerApplied || pc.currentRemoteDescription) return;
+            offerApplied = true;
+            await pc.setRemoteDescription(new RTCSessionDescription(offerObj));
+            processIceBuffer();
             const answerDescription = await pc.createAnswer();
+            if (!isSubscribed) return;
             await pc.setLocalDescription(answerDescription);
-            
             await updateDoc(callDocRef, {
               answer: {
                 type: answerDescription.type,
-                sdp: answerDescription.sdp
-              }
+                sdp: answerDescription.sdp,
+              },
             });
-          } else {
-            console.log("Receiver waiting for offer from caller via snapshot");
-            unsubCallDoc = onSnapshot(callDocRef, async (snap) => {
-              const data = snap.data();
-              if (data && data.offer && !pc.currentRemoteDescription) {
-                console.log("Receiver received offer from snapshot: setting remote description");
-                const offerDescription = new RTCSessionDescription(data.offer);
-                await pc.setRemoteDescription(offerDescription)
-                  .then(processIceBuffer)
-                  .catch(e => console.error("Error setting remote description from snapshot on receiver:", e));
-                
-                const answerDescription = await pc.createAnswer();
-                await pc.setLocalDescription(answerDescription);
-                
-                await updateDoc(callDocRef, {
-                  answer: {
-                    type: answerDescription.type,
-                    sdp: answerDescription.sdp
-                  }
-                });
-              }
-            });
+          };
+
+          if (callData.offer) {
+            await applyOfferAndAnswer(callData.offer).catch(e =>
+              console.error("Error setting initial offer on receiver:", e)
+            );
           }
+
+          unsubCallDoc = onSnapshot(callDocRef, (snap) => {
+            const data = snap.data();
+            if (!isSubscribed || !data) return;
+            if (data.offer && !offerApplied && !pc.currentRemoteDescription) {
+              applyOfferAndAnswer(data.offer).catch(() => {});
+            } else if (data.offer && offerApplied && data.renegotiatedBy === 'caller' && data.offer.sdp !== pc.remoteDescription?.sdp) {
+              pc.setRemoteDescription(new RTCSessionDescription(data.offer))
+                .then(() => pc.createAnswer())
+                .then((ans) => pc.setLocalDescription(ans).then(() => ans))
+                .then((ans) =>
+                  updateDoc(callDocRef, {
+                    answer: { type: ans.type, sdp: ans.sdp },
+                  })
+                )
+                .catch(() => {});
+            }
+          });
         }
       } catch (err: any) {
         console.error("WebRTC setup error:", err);
@@ -4170,14 +4616,16 @@ const handleCreateChannel = async () => {
           try {
             track.stop();
             track.enabled = false;
-          } catch (e) {}
+          } catch {}
         });
         localStreamRef.current = null;
       }
+      localStreamPromiseRef.current = null;
+      remoteMediaStreamRef.current = null;
       if (peerConnectionRef.current) {
         try {
           peerConnectionRef.current.close();
-        } catch (e) {}
+        } catch {}
         peerConnectionRef.current = null;
       }
       if (remoteVideoRef.current) {
@@ -4187,33 +4635,92 @@ const handleCreateChannel = async () => {
         remoteAudioRef.current.srcObject = null;
       }
     };
-  }, [currentCallId, callStatus]);
+  }, [currentCallId]);
 
-  const endCall = async () => {
+  const toggleCallCamera = async () => {
+    const nextType: 'audio' | 'video' = callType === 'video' ? 'audio' : 'video';
+    setCallType(nextType);
+    const stream = localStreamRef.current || localStream;
+    const pc = peerConnectionRef.current;
+
+    if (nextType === 'audio') {
+      stream?.getVideoTracks().forEach((t) => {
+        t.enabled = false;
+      });
+      return;
+    }
+
+    const existingVideoTracks = stream?.getVideoTracks().filter((t) => t.readyState === 'live') || [];
+    if (existingVideoTracks.length > 0) {
+      existingVideoTracks.forEach((t) => {
+        t.enabled = true;
+      });
+      if (localVideoRef.current && stream) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => {});
+      }
+      return;
+    }
+
+    try {
+      const camStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      });
+      const camTrack = camStream.getVideoTracks()[0];
+      if (!camTrack) return;
+
+      const updated = stream ? new MediaStream([...stream.getAudioTracks(), camTrack]) : camStream;
+      localStreamRef.current = updated;
+      setLocalStream(updated);
+
+      if (pc) {
+        pc.addTrack(camTrack, updated);
+        if (currentCallId && pc.signalingState === 'stable') {
+          const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+          await pc.setLocalDescription(offer);
+          const isCaller = activeCallMetaRef.current?.callerId === user?.uid;
+          await updateDoc(doc(db, 'p2p_calls', currentCallId), {
+            type: 'video',
+            renegotiatedBy: isCaller ? 'caller' : 'receiver',
+            offer: { type: offer.type, sdp: offer.sdp },
+          }).catch(() => {});
+        }
+      }
+    } catch {
+      notify("Camera permission denied or unavailable", "error");
+      setCallType('audio');
+    }
+  };
+
+  const endCall = async (reasonOverride?: 'missed' | 'cancelled' | 'completed') => {
     const finalDuration = callDurationRef.current;
     const meta = activeCallMetaRef.current;
     const wasConnected = Boolean(meta?.wasConnected || callStatusRef.current === 'connected');
     const activeId = currentCallId || meta?.callId;
+    const resolvedEndReason = wasConnected ? 'completed' : (reasonOverride || 'cancelled');
 
     setIsCalling(false);
+    setSwapCallVideos(false);
     setWebRTCError(null);
-    
-    // Clean up WebRTC streams and peer connection
+
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track: any) => {
         try {
           track.stop();
           track.enabled = false;
-        } catch (e) {}
+        } catch {}
       });
       localStreamRef.current = null;
     }
+    localStreamPromiseRef.current = null;
+    remoteMediaStreamRef.current = null;
     if (localStream) {
       localStream.getTracks().forEach((track: any) => {
         try {
           track.stop();
           track.enabled = false;
-        } catch (e) {}
+        } catch {}
       });
     }
     if (remoteStream) {
@@ -4221,7 +4728,7 @@ const handleCreateChannel = async () => {
         try {
           track.stop();
           track.enabled = false;
-        } catch (e) {}
+        } catch {}
       });
     }
     setLocalStream(null);
@@ -4229,7 +4736,7 @@ const handleCreateChannel = async () => {
     if (peerConnectionRef.current) {
       try {
         peerConnectionRef.current.close();
-      } catch (e) {}
+      } catch {}
       peerConnectionRef.current = null;
     }
     if (remoteVideoRef.current) {
@@ -4238,6 +4745,9 @@ const handleCreateChannel = async () => {
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
 
     if (audioHelper && typeof audioHelper.stop === 'function') {
       audioHelper.stop();
@@ -4245,11 +4755,37 @@ const handleCreateChannel = async () => {
     if (audioHelper && typeof audioHelper.playEndBip === 'function') {
       audioHelper.playEndBip();
     }
-    
+
     if (activeId) {
+      if (
+        resolvedEndReason === 'missed' &&
+        !wasConnected &&
+        (meta?.callerId === user?.uid || !meta?.callerId) &&
+        !noAnswerShownIdsRef.current.has(activeId)
+      ) {
+        noAnswerShownIdsRef.current.add(activeId);
+        setUnansweredCallState({
+          targetUser: {
+            id: meta?.targetUser?.id || activeChat?.otherUser?.id || activeChat?.otherUser?.uid,
+            displayName:
+              meta?.targetUser?.displayName ||
+              getChatDisplayName(activeChat) ||
+              activeChat?.otherUser?.displayName ||
+              'User',
+            photoURL:
+              meta?.targetUser?.photoURL ||
+              activeChat?.otherUser?.photoURL ||
+              activeChat?.otherUser?.avatar ||
+              '',
+          },
+          chatId: meta?.chatId || activeChat?.id,
+          callType: meta?.type || callType,
+        });
+      }
+
       await updateDoc(doc(db, 'p2p_calls', activeId), {
         status: 'ended',
-        endReason: wasConnected ? 'completed' : 'cancelled'
+        endReason: resolvedEndReason
       }).catch(console.error);
 
       await finalizeCallLog({
@@ -5066,6 +5602,93 @@ const handleCreateChannel = async () => {
     </div>
   );
 
+  const [pullSearchOffset, setPullSearchOffset] = useState(0);
+  const [pullSearchArmed, setPullSearchArmed] = useState(false);
+  const pullSearchTouchRef = useRef<{ startY: number; active: boolean; armed: boolean } | null>(null);
+  const [channelRecSlideX, setChannelRecSlideX] = useState(0);
+  const channelRecTouchRef = useRef<{ startX: number; armed: boolean } | null>(null);
+
+  const inboxFilterOrder: Array<'all' | 'unread' | 'groups'> = ['all', 'unread', 'groups'];
+  const { swipeHandlers: inboxTabSwipeHandlers } = useSwipeNavigation({
+    disabled: Boolean(activeChat || activeChannel || activeMessagesTab === 'settings' || sidebarTab !== 'messages'),
+    onEdgeSwipeRight: () => {
+      triggerHaptic('light');
+      navigate(originHomePath === '/loops' ? '/loops' : '/');
+    },
+    onSwipeLeft: () => {
+      const idx = inboxFilterOrder.indexOf(messagesFilterTab);
+      if (idx < inboxFilterOrder.length - 1) {
+        triggerHaptic('selection');
+        setMessagesFilterTab(inboxFilterOrder[idx + 1]);
+      }
+    },
+    onSwipeRight: () => {
+      const idx = inboxFilterOrder.indexOf(messagesFilterTab);
+      if (idx > 0) {
+        triggerHaptic('selection');
+        setMessagesFilterTab(inboxFilterOrder[idx - 1]);
+      }
+    },
+  });
+
+  const { swipeHandlers: chatWorkspaceSwipeHandlers } = useSwipeNavigation({
+    disabled: !activeChat && !activeChannel,
+    edgeThreshold: 34,
+    edgeMinDistance: 48,
+    onEdgeSwipeRight: () => {
+      triggerHaptic('light');
+      if (detailsSubModal) {
+        setDetailsSubModal(null);
+        setConfirmDeleteChannel(false);
+      } else if (showChannelDetailsModal) {
+        setShowChannelDetailsModal(false);
+      } else {
+        setSearchParams({}, { replace: true });
+      }
+    },
+  });
+
+  const dockTouchRef = useRef<{ startX: number; startY: number; at: number } | null>(null);
+  const handleMessagesDockTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    if (e.touches.length !== 1) {
+      dockTouchRef.current = null;
+      return;
+    }
+    dockTouchRef.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      at: Date.now(),
+    };
+  };
+  const handleMessagesDockTouchEnd = (e: React.TouchEvent<HTMLElement>) => {
+    const s = dockTouchRef.current;
+    dockTouchRef.current = null;
+    if (!s || !e.changedTouches[0]) return;
+    const dx = e.changedTouches[0].clientX - s.startX;
+    const dy = e.changedTouches[0].clientY - s.startY;
+    if (Math.abs(dx) < 42 || Math.abs(dy) > Math.abs(dx) * 0.75 || Date.now() - s.at > 600) return;
+    const order = ['chats', 'activity', 'profile'] as const;
+    const currentDockIdx = activeMessagesTab === 'settings' ? 2 : 0;
+    const nextDockIdx = dx < 0 ? Math.min(2, currentDockIdx + 1) : Math.max(0, currentDockIdx - 1);
+    const targetDock = order[nextDockIdx];
+    if (targetDock === 'chats') {
+      triggerHaptic('selection');
+      setActiveMessagesTab('chats');
+      setSidebarTab('messages');
+      setShowArchivedOnly(false);
+    } else if (targetDock === 'activity') {
+      triggerHaptic('selection');
+      navigate('/loops/activity');
+    } else if (targetDock === 'profile') {
+      triggerHaptic('selection');
+      if (user?.uid) {
+        navigate(`/author/${user.uid}`);
+      } else {
+        setActiveMessagesTab('settings');
+      }
+    }
+  };
+
   return (
     <div className="msg-shell ambient-dynamic-bg fixed inset-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full font-inter overflow-hidden overscroll-none transition-colors duration-200">
       <SEO title="Messages" description="Chat and connect directly with verified sellers, friends, and customer support on DEEP SHOP." canonical="/messages" />
@@ -5244,6 +5867,7 @@ const handleCreateChannel = async () => {
 
         {/* Inbox Content (Always visible on Desktop; visible on Mobile when not in mobile settings) */}
         <div
+          {...inboxTabSwipeHandlers}
           className={cn(
             'flex-col h-full overflow-hidden',
             activeMessagesTab === 'settings' ? 'hidden md:flex' : 'flex'
@@ -5404,7 +6028,7 @@ const handleCreateChannel = async () => {
                               {getChatDisplayName(chat)}
                             </p>
                             {(() => {
-                              const matchPreview = getChatListPreview(chat, user?.uid);
+                              const matchPreview = getChatListPreview(chat, user?.uid, getChatDisplayName(chat));
                               if (!matchPreview.text) return null;
                               return (
                                 <p
@@ -5470,7 +6094,80 @@ const handleCreateChannel = async () => {
               )}
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto pb-32 md:pb-6 no-scrollbar" onScroll={handleSidebarScroll}>
+            <div
+              className="flex-1 overflow-y-auto pb-32 md:pb-6 no-scrollbar relative"
+              onScroll={handleSidebarScroll}
+              onTouchStart={(e) => {
+                if (e.touches.length !== 1 || showInboxSearch) {
+                  pullSearchTouchRef.current = null;
+                  return;
+                }
+                if (e.currentTarget.scrollTop <= 2) {
+                  pullSearchTouchRef.current = {
+                    startY: e.touches[0].clientY,
+                    active: true,
+                    armed: false,
+                  };
+                }
+              }}
+              onTouchMove={(e) => {
+                const p = pullSearchTouchRef.current;
+                if (!p || !p.active || e.touches.length !== 1) return;
+                if (e.currentTarget.scrollTop > 2) {
+                  p.active = false;
+                  setPullSearchOffset(0);
+                  setPullSearchArmed(false);
+                  return;
+                }
+                const dy = e.touches[0].clientY - p.startY;
+                if (dy > 8) {
+                  const visual = Math.min(64, (dy - 8) * 0.55);
+                  setPullSearchOffset(visual);
+                  const armed = visual >= 40;
+                  if (armed !== p.armed) {
+                    p.armed = armed;
+                    setPullSearchArmed(armed);
+                    triggerHaptic('selection');
+                  }
+                } else {
+                  setPullSearchOffset(0);
+                  setPullSearchArmed(false);
+                }
+              }}
+              onTouchEnd={() => {
+                const p = pullSearchTouchRef.current;
+                pullSearchTouchRef.current = null;
+                if (p?.armed) {
+                  triggerHaptic('light');
+                  setShowInboxSearch(true);
+                }
+                setPullSearchOffset(0);
+                setPullSearchArmed(false);
+              }}
+              onTouchCancel={() => {
+                pullSearchTouchRef.current = null;
+                setPullSearchOffset(0);
+                setPullSearchArmed(false);
+              }}
+            >
+              {pullSearchOffset > 6 && (
+                <div
+                  style={{ height: `${pullSearchOffset}px` }}
+                  className="flex items-center justify-center overflow-hidden transition-[height] duration-75 pointer-events-none select-none"
+                >
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-xs transition-colors',
+                      pullSearchArmed
+                        ? 'bg-[#F246F5] text-white'
+                        : 'bg-white/90 dark:bg-zinc-800/90 text-zinc-500 dark:text-zinc-300'
+                    )}
+                  >
+                    <MsgSearchIcon className="w-3.5 h-3.5" />
+                    <span>{pullSearchArmed ? 'Release to search' : 'Pull to search chats'}</span>
+                  </span>
+                </div>
+              )}
               {/* Stories & Active Contacts Strip matching IMG_5470 */}
               {sidebarTab === 'messages' && (
                 <>
@@ -5487,16 +6184,18 @@ const handleCreateChannel = async () => {
                     hideBar={true}
                   />
 
-                  <MessagesStoriesStrip
-                    currentUser={user}
-                    contacts={allStripContacts}
-                    onOpenChatWithUser={(u) => {
-                      if (u?.id || u?.uid) {
-                        setActiveMessagesTab('chats');
-                        setSearchParams({ chatId: u.id || u.uid || '' });
-                      }
-                    }}
-                  />
+                  <div data-no-swipe="true">
+                    <MessagesStoriesStrip
+                      currentUser={user}
+                      contacts={allStripContacts}
+                      onOpenChatWithUser={(u) => {
+                        if (u?.id || u?.uid) {
+                          setActiveMessagesTab('chats');
+                          setSearchParams({ chatId: u.id || u.uid || '' });
+                        }
+                      }}
+                    />
+                  </div>
 
                   {/* Segmented Filter Tabs: All | Unread | Groups with Apple Liquid Glass sliding lens */}
                   <div className="px-4 pt-1 pb-2">
@@ -5753,10 +6452,22 @@ const handleCreateChannel = async () => {
                           );
                           const unreadCountNum = Number(chat.unreadCount?.[user.uid]) || 1;
                           const chatOtherUid = chat.otherUser?.id || chat.otherUser?.uid;
+                          const isGroupChat = Boolean(
+                            chat.isGroup || chat.type === 'group' || (chat.participants && chat.participants.length > 2)
+                          );
                           const isSeenByOtherInList = Boolean(
                             chatOtherUid && Array.isArray(chat.seenBy) && chat.seenBy.includes(chatOtherUid)
                           );
-                          const isChatUserOnline = chatOtherUid ? chatUsersPresence[chatOtherUid]?.isOnline : false;
+                          const chatOtherPresence = chatOtherUid ? chatUsersPresence[chatOtherUid] : null;
+                          const isChatUserOnline = Boolean(
+                            chatOtherPresence?.isOnline &&
+                              chatOtherPresence?.lastActive &&
+                              presenceNowMs - chatOtherPresence.lastActive < 90000
+                          );
+                          const shortActiveLabel =
+                            !isGroupChat && !isChatUserOnline && chatOtherPresence?.lastActive
+                              ? formatShortActiveAgo(chatOtherPresence.lastActive, presenceNowMs)
+                              : null;
                           const chatTypingData = chat.typingState?.[chatOtherUid];
                           const isChatOtherTyping =
                             chatTypingData?.status === 'typing' && Date.now() - (chatTypingData?.updatedAt || 0) < 5000;
@@ -5772,148 +6483,109 @@ const handleCreateChannel = async () => {
                             : typeof chat.updatedAt === 'number'
                             ? chat.updatedAt
                             : 0;
+                          const displayChatName = getChatDisplayName(chat);
+                          const previewInfo = getChatListPreview(chat, user?.uid, displayChatName);
 
                           return (
-                            <div
-                              key={`chat-item-${cId}`}
-                              className={cn('relative select-none', isMenuOpen && 'z-50')}
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const menuW = 200;
-                                const menuH = 225;
-                                const top = Math.min(Math.max(12, rect.top + 48), (typeof window !== 'undefined' ? window.innerHeight : 760) - menuH);
-                                const left = Math.min(Math.max(12, rect.right - menuW - 12), (typeof window !== 'undefined' ? window.innerWidth : 400) - menuW - 12);
-                                setActiveContextMenuPos({ top, left });
-                                setActiveContextMenuChatId(cId);
-                                setSwipedChatId(null);
-                              }}
-                              onTouchStart={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const menuW = 200;
-                                const menuH = 225;
-                                const top = Math.min(Math.max(12, rect.top + 48), (typeof window !== 'undefined' ? window.innerHeight : 760) - menuH);
-                                const left = Math.min(Math.max(12, rect.right - menuW - 12), (typeof window !== 'undefined' ? window.innerWidth : 400) - menuW - 12);
-                                touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, cId };
-                                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                                longPressTimerRef.current = setTimeout(() => {
+                            <div key={`chat-item-${cId}`} className={cn('relative', isMenuOpen && 'z-50')}>
+                              <SwipeableInboxRow
+                                chatId={cId}
+                                isSwiped={isSwiped}
+                                isPinned={isPinned}
+                                isArchived={isArchived}
+                                isUnread={isUnread}
+                                isMenuOpen={isMenuOpen}
+                                onOpenSwipe={(id) => setSwipedChatId(id)}
+                                onCloseSwipe={() => setSwipedChatId(null)}
+                                onPin={() => togglePinChat(cId)}
+                                onArchive={() => toggleArchiveChat(cId)}
+                                onDelete={() => {
+                                  setClearTargetChat(chat);
+                                  setShowClearChatModal(true);
+                                }}
+                                onToggleUnread={() => toggleChatUnreadStatus(chat, isUnread)}
+                                onLongPress={(rect) => {
+                                  const menuW = 200;
+                                  const menuH = 225;
+                                  const top = Math.min(Math.max(12, rect.top + 48), (typeof window !== 'undefined' ? window.innerHeight : 760) - menuH);
+                                  const left = Math.min(Math.max(12, rect.right - menuW - 12), (typeof window !== 'undefined' ? window.innerWidth : 400) - menuW - 12);
                                   setActiveContextMenuPos({ top, left });
                                   setActiveContextMenuChatId(cId);
                                   setSwipedChatId(null);
-                                  touchStartRef.current = null;
-                                }, 450);
-                              }}
-                              onTouchMove={(e) => {
-                                if (!touchStartRef.current || touchStartRef.current.cId !== cId) return;
-                                const dx = touchStartRef.current.x - e.touches[0].clientX;
-                                const dy = touchStartRef.current.y - e.touches[0].clientY;
-                                if (Math.abs(dy) > 10 || Math.abs(dx) > 15) {
-                                  if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                                }
-                                if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-                                  setSwipedChatId(cId);
-                                } else if (dx < -30 && isSwiped) {
+                                }}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const menuW = 200;
+                                  const menuH = 225;
+                                  const top = Math.min(Math.max(12, rect.top + 48), (typeof window !== 'undefined' ? window.innerHeight : 760) - menuH);
+                                  const left = Math.min(Math.max(12, rect.right - menuW - 12), (typeof window !== 'undefined' ? window.innerWidth : 400) - menuW - 12);
+                                  setActiveContextMenuPos({ top, left });
+                                  setActiveContextMenuChatId(cId);
                                   setSwipedChatId(null);
-                                }
-                              }}
-                              onTouchEnd={() => {
-                                if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                                touchStartRef.current = null;
-                              }}
-                            >
-                              <div className="relative overflow-hidden rounded-2xl">
-                              {/* Swipe Quick Actions (mounted ONLY when swiped so nothing peeks out at rest) */}
-                              {isSwiped && (
-                                <div className="absolute right-0 top-0 bottom-0 w-[198px] flex items-center z-0 overflow-hidden rounded-r-2xl">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      togglePinChat(cId);
-                                      setSwipedChatId(null);
-                                    }}
-                                    className="h-full w-[66px] bg-[#F246F5] hover:bg-[#e135e4] text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                  >
-                                    <Icon name="pin" className="w-4 h-4" />
-                                    <span className="text-[10px] whitespace-nowrap">{isPinned ? 'Unpin' : 'Pin'}</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      toggleArchiveChat(cId);
-                                      setSwipedChatId(null);
-                                    }}
-                                    className="h-full w-[66px] bg-zinc-700 hover:bg-zinc-600 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                  >
-                                    <Icon name="archive" className="w-4 h-4" />
-                                    <span className="text-[10px] whitespace-nowrap">{isArchived ? 'Restore' : 'Archive'}</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setShowClearChatModal(true);
-                                      setSwipedChatId(null);
-                                    }}
-                                    className="h-full w-[66px] bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer shrink-0"
-                                  >
-                                    <Icon name="trash-2" className="w-4 h-4" />
-                                    <span className="text-[10px] whitespace-nowrap">Delete</span>
-                                  </button>
-                                </div>
-                              )}
-
-                              {/* Conversation Row matching IMG_5359 & IMG_5360 */}
-                              <div
+                                }}
                                 onClick={() => {
-                                  if (isSwiped) {
-                                    setSwipedChatId(null);
-                                    return;
-                                  }
                                   setActiveMessagesTab('chats');
                                   setSearchParams({ chatId: chat.id || chat.otherUser?.id || '' }, { replace: true });
                                 }}
+                              >
+                              {/* Messenger-style Conversation Row */}
+                              <div
                                 className={cn(
-                                  'flex items-center gap-3.5 px-3 py-3 rounded-2xl cursor-pointer transition-all duration-200 relative group/chat z-10',
-                                  isSelected ? 'msg-chat-row-active' : 'hover:bg-white/60 dark:hover:bg-white/[0.04]',
-                                  isSwiped && '-translate-x-[198px] bg-white/95 dark:bg-zinc-900'
+                                  'flex items-center gap-3 pl-2 pr-3 py-3 rounded-2xl cursor-pointer transition-all duration-200 relative group/chat z-10',
+                                  isSelected ? 'msg-chat-row-active' : 'hover:bg-white/60 dark:hover:bg-white/[0.04]'
                                 )}
                               >
-                                {/* Avatar with Group Badge or Online Dot (IMG_5470) */}
+                                {/* Left Messenger Blue Unread Dot */}
+                                <div className="w-2.5 shrink-0 flex items-center justify-center">
+                                  {isUnread && (
+                                    <span className="w-2.5 h-2.5 rounded-full bg-[#0084FF] shrink-0" />
+                                  )}
+                                </div>
+
+                                {/* Avatar with Online Green Dot or Recently Active Pill */}
                                 <div className="relative shrink-0">
                                   <div className="w-[54px] h-[54px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                                     {chat.otherUser?.photoURL ? (
                                       <img
                                         src={chat.otherUser.photoURL}
-                                        alt={chat.otherUser.displayName}
+                                        alt={chat.otherUser.displayName || displayChatName}
                                         className="w-full h-full object-cover"
                                       />
                                     ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-[#F246F5]/12 text-[#F246F5] font-bold text-base">
-                                        {(getChatDisplayName(chat) || 'U')[0].toUpperCase()}
+                                      <div className="w-full h-full flex items-center justify-center bg-[#0084FF]/12 text-[#0084FF] font-bold text-base">
+                                        {(displayChatName || 'U')[0].toUpperCase()}
                                       </div>
                                     )}
                                   </div>
-                                  {/* Group participant badge (IMG_5470) */}
-                                  {(chat.isGroup || chat.type === 'group' || (chat.participants && chat.participants.length > 2)) && (
-                                    <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] px-1 rounded-full bg-[#F246F5] text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-[#0E1015]">
+
+                                  {isGroupChat && (
+                                    <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] px-1 rounded-full bg-[#0084FF] text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-zinc-900">
                                       {chat.participants?.length || 5}
                                     </span>
                                   )}
-                                  {isChatUserOnline && !(chat.isGroup || chat.type === 'group' || (chat.participants && chat.participants.length > 2)) && (
-                                    <span className="msg-online-dot absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#0E1015]" />
+
+                                  {!isGroupChat && isChatUserOnline && (
+                                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#31A24C] ring-[2.5px] ring-white dark:ring-zinc-900" />
+                                  )}
+
+                                  {!isGroupChat && !isChatUserOnline && shortActiveLabel && (
+                                    <span className="absolute -bottom-0.5 -right-1 px-1.5 py-[1px] rounded-full bg-[#EAF8EB] dark:bg-[#163820] text-[#1D6F2F] dark:text-[#6EE787] text-[10.5px] font-bold leading-[14px] ring-2 ring-white dark:ring-zinc-900 tabular-nums whitespace-nowrap">
+                                      {shortActiveLabel}
+                                    </span>
                                   )}
                                 </div>
 
-                                {/* Center Name + Message Snippet with Checkmarks */}
+                                {/* Center Name + Messenger-Style Snippet */}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 min-w-0">
-                                    <h4 className="text-[16px] font-semibold text-zinc-950 dark:text-white truncate leading-snug">
-                                      {getChatDisplayName(chat)}
+                                    <h4
+                                      className={cn(
+                                        'text-[16px] text-zinc-950 dark:text-white truncate leading-snug',
+                                        isUnread ? 'font-bold' : 'font-semibold'
+                                      )}
+                                    >
+                                      {displayChatName}
                                     </h4>
                                     {(chat.otherUser?.kycStatus === 'verified' || chat.otherUser?.verified) && (
                                       <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -5926,9 +6598,8 @@ const handleCreateChannel = async () => {
 
                                   <div className="mt-0.5 flex items-center gap-1 min-w-0">
                                     {(() => {
-                                      const previewInfo = getChatListPreview(chat, user?.uid);
                                       if (isChatOtherTyping) {
-                                        return <p className="text-[13.5px] font-medium text-[#2F80ED] truncate">typing...</p>;
+                                        return <p className="text-[13.5px] font-medium text-[#0070E0] dark:text-[#3897FF] truncate">typing...</p>;
                                       }
                                       if (isChatOtherRecording) {
                                         return (
@@ -5938,29 +6609,25 @@ const handleCreateChannel = async () => {
                                           </p>
                                         );
                                       }
-                                      if (chat.lastSenderId === user?.uid && previewInfo.text) {
+                                      if (isUnread) {
+                                        const unreadLabel =
+                                          unreadCountNum >= 2 && !previewInfo.isMissedCall
+                                            ? `${unreadCountNum} new messages`
+                                            : previewInfo.text || '1 new message';
                                         return (
-                                          <div className="flex items-center gap-1 min-w-0">
-                                            <MsgCheckDoubleIcon
-                                              className={cn(
-                                                'w-[16px] h-[16px] shrink-0',
-                                                isSeenByOtherInList ? 'text-[#2F80ED]' : 'text-zinc-400 dark:text-zinc-500'
-                                              )}
-                                            />
-                                            <p
-                                              className={cn(
-                                                'text-[13.5px] truncate',
-                                                previewInfo.isDeleted
-                                                  ? 'italic text-zinc-400 dark:text-zinc-500'
-                                                  : 'text-zinc-500 dark:text-zinc-400'
-                                              )}
-                                            >
-                                              {previewInfo.text}
-                                            </p>
-                                          </div>
+                                          <p
+                                            className={cn(
+                                              'text-[14px] font-bold truncate',
+                                              previewInfo.isMissedCall
+                                                ? 'text-rose-600 dark:text-rose-400'
+                                                : 'text-zinc-950 dark:text-white'
+                                            )}
+                                          >
+                                            {unreadLabel}
+                                          </p>
                                         );
                                       }
-                                      if ((chat.isGroup || chat.type === 'group') && chat.lastSenderName && previewInfo.text) {
+                                      if (isGroupChat && chat.lastSenderId !== user?.uid && chat.lastSenderName && previewInfo.text && !previewInfo.isCall) {
                                         return (
                                           <p
                                             className={cn(
@@ -5984,8 +6651,6 @@ const handleCreateChannel = async () => {
                                               ? 'italic text-zinc-400 dark:text-zinc-500'
                                               : previewInfo.isMissedCall
                                               ? 'text-rose-500 font-medium'
-                                              : isUnread
-                                              ? 'text-zinc-700 dark:text-zinc-200 font-medium'
                                               : 'text-zinc-500 dark:text-zinc-400'
                                           )}
                                         >
@@ -5996,32 +6661,42 @@ const handleCreateChannel = async () => {
                                   </div>
                                 </div>
 
-                                {/* Right Column: Time on top + Pink Unread Pill or Pink Double-Check below (IMG_5470) */}
+                                {/* Right Column: Time (Blue if unread) + Seen Mini-Avatar below */}
                                 <div className="flex flex-col items-end justify-between self-stretch py-0.5 shrink-0 ml-2 gap-1.5">
-                                  <span className="text-[12px] text-zinc-400 dark:text-zinc-500 tabular-nums leading-none">
+                                  <span
+                                    className={cn(
+                                      'text-[12.5px] tabular-nums leading-none',
+                                      isUnread
+                                        ? 'text-[#0070E0] dark:text-[#3897FF] font-semibold'
+                                        : 'text-zinc-500 dark:text-zinc-400 font-normal'
+                                    )}
+                                  >
                                     {rawUpdatedMs > 0 ? formatInboxTime24h(rawUpdatedMs) : ''}
                                   </span>
 
-                                  <div className="flex items-center gap-1 min-h-[22px]">
+                                  <div className="flex items-center justify-end gap-1 min-h-[18px]">
                                     {isPinned && !isUnread && (
                                       <Icon name="pin" className="w-3.5 h-3.5 text-zinc-400 rotate-45 shrink-0" />
                                     )}
-                                    {isUnread ? (
-                                      <span className="bg-[#F246F5] text-white min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center tabular-nums">
-                                        {unreadCountNum}
-                                      </span>
-                                    ) : (
-                                      <MsgCheckDoubleIcon
-                                        className={cn(
-                                          'w-[18px] h-[18px] shrink-0',
-                                          isSeenByOtherInList ? 'text-[#F246F5]' : 'text-zinc-400 dark:text-zinc-500'
+                                    {!isUnread && !isGroupChat && chat.lastSenderId === user?.uid && isSeenByOtherInList && (
+                                      <div className="w-4 h-4 rounded-full overflow-hidden ring-1 ring-black/10 dark:ring-white/15 shrink-0 bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
+                                        {chat.otherUser?.photoURL ? (
+                                          <img
+                                            src={chat.otherUser.photoURL}
+                                            alt=""
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <span className="text-[8px] font-bold text-zinc-600 dark:text-zinc-200">
+                                            {(displayChatName || 'U')[0].toUpperCase()}
+                                          </span>
                                         )}
-                                      />
+                                      </div>
                                     )}
                                   </div>
                                 </div>
                               </div>
-                              </div>
+                              </SwipeableInboxRow>
 
                               {/* Context Menu Popover via Portal so it NEVER clips inside rows or scroll containers */}
                               {typeof document !== 'undefined' &&
@@ -6101,6 +6776,7 @@ const handleCreateChannel = async () => {
                                       <button
                                         type="button"
                                         onClick={() => {
+                                          setClearTargetChat(chat);
                                           setActiveContextMenuChatId(null);
                                           setShowClearChatModal(true);
                                         }}
@@ -6278,7 +6954,10 @@ const handleCreateChannel = async () => {
             {/* Left/Center: Apple Liquid Glass Navigation Bar (Chats, Activity, Profile) */}
             <nav
               aria-label="Messages Navigation"
-              className="ds-shop-bottom-dock pointer-events-auto flex-1 max-w-[308px] rounded-full p-1.5 flex items-center justify-between gap-1 relative select-none"
+              data-no-swipe="true"
+              onTouchStart={handleMessagesDockTouchStart}
+              onTouchEnd={handleMessagesDockTouchEnd}
+              className="ds-shop-bottom-dock pointer-events-auto flex-1 max-w-[308px] rounded-full p-1.5 flex items-center justify-between gap-1 relative select-none touch-pan-y"
             >
               {/* 1. Chats */}
               <button
@@ -6393,6 +7072,7 @@ const handleCreateChannel = async () => {
           COLUMN 3: Right Active Chat / Community / Settings Workspace
           ===================================================================== */}
       <div
+        {...chatWorkspaceSwipeHandlers}
         className={cn(
           'flex-1 flex-col h-full overflow-hidden transition-all duration-200 msg-stream-default',
           activeMessagesTab === 'settings'
@@ -7584,10 +8264,7 @@ const handleCreateChannel = async () => {
                                         </div>
                                       )}
                                                                    
-                                      <div
-                                        {...getMsgHoldHandlers(msg.id)}
-                                        className={cn("max-w-[80%] sm:max-w-[70%] flex flex-col relative group/bubble", isMe ? "items-end" : "items-start")}
-                                      >
+                                      <div className={cn("max-w-[80%] sm:max-w-[70%] flex flex-col relative group/bubble", isMe ? "items-end" : "items-start")}>
                                           {/* Sender Label and Role Badge */}
                                           {!isMe && (
                                             <div className="flex items-center gap-1.5 mb-1 ml-1">
@@ -7615,6 +8292,22 @@ const handleCreateChannel = async () => {
                                             </div>
                                           )}
 
+                                          <SwipeableMessageBubble
+                                            isMe={isMe}
+                                            holdHandlers={getMsgHoldHandlers(msg.id)}
+                                            onCancelHold={cancelMsgHoldTimer}
+                                            onReply={() => {
+                                              setReplyingTo({
+                                                id: msg.id,
+                                                text: msg.text || (hasMedia ? 'Photo' : msg.audioUrl ? 'Voice Message' : 'Attachment'),
+                                                senderId: msg.senderId,
+                                                senderName: isMe ? 'You' : (msg.senderName || 'Member'),
+                                                imageUrl: msg.images?.[0] || msg.imageUrl || undefined,
+                                                audioUrl: msg.audioUrl || undefined,
+                                              });
+                                            }}
+                                            className="w-full"
+                                          >
                                           {/* Quoted Reply Header */}
                                           {msg.replyTo && (
                                               <MessageReplyPreview
@@ -7719,6 +8412,7 @@ const handleCreateChannel = async () => {
                                                   </div>
                                               )}
                                           </div>
+                                          </SwipeableMessageBubble>
 
                                           <span className={cn("text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mx-1 block", reactionEntries.length > 0 ? "mt-3.5" : "mt-1")}>
                                               {formatTime12h(msg.timestamp)}
@@ -7786,7 +8480,10 @@ const handleCreateChannel = async () => {
                               <input type="file" ref={fileInputRef} onChange={handleAttachmentChange} className="hidden" accept="image/*" multiple />
                               
                               {isRecording ? (
-                                  <div className="flex-1 flex items-center justify-between bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl px-4 py-2.5 rounded-full border-0 shadow-[0_4px_18px_rgba(120,90,160,0.08)]">
+                                  <div
+                                    style={{ transform: `translate3d(${channelRecSlideX * 0.45}px, 0, 0)` }}
+                                    className="flex-1 flex items-center justify-between bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl px-4 py-2.5 rounded-full border-0 shadow-[0_4px_18px_rgba(120,90,160,0.08)] transition-transform duration-75"
+                                  >
                                       <div className="flex items-center gap-3 text-[#F246F5] font-semibold text-sm">
                                           <div className="flex items-center gap-1.5 animate-pulse">
                                               <div className="w-2.5 h-2.5 rounded-full bg-[#F246F5]"></div>
@@ -7801,7 +8498,9 @@ const handleCreateChannel = async () => {
                                           </span>
                                       </div>
                                       <div className="flex items-center gap-3">
-                                          <span className="text-xs text-zinc-400 animate-pulse hidden sm:block">&lt; Slide to cancel</span>
+                                          <span className={cn("text-xs font-medium", channelRecSlideX <= -75 ? "text-rose-500 font-bold" : "text-zinc-400 animate-pulse")}>
+                                            {channelRecSlideX <= -75 ? 'Release to cancel' : '← Slide to cancel'}
+                                          </span>
                                           <button type="button" onClick={cancelRecording} className="text-zinc-500 hover:text-rose-500 transition-colors bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-full cursor-pointer">
                                               <Icon name="x" className="w-5 h-5" />
                                           </button>
@@ -7848,15 +8547,38 @@ const handleCreateChannel = async () => {
                                               stopRecording(true);
                                           }
                                       }}
-                                      onTouchStart={() => {
+                                      onTouchStart={(e) => {
                                           isTouchActiveRef.current = true;
+                                          if (e.touches[0]) {
+                                            channelRecTouchRef.current = { startX: e.touches[0].clientX, armed: false };
+                                            setChannelRecSlideX(0);
+                                          }
                                           if (!isRecording && !newMessage.trim() && previewUrls.length === 0) {
+                                              triggerHaptic('medium');
                                               startRecording();
                                           }
                                       }}
+                                      onTouchMove={(e) => {
+                                          const c = channelRecTouchRef.current;
+                                          if (!c || !isRecording || !e.touches[0]) return;
+                                          const dx = Math.min(0, Math.max(-130, e.touches[0].clientX - c.startX));
+                                          setChannelRecSlideX(dx);
+                                          const armed = dx <= -75;
+                                          if (armed !== c.armed) {
+                                            c.armed = armed;
+                                            triggerHaptic(armed ? 'warning' : 'selection');
+                                          }
+                                      }}
                                       onTouchEnd={() => {
+                                          const c = channelRecTouchRef.current;
+                                          channelRecTouchRef.current = null;
+                                          setChannelRecSlideX(0);
                                           if (isRecording) {
-                                              stopRecording(true);
+                                              if (c?.armed) {
+                                                cancelRecording();
+                                              } else {
+                                                stopRecording(true);
+                                              }
                                           }
                                           setTimeout(() => {
                                               isTouchActiveRef.current = false;
@@ -7868,7 +8590,7 @@ const handleCreateChannel = async () => {
                                           }
                                       }}
                                       disabled={isUploadingAttachment}
-                                      className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all shadow-[0_6px_18px_rgba(242,70,245,0.28)] bg-[#F246F5] hover:bg-[#e135e4] hover:scale-105 active:scale-95 text-white cursor-pointer"
+                                      className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all shadow-[0_6px_18px_rgba(242,70,245,0.28)] bg-[#F246F5] hover:bg-[#e135e4] hover:scale-105 active:scale-95 text-white cursor-pointer touch-none"
                                   >
                                       {isRecording ? (
                                           <Icon name="send" className="w-5 h-5 ml-0.5" />
@@ -8403,9 +9125,21 @@ const handleCreateChannel = async () => {
                                              </button>
                                            </div>
 
-                                           {/* Redesigned Message Bubble matching IMG_5359 right 1:1 (Hold on mobile or Right-Click on desktop opens MessageHoldPopup) */}
-                                           <div
-                                               {...getMsgHoldHandlers(msg.id)}
+                                           {/* Redesigned Message Bubble with Swipe-to-Reply + Hold Popup */}
+                                           <SwipeableMessageBubble
+                                               isMe={isMe}
+                                               holdHandlers={getMsgHoldHandlers(msg.id)}
+                                               onCancelHold={cancelMsgHoldTimer}
+                                               onReply={() => {
+                                                 setReplyingTo({
+                                                   id: msg.id,
+                                                   text: msg.text || (hasMedia ? 'Photo' : msg.audioUrl ? 'Voice Message' : 'Attachment'),
+                                                   senderId: msg.senderId,
+                                                   senderName: isMe ? 'You' : senderName,
+                                                   imageUrl: msg.images?.[0] || msg.imageUrl || undefined,
+                                                   audioUrl: msg.audioUrl || undefined,
+                                                 });
+                                               }}
                                                onDoubleClick={(e) => { e.stopPropagation(); handleReactToMessage(msg.id, '❤️'); }}
                                                title={formatTime12h(msg.timestamp)}
                                                className={cn(
@@ -8536,7 +9270,7 @@ const handleCreateChannel = async () => {
                                                       )}
                                                   </div>
                                               )}
-                                           </div>
+                                           </SwipeableMessageBubble>
                                          </div>
 
                                          {/* AI Generated Disclaimer Label */}
@@ -8718,12 +9452,14 @@ const handleCreateChannel = async () => {
               </button>
 
               <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
-                {getChatDisplayName(activeChat) || "Wade Warren"}
+                {activeCallMetaRef.current?.targetUser?.displayName || getChatDisplayName(activeChat) || "Call"}
               </h2>
 
               {Boolean(activeChat?.isGroup || activeChat?.type === "group" || callType === "video") ? (
                 <div className="bg-[#FF2E93] text-white px-3.5 py-1 rounded-full text-xs font-bold border border-pink-400/30">
-                  {`${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`}
+                  {callStatus === 'connected'
+                    ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`
+                    : "Ringing..."}
                 </div>
               ) : (
                 <div className="w-11" />
@@ -8754,9 +9490,9 @@ const handleCreateChannel = async () => {
                   return fourGrid.map((participant, pIdx) => (
                     <div key={`part-${pIdx}-${participant.name}`} className="relative rounded-[28px] overflow-hidden bg-zinc-800 border border-zinc-200/40 dark:border-white/10">
                       {participant.isMe && callType === "video" ? (
-                        <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                        <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover -scale-x-100" />
                       ) : pIdx === 0 && callType === "video" && remoteStream ? (
-                        <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                        <video ref={remoteVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                       ) : participant.img ? (
                         <img src={participant.img} alt={participant.name} className="w-full h-full object-cover" />
                       ) : (
@@ -8773,47 +9509,110 @@ const handleCreateChannel = async () => {
                   ));
                 })()}
               </div>
+            ) : callType === "video" ? (
+              /* 1-on-1 Video Call: Full-frame Remote Video + Corner Self PiP (tap PiP to swap) */
+              <div className="relative flex-1 my-3 rounded-[28px] overflow-hidden bg-zinc-950 border border-white/15 shadow-2xl">
+                {/* Main Video (Remote by default, or Local when swapped) */}
+                {swapCallVideos ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover -scale-x-100"
+                  />
+                ) : (
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                )}
+
+                {/* Waiting/Connecting backdrop when remote video track hasn't started yet */}
+                {!swapCallVideos && !(remoteStream && remoteStream.getVideoTracks().some((t) => t.readyState === 'live')) && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/90 backdrop-blur-md">
+                    <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-white/30 bg-zinc-800 shadow-xl">
+                      {(activeCallMetaRef.current?.targetUser?.photoURL || activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatar) ? (
+                        <img
+                          src={activeCallMetaRef.current?.targetUser?.photoURL || activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatar}
+                          alt={activeCallMetaRef.current?.targetUser?.displayName || getChatDisplayName(activeChat) || "Recipient"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold">
+                          {(activeCallMetaRef.current?.targetUser?.displayName || getChatDisplayName(activeChat) || "U")[0]?.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-3 text-sm font-medium text-white/85">
+                      {callStatus === 'connected' ? 'Connecting video...' : 'Ringing...'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Corner PiP (Local self preview by default, tap to swap) */}
+                <button
+                  type="button"
+                  onClick={() => setSwapCallVideos((prev) => !prev)}
+                  className="absolute top-3.5 right-3.5 z-20 w-28 h-40 sm:w-32 sm:h-44 rounded-2xl overflow-hidden bg-zinc-900 border-2 border-white/70 shadow-2xl cursor-pointer active:scale-95 transition"
+                  title="Tap to swap camera views"
+                >
+                  {swapCallVideos ? (
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover -scale-x-100"
+                    />
+                  )}
+                </button>
+              </div>
             ) : (
-              /* 1-on-1 Call: Radiant Sunset Halo + Live Video Stream / Avatar (IMG_5469) */
+              /* 1-on-1 Audio Call: Radiant Sunset Halo + Avatar */
               <div className="flex flex-col items-center justify-center flex-1 my-auto">
                 <div className="relative flex items-center justify-center">
-                  {/* Glowing Multi-Color Sunset Halo (IMG_5469) */}
+                  {/* Glowing Multi-Color Sunset Halo */}
                   <div className="absolute -inset-10 rounded-full bg-gradient-to-tr from-[#FF7A00] via-[#FF007A] to-[#FFE600] blur-3xl opacity-85 animate-pulse" />
 
-                  {/* Video / Avatar Box */}
+                  {/* Avatar Box */}
                   <div className="relative z-10 w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden border-4 border-white/90 dark:border-white/20 bg-zinc-900 flex items-center justify-center">
-                    {callType === "video" ? (
-                      <video 
-                        ref={localVideoRef} 
-                        autoPlay 
-                        playsInline 
-                        muted 
-                        className="w-full h-full object-cover" 
-                      />
-                    ) : (
-                      <img 
-                        src={activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600&auto=format&fit=crop&q=80"} 
-                        alt="Caller" 
-                        className="w-full h-full object-cover" 
-                      />
-                    )}
+                    <img
+                      src={activeCallMetaRef.current?.targetUser?.photoURL || activeChat?.otherUser?.photoURL || activeChat?.otherUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=600&auto=format&fit=crop&q=80"}
+                      alt={activeCallMetaRef.current?.targetUser?.displayName || "Caller"}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
 
-                {/* Translucent Frosted Glass Pill Below Avatar (IMG_5469) */}
+                {/* Translucent Frosted Glass Pill Below Avatar */}
                 <div className="relative z-10 -mt-5 px-6 py-2 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-md border border-white/60 dark:border-white/10 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                  {callStatus === "connected" 
-                    ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}` 
-                    : callStatus === 'connecting'
-                    ? "Ringing..."
-                    : `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`
+                  {callStatus === "connected"
+                    ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`
+                    : "Ringing..."
                   }
                 </div>
               </div>
             )}
 
-            {/* Audio element for remote audio */}
-            <audio ref={remoteAudioRef} autoPlay playsInline className="sr-only" />
+            {/* Audio element for remote audio (1x1 transparent fixed element ensures mobile browsers don't suspend playback) */}
+            <audio
+              ref={remoteAudioRef}
+              autoPlay
+              playsInline
+              className="w-px h-px opacity-0 pointer-events-none fixed bottom-0 left-0"
+            />
 
             {/* Bottom Controls Dock matching IMG_5469 & IMG_5474 */}
             <div className="flex justify-center items-center gap-4 sm:gap-6 z-20 pb-4">
@@ -8830,14 +9629,18 @@ const handleCreateChannel = async () => {
               {/* 2. Video Camera Toggle */}
               <button 
                 type="button" 
-                onClick={() => setCallType(prev => prev === "video" ? "audio" : "video")} 
-                className="w-12 h-12 rounded-full bg-white/95 dark:bg-zinc-800/90 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.08)] text-zinc-800 dark:text-zinc-200 flex items-center justify-center hover:bg-white active:scale-95 transition cursor-pointer"
-                title="Camera"
+                onClick={toggleCallCamera} 
+                className={`w-12 h-12 rounded-full border-0 shadow-[0_4px_16px_rgba(120,90,160,0.08)] flex items-center justify-center active:scale-95 transition cursor-pointer ${
+                  callType === 'video'
+                    ? "bg-white text-zinc-900"
+                    : "bg-white/95 dark:bg-zinc-800/90 text-zinc-800 dark:text-zinc-200"
+                }`}
+                title={callType === 'video' ? "Turn Off Camera" : "Turn On Camera"}
               >
-                <Icon name="video" className="w-5 h-5" />
+                <Icon name={callType === 'video' ? 'video' : 'video-off'} className="w-5 h-5" />
               </button>
 
-              {/* 3. Large Red End Call Button (IMG_5469 & IMG_5474) */}
+              {/* 3. Large Red End Call Button */}
               <button 
                 type="button" 
                 onClick={() => endCall()} 
@@ -8864,7 +9667,11 @@ const handleCreateChannel = async () => {
               {/* 5. Speaker Toggle */}
               <button 
                 type="button" 
-                onClick={() => setIsSpeaker(!isSpeaker)} 
+                onClick={() => {
+                  const next = !isSpeaker;
+                  setIsSpeaker(next);
+                  unlockRemoteAudioElement();
+                }} 
                 className={`w-12 h-12 rounded-full border-0 shadow-[0_4px_16px_rgba(120,90,160,0.08)] flex items-center justify-center active:scale-95 transition cursor-pointer ${
                   isSpeaker 
                     ? "bg-[#F246F5] text-white" 
@@ -8874,6 +9681,128 @@ const handleCreateChannel = async () => {
               >
                 <Icon name="volume-2" className="w-5 h-5" />
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Messenger-style Unanswered / Declined "No Answer" Call Screen */}
+      <AnimatePresence>
+        {unansweredCallState && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[1000] bg-[#1E221D] overflow-hidden flex flex-col justify-between items-center px-6 pt-24 pb-12 sm:pb-16 select-none"
+          >
+            {/* Blurred ambient backdrop derived from recipient avatar */}
+            {unansweredCallState.targetUser?.photoURL ? (
+              <img
+                src={unansweredCallState.targetUser.photoURL}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover scale-125 blur-[70px] brightness-[0.38] saturate-[0.9] pointer-events-none"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 via-zinc-900 to-black pointer-events-none" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/65 pointer-events-none" />
+
+            {/* Centered Recipient Avatar + Name + No Answer */}
+            <div className="relative z-10 flex flex-col items-center text-center mt-6 sm:mt-10">
+              <div className="w-[96px] h-[96px] sm:w-[104px] sm:h-[104px] rounded-full overflow-hidden shadow-2xl bg-zinc-700/80 ring-1 ring-white/15 flex items-center justify-center">
+                {unansweredCallState.targetUser?.photoURL ? (
+                  <img
+                    src={unansweredCallState.targetUser.photoURL}
+                    alt={unansweredCallState.targetUser.displayName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold text-white">
+                    {(unansweredCallState.targetUser?.displayName || 'U')[0].toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <h2 className="mt-4 text-[24px] sm:text-[26px] font-bold text-white tracking-tight leading-snug">
+                {unansweredCallState.targetUser?.displayName || 'User'}
+              </h2>
+              <p className="mt-1 text-[15px] font-normal text-white/90">
+                No Answer
+              </p>
+            </div>
+
+            {/* Bottom 3 Circular Actions: Cancel / Record audio message / Call again */}
+            <div className="relative z-10 w-full max-w-[340px] grid grid-cols-3 gap-4 items-start">
+              {/* Cancel */}
+              <div className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setUnansweredCallState(null);
+                  }}
+                  className="w-[60px] h-[60px] rounded-full bg-white text-zinc-950 shadow-xl flex items-center justify-center hover:bg-zinc-100 active:scale-95 transition cursor-pointer"
+                  aria-label="Cancel"
+                >
+                  <Icon name="x" className="w-6 h-6" />
+                </button>
+                <span className="mt-2.5 text-[12.5px] font-medium text-white text-center leading-tight">
+                  Cancel
+                </span>
+              </div>
+
+              {/* Record audio message */}
+              <div className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('selection');
+                    const targetChatId = unansweredCallState.chatId || unansweredCallState.targetUser?.id;
+                    setUnansweredCallState(null);
+                    if (targetChatId && activeChat?.id !== targetChatId) {
+                      setSearchParams({ chatId: targetChatId }, { replace: true });
+                    }
+                    setTimeout(() => {
+                      startRecording();
+                    }, 90);
+                  }}
+                  className="w-[60px] h-[60px] rounded-full bg-black/45 backdrop-blur-md border border-white/15 text-white shadow-xl flex items-center justify-center hover:bg-black/55 active:scale-95 transition cursor-pointer"
+                  aria-label="Record audio message"
+                >
+                  <Icon name="mic" className="w-6 h-6 text-white" solid />
+                </button>
+                <span className="mt-2.5 text-[12.5px] font-medium text-white text-center leading-tight max-w-[92px]">
+                  Record audio message
+                </span>
+              </div>
+
+              {/* Call again */}
+              <div className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    const snapshot = unansweredCallState;
+                    setUnansweredCallState(null);
+                    startCall(snapshot.callType, {
+                      targetUser: snapshot.targetUser,
+                      chatId: snapshot.chatId,
+                    });
+                  }}
+                  className="w-[60px] h-[60px] rounded-full bg-[#28CD41] text-white shadow-xl shadow-emerald-950/30 flex items-center justify-center hover:brightness-105 active:scale-95 transition cursor-pointer"
+                  aria-label="Call again"
+                >
+                  <Icon
+                    name={unansweredCallState.callType === 'video' ? 'video' : 'phone'}
+                    className="w-6 h-6 text-white"
+                    solid
+                  />
+                </button>
+                <span className="mt-2.5 text-[12.5px] font-medium text-white text-center leading-tight">
+                  Call again
+                </span>
+              </div>
             </div>
           </motion.div>
         )}
@@ -9641,20 +10570,43 @@ const handleCreateChannel = async () => {
             />
 
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              data-no-pull-refresh="true"
               initial={{ opacity: 0, y: 36, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 28, scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              drag="y"
+              dragControls={forwardSheetDragControls}
+              dragListener={false}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.04, bottom: 0.45 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 95 || info.velocity.y > 420) {
+                  triggerHaptic('light');
+                  setShowForwardModal(false);
+                  setForwardingMessage(null);
+                  setForwardSearchQuery('');
+                  setForwardedTargetsMap({});
+                }
+              }}
               onClick={(e) => e.stopPropagation()}
               className="relative z-10 w-full sm:max-w-[440px] max-h-[85dvh] bg-white dark:bg-[#14161D] border-t sm:border border-zinc-200/80 dark:border-white/10 rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden font-inter"
             >
               {/* Drag Handle (Mobile) */}
-              <div className="sm:hidden pt-2.5 flex justify-center shrink-0">
+              <div
+                onPointerDown={(e) => forwardSheetDragControls.start(e)}
+                className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0 touch-none cursor-grab active:cursor-grabbing"
+              >
                 <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
               </div>
 
               {/* Header */}
-              <div className="px-5 pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.06] flex items-center justify-between shrink-0">
+              <div
+                onPointerDown={(e) => forwardSheetDragControls.start(e)}
+                className="px-5 pt-3 sm:pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.06] flex items-center justify-between shrink-0 touch-none"
+              >
                 <div>
                   <h3 className="text-[16px] font-bold text-zinc-950 dark:text-white tracking-tight">
                     Forward message
@@ -9959,14 +10911,33 @@ const handleCreateChannel = async () => {
           const msg = activeChannel ? channelMessages.find(m => m.id === deleteMessageId) : messages.find(m => m.id === deleteMessageId);
           const isOwnMessage = msg?.senderId === user?.uid;
           return (
-            <div className="fixed inset-0 z-[10000] flex items-end justify-center sm:items-center bg-black/60 backdrop-blur-sm p-4">
+            <div
+              onClick={() => setDeleteMessageId(null)}
+              className="fixed inset-0 z-[10000] flex items-end justify-center sm:items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+            >
               <motion.div
+                role="dialog"
+                aria-modal="true"
+                data-no-pull-refresh="true"
                 initial={{ opacity: 0, y: "100%" }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: "100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl font-inter flex flex-col"
+                transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0.04, bottom: 0.5 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 85 || info.velocity.y > 400) {
+                    triggerHaptic('light');
+                    setDeleteMessageId(null);
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-t-[28px] sm:rounded-[32px] overflow-hidden shadow-2xl font-inter flex flex-col pb-[env(safe-area-inset-bottom,0px)] sm:pb-0"
               >
+                <div className="sm:hidden pt-2.5 flex justify-center shrink-0">
+                  <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+                </div>
                 <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
                   <h3 className="text-center font-bold text-zinc-900 dark:text-white">Delete Message</h3>
                 </div>
@@ -10052,14 +11023,42 @@ const handleCreateChannel = async () => {
       {/* Wallpaper Selection Modal */}
       <AnimatePresence>
         {showWallpaperModal && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div
+            onClick={() => setShowWallpaperModal(false)}
+            className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="ambient-dynamic-bg w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl font-inter flex flex-col relative border-0"
+              role="dialog"
+              aria-modal="true"
+              data-no-pull-refresh="true"
+              initial={{ opacity: 0, y: 36, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 36, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              drag="y"
+              dragControls={wallpaperDragControls}
+              dragListener={false}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.04, bottom: 0.45 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 95 || info.velocity.y > 420) {
+                  triggerHaptic('light');
+                  setShowWallpaperModal(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="ambient-dynamic-bg w-full max-w-md rounded-t-[28px] sm:rounded-[32px] overflow-hidden shadow-2xl font-inter flex flex-col relative border-0 pb-[env(safe-area-inset-bottom,0px)] sm:pb-0"
             >
-              <div className="p-4 flex items-center justify-between">
+              <div
+                onPointerDown={(e) => wallpaperDragControls.start(e)}
+                className="sm:hidden pt-2.5 pb-1 flex justify-center shrink-0 touch-none cursor-grab active:cursor-grabbing"
+              >
+                <div className="w-10 h-1 rounded-full bg-zinc-400/50 dark:bg-zinc-600" />
+              </div>
+              <div
+                onPointerDown={(e) => wallpaperDragControls.start(e)}
+                className="p-4 flex items-center justify-between touch-none"
+              >
                 <div className="flex items-center gap-2">
                   <Icon name="image" className="w-5 h-5 text-[#F246F5]" />
                   <h3 className="font-extrabold text-base text-zinc-900 dark:text-zinc-100">Change Chat Wallpaper</h3>
@@ -10154,13 +11153,33 @@ const handleCreateChannel = async () => {
       {/* Call Disabled Warning Modal */}
       <AnimatePresence>
         {disabledCallUser && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div
+            onClick={() => setDisabledCallUser(null)}
+            className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-[#1C1C1D] w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl font-inter flex flex-col p-6 border border-zinc-100 dark:border-zinc-800"
+              role="dialog"
+              aria-modal="true"
+              data-no-pull-refresh="true"
+              initial={{ opacity: 0, y: 32, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 32, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.04, bottom: 0.5 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 85 || info.velocity.y > 400) {
+                  triggerHaptic('light');
+                  setDisabledCallUser(null);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-[#1C1C1D] w-full max-w-sm rounded-t-[28px] sm:rounded-[2rem] overflow-hidden shadow-2xl font-inter flex flex-col p-6 border border-zinc-100 dark:border-zinc-800 pb-[calc(24px+env(safe-area-inset-bottom,0px))] sm:pb-6"
             >
+              <div className="sm:hidden -mt-2 mb-3 flex justify-center shrink-0">
+                <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+              </div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-950/30 flex items-center justify-center text-orange-500">
@@ -10191,13 +11210,33 @@ const handleCreateChannel = async () => {
       {/* Auto Delete Modal */}
       <AnimatePresence>
         {showAutoDeleteModal && (
-          <div className="fixed inset-0 z-[10000] bg-white dark:bg-zinc-950 overflow-y-auto">
+          <div
+            onClick={() => setShowAutoDeleteModal(false)}
+            className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+          >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-[#1C1C1D] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl font-inter flex flex-col relative"
+              role="dialog"
+              aria-modal="true"
+              data-no-pull-refresh="true"
+              initial={{ opacity: 0, y: 36, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 36, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.04, bottom: 0.5 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 85 || info.velocity.y > 400) {
+                  triggerHaptic('light');
+                  setShowAutoDeleteModal(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-[#1C1C1D] w-full max-w-sm rounded-t-[28px] sm:rounded-3xl overflow-hidden shadow-2xl font-inter flex flex-col relative pb-[env(safe-area-inset-bottom,0px)] sm:pb-0"
             >
+              <div className="sm:hidden pt-2.5 flex justify-center shrink-0">
+                <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+              </div>
               <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
                 <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Auto-Delete</h3>
                 <button onClick={() => setShowAutoDeleteModal(false)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
@@ -10252,105 +11291,134 @@ const handleCreateChannel = async () => {
 
       {/* Clear Chat Modal */}
       <AnimatePresence>
-        {showClearChatModal && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-[#1C1C1D] w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl font-inter flex flex-col relative border border-zinc-200/50 dark:border-zinc-800/50"
+        {showClearChatModal && (() => {
+          const targetChat = clearTargetChat || activeChat;
+          const closeClearModal = () => {
+            setShowClearChatModal(false);
+            setClearTargetChat(null);
+          };
+          return (
+            <div
+              onClick={closeClearModal}
+              className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
             >
-              <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
-                <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Clear Chat</h3>
-                <button onClick={() => setShowClearChatModal(false)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
-                  <Icon name="x" className="w-5 h-5 text-zinc-500" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  Are you sure you want to clear the conversation? This action cannot be undone.
-                </p>
-                
-                <label className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition select-none border border-zinc-200/50 dark:border-zinc-800/50">
-                  <input
-                    type="checkbox"
-                    checked={clearChatDeleteForOther}
-                    onChange={(e) => setClearChatDeleteForOther(e.target.checked)}
-                    className="w-4.5 h-4.5 rounded text-rose-500 border-zinc-300 dark:border-zinc-700 focus:ring-rose-500"
-                  />
-                  <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                    Also delete from {activeChat?.otherUser?.shopName || activeChat?.otherUser?.displayName || "user"}
-                  </span>
-                </label>
-
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button
-                    onClick={() => setShowClearChatModal(false)}
-                    className="py-3 font-bold text-[14px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={isClearingChat}
-                    onClick={async () => {
-                      if (!activeChat || !user) return;
-                      setIsClearingChat(true);
-                      try {
-                        const chatId = activeChat?.id;
-                        if (clearChatDeleteForOther) {
-                          // Complete delete of chat and messages for both sides
-                          // 1. Delete all messages
-                          const msgSnap = await getDocs(collection(db, 'p2p_chats', chatId, 'messages'));
-                          const batch = writeBatch(db);
-                          msgSnap.docs.forEach(d => batch.delete(d.ref));
-                          await batch.commit();
-
-                          // 2. Delete chat doc
-                          await deleteDoc(doc(db, 'p2p_chats', chatId));
-                          
-                          // 3. Clear parameters to go back
-                          setSearchParams({});
-                          notify("Chat deleted for both sides", "success");
-                        } else {
-                          // Clear messages for me only
-                          const msgSnap = await getDocs(collection(db, 'p2p_chats', chatId, 'messages'));
-                          const batch = writeBatch(db);
-                          msgSnap.docs.forEach(d => {
-                            const data = d.data();
-                            const currentDeletedFor = data.deletedFor || [];
-                            if (!currentDeletedFor.includes(user.uid)) {
-                              batch.update(d.ref, {
-                                deletedFor: arrayUnion(user.uid)
-                              });
-                            }
-                          });
-                          await batch.commit();
-                          await updateDoc(doc(db, 'p2p_chats', chatId), {
-                            [`deletedLastFor.${user.uid}`]: true
-                          }).catch(() => {});
-                          notify("Conversation cleared for you", "success");
-                        }
-                        setShowClearChatModal(false);
-                      } catch (err) {
-                        console.error("Error clearing chat:", err);
-                        notify("Failed to clear chat", "error");
-                      } finally {
-                        setIsClearingChat(false);
-                      }
-                    }}
-                    className={`py-3 font-bold text-[14px] rounded-xl transition text-white ${
-                      isClearingChat 
-                        ? 'bg-rose-400 dark:bg-rose-600/50 cursor-not-allowed' 
-                        : 'bg-rose-500 hover:bg-rose-600 active:scale-95'
-                    }`}
-                  >
-                    {isClearingChat ? "Clearing..." : "Clear Chat"}
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                data-no-pull-refresh="true"
+                initial={{ opacity: 0, y: 36, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 36, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0.04, bottom: 0.5 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 85 || info.velocity.y > 400) {
+                    triggerHaptic('light');
+                    closeClearModal();
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#1C1C1D] w-full max-w-sm rounded-t-[28px] sm:rounded-3xl overflow-hidden shadow-2xl font-inter flex flex-col relative border border-zinc-200/50 dark:border-zinc-800/50 pb-[env(safe-area-inset-bottom,0px)] sm:pb-0"
+              >
+                <div className="sm:hidden pt-2.5 flex justify-center shrink-0">
+                  <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+                </div>
+                <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
+                  <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Clear Chat</h3>
+                  <button onClick={closeClearModal} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
+                    <Icon name="x" className="w-5 h-5 text-zinc-500" />
                   </button>
                 </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
+                <div className="p-6 space-y-4">
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    Are you sure you want to clear the conversation? This action cannot be undone.
+                  </p>
+                  
+                  <label className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 transition select-none border border-zinc-200/50 dark:border-zinc-800/50">
+                    <input
+                      type="checkbox"
+                      checked={clearChatDeleteForOther}
+                      onChange={(e) => setClearChatDeleteForOther(e.target.checked)}
+                      className="w-4.5 h-4.5 rounded text-rose-500 border-zinc-300 dark:border-zinc-700 focus:ring-rose-500"
+                    />
+                    <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                      Also delete from {targetChat?.otherUser?.shopName || targetChat?.otherUser?.displayName || targetChat?.name || "user"}
+                    </span>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <button
+                      onClick={closeClearModal}
+                      className="py-3 font-bold text-[14px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={isClearingChat}
+                      onClick={async () => {
+                        if (!targetChat?.id || !user) return;
+                        setIsClearingChat(true);
+                        try {
+                          const chatId = targetChat.id;
+                          if (clearChatDeleteForOther) {
+                            // Complete delete of chat and messages for both sides
+                            // 1. Delete all messages
+                            const msgSnap = await getDocs(collection(db, 'p2p_chats', chatId, 'messages'));
+                            const batch = writeBatch(db);
+                            msgSnap.docs.forEach(d => batch.delete(d.ref));
+                            await batch.commit();
+
+                            // 2. Delete chat doc
+                            await deleteDoc(doc(db, 'p2p_chats', chatId));
+                            
+                            // 3. Clear parameters to go back if currently viewing this chat
+                            if (activeChat?.id === chatId) {
+                              setSearchParams({});
+                            }
+                            notify("Chat deleted for both sides", "success");
+                          } else {
+                            // Clear messages for me only
+                            const msgSnap = await getDocs(collection(db, 'p2p_chats', chatId, 'messages'));
+                            const batch = writeBatch(db);
+                            msgSnap.docs.forEach(d => {
+                              const data = d.data();
+                              const currentDeletedFor = data.deletedFor || [];
+                              if (!currentDeletedFor.includes(user.uid)) {
+                                batch.update(d.ref, {
+                                  deletedFor: arrayUnion(user.uid)
+                                });
+                              }
+                            });
+                            await batch.commit();
+                            await updateDoc(doc(db, 'p2p_chats', chatId), {
+                              [`deletedLastFor.${user.uid}`]: true
+                            }).catch(() => {});
+                            notify("Conversation cleared for you", "success");
+                          }
+                          closeClearModal();
+                        } catch (err) {
+                          console.error("Error clearing chat:", err);
+                          notify("Failed to clear chat", "error");
+                        } finally {
+                          setIsClearingChat(false);
+                        }
+                      }}
+                      className={`py-3 font-bold text-[14px] rounded-xl transition text-white ${
+                        isClearingChat 
+                          ? 'bg-rose-400 dark:bg-rose-600/50 cursor-not-allowed' 
+                          : 'bg-rose-500 hover:bg-rose-600 active:scale-95'
+                      }`}
+                    >
+                      {isClearingChat ? "Clearing..." : "Clear Chat"}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Live Audio Call Modal */}

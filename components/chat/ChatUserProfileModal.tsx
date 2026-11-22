@@ -5,6 +5,8 @@ import Icon from '../Icon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getSafeDisplayName, getSafePublicUsername } from '../../lib/utils';
+import { useSwipeNavigation } from '../../lib/useSwipeNavigation';
+import { triggerHaptic } from '../../lib/haptics';
 
 interface ChatUserProfileModalProps {
   isOpen: boolean;
@@ -117,6 +119,19 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
 
+  const { swipeHandlers } = useSwipeNavigation({
+    disabled: !isOpen || showNicknameModal || showDisappearingModal || showChatControlsModal || showPrivacyModal || showReportModal || showFeedbackModal,
+    ignoreDialogs: false,
+    onEdgeSwipeRight: () => {
+      triggerHaptic('light');
+      onClose();
+    },
+    onSwipeRight: () => {
+      triggerHaptic('light');
+      onClose();
+    },
+  });
+
   if (!isOpen || !activeChat) return null;
 
   // Real account name is the primary name in user details modal
@@ -184,7 +199,13 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex flex-col ambient-dynamic-bg text-zinc-900 dark:text-white overflow-y-auto no-scrollbar font-inter">
+    <div
+      role="dialog"
+      aria-modal="true"
+      data-no-pull-refresh="true"
+      {...swipeHandlers}
+      className="fixed inset-0 z-[10000] flex flex-col ambient-dynamic-bg text-zinc-900 dark:text-white overflow-y-auto no-scrollbar font-inter"
+    >
       {/* Top Header with circular Back button */}
       <div className="sticky top-0 z-20 bg-transparent backdrop-blur-md px-4 py-3 flex items-center justify-between border-0">
         <button

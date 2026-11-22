@@ -1,5 +1,5 @@
 import { auth, db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export interface NotificationPermissionAttempt {
     permission: NotificationPermission | 'unsupported';
@@ -86,6 +86,7 @@ export async function unsubscribeFromWebPush() {
 }
 
 let activePushSyncPromise: Promise<any> | null = null;
+let activePushSyncUid = '__unset__';
 let lastSyncedEndpointUidKey = '';
 
 async function waitForActiveServiceWorkerRegistration(timeoutMs = 7000): Promise<ServiceWorkerRegistration | null> {
@@ -110,6 +111,10 @@ async function waitForActiveServiceWorkerRegistration(timeoutMs = 7000): Promise
     } catch {}
 
     try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        if (regs && regs.length > 0) {
+            return regs[0];
+        }
         return await navigator.serviceWorker.getRegistration() || null;
     } catch {
         return null;
@@ -121,7 +126,11 @@ export async function subscribeToWebPush(
     preAcquiredPermission?: NotificationPermission | 'unsupported'
 ) {
     const targetUid = uidParam || auth.currentUser?.uid || '';
-    if (activePushSyncPromise && preAcquiredPermission === 'granted') {
+    if (
+        activePushSyncPromise &&
+        preAcquiredPermission === 'granted' &&
+        activePushSyncUid === targetUid
+    ) {
         return activePushSyncPromise;
     }
 
@@ -146,7 +155,7 @@ export async function subscribeToWebPush(
                 };
             }
 
-            const uid = uidParam || auth.currentUser?.uid;
+            const uid = uidParam || auth.currentUser?.uid || '';
             try {
                 localStorage.setItem('deepshop_push_enabled', 'true');
                 localStorage.setItem('vibe_push_enabled', 'true');
@@ -174,7 +183,7 @@ export async function subscribeToWebPush(
                 return { ok: true, permission: 'granted', browserNotificationOnly: true };
             }
 
-            const res = await fetch('/api/web-push/public-key');
+            const res = await fetch('/api/web-push/public-key', { cache: 'no-store' });
             if (!res.ok) {
                 return { ok: true, permission: 'granted', browserNotificationOnly: true };
             }
@@ -237,7 +246,7 @@ export async function subscribeToWebPush(
                 }
 
                 const subJson = subscription?.toJSON ? subscription.toJSON() : subscription;
-                const endpointKey = `${(subJson as any)?.endpoint || ''}::${uid || ''}`;
+                const endpointKey = `${(subJson as any)?.endpoint || ''}::${uid}`;
 
                 if (isFreshSub || lastSyncedEndpointUidKey !== endpointKey) {
                     try {
@@ -246,7 +255,7 @@ export async function subscribeToWebPush(
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ subscription: subJson, uid: uid || null }),
                         });
-                        if (saveRes.ok) {
+                        if (saveRes.ok && uid) {
                             lastSyncedEndpointUidKey = endpointKey;
                         }
                     } catch (err) {
@@ -262,13 +271,30 @@ export async function subscribeToWebPush(
                     }).catch(() => {});
                 }
 
-                if (uid) {
+                if (uid && (subJson as any)?.endpoint) {
                     try {
+                        const userRef = doc(db, 'users', uid);
+                        let mergedSubs: any[] = [subJson];
+                        try {
+                            const snap = await getDoc(userRef);
+                            const existingList = snap.exists() ? snap.data()?.webPushSubs : null;
+                            if (Array.isArray(existingList)) {
+                                const byEndpoint = new Map<string, any>();
+                                existingList.forEach((s: any) => {
+                                    if (s?.endpoint) byEndpoint.set(s.endpoint, s);
+                                });
+                                byEndpoint.set((subJson as any).endpoint, subJson);
+                                mergedSubs = Array.from(byEndpoint.values()).slice(-6);
+                            }
+                        } catch {}
+
                         await setDoc(
-                            doc(db, 'users', uid),
+                            userRef,
                             {
                                 webPushSub: subJson,
+                                webPushSubs: mergedSubs,
                                 notificationsEnabled: true,
+                                pushUpdatedAt: Date.now(),
                             },
                             { merge: true }
                         );
@@ -290,10 +316,12 @@ export async function subscribeToWebPush(
     const promise = runSync().finally(() => {
         if (activePushSyncPromise === promise) {
             activePushSyncPromise = null;
+            activePushSyncUid = '__unset__';
         }
     });
     if (targetUid || preAcquiredPermission === 'granted') {
         activePushSyncPromise = promise;
+        activePushSyncUid = targetUid;
     }
     return promise;
 }

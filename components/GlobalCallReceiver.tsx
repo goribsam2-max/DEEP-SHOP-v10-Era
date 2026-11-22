@@ -132,6 +132,11 @@ export const GlobalCallReceiver: React.FC = () => {
     };
   }, [myId, incomingCall?.id]);
 
+  const incomingP2PCallIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    incomingP2PCallIdRef.current = incomingP2PCall?.id || null;
+  }, [incomingP2PCall?.id]);
+
   useEffect(() => {
     if (!myId) return;
 
@@ -142,13 +147,19 @@ export const GlobalCallReceiver: React.FC = () => {
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
-      const activeDocs = snapshot.docs.filter(doc => {
-        const status = doc.data().status;
-        return status === 'calling' || status === 'ringing';
-      });
+      const now = Date.now();
+      const activeDocs = snapshot.docs
+        .filter((d) => {
+          const data = d.data();
+          const status = data.status;
+          const ts = Number(data.timestamp || 0);
+          const isFresh = ts > 0 ? now - ts < 45000 : true;
+          return (status === 'calling' || status === 'ringing') && isFresh;
+        })
+        .sort((a, b) => Number(b.data().timestamp || 0) - Number(a.data().timestamp || 0));
 
       if (activeDocs.length === 0) {
-        if (incomingP2PCall) {
+        if (incomingP2PCallIdRef.current) {
           audioHelper.stop();
           setIncomingP2PCall(null);
         }
@@ -185,7 +196,7 @@ export const GlobalCallReceiver: React.FC = () => {
     return () => {
       unsub();
     };
-  }, [myId, incomingP2PCall?.id]);
+  }, [myId]);
 
   // Global message notification listener
   useEffect(() => {
@@ -331,9 +342,13 @@ export const GlobalCallReceiver: React.FC = () => {
         }
         updateDoc(doc(db, 'p2p_chats', chatId), {
           lastMessage: missedPreview,
+          lastMessageType: 'call',
+          lastCallType: type === 'video' ? 'video' : 'audio',
+          lastCallStatus: 'missed',
           lastSenderId: callerId,
           lastMessageDeleted: false,
           deletedLastFor: {},
+          ...(myId ? { seenBy: arrayUnion(myId), [`unreadCount.${myId}`]: 0 } : {}),
           updatedAt: serverTimestamp(),
         }).catch(console.error);
       }
@@ -341,16 +356,19 @@ export const GlobalCallReceiver: React.FC = () => {
     setIncomingP2PCall(null);
   };
 
-  const acceptP2PCall = async () => {
+  const acceptP2PCall = () => {
     audioHelper.stop();
     if (incomingP2PCall) {
-      await updateDoc(doc(db, 'p2p_calls', incomingP2PCall.id), {
+      const accepted = incomingP2PCall;
+      setIncomingP2PCall(null);
+      updateDoc(doc(db, 'p2p_calls', accepted.id), {
         status: 'connected'
       }).catch(console.error);
-      
-      navigate(`/messages?chatId=${incomingP2PCall.callerId}&activeCallId=${incomingP2PCall.id}&callType=${incomingP2PCall.type}`);
+
+      navigate(`/messages?chatId=${accepted.callerId}&activeCallId=${accepted.id}&callType=${accepted.type}`);
+    } else {
+      setIncomingP2PCall(null);
     }
-    setIncomingP2PCall(null);
   };
 
   const declineCall = async () => {

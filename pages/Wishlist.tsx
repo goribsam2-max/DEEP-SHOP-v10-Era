@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   collection,
@@ -21,6 +21,137 @@ import { CatalogPageSkeleton } from "../components/PageSkeletons";
 import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 import { triggerHaptic } from "../lib/haptics";
 import { APPLE_SPRING_DEFAULT, APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
+
+interface SwipeableWishlistCardProps {
+  item: any;
+  shouldReduceMotion: boolean | null;
+  onOpen: () => void;
+  onRemove: (e?: React.MouseEvent) => void;
+  children: React.ReactNode;
+}
+
+const SwipeableWishlistCard: React.FC<SwipeableWishlistCardProps> = ({
+  shouldReduceMotion,
+  onOpen,
+  onRemove,
+  children,
+}) => {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const touchRef = useRef<{
+    startX: number;
+    startY: number;
+    axis: "x" | "y" | null;
+    hapticTicked: boolean;
+  } | null>(null);
+  const didSwipeRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (t.clientX <= 26) return;
+    touchRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      axis: null,
+      hapticTicked: false,
+    };
+    didSwipeRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const s = touchRef.current;
+    if (!s || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s.startX;
+    const dy = t.clientY - s.startY;
+
+    if (!s.axis) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx) * 1.1) {
+        s.axis = "y";
+        touchRef.current = null;
+        return;
+      }
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+        s.axis = "x";
+        setIsDragging(true);
+        didSwipeRef.current = true;
+      } else {
+        return;
+      }
+    }
+
+    if (dx < 0) {
+      const clamped = Math.max(-96, dx);
+      if (!s.hapticTicked && clamped <= -58) {
+        s.hapticTicked = true;
+        triggerHaptic("selection");
+      }
+      setOffsetX(clamped);
+    } else {
+      setOffsetX(0);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    const s = touchRef.current;
+    touchRef.current = null;
+    setIsDragging(false);
+    if (!s || s.axis !== "x") return;
+
+    if (offsetX <= -58) {
+      setOffsetX(0);
+      onRemove();
+      return;
+    }
+    setOffsetX(0);
+  };
+
+  return (
+    <motion.div
+      layout={!shouldReduceMotion}
+      initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+      animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+      transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_SNAPPY}
+      data-no-swipe="true"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      className="relative overflow-hidden rounded-[22px]"
+    >
+      <div
+        className={`absolute inset-y-0 right-0 w-24 flex flex-col items-center justify-center gap-1 rounded-r-[22px] bg-[#FF3B30] text-white text-xs font-bold transition-opacity ${
+          offsetX < -6 ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <Icon name="trash-alt" className="text-sm" />
+        <span>Remove</span>
+      </div>
+
+      <div
+        onClick={() => {
+          if (didSwipeRef.current) {
+            didSwipeRef.current = false;
+            return;
+          }
+          onOpen();
+        }}
+        style={{
+          transform: `translate3d(${offsetX}px, 0, 0)`,
+          transition: isDragging
+            ? "none"
+            : "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+        className="group cursor-pointer relative z-10 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] p-2.5 md:p-3 rounded-[22px] hover:border-black/[0.14] dark:hover:border-white/[0.18] active:scale-[0.98] transition-all shadow-xs"
+      >
+        {children}
+      </div>
+    </motion.div>
+  );
+};
 
 const Wishlist: React.FC = () => {
   const navigate = useNavigate();
@@ -31,6 +162,13 @@ const Wishlist: React.FC = () => {
   const illustrations = useIllustrations();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { swipeHandlers: wishlistSwipeHandlers } = useSwipeNavigation({
+    onEdgeSwipeRight: () => {
+      triggerHaptic("light");
+      navigate(-1);
+    },
+  });
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -51,8 +189,8 @@ const Wishlist: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  const removeFromWishlist = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const removeFromWishlist = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     triggerHaptic("warning");
     if (!auth.currentUser) return;
     try {
@@ -66,7 +204,10 @@ const Wishlist: React.FC = () => {
   if (loading) return <CatalogPageSkeleton />;
 
   return (
-    <div className="w-full bg-[#F5F5F7] dark:bg-black min-h-screen pb-[120px] md:pb-10">
+    <div
+      {...wishlistSwipeHandlers}
+      className="w-full bg-[#F5F5F7] dark:bg-black min-h-screen pb-[120px] md:pb-10"
+    >
       <div className="px-4 sm:px-6 md:px-12 py-8 sm:py-10 max-w-7xl mx-auto">
         {!auth.currentUser ? (
           <motion.div
@@ -135,18 +276,15 @@ const Wishlist: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
             <AnimatePresence mode="popLayout">
               {items.map((item) => (
-                <motion.div
-                  layout={!shouldReduceMotion}
+                <SwipeableWishlistCard
                   key={item.id}
-                  initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
-                  animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-                  transition={shouldReduceMotion ? { duration: 0.16 } : APPLE_SPRING_SNAPPY}
-                  onClick={() => {
+                  item={item}
+                  shouldReduceMotion={shouldReduceMotion}
+                  onOpen={() => {
                     triggerHaptic("light");
                     navigate(`/product/${item.productId}`);
                   }}
-                  className="group cursor-pointer relative bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] p-2.5 md:p-3 rounded-[22px] hover:border-black/[0.14] dark:hover:border-white/[0.18] active:scale-[0.98] transition-all shadow-xs"
+                  onRemove={(e) => removeFromWishlist(item.id, e)}
                 >
                   <div className="aspect-[4/5] flex items-center justify-center bg-[#F5F5F7] dark:bg-[#2C2C2E] rounded-2xl mb-3 overflow-hidden relative">
                     <PixelImage
@@ -172,7 +310,7 @@ const Wishlist: React.FC = () => {
                       {item.price != null ? formatPrice(item.price) : "Price not available"}
                     </p>
                   </div>
-                </motion.div>
+                </SwipeableWishlistCard>
               ))}
             </AnimatePresence>
           </div>

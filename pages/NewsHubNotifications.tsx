@@ -36,6 +36,8 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { toggleFollowUser, useFollowedIds } from "../lib/follow";
 import { useNotify } from "../components/Notifications";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
+import { motion, AnimatePresence } from "framer-motion";
 import SEO from "../components/SEO";
 import { ProfileAvatar } from "./NewsProfilePage";
 import { isPhoneLikeUsername } from "../lib/utils";
@@ -98,6 +100,18 @@ export const NewsHubNotifications: React.FC = () => {
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
 
   const followedIds = useFollowedIds(currentUser?.uid);
+
+  const { swipeHandlers: loopsNotifSwipeHandlers } = useSwipeNavigation({
+    disabled: showPreferencesModal,
+    onEdgeSwipeRight: () => {
+      triggerHaptic("light");
+      navigate("/loops");
+    },
+    onSwipeRight: () => {
+      triggerHaptic("light");
+      navigate("/loops");
+    },
+  });
 
   // Preferences toggles
   const [prefs, setPrefs] = useState({
@@ -251,7 +265,10 @@ export const NewsHubNotifications: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen loops-surface text-slate-900 dark:text-zinc-100 font-sans pb-28">
+    <div
+      {...loopsNotifSwipeHandlers}
+      className="min-h-screen loops-surface text-slate-900 dark:text-zinc-100 font-sans pb-28"
+    >
       <SEO title="Notifications — Loops" description="Stay updated on new followers, likes, replies, and reposts on Loops." />
 
       {/* Sticky Header */}
@@ -459,10 +476,36 @@ export const NewsHubNotifications: React.FC = () => {
       </main>
 
       {/* Preferences Modal */}
-      {showPreferencesModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl border border-slate-200 dark:border-zinc-800 space-y-4">
-            <div className="flex items-center justify-between">
+      <AnimatePresence>
+        {showPreferencesModal && (
+          <div
+            onClick={() => setShowPreferencesModal(false)}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              data-no-pull-refresh="true"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 420, damping: 34 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.04, bottom: 0.5 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 90 || info.velocity.y > 400) {
+                  triggerHaptic("light");
+                  setShowPreferencesModal(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 pb-[calc(24px+env(safe-area-inset-bottom,0px))] sm:pb-6 shadow-2xl border border-slate-200 dark:border-zinc-800 space-y-4"
+            >
+              <div className="sm:hidden -mt-2 mb-1 flex justify-center shrink-0">
+                <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-zinc-700" />
+              </div>
+              <div className="flex items-center justify-between">
               <h2 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
                 Get notified about important stuff
               </h2>
@@ -561,9 +604,10 @@ export const NewsHubNotifications: React.FC = () => {
                 Get notified
               </button>
             </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };

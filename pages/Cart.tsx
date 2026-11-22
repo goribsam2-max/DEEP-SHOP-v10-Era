@@ -1,5 +1,5 @@
 import { formatPrice } from "@/lib/utils";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -12,6 +12,7 @@ import { PixelImage } from "../components/ui/PixelImage";
 import { getProductDisplayImage } from "../src/lib/phonePartsArt";
 import { APPLE_SPRING_DEFAULT, projectMomentum } from "../lib/shoppingRoute";
 import { triggerHaptic } from "../lib/haptics";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import {
   ShoppingBag,
   Trash2,
@@ -24,6 +25,166 @@ import {
   CheckCircle2,
   PackageCheck,
 } from "lucide-react";
+
+interface SwipeableCartItemProps {
+  children: React.ReactNode;
+  onRemove: () => void;
+  onIncrement: () => void;
+}
+
+const SwipeableCartItem: React.FC<SwipeableCartItemProps> = ({
+  children,
+  onRemove,
+  onIncrement,
+}) => {
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const touchRef = useRef<{
+    startX: number;
+    startY: number;
+    baseOffset: number;
+    axis: "x" | "y" | null;
+    hapticTicked: boolean;
+  } | null>(null);
+  const didSwipeRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (t.clientX <= 26) return; // Yield to GlobalEdgeSwipeBack
+    touchRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      baseOffset: offsetX,
+      axis: null,
+      hapticTicked: false,
+    };
+    didSwipeRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const s = touchRef.current;
+    if (!s || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s.startX;
+    const dy = t.clientY - s.startY;
+
+    if (!s.axis) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx) * 1.1) {
+        s.axis = "y";
+        touchRef.current = null;
+        return;
+      }
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+        s.axis = "x";
+        setIsDragging(true);
+        didSwipeRef.current = true;
+      } else {
+        return;
+      }
+    }
+
+    const raw = s.baseOffset + dx;
+    const clamped = Math.max(-165, Math.min(88, raw));
+    if (!s.hapticTicked && (clamped <= -138 || clamped >= 62)) {
+      s.hapticTicked = true;
+      triggerHaptic("selection");
+    }
+    setOffsetX(clamped);
+  };
+
+  const handleTouchEnd = () => {
+    const s = touchRef.current;
+    touchRef.current = null;
+    setIsDragging(false);
+    if (!s || s.axis !== "x") return;
+
+    if (offsetX <= -145) {
+      triggerHaptic("medium");
+      setOffsetX(0);
+      onRemove();
+      return;
+    }
+    if (offsetX <= -44) {
+      setOffsetX(-84);
+      return;
+    }
+    if (offsetX >= 58) {
+      triggerHaptic("selection");
+      setOffsetX(0);
+      onIncrement();
+      return;
+    }
+    setOffsetX(0);
+  };
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      data-no-swipe="true"
+      className="relative overflow-hidden rounded-[22px]"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      onClickCapture={(e) => {
+        if (didSwipeRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          didSwipeRef.current = false;
+        }
+      }}
+    >
+      {/* Left Reveal: Quick +1 Quantity */}
+      <div
+        className={`absolute inset-y-0 left-0 w-24 flex items-center justify-center rounded-l-[22px] bg-emerald-500 text-white transition-opacity ${
+          offsetX > 6 ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-0.5 font-bold text-xs">
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+          <span>+1 Qty</span>
+        </div>
+      </div>
+
+      {/* Right Reveal: Remove Item */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOffsetX(0);
+          onRemove();
+        }}
+        className={`absolute inset-y-0 right-0 w-[84px] flex flex-col items-center justify-center gap-1 rounded-r-[22px] bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs cursor-pointer transition-opacity ${
+          offsetX < -6 ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        aria-label="Remove item"
+      >
+        <Trash2 className="w-4 h-4" />
+        <span>Remove</span>
+      </button>
+
+      {/* Foreground Card */}
+      <div
+        onClick={() => {
+          if (offsetX < 0) setOffsetX(0);
+        }}
+        style={{
+          transform: `translate3d(${offsetX}px, 0, 0)`,
+          transition: isDragging
+            ? "none"
+            : "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+        className="relative z-10"
+      >
+        {children}
+      </div>
+    </motion.div>
+  );
+};
 
 const Cart: React.FC = () => {
   const [items, setItems] = useState<any[]>([]);
@@ -38,6 +199,14 @@ const Cart: React.FC = () => {
   const navigate = useNavigate();
   const notify = useNotify();
   const prefersReducedMotion = useReducedMotion();
+
+  const { swipeHandlers: cartSwipeHandlers } = useSwipeNavigation({
+    disabled: showCouponsModal,
+    onEdgeSwipeRight: () => {
+      triggerHaptic("light");
+      navigate(-1);
+    },
+  });
 
   useEffect(() => {
     const syncCartFromStorage = () => {
@@ -214,7 +383,10 @@ const Cart: React.FC = () => {
   };
 
   return (
-    <div className="ds-liquid-checkout-shell min-h-screen relative transition-colors font-sans pb-28 lg:pb-16">
+    <div
+      {...cartSwipeHandlers}
+      className="ds-liquid-checkout-shell min-h-screen relative transition-colors font-sans pb-28 lg:pb-16"
+    >
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8">
         {/* ====================================================================
             EMPTY CART STATE (Shared Liquid Glass Showcase)
@@ -307,83 +479,82 @@ const Cart: React.FC = () => {
                     const lineTotal = unitPrice * qty;
 
                     return (
-                      <motion.div
-                        layout
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.96 }}
+                      <SwipeableCartItem
                         key={item.id ? `${item.id}-${idx}` : idx}
-                        className="ds-liquid-panel p-3.5 rounded-[22px]"
+                        onRemove={() => removeItem(idx)}
+                        onIncrement={() => updateQuantity(idx, 1)}
                       >
-                        <div className="flex items-start gap-3">
-                          <Link
-                            to={getItemUrl(item)}
-                            className="w-20 h-20 rounded-2xl ds-liquid-product-media overflow-hidden shrink-0 flex items-center justify-center"
-                          >
-                            <PixelImage
-                              src={getItemImage(item)}
-                              alt={item.name}
-                              className="w-full h-full bg-transparent"
-                              imgClassName="w-full h-full object-cover"
-                            />
-                          </Link>
+                        <div className="ds-liquid-panel p-3.5 rounded-[22px]">
+                          <div className="flex items-start gap-3">
+                            <Link
+                              to={getItemUrl(item)}
+                              className="w-20 h-20 rounded-2xl ds-liquid-product-media overflow-hidden shrink-0 flex items-center justify-center"
+                            >
+                              <PixelImage
+                                src={getItemImage(item)}
+                                alt={item.name}
+                                className="w-full h-full bg-transparent"
+                                imgClassName="w-full h-full object-cover"
+                              />
+                            </Link>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <Link
-                                to={getItemUrl(item)}
-                                className="font-bold text-[14px] text-slate-900 dark:text-white leading-snug line-clamp-2"
-                              >
-                                {item.name}
-                              </Link>
-                              <button
-                                type="button"
-                                onClick={() => removeItem(idx)}
-                                aria-label="Remove item"
-                                className="w-7 h-7 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-500 hover:text-rose-500 shrink-0"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                              {item.variant || "Standard Edition"}
-                              {item.brand ? ` · ${item.brand}` : ""}
-                              {` · Unit ${formatPrice(unitPrice)}`}
-                            </p>
-
-                            <div className="mt-2.5 pt-2.5 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
-                              <div className="tabular-nums">
-                                <span className="text-[15px] font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
-                                  {formatPrice(lineTotal)}
-                                </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <Link
+                                  to={getItemUrl(item)}
+                                  className="font-bold text-[14px] text-slate-900 dark:text-white leading-snug line-clamp-2"
+                                >
+                                  {item.name}
+                                </Link>
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(idx)}
+                                  aria-label="Remove item"
+                                  className="w-7 h-7 rounded-full ds-liquid-icon-btn flex items-center justify-center text-slate-500 hover:text-rose-500 shrink-0"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
 
-                              <div className="ds-liquid-dock rounded-full p-0.5 flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => updateQuantity(idx, -1)}
-                                  aria-label="Decrease quantity"
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200 active:scale-95"
-                                >
-                                  <Minus className="w-3.5 h-3.5" />
-                                </button>
-                                <span className="min-w-[24px] text-center text-xs font-extrabold text-slate-900 dark:text-white tabular-nums select-none">
-                                  {qty}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => updateQuantity(idx, 1)}
-                                  aria-label="Increase quantity"
-                                  className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-slate-900 dark:text-white active:scale-95"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                {item.variant || "Standard Edition"}
+                                {item.brand ? ` · ${item.brand}` : ""}
+                                {` · Unit ${formatPrice(unitPrice)}`}
+                              </p>
+
+                              <div className="mt-2.5 pt-2.5 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
+                                <div className="tabular-nums">
+                                  <span className="text-[15px] font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
+                                    {formatPrice(lineTotal)}
+                                  </span>
+                                </div>
+
+                                <div className="ds-liquid-dock rounded-full p-0.5 flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateQuantity(idx, -1)}
+                                    aria-label="Decrease quantity"
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200 active:scale-95"
+                                  >
+                                    <Minus className="w-3.5 h-3.5" />
+                                  </button>
+                                  <span className="min-w-[24px] text-center text-xs font-extrabold text-slate-900 dark:text-white tabular-nums select-none">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateQuantity(idx, 1)}
+                                    aria-label="Increase quantity"
+                                    className="w-8 h-8 rounded-full ds-liquid-dock-pill flex items-center justify-center text-slate-900 dark:text-white active:scale-95"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </motion.div>
+                      </SwipeableCartItem>
                     );
                   })}
                 </AnimatePresence>

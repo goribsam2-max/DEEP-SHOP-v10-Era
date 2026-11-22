@@ -9,6 +9,7 @@ export interface UseSwipeNavigationOptions {
   edgeThreshold?: number;
   edgeMinDistance?: number;
   disabled?: boolean;
+  ignoreDialogs?: boolean;
 }
 
 interface SwipeSession {
@@ -32,17 +33,22 @@ const INTERACTIVE_TAGS = new Set([
 
 /**
  * Returns true if the touch originated inside a horizontal scroll strip, slider,
- * form control, or an element explicitly marked with `data-no-swipe="true"`.
+ * form control, open modal/dialog (when ignoreDialogs is true), or an element
+ * explicitly marked with `data-no-swipe="true"`.
  */
 export function shouldIgnoreSwipeTarget(
   target: EventTarget | null,
-  boundary: HTMLElement | null
+  boundary: HTMLElement | null,
+  ignoreDialogs: boolean = true
 ): boolean {
   let node = target instanceof HTMLElement ? target : null;
   while (node && node !== boundary) {
     if (
       node.dataset.noSwipe === "true" ||
       node.getAttribute("role") === "slider" ||
+      (ignoreDialogs &&
+        (node.getAttribute("role") === "dialog" ||
+          node.getAttribute("aria-modal") === "true")) ||
       node.isContentEditable ||
       INTERACTIVE_TAGS.has(node.tagName)
     ) {
@@ -71,6 +77,7 @@ export function useSwipeNavigation({
   edgeThreshold = 32,
   edgeMinDistance = 52,
   disabled = false,
+  ignoreDialogs = true,
 }: UseSwipeNavigationOptions) {
   const sessionRef = useRef<SwipeSession | null>(null);
 
@@ -81,7 +88,7 @@ export function useSwipeNavigation({
         return;
       }
 
-      if (shouldIgnoreSwipeTarget(e.target, e.currentTarget)) {
+      if (shouldIgnoreSwipeTarget(e.target, e.currentTarget, ignoreDialogs)) {
         sessionRef.current = null;
         return;
       }
@@ -97,7 +104,7 @@ export function useSwipeNavigation({
         lockedAxis: null,
       };
     },
-    [disabled, edgeThreshold]
+    [disabled, edgeThreshold, ignoreDialogs]
   );
 
   const onTouchMove = useCallback((e: React.TouchEvent<HTMLElement>) => {

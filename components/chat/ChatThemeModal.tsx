@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Check } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
+import { triggerHaptic } from '../../lib/haptics';
 
 export interface ChatTheme {
   id: string;
@@ -68,29 +69,53 @@ export const ChatThemeModal: React.FC<ChatThemeModalProps> = ({
   onClose,
   onSelectTheme,
 }) => {
+  const dragControls = useDragControls();
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[10015] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      data-no-pull-refresh="true"
+      onClick={onClose}
+      className="fixed inset-0 z-[10015] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+    >
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 280 }}
+        drag="y"
+        dragControls={dragControls}
+        dragListener={false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0.02, bottom: 0.45 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 95 || info.velocity.y > 420) {
+            triggerHaptic('light');
+            onClose();
+          }
+        }}
+        onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md bg-white dark:bg-[#1E1F24] rounded-t-3xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-750 shadow-2xl overflow-hidden flex flex-col"
       >
-        <div className="w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto my-3" />
+        <div
+          onPointerDown={(e) => dragControls.start(e)}
+          className="cursor-grab active:cursor-grabbing touch-none"
+        >
+          <div className="w-10 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto my-3" />
 
-        <div className="px-5 pb-3 flex items-center justify-between border-b border-zinc-150 dark:border-zinc-800">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-          <h3 className="font-bold text-base text-zinc-900 dark:text-white">Chat Themes</h3>
-          <div className="w-9" />
+          <div className="px-5 pb-3 flex items-center justify-between border-b border-zinc-150 dark:border-zinc-800">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="font-bold text-base text-zinc-900 dark:text-white">Chat Themes</h3>
+            <div className="w-9" />
+          </div>
         </div>
 
         <div className="p-4 space-y-2.5 max-h-[60vh] overflow-y-auto no-scrollbar">

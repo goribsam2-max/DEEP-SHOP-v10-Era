@@ -48,6 +48,7 @@ import { ReelUploadProgressOverlay } from './components/ReelUploadProgressOverla
 import { MobileAppInstallExperience } from './components/MobileAppInstallExperience';
 import { prefetchLoopsBootstrap } from './lib/loopsCache';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { GlobalEdgeSwipeBack } from './components/GlobalEdgeSwipeBack';
 import Messages from './pages/Messages';
 import NewsHub from './pages/NewsHub';
 
@@ -1536,6 +1537,7 @@ const App: React.FC = () => {
               </PullToRefresh>
               <ReelUploadProgressOverlay />
               <MobileAppInstallExperience />
+              <GlobalEdgeSwipeBack />
               {deferredReady && (
                 <Suspense fallback={null}>
                   <GlobalCallReceiver />

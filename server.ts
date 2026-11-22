@@ -564,9 +564,48 @@ app.use(async (req, res, next) => {
     }
   });
 
-  app.get("/api/web-push/public-key", (req, res) => {
-    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800");
+  app.get("/api/web-push/public-key", async (req, res) => {
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      await initializeVapid();
+    }
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.json({ publicKey: vapidPublicKey });
+  });
+
+  app.get("/api/webrtc-ice", (_req, res) => {
+    const iceServers: Array<{ urls: string | string[]; username?: string; credential?: string }> = [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun.cloudflare.com:3478" },
+    ];
+    if (process.env.TURN_URL && process.env.TURN_USERNAME && process.env.TURN_CREDENTIAL) {
+      iceServers.push({
+        urls: process.env.TURN_URL,
+        username: process.env.TURN_USERNAME,
+        credential: process.env.TURN_CREDENTIAL,
+      });
+    } else {
+      iceServers.push(
+        {
+          urls: "turn:openrelay.metered.ca:80",
+          username: "openrelayproject",
+          credential: "openrelayproject",
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443",
+          username: "openrelayproject",
+          credential: "openrelayproject",
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443?transport=tcp",
+          username: "openrelayproject",
+          credential: "openrelayproject",
+        }
+      );
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ iceServers });
   });
 
   // Aggregated Historical Order Volume per Product (Zero PII — Cached 3m)
@@ -921,6 +960,56 @@ app.use(async (req, res, next) => {
     }
   });
 
+  function parseFirestoreRestValue(val: any): any {
+    if (!val || typeof val !== "object") return undefined;
+    if ("stringValue" in val) return val.stringValue;
+    if ("integerValue" in val) return Number(val.integerValue);
+    if ("doubleValue" in val) return Number(val.doubleValue);
+    if ("booleanValue" in val) return val.booleanValue;
+    if ("nullValue" in val) return null;
+    if ("arrayValue" in val) {
+      return Array.isArray(val.arrayValue?.values)
+        ? val.arrayValue.values.map(parseFirestoreRestValue).filter((v: any) => v !== undefined)
+        : [];
+    }
+    if ("mapValue" in val) {
+      const out: Record<string, any> = {};
+      const fields = val.mapValue?.fields || {};
+      for (const [k, v] of Object.entries(fields)) {
+        out[k] = parseFirestoreRestValue(v);
+      }
+      return out;
+    }
+    return undefined;
+  }
+
+  async function fetchUserPushSubsFromFirestore(userId: string): Promise<any[]> {
+    const projectId = process.env.VITE_FIREBASE_PROJECT_ID || "deep-shop-bd";
+    const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/users/${encodeURIComponent(userId)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3500);
+    try {
+      const resp = await fetch(url, { signal: controller.signal });
+      if (!resp.ok) return [];
+      const json = await resp.json();
+      const fields = json?.fields || {};
+      const subs: any[] = [];
+      const single = parseFirestoreRestValue(fields.webPushSub);
+      if (single && single.endpoint) subs.push(single);
+      const multi = parseFirestoreRestValue(fields.webPushSubs);
+      if (Array.isArray(multi)) {
+        multi.forEach((s: any) => {
+          if (s && s.endpoint) subs.push(s);
+        });
+      }
+      return subs;
+    } catch {
+      return [];
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function dispatchUserWebPush(rawBody: any) {
     const userId = rawBody?.userId || rawBody?.targetUserId;
     if (!userId) {
@@ -946,6 +1035,13 @@ app.use(async (req, res, next) => {
 
     let subscriptions: any[] = [];
 
+    if (Array.isArray(rawBody?.fallbackSubs)) {
+      subscriptions.push(...rawBody.fallbackSubs);
+    }
+    if (rawBody?.fallbackSub?.endpoint) {
+      subscriptions.push(rawBody.fallbackSub);
+    }
+
     if (hasValidFirebaseAdmin) {
       try {
         const subSnap = await admin.firestore().collection("web_push_subscriptions").where("uid", "==", userId).get();
@@ -959,13 +1055,20 @@ app.use(async (req, res, next) => {
         const userSnap = await admin.firestore().collection("users").doc(userId).get();
         if (userSnap.exists) {
           const userData = userSnap.data();
-          if (userData && userData.webPushSub) {
+          if (userData?.webPushSub) {
             subscriptions.push(userData.webPushSub);
+          }
+          if (Array.isArray(userData?.webPushSubs)) {
+            subscriptions.push(...userData.webPushSubs);
           }
         }
       } catch (err) {
         console.error("Failed to fetch user webPushSub from users collection", err);
       }
+    } else {
+      // Fallback: read user's webPushSub / webPushSubs directly from Firestore REST API
+      const restSubs = await fetchUserPushSubsFromFirestore(userId);
+      subscriptions.push(...restSubs);
     }
 
     // Read local file fallback / mirror as well

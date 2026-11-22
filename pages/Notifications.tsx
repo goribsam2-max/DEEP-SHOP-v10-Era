@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { auth, db } from "../firebase";
 import {
   collection,
@@ -25,10 +25,14 @@ import {
   CheckCircle2,
   MessageSquareWarning,
   Percent,
+  Check,
+  Mail,
+  Trash2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { triggerHaptic } from "../lib/haptics";
 import { APPLE_SPRING_SNAPPY } from "../lib/shoppingRoute";
+import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 
 interface NotificationPrefs {
   emailNotifications: boolean;
@@ -171,8 +175,83 @@ const NotificationRow: React.FC<{
   notification: Notification;
   isTodaySection: boolean;
   onSelect: () => void;
-}> = ({ notification, isTodaySection, onSelect }) => {
+  onToggleRead: () => void;
+  onDismiss: () => void;
+}> = ({ notification, isTodaySection, onSelect, onToggleRead, onDismiss }) => {
   const { circleClass, icon } = getNotificationCategoryStyle(notification);
+  const [offsetX, setOffsetX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const touchRef = useRef<{
+    startX: number;
+    startY: number;
+    axis: "x" | "y" | null;
+    hapticTicked: boolean;
+  } | null>(null);
+  const didSwipeRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (t.clientX <= 26) return;
+    touchRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      axis: null,
+      hapticTicked: false,
+    };
+    didSwipeRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const s = touchRef.current;
+    if (!s || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s.startX;
+    const dy = t.clientY - s.startY;
+
+    if (!s.axis) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx) * 1.1) {
+        s.axis = "y";
+        touchRef.current = null;
+        return;
+      }
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+        s.axis = "x";
+        setIsDragging(true);
+        didSwipeRef.current = true;
+      } else {
+        return;
+      }
+    }
+
+    const clamped = Math.max(-96, Math.min(88, dx));
+    if (!s.hapticTicked && Math.abs(clamped) >= 60) {
+      s.hapticTicked = true;
+      triggerHaptic("selection");
+    }
+    setOffsetX(clamped);
+  };
+
+  const handleTouchEnd = () => {
+    const s = touchRef.current;
+    touchRef.current = null;
+    setIsDragging(false);
+    if (!s || s.axis !== "x") return;
+
+    if (offsetX >= 60) {
+      triggerHaptic("selection");
+      setOffsetX(0);
+      onToggleRead();
+      return;
+    }
+    if (offsetX <= -64) {
+      triggerHaptic("medium");
+      setOffsetX(0);
+      onDismiss();
+      return;
+    }
+    setOffsetX(0);
+  };
 
   const headline =
     notification.title && notification.message
@@ -181,51 +260,98 @@ const NotificationRow: React.FC<{
 
   return (
     <div
-      onClick={() => {
-        triggerHaptic();
-        onSelect();
-      }}
-      className="py-3.5 flex items-start gap-3.5 cursor-pointer rounded-2xl px-2 hover:bg-black/[0.025] dark:hover:bg-white/[0.03] transition-colors"
+      data-no-swipe="true"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      className="relative overflow-hidden rounded-2xl"
     >
-      {!notification.isRead && (
-        <span
-          aria-label="Unread"
-          className="w-2 h-2 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] shrink-0 mt-4"
-        />
-      )}
+      {/* Left Reveal: Toggle Read/Unread */}
+      <div
+        className={`absolute inset-y-0 left-0 w-24 flex items-center justify-center rounded-l-2xl bg-[#0071E3] text-white text-xs font-bold transition-opacity ${
+          offsetX > 6 ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-0.5">
+          {notification.isRead ? (
+            <Mail className="w-4 h-4" />
+          ) : (
+            <Check className="w-4 h-4 stroke-[2.5]" />
+          )}
+          <span>{notification.isRead ? "Unread" : "Read"}</span>
+        </div>
+      </div>
 
-      {(() => {
-        const notifImg = notification.image?.trim()
-          ? optimizeImageUrl(notification.image.trim(), 112)
-          : "";
-        return (
-          <div
-            className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
-              notifImg ? "ds-apple-surface-subtle" : circleClass
-            }`}
-          >
-            {notifImg ? (
-              <img
-                src={notifImg}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              icon
-            )}
-          </div>
-        );
-      })()}
+      {/* Right Reveal: Dismiss Notification */}
+      <div
+        className={`absolute inset-y-0 right-0 w-24 flex items-center justify-center rounded-r-2xl bg-rose-500 text-white text-xs font-bold transition-opacity ${
+          offsetX < -6 ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-0.5">
+          <Trash2 className="w-4 h-4" />
+          <span>Dismiss</span>
+        </div>
+      </div>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-[13.5px] sm:text-[14px] font-semibold leading-[1.38] line-clamp-3">
-          {headline}
-        </p>
-        <span className="block text-[11.5px] font-medium ds-apple-muted mt-1 tabular-nums">
-          {formatClockTime(notification.createdAt, !isTodaySection)}
-        </span>
+      <div
+        onClick={() => {
+          if (didSwipeRef.current) {
+            didSwipeRef.current = false;
+            return;
+          }
+          triggerHaptic();
+          onSelect();
+        }}
+        style={{
+          transform: `translate3d(${offsetX}px, 0, 0)`,
+          transition: isDragging
+            ? "none"
+            : "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+        className="relative z-10 py-3.5 flex items-start gap-3.5 cursor-pointer rounded-2xl px-2 bg-white dark:bg-[#1C1C1E] hover:bg-black/[0.025] dark:hover:bg-white/[0.03] transition-colors"
+      >
+        {!notification.isRead && (
+          <span
+            aria-label="Unread"
+            className="w-2 h-2 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] shrink-0 mt-4"
+          />
+        )}
+
+        {(() => {
+          const notifImg = notification.image?.trim()
+            ? optimizeImageUrl(notification.image.trim(), 112)
+            : "";
+          return (
+            <div
+              className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
+                notifImg ? "ds-apple-surface-subtle" : circleClass
+              }`}
+            >
+              {notifImg ? (
+                <img
+                  src={notifImg}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                icon
+              )}
+            </div>
+          );
+        })()}
+
+        <div className="flex-1 min-w-0">
+          <p className="text-[13.5px] sm:text-[14px] font-semibold leading-[1.38] line-clamp-3">
+            {headline}
+          </p>
+          <span className="block text-[11.5px] font-medium ds-apple-muted mt-1 tabular-nums">
+            {formatClockTime(notification.createdAt, !isTodaySection)}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -239,6 +365,7 @@ const NotificationsPage: React.FC = () => {
   );
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
   const [prefs, setPrefs] = useState<NotificationPrefs>(() => {
     try {
       const saved = localStorage.getItem("vibe_notification_prefs_v2");
@@ -251,6 +378,39 @@ const NotificationsPage: React.FC = () => {
   const fullScreenInfo = useFullScreenInfo();
   const notify = useNotify();
   const illustrations = useIllustrations();
+
+  useEffect(() => {
+    try {
+      const key = `deepshop_dismissed_notifications_${currentUid || "guest"}`;
+      const saved = JSON.parse(localStorage.getItem(key) || "[]");
+      setDismissedIds(Array.isArray(saved) ? saved : []);
+    } catch {
+      setDismissedIds([]);
+    }
+  }, [currentUid]);
+
+  const { swipeHandlers: notificationPageSwipeHandlers } = useSwipeNavigation({
+    onSwipeLeft: () => {
+      if (!showSettings) {
+        triggerHaptic("selection");
+        setShowSettings(true);
+      }
+    },
+    onSwipeRight: () => {
+      if (showSettings) {
+        triggerHaptic("selection");
+        setShowSettings(false);
+      }
+    },
+    onEdgeSwipeRight: () => {
+      triggerHaptic("light");
+      if (showSettings) {
+        setShowSettings(false);
+      } else {
+        navigate(-1);
+      }
+    },
+  });
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (u) => {
@@ -429,12 +589,49 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
+  const toggleReadStatus = async (notif: Notification) => {
+    if (!notif.id) return;
+    const nextRead = !notif.isRead;
+    setNotifications((prev) =>
+      prev.map((item) =>
+        item.id === notif.id ? { ...item, isRead: nextRead } : item
+      )
+    );
+    try {
+      await updateDoc(doc(db, "notifications", notif.id), { isRead: nextRead });
+    } catch {
+      // Broadcast/system docs may be read-only in Firestore rules; keep local state optimistic
+    }
+    notify(nextRead ? "Marked as read" : "Marked as unread", "info");
+  };
+
+  const dismissNotification = (notif: Notification) => {
+    if (!notif.id) return;
+    setDismissedIds((prev) => {
+      if (prev.includes(notif.id)) return prev;
+      const next = [notif.id, ...prev].slice(0, 200);
+      try {
+        localStorage.setItem(
+          `deepshop_dismissed_notifications_${currentUid || "guest"}`,
+          JSON.stringify(next)
+        );
+      } catch {}
+      return next;
+    });
+    notify("Notification dismissed", "info");
+  };
+
+  const visibleNotifications = useMemo(
+    () => notifications.filter((n) => !dismissedIds.includes(n.id)),
+    [notifications, dismissedIds]
+  );
+
   const { todayList, earlierList } = useMemo(() => {
     const nowStr = new Date().toDateString();
     const today: Notification[] = [];
     const earlier: Notification[] = [];
 
-    notifications.forEach((n) => {
+    visibleNotifications.forEach((n) => {
       const ms = toMillis(n.createdAt);
       const d = ms ? new Date(ms) : null;
       if (d && !Number.isNaN(d.getTime()) && d.toDateString() === nowStr) {
@@ -445,10 +642,13 @@ const NotificationsPage: React.FC = () => {
     });
 
     return { todayList: today, earlierList: earlier };
-  }, [notifications]);
+  }, [visibleNotifications]);
 
   return (
-    <div className="ds-apple-shop-canvas min-h-screen pb-[120px] md:pb-14">
+    <div
+      {...notificationPageSwipeHandlers}
+      className="ds-apple-shop-canvas min-h-screen pb-[120px] md:pb-14"
+    >
       <div className="max-w-[560px] mx-auto px-4 sm:px-6 pt-6">
         <div className="flex items-center justify-between gap-3 mb-5 px-1">
           <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
@@ -565,7 +765,7 @@ const NotificationsPage: React.FC = () => {
                   </div>
                 ))}
               </div>
-            ) : notifications.length === 0 ? (
+            ) : visibleNotifications.length === 0 ? (
               <div className="ds-apple-surface rounded-[24px] py-16 px-6 text-center flex flex-col items-center">
                 {illustrations.emptyNotifications ? (
                   <div className="w-40 h-40 mx-auto mb-4 rounded-[20px] overflow-hidden">
@@ -613,6 +813,8 @@ const NotificationsPage: React.FC = () => {
                           notification={notif}
                           isTodaySection={true}
                           onSelect={() => markAsRead(notif)}
+                          onToggleRead={() => toggleReadStatus(notif)}
+                          onDismiss={() => dismissNotification(notif)}
                         />
                       ))}
                     </div>
@@ -643,6 +845,8 @@ const NotificationsPage: React.FC = () => {
                           notification={notif}
                           isTodaySection={false}
                           onSelect={() => markAsRead(notif)}
+                          onToggleRead={() => toggleReadStatus(notif)}
+                          onDismiss={() => dismissNotification(notif)}
                         />
                       ))}
                     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { 
   X, Search, Users, ChevronRight, ChevronLeft, Check, 
   Image as ImageIcon, Camera, Globe, MessageSquareShare, 
@@ -12,6 +12,8 @@ import {
 } from 'firebase/firestore';
 import { uploadToImgbb } from '../../services/imgbb';
 import { cn } from '../../lib/utils';
+import { useSwipeNavigation } from '../../lib/useSwipeNavigation';
+import { triggerHaptic } from '../../lib/haptics';
 
 export interface SuggestedContact {
   id: string;
@@ -48,6 +50,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
   onSelectUser,
   onGroupCreated
 }) => {
+  const dragControls = useDragControls();
   const [step, setStep] = useState<ModalStep>(initialStep);
   const [searchQuery, setSearchQuery] = useState('');
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
@@ -332,10 +335,40 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
     }
   };
 
+  const { swipeHandlers } = useSwipeNavigation({
+    disabled: !isOpen,
+    ignoreDialogs: false,
+    onEdgeSwipeRight: () => {
+      triggerHaptic('light');
+      if (step === 'new_group_details') {
+        setStep('new_group_select');
+      } else if (step === 'new_group_select') {
+        setStep('new_message');
+      } else {
+        handleModalClose();
+      }
+    },
+    onSwipeRight: () => {
+      triggerHaptic('light');
+      if (step === 'new_group_details') {
+        setStep('new_group_select');
+      } else if (step === 'new_group_select') {
+        setStep('new_message');
+      } else {
+        handleModalClose();
+      }
+    },
+  });
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      data-no-pull-refresh="true"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+    >
       {/* Backdrop */}
       <motion.div 
         initial={{ opacity: 0 }} 
@@ -347,19 +380,40 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
       {/* Main Container - Exact iOS/Messenger style matching screenshots */}
       <motion.div 
+        {...(swipeHandlers as any)}
         initial={{ y: '100%', opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: '100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        drag="y"
+        dragControls={dragControls}
+        dragListener={false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0.02, bottom: 0.45 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 110 || info.velocity.y > 420) {
+            triggerHaptic('light');
+            handleModalClose();
+          }
+        }}
         className="relative z-10 w-full sm:max-w-[460px] h-[92vh] sm:h-[680px] bg-white dark:bg-[#121214] text-zinc-900 dark:text-white rounded-t-[32px] sm:rounded-[32px] overflow-hidden flex flex-col font-sans shadow-2xl border border-zinc-200 dark:border-white/10"
       >
+        <div
+          onPointerDown={(e) => dragControls.start(e)}
+          className="sm:hidden w-full pt-2.5 pb-1 flex justify-center cursor-grab active:cursor-grabbing touch-none shrink-0"
+        >
+          <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+        </div>
         {/* ============================================================== */}
         {/* SCREEN 1: NEW MESSAGE (Screenshot 1: IMG_3989.jpeg)            */}
         {/* ============================================================== */}
         {step === 'new_message' && (
           <div className="flex flex-col h-full">
             {/* Top Navigation Bar */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-zinc-200 dark:border-zinc-800/80 shrink-0">
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              className="flex items-center justify-between px-5 pt-3 pb-3 border-b border-zinc-200 dark:border-zinc-800/80 shrink-0 touch-none"
+            >
               <button 
                 type="button"
                 onClick={handleModalClose}

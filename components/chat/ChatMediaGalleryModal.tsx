@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ImageSkeletonShimmer } from './ProgressiveImage';
+import { triggerHaptic } from '../../lib/haptics';
 
 export interface ChatMediaGalleryModalProps {
   isOpen: boolean;
@@ -34,6 +35,18 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [userToggledControls, setUserToggledControls] = useState(true);
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const [dismissDragY, setDismissDragY] = useState(0);
+  const [swipeStageX, setSwipeStageX] = useState(0);
+
+  const pinchRef = useRef<{ initialDistance: number; initialZoom: number } | null>(null);
+  const touchSwipeRef = useRef<{
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    startedAt: number;
+    axis: 'x' | 'y' | null;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +55,8 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
       setOffset({ x: 0, y: 0 });
       setUserToggledControls(true);
       setIsImageLoading(true);
+      setDismissDragY(0);
+      setSwipeStageX(0);
     }
   }, [isOpen, initialIndex, images.length]);
 
@@ -85,18 +100,21 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
 
   const goToPrev = () => {
     if (currentIndex > 0) {
+      triggerHaptic('selection');
       setCurrentIndex((prev) => prev - 1);
     }
   };
 
   const goToNext = () => {
     if (currentIndex < images.length - 1) {
+      triggerHaptic('selection');
       setCurrentIndex((prev) => prev + 1);
     }
   };
 
   const handleDoubleTapOrClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    triggerHaptic('light');
     if (zoom > 1) {
       setZoom(1);
       setOffset({ x: 0, y: 0 });
@@ -118,8 +136,121 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
     }
   };
 
-  const isZoomedIn = zoom > 1;
-  const showControls = !isZoomedIn && userToggledControls;
+  const getPinchDistance = (touches: React.TouchList) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  };
+
+  const handleStageTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      touchSwipeRef.current = null;
+      setDismissDragY(0);
+      setSwipeStageX(0);
+      pinchRef.current = {
+        initialDistance: getPinchDistance(e.touches),
+        initialZoom: zoom,
+      };
+      return;
+    }
+
+    if (e.touches.length === 1 && zoom <= 1.02) {
+      const t = e.touches[0];
+      touchSwipeRef.current = {
+        startX: t.clientX,
+        startY: t.clientY,
+        lastX: t.clientX,
+        lastY: t.clientY,
+        startedAt: Date.now(),
+        axis: null,
+      };
+    }
+  };
+
+  const handleStageTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      const dist = getPinchDistance(e.touches);
+      const scale = dist / Math.max(10, pinchRef.current.initialDistance);
+      const nextZoom = Math.max(1, Math.min(4, pinchRef.current.initialZoom * scale));
+      setZoom(nextZoom);
+      if (nextZoom <= 1.02) {
+        setOffset({ x: 0, y: 0 });
+      }
+      return;
+    }
+
+    const s = touchSwipeRef.current;
+    if (!s || e.touches.length !== 1 || zoom > 1.02) return;
+    const t = e.touches[0];
+    const dx = t.clientX - s.startX;
+    const dy = t.clientY - s.startY;
+    s.lastX = t.clientX;
+    s.lastY = t.clientY;
+
+    if (!s.axis) {
+      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx) * 1.15 && dy > 0) {
+        s.axis = 'y';
+      } else if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15 && images.length > 1) {
+        s.axis = 'x';
+      }
+    }
+
+    if (s.axis === 'y') {
+      setDismissDragY(Math.max(0, dy));
+    } else if (s.axis === 'x') {
+      const edgeDampen =
+        (currentIndex === 0 && dx > 0) || (currentIndex === images.length - 1 && dx < 0)
+          ? 0.28
+          : 0.72;
+      setSwipeStageX(dx * edgeDampen);
+    }
+  };
+
+  const handleStageTouchEnd = () => {
+    if (pinchRef.current) {
+      pinchRef.current = null;
+      if (zoom < 1.08) {
+        setZoom(1);
+        setOffset({ x: 0, y: 0 });
+      }
+    }
+
+    const s = touchSwipeRef.current;
+    touchSwipeRef.current = null;
+    if (!s) {
+      setDismissDragY(0);
+      setSwipeStageX(0);
+      return;
+    }
+
+    const dx = s.lastX - s.startX;
+    const dy = s.lastY - s.startY;
+    const elapsed = Math.max(1, Date.now() - s.startedAt);
+    const vy = dy / elapsed;
+    const vx = Math.abs(dx) / elapsed;
+
+    if (s.axis === 'y' && (dy > 105 || (dy > 62 && vy > 0.45))) {
+      setDismissDragY(0);
+      setSwipeStageX(0);
+      triggerHaptic('light');
+      onClose();
+      return;
+    }
+
+    if (s.axis === 'x' && images.length > 1 && (Math.abs(dx) > 55 || (Math.abs(dx) > 32 && vx > 0.42))) {
+      if (dx < 0) {
+        goToNext();
+      } else {
+        goToPrev();
+      }
+    }
+
+    setDismissDragY(0);
+    setSwipeStageX(0);
+  };
+
+  const isZoomedIn = zoom > 1.02;
+  const showControls = !isZoomedIn && userToggledControls && dismissDragY < 16;
 
   const formattedDate = timestamp
     ? new Date(
@@ -137,15 +268,21 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
     : '';
 
   const initialLetter = (senderName || 'P')[0]?.toUpperCase() || 'P';
+  const backdropOpacity = Math.max(0.35, 0.96 - dismissDragY / 420);
 
   return (
     <AnimatePresence>
       <motion.div
+        role="dialog"
+        aria-modal="true"
+        data-no-swipe="true"
+        data-no-pull-refresh="true"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18 }}
-        className="fixed inset-0 z-[60000] bg-zinc-950/96 backdrop-blur-2xl flex flex-col justify-between overflow-hidden select-none"
+        style={{ backgroundColor: `rgba(9, 9, 11, ${backdropOpacity})` }}
+        className="fixed inset-0 z-[60000] backdrop-blur-2xl flex flex-col justify-between overflow-hidden select-none"
         onClick={() => {
           if (isZoomedIn) {
             setZoom(1);
@@ -226,8 +363,12 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
 
         {/* Center Photo Stage */}
         <div
-          className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden"
+          className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden touch-none"
           onWheel={handleWheel}
+          onTouchStart={handleStageTouchStart}
+          onTouchMove={handleStageTouchMove}
+          onTouchEnd={handleStageTouchEnd}
+          onTouchCancel={handleStageTouchEnd}
         >
           {/* Previous Photo Button */}
           {images.length > 1 && (
@@ -253,9 +394,14 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
           <motion.div
             key={currentIndex}
             initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
+            animate={{
+              opacity: 1,
+              scale: dismissDragY > 0 ? Math.max(0.86, 1 - dismissDragY / 750) : 1,
+              x: isZoomedIn ? 0 : swipeStageX,
+              y: isZoomedIn ? 0 : dismissDragY,
+            }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: dismissDragY > 0 || swipeStageX !== 0 ? 0.04 : 0.18 }}
             className={cn(
               'w-full h-full flex items-center justify-center px-3 sm:px-12 py-2',
               isZoomedIn ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'
